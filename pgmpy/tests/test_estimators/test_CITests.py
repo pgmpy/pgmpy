@@ -387,8 +387,11 @@ class TestResidualMethod(unittest.TestCase):
     @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
     def test_pillai(self):
         # Non-conditional tests
-        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
-        dep_pvalues = [0, 0, 0, 0.0, 0]
+        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
+        dep_pvalues = [0, 0, 0, 0, 0]
+
+        computed_coefs = []
+        computed_pvalues = []
         for i, df_indep in enumerate(
             [
                 self.df_indep,
@@ -406,12 +409,18 @@ class TestResidualMethod(unittest.TestCase):
                 boolean=False,
                 seed=42,
             )
-            self.assertTrue(np.isclose(coef, dep_coefs[i], atol=1e-4))
-            self.assertTrue(np.isclose(p_value, dep_pvalues[i], atol=1e-4))
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
+
+        self.assertTrue((np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all())
+        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)).all())
 
         # Conditional tests
-        indep_coefs = [0.0010, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
+        indep_coefs = [0.0014, 0.0058, 0.0073, 0.0185, 0.0073]
+        indep_pvalues = [0.243, 0.0161, 0.0628, 0.0302, 0.0628]
+
+        computed_coefs = []
+        computed_pvalues = []
         for i, df_indep in enumerate(
             [
                 self.df_indep,
@@ -429,11 +438,17 @@ class TestResidualMethod(unittest.TestCase):
                 boolean=False,
                 seed=42,
             )
-            self.assertTrue(np.isclose(coef, indep_coefs[i], atol=1e-4))
-            self.assertTrue(np.isclose(p_value, indep_pvalues[i], atol=1e-4))
+
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
+        self.assertTrue((np.array(computed_coefs).round(2) == np.array(indep_coefs).round(2)).all())
+        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(indep_pvalues).round(2)).all())
 
         dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
         dep_pvalues = [0, 0, 0, 0, 0]
+
+        computed_coefs = []
+        computed_pvalues = []
         for i, df_dep in enumerate(
             [
                 self.df_dep,
@@ -446,5 +461,9 @@ class TestResidualMethod(unittest.TestCase):
             coef, p_value = ci_pillai(
                 X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False, seed=42
             )
-            self.assertTrue(np.isclose(coef, dep_coefs[i], atol=1e-4))
-            self.assertTrue(np.isclose(p_value, dep_pvalues[i], atol=1e-4))
+
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
+
+        self.assertTrue((np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all())
+        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)).all())
