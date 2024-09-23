@@ -63,7 +63,15 @@ class ExpertInLoop(StructureEstimator):
         **kwargs,
     ):
         """
-        Estimates a DAG from the data.
+        Estimates a DAG from the data by utilizing expert knowledge.
+
+        The method iteratively adds and removes edges between variables
+        (similar to Greedy Equivalence Search algorithm) based on a score
+        metric that improves the model's fit to the data the most. The score
+        metric used is based on conditional independence testing. When adding
+        an edge to the model, the method asks for expert knowledge to decide
+        the orientation of the edge. Alternatively, an LLM can used to decide
+        the orientation of the edge.
 
         Parameters
         ----------
