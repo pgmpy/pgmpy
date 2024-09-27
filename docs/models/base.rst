@@ -2,6 +2,7 @@ Models
 ======
 
 - :doc:`bayesiannetwork`
+- :doc:`gaussianbn`
 - :doc:`dbn`
 - :doc:`sem`
 - :doc:`markovnetwork`
@@ -16,6 +17,7 @@ Models
    :hidden:
 
    bayesiannetwork.rst
+   gaussianbn.rst
    dbn.rst
    sem.rst
    naive.rst

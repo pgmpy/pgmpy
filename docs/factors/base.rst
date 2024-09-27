@@ -2,6 +2,7 @@ Parameterization
 ================
 
 - :doc:`discrete`
+- :doc:`lineargauss`
 - :doc:`discretize`
 
 .. toctree::
@@ -9,5 +10,5 @@ Parameterization
    :hidden:
 
    discrete.rst
-   continuous.rst
+   lineargauss.rst
    discretize.rst
