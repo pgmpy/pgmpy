@@ -139,7 +139,7 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method="k2score",
+        scoring_method="k2",
         start_dag=None,
         fixed_edges=set(),
         tabu_length=100,
