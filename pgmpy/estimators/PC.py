@@ -60,15 +60,18 @@ class PC(StructureEstimator):
         max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
+        fixed_edges=None,
+        white_list=None,
+        black_list=None,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
     ):
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
-        is a constraint-based structure learning algorithm[1]. The independencies
-        in the dataset are identified by doing statistical independece test. This
-        method returns a DAG/PDAG structure which is faithful to the independencies
+        is a constraint-based structure learning algorithm[1]. The independences
+        in the dataset are identified by doing statistical independence test. This
+        method returns a DAG/PDAG structure which is faithful to the independences
         implied by the dataset.
 
         Parameters
@@ -88,6 +91,8 @@ class PC(StructureEstimator):
             the dataset. If `str` values should be one of:
                 "independence_match": If using this option, an additional parameter
                         `independencies` must be specified.
+                "pillai": Uses a canonical correlation based test. Works for any
+                        combination of data types.
                 "chi_square": Uses the Chi-Square independence test. This works
                         only for discrete datasets.
                 "pearsonr": Uses the pertial correlation based on pearson
@@ -117,11 +122,21 @@ class PC(StructureEstimator):
         significance_level: float (default: 0.01)
             The statistical tests use this value to compare with the p-value of
             the test to decide whether the tested variables are independent or
-            not. Different tests can treat this parameter differently:
-                1. Chi-Square: If p-value > significance_level, it assumes that the
-                    independence condition satisfied in the data.
-                2. pearsonr: If p-value > significance_level, it assumes that the
-                    independence condition satisfied in the data.
+            not. A higher `significance_level` would result in denser models.
+
+        fixed_edges: list (default: None)
+            A list of tuples specifying the pair of variables that must have an
+            edge in the final learned network. The direction of the edge is decided
+            based on the orientation rules.
+
+        black_list: list (default: None)
+            A list of tuples specifying the pair of variables that must not have an
+            edge between them in the final learned network.
+
+        white_list: list (default: None)
+            If specified, only the pair of variables specified are considered to
+            possibly have an edge between them. This is equivalent to specifying
+            black_list = (all_possible_edges - white_list).
 
         Returns
         -------
@@ -154,7 +169,7 @@ class PC(StructureEstimator):
         >>> print(len(model_gsq.edges()))
         33
         """
-        # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
+        # Step 0: Do checks that the specified parameters are correct, else throw meaningful errors.
         if variant not in ("orig", "stable", "parallel"):
             raise ValueError(
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
@@ -177,12 +192,45 @@ class PC(StructureEstimator):
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
+        if fixed_edges is not None:
+            if not (set(chain(*fixed_edges)) <= set(self.data.columns)):
+                raise ValueError(
+                    "Some of the variables specified in `fixed_edges` argument do not exist in the data"
+                )
+            else:
+                fixed_edges = set(fixed_edges)
+        else:
+            fixed_edges = set()
+
+        if white_list is not None:
+            if not (set(chain(*white_list)) <= set(self.data.columns)):
+                raise ValueError(
+                    "Some of the variables specified in `fixed_edges` argument do not exist in the data"
+                )
+            else:
+                white_list = set(white_list)
+        else:
+            white_list = set()
+
+        if black_list is not None:
+            if not (set(chain(*black_list)) <= set(self.data.columns)):
+                raise ValueError(
+                    "Some of the variables specified in `fixed_edges` argument do not exist in the data"
+                )
+            else:
+                black_list = set(black_list)
+        else:
+            black_list = set()
+
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
             max_cond_vars=max_cond_vars,
             significance_level=significance_level,
             variant=variant,
+            fixed_edges=fixed_edges,
+            black_list=black_list,
+            white_list=white_list,
             n_jobs=n_jobs,
             show_progress=show_progress,
             **kwargs,
@@ -190,7 +238,6 @@ class PC(StructureEstimator):
 
         if return_type.lower() == "skeleton":
             return skel, separating_sets
-
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
 
@@ -213,6 +260,9 @@ class PC(StructureEstimator):
         max_cond_vars=5,
         significance_level=0.01,
         variant="stable",
+        fixed_edges=set(),
+        black_list=set(),
+        white_list=set(),
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -263,10 +313,15 @@ class PC(StructureEstimator):
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
-            pbar.set_description("Working for n conditional variables: 0")
+            pbar.set_description("Testing with 0 conditional variables")
 
         # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        if len(white_list) != 0:
+            graph = nx.graph(white_list)
+        else:
+            graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+            if len(black_list) != 0:
+                graph.remove_edges_from(black_list)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -277,55 +332,65 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
-                    ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges):
+                        for separating_set in chain(
+                            combinations(
+                                set(graph.neighbors(u)) - set([v]), lim_neighbors
+                            ),
+                            combinations(
+                                set(graph.neighbors(v)) - set([u]), lim_neighbors
+                            ),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the separating set
+                            # and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                neighbors = {node: sorted(list(graph[node])) for node in graph.nodes()}
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                        combinations(set(neighbors[v]) - set([u]), lim_neighbors),
-                    ):
-                        # If a conditioning set exists remove the edge, store the
-                        # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges):
+                        u_neighbors = [node for node in neighbors[u] if node != v]
+                        v_neighbors = [node for node in neighbors[v] if node != u]
+                        for separating_set in chain(
+                            combinations(u_neighbors, lim_neighbors),
+                            combinations(v_neighbors, lim_neighbors),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the
+                            # separating set and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "parallel":
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                neighbors = {node: sorted(list(graph[node])) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
+                    u_neighbors = [node for node in neighbors[u] if node != v]
+                    v_neighbors = [node for node in neighbors[v] if node != u]
                     for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                        combinations(u_neighbors, lim_neighbors),
+                        combinations(v_neighbors, lim_neighbors),
                     ):
                         if ci_test(
                             u,
@@ -339,7 +404,9 @@ class PC(StructureEstimator):
                             return (u, v), separating_set
 
                 results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
+                    delayed(_parallel_fun)(u, v)
+                    for (u, v) in graph.edges()
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges)
                 )
                 for result in results:
                     if result is not None:
@@ -349,7 +416,7 @@ class PC(StructureEstimator):
 
             else:
                 raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
+                    f"Argument variant must be one of (orig, stable, parallel). Got: {variant}"
                 )
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
@@ -364,7 +431,7 @@ class PC(StructureEstimator):
             if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
                 pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
+                    f"Testing with {lim_neighbors} conditional variables"
                 )
 
         if show_progress and config.SHOW_PROGRESS:
@@ -416,7 +483,7 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(permutations(pdag.nodes(), 2))
+        node_pairs = list(combinations(pdag.nodes(), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
@@ -425,6 +492,7 @@ class PC(StructureEstimator):
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
+                        print(f"Selected triplet: {X, Z, Y}")
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         progress = True
