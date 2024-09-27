@@ -2,6 +2,7 @@
 from math import lgamma, log
 
 import numpy as np
+import statsmodels.formula.api as smf
 from scipy.special import gammaln
 
 from pgmpy.estimators import BaseEstimator
@@ -9,9 +10,10 @@ from pgmpy.estimators import BaseEstimator
 
 class StructureScore(BaseEstimator):
     """
-    Abstract base class for structure scoring classes in pgmpy. Use any of the derived classes
-    K2Score, BDeuScore, BicScore or AICScore. Scoring classes are
-    used to measure how well a model is able to describe the given data set.
+    Abstract base class for structure scoring classes in pgmpy. Use any of the
+    derived classes K2Score, BDeuScore, BicScore or AICScore. Scoring classes
+    are used to measure how well a model is able to describe the given data
+    set.
 
     Parameters
     ----------
@@ -68,7 +70,7 @@ class StructureScore(BaseEstimator):
 
         score = 0
         for node in model.nodes():
-            score += self.local_score(node, model.predecessors(node))
+            score += self.local_score(node, list(model.predecessors(node)))
         score += self.structure_prior(model)
         return score
 
@@ -385,6 +387,23 @@ class BicScore(StructureScore):
         return score
 
 
+class BicScoreGauss(StructureScore):
+    def __init__(self, data, **kwargs):
+        super(BicScoreGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        if len(parents) == 0:
+            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
+        else:
+            glm_model = smf.glm(
+                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
+            ).fit()
+        # Adding +2 to model df to compute the likelihood df.
+        return glm_model.llf - (
+            ((glm_model.df_model + 2) / 2) * np.log(self.data.shape[0])
+        )
+
+
 class AICScore(StructureScore):
     """
     Class for Bayesian structure scoring for BayesianNetworks with
@@ -445,3 +464,18 @@ class AICScore(StructureScore):
         score -= num_parents_states * (var_cardinality - 1)
 
         return score
+
+
+class AICScoreGauss(StructureScore):
+    def __init__(self, data, **kwargs):
+        super(AICScoreGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        if len(parents) == 0:
+            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
+        else:
+            glm_model = smf.glm(
+                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
+            ).fit()
+        # Adding +2 to model df to compute the likelihood df.
+        return glm_model.llf - (glm_model.df_model + 2)
