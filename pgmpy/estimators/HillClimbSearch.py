@@ -161,7 +161,7 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2score, bdeuscore, bdsscore, bicscore, aicscore. Also accepts a
+            structure scores: k2, bdeu, bds, bic, aic. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
@@ -244,7 +244,7 @@ class HillClimbSearch(StructureEstimator):
                 "aicscore",
             ]:
                 raise ValueError(
-                    f"The scoring method names have been changed. Please refer the documentation"
+                    f"The scoring method names have been changed. Please refer the documentation."
                 )
             elif scoring_method.lower() not in list(supported_methods.keys()):
                 raise ValueError(
