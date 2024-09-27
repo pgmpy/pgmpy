@@ -7,7 +7,9 @@ from pgmpy.estimators.StructureScore import (
     BDeuScore,
     BDsScore,
     BicScore,
+    BicScoreGauss,
     AICScore,
+    AICScoreGauss,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
@@ -20,6 +22,7 @@ from pgmpy.estimators.PC import PC
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
 from pgmpy.estimators.expert import ExpertInLoop
+
 
 __all__ = [
     "BaseEstimator",
@@ -35,7 +38,9 @@ __all__ = [
     "BDeuScore",
     "BDsScore",
     "BicScore",
+    "BicScoreGauss",
     "AICScore",
+    "AICScoreGauss",
     "ScoreCache",
     "SEMEstimator",
     "IVEstimator",

@@ -9,9 +9,11 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
     AICScore,
+    AICScoreGauss,
     BDeuScore,
     BDsScore,
     BicScore,
+    BicScoreGauss,
     K2Score,
     ScoreCache,
     StructureEstimator,
@@ -137,7 +139,7 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method="k2score",
+        scoring_method="k2",
         start_dag=None,
         fixed_edges=set(),
         tabu_length=100,
@@ -159,7 +161,7 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2score, bdeuscore, bdsscore, bicscore, aicscore. Also accepts a
+            structure scores: k2, bdeu, bds, bic, aic. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
@@ -225,18 +227,30 @@ class HillClimbSearch(StructureEstimator):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
         supported_methods = {
-            "k2score": K2Score,
-            "bdeuscore": BDeuScore,
-            "bdsscore": BDsScore,
-            "bicscore": BicScore,
-            "aicscore": AICScore,
+            "k2": K2Score,
+            "bdeu": BDeuScore,
+            "bds": BDsScore,
+            "bic": BicScore,
+            "aic": AICScore,
+            "aic-g": AICScoreGauss,
+            "bic-g": BicScoreGauss,
         }
-        if (
-            (
-                isinstance(scoring_method, str)
-                and (scoring_method.lower() not in supported_methods)
-            )
-        ) and (not isinstance(scoring_method, StructureScore)):
+        if isinstance(scoring_method, str):
+            if scoring_method.lower() in [
+                "k2score",
+                "bdeuscore",
+                "bdsscore",
+                "bicscore",
+                "aicscore",
+            ]:
+                raise ValueError(
+                    f"The scoring method names have been changed. Please refer the documentation."
+                )
+            elif scoring_method.lower() not in list(supported_methods.keys()):
+                raise ValueError(
+                    f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
+                )
+        elif not isinstance(scoring_method, StructureScore):
             raise ValueError(
                 "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
             )
