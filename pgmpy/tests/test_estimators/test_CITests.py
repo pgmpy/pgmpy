@@ -167,10 +167,7 @@ class TestDiscreteTests(unittest.TestCase):
             chi_square,
             g_sq,
             log_likelihood,
-            freeman_tuckey,
             modified_log_likelihood,
-            neyman,
-            cressie_read,
         ]:
             self.assertFalse(
                 t(
@@ -245,10 +242,7 @@ class TestDiscreteTests(unittest.TestCase):
             chi_square,
             g_sq,
             log_likelihood,
-            freeman_tuckey,
             modified_log_likelihood,
-            neyman,
-            cressie_read,
         ]:
             stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
@@ -387,7 +381,7 @@ class TestResidualMethod(unittest.TestCase):
     @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
     def test_pillai(self):
         # Non-conditional tests
-        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
+        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
         dep_pvalues = [0, 0, 0, 0, 0]
 
         computed_coefs = []
@@ -401,7 +395,7 @@ class TestResidualMethod(unittest.TestCase):
                 self.df_indep_ord_cont,
             ]
         ):
-            coef, p_value = ci_pillai(
+            coef, p_value = pillai_trace(
                 X="X",
                 Y="Y",
                 Z=[],
@@ -411,7 +405,6 @@ class TestResidualMethod(unittest.TestCase):
             )
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
-
         self.assertTrue(
             (np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all()
         )
@@ -422,8 +415,8 @@ class TestResidualMethod(unittest.TestCase):
         )
 
         # Conditional tests
-        indep_coefs = [0.0014, 0.0058, 0.0073, 0.0185, 0.0073]
-        indep_pvalues = [0.243, 0.0161, 0.0628, 0.0302, 0.0628]
+        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
+        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
 
         computed_coefs = []
         computed_pvalues = []
@@ -436,7 +429,7 @@ class TestResidualMethod(unittest.TestCase):
                 self.df_indep_ord_cont,
             ]
         ):
-            coef, p_value = ci_pillai(
+            coef, p_value = pillai_trace(
                 X="X",
                 Y="Y",
                 Z=["Z1", "Z2", "Z3"],
@@ -470,7 +463,7 @@ class TestResidualMethod(unittest.TestCase):
                 self.df_dep_ord_cont,
             ]
         ):
-            coef, p_value = ci_pillai(
+            coef, p_value = pillai_trace(
                 X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False, seed=42
             )
 

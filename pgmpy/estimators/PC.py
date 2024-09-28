@@ -16,13 +16,10 @@ CI_TESTS = {
     "chi_square": chi_square,
     "independence_match": independence_match,
     "pearsonr": pearsonr,
-    "pillai": ci_pillai,
+    "pillai": pillai_trace,
     "g_sq": g_sq,
     "log_likelihood": log_likelihood,
-    "freeman_tuckey": freeman_tuckey,
     "modified_log_likelihood": modified_log_likelihood,
-    "neyman": neyman,
-    "cressie_read": cressie_read,
     "power_divergence": power_divergence,
 }
 
