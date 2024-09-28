@@ -122,20 +122,12 @@ class Config:
         if self.BACKEND == "numpy":
             if dtype is None:
                 self.DTYPE = "float64"
-            elif not isinstance(dtype, np.dtype):
-                raise ValueError(
-                    f"Backend is set to numpy, dtype must be an instance of np.dtype. Got: {type(dtype)}"
-                )
             else:
                 self.DTYPE = dtype
 
         elif self.BACKEND == "torch":
             if dtype is None:
                 self.DTYPE = torch.float64
-            elif not isinstance(dtype, torch.dtype):
-                raise ValueError(
-                    f"Backend is set to torch, dtype must be an instance of torch.dtype. Got: {type(dtype)}"
-                )
             else:
                 self.DTYPE = dtype
 
