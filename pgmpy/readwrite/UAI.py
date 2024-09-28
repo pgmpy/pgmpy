@@ -1,7 +1,14 @@
 from itertools import combinations
 
 import numpy as np
-from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
+
+try:
+    from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
+except ImportError:
+    raise ImportError(
+        e.message()
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork

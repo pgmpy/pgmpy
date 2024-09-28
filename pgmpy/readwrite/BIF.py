@@ -7,19 +7,26 @@ from string import Template
 import numpy as np
 import pyparsing as pp
 from joblib import Parallel, delayed
-from pyparsing import (
-    CharsNotIn,
-    Group,
-    OneOrMore,
-    Optional,
-    Suppress,
-    Word,
-    ZeroOrMore,
-    alphanums,
-    cppStyleComment,
-    nums,
-    printables,
-)
+
+try:
+    from pyparsing import (
+        CharsNotIn,
+        Group,
+        OneOrMore,
+        Optional,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        alphanums,
+        cppStyleComment,
+        nums,
+        printables,
+    )
+except ImportError:
+    raise ImportError(
+        e.message()
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork

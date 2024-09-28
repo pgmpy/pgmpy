@@ -3,20 +3,27 @@ from math import prod
 from string import Template
 
 import numpy as np
-from pyparsing import (
-    CharsNotIn,
-    Group,
-    OneOrMore,
-    Optional,
-    Suppress,
-    Word,
-    ZeroOrMore,
-    alphanums,
-    alphas,
-    cppStyleComment,
-    nums,
-    printables,
-)
+
+try:
+    from pyparsing import (
+        CharsNotIn,
+        Group,
+        OneOrMore,
+        Optional,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        alphanums,
+        alphas,
+        cppStyleComment,
+        nums,
+        printables,
+    )
+except ImportError:
+    raise ImportError(
+        e.message()
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import BayesianNetwork
