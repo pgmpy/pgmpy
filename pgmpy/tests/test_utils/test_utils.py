@@ -7,7 +7,12 @@ import pandas as pd
 import pytest
 from tqdm.auto import tqdm
 
-from pgmpy.utils import discretize, get_example_model, llm_pairwise_orient
+from pgmpy.utils import (
+    discretize,
+    get_example_model,
+    llm_pairwise_orient,
+    preprocess_data,
+)
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -101,4 +106,67 @@ class TestPairwiseOrientation(unittest.TestCase):
                 x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"
             ),
             ("Age", "Income"),
+        )
+
+
+class TestPreprocessData(unittest.TestCase):
+    def setUp(self):
+        self.data_raw = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
+
+        self.data_proc = self.data_raw.copy()
+        self.data_proc["A_cat"] = self.data_proc.A_cat.astype("category")
+        self.data_proc["B_cat"] = self.data_proc.C_cat.astype("category")
+        self.data_proc["C_cat"] = self.data_proc.C_cat.astype("category")
+
+        self.data_proc_proc = self.data_proc.copy()
+        cat_type = pd.CategoricalDtype(
+            categories=np.array(sorted(self.data_proc_proc.B_int.unique())),
+            ordered=True,
+        )
+
+        self.data_proc_proc["B_int"] = self.data_proc_proc.B_int.astype(cat_type)
+
+    def test_preprocess_data(self):
+        df, dtypes = preprocess_data(self.data_raw)
+        self.assertEqual(
+            dtypes,
+            {
+                "A": "N",
+                "B": "N",
+                "C": "N",
+                "A_cat": "C",
+                "B_cat": "C",
+                "C_cat": "C",
+                "B_int": "N",
+            },
+        )
+
+        df, dtypes = preprocess_data(self.data_proc)
+        self.assertEqual(
+            dtypes,
+            {
+                "A": "N",
+                "B": "N",
+                "C": "N",
+                "A_cat": "C",
+                "B_cat": "C",
+                "C_cat": "C",
+                "B_int": "N",
+            },
+        )
+
+        df, dtypes = preprocess_data(self.data_proc_proc)
+        self.assertEqual(
+            dtypes,
+            {
+                "A": "N",
+                "B": "N",
+                "C": "N",
+                "A_cat": "C",
+                "B_cat": "C",
+                "C_cat": "C",
+                "B_int": "O",
+            },
         )

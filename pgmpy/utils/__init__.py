@@ -7,6 +7,7 @@ from .utils import (
     get_example_model,
     llm_pairwise_orient,
     manual_pairwise_orient,
+    preprocess_data,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "discretize",
     "llm_pairwise_orient",
     "manual_pairwise_orient",
+    "preprocess_data",
 ]
