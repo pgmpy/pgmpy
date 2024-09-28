@@ -8,6 +8,7 @@ import pandas as pd
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference.ExactInference import BeliefPropagation
+from pgmpy.utils import preprocess_data
 
 
 class BaseEstimator(object):
@@ -29,7 +30,12 @@ class BaseEstimator(object):
     """
 
     def __init__(self, data=None, state_names=None):
-        self.data = data
+        if data is None:
+            self.data = None
+            self.dtypes = None
+        else:
+            self.data, self.dtypes = preprocess_data(data)
+
         # data can be None in the case when learning structure from
         # independence conditions. Look into PC.py.
         if self.data is not None:
