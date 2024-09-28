@@ -9,6 +9,8 @@ except:
     # For python 3.8 and lower
     from importlib_resources import files
 
+from pgmpy.global_vars import logger
+
 
 def get_example_model(model):
     """
@@ -266,3 +268,46 @@ def manual_pairwise_orient(x, y):
         return (x, y)
     elif user_input == "2":
         return (y, x)
+
+
+def preprocess_data(df):
+    """
+    Tries to figure out the data type of each variable `df`.
+
+    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes
+    to each column in `df`. Also changes any object datatypes to categorical.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        A pandas dataframe.
+
+    Returns
+    -------
+    (pd.DataFrame, dtypes): Tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+    """
+    df = df.copy()
+    dtypes = {}
+    for col in df.columns:
+        if pd.api.types.is_integer_dtype(df[col]):
+            df[col] = df[col].astype("float")
+            dtypes[col] = "N"
+        elif pd.api.types.is_numeric_dtype(df[col]):
+            dtypes[col] = "N"
+        elif pd.api.types.is_object_dtype(df[col]):
+            dtypes[col] = "C"
+            df[col] = df[col].astype("category")
+        elif isinstance(df[col].dtype, pd.CategoricalDtype):
+            if df[col].dtype.ordered:
+                dtypes[col] = "O"
+            else:
+                dtypes[col] = "C"
+        else:
+            raise ValueError(
+                f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column."
+            )
+
+    logger.info(
+        f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
+    )
+    return (df, dtypes)
