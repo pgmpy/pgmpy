@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from networkx.algorithms.dag import descendants
-from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import logger
@@ -1024,6 +1023,21 @@ class SEM(SEMGraph):
         """
         if syntax.lower() == "lavaan":
             # Create a SEMGraph model using the lavaan str.
+            # Step 0: Check if pyparsing is installed
+            try:
+                from pyparsing import (
+                    OneOrMore,
+                    Optional,
+                    Suppress,
+                    Word,
+                    alphanums,
+                    nums,
+                )
+            except ImportError as e:
+                raise ImportError(
+                    e.message()
+                    + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
+                )
 
             # Step 1: Define the grammar for each type of string.
             var = Word(alphanums)

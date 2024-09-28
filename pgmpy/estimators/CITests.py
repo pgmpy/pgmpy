@@ -3,7 +3,6 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 from statsmodels.multivariate.manova import MANOVA
-from xgboost import XGBClassifier, XGBRegressor
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
@@ -475,6 +474,15 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     """
     Function to get predictions using XGBoost for `ci_pillai`.
     """
+    # Step 0: Check if XGboost is installed.
+    try:
+        from xgboost import XGBClassifier, XGBRegressor
+    except ImportError as e:
+        raise ImportError(
+            e.message
+            + ". xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
+        )
+
     # Step 1: Check if any of the conditional variables are categorical
     if any(data.loc[:, Z].dtypes == "category"):
         enable_categorical = True

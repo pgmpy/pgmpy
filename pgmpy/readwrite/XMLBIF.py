@@ -5,7 +5,14 @@ from io import BytesIO
 from itertools import chain
 
 import numpy as np
-import pyparsing as pp
+
+try:
+    import pyparsing as pp
+except ImportError:
+    raise ImportError(
+        e.message()
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import BayesianNetwork

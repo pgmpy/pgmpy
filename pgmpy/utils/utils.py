@@ -2,7 +2,6 @@ import gzip
 import os
 
 import pandas as pd
-from litellm import completion
 
 try:
     from importlib.resources import files
@@ -211,6 +210,14 @@ def llm_pairwise_orient(
     kwargs: kwargs
         Any additional parameters to pass to litellm.completion method.
     """
+    try:
+        from litellm import completion
+    except ImportError as e:
+        raise ImportError(
+            e.message
+            + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
+        )
+
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
 
