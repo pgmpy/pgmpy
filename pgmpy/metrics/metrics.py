@@ -81,13 +81,11 @@ def correlation_score(
     """
     from pgmpy.estimators.CITests import (
         chi_square,
-        cressie_read,
-        freeman_tuckey,
         g_sq,
         log_likelihood,
         modified_log_likelihood,
-        neyman,
         pearsonr,
+        pillai_trace,
     )
 
     # Step 1: Checks for input arguments.
@@ -95,11 +93,9 @@ def correlation_score(
         "chi_square": chi_square,
         "g_sq": g_sq,
         "log_likelihood": log_likelihood,
-        "freeman_tuckey": freeman_tuckey,
         "modified_log_likelihood": modified_log_likelihood,
-        "neyman": neyman,
-        "cressie_read": cressie_read,
         "pearsonr": pearsonr,
+        "pillai": pillai_trace,
     }
 
     if not isinstance(model, (DAG, BayesianNetwork)):

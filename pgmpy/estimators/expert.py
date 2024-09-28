@@ -7,7 +7,7 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.estimators.CITests import ci_pillai
+from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
 
@@ -43,7 +43,7 @@ class ExpertInLoop(StructureEstimator):
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            effect, p_value = ci_pillai(
+            effect, p_value = pillai_trace(
                 X=u, Y=v, Z=cond_set, data=self.data, boolean=False
             )
             cis.append([u, v, cond_set, edge_present, effect, p_value])

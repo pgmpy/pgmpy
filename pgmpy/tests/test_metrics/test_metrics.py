@@ -22,10 +22,7 @@ class TestCorrelationScore(unittest.TestCase):
             "chi_square",
             "g_sq",
             "log_likelihood",
-            "freeman_tuckey",
             "modified_log_likelihood",
-            "neyman",
-            "cressie_read",
         }:
             for score in {f1_score, accuracy_score}:
                 metric = correlation_score(

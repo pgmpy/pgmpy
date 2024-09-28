@@ -325,10 +325,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             for test in [
                 "g_sq",
                 "log_likelihood",
-                "freeman_tuckey",
                 "modified_log_likelihood",
-                "neyman",
-                "cressie_read",
                 "power_divergence",
             ]:
                 skel, sep_sets = est.estimate(
