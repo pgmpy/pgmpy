@@ -131,7 +131,9 @@ class BaseEstimator(object):
         if not parents:
             # count how often each state of 'variable' occurred
             if weighted:
-                state_count_data = self.data.groupby([variable])["_weight"].sum()
+                state_count_data = self.data.groupby([variable], observed=True)[
+                    "_weight"
+                ].sum()
             else:
                 state_count_data = self.data.loc[:, variable].value_counts()
 
@@ -146,7 +148,7 @@ class BaseEstimator(object):
             # count how often each state of 'variable' occurred, conditional on parents' states
             if weighted:
                 state_count_data = (
-                    self.data.groupby([variable] + parents)["_weight"]
+                    self.data.groupby([variable] + parents, observed=True)["_weight"]
                     .sum()
                     .unstack(parents)
                 )
