@@ -7,7 +7,7 @@ from pgmpy.estimators import HillClimbSearch, K2Score
 from pgmpy.models import BayesianNetwork
 
 
-class TestHillClimbEstimator(unittest.TestCase):
+class TestHillClimbEstimatorDiscrete(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(
             np.random.randint(0, 5, size=(int(1e4), 2)), columns=list("AB")
@@ -254,3 +254,15 @@ class TestHillClimbEstimator(unittest.TestCase):
         del self.titanic_data2
         del self.est_titanic1
         del self.est_titanic2
+
+
+class TestHillClimbEstimatorGaussian(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0
+        )
+
+    def test_estimate(self):
+        est = HillClimbSearch(self.data)
+        for score in ["aic-g", "bic-g"]:
+            dag = est.estimate(scoring_method=score, show_progress=False)
