@@ -43,3 +43,15 @@ class TestGESDiscrete(unittest.TestCase):
         dag = self.est_rand.estimate()
         dag = self.est_titanic1.estimate()
         dag = self.est_titanic2.estimate()
+
+
+class TestGESGauss(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0
+        )
+
+    def test_estimate(self):
+        est = GES(self.data)
+        for score in ["aic-g", "bic-g"]:
+            dag = est.estimate(scoring_method=score, debug=True)

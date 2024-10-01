@@ -17,6 +17,7 @@ from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
 )
+from pgmpy.global_vars import logger
 
 
 class GES(StructureEstimator):
@@ -50,7 +51,7 @@ class GES(StructureEstimator):
             current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic"):
+    def estimate(self, scoring_method="bic", debug=False):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
         supported_methods = {
@@ -104,16 +105,16 @@ class GES(StructureEstimator):
                     v, current_parents
                 )
                 score_deltas[index] = score_delta
+
             if (len(potential_edges) == 0) or (np.all(score_deltas <= 0)):
-                if len(potential_edges) == 0:
-                    print("No potential edges")
-                if np.all(score_deltas <= 0):
-                    print(potential_edges)
-                    print(score_deltas)
-                    print("NO score improvement")
                 break
+
             edge_to_add = potential_edges[np.argmax(score_deltas)]
             current_model.add_edge(edge_to_add[0], edge_to_add[1])
+            if debug:
+                logger.info(
+                    f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}"
+                )
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
@@ -125,10 +126,14 @@ class GES(StructureEstimator):
                 score_deltas[index] = score_fn(
                     v, [node for node in current_parents if node != u]
                 ) - score_fn(v, current_parents)
-            if (len(potential_removals) == 0) or (np.all(score_deltas) <= 0):
+            if (len(potential_removals) == 0) or (np.all(score_deltas <= 0)):
                 break
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_remove[0], edge_to_remove[1])
+            if debug:
+                logger.info(
+                    f"Removing edge {edge_to_remove[0]} -> {edge_to_remove[1]}. Improves score by: {score_deltas.max()}"
+                )
 
         # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
         while True:
@@ -139,13 +144,19 @@ class GES(StructureEstimator):
                 u_parents = current_model.get_parents(u)
                 score_deltas[index] = (
                     score_fn(v, v_parents + [u]) - score_fn(v, v_parents)
-                ) + (score_fn(u, u_parents - [v]), score_fn(u, u_parents))
+                ) + (
+                    score_fn(u, [node for node in u_parents if node != v])
+                    - score_fn(u, u_parents)
+                )
 
             if (len(potential_flips) == 0) or (np.all(score_deltas <= 0)):
                 break
-
             edge_to_flip = potential_flips[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_flip[1], edge_to_flip[0])
             current_model.add_edge(edge_to_flip[0], edge_to_flip[1])
+            if debug:
+                logger.info(
+                    f"Fliping edge {edge_to_flip[1]} -> {edge_to_flip[0]}. Improves score by: {score_deltas.max()}"
+                )
 
         return current_model
