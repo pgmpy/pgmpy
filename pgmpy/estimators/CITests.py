@@ -346,7 +346,6 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
     False
     """
-
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
         Z = list(Z)
@@ -361,7 +360,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-            data.groupby([X, Y]).size().unstack(Y, fill_value=0), lambda_=lambda_
+            data.groupby([X, Y], observed=False).size().unstack(Y, fill_value=0),
+            lambda_=lambda_,
         )
 
     # Step 3: If there are conditionals variables, iterate over unique states and do
@@ -369,15 +369,16 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     else:
         chi = 0
         dof = 0
-        for z_state, df in data.groupby(Z):
-            try:
-                c, _, d, _ = stats.chi2_contingency(
-                    df.groupby([X, Y]).size().unstack(Y, fill_value=0), lambda_=lambda_
-                )
-                chi += c
-                dof += d
-            except ValueError:
-                # If one of the values is 0 in the 2x2 table.
+        for z_state, df in data.groupby(Z, observed=True):
+            # Compute the contingency table
+            unique_x, x_inv = np.unique(df[X], return_inverse=True)
+            unique_y, y_inv = np.unique(df[Y], return_inverse=True)
+            contingency = np.bincount(
+                x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)
+            ).reshape(len(unique_x), len(unique_y))
+
+            # If all values of a column in the contingency table are zeros, skip the test.
+            if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                 if isinstance(z_state, str):
                     logger.info(
                         f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
@@ -389,6 +390,10 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
                     logger.info(
                         f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
                     )
+            else:
+                c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
+                chi += c
+                dof += d
         p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
