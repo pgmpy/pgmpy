@@ -111,7 +111,9 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
-        n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
+        n_counts = (
+            self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
+        )
 
         cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
