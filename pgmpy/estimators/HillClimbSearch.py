@@ -161,7 +161,7 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic. Also accepts a
+            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
@@ -206,22 +206,19 @@ class HillClimbSearch(StructureEstimator):
 
         Examples
         --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.estimators import HillClimbSearch, BicScore
-        >>> # create data sample with 9 random variables:
-        ... data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 9)), columns=list('ABCDEFGHI'))
-        >>> # add 10th dependent variable
-        ... data['J'] = data['A'] * data['B']
+        >>> # Simulate some sample data from a known model to learn the model structure from
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> df = model.simulate(int(1e3))
+
+        >>> # Learn the model structure using HillClimbSearch algorithm from `df`
+        >>> from pgmpy.estimators import HillClimbSearch
         >>> est = HillClimbSearch(data)
-        >>> best_model = est.estimate(scoring_method=BicScore(data))
-        >>> sorted(best_model.nodes())
-        ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
-        >>> best_model.edges()
-        OutEdgeView([('B', 'J'), ('A', 'J')])
-        >>> # search a model with restriction on the number of parents:
-        >>> est.estimate(max_indegree=1).edges()
-        OutEdgeView([('J', 'A'), ('B', 'J')])
+        >>> dag = est.estimate(scoring_method='bic')
+        >>> len(dag.nodes())
+        37
+        >>> len(dag.edges())
+        45
         """
 
         # Step 1: Initial checks and setup for arguments

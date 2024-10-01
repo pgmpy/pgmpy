@@ -21,6 +21,31 @@ from pgmpy.global_vars import logger
 
 
 class GES(StructureEstimator):
+    """
+    Implementation of Greedy Equivalence Search (GES) causal discovery / structure learning algorithm.
+
+    GES is a score-based casual discovery / structure learning algorithm that works in three phases:
+        1. Forward phase: New edges are added such that the model score improves.
+        2. Backward phase: Edges are removed from the model such that the model score improves.
+        3. Edge flipping phase: Edge orientations are flipped such that model score improves.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+
+    use_caching: boolean
+        If True, uses caching of score for faster computation.
+        Note: Caching only works for scoring methods which are decomposable. Can
+        give wrong results in case of custom scoring methods.
+
+    References
+    ----------
+    Chickering, David Maxwell. "Optimal structure identification with greedy search." Journal of machine learning research 3.Nov (2002): 507-554.
+    """
+
     def __init__(self, data, use_cache=True, **kwargs):
         self.use_cache = use_cache
 
@@ -28,7 +53,7 @@ class GES(StructureEstimator):
 
     def _legal_edge_additions(self, current_model):
         """
-        Find all edges that can be added to the graph such that it remains a DAG.
+        Returns a list of all edges that can be added to the graph such that it remains a DAG.
         """
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
@@ -40,6 +65,10 @@ class GES(StructureEstimator):
         return edges
 
     def _legal_edge_flips(self, current_model):
+        """
+        Returns a list of all the edges in the `current_model` that can be flipped such that the model
+        remains a DAG.
+        """
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
@@ -52,8 +81,39 @@ class GES(StructureEstimator):
         return potential_flips
 
     def estimate(self, scoring_method="bic", debug=False):
-        # Step 1: Initial checks and setup for arguments
-        # Step 1.1: Check scoring_method
+        """
+        Estimates the DAG from the data.
+
+        Parameters
+        ----------
+        scoring_method: str or StructureScore instance
+            The score to be optimized during structure estimation.  Supported
+            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
+            custom score, but it should be an instance of `StructureScore`.
+
+        Returns
+        -------
+        Estimated model: pgmpy.base.DAG
+            A `DAG` at a (local) score maximum.
+
+        Examples
+        --------
+        >>> # Simulate some sample data from a known model to learn the model structure from
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> df = model.simulate(int(1e3))
+
+        >>> # Learn the model structure using GES algorithm from `df`
+        >>> from pgmpy.estimators import GES
+        >>> est = GES(data)
+        >>> dag = est.estimate(scoring_method='bic')
+        >>> len(dag.nodes())
+        37
+        >>> len(dag.edges())
+        45
+        """
+
+        # Step 0: Initial checks and setup for arguments
         supported_methods = {
             "k2": K2Score,
             "bdeu": BDeuScore,
@@ -93,8 +153,10 @@ class GES(StructureEstimator):
         else:
             score_fn = score.local_score
 
+        # Step 1: Initialize an empty model.
         current_model = DAG()
         current_model.add_nodes_from(list(self.data.columns))
+
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
             potential_edges = self._legal_edge_additions(current_model)
@@ -159,4 +221,5 @@ class GES(StructureEstimator):
                     f"Fliping edge {edge_to_flip[1]} -> {edge_to_flip[0]}. Improves score by: {score_deltas.max()}"
                 )
 
+        # Step 5: Return the model.
         return current_model
