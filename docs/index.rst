@@ -75,21 +75,21 @@ Supported Data Types
    :header-rows: 1
 
    * -
-     - Casual Discovery / Structure Learning
+     - Casual Discovery
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference
-   * - **Discrete**
+   * - **Categorical**
      - Yes
      - Yes
      - Yes
      - Yes
    * - **Continuous**
-     - Yes (only PC)
+     - Yes
      - Yes
      - Yes (partial)
      - Yes
-   * - **Hybrid**
+   * - **Mixed**
      - Yes (only PC)
      - No
      - No
