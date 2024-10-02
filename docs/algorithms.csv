@@ -2,6 +2,7 @@ Causal Discovery / Structure Learning, Parameter Estimation, Probabilistic Infer
 PC with variants, Maximum Likelihood, Variable Elimination, do-operation
 Greedy Equivalence Search(GES), Bayesian Estimator, Belief Propagation, adjustment sets
 Hill-Climb Search, Expectation Maximization (EM), MPLP,
-Tree Search,, Sampling methods,
+Expert In The Loop,, Sampling methods,
+Tree Search,,,
 Max-Min Hill-Climb,,,
 Exhaustive Search,,,
