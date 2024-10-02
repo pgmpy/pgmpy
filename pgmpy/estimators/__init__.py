@@ -22,6 +22,7 @@ from pgmpy.estimators.PC import PC
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
 from pgmpy.estimators.expert import ExpertInLoop
+from pgmpy.estimators.GES import GES
 
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "ExpectationMaximization",
     "MarginalEstimator",
     "MirrorDescentEstimator",
+    "GES",
 ]
