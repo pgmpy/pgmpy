@@ -814,7 +814,7 @@ class DynamicBayesianNetwork(DAG):
         bn.add_cpds(*new_cpds)
         return bn
 
-    def fit(self, data, estimator="MLE"):
+    def fit(self, data, estimator="MLE", state_names={}, n_jobs=-1):
         """
         Learns the CPD of the model from data.
 
@@ -830,6 +830,16 @@ class DynamicBayesianNetwork(DAG):
 
         estimator: str
             Currently only Maximum Likelihood Estimator is supported.
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        n_jobs: int (default: -1)
+            Number of threads/processes to use for estimation. It improves speed only
+            for large networks (>100 nodes). For smaller networks might reduce
+            performance.
 
         Returns
         -------
@@ -895,14 +905,29 @@ class DynamicBayesianNetwork(DAG):
 
             # Fit or fit_update with df_slice depending on the time slice
             if t_slice == 0:
-                const_bn.fit(df_slice)
+                if state_names != {}:
+                    state_names = {
+                        **{
+                            str(var) + "_" + str(0): s for var, s in state_names.items()
+                        },
+                        **{
+                            str(var) + "_" + str(1): s for var, s in state_names.items()
+                        },
+                    }
+                const_bn.fit(df_slice, state_names=state_names, n_jobs=n_jobs)
             else:
-                const_bn.fit_update(df_slice, n_prev_samples=t_slice * n_samples)
+                const_bn.fit_update(
+                    df_slice, n_prev_samples=t_slice * n_samples, n_jobs=n_jobs
+                )
 
         cpds = []
         for cpd in const_bn.cpds:
             var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
             new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
+            state_names = {
+                var: cpd.state_names[str(var.node) + "_" + str(var.time_slice)]
+                for var in new_vars
+            }
             cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -910,6 +935,7 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=state_names,
                 )
             )
 
