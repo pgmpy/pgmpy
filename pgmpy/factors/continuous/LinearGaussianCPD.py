@@ -8,17 +8,19 @@ from pgmpy.factors.base import BaseFactor
 
 class LinearGaussianCPD(BaseFactor):
     r"""
-    For, X -> Y the Linear Gaussian model assumes that the mean
-    of Y is a linear function of mean of X and the variance of Y does
-    not depend on X.
+    In a Linear Gaussian Bayesian Network, the CPD of a variable is defined
+    using a Gaussian distribution with its mean as a function of its parents
+    and some fixed variance.
+
+    Taking an example of a variable Y with a single parent X, and
+    For X -> Y the Linear Gaussian model assumes that the mean of Y is a
+    linear function of mean of X and the variance of Y does not depend on X.
 
     For example,
 
     .. math::
 
-      p(Y|X) = N(-2x + 0.9 ; 1)
-
-    Here, :math:`x` is the mean of the variable :math:`X`.
+      p(Y|X) = N(0.9 - 0.2x ; 1)
 
     Let :math:`Y` be a continuous variable with continuous parents
     :math:`X1, X2, \cdots, Xk`. We say that :math:`Y` has a linear Gaussian CPD
@@ -37,7 +39,11 @@ class LinearGaussianCPD(BaseFactor):
     """
 
     def __init__(
-        self, variable, evidence_mean, evidence_variance, evidence=[], beta=None
+        self,
+        variable,
+        parent_coef,
+        evidence_variance,
+        evidence=[],
     ):
         """
         Parameters
@@ -46,18 +52,14 @@ class LinearGaussianCPD(BaseFactor):
         variable: any hashable python object
             The variable whose CPD is defined.
 
-        evidence_mean: Mean vector (numpy array) of the joint distribution, X
+        parent_coef: array-like
+            The coefi
 
         evidence_variance: int, float
             The variance of the multivariate gaussian, X = ['x1', 'x2', ..., 'xn']
 
         evidence: iterable of any hashable python objects
             An iterable of the parents of the variable. None if there are no parents.
-
-        beta (optional): iterable of int or float
-            An iterable representing the coefficient vector of the linear equation.
-            The first term represents the constant term in the linear equation.
-
 
         Examples
         --------
@@ -74,15 +76,15 @@ class LinearGaussianCPD(BaseFactor):
 
         """
         self.variable = variable
-        self.mean = np.array(evidence_mean)
+        self.parent_coef = np.array(parent_coef)
         self.variance = evidence_variance
         self.evidence = evidence
         self.sigma_yx = None
 
         self.variables = [variable] + evidence
-        super(LinearGaussianCPD, self).__init__(
-            self.variables, pdf="gaussian", mean=self.mean, covariance=self.variance
-        )
+        # super(LinearGaussianCPD, self).__init__(
+        #     self.variables, pdf="gaussian", mean=self.mean, covariance=self.variance
+        # )
 
     def sum_of_product(self, xi, xj):
         prod_xixj = xi * xj
@@ -186,8 +188,8 @@ class LinearGaussianCPD(BaseFactor):
             # and the rest of the elements give the mean values of the parent
             # variables.
             mean = (
-                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.mean)])
-                + self.mean[0]
+                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.parent_coef)])
+                + self.parent_coef[0]
             )
             return multivariate_normal.pdf(
                 args[0], np.array(mean), np.array([[self.variance]])
@@ -220,9 +222,9 @@ class LinearGaussianCPD(BaseFactor):
         return copy_cpd
 
     def __str__(self):
-        mean = self.mean.round(3)
+        mean = self.parent_coef.round(3)
         variance = round(self.variance, 3)
-        if self.evidence and list(self.mean):
+        if self.evidence and list(self.parent_coef):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
                 node=str(self.variable),
