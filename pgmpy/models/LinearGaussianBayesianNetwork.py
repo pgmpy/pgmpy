@@ -432,3 +432,34 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         raise NotImplementedError(
             "is_imap method has not been implemented for LinearGaussianBayesianNetwork."
         )
+    
+    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, n_states=None, latents=False):
+        """
+        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
+        with edge probabiliy of `edge_prob` between variables.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
+
+        n_states: int or dict (default: None)
+            The number of states of each variable in the form
+            {variable: no_of_states}. If a single value is provided,
+            all nodes will have the same number of states. When None
+            randomly generates the number of states.
+
+        latents: bool (default: False)
+            If True, also creates latent variables.
+
+        """
+        base_bn = BayesianNetwork.get_random(n_nodes, edge_prob, node_names, n_states, latents)
+        return LinearGaussianBayesianNetwork(base_bn)
