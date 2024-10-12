@@ -280,8 +280,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
             if isinstance(cpd, LinearGaussianCPD):
                 if set(cpd.evidence) != set(self.get_parents(node)):
                     raise ValueError(
-                        "CPD associated with %s doesn't have "
-                        "proper parents associated with it." % node
+                        f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
         return True
 

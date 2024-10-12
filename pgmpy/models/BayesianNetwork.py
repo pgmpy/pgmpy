@@ -120,8 +120,7 @@ class BayesianNetwork(DAG):
             raise ValueError("Self loops are not allowed.")
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
             raise ValueError(
-                "Loops are not allowed. Adding the edge from (%s->%s) forms a loop."
-                % (u, v)
+                f"Loops are not allowed. Adding the edge from ({u}->{v}) forms a loop."
             )
         else:
             super(BayesianNetwork, self).add_edge(u, v, **kwargs)
