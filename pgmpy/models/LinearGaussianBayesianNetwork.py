@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
@@ -432,3 +433,110 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         raise NotImplementedError(
             "is_imap method has not been implemented for LinearGaussianBayesianNetwork."
         )
+
+    @staticmethod
+    def get_random(
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names=None,
+        n_states=None,
+        latents=False,
+        loc=0,
+        scale=1,
+        seed=None,
+    ):
+        """
+        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
+        with edge probabiliy of `edge_prob` between variables.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
+
+        n_states: int or dict (default: None)
+            The number of states of each variable in the form
+            {variable: no_of_states}. If a single value is provided,
+            all nodes will have the same number of states. When None
+            randomly generates the number of states.
+
+        latents: bool (default: False)
+            If True, also creates latent variables.
+
+        loc: float
+            The mean of the normal distribution from which the coefficients are
+            sampled.
+
+        scale: float
+            The standard deviation of the normal distribution from which the
+            coefficients are sampled.
+
+        seed: int
+            The seed for the random number generator.
+
+        Returns
+        -------
+        Random DAG: pgmpy.base.DAG
+            The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork.get_random(n_nodes=5)
+        >>> model.nodes()
+        NodeView((0, 1, 2, 3, 4))
+        >>> model.edges()
+        OutEdgeView([(0, 1), (0, 2), (0, 3), (0, 4), (2, 4), (3, 4)])
+        >>> model.cpds
+        [<LinearGaussianCPD: P(0) = N(1.049; 0.882) at 0x2672d329130,
+        <LinearGaussianCPD: P(1 | 0) = N(-0.705*0 + 1.46; 0.187) at 0x26730daf9b0,
+        <LinearGaussianCPD: P(2 | 0) = N(-1.881*0 + 0.288; 1.53) at 0x267308a0800,
+        <LinearGaussianCPD: P(3 | 0) = N(1.429*0 + 0.861; 0.351) at 0x26731307620,
+        <LinearGaussianCPD: P(4 | 0, 2, 3) = N(1.103*0 + 1.812*2 + 1.397*3 + 0.877; 1.06) at 0x26730f55f10]
+        """
+        if node_names is None:
+            node_names = list(range(n_nodes))
+
+        if n_states is None:
+            n_states = np.random.randint(low=1, high=5, size=n_nodes)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
+
+        elif isinstance(n_states, int):
+            n_states = np.array([n_states] * n_nodes)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
+
+        elif isinstance(n_states, dict):
+            n_states_dict = n_states
+
+        dag = DAG.get_random(
+            n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
+        )
+        lgbn_model = LinearGaussianBayesianNetwork(dag.edges(), latents=dag.latents)
+        lgbn_model.add_nodes_from(dag.nodes())
+
+        rng = np.random.default_rng(seed=seed)
+
+        cpds = []
+        for var in lgbn_model.nodes():
+            parents = lgbn_model.get_parents(var)
+            cpds.append(
+                LinearGaussianCPD(
+                    var,
+                    evidence_mean=rng.normal(
+                        loc=loc, scale=scale, size=(len(parents) + 1)
+                    ),
+                    evidence_variance=abs(rng.normal(loc=loc, scale=scale)),
+                    evidence=parents,
+                )
+            )
+
+        lgbn_model.add_cpds(*cpds)
+        return lgbn_model
