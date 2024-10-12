@@ -199,8 +199,11 @@ class TestLGBNMethods(unittest.TestCase):
         del self.model, self.cpd1, self.cpd2, self.cpd3
 
     def test_get_random(self):
-        model = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, latents=False)
-        self.assertIsInstance(self.model, LinearGaussianBayesianNetwork, 
-                              "The model is not an instance of LinearGaussianBayesianNetwork.")
-
-
+        model = LinearGaussianBayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.5, latents=False
+        )
+        self.assertIsInstance(
+            self.model,
+            LinearGaussianBayesianNetwork,
+            "The model is not an instance of LinearGaussianBayesianNetwork.",
+        )

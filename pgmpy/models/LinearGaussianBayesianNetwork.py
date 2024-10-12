@@ -432,8 +432,10 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         raise NotImplementedError(
             "is_imap method has not been implemented for LinearGaussianBayesianNetwork."
         )
-    
-    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, n_states=None, latents=False):
+
+    def get_random(
+        n_nodes=5, edge_prob=0.5, node_names=None, n_states=None, latents=False
+    ):
         """
         Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
@@ -461,5 +463,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
             If True, also creates latent variables.
 
         """
-        base_bn = BayesianNetwork.get_random(n_nodes, edge_prob, node_names, n_states, latents)
+        base_bn = BayesianNetwork.get_random(
+            n_nodes, edge_prob, node_names, n_states, latents
+        )
         return LinearGaussianBayesianNetwork(base_bn)
