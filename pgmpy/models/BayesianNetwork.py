@@ -279,11 +279,10 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        - If 'node' is specified: 
-            Returns the TabularCPD object corresponding to the specified node.
-            Raises ValueError if the node is not present in the model.
-        - If 'node' is not specified: 
-            Returns a list of all TabularCPD objects that have been added to the model.
+        cpd : TabularCPD object or list of TabularCPD objects
+            If 'node' is specified, returns the `TabularCPD` object corresponding to the node.
+            If 'node' is not specified, returns a list of all `TabularCPD` objects added to the model.
+            
         Raises
         ------
         ValueError
