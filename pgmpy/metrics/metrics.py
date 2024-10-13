@@ -427,6 +427,9 @@ def SHD(true_model, est_model):
     >>> SHD(dag1, dag2)
     2
     """
+    if set(dag_true.nodes()) != set(dag_est.nodes()):
+        raise ValueError("The graphs must have the same number of nodes.")
+
     dag_true = nx.DiGraph(true_model.edges())
     dag_true.add_nodes_from(true_model.nodes())
     adj_mat_true = nx.adjacency_matrix(dag_true).todense()
@@ -434,9 +437,6 @@ def SHD(true_model, est_model):
     dag_est = nx.DiGraph(est_model.edges())
     dag_est.add_nodes_from(est_model.nodes())
     adj_mat_est = nx.adjacency_matrix(dag_est).todense()
-
-    if set(dag_true.nodes()) != set(dag_est.nodes()):
-        raise ValueError("The graphs must have the same number of nodes.")
 
     shd = np.sum(adj_mat_true != adj_mat_est)
     return shd
