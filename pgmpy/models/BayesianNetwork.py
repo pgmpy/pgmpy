@@ -280,15 +280,15 @@ class BayesianNetwork(DAG):
         Returns
         -------
         cpd : TabularCPD object or list of TabularCPD objects
-            If 'node' is specified, returns the `TabularCPD` object corresponding to the node.
-            If 'node' is not specified, returns a list of all `TabularCPD` objects added to the model.
-            
+            If 'node' is specified, returns the 'TabularCPD' object corresponding to the node.
+            If 'node' is not specified, returns a list of all 'TabularCPD' objects added to the model.
+
         Raises
         ------
         ValueError
             If the specified node is not present in the model.
-            
-            
+
+
         Examples
         --------
         >>> from pgmpy.models import BayesianNetwork
@@ -299,10 +299,10 @@ class BayesianNetwork(DAG):
         ...                  ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd)
         >>> student.get_cpds()
-        
+
         # Retrieve all CPDs
         >>> student.get_cpds()
-    
+
         # Retrieve CPD for a specific node
         >>> student.get_cpds('grade')
         TabularCPD representing P(grade | intel, diff)
