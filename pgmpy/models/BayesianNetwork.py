@@ -292,20 +292,22 @@ class BayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
-        ...                               [0.9, 0.1, 0.8, 0.3]],
-        ...                  ['intel', 'diff'], [2, 2])
-        >>> student.add_cpds(cpd)
-        >>> student.get_cpds()
+        >>> import pprint
+        >>> random_model = BayesianNetwork.get_random(n_nodes=8, edge_prob=0.4, n_states=2, latents=True)
+        >>> cpds = random_model.get_cpds()  # Returns a list of all CPDs in the model
+        CPDs in the model:
+        [<TabularCPD representing P(0:2) at 0x7eaf3409f280>,
+        <TabularCPD representing P(2:2 | 0:2, 1:2) at 0x7eae53e22fb0>,
+        <TabularCPD representing P(3:2 | 0:2) at 0x7eae53e23b20>,
+        <TabularCPD representing P(4:2 | 2:2, 3:2) at 0x7eae53e22e60>,
+        <TabularCPD representing P(5:2 | 2:2, 1:2) at 0x7eae53e23c40>,
+        <TabularCPD representing P(6:2 | 2:2, 4:2) at 0x7eae53e22530>,
+        <TabularCPD representing P(1:2) at 0x7eae53e23fd0>,
+        <TabularCPD representing P(7:2 | 1:2, 4:2) at 0x7eae53e23520>]
 
-        # Retrieve all CPDs
-        >>> student.get_cpds()
-
-        # Retrieve CPD for a specific node
-        >>> student.get_cpds('grade')
-        TabularCPD representing P(grade | intel, diff)
+        >>>  cpd = random_model.get_cpds(2)  # Returns the CPD of node '
+        CPDs in the model:
+        <TabularCPD representing P(2:2 | 0:2, 1:2) at 0x7eae53e22fb0>
         """
         if node is not None:
             if node not in self.nodes():
@@ -623,7 +625,7 @@ class BayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> model = get_example_model('alarm')
+        >>> model = ('alarm')
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
