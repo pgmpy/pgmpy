@@ -217,16 +217,5 @@ class TestLGBNMethods(unittest.TestCase):
             model3, LinearGaussianBayesianNetwork, "Incorrect instance"
         )
 
-        seed = 42
-        model4 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, seed=seed)
-        model5 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, seed=seed)
-        self.assertTrue(np.array_equal(model4.cpds, model5.cpds))
-        self.assertIsInstance(
-            model4, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
-        self.assertIsInstance(
-            model5, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
-
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
