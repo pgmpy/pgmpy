@@ -1,9 +1,9 @@
 import math
 from itertools import combinations
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 from scipy import stats
 from sklearn.metrics import f1_score
 from tqdm import tqdm
@@ -423,18 +423,16 @@ def SHD(true_model, est_model):
     >>> print(SHD(dag1, dag2))
     >>> 2
     """
-    dag_true = nx.DiGraph(true_model.edges())  
-    dag_true.add_nodes_from(true_model.nodes())  
-    adj_mat_true = nx.adjacency_matrix(dag_true).todense()  
-    
-    dag_est = nx.DiGraph(est_model.edges())  
-    dag_est.add_nodes_from(est_model.nodes()) 
-    adj_mat_est = nx.adjacency_matrix(dag_est).todense()  
+    dag_true = nx.DiGraph(true_model.edges())
+    dag_true.add_nodes_from(true_model.nodes())
+    adj_mat_true = nx.adjacency_matrix(dag_true).todense()
+
+    dag_est = nx.DiGraph(est_model.edges())
+    dag_est.add_nodes_from(est_model.nodes())
+    adj_mat_est = nx.adjacency_matrix(dag_est).todense()
 
     if adj_mat_true.shape != adj_mat_est.shape:
         raise ValueError("The graphs must have the same number of nodes.")
 
     shd = np.sum(adj_mat_true != adj_mat_est)
     return shd
-
-
