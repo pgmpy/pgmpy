@@ -5,6 +5,7 @@ from .metrics import (
     implied_cis,
     log_likelihood_score,
     structure_score,
+    SHD,
 )
 
 __all__ = [

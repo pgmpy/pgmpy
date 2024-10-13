@@ -3,6 +3,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+import networkx as nx
 from scipy import stats
 from sklearn.metrics import f1_score
 from tqdm import tqdm
@@ -394,3 +395,46 @@ def fisher_c(model, data, ci_test, show_progress=True):
     C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
     return p_value
+
+
+def SHD(true_model, est_model):
+    """
+    Computes the Structural Hamming Distance between `true_model` and `est_model`.
+    SID is defined as total number of basic operations: adding edges, removing
+    edges, and reversing edges required to transform one graph to the other. It
+    is a symmetrical measure.
+    Parameters
+    ----------
+    true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The first model to compare.
+    est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The first model to compare.
+    Returns
+    -------
+    int or tuple: If both true_model and est_model are DAGs or Bayesian Networks returns
+        an integer. If either or both of them are CPDAG returns a tuple of best and worst
+        SHD values from all possible orientations.
+    Examples
+    --------
+    >>> from pgmpy.metrics import SHD
+    >>> from pgmpy.models.BayesianNetwork import BayesianNetwork
+    >>> dag1 = BayesianNetwork([(1, 2), (2, 3)])
+    >>> dag2 = BayesianNetwork([(2, 1), (2, 3)])
+    >>> print(SHD(dag1, dag2))
+    >>> 2
+    """
+    dag_true = nx.DiGraph(true_model.edges())  
+    dag_true.add_nodes_from(true_model.nodes())  
+    adj_mat_true = nx.adjacency_matrix(dag_true).todense()  
+    
+    dag_est = nx.DiGraph(est_model.edges())  
+    dag_est.add_nodes_from(est_model.nodes()) 
+    adj_mat_est = nx.adjacency_matrix(dag_est).todense()  
+
+    if adj_mat_true.shape != adj_mat_est.shape:
+        raise ValueError("The graphs must have the same number of nodes.")
+
+    shd = np.sum(adj_mat_true != adj_mat_est)
+    return shd
+
+
