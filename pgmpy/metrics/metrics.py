@@ -427,7 +427,7 @@ def SHD(true_model, est_model):
     >>> SHD(dag1, dag2)
     2
     """
-    if set(dag_true.nodes()) != set(dag_est.nodes()):
+    if set(true_model.nodes()) != set(est_model.nodes()):
         raise ValueError("The graphs must have the same number of nodes.")
 
     dag_true = nx.DiGraph(true_model.edges())
