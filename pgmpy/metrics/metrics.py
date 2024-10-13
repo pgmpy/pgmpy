@@ -394,3 +394,33 @@ def fisher_c(model, data, ci_test, show_progress=True):
     C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
     return p_value
+
+
+def SHD(true_model, est_model):
+    """
+    Computes the Structural Hamming Distance between `true_model` and `est_model`.
+
+    SID is defined as total number of basic operations: adding edges, removing
+    edges, and reversing edges required to transform one graph to the other. It
+    is a symmetrical measure.
+
+    Parameters
+    ----------
+    true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The first model to compare.
+
+    est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The first model to compare.
+
+    Returns
+    -------
+    int or tuple: If both true_model and est_model are DAGs or Bayesian Networks returns
+        an integer. If either or both of them are CPDAG returns a tuple of best and worst
+        SHD values from all possible orientations.
+
+    Examples
+    --------
+    >>> from pgmpy.metrics import SHD
+    >>>
+    >>> tru
+    """
