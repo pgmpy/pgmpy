@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
@@ -432,3 +433,79 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         raise NotImplementedError(
             "is_imap method has not been implemented for LinearGaussianBayesianNetwork."
         )
+
+    @staticmethod
+    def get_random(
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names=None,
+        latents=False,
+        loc=0,
+        scale=1,
+        seed=None,
+    ):
+        """
+        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
+        with edge probabiliy of `edge_prob` between variables.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
+
+        latents: bool (default: False)
+            If True, also creates latent variables.
+
+        loc: float
+            The mean of the normal distribution from which the coefficients are
+            sampled.
+
+        scale: float
+            The standard deviation of the normal distribution from which the
+            coefficients are sampled.
+
+        seed: int
+            The seed for the random number generator.
+
+        Returns
+        -------
+        Random DAG: pgmpy.base.DAG
+            The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork.get_random(n_nodes=5)
+        >>> model.nodes()
+        NodeView((0, 3, 1, 2, 4))
+        >>> model.edges()
+        OutEdgeView([(0, 3), (3, 4), (1, 3), (2, 4)])
+        >>> model.cpds
+        [<LinearGaussianCPD: P(0) = N(1.764; 1.613) at 0x2732f41aae0,
+        <LinearGaussianCPD: P(3 | 0, 1) = N(-0.721*0 + -0.079*1 + 0.943; 0.12) at 0x2732f16db20,
+        <LinearGaussianCPD: P(1) = N(-0.534; 0.208) at 0x2732f320b30,
+        <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
+        <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
+        """
+
+        if node_names is None:
+            node_names = list(range(n_nodes))
+
+        dag = DAG.get_random(
+            n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
+        )
+        lgbn_model = LinearGaussianBayesianNetwork(dag.edges(), latents=dag.latents)
+        lgbn_model.add_nodes_from(dag.nodes())
+
+        cpds = lgbn_model.get_random_cpds(loc=loc, scale=scale, seed=seed)
+
+        lgbn_model.add_cpds(*cpds)
+        return lgbn_model
