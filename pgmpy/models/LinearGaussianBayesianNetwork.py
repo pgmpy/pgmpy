@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-from pgmpy.models import DAG
+from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
@@ -505,7 +505,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         lgbn_model = LinearGaussianBayesianNetwork(dag.edges(), latents=dag.latents)
         lgbn_model.add_nodes_from(dag.nodes())
 
-        cpds = lgbn_model.get_random_cpds(loc, scale, seed)
+        cpds = lgbn_model.get_random_cpds(loc=loc, scale=scale, seed=seed)
 
         lgbn_model.add_cpds(*cpds)
         return lgbn_model
