@@ -197,8 +197,20 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_get_random(self):
         model = LinearGaussianBayesianNetwork()
-        random_model = model.get_random(n_nodes=5, edge_prob=0.5, latents=False, node_names=None, loc=2, scale=2, seed=None)
-        self.assertIsInstance(random_model, LinearGaussianBayesianNetwork, "This is not the expected instance")
+        random_model = model.get_random(
+            n_nodes=5,
+            edge_prob=0.5,
+            latents=False,
+            node_names=None,
+            loc=2,
+            scale=2,
+            seed=None,
+        )
+        self.assertIsInstance(
+            random_model,
+            LinearGaussianBayesianNetwork,
+            "This is not the expected instance",
+        )
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
