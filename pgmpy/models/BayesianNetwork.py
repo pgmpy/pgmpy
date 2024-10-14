@@ -292,7 +292,7 @@ class BayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model('asia')
-        >>> cpds=model.get_cpds()
+        >>> cpds = model.get_cpds()
         >>> cpds
         [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
         <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>,
@@ -302,8 +302,8 @@ class BayesianNetwork(DAG):
         <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
         <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
         <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
-        >>>  cpds = model.get_cpds('bronc')     # Returns the CPD of node
-        >>>  cpds
+        >>> cpd = model.get_cpds('bronc')     # Returns the CPD of node
+        >>> cpd
         <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
         """
         if node is not None:
