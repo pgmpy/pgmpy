@@ -63,7 +63,7 @@ def get_example_model(model):
     Example
     -------
     >>> from pgmpy.data import get_example_model
-    >>> model = (model='asia')
+    >>> model = get_example_model(model='asia')
     >>> model
 
     Returns
