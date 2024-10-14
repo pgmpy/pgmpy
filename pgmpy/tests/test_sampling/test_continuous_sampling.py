@@ -4,13 +4,11 @@ import unittest
 import numpy as np
 
 from pgmpy.factors.distributions import GaussianDistribution as JGD
-from pgmpy.sampling import (
-    HamiltonianMC as HMC,
-    HamiltonianMCDA as HMCda,
-    GradLogPDFGaussian,
-    NoUTurnSampler as NUTS,
-    NoUTurnSamplerDA as NUTSda,
-)
+from pgmpy.sampling import GradLogPDFGaussian
+from pgmpy.sampling import HamiltonianMC as HMC
+from pgmpy.sampling import HamiltonianMCDA as HMCda
+from pgmpy.sampling import NoUTurnSampler as NUTS
+from pgmpy.sampling import NoUTurnSamplerDA as NUTSda
 
 
 class TestHMCInference(unittest.TestCase):

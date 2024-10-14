@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from itertools import combinations, chain
+from itertools import chain, combinations
 
 
 def _variable_or_iterable_to_set(x):

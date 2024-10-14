@@ -4,7 +4,7 @@ import numpy as np
 import scipy.integrate as integrate
 
 from pgmpy.factors.base import BaseFactor
-from pgmpy.factors.distributions import GaussianDistribution, CustomDistribution
+from pgmpy.factors.distributions import CustomDistribution, GaussianDistribution
 
 
 class ContinuousFactor(BaseFactor):

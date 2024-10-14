@@ -1,7 +1,7 @@
 Contributing to pgmpy
 =====================
 
-Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation) :D . 
+Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation) :D .
 In this document we'll try to summarize everything that you need to know to do a good job.
 
 
@@ -92,7 +92,7 @@ Discussion
 
 Please feel free to contact us through mail list if
 you have any questions or suggestions.
-Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy). 
+Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy).
 Every contribution is very welcome!
 
 *Mailing list* : pgmpy@googlegroups.com

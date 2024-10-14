@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import unittest
-import numpy as np
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovNetwork
-from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.inference import Inference
 from collections import defaultdict
+
+import numpy as np
+
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+from pgmpy.inference import Inference
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 
 
 class TestInferenceBase(unittest.TestCase):

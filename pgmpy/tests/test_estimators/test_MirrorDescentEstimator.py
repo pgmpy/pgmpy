@@ -1,7 +1,8 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import pandas as pd
+
 from pgmpy import config
 from pgmpy.estimators import MirrorDescentEstimator
 from pgmpy.factors import FactorDict

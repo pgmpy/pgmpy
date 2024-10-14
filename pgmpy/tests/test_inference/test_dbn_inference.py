@@ -1,11 +1,12 @@
 import unittest
+
 import numpy as np
 import numpy.testing as np_test
 from scipy.special import softmax
 
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import DBNInference
 from pgmpy.models import DynamicBayesianNetwork
-from pgmpy.factors.discrete import TabularCPD
 
 # The sample Dynamic Bayesian Network is taken from the following paper:-
 # Novel recursive inference algorithm for discrete dynamic Bayesian networks
