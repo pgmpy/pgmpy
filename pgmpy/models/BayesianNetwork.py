@@ -305,9 +305,6 @@ class BayesianNetwork(DAG):
         >>>  cpds = model.get_cpds('bronc')     # Returns the CPD of node
         >>>  cpds
         <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
-        >>> cpds = model.get_cpds('tbu')
-        >>> cpds
-        ValueError: Node 'tub' not present in the model
         """
         if node is not None:
             if node not in self.nodes():
