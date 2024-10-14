@@ -291,31 +291,33 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> import pprint
-        >>> random_model = BayesianNetwork.get_random(n_nodes=8, edge_prob=0.4, n_states=2, latents=True)
-        >>> cpds = random_model.get_cpds()  # Returns a list of all CPDs in the model
-        CPDs in the model:
-        [<TabularCPD representing P(0:2) at 0x7eaf3409f280>,
-        <TabularCPD representing P(2:2 | 0:2, 1:2) at 0x7eae53e22fb0>,
-        <TabularCPD representing P(3:2 | 0:2) at 0x7eae53e23b20>,
-        <TabularCPD representing P(4:2 | 2:2, 3:2) at 0x7eae53e22e60>,
-        <TabularCPD representing P(5:2 | 2:2, 1:2) at 0x7eae53e23c40>,
-        <TabularCPD representing P(6:2 | 2:2, 4:2) at 0x7eae53e22530>,
-        <TabularCPD representing P(1:2) at 0x7eae53e23fd0>,
-        <TabularCPD representing P(7:2 | 1:2, 4:2) at 0x7eae53e23520>]
-
-        >>>  cpd = random_model.get_cpds(2)  # Returns the CPD of node '
-        CPDs in the model:
-        <TabularCPD representing P(2:2 | 0:2, 1:2) at 0x7eae53e22fb0>
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> cpds=model.get_cpds()
+        >>> cpds
+        [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>,
+        <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x7dbbd9bd8550>,
+        <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x7dbbd9bda800>,
+        <TabularCPD representing P(lung:2 | smoke:2) at 0x7dbbd9bd89d0>,
+        <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
+        <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
+        <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
+        >>>  cpds = model.get_cpds('bronc')     # Returns the CPD of node '
+        >>>  cpds
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
+        >>> cpds = model.get_cpds('tbu')
+        >>> cpds
+        ValueError: Node 'tub' not present in the model
         """
         if node is not None:
             if node not in self.nodes():
-                raise ValueError("Node not present in the Directed Graph")
+                raise ValueError(f"Node '{node}' not present in the model.")
             else:
                 for cpd in self.cpds:
                     if cpd.variable == node:
                         return cpd
+                raise ValueError(f"Node '{node}' does not have an associated CPD.")
         else:
             return self.cpds
 
@@ -625,7 +627,7 @@ class BayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> model = ('alarm')
+        >>> model = get_example_model('alarm')
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
