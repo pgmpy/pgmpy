@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score, f1_score
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import *
+from pgmpy.metrics import SHD
 from pgmpy.models import BayesianNetwork
 from pgmpy.utils import get_example_model
 
@@ -174,3 +175,26 @@ class TestImpliedCI(unittest.TestCase):
 
         p_value = fisher_c(self.model_alarm_random, self.df_alarm, chi_square)
         self.assertEqual(p_value, 0)
+
+
+class TestStructuralHammingDistance(unittest.TestCase):
+    def setUp(self):
+        self.dag_1 = BayesianNetwork([(1, 2), (2, 3), (2, 4)])
+        self.dag_2 = BayesianNetwork([(1, 2), (1, 3), (2, 4)])
+
+        self.dag_3 = BayesianNetwork([(1, 2), (1, 3), (2, 5)])
+
+        self.large_dag_1 = BayesianNetwork([(1, 2), (2, 3), (3, 4), (4, 5)])
+        self.large_dag_2 = BayesianNetwork([(2, 1), (3, 2), (4, 3), (5, 4)])
+
+    def test_shd(self):
+        self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 8)
+
+    def test_shd(self):
+        self.assertEqual(SHD(self.dag_1, self.dag_2), 2)
+
+    def test_shd_unequal_graphs(self):
+        with self.assertRaises(
+            ValueError, msg="The graphs must have the same number of nodes."
+        ):
+            SHD(self.dag_1, self.dag_3)
