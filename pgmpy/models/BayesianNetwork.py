@@ -316,7 +316,7 @@ class BayesianNetwork(DAG):
                 for cpd in self.cpds:
                     if cpd.variable == node:
                         return cpd
-                raise ValueError(f"Node '{node}' does not have an associated CPD.")
+                raise ValueError("Node does not have an associated CPD.")
         else:
             return self.cpds
 
