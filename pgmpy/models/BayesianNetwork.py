@@ -279,18 +279,32 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        A list of TabularCPDs: list
+        cpd : TabularCPD object or list of TabularCPD objects
+            If 'node' is specified, returns the 'TabularCPD' object corresponding to the node.
+            If 'node' is not specified, returns a list of all 'TabularCPD' objects added to the model.
+
+        Raises
+        ------
+        ValueError
+            If the specified node is not present in the model.
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
-        ...                               [0.9, 0.1, 0.8, 0.3]],
-        ...                  ['intel', 'diff'], [2, 2])
-        >>> student.add_cpds(cpd)
-        >>> student.get_cpds()
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> cpds = model.get_cpds()
+        >>> cpds
+        [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>,
+        <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x7dbbd9bd8550>,
+        <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x7dbbd9bda800>,
+        <TabularCPD representing P(lung:2 | smoke:2) at 0x7dbbd9bd89d0>,
+        <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
+        <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
+        <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
+        >>> cpd = model.get_cpds('bronc')
+        >>> cpd
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
         """
         if node is not None:
             if node not in self.nodes():

@@ -3,22 +3,21 @@ message: "If you use this software, please cite it as below."
 authors:
 - family-names: "Ankan"
   given-names: "Ankur"
-- family-names: "Panda"
-  given-names: "Abinash"
-title: "pgmpy: Probabilistic Graphical Models using Python"
-version: 0.1.25
+- family-names: "Textor"
+  given-names: "Johannes"
+title: "pgmpy: A Python Toolkit for Bayesian Networks"
+version: 0.1.26
 url: "https://github.com/pgmpy/pgmpy"
 preferred-citation:
-  type: conference-paper
+  type: article
   authors:
   - family-names: "Ankan"
     given-names: "Ankur"
-  - family-names: "Panda"
-    given-names: "Abinash"
-  doi: "10.25080/majora-7b98e3ed-001"
-  journal: "Proceedings of the 14th Python in Science Conference"
-  start: 6
-  end: 11
-  title: "pgmpy: Probabilistic Graphical Models using Python"
-  issue: 14
-  year: 2015
+  - family-names: "Textor"
+    given-names: "Johannes"
+  journal: "Journal Of Machine Learning Research"
+  start: 1
+  end: 8
+  title: "pgmpy: A Python Toolkit for Bayesian Networks"
+  issue: 25
+  year: 2024
