@@ -19,8 +19,8 @@ class ExhaustiveSearch(StructureEstimator):
     ----------
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.nan`.
-        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
     scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
         An instance of `K2Score`, `BDeuScore`, `BicScore` or 'AICScore'.
