@@ -401,16 +401,20 @@ def SHD(true_model, est_model):
     """
     Computes the Structural Hamming Distance between `true_model` and `est_model`.
 
-    SID is defined as total number of basic operations: adding edges, removing
+    SHD is defined as total number of basic operations: adding edges, removing
     edges, and reversing edges required to transform one graph to the other. It
     is a symmetrical measure.
+
+    The code first accounts for edges that need to be deleted (from true_model),
+    added (to true_model) and finally edges that need to be reversed. All operations
+    count as 1.
 
     Parameters
     ----------
     true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
         The first model to compare.
     est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
-        The first model to compare.
+        The second model to compare.
 
     Returns
     -------
@@ -425,18 +429,40 @@ def SHD(true_model, est_model):
     >>> dag1 = BayesianNetwork([(1, 2), (2, 3)])
     >>> dag2 = BayesianNetwork([(2, 1), (2, 3)])
     >>> SHD(dag1, dag2)
-    2
+    1
     """
     if set(true_model.nodes()) != set(est_model.nodes()):
         raise ValueError("The graphs must have the same number of nodes.")
 
+    nodes_list = true_model.nodes()
+
     dag_true = nx.DiGraph(true_model.edges())
-    dag_true.add_nodes_from(true_model.nodes())
-    adj_mat_true = nx.adjacency_matrix(dag_true).todense()
+    adj_mat_true = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
 
     dag_est = nx.DiGraph(est_model.edges())
-    dag_est.add_nodes_from(est_model.nodes())
-    adj_mat_est = nx.adjacency_matrix(dag_est).todense()
+    adj_mat_est = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
 
-    shd = np.sum(adj_mat_true != adj_mat_est)
-    return shd
+    shd = 0
+
+    m1 = np.array(adj_mat_true)
+    m2 = np.array(adj_mat_est)
+
+    s1 = m1 + m1.T
+    s2 = m2 + m2.T
+
+    s1[s1 == 2] = 1
+    s2[s2 == 2] = 1
+
+    ds = s1 - s2
+    ind = np.where(ds > 0)
+    m1[ind] = 0
+    shd = shd + (len(ind[0]) / 2)
+
+    ind = np.where(ds < 0)
+    m1[ind] = m2[ind]
+    shd = shd + (len(ind[0]) / 2)
+
+    d = np.abs(m1 - m2)
+    shd = shd + (np.sum((d + d.T) > 0) / 2)
+
+    return int(shd)
