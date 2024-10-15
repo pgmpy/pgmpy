@@ -437,15 +437,12 @@ def SHD(true_model, est_model):
     nodes_list = true_model.nodes()
 
     dag_true = nx.DiGraph(true_model.edges())
-    adj_mat_true = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
+    m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
 
     dag_est = nx.DiGraph(est_model.edges())
-    adj_mat_est = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
+    m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
 
     shd = 0
-
-    m1 = adj_mat_true
-    m2 = adj_mat_est
 
     s1 = m1 + m1.T
     s2 = m2 + m2.T
