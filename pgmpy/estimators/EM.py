@@ -58,6 +58,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         if isinstance(model, DAG):
             model = BayesianNetwork(model.edges())
+            model.add_nodes_from(model.nodes())
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()

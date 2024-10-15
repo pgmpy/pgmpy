@@ -4,9 +4,12 @@ import unittest
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
+from pgmpy.estimators import BayesianEstimator
+from pgmpy.factors.discrete import TabularCPD
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -293,10 +296,6 @@ class TestDAGCreation(unittest.TestCase):
         dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
 
     def test_dag_fit(self):
-        import pandas as pd
-        from pgmpy.estimators import BayesianEstimator
-        from pgmpy.factors.discrete import TabularCPD
-
         self.model = DAG([("A", "C"), ("B", "C")])
         self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.fitted_model = self.model.fit(

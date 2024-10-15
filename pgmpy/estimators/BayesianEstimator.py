@@ -24,17 +24,15 @@ class BayesianEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for DAG or BayesianNetwork"
             )
-        if isinstance(model, DAG):
+
+        if isinstance(model, (DAG, BayesianNetwork)):
             if len(model.latents) != 0:
                 raise ValueError(
                     f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
                 )
-            model = BayesianNetwork(model.edges())
 
-        elif len(model.latents) != 0:
-            raise ValueError(
-                f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
-            )
+            if isinstance(model, DAG):
+                model = BayesianNetwork(model.edges())
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
