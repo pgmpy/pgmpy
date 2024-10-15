@@ -292,6 +292,28 @@ class TestDAGCreation(unittest.TestCase):
 
         dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
 
+    def test_dag_fit(self):
+        import pandas as pd
+        from pgmpy.estimators import BayesianEstimator
+        from pgmpy.factors.discrete import TabularCPD
+
+        self.model = DAG([("A", "C"), ("B", "C")])
+        self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        self.fitted_model = self.model.fit(
+            self.data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts={
+                "A": [[9], [3]],
+                "B": [[9], [3]],
+                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+            },
+        )
+        self.assertEqual(
+            self.fitted_model.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+
     def tearDown(self):
         del self.graph
 

@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.base import DAG
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -50,9 +51,21 @@ class ExpectationMaximization(ParameterEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, (DAG, BayesianNetwork)):
             raise NotImplementedError(
-                "Expectation Maximization is only implemented for BayesianNetwork"
+                "Expectation Maximization is only implemented for DAG or BayesianNetwork"
+            )
+
+        if isinstance(model, DAG):
+            if len(model.latents) != 0:
+                raise ValueError(
+                    f"Expectation Maximization works only on models with all observed variables. Found latent variables: {model.latents}"
+                )
+            model = BayesianNetwork(model.edges())
+
+        if len(model.latents) != 0:
+            raise ValueError(
+                f"Expectation Maximization works only on models with all observed variables. Found latent variables: {model.latents}"
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)

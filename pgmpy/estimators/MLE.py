@@ -9,6 +9,7 @@ from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork, JunctionTree
+from pgmpy.base import DAG
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
@@ -42,22 +43,26 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, BayesianNetwork) and not isinstance(
-            model, JunctionTree
-        ):
+        if not isinstance(model, (BayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(
-                "Maximum Likelihood Estimate is only implemented for BayesianNetwork and JunctionTree"
+                "Maximum Likelihood Estimate is only implemented for BayesianNetwork, JunctionTree, and DAG"
             )
 
-        elif set(model.nodes()) > set(data.columns):
+        if isinstance(model, BayesianNetwork) and len(model.latents) > 0:
+            raise ValueError(
+                f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
+            )
+
+        if set(model.nodes()) - set(data.columns):
             if isinstance(model, BayesianNetwork):
                 raise ValueError(
-                    f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
+                    "Nodes detected in the model that are not present in the dataset. "
+                    "Refine the model so that all parameters can be estimated from the data."
                 )
             else:
                 raise ValueError(
-                    "Nodes detected in the model that are not present in the dataset. "
-                    + "Refine the model so that all parameters can be estimated from the data."
+                    "Nodes detected in the DAG or JunctionTree that are not present in the dataset. "
+                    "Refine the model to ensure all parameters can be estimated."
                 )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
