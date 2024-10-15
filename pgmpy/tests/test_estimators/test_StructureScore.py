@@ -235,3 +235,11 @@ class TestAICScoreGauss(unittest.TestCase):
 
         self.assertAlmostEqual(self.score_fn.score(self.m1), -463.1059, places=3)
         self.assertAlmostEqual(self.score_fn.score(self.m2), -577.4505, places=3)
+
+
+class TestCondGauss(unittest.TestCase):
+    def setUp(self):
+        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv")
+        self.score_fn = CondGauss(data)
+
+        self.m1 = BayesianNetwork([("A", "C"), ("A_cat", "C"), ("A", "B_int")])

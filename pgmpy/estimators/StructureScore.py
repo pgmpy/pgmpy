@@ -4,6 +4,7 @@ from math import lgamma, log
 import numpy as np
 import statsmodels.formula.api as smf
 from scipy.special import gammaln
+from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
 
@@ -479,3 +480,86 @@ class AICScoreGauss(StructureScore):
             ).fit()
         # Adding +2 to model df to compute the likelihood df.
         return glm_model.llf - (glm_model.df_model + 2)
+
+
+class CondGauss(StructureScore):
+    def __init__(self, data, **kwargs):
+        super(CondGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        df = self.data.loc[:, [variable] + parents]
+
+        # If variable is continuous, the probability is computed as:
+        # P(C1 | C2, D) = p(C1, C2 | D) / p(C2 | D)
+        if self.dtypes[variable] == "N":
+            C1 = variable
+            C2 = [var for var in parents if self.dtypes[var] == "N"]
+            D = list(set(parents) - set(C2))
+
+            if len(D) == 0:
+                if len(C2) == 0:
+                    return np.log(
+                        multivariate_normal.pdf(
+                            x=df, mean=df.mean(axis=1), cov=df.cov()
+                        )
+                    ).sum()
+                else:
+                    return np.log(
+                        multivariate_normal.pdf(
+                            x=df, mean=df.mean(axis=1), cov=df.cov()
+                        )
+                        / multivariate_normal.pdf(
+                            x=df.loc[:, C2],
+                            mean=df.loc[:, C2].mean(axis=1),
+                            cov=df.loc[:, C2].cov(axis=1),
+                        )
+                    ).sum()
+
+            else:
+                log_like = 0
+                for D_states, df_strat in df.groupby(D):
+                    df_C1C2 = df.loc[:, [C1] + C2]
+                    p_C1C2_D = multivariate_normal.pdf(
+                        x=df_C1C2, mean=df_C1C2.mean(axis=1), cov=df_C1C2.cov()
+                    )
+                    if len(C2) == 0:
+                        p_C2_D = 1
+                    else:
+                        df_C2 = df.loc[:, C2]
+                        p_C2_D = multivariate_normal.pdf(
+                            x=df_C2, mean=df_C2.mean(axis=1), cov=df_C2.cov()
+                        )
+                    log_like += np.log(p_C1C2_D / p_C2_D).sum()
+                return log_like
+
+        # If variable is discrete, the probability is computed as:
+        # P(D1 | C1, C2, D2) = (p(C1, C2 | D1, D2) p(D1, D2)) / (p(C1, C2 | D2) p(D2))
+        else:
+            all_discrete = [variable] + [
+                var for var in parents if self.dtypes[var] in ("C", "O")
+            ]
+            all_cont = list(set(parents) - set(all_discrete))
+
+            p_all_discrete = (
+                df.loc[:, all_discrete].groupby(all_discrete).counts() / df.shape[0]
+            )
+            if all_discrete == [variable]:
+                p_d2 = 1
+            else:
+                d2 = set(all_discrete) - {variable}
+                p_d2 = df.loc[:, d2].groupby(d2).counts() / df.shape[0]
+
+            for z_state, df_strat in df.groupby(all_discrete):
+                p_c1_c2 = multivariate_normal(
+                    df.loc[:, all_cont],
+                    mean=df.loc[:, all_cont].mean(axis=1),
+                    cov=df.loc[:, all_cont].cov(),
+                )
+                p_d1_d2 = p_all_discrete[df_strat]
+                df_d2 = df.loc[df.loc[:, d2] == df_strat[1:]]
+                p_c1_c2_d2 = multivariate_normal(
+                    df_d2.loc[:, all_cont],
+                    df_d2.loc[:, all_cont].mean(axis=1),
+                    df_d2.loc[:, all_cont].cov(),
+                )
+                p_d2 = p_d2[d2_state]
