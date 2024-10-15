@@ -432,7 +432,7 @@ def SHD(true_model, est_model):
     1
     """
     if set(true_model.nodes()) != set(est_model.nodes()):
-        raise ValueError("The graphs must have the same number of nodes.")
+        raise ValueError("The graphs must have the same nodes.")
 
     nodes_list = true_model.nodes()
 
@@ -444,24 +444,24 @@ def SHD(true_model, est_model):
 
     shd = 0
 
-    m1 = np.array(adj_mat_true)
-    m2 = np.array(adj_mat_est)
+    m1 = adj_mat_true
+    m2 = adj_mat_est
 
     s1 = m1 + m1.T
     s2 = m2 + m2.T
 
-    s1[s1 == 2] = 1
-    s2[s2 == 2] = 1
-
+    # Edges that are in m1 but not in m2 (deletions from m1)
     ds = s1 - s2
     ind = np.where(ds > 0)
     m1[ind] = 0
     shd = shd + (len(ind[0]) / 2)
 
+    # Edges that are in m2 but not in m1 (additions to m1)
     ind = np.where(ds < 0)
     m1[ind] = m2[ind]
     shd = shd + (len(ind[0]) / 2)
 
+    # Edges that need to be simply reversed
     d = np.abs(m1 - m2)
     shd = shd + (np.sum((d + d.T) > 0) / 2)
 

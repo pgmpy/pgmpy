@@ -210,7 +210,5 @@ class TestStructuralHammingDistance(unittest.TestCase):
         self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
 
     def test_shd_unequal_graphs(self):
-        with self.assertRaises(
-            ValueError, msg="The graphs must have the same number of nodes."
-        ):
+        with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
             SHD(self.dag_4, self.dag_5)
