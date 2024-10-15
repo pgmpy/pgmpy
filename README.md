@@ -50,19 +50,20 @@ Citing
 If you use `pgmpy` in your scientific work, please consider citing us:
 
 ```
-Ankur Ankan, & Abinash Panda ( 2015 ). pgmpy: Probabilistic Graphical Models using Python. In Proceedings of the 14th Python in Science Conference (pp. 6 - 11 ).
+Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
 ```
 
 Bibtex:
 ```
-@InProceedings{ Ankan2015,
-  author    = { {A}nkur {A}nkan and {A}binash {P}anda },
-  title     = { pgmpy: {P}robabilistic {G}raphical {M}odels using {P}ython },
-  booktitle = { {P}roceedings of the 14th {P}ython in {S}cience {C}onference },
-  pages     = { 6 - 11 },
-  year      = { 2015 },
-  editor    = { {K}athryn {H}uff and {J}ames {B}ergstra },
-  doi       = { 10.25080/Majora-7b98e3ed-001 }
+@article{Ankan2024,
+  author  = {Ankur Ankan and Johannes Textor},
+  title   = {pgmpy: A Python Toolkit for Bayesian Networks},
+  journal = {Journal of Machine Learning Research},
+  year    = {2024},
+  volume  = {25},
+  number  = {265},
+  pages   = {1--8},
+  url     = {http://jmlr.org/papers/v25/23-0487.html}
 }
 ```
 
