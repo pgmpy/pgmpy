@@ -57,16 +57,7 @@ class ExpectationMaximization(ParameterEstimator):
             )
 
         if isinstance(model, DAG):
-            if len(model.latents) != 0:
-                raise ValueError(
-                    f"Expectation Maximization works only on models with all observed variables. Found latent variables: {model.latents}"
-                )
             model = BayesianNetwork(model.edges())
-
-        if len(model.latents) != 0:
-            raise ValueError(
-                f"Expectation Maximization works only on models with all observed variables. Found latent variables: {model.latents}"
-            )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
