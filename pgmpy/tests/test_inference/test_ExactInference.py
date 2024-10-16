@@ -345,6 +345,21 @@ class TestVariableElimination(unittest.TestCase):
         )
         self.assertEqual(2, result_width)
 
+    def test_query_unknown_var(self):
+        self.assertRaises(
+            ValueError, self.bayesian_inference.query, {"variables": ["Unknown"]}
+        )
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.query,
+            {"variables": ["J"], "evidence": {"Unknown": 1}},
+        )
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.query,
+            {"variables": ["Unknown"], "evidence": {"Unknown": 1}},
+        )
+
     def tearDown(self):
         del self.bayesian_inference
         del self.bayesian_model

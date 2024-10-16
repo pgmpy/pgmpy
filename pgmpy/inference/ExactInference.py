@@ -76,6 +76,19 @@ class VariableElimination(Inference):
         -------
         list: A list of variables names in the order they need to be eliminated.
         """
+        for var in variables:
+            if var not in self.model.nodes():
+                raise ValueError(
+                    "The variable: {var} is not in the model".format(var=var)
+                )
+
+        if evidence is not None:
+            for var, state in evidence.items():
+                if var not in self.model.nodes():
+                    raise ValueError(
+                        "The variable: {var} is not in the model".format(var=var)
+                    )
+
         to_eliminate = (
             set(self.variables)
             - set(variables)
