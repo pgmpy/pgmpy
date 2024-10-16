@@ -54,7 +54,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
                     f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization."
                 )
 
-            elif len(set(data.columns) - set(model.nodes())) != 0:
+            elif set(model.nodes()) > set(data.columns):
                 raise ValueError(
                     "Nodes detected in the model that are not present in the dataset. "
                     "Refine the model so that all parameters can be estimated from the data."
