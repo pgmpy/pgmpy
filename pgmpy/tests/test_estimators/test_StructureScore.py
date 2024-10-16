@@ -9,6 +9,7 @@ from pgmpy.estimators import (
     BDsScore,
     BicScore,
     BicScoreGauss,
+    CondGaussScore,
     K2Score,
 )
 from pgmpy.models import BayesianNetwork
@@ -239,7 +240,25 @@ class TestAICScoreGauss(unittest.TestCase):
 
 class TestCondGauss(unittest.TestCase):
     def setUp(self):
-        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv")
-        self.score_fn = CondGauss(data)
-
+        data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
+        self.score_fn = CondGaussScore(data)
         self.m1 = BayesianNetwork([("A", "C"), ("A_cat", "C"), ("A", "B_int")])
+
+    def test_score(self):
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=[]), -119.723, places=3)
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B']), -119.494, places=3)
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat']), -118.525, places=3)
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat', 'B']), -113.237, places=3)
+
+        # TODO: Figure out this case. The covariance matrix computed by pandas is not positive definite.
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat', 'B', 'C_cat', 'C']), -113.237, places=3)
+
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=[]), -6.535, places=3)
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=['B_cat']), -17.130, places=3)
+        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=['B']), -116.710, places=3)
+        # self.score_fn.local_score(variable='A_cat', parents=['B_cat', 'A'])
+        self.score_fn.local_score(
+            variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
+        )
