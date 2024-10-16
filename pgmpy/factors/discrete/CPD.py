@@ -359,7 +359,7 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / (cpd.sum(axis=0) + 1e-6)).reshape(
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(
             tuple(tabular_cpd.cardinality)
         )
         if not inplace:
