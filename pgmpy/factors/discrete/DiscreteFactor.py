@@ -486,7 +486,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self if inplace else self.copy()
 
-        phi.values = phi.values / (phi.values.sum() + 1e-6)
+        phi.values = phi.values / (phi.values.sum())
 
         if not inplace:
             return phi
