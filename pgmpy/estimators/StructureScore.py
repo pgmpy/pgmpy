@@ -4,6 +4,7 @@ from math import lgamma, log
 import numpy as np
 import statsmodels.formula.api as smf
 from scipy.special import gammaln
+from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
 
@@ -479,3 +480,116 @@ class AICScoreGauss(StructureScore):
             ).fit()
         # Adding +2 to model df to compute the likelihood df.
         return glm_model.llf - (glm_model.df_model + 2)
+
+
+class CondGaussScore(StructureScore):
+    def __init__(self, data, **kwargs):
+        super(CondGaussScore, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        # TODO: For all covariance computation, if the number of samples is 1, set the covariance to 1.
+
+        df = self.data.loc[:, [variable] + parents]
+
+        # If variable is continuous, the probability is computed as:
+        # P(C1 | C2, D) = p(C1, C2 | D) / p(C2 | D)
+        if self.dtypes[variable] == "N":
+            c1 = variable
+            c2 = [var for var in parents if self.dtypes[var] == "N"]
+            d = list(set(parents) - set(c2))
+
+            # If D = {}, p(C1, C2 | D) = p(C1, C2) and p(C2 | D) = p(C2)
+            if len(d) == 0:
+                # If C2 = {}, p(C1, C2 | D) = p(C1) and p(C2 | D) = 1.
+                if len(c2) == 0:
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df, mean=df.mean(axis=0), cov=df.cov()
+                    )
+                    return np.sum(np.log(p_c1c2_d))
+                else:
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df, mean=df.mean(axis=0), cov=df.cov()
+                    )
+                    df_c2 = df.loc[:, c2]
+                    p_c2_d = multivariate_normal.pdf(
+                        x=df_c2, mean=df_c2.mean(axis=0), cov=df_c2.cov()
+                    )
+
+                    return np.sum(np.log(p_c1c2_d / p_c2_d))
+            else:
+                log_like = 0
+                for d_states, df_d in df.groupby(d, observed=True):
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df_d.loc[:, [c1] + c2],
+                        mean=df_d.loc[:, [c1] + c2].mean(axis=0),
+                        cov=df_d.loc[:, [c1] + c2].cov(),
+                    )
+                    if len(c2) == 0:
+                        p_c2_d = 1
+                    else:
+                        p_c2_d = multivariate_normal.pdf(
+                            x=df_d.loc[:, c2],
+                            mean=df_d.loc[:, c2].mean(axis=0),
+                            cov=df_d.loc[:, c2].cov(),
+                        )
+
+                    log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
+                return log_like
+
+        # If variable is discrete, the probability is computed as:
+        # P(D1 | C, D2) = (p(C| D1, D2) p(D1, D2)) / (p(C| D2) p(D2))
+        else:
+            d1 = variable
+            c = [var for var in parents if self.dtypes[var] == "N"]
+            d2 = list(set(parents) - set(c))
+
+            log_like = 0
+            for d_states, df_d1d2 in df.groupby([d1] + d2, observed=True):
+                # Check if df_d1d2 also has the discrete variables.
+                # If C={}, p(C1 | D1, D2) = 1.
+                if len(c) == 0:
+                    p_c_d1d2 = 1
+                else:
+                    p_c_d1d2 = multivariate_normal.pdf(
+                        x=df_d1d2.loc[:, c],
+                        mean=df_d1d2.loc[:, c].mean(axis=0),
+                        cov=df_d1d2.loc[:, c].cov(),
+                    )
+
+                # Check this step for getting the correct values.
+                p_d1d2 = df_d1d2.shape[0] / df.shape[0]
+
+                # If D2 = {}, p(D1 | C, D2) = (p(C | D1, D2) p(D1, D2)) / p(C)
+                if len(d2) == 0:
+                    if len(c) == 0:
+                        p_c_d2 = 1
+                    else:
+                        p_c_d2 = multivariate_normal.pdf(
+                            x=df_d1d2.loc[:, c],
+                            mean=df.loc[:, c].mean(axis=0),
+                            cov=df.loc[:, c].cov(),
+                        )
+
+                    log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
+                else:
+                    if len(c) == 0:
+                        p_c_d2 = 1
+                    else:
+                        df_d2 = df
+                        for var, state in zip(d2, d_states[1:]):
+                            df_d2 = df_d2.loc[df_d2[var] == state]
+
+                        p_c_d2 = multivariate_normal.pdf(
+                            x=df_d1d2.loc[:, c],
+                            mean=df_d2.loc[:, c].mean(axis=0),
+                            cov=df_d2.loc[:, c].cov(),
+                        )
+
+                    p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]
+                    for var, value in zip(d2, d_states[1:]):
+                        p_d2 = p_d2.loc[p_d2.index.get_level_values(var) == value]
+
+                    log_like += np.sum(
+                        np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0]))
+                    )
+            return log_like
