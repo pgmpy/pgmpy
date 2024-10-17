@@ -8,7 +8,11 @@ import pandas as pd
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import BayesianEstimator
+from pgmpy.estimators import (
+    BayesianEstimator,
+    MaximumLikelihoodEstimator,
+    ExpectationMaximization,
+)
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -298,18 +302,37 @@ class TestDAGCreation(unittest.TestCase):
     def test_dag_fit(self):
         self.model = DAG([("A", "C"), ("B", "C")])
         self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        self.fitted_model = self.model.fit(
+        self.pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+        }
+
+        self.fitted_model_bayesian = self.model.fit(
             self.data,
             estimator=BayesianEstimator,
             prior_type="dirichlet",
-            pseudo_counts={
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-            },
+            pseudo_counts=self.pseudo_counts,
+        )
+
+        self.fitted_model_mle = self.model.fit(
+            self.data, estimator=MaximumLikelihoodEstimator
+        )
+
+        self.fitted_model_em = self.model.fit(
+            self.data, estimator=ExpectationMaximization
+        )
+
+        self.assertEqual(
+            self.fitted_model_bayesian.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
         )
         self.assertEqual(
-            self.fitted_model.get_cpds("B"),
+            self.fitted_model_mle.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+        self.assertEqual(
+            self.fitted_model_em.get_cpds("B"),
             TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
         )
 

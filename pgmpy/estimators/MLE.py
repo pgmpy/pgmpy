@@ -56,14 +56,14 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
             elif set(model.nodes()) > set(data.columns):
                 raise ValueError(
-                    "Nodes detected in the model that are not present in the dataset. "
+                    f"Nodes detected in the model that are not present in the dataset: {set(model.nodes) - set(data.columns)}. "
                     "Refine the model so that all parameters can be estimated from the data."
                 )
 
             if isinstance(model, JunctionTree):
                 if len(set(data.columns) - set(chain(*model.nodes()))) != 0:
                     raise ValueError(
-                        "Nodes detected in the JunctionTree that are not present in the dataset. "
+                        f"Nodes detected in the JunctionTree that are not present in the dataset: {set(data.columns) - set(chain(*model.nodes()))} "
                         "Refine the model to ensure all parameters can be estimated."
                     )
 
