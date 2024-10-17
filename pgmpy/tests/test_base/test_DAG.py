@@ -329,11 +329,11 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(
             self.fitted_model_mle.get_cpds("B"),
-            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
         )
         self.assertEqual(
             self.fitted_model_em.get_cpds("B"),
-            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
         )
 
     def tearDown(self):
