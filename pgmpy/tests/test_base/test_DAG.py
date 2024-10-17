@@ -498,11 +498,14 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set())
         self.assertEqual(pdag.latents, set(["D"]))
 
-        # TODO: Fix the cycle issue.
-        # Test cycle
-        # directed_edges = [('A', 'C')]
-        # undirected_edges = [('A', 'B'), ('B', 'D'), ('D', 'C')]
-        # self.assertRaises(ValueError, PDAG, directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        directed_edges = [("A", "C")]
+        undirected_edges = [("A", "B"), ("B", "D"), ("D", "C")]
+        self.assertRaises(
+            ValueError,
+            PDAG,
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+        )
 
     def test_copy(self):
         pdag_copy = self.pdag_mix.copy()
