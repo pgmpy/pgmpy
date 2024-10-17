@@ -398,9 +398,15 @@ class TestPDAG(unittest.TestCase):
         self.pdag_dir = PDAG(
             directed_ebunch=[("A", "B"), ("D", "B"), ("A", "C"), ("D", "C")]
         )
-        self.pdag_undir = PDAG(
-            undirected_ebunch=[("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
-        )
+        undirected_edges = [("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
+        try:
+            self.pdag_undir = PDAG(undirected_ebunch=undirected_edges)
+        except ValueError:
+            self.assertRaises(
+                ValueError,
+                PDAG,
+                undirected_ebunch=undirected_edges,
+            )
         self.pdag_latent = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
@@ -448,6 +454,8 @@ class TestPDAG(unittest.TestCase):
 
         # Only undirected
         undirected_edges = [("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
+        with self.assertRaises(ValueError, msg="Cycle detected in the PDAG."):
+            pdag = PDAG(undirected_ebunch=undirected_edges)
         pdag = PDAG(undirected_ebunch=undirected_edges)
         expected_edges = {
             ("A", "C"),
@@ -465,6 +473,8 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set(undirected_edges))
 
         undirected_edges = [("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
+        with self.assertRaises(ValueError, msg="Cycle detected in the PDAG."):
+            pdag = PDAG(undirected_ebunch=undirected_edges, latents=["A", "D"])
         pdag = PDAG(undirected_ebunch=undirected_edges, latents=["A", "D"])
         expected_edges = {
             ("A", "C"),
