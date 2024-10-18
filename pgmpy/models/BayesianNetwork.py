@@ -585,7 +585,7 @@ class BayesianNetwork(DAG):
         self.add_cpds(*cpds)
         logger.disabled = False
 
-    def predict(self, data, stochastic=False, n_jobs=-1):
+    def predict(self, data, algo=None, stochastic=False, n_jobs=-1, **kwargs):
         """
         Predicts states of all the missing variables.
 
@@ -632,7 +632,12 @@ class BayesianNetwork(DAG):
         998 0
         999 0
         """
-        from pgmpy.inference import VariableElimination
+        from pgmpy.inference import (
+            ApproxInference,
+            BeliefPropagation,
+            Inference,
+            VariableElimination,
+        )
 
         if set(data.columns) == set(self.nodes()):
             raise ValueError("No variable missing in data. Nothing to predict")
@@ -641,7 +646,14 @@ class BayesianNetwork(DAG):
             raise ValueError("Data has variables which are not in the model")
 
         missing_variables = set(self.nodes()) - set(data.columns)
-        model_inference = VariableElimination(self)
+
+        if algo is None:
+            algo = VariableElimination
+        else:
+            if not issubclass(algo, Inference):
+                raise TypeError("Algorithm should be a valid pgmpy inference method.")
+
+        model_inference = algo(self)
 
         if stochastic:
             data_unique_indexes = data.groupby(list(data.columns)).apply(
