@@ -2,6 +2,7 @@
 from math import lgamma, log
 
 import numpy as np
+import pandas as pd
 import statsmodels.formula.api as smf
 from scipy.special import gammaln
 from scipy.stats import multivariate_normal
@@ -486,6 +487,22 @@ class CondGaussScore(StructureScore):
     def __init__(self, data, **kwargs):
         super(CondGaussScore, self).__init__(data, **kwargs)
 
+    @staticmethod
+    def _adjusted_cov(df):
+        """
+        Computes an adjusted covariance matrix from the given dataframe.
+        """
+        # If a single row of data is available, return variance 1 with no covariance.
+        if df.shape[0] == 1:
+            return pd.DataFrame(
+                np.eye(len(df.columns)), index=df.columns, columns=df.columns
+            )
+
+        # If the matrix is not positive semidefinite, add a small error to make it.
+        df_cov = df.cov()
+        if np.any(np.isclose(np.linalg.eig(df_cov)[0], 0)):
+            return df_cov + 1e-6
+
     def local_score(self, variable, parents):
         # TODO: For all covariance computation, if the number of samples is 1, set the covariance to 1.
 
@@ -503,16 +520,18 @@ class CondGaussScore(StructureScore):
                 # If C2 = {}, p(C1, C2 | D) = p(C1) and p(C2 | D) = 1.
                 if len(c2) == 0:
                     p_c1c2_d = multivariate_normal.pdf(
-                        x=df, mean=df.mean(axis=0), cov=df.cov()
+                        x=df, mean=df.mean(axis=0), cov=CondGaussScore._adjusted_cov(df)
                     )
                     return np.sum(np.log(p_c1c2_d))
                 else:
                     p_c1c2_d = multivariate_normal.pdf(
-                        x=df, mean=df.mean(axis=0), cov=df.cov()
+                        x=df, mean=df.mean(axis=0), cov=CondGaussScore._adjusted_cov(df)
                     )
                     df_c2 = df.loc[:, c2]
                     p_c2_d = multivariate_normal.pdf(
-                        x=df_c2, mean=df_c2.mean(axis=0), cov=df_c2.cov()
+                        x=df_c2,
+                        mean=df_c2.mean(axis=0),
+                        cov=CondGaussScore._adjusted_cov(df_c2),
                     )
 
                     return np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -522,7 +541,7 @@ class CondGaussScore(StructureScore):
                     p_c1c2_d = multivariate_normal.pdf(
                         x=df_d.loc[:, [c1] + c2],
                         mean=df_d.loc[:, [c1] + c2].mean(axis=0),
-                        cov=df_d.loc[:, [c1] + c2].cov(),
+                        cov=CondGaussScore._adjusted_cov(df_d.loc[:, [c1] + c2]),
                     )
                     if len(c2) == 0:
                         p_c2_d = 1
@@ -530,7 +549,7 @@ class CondGaussScore(StructureScore):
                         p_c2_d = multivariate_normal.pdf(
                             x=df_d.loc[:, c2],
                             mean=df_d.loc[:, c2].mean(axis=0),
-                            cov=df_d.loc[:, c2].cov(),
+                            cov=CondGaussScore._adjusted_cov(df_d.loc[:, c2]),
                         )
 
                     log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -553,7 +572,7 @@ class CondGaussScore(StructureScore):
                     p_c_d1d2 = multivariate_normal.pdf(
                         x=df_d1d2.loc[:, c],
                         mean=df_d1d2.loc[:, c].mean(axis=0),
-                        cov=df_d1d2.loc[:, c].cov(),
+                        cov=CondGaussScore._adjusted_cov(df_d1d2.loc[:, c]),
                     )
 
                 # Check this step for getting the correct values.
@@ -567,7 +586,7 @@ class CondGaussScore(StructureScore):
                         p_c_d2 = multivariate_normal.pdf(
                             x=df_d1d2.loc[:, c],
                             mean=df.loc[:, c].mean(axis=0),
-                            cov=df.loc[:, c].cov(),
+                            cov=CondGaussScore._adjusted_cov(df.loc[:, c]),
                         )
 
                     log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
@@ -582,7 +601,7 @@ class CondGaussScore(StructureScore):
                         p_c_d2 = multivariate_normal.pdf(
                             x=df_d1d2.loc[:, c],
                             mean=df_d2.loc[:, c].mean(axis=0),
-                            cov=df_d2.loc[:, c].cov(),
+                            cov=CondGaussScore._adjusted_cov(df_d2.loc[:, c]),
                         )
 
                     p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]

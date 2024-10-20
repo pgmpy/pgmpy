@@ -247,18 +247,52 @@ class TestCondGauss(unittest.TestCase):
         self.m1 = BayesianNetwork([("A", "C"), ("A_cat", "C"), ("A", "B_int")])
 
     def test_score(self):
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=[]), -119.723, places=3)
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B']), -119.494, places=3)
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat']), -118.525, places=3)
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat', 'B']), -113.237, places=3)
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=[]), -123.984, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B"]), -123.984, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B_cat"]),
+            -123.707,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B_cat", "B"]),
+            -123.707,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(
+                variable="A", parents=["B_cat", "B", "C_cat", "C"]
+            ),
+            -84.926,
+            places=3,
+        )
 
-        # TODO: Figure out this case. The covariance matrix computed by pandas is not positive definite.
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A', parents=['B_cat', 'B', 'C_cat', 'C']), -113.237, places=3)
-
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=[]), -6.535, places=3)
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=['B_cat']), -17.130, places=3)
-        # self.assertAlmostEqual(self.score_fn.local_score(variable='A_cat', parents=['B']), -116.710, places=3)
-        # self.score_fn.local_score(variable='A_cat', parents=['B_cat', 'A'])
-        self.score_fn.local_score(
-            variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=[]), -6.535, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B_cat"]),
+            -17.130,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B"]),
+            -85.542,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B_cat", "A"]),
+            -89.032,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(
+                variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
+            ),
+            7.125,
+            places=3,
         )
