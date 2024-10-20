@@ -492,8 +492,8 @@ class CondGaussScore(StructureScore):
         """
         Computes an adjusted covariance matrix from the given dataframe.
         """
-        # If a single row of data is available, return variance 1 with no covariance.
-        if df.shape[0] == 1:
+        # If a number of rows less than number of variables, return variance 1 with no covariance.
+        if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
             return pd.DataFrame(
                 np.eye(len(df.columns)), index=df.columns, columns=df.columns
             )
