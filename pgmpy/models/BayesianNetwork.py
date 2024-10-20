@@ -594,6 +594,9 @@ class BayesianNetwork(DAG):
         data: pandas DataFrame object
             A DataFrame object with column names same as the variables in the model.
 
+        algo: pgmpy Inference instance
+            An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
+
         stochastic: boolean
             If True, does prediction by sampling from the distribution of predicted variable(s).
             If False, returns the states with the highest probability value (i.e. MAP) for the
@@ -650,8 +653,10 @@ class BayesianNetwork(DAG):
         if algo is None:
             algo = VariableElimination
         else:
-            if not issubclass(algo, Inference):
-                raise TypeError("Algorithm should be a valid pgmpy inference method.")
+            if not issubclass(algo, Inference) and algo is not ApproxInference:
+                raise TypeError(
+                    f"Algorithm should be a valid pgmpy inference method. Got {type(algo)} instead."
+                )
 
         model_inference = algo(self)
 

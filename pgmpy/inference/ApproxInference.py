@@ -2,6 +2,7 @@ import itertools
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork
+from pgmpy.utils import compat_fns
 
 
 class ApproxInference(object):
@@ -67,6 +68,9 @@ class ApproxInference(object):
             Else, returns a dict with marginal distribution of each variable in
             `variables`.
         """
+        if isinstance(variables, (set, tuple)):
+            variables = list(variables)
+
         if joint == True:
             return self._get_factor_from_df(
                 samples.groupby(variables).size() / samples.shape[0], state_names
@@ -145,7 +149,9 @@ class ApproxInference(object):
         {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x7f92dc61eb50>,
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
+
         # Step 1: If samples are not provided, generate samples for the query
+
         if samples is None:
             if isinstance(self.model, BayesianNetwork):
                 samples = self.model.simulate(
@@ -196,3 +202,81 @@ class ApproxInference(object):
         return self.get_distribution(
             samples, variables=variables, state_names=state_names, joint=joint
         )
+
+    def map_query(
+        self,
+        variables,
+        n_samples=int(1e4),
+        samples=None,
+        evidence=None,
+        virtual_evidence=None,
+        state_names=None,
+        show_progress=True,
+        seed=None,
+    ):
+        """
+        Computes the MAP Query using approx inference. Returns the
+        highest probable state in the joint distribution of `variables`.
+
+        Parameters
+        ----------
+        variables: list
+            List of variables for which the probability distribution needs to be calculated.
+
+        n_samples: int
+            The number of samples to generate for computing the distributions. Higher `n_samples`
+            results in more accurate results at the cost of more computation time.
+
+        samples: pd.DataFrame (default: None)
+            If provided, uses these samples to compute the distribution instead
+            of generating samples. `samples` **must** conform with the provided
+            `evidence` and `virtual_evidence`.
+
+        evidence: dict (default: None)
+            The observed values. A dict key, value pair of the form {var: state_name}.
+
+        virtual_evidence: list (default: None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
+            evidence.
+
+        state_names: dict (default: None)
+            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+            If None, inferred from the data but is possible that the final distribution misses some states.
+
+        show_progress: boolean (default: True)
+            If True, shows a progress bar when generating samples.
+
+        seed: int (default: None)
+            Sets the seed for the random generators.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.inference import ApproxInference
+        >>> model = get_example_model("alarm")
+        >>> infer = ApproxInference(model)
+        >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
+        {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
+        """
+
+        final_distribution = self.query(
+            variables,
+            n_samples=n_samples,
+            samples=samples,
+            evidence=evidence,
+            virtual_evidence=virtual_evidence,
+            joint=True,
+            state_names=state_names,
+            show_progress=show_progress,
+            seed=seed,
+        )
+
+        argmax = compat_fns.argmax(final_distribution.values)
+        assignment = final_distribution.assignment([argmax])[0]
+
+        map_query_results = {}
+        for var_assignment in assignment:
+            var, value = var_assignment
+            map_query_results[var] = value
+
+        return map_query_results

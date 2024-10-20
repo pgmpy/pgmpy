@@ -1025,7 +1025,14 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         p1_belief_propagation = titanic.predict(
             self.titanic_data2[["Sex", "Pclass"]][:30], algo=BeliefPropagation
         )
-        p2 = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
+
+        p2_variable_elimination = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30]
+        )
+        p2_approx_inference = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30], algo=ApproxInference
+        )
+
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
 
         p1_res = np.array(
@@ -1133,7 +1140,10 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
         np_test.assert_array_equal(p1_variable_elimination.values.ravel(), p1_res)
         np_test.assert_array_equal(p1_belief_propagation.values.ravel(), p1_res)
-        np_test.assert_array_equal(p2.values.ravel(), p2_res)
+
+        np_test.assert_array_equal(p2_variable_elimination.values.ravel(), p2_res)
+        np_test.assert_array_equal(p2_approx_inference.values.ravel(), p2_res)
+
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
 
     def test_predict_stochastic(self):
