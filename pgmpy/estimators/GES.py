@@ -12,6 +12,7 @@ from pgmpy.estimators import (
     BDsScore,
     BicScore,
     BicScoreGauss,
+    CondGaussScore,
     K2Score,
     ScoreCache,
     StructureEstimator,
@@ -88,7 +89,7 @@ class GES(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
+            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g, cond-gauss. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
 
         Returns
@@ -122,6 +123,7 @@ class GES(StructureEstimator):
             "aic": AICScore,
             "aic-g": AICScoreGauss,
             "bic-g": BicScoreGauss,
+            "cond-gauss": CondGaussScore,
         }
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [
