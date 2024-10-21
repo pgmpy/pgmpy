@@ -1018,10 +1018,12 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         titanic = BayesianNetwork()
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
         titanic.fit(self.titanic_data2[500:])
+        var_el_parameters = {"elimination_order": "WeightedMinFill"}
 
         p1_variable_elimination = titanic.predict(
-            self.titanic_data2[["Sex", "Pclass"]][:30]
+            self.titanic_data2[["Sex", "Pclass"]][:30], **var_el_parameters
         )
+
         p1_belief_propagation = titanic.predict(
             self.titanic_data2[["Sex", "Pclass"]][:30], algo=BeliefPropagation
         )
@@ -1029,6 +1031,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         p2_variable_elimination = titanic.predict(
             self.titanic_data2[["Survived", "Pclass"]][:30]
         )
+
         p2_approx_inference = titanic.predict(
             self.titanic_data2[["Survived", "Pclass"]][:30], algo=ApproxInference
         )

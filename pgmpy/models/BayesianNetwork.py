@@ -605,11 +605,70 @@ class BayesianNetwork(DAG):
         n_jobs: int (default: -1)
             The number of CPU cores to use. If -1, uses all available cores.
 
+        **kwargs
+            Optional keyword arguments specific to the selected algorithm.
+
+            - Variable Elimination:
+
+              - virtual_evidence: list (default:None)
+                A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+                evidences.
+
+              - elimination_order: str or list (default='greedy')
+                Order in which to eliminate the variables in the algorithm. If list is provided,
+                should contain all variables in the model except the ones in `variables`. str options
+                are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
+                refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
+                for details.
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+            - Belief Propagation:
+
+              - virtual_evidence: list (default:None)
+                A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+                evidences.
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+
+            - Approx Inference:
+
+              - n_samples: int
+                The number of samples to generate for computing the distributions. Higher `n_samples`
+                results in more accurate results at the cost of more computation time.
+
+              - samples: pd.DataFrame (default: None)
+                If provided, uses these samples to compute the distribution instead
+                of generating samples. `samples` **must** conform with the
+                `evidence` and `virtual_evidence`.
+
+              - virtual_evidence: list (default: None)
+                A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
+                evidence.
+
+              - state_names: dict (default: None)
+                A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+                If None, inferred from the data but is possible that the final distribution misses some states.
+
+              - seed: int (default: None)
+                Sets the seed for the random generators.
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+
         Examples
         --------
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.inference import ApproxInference
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> train_data = values[:800]
@@ -618,21 +677,20 @@ class BayesianNetwork(DAG):
         >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('E', axis=1, inplace=True)
-        >>> y_pred = model.predict(predict_data)
+        >>> approx_inf_parameters = {'n_samples':int(1e3),'seed':42}
+        >>> y_pred = model.predict(predict_data,algo=ApproxInference,**approx_inf_parameters)
         >>> y_pred
             E
-        800 0
-        801 1
+        800 1
+        801 0
         802 1
         803 1
-        804 0
+        804 1
         ... ...
-        993 0
-        994 0
         995 1
         996 1
-        997 0
-        998 0
+        997 1
+        998 1
         999 0
         """
         from pgmpy.inference import (
@@ -671,6 +729,7 @@ class BayesianNetwork(DAG):
                     variables=missing_variables,
                     evidence=data_point.to_dict(),
                     show_progress=False,
+                    **kwargs,
                 )
                 for index, data_point in tqdm(
                     data_unique.iterrows(), total=data_unique.shape[0]
@@ -694,6 +753,7 @@ class BayesianNetwork(DAG):
                     variables=missing_variables,
                     evidence=data_point.to_dict(),
                     show_progress=False,
+                    **kwargs,
                 )
                 for index, data_point in tqdm(
                     data_unique.iterrows(), total=data_unique.shape[0]
