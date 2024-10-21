@@ -302,6 +302,7 @@ class BayesianNetwork(DAG):
         <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
         <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
         <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
+
         >>> cpd = model.get_cpds('bronc')
         >>> cpd
         <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
