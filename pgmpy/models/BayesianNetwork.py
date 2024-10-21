@@ -662,6 +662,11 @@ class BayesianNetwork(DAG):
                 If True, returns a Joint Distribution over `variables`.
                 If False, returns a dict of distributions over each of the `variables`.
 
+        Returns
+        -------
+        Inference results: Pandas DataFrame
+            If `stochastic` is True, returns the distribution of the queried variables.
+            If `stochastic` is False, returns the most likely state of the queried variables.
 
         Examples
         --------

@@ -249,6 +249,11 @@ class ApproxInference(object):
         seed: int (default: None)
             Sets the seed for the random generators.
 
+        Returns
+        -------
+        MAP values: dict
+            The most probable state of provided `variables` given the evidence.
+
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
@@ -258,7 +263,6 @@ class ApproxInference(object):
         >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
         {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
         """
-
         final_distribution = self.query(
             variables,
             n_samples=n_samples,
