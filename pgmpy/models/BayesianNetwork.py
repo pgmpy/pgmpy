@@ -1187,7 +1187,7 @@ class BayesianNetwork(DAG):
         show_progress=True,
         include_missing=False,
         missing_prob=0.1,
-        missing_columns=None
+        missing_columns=None,
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1232,13 +1232,13 @@ class BayesianNetwork(DAG):
 
         include_missing: bool
             If True, include missing values in the samples.
-        
+
         missing_prob: float
             The probability that there is missing values in the samples.
 
         missing_columns: list
             The list of columns where there will be missing values in the samples.
-            If None, then all columns could contain the missing values. 
+            If None, then all columns could contain the missing values.
 
         Simulation with missing values:
         >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
@@ -1373,7 +1373,11 @@ class BayesianNetwork(DAG):
             missing_mask = mask < missing_prob
 
             if missing_columns:
-                col_indices = [samples.columns.get_loc(col) for col in samples.columns if col not in missing_columns]
+                col_indices = [
+                    samples.columns.get_loc(col)
+                    for col in samples.columns
+                    if col not in missing_columns
+                ]
                 missing_mask[:, col_indices] = 0
 
             samples = samples.mask(missing_mask)
