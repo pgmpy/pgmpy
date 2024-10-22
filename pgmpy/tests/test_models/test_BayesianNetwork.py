@@ -1033,7 +1033,9 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         )
 
         p2_approx_inference = titanic.predict(
-            self.titanic_data2[["Survived", "Pclass"]][:30], algo=ApproxInference
+            self.titanic_data2[["Survived", "Pclass"]][:30],
+            algo=ApproxInference,
+            seed=42,
         )
 
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
