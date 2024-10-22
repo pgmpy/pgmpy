@@ -9,6 +9,7 @@ from pgmpy.estimators import (
     BDsScore,
     BicScore,
     BicScoreGauss,
+    CondGaussScore,
     K2Score,
 )
 from pgmpy.models import BayesianNetwork
@@ -235,3 +236,63 @@ class TestAICScoreGauss(unittest.TestCase):
 
         self.assertAlmostEqual(self.score_fn.score(self.m1), -463.1059, places=3)
         self.assertAlmostEqual(self.score_fn.score(self.m2), -577.4505, places=3)
+
+
+class TestCondGauss(unittest.TestCase):
+    def setUp(self):
+        data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
+        self.score_fn = CondGaussScore(data)
+        self.m1 = BayesianNetwork([("A", "C"), ("A_cat", "C"), ("A", "B_int")])
+
+    def test_score(self):
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=[]), -123.984, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B"]), -123.984, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B_cat"]),
+            -123.707,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B_cat", "B"]),
+            -123.707,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(
+                variable="A", parents=["B_cat", "B", "C_cat", "C"]
+            ),
+            -84.926,
+            places=3,
+        )
+
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=[]), -6.535, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B_cat"]),
+            -17.130,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B"]),
+            -85.542,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A_cat", parents=["B_cat", "A"]),
+            -89.032,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(
+                variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
+            ),
+            7.125,
+            places=3,
+        )

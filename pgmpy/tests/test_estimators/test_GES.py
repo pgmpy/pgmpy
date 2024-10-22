@@ -55,3 +55,18 @@ class TestGESGauss(unittest.TestCase):
         est = GES(self.data)
         for score in ["aic-g", "bic-g"]:
             dag = est.estimate(scoring_method=score, debug=True)
+
+
+class TestGESMixed(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
+        self.data["A_cat"] = self.data.A_cat.astype("category")
+        self.data["B_cat"] = self.data.B_cat.astype("category")
+        self.data["C_cat"] = self.data.C_cat.astype("category")
+        self.data["B_int"] = self.data.B_int.astype("category")
+
+    def test_estimate(self):
+        est = GES(self.data)
+        dag = est.estimate(scoring_method="cond-gauss", debug=True)

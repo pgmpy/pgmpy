@@ -10,6 +10,7 @@ from pgmpy.estimators.StructureScore import (
     BicScoreGauss,
     AICScore,
     AICScoreGauss,
+    CondGaussScore,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
