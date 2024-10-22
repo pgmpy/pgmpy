@@ -594,7 +594,7 @@ class BayesianNetwork(DAG):
         data: pandas DataFrame object
             A DataFrame object with column names same as the variables in the model.
 
-        algo: pgmpy Inference instance
+        algo: a subclass of pgmpy.inference.Inference or pgmpy.inference.ApproxInference
             An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
 
         stochastic: boolean
@@ -610,10 +610,6 @@ class BayesianNetwork(DAG):
 
             - Variable Elimination:
 
-              - virtual_evidence: list (default:None)
-                A list of pgmpy.factors.discrete.TabularCPD representing the virtual
-                evidences.
-
               - elimination_order: str or list (default='greedy')
                 Order in which to eliminate the variables in the algorithm. If list is provided,
                 should contain all variables in the model except the ones in `variables`. str options
@@ -626,10 +622,6 @@ class BayesianNetwork(DAG):
                 If False, returns a dict of distributions over each of the `variables`.
 
             - Belief Propagation:
-
-              - virtual_evidence: list (default:None)
-                A list of pgmpy.factors.discrete.TabularCPD representing the virtual
-                evidences.
 
               - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
                 If True, returns a Joint Distribution over `variables`.
@@ -647,10 +639,6 @@ class BayesianNetwork(DAG):
                 of generating samples. `samples` **must** conform with the
                 `evidence` and `virtual_evidence`.
 
-              - virtual_evidence: list (default: None)
-                A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
-                evidence.
-
               - state_names: dict (default: None)
                 A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
                 If None, inferred from the data but is possible that the final distribution misses some states.
@@ -665,8 +653,8 @@ class BayesianNetwork(DAG):
         Returns
         -------
         Inference results: Pandas DataFrame
-            If `stochastic` is True, returns the distribution of the queried variables.
-            If `stochastic` is False, returns the most likely state of the queried variables.
+            If `stochastic` is True, returns state(s) by sampling from the distribution of predicted variables.
+            If `stochastic` is False, returns state(s) with the highest probability value.
 
         Examples
         --------
