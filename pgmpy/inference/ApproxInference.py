@@ -262,9 +262,9 @@ class ApproxInference(object):
         >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
         {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
         >>> virtual_evidence_history = TabularCPD(variable='HISTORY', variable_card=2,values=[[0.99],[0.01]],
-                                          state_names={"HISTORY": ["TRUE", "FALSE"]})
+        ...                                  state_names={"HISTORY": ["TRUE", "FALSE"]})
         >>> evidence = {'CVP':'NORMAL'}
-        >>> print(infer.map_query(variables=["HISTORY"],evidence=evidence,virtual_evidence=[virtual_evidence_history]))
+        >>> print(infer.map_query(variables=["HISTORY"], evidence=evidence, virtual_evidence=[virtual_evidence_history]))
         {'HISTORY': 'TRUE'}
         """
         final_distribution = self.query(
