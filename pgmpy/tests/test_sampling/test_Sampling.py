@@ -374,34 +374,6 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
         self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
 
-    def test_missing_scheme_sample(self):
-        samples = self.bayesian_model.simulate(n_samples=1000)
-        self.assertFalse(samples.isnull().values.any())
-
-        samples = self.bayesian_model.simulate(
-            n_samples=1000, include_missing=True, missing_prob=0.9
-        )
-        self.assertTrue(samples.isnull().values.any())
-
-        miss_columns = ["A", "Q"]
-        samples = self.bayesian_model.simulate(
-            n_samples=1000,
-            include_missing=True,
-            missing_prob=0.9,
-            missing_columns=miss_columns,
-        )
-        self.assertTrue(samples[miss_columns].isnull().values.any())
-        self.assertFalse(samples.drop(columns=miss_columns).isnull().values.any())
-
-        with self.assertRaises(ValueError):
-            self.bayesian_model.simulate(
-                n_samples=100, include_missing=True, missing_prob=0
-            )
-        with self.assertRaises(ValueError):
-            self.bayesian_model.simulate(
-                n_samples=100, include_missing=True, missing_prob=1
-            )
-
     def test_likelihood_weighted_sample(self):
         # Test without state names
         sample = self.sampling_inference.likelihood_weighted_sample()

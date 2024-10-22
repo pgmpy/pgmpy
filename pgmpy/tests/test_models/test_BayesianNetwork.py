@@ -1840,3 +1840,33 @@ class TestSimulation(unittest.TestCase):
             ),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_missing_scheme_sample(self):
+        samples = self.con_model.simulate(n_samples=1000)
+        self.assertFalse(samples.isnull().values.any())
+
+        samples = self.con_model.simulate(
+            n_samples=1000, include_missing=True, missing_prob=0.9
+        )
+        self.assertTrue(samples.isnull().values.any())
+        
+        miss_columns = ["X", "U"]
+        samples = self.con_model.simulate(
+            n_samples=1000,
+            seed=42,
+            include_missing=True,
+            missing_prob=0.9,
+            missing_columns=miss_columns,
+        )
+        self.assertTrue(samples[miss_columns].isnull().values.any())
+        self.assertFalse(samples.drop(columns=miss_columns).isnull().values.any())
+
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=100, include_missing=True, missing_prob=0
+            )
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=100, include_missing=True, missing_prob=1
+            )
+
