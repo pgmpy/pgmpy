@@ -1185,6 +1185,9 @@ class BayesianNetwork(DAG):
         partial_samples=None,
         seed=None,
         show_progress=True,
+        include_missing=False,
+        missing_prob=0.1,
+        missing_columns=None
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1226,6 +1229,9 @@ class BayesianNetwork(DAG):
 
         show_progress: bool
             If True, shows a progress bar when generating samples.
+
+        Simulation with missing values:
+        >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
 
         Returns
         -------
@@ -1346,7 +1352,23 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 5: Postprocess and return
+        # Step 5: If include_missing; include missing values in samples.
+        if include_missing:
+            if missing_prob <= 0:
+                raise ValueError("Missingness probability should be greater than 0")
+            if missing_prob >= 1:
+                raise ValueError("Missingness probability should be less than 1")
+
+            mask = np.random.rand(*samples.shape)
+            missing_mask = mask < missing_prob
+
+            if missing_columns:
+                col_indices = [samples.columns.get_loc(col) for col in samples.columns if col not in missing_columns]
+                missing_mask[:, col_indices] = 0
+
+            samples = samples.mask(missing_mask)
+
+        # Step 6: Postprocess and return
         if include_latents:
             return samples.astype("category")
         else:
