@@ -47,6 +47,73 @@ class CausalInference(object):
     'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
     """
 
+    def identify_causal_effect(self, X, Y, **kwargs):
+        """
+        Iteratively applies different identification methods to identify the 
+    causal effect of X on Y and returns a combined result.
+
+    Parameters
+    ----------
+    X: str or list (array-like)
+        The cause/exposure variables.
+
+    Y: str or list (array-like)
+        The outcome variable
+
+    kwargs: Any
+        Additional parameters for specific identification methods.
+
+    Returns
+    -------
+    Identification result: dict
+        A dictionary with identification methods as keys and their corresponding
+        causal effects or identification results as values.
+
+    Examples
+    --------
+    >>> from pgmpy.models import BayesianNetwork
+    >>> from pgmpy.inference import CausalInference
+    >>> model = BayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+    ...                        ("z2", "x2"), ("y2", "z2")])
+    >>> c_infer = CausalInference(model)
+    >>> c_infer.identify_causal_effect(X="x1", Y="y1")
+    {'backdoor': 0.25, 'frontdoor': None, 'instrumental': None}
+
+    References
+    ----------
+    Pearl, Judea. "Causality: models, reasoning and inference." Cambridge university press, 2009.
+        """
+        results = {}
+
+        # Try Backdoor Adjustment
+        try:
+            adjustment_set = self.get_minimal_adjustment_set(X, Y)
+            if adjustment_set:
+                backdoor_effect = self.query(variables=[Y], do={X: 1}, adjustment_set=adjustment_set, **kwargs)
+                results['backdoor'] = backdoor_effect
+            else:
+                results['backdoor'] = None
+        except Exception as e:
+            results['backdoor'] = None
+
+        # Try Front-door Adjustment
+        try:
+            frontdoor_effect = self._apply_frontdoor_adjustment(X, Y, **kwargs)
+            results['frontdoor'] = frontdoor_effect
+        except Exception as e:
+            results['frontdoor'] = None
+
+        # Try Instrumental Variables Method
+        try:
+            instrumental_effect = self._apply_instrumental_variable_method(X, Y, **kwargs)
+            results['instrumental'] = instrumental_effect
+        except Exception as e:
+            results['instrumental'] = None
+
+        return results
+
+
+    
     def __init__(self, model, set_nodes=None):
         if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
