@@ -1230,6 +1230,16 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
+        include_missing: bool
+            If True, include missing values in the samples.
+        
+        missing_prob: float
+            The probability that there is missing values in the samples.
+
+        missing_columns: list
+            The list of columns where there will be missing values in the samples.
+            If None, then all columns could contain the missing values. 
+
         Simulation with missing values:
         >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
 
