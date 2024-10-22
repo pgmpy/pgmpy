@@ -195,5 +195,27 @@ class TestLGBNMethods(unittest.TestCase):
         cpds = model_lin.get_random_cpds()
         self.assertEqual(len(cpds), len(model.nodes()))
 
+    def test_get_random(self):
+        model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
+        model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.2)
+        self.assertNotEqual(model1.edges(), model2.edges())
+        self.assertIsInstance(
+            model1, LinearGaussianBayesianNetwork, "Incorrect instance"
+        )
+        self.assertIsInstance(
+            model2, LinearGaussianBayesianNetwork, "Incorrect instance"
+        )
+
+        node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
+        model3 = LinearGaussianBayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.5, node_names=node_names
+        )
+        self.assertEqual(len(model3.nodes()), 5)
+        self.assertEqual(sorted(model3.nodes()), node_names)
+        self.assertEqual(len(model3.cpds), 5)
+        self.assertIsInstance(
+            model3, LinearGaussianBayesianNetwork, "Incorrect instance"
+        )
+
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3

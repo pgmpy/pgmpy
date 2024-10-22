@@ -1,5 +1,6 @@
 from .bn_inference import BayesianModelProbability
 from .metrics import (
+    SHD,
     correlation_score,
     fisher_c,
     implied_cis,
@@ -13,4 +14,5 @@ __all__ = [
     "structure_score",
     "implied_cis",
     "fisher_c",
+    "SHD",
 ]

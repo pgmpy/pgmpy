@@ -732,8 +732,10 @@ class BeliefPropagation(Inference):
         ----------
         sending_clique: node (as the operation is on junction tree, node should be a tuple)
             Node sending the message
+
         receiving_clique: node (as the operation is on junction tree, node should be a tuple)
             Node receiving the message
+
         operation: str ('marginalize' | 'maximize')
             The operation to do for passing messages between nodes.
 

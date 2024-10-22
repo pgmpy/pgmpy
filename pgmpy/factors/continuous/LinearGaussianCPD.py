@@ -46,7 +46,8 @@ class LinearGaussianCPD(BaseFactor):
         variable: any hashable python object
             The variable whose CPD is defined.
 
-        evidence_mean: Mean vector (numpy array) of the joint distribution, X
+        evidence_mean: list (array-like)
+            Mean vector (numpy array) of the joint distribution, X
 
         evidence_variance: int, float
             The variance of the multivariate gaussian, X = ['x1', 'x2', ..., 'xn']
@@ -57,7 +58,6 @@ class LinearGaussianCPD(BaseFactor):
         beta (optional): iterable of int or float
             An iterable representing the coefficient vector of the linear equation.
             The first term represents the constant term in the linear equation.
-
 
         Examples
         --------
