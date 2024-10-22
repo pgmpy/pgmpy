@@ -19,6 +19,7 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.independencies import Independencies
+from pgmpy.inference import ApproxInference, BeliefPropagation
 from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
@@ -1017,9 +1018,26 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         titanic = BayesianNetwork()
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
         titanic.fit(self.titanic_data2[500:])
+        var_el_parameters = {"elimination_order": "WeightedMinFill"}
 
-        p1 = titanic.predict(self.titanic_data2[["Sex", "Pclass"]][:30])
-        p2 = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
+        p1_variable_elimination = titanic.predict(
+            self.titanic_data2[["Sex", "Pclass"]][:30], **var_el_parameters
+        )
+
+        p1_belief_propagation = titanic.predict(
+            self.titanic_data2[["Sex", "Pclass"]][:30], algo=BeliefPropagation
+        )
+
+        p2_variable_elimination = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30]
+        )
+
+        p2_approx_inference = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30],
+            algo=ApproxInference,
+            seed=42,
+        )
+
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
 
         p1_res = np.array(
@@ -1125,8 +1143,12 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             ]
         )
 
-        np_test.assert_array_equal(p1.values.ravel(), p1_res)
-        np_test.assert_array_equal(p2.values.ravel(), p2_res)
+        np_test.assert_array_equal(p1_variable_elimination.values.ravel(), p1_res)
+        np_test.assert_array_equal(p1_belief_propagation.values.ravel(), p1_res)
+
+        np_test.assert_array_equal(p2_variable_elimination.values.ravel(), p2_res)
+        np_test.assert_array_equal(p2_approx_inference.values.ravel(), p2_res)
+
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
 
     def test_predict_stochastic(self):
