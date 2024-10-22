@@ -1368,7 +1368,7 @@ class BayesianNetwork(DAG):
                 raise ValueError("Missingness probability should be greater than 0")
             if missing_prob >= 1:
                 raise ValueError("Missingness probability should be less than 1")
-            
+
             rng = np.random.Generator(np.random.PCG64(seed))
 
             mask = rng.random(size=samples.shape)

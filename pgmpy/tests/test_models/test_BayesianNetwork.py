@@ -1849,7 +1849,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=1000, include_missing=True, missing_prob=0.9
         )
         self.assertTrue(samples.isnull().values.any())
-        
+
         miss_columns = ["X", "U"]
         samples = self.con_model.simulate(
             n_samples=1000,
@@ -1862,11 +1862,6 @@ class TestSimulation(unittest.TestCase):
         self.assertFalse(samples.drop(columns=miss_columns).isnull().values.any())
 
         with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, include_missing=True, missing_prob=0
-            )
+            self.con_model.simulate(n_samples=100, include_missing=True, missing_prob=0)
         with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, include_missing=True, missing_prob=1
-            )
-
+            self.con_model.simulate(n_samples=100, include_missing=True, missing_prob=1)
