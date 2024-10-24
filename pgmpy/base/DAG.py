@@ -1201,19 +1201,29 @@ class PDAG(nx.DiGraph):
         self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
-        # TODO: Fix the cycle issue
-        # import pdb; pdb.set_trace()
-        # try:
-        #     # Filter out undirected edges as they also form a cycle in
-        #     # themself when represented using directed edges.
-        #     cycles = filter(lambda t: len(t) > 2, nx.simple_cycles(self))
-        #     if cycles:
-        #         out_str = "Cycles are not allowed in a PDAG. "
-        #         out_str += "The following path forms a loop: "
-        #         out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
-        #         raise ValueError(out_str)
-        # except nx.NetworkXNoCycle:
-        #     pass
+
+        self.detect_cycles()
+
+    def detect_cycles(self):
+        """
+        Detects and handles cycles in the PDAG. Ignores pseudo-cycles caused by undirected edges
+        being represented as two directed edges. Raises an error if real cycles are found.
+        """
+        cycles = list(nx.simple_cycles(self))
+
+        real_cycles = []
+        for cycle in cycles:
+            if len(cycle) > 2:
+                real_cycles.append(cycle)
+
+        if real_cycles:
+            out_str = (
+                "Cycles are not allowed in a PDAG. The following paths form a loop:\n"
+            )
+            for cycle in real_cycles:
+                formatted_cycle = " -> ".join(map(str, cycle))
+                out_str += formatted_cycle + " -> " + str(cycle[0]) + "\n"
+            raise ValueError(out_str)
 
     def copy(self):
         """
