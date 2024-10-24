@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 from itertools import chain, product
-import sys
-sys.path.insert(0, 'C:/Users/MS/pgmpy')
+
 import networkx as nx
 import numpy as np
 from tqdm.auto import tqdm
