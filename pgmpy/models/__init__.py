@@ -8,14 +8,12 @@ from .MarkovChain import MarkovChain
 from .MarkovNetwork import MarkovNetwork
 from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
-from .NoisyOrModel import NoisyOrModel
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .SEM import SEMGraph, SEMAlg, SEM
 
 __all__ = [
     "BayesianModel",
     "BayesianNetwork",
-    "NoisyOrModel",
     "MarkovNetwork",
     "MarkovModel",
     "FactorGraph",
