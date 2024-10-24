@@ -1,4 +1,5 @@
 import gzip
+import json
 import os
 
 import pandas as pd
@@ -98,7 +99,7 @@ def get_example_model(model):
         "pathfinder": "utils/example_models/pathfinder.bif.gz",
         "pigs": "utils/example_models/pigs.bif.gz",
         "munin": "utils/example_models/munin.bif.gz",
-        "ecoli70": "",
+        "ecoli70": "utils/example_models/ecoli70.json",
         "magic-niab": "",
         "magic-irri": "",
         "arth150": "",
@@ -106,17 +107,55 @@ def get_example_model(model):
         "mehra": "",
     }
 
-    if model not in filenames.keys():
-        raise ValueError("dataset should be one of the options")
-    if filenames[model] == "":
-        raise NotImplementedError("The specified dataset isn't available.")
+    if model not in filenames:
+        raise ValueError(f"Unknown model name: {model}")
 
     path = filenames[model]
-    ref = files("pgmpy") / path
-    with gzip.open(ref) as f:
-        content = f.read()
-    reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
-    return reader.get_model()
+
+    # Handle BIF files (existing logic)
+    if path.endswith(".bif.gz"):
+        from pgmpy.readwrite import BIFReader
+
+        ref = files("pgmpy") / path
+        with gzip.open(ref) as f:
+            content = f.read()
+        reader = BIFReader(string=content.decode("utf-8"))
+        return reader.get_model()
+
+    # Handle JSON files for Gaussian or Conditional Linear Gaussian Bayesian Networks
+    elif path.endswith(".json"):
+
+        from pgmpy.factors.continuous import LinearGaussianCPD
+        from pgmpy.models import LinearGaussianBayesianNetwork
+
+        with open(files("pgmpy") / path, "r") as f:
+            data = json.load(f)
+
+        # Extract nodes, arcs, and CPDs from the JSON file
+        nodes = data.get("nodes")
+        arcs = data.get("arcs")
+        cpds_data = data.get("cpds")
+
+        # Create the model
+        model = LinearGaussianBayesianNetwork(arcs)
+        model.add_nodes_from(nodes)
+
+        # Create CPDs and add them to the model
+        cpds = []
+        for cpd_data in cpds_data:
+            cpd = LinearGaussianCPD(
+                variable=nodes,
+                evidence_mean=cpd_data["coefficients"],
+                evidence_variance=cpd_data["variance"],
+                evidence=cpd_data["parents"],
+            )
+            cpds.append(cpd)
+
+        model.add_cpds(*cpds)
+        return model
+
+    else:
+        raise NotImplementedError(f"The specified dataset {model} isn't available.")
 
 
 def discretize(data, cardinality, labels=dict(), method="rounding"):

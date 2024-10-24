@@ -1,0 +1,469 @@
+{
+  "nodes": ["aceB", "asnA", "atpD", "atpG", "b1191", "b1583", "b1963", "cchB", "cspA", "cspG", "dnaG", "dnaJ", "dnaK", "eutG", "fixC", "flgD", "folK", "ftsJ", "gltA", "hupB", "ibpB", "icdA", "lacA", "lacY", "lacZ", "lpdA", "mopB", "nmpC", "nuoM", "pspA", "pspB", "sucA", "sucD", "tnaA", "yaeM", "yceP", "ycgX", "yecO", "yedE", "yfaD", "yfiA", "ygbD", "ygcE", "yhdM", "yheI", "yjbO"],
+  "arcs": [
+    ["asnA", "icdA"],
+    ["asnA", "lacA"],
+    ["asnA", "lacY"],
+    ["asnA", "lacZ"],
+    ["atpD", "yheI"],
+    ["b1191", "fixC"],
+    ["b1191", "tnaA"],
+    ["b1191", "ygcE"],
+    ["cspA", "hupB"],
+    ["cspA", "yfiA"],
+    ["cspG", "cspA"],
+    ["cspG", "lacA"],
+    ["cspG", "lacY"],
+    ["cspG", "pspA"],
+    ["cspG", "pspB"],
+    ["cspG", "yaeM"],
+    ["cspG", "yecO"],
+    ["cspG", "yedE"],
+    ["dnaK", "mopB"],
+    ["eutG", "ibpB"],
+    ["eutG", "lacY"],
+    ["eutG", "sucA"],
+    ["eutG", "yceP"],
+    ["eutG", "yfaD"],
+    ["fixC", "cchB"],
+    ["fixC", "tnaA"],
+    ["fixC", "yceP"],
+    ["fixC", "ycgX"],
+    ["fixC", "ygbD"],
+    ["fixC", "yjbO"],
+    ["icdA", "aceB"],
+    ["lacA", "b1583"],
+    ["lacA", "lacY"],
+    ["lacA", "lacZ"],
+    ["lacA", "yaeM"],
+    ["lacY", "lacZ"],
+    ["lacY", "nuoM"],
+    ["lacZ", "b1583"],
+    ["lacZ", "mopB"],
+    ["lacZ", "yaeM"],
+    ["mopB", "ftsJ"],
+    ["pspA", "nmpC"],
+    ["pspB", "pspA"],
+    ["sucA", "atpD"],
+    ["sucA", "atpG"],
+    ["sucA", "dnaJ"],
+    ["sucA", "flgD"],
+    ["sucA", "gltA"],
+    ["sucA", "sucD"],
+    ["sucA", "tnaA"],
+    ["sucA", "yfaD"],
+    ["sucA", "ygcE"],
+    ["sucA", "yhdM"],
+    ["yceP", "b1583"],
+    ["yceP", "ibpB"],
+    ["yceP", "yfaD"],
+    ["ycgX", "dnaG"],
+    ["yedE", "lpdA"],
+    ["yedE", "pspA"],
+    ["yedE", "pspB"],
+    ["yedE", "yheI"],
+    ["yfiA", "hupB"],
+    ["ygcE", "asnA"],
+    ["ygcE", "atpD"],
+    ["ygcE", "icdA"],
+    ["yheI", "b1963"],
+    ["yheI", "dnaG"],
+    ["yheI", "dnaK"],
+    ["yheI", "folK"],
+    ["yheI", "ycgX"]
+  ],
+  "cpds": {
+    "aceB": {
+      "coefficients": {
+        "(Intercept)": [0.1324],
+        "icdA": [1.0464]
+      },
+      "variance": [0.0853],
+      "parents": ["icdA"]
+    },
+    "asnA": {
+      "coefficients": {
+        "(Intercept)": [0.3494],
+        "ygcE": [0.7975]
+      },
+      "variance": [0.0914],
+      "parents": ["ygcE"]
+    },
+    "atpD": {
+      "coefficients": {
+        "(Intercept)": [-0.0403],
+        "sucA": [0.2603],
+        "ygcE": [-0.7252]
+      },
+      "variance": [0.4131],
+      "parents": ["sucA", "ygcE"]
+    },
+    "atpG": {
+      "coefficients": {
+        "(Intercept)": [-0.8908],
+        "sucA": [0.618]
+      },
+      "variance": [0.3943],
+      "parents": ["sucA"]
+    },
+    "b1191": {
+      "coefficients": {
+        "(Intercept)": [1.273]
+      },
+      "variance": [0.6086],
+      "parents": []
+    },
+    "b1583": {
+      "coefficients": {
+        "(Intercept)": [1.382],
+        "lacA": [-0.2457],
+        "lacZ": [0.3422],
+        "yceP": [0.2407]
+      },
+      "variance": [1.1085],
+      "parents": ["lacA", "lacZ", "yceP"]
+    },
+    "b1963": {
+      "coefficients": {
+        "(Intercept)": [0.9649],
+        "yheI": [1.0376]
+      },
+      "variance": [0.3768],
+      "parents": ["yheI"]
+    },
+    "cchB": {
+      "coefficients": {
+        "(Intercept)": [1.0695],
+        "fixC": [0.618]
+      },
+      "variance": [0.6406],
+      "parents": ["fixC"]
+    },
+    "cspA": {
+      "coefficients": {
+        "(Intercept)": [-0.4265],
+        "cspG": [0.2887]
+      },
+      "variance": [1.5367],
+      "parents": ["cspG"]
+    },
+    "cspG": {
+      "coefficients": {
+        "(Intercept)": [2.0261]
+      },
+      "variance": [1.0755],
+      "parents": []
+    },
+    "dnaG": {
+      "coefficients": {
+        "(Intercept)": [0.117],
+        "ycgX": [0.5992],
+        "yheI": [0.1955]
+      },
+      "variance": [0.1302],
+      "parents": ["ycgX", "yheI"]
+    },
+    "dnaJ": {
+      "coefficients": {
+        "(Intercept)": [0.121],
+        "sucA": [-0.8085]
+      },
+      "variance": [0.5754],
+      "parents": ["sucA"]
+    },
+    "dnaK": {
+      "coefficients": {
+        "(Intercept)": [-0.2469],
+        "yheI": [1.0797]
+      },
+      "variance": [0.2908],
+      "parents": ["yheI"]
+    },
+    "eutG": {
+      "coefficients": {
+        "(Intercept)": [1.2654]
+      },
+      "variance": [0.6911],
+      "parents": []
+    },
+    "fixC": {
+      "coefficients": {
+        "(Intercept)": [0.3165],
+        "b1191": [0.9406]
+      },
+      "variance": [1.1309],
+      "parents": ["b1191"]
+    },
+    "flgD": {
+      "coefficients": {
+        "(Intercept)": [-0.5167],
+        "sucA": [0.6362]
+      },
+      "variance": [0.3929],
+      "parents": ["sucA"]
+    },
+    "folK": {
+      "coefficients": {
+        "(Intercept)": [0.5641],
+        "yheI": [0.8181]
+      },
+      "variance": [0.1344],
+      "parents": ["yheI"]
+    },
+    "ftsJ": {
+      "coefficients": {
+        "(Intercept)": [0.6738],
+        "mopB": [0.9241]
+      },
+      "variance": [0.1564],
+      "parents": ["mopB"]
+    },
+    "gltA": {
+      "coefficients": {
+        "(Intercept)": [-0.9572],
+        "sucA": [0.379]
+      },
+      "variance": [0.6895],
+      "parents": ["sucA"]
+    },
+    "hupB": {
+      "coefficients": {
+        "(Intercept)": [-0.1821],
+        "cspA": [-0.2984],
+        "yfiA": [1.3867]
+      },
+      "variance": [0.1159],
+      "parents": ["cspA", "yfiA"]
+    },
+    "ibpB": {
+      "coefficients": {
+        "(Intercept)": [-0.4227],
+        "eutG": [1.4471],
+        "yceP": [0.1249]
+      },
+      "variance": [0.4609],
+      "parents": ["eutG", "yceP"]
+    },
+    "icdA": {
+      "coefficients": {
+        "(Intercept)": [-0.4155],
+        "asnA": [0.5228],
+        "ygcE": [-1.0585]
+      },
+      "variance": [0.3179],
+      "parents": ["asnA", "ygcE"]
+    },
+    "lacA": {
+      "coefficients": {
+        "(Intercept)": [0.4469],
+        "asnA": [0.2724],
+        "cspG": [0.2539]
+      },
+      "variance": [2.887],
+      "parents": ["asnA", "cspG"]
+    },
+    "lacY": {
+      "coefficients": {
+        "(Intercept)": [-0.1149],
+        "asnA": [-0.204],
+        "cspG": [-0.2241],
+        "eutG": [0.3537],
+        "lacA": [1.0462]
+      },
+      "variance": [0.0602],
+      "parents": ["asnA", "cspG", "eutG", "lacA"]
+    },
+    "lacZ": {
+      "coefficients": {
+        "(Intercept)": [0.2],
+        "asnA": [-0.0161],
+        "lacA": [1.3684],
+        "lacY": [-0.4376]
+      },
+      "variance": [0.3408],
+      "parents": ["asnA", "lacA", "lacY"]
+    },
+    "lpdA": {
+      "coefficients": {
+        "(Intercept)": [-0.1007],
+        "yedE": [0.9609]
+      },
+      "variance": [0.1399],
+      "parents": ["yedE"]
+    },
+    "mopB": {
+      "coefficients": {
+        "(Intercept)": [0.0357],
+        "dnaK": [0.8958],
+        "lacZ": [-0.059]
+      },
+      "variance": [0.3139],
+      "parents": ["dnaK", "lacZ"]
+    },
+    "nmpC": {
+      "coefficients": {
+        "(Intercept)": [0.1688],
+        "pspA": [-0.769]
+      },
+      "variance": [0.3232],
+      "parents": ["pspA"]
+    },
+    "nuoM": {
+      "coefficients": {
+        "(Intercept)": [-2.0176],
+        "lacY": [0.4083]
+      },
+      "variance": [0.8133],
+      "parents": ["lacY"]
+    },
+    "pspA": {
+      "coefficients": {
+        "(Intercept)": [-0.1901],
+        "cspG": [0.1079],
+        "pspB": [0.1399],
+        "yedE": [-0.7456]
+      },
+      "variance": [0.1724],
+      "parents": ["cspG", "pspB", "yedE"]
+    },
+    "pspB": {
+      "coefficients": {
+        "(Intercept)": [-0.249],
+        "cspG": [0.2759],
+        "yedE": [-0.9886]
+      },
+      "variance": [0.2706],
+      "parents": ["cspG", "yedE"]
+    },
+    "sucA": {
+      "coefficients": {
+        "(Intercept)": [0.0243],
+        "eutG": [-1.0894]
+      },
+      "variance": [0.6586],
+      "parents": ["eutG"]
+    },
+    "sucD": {
+      "coefficients": {
+        "(Intercept)": [-0.5907],
+        "sucA": [0.683]
+      },
+      "variance": [0.4356],
+      "parents": ["sucA"]
+    },
+    "tnaA": {
+      "coefficients": {
+        "(Intercept)": [-0.3861],
+        "b1191": [-0.5926],
+        "fixC": [-0.2442],
+        "sucA": [0.1106]
+      },
+      "variance": [0.0962],
+      "parents": ["b1191", "fixC", "sucA"]
+    },
+    "yaeM": {
+      "coefficients": {
+        "(Intercept)": [0.3665],
+        "cspG": [1.4722],
+        "lacA": [-0.7173],
+        "lacZ": [0.7204]
+      },
+      "variance": [0.6561],
+      "parents": ["cspG", "lacA", "lacZ"]
+    },
+    "yceP": {
+      "coefficients": {
+        "(Intercept)": [-0.128],
+        "eutG": [1.1409],
+        "fixC": [-0.3267]
+      },
+      "variance": [0.1674],
+      "parents": ["eutG", "fixC"]
+    },
+    "ycgX": {
+      "coefficients": {
+        "(Intercept)": [0.1584],
+        "fixC": [-0.2716],
+        "yheI": [1.2448]
+      },
+      "variance": [0.2555],
+      "parents": ["fixC", "yheI"]
+    },
+    "yecO": {
+      "coefficients": {
+        "(Intercept)": [0.2719],
+        "cspG": [0.7949]
+      },
+      "variance": [0.2249],
+      "parents": ["cspG"]
+    },
+    "yedE": {
+      "coefficients": {
+        "(Intercept)": [-0.1606],
+        "cspG": [-0.642]
+      },
+      "variance": [0.2771],
+      "parents": ["cspG"]
+    },
+    "yfaD": {
+      "coefficients": {
+        "(Intercept)": [0.1628],
+        "eutG": [0.2876],
+        "sucA": [-0.2437],
+        "yceP": [0.3178]
+      },
+      "variance": [0.187],
+      "parents": ["eutG", "sucA", "yceP"]
+    },
+    "yfiA": {
+      "coefficients": {
+        "(Intercept)": [-1.1928],
+        "cspA": [0.8572]
+      },
+      "variance": [0.3156],
+      "parents": ["cspA"]
+    },
+    "ygbD": {
+      "coefficients": {
+        "(Intercept)": [1.3504],
+        "fixC": [0.6607]
+      },
+      "variance": [0.74],
+      "parents": ["fixC"]
+    },
+    "ygcE": {
+      "coefficients": {
+        "(Intercept)": [0.524],
+        "b1191": [1.8815],
+        "sucA": [0.6327]
+      },
+      "variance": [0.3429],
+      "parents": ["b1191", "sucA"]
+    },
+    "yhdM": {
+      "coefficients": {
+        "(Intercept)": [0.2085],
+        "sucA": [-0.777]
+      },
+      "variance": [0.5882],
+      "parents": ["sucA"]
+    },
+    "yheI": {
+      "coefficients": {
+        "(Intercept)": [-0.2137],
+        "atpD": [-0.9633],
+        "yedE": [0.3382]
+      },
+      "variance": [0.1406],
+      "parents": ["atpD", "yedE"]
+    },
+    "yjbO": {
+      "coefficients": {
+        "(Intercept)": [1.591],
+        "fixC": [-0.0706]
+      },
+      "variance": [1.8512],
+      "parents": ["fixC"]
+    }
+  }
+}
