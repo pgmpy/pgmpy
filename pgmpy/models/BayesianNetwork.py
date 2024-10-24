@@ -1186,6 +1186,9 @@ class BayesianNetwork(DAG):
         partial_samples=None,
         seed=None,
         show_progress=True,
+        include_missing=False,
+        missing_prob=0.1,
+        missing_columns=None,
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1228,6 +1231,16 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
+        include_missing: bool (default: False)
+            If True, include missing values in the samples.
+
+        missing_prob: float (default: 0.1)
+            The probability that there is missing values in the samples.
+
+        missing_columns: list (default: None)
+            The list of columns where there will be missing values in the samples.
+            If None, then all columns could contain the missing values.
+
         Returns
         -------
         A dataframe with the simulated data: pd.DataFrame
@@ -1259,6 +1272,9 @@ class BayesianNetwork(DAG):
 
         >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]], state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
+
+        Simulation with missing values:
+        >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
         """
         from pgmpy.sampling import BayesianModelSampling
 
@@ -1347,7 +1363,29 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 5: Postprocess and return
+        # Step 5: If include_missing; include missing values in samples.
+        if include_missing:
+            if missing_prob <= 0:
+                raise ValueError("Missingness probability should be greater than 0")
+            if missing_prob >= 1:
+                raise ValueError("Missingness probability should be less than 1")
+
+            rng = np.random.Generator(np.random.PCG64(seed))
+
+            mask = rng.random(size=samples.shape)
+            missing_mask = mask < missing_prob
+
+            if missing_columns:
+                col_indices = [
+                    samples.columns.get_loc(col)
+                    for col in samples.columns
+                    if col not in missing_columns
+                ]
+                missing_mask[:, col_indices] = 0
+
+            samples = samples.mask(missing_mask)
+
+        # Step 6: Postprocess and return
         if include_latents:
             return samples.astype("category")
         else:

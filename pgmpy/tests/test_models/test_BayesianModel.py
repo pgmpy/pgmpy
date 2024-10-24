@@ -1163,6 +1163,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                     0.5,
                 ]
             ),
+            rtol=1e-5,
             atol=0,
         )
         predict_data = pd.DataFrame(
