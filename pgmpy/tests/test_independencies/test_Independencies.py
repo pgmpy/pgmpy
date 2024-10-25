@@ -1,6 +1,6 @@
 import unittest
 
-from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.independencies import IndependenceAssertion, Independencies
 
 
 class TestIndependenceAssertion(unittest.TestCase):
@@ -211,6 +211,44 @@ class TestIndependencies(unittest.TestCase):
         self.assertFalse(Independencies() == Independencies(["A", "B", "C"]))
         self.assertFalse(Independencies(["A", "B", "C"]) == Independencies())
         self.assertTrue(Independencies() == Independencies())
+
+    def test_reduce(self):
+        ind1 = Independencies(["X", "Y", "Z"], ["X", "Y", "Z"])
+        self.assertEqual(len(ind1.reduce()), 1)
+
+        ind2 = Independencies(["A", "B", "C"], ["D", "E", "F"])
+        reduced = ind2.reduce()
+        self.assertEqual(len(reduced), 2)
+        self.assertTrue(
+            all(assertion in reduced for assertion in ind2.get_assertions())
+        )
+
+        ind3 = Independencies(["W", ["X", "Y", "Z"]], ["W", "X", "Y"])
+        reduced = ind3.reduce()
+        self.assertEqual(len(reduced), 1)
+        self.assertEqual(reduced[0], IndependenceAssertion("W", ["X", "Y", "Z"]))
+
+        ind4 = Independencies(
+            ["A", ["B", "C"], "D"], ["A", "B", "D"], ["A", "C", "D"], ["E", "F", "G"]
+        )
+        reduced = ind4.reduce()
+        self.assertEqual(len(reduced), 2)
+        self.assertTrue(IndependenceAssertion("A", ["B", "C"], "D") in reduced)
+        self.assertTrue(IndependenceAssertion("E", "F", "G") in reduced)
+
+        ind5 = Independencies(["X", "Y", "Z"], ["X", "Y", "Z"], ["A", "B", "C"])
+        original_assertions = ind5.get_assertions()
+        ind5.reduce(inplace=True)
+        self.assertNotEqual(len(original_assertions), len(ind5.get_assertions()))
+        self.assertEqual(len(ind5.get_assertions()), 2)
+
+        ind6 = Independencies()
+        self.assertEqual(len(ind6.reduce()), 0)
+
+        ind7 = Independencies(["X", "Y", "Z"])
+        reduced = ind7.reduce()
+        self.assertEqual(len(reduced), 1)
+        self.assertEqual(reduced[0], IndependenceAssertion("X", "Y", "Z"))
 
     def tearDown(self):
         del self.Independencies
