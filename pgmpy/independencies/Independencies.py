@@ -351,16 +351,22 @@ class Independencies(object):
             assertion_temp = Independencies(assertion)
 
             if not temp_independencies.entails(assertion_temp):
-                for existing_assertion in reduced_assertions:
-                    existing_temp = Independencies(existing_assertion)
+                removed_any = True
+                while removed_any:
+                    removed_any = False
+                    # Create a copy to iterate over since we might modify reduced_assertions
+                    for existing_assertion in reduced_assertions[:]:
+                        existing_temp = Independencies(existing_assertion)
 
-                    if existing_temp != assertion_temp:
-                        remove_old = not existing_temp.entails(
-                            assertion_temp
-                        ) and assertion_temp.entails(existing_temp)
+                        if existing_temp != assertion_temp:
+                            remove_old = not existing_temp.entails(
+                                assertion_temp
+                            ) and assertion_temp.entails(existing_temp)
 
-                        if remove_old:
-                            reduced_assertions.remove(existing_assertion)
+                            if remove_old:
+                                reduced_assertions.remove(existing_assertion)
+                                removed_any = True
+                                break
 
                 reduced_assertions.append(assertion)
 
