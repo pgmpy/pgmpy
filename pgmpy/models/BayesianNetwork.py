@@ -753,8 +753,45 @@ class BayesianNetwork(DAG):
                 )
             )
 
+            # example 'data' used for prediction
+            #         A    B    C    D
+            #   800  1.0  NaN  0.0  NaN
+            #   801  1.0  0.0  NaN  0.0
+
             df_results = pd.DataFrame(pred_values, index=data_unique.index)
-            data_with_results = pd.concat([data_unique, df_results], axis=1)
+            print(df_results)
+            # converting results dict to dataframe, only the predicted data points are not NaN
+            #        E    B    D    C    A
+            #  800  1.0  1.0  1.0  NaN  NaN
+            #  801  0.0  NaN  NaN  1.0  NaN
+
+            all_columns = data_unique.columns.tolist() + [
+                col for col in df_results.columns if col not in data_unique.columns
+            ]
+            df_complete_results = df_results.reindex(columns=all_columns)
+            print(df_complete_results)
+            # oredering columns correctly, the original data points are NaN as they were not part of pred_values' dictionary
+            #        A    B    C    D    E
+            #  800  NaN  1.0  NaN  1.0  1.0
+            #  801  NaN  NaN  1.0  NaN  0.0
+
+            data_with_results = df_complete_results.combine_first(data_unique)
+            print(data_with_results)
+            # NaN values are filled from original data
+            #        A    B    C    D    E
+            #  800  1.0  1.0  0.0  1.0  1.0
+            #  801  1.0  0.0  1.0  0.0  0.0
+
+            print(
+                data.merge(data_with_results, how="left").loc[
+                    :, list(missing_variables)
+                ]
+            )
+            # cannot merge these two as 'data' contains NaNs, and so it cannot be compared with data_with_results
+            # we need to merge them because data_with_results has results for multiple duplicate rows in 'data'
+            #       E
+            # 0    NaN
+            # 1    NaN
             return data.merge(data_with_results, how="left").loc[
                 :, list(missing_variables)
             ]
