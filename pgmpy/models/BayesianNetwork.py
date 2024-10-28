@@ -743,8 +743,10 @@ class BayesianNetwork(DAG):
             # Send state_names dict from one of the estimated CPDs to the inference class.
             pred_values = Parallel(n_jobs=n_jobs)(
                 delayed(model_inference.map_query)(
-                    variables=missing_variables,
-                    evidence=data_point.to_dict(),
+                    variables=missing_variables.union(
+                        set(data_point.index[data_point.isna()])
+                    ),
+                    evidence=data_point[~data_point.isna()].to_dict(),
                     show_progress=False,
                     **kwargs,
                 )
