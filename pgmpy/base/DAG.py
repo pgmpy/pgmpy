@@ -394,7 +394,7 @@ class DAG(nx.DiGraph):
 
     def get_independencies(self, latex=False, include_latents=False):
         """
-        Computes independencies in the DAG, by checking d-seperation.
+        Computes independencies in the DAG, by checking minimal d-seperation.
 
         Parameters
         ----------
@@ -412,36 +412,20 @@ class DAG(nx.DiGraph):
         >>> chain = DAG([('X', 'Y'), ('Y', 'Z')])
         >>> chain.get_independencies()
         (X \u27C2 Z | Y)
-        (Z \u27C2 X | Y)
         """
         nodes = set(self.nodes())
         if not include_latents:
-            nodes = set(self.nodes()) - self.latents
+            nodes -= self.latents
 
         independencies = Independencies()
-        for start in nodes:
-            if not include_latents:
-                rest = set(self.nodes()) - {start} - self.latents
-            else:
-                rest = set(self.nodes()) - {start}
+        for x, y in itertools.combinations(nodes, 2):
+            if not self.has_edge(x, y) and not self.has_edge(y, x):
+                minimal_separator = self.minimal_dseparator(
+                    start=x, end=y, include_latents=include_latents
+                )
+                if minimal_separator is not None:
+                    independencies.add_assertions([x, y, minimal_separator])
 
-            for r in range(len(rest)):
-                for observed in itertools.combinations(rest, r):
-                    d_seperated_variables = (
-                        rest
-                        - set(observed)
-                        - set(
-                            self.active_trail_nodes(
-                                start,
-                                observed=observed,
-                                include_latents=include_latents,
-                            )[start]
-                        )
-                    )
-                    if d_seperated_variables:
-                        independencies.add_assertions(
-                            [start, d_seperated_variables, observed]
-                        )
         independencies.reduce()
 
         if not latex:
@@ -554,7 +538,7 @@ class DAG(nx.DiGraph):
                     immoralities.add(tuple(sorted(parents)))
         return immoralities
 
-    def is_dconnected(self, start, end, observed=None):
+    def is_dconnected(self, start, end, observed=None, include_latents=False):
         """
         Returns True if there is an active trail (i.e. d-connection) between
         `start` and `end` node given that `observed` is observed.
@@ -580,12 +564,17 @@ class DAG(nx.DiGraph):
         >>> student.is_dconnected('grades', 'sat')
         True
         """
-        if end in self.active_trail_nodes(start, observed)[start]:
+        if (
+            end
+            in self.active_trail_nodes(
+                variables=start, observed=observed, include_latents=include_latents
+            )[start]
+        ):
             return True
         else:
             return False
 
-    def minimal_dseparator(self, start, end):
+    def minimal_dseparator(self, start, end, include_latents):
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -615,19 +604,24 @@ class DAG(nx.DiGraph):
         separator = set(
             itertools.chain(self.predecessors(start), self.predecessors(end))
         )
-        # If any of the parents were latents, take the latent's parent
-        while len(separator.intersection(self.latents)) != 0:
-            separator_copy = separator.copy()
-            for u in separator:
-                if u in self.latents:
-                    separator_copy.remove(u)
-                    separator_copy.update(set(self.predecessors(u)))
-            separator = separator_copy
+
+        if not include_latents:
+            # If any of the parents were latents, take the latent's parent
+            while len(separator.intersection(self.latents)) != 0:
+                separator_copy = separator.copy()
+                for u in separator:
+                    if u in self.latents:
+                        separator_copy.remove(u)
+                        separator_copy.update(set(self.predecessors(u)))
+                separator = separator_copy
+
         # Remove the start and end nodes in case it reaches there while removing latents.
         separator.difference_update({start, end})
 
         # If the initial set is not able to d-separate, no d-separator is possible.
-        if an_graph.is_dconnected(start, end, observed=separator):
+        if an_graph.is_dconnected(
+            start, end, observed=separator, include_latents=include_latents
+        ):
             return None
 
         # Go through the separator set, remove one element and check if it remains

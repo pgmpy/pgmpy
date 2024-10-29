@@ -4,7 +4,7 @@ import numpy as np
 import scipy.integrate as integrate
 
 from pgmpy.factors.base import BaseFactor
-from pgmpy.factors.distributions import GaussianDistribution, CustomDistribution
+from pgmpy.factors.distributions import CustomDistribution, GaussianDistribution
 
 
 class ContinuousFactor(BaseFactor):
@@ -36,6 +36,8 @@ class ContinuousFactor(BaseFactor):
         ['x', 'y']
         >>> dirichlet_factor.assignment(5,6)
         226800.0
+        >>> dirichlet_factor.cdf([(0, 0.2), (0, 0.5)])
+        8.384972114200703e-05
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
@@ -82,6 +84,39 @@ class ContinuousFactor(BaseFactor):
     @property
     def variable(self):
         return self.scope()[0]
+
+    def cdf(self, limits):
+        """
+        Returns the value of the cumulative distribution function for a multivariate
+        distribution over the given limits.
+
+        Parameters
+        ----------
+        limits : list of tuples
+            Each tuple contains the lower and upper integration limits for each variable.
+            For example, limits for a bivariate distribution could be [(-np.inf, x1), (-np.inf, x2)].
+
+        Returns
+        -------
+        float
+            The cumulative probability within the specified limits.
+
+        Examples
+        --------
+        >>> from scipy.stats import norm, multivariate_normal
+        >>> from pgmpy.factors.continuous import ContinuousFactor
+        >>> pdf = lambda x, y: multivariate_normal.pdf([x, y], mean=[0,0], cov=[[1, 0.5], [0.5, 1]])
+        >>> factor = ContinuousFactor(['x', 'y'], pdf)
+        >>> factor.cdf([(-np.inf, 1), (-np.inf, 1)])
+        0.7452035867990542
+        """
+
+        if len(limits) != len(self.distribution.variables):
+            raise ValueError(
+                "Limits should have the same length as the number of variables."
+            )
+
+        return integrate.nquad(self.pdf, limits)[0]
 
     def scope(self):
         """
