@@ -574,7 +574,7 @@ class DAG(nx.DiGraph):
         else:
             return False
 
-    def minimal_dseparator(self, start, end, include_latents):
+    def minimal_dseparator(self, start, end, include_latents=False):
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -585,6 +585,9 @@ class DAG(nx.DiGraph):
 
         end: node
             The second node.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are consider for minimal d-seperator.
 
         Examples
         --------
