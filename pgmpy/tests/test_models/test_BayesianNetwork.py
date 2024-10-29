@@ -1039,6 +1039,12 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         )
 
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
+        mask = np.random.choice(
+            [True, False], size=self.titanic_data2[["Survived", "Sex"]][:30].shape
+        )
+        p3_with_NaNs = titanic.predict(
+            self.titanic_data2[["Survived", "Sex"]][:30].mask(mask)
+        )
 
         p1_res = np.array(
             [
@@ -1150,6 +1156,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         np_test.assert_array_equal(p2_approx_inference.values.ravel(), p2_res)
 
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
+        # np_test.assert_array_equal(p3_with_NaNs.values.ravel(), p3_res)
 
     def test_predict_stochastic(self):
         titanic = BayesianNetwork()
