@@ -252,5 +252,5 @@ class TestGetExampleModel(unittest.TestCase):
         cat_model = get_example_model("asia")
         self.assertNotIsInstance(cat_model, LinearGaussianBayesianNetwork)
 
-        cont_model = get_example_model("ecoli70")
+        cont_model = get_example_model("magic-irri")
         self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)

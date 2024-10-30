@@ -104,9 +104,9 @@ def get_example_model(model):
         "pigs": "utils/example_models/pigs.bif.gz",
         "munin": "utils/example_models/munin.bif.gz",
         "ecoli70": "utils/example_models/ecoli70.json",
-        "magic-niab": "",
-        "magic-irri": "",
-        "arth150": "",
+        "magic-niab": "utils/example_models/magic-niab.json",
+        "magic-irri": "utils/example_models/magic-irri.json",
+        "arth150": "utils/example_models/arth150.json",
         "sangiovese": "",
         "mehra": "",
     }
