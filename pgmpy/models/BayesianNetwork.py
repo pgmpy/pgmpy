@@ -773,7 +773,7 @@ class BayesianNetwork(DAG):
                 predictions = pd.concat((predictions, duplicate_rows), copy=False)
 
             predictions = predictions.sort_index()
-            return predictions.loc[:, list(missing_variables)]
+            return predictions
 
     def predict_probability(self, data):
         """
