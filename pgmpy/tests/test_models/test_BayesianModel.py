@@ -855,9 +855,9 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             ]
         )
 
-        np_test.assert_array_equal(p1.values.ravel(), p1_res)
-        np_test.assert_array_equal(p2.values.ravel(), p2_res)
-        np_test.assert_array_equal(p3.values.ravel(), p3_res)
+        np_test.assert_array_equal(p1["Survived"].values.ravel(), p1_res)
+        np_test.assert_array_equal(p2["Sex"].values.ravel(), p2_res)
+        np_test.assert_array_equal(p3["Pclass"].values.ravel(), p3_res)
 
     def test_predict_stochastic(self):
         titanic = BayesianModel()
@@ -876,14 +876,14 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
         # Acceptable range between 15 - 20.
         # TODO: Is there a better way to test this?
-        self.assertTrue(p1.value_counts().values[0] <= 23)
-        self.assertTrue(p1.value_counts().values[0] >= 15)
+        self.assertTrue(p1["Survived"].value_counts().values[0] <= 23)
+        self.assertTrue(p1["Survived"].value_counts().values[0] >= 15)
 
-        self.assertTrue(p2.value_counts().values[0] <= 22)
-        self.assertTrue(p2.value_counts().values[0] >= 15)
+        self.assertTrue(p2["Sex"].value_counts().values[0] <= 22)
+        self.assertTrue(p2["Sex"].value_counts().values[0] >= 15)
 
-        self.assertTrue(p3.value_counts().values[0] <= 19)
-        self.assertTrue(p3.value_counts().values[0] >= 8)
+        self.assertTrue(p3["Pclass"].value_counts().values[0] <= 19)
+        self.assertTrue(p3["Pclass"].value_counts().values[0] >= 8)
 
     def test_connected_predict(self):
         np.random.seed(42)
@@ -898,7 +898,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         predict_data.drop("E", axis=1, inplace=True)
         e_predict = self.model_connected.predict(predict_data)
         np_test.assert_array_equal(
-            e_predict.values.ravel(),
+            e_predict["E"].values.ravel(),
             np.array(
                 [
                     1,
