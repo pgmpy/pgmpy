@@ -1234,7 +1234,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         predict_data.drop("E", axis=1, inplace=True)
         e_predict = self.model_connected.predict(predict_data)
         np_test.assert_array_equal(
-            e_predict.values.ravel(),
+            e_predict["E"].values.ravel(),
             np.array(
                 [
                     1,
