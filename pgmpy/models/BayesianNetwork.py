@@ -712,15 +712,17 @@ class BayesianNetwork(DAG):
         model_inference = algo(self)
 
         if stochastic:
-            data_unique_indexes = data.groupby(list(data.columns)).apply(
+            data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
                 lambda t: t.index.tolist()
             )
             data_unique = data_unique_indexes.index.to_frame()
 
             pred_values = Parallel(n_jobs=n_jobs)(
                 delayed(model_inference.query)(
-                    variables=missing_variables,
-                    evidence=data_point.to_dict(),
+                    variables=missing_variables.union(
+                        set(data_point.index[data_point.isna()])
+                    ),
+                    evidence=data_point[~data_point.isna()].to_dict(),
                     show_progress=False,
                     **kwargs,
                 )
@@ -728,22 +730,29 @@ class BayesianNetwork(DAG):
                     data_unique.iterrows(), total=data_unique.shape[0]
                 )
             )
+
+            all_columns = data.columns.tolist() + [col for col in missing_variables]
             predictions = pd.DataFrame()
             for i, row in enumerate(data_unique_indexes):
-                p = pred_values[i].sample(n=len(row))
-                p.index = row
-                predictions = pd.concat((predictions, p), copy=False)
+                samples = pred_values[i].sample(n=len(row))
+                initial_variables = data_unique.iloc[[i]]
+                known_variables = initial_variables.dropna(axis=1)
+                known_df = known_variables.loc[known_variables.index.repeat(len(row))]
+                known_df.index = samples.index
 
-            return predictions.reindex(data.index)
+                complete_data = pd.concat([samples, known_df], axis="columns")
+                complete_data.index = row
+                complete_data = complete_data.reindex(columns=all_columns)
+                predictions = pd.concat((predictions, complete_data), copy=False)
+
+            return predictions.sort_index()
 
         else:
             data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
                 lambda t: t.index.tolist()
             )
             data_unique = data_unique_indexes.index.to_frame()
-            pred_values = []
 
-            # Send state_names dict from one of the estimated CPDs to the inference class.
             pred_values = Parallel(n_jobs=n_jobs)(
                 delayed(model_inference.map_query)(
                     variables=missing_variables.union(
@@ -757,23 +766,21 @@ class BayesianNetwork(DAG):
                     data_unique.iterrows(), total=data_unique.shape[0]
                 )
             )
-            df_results = pd.DataFrame(pred_values, index=data_unique.index)
 
-            all_columns = data_unique.columns.tolist() + [
-                col for col in df_results.columns if col not in data_unique.columns
-            ]
-            df_complete_results = df_results.reindex(columns=all_columns)
-            data_with_results = df_complete_results.combine_first(data_unique)
-
+            all_columns = data.columns.tolist() + [col for col in missing_variables]
             predictions = pd.DataFrame()
             for i, row in enumerate(data_unique_indexes):
-                unique_row = data_with_results.iloc[[i]]
-                duplicate_rows = unique_row.loc[unique_row.index.repeat(len(row))]
-                duplicate_rows.index = row
-                predictions = pd.concat((predictions, duplicate_rows), copy=False)
+                predicted = pd.DataFrame(pred_values[i], index=[0])
+                initial_variables = data_unique.iloc[[i]].reset_index(drop=True)
+                known_variables = initial_variables.dropna(axis=1)
 
-            predictions = predictions.sort_index()
-            return predictions
+                complete_data = pd.concat([predicted, known_variables], axis="columns")
+                complete_data = complete_data.loc[complete_data.index.repeat(len(row))]
+                complete_data.index = row
+                complete_data = complete_data.reindex(columns=all_columns)
+                predictions = pd.concat([predictions, complete_data], copy=False)
+
+            return predictions.sort_index()
 
     def predict_probability(self, data):
         """

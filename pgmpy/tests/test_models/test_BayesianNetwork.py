@@ -1080,6 +1080,13 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                 "0",
             ]
         )
+        p1_complete = pd.concat(
+            [
+                self.titanic_data2[["Sex", "Pclass"]][:30],
+                pd.DataFrame({"Survived": p1_res}),
+            ],
+            axis=1,
+        )
         p2_res = np.array(
             [
                 "male",
@@ -1113,6 +1120,13 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                 "female",
                 "male",
             ]
+        )
+        p2_complete = pd.concat(
+            [
+                self.titanic_data2[["Survived", "Pclass"]][:30],
+                pd.DataFrame({"Sex": p2_res}),
+            ],
+            axis=1,
         )
         p3_res = np.array(
             [
@@ -1148,15 +1162,38 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                 "3",
             ]
         )
+        p3_complete = pd.concat(
+            [
+                self.titanic_data2[["Survived", "Sex"]][:30],
+                pd.DataFrame({"Pclass": p3_res}),
+            ],
+            axis=1,
+        )
 
-        np_test.assert_array_equal(p1_variable_elimination.values.ravel(), p1_res)
-        np_test.assert_array_equal(p1_belief_propagation.values.ravel(), p1_res)
+        self.assertTrue(
+            p1_variable_elimination.sort_index(axis=1).equals(
+                p1_complete.sort_index(axis=1)
+            )
+        )
+        self.assertTrue(
+            p1_belief_propagation.sort_index(axis=1).equals(
+                p1_complete.sort_index(axis=1)
+            )
+        )
 
-        np_test.assert_array_equal(p2_variable_elimination.values.ravel(), p2_res)
-        np_test.assert_array_equal(p2_approx_inference.values.ravel(), p2_res)
+        self.assertTrue(
+            p2_approx_inference.sort_index(axis=1).equals(
+                p2_complete.sort_index(axis=1)
+            )
+        )
+        self.assertTrue(
+            p2_variable_elimination.sort_index(axis=1).equals(
+                p2_complete.sort_index(axis=1)
+            )
+        )
 
-        np_test.assert_array_equal(p3.values.ravel(), p3_res)
-        # np_test.assert_array_equal(p3_with_NaNs.values.ravel(), p3_res)
+        # TODO: Tests for dataframes with NaN data?
+        self.assertTrue(p3.sort_index(axis=1).equals(p3_complete.sort_index(axis=1)))
 
     def test_predict_stochastic(self):
         titanic = BayesianNetwork()
@@ -1175,14 +1212,14 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
         # Acceptable range between 15 - 20.
         # TODO: Is there a better way to test this?
-        self.assertTrue(p1.value_counts().values[0] <= 23)
-        self.assertTrue(p1.value_counts().values[0] >= 15)
+        self.assertTrue(p1["Survived"].value_counts().values[0] <= 23)
+        self.assertTrue(p1["Survived"].value_counts().values[0] >= 15)
 
-        self.assertTrue(p2.value_counts().values[0] <= 22)
-        self.assertTrue(p2.value_counts().values[0] >= 15)
+        self.assertTrue(p2["Sex"].value_counts().values[0] <= 22)
+        self.assertTrue(p2["Sex"].value_counts().values[0] >= 15)
 
-        self.assertTrue(p3.value_counts().values[0] <= 19)
-        self.assertTrue(p3.value_counts().values[0] >= 8)
+        self.assertTrue(p3["Pclass"].value_counts().values[0] <= 19)
+        self.assertTrue(p3["Pclass"].value_counts().values[0] >= 8)
 
     def test_connected_predict(self):
         np.random.seed(42)
