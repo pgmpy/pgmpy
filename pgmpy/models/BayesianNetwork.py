@@ -672,7 +672,7 @@ class BayesianNetwork(DAG):
         >>> predict_data.drop('E', axis=1, inplace=True)
         >>> approx_inf_parameters = {'n_samples':int(1e3),'seed':42}
         >>> y_pred = model.predict(predict_data,algo=ApproxInference,**approx_inf_parameters)
-        >>> y_pred
+        >>> y_pred['E']
             E
         800 1
         801 0
@@ -710,77 +710,48 @@ class BayesianNetwork(DAG):
                 )
 
         model_inference = algo(self)
-
-        if stochastic:
-            data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
-                lambda t: t.index.tolist()
+        data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
+            lambda t: t.index.tolist()
+        )
+        data_unique = data_unique_indexes.index.to_frame()
+        pred_values = Parallel(n_jobs=n_jobs)(
+            delayed(model_inference.query if stochastic else model_inference.map_query)(
+                variables=missing_variables.union(
+                    set(data_point.index[data_point.isna()])
+                ),
+                evidence=data_point[~data_point.isna()].to_dict(),
+                show_progress=False,
+                **kwargs,
             )
-            data_unique = data_unique_indexes.index.to_frame()
-
-            pred_values = Parallel(n_jobs=n_jobs)(
-                delayed(model_inference.query)(
-                    variables=missing_variables.union(
-                        set(data_point.index[data_point.isna()])
-                    ),
-                    evidence=data_point[~data_point.isna()].to_dict(),
-                    show_progress=False,
-                    **kwargs,
-                )
-                for index, data_point in tqdm(
-                    data_unique.iterrows(), total=data_unique.shape[0]
-                )
+            for index, data_point in tqdm(
+                data_unique.iterrows(), total=data_unique.shape[0]
             )
+        )
 
-            all_columns = data.columns.tolist() + [col for col in missing_variables]
-            predictions = pd.DataFrame()
-            for i, row in enumerate(data_unique_indexes):
-                samples = pred_values[i].sample(n=len(row))
-                initial_variables = data_unique.iloc[[i]]
-                known_variables = initial_variables.dropna(axis=1)
-                known_df = known_variables.loc[known_variables.index.repeat(len(row))]
-                known_df.index = samples.index
+        all_columns = data.columns.tolist() + [col for col in missing_variables]
+        predictions = pd.DataFrame()
 
-                complete_data = pd.concat([samples, known_df], axis="columns")
-                complete_data.index = row
-                complete_data = complete_data.reindex(columns=all_columns)
-                predictions = pd.concat((predictions, complete_data), copy=False)
-
-            return predictions.sort_index()
-
-        else:
-            data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
-                lambda t: t.index.tolist()
-            )
-            data_unique = data_unique_indexes.index.to_frame()
-
-            pred_values = Parallel(n_jobs=n_jobs)(
-                delayed(model_inference.map_query)(
-                    variables=missing_variables.union(
-                        set(data_point.index[data_point.isna()])
-                    ),
-                    evidence=data_point[~data_point.isna()].to_dict(),
-                    show_progress=False,
-                    **kwargs,
-                )
-                for index, data_point in tqdm(
-                    data_unique.iterrows(), total=data_unique.shape[0]
-                )
-            )
-
-            all_columns = data.columns.tolist() + [col for col in missing_variables]
-            predictions = pd.DataFrame()
-            for i, row in enumerate(data_unique_indexes):
+        for i, row in enumerate(data_unique_indexes):
+            if stochastic:
+                predicted_df = pred_values[i].sample(n=len(row)).reset_index(drop=True)
+            else:
                 predicted = pd.DataFrame(pred_values[i], index=[0])
-                initial_variables = data_unique.iloc[[i]].reset_index(drop=True)
-                known_variables = initial_variables.dropna(axis=1)
+                predicted_df = predicted.loc[
+                    predicted.index.repeat(len(row))
+                ].reset_index(drop=True)
 
-                complete_data = pd.concat([predicted, known_variables], axis="columns")
-                complete_data = complete_data.loc[complete_data.index.repeat(len(row))]
-                complete_data.index = row
-                complete_data = complete_data.reindex(columns=all_columns)
-                predictions = pd.concat([predictions, complete_data], copy=False)
+            initial_variables = data_unique.iloc[[i]].reset_index(drop=True)
+            known_variables = initial_variables.dropna(axis=1)
+            known_df = known_variables.loc[
+                known_variables.index.repeat(len(row))
+            ].reset_index(drop=True)
 
-            return predictions.sort_index()
+            complete_data = pd.concat([predicted_df, known_df], axis="columns")
+            complete_data.index = row
+            complete_data = complete_data.reindex(columns=all_columns)
+            predictions = pd.concat([predictions, complete_data], copy=False)
+
+        return predictions.sort_index()
 
     def predict_probability(self, data):
         """
