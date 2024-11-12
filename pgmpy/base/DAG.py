@@ -552,6 +552,9 @@ class DAG(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to
             be observed.
 
+        include_latents: boolean (default: False)
+            If true, latent variables are return as part of the active trail.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -622,9 +625,7 @@ class DAG(nx.DiGraph):
         separator.difference_update({start, end})
 
         # If the initial set is not able to d-separate, no d-separator is possible.
-        if an_graph.is_dconnected(
-            start, end, observed=separator, include_latents=include_latents
-        ):
+        if an_graph.is_dconnected(start, end, observed=separator):
             return None
 
         # Go through the separator set, remove one element and check if it remains
