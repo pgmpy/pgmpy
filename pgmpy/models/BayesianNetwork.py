@@ -585,7 +585,9 @@ class BayesianNetwork(DAG):
         self.add_cpds(*cpds)
         logger.disabled = False
 
-    def predict(self, data, algo=None, stochastic=False, n_jobs=-1, **kwargs):
+    def predict(
+        self, data, algo=None, stochastic=False, n_jobs=-1, seed=None, **kwargs
+    ):
         """
         Predicts states of all the missing variables.
 
@@ -604,6 +606,9 @@ class BayesianNetwork(DAG):
 
         n_jobs: int (default: -1)
             The number of CPU cores to use. If -1, uses all available cores.
+
+        seed: int (default: None)
+            When `stochastic=True`, the seed value to use for random number generators.
 
         **kwargs
             Optional keyword arguments specific to the selected algorithm.
@@ -733,7 +738,9 @@ class BayesianNetwork(DAG):
 
         for i, row in enumerate(data_unique_indexes):
             if stochastic:
-                predicted_df = pred_values[i].sample(n=len(row)).reset_index(drop=True)
+                predicted_df = (
+                    pred_values[i].sample(n=len(row), seed=seed).reset_index(drop=True)
+                )
             else:
                 predicted = pd.DataFrame(pred_values[i], index=[0])
                 predicted_df = predicted.loc[

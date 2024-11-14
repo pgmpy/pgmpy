@@ -803,14 +803,17 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
-    def sample(self, n):
+    def sample(self, n, seed=None):
         """
         Normalizes the factor and samples state combinations from it.
 
         Parameters
         ----------
         n: int
-            No. of samples to return
+            Number of samples to generate.
+
+        seed: int (default: None)
+            The seed value for the random number generator.
 
         Examples
         --------
@@ -830,7 +833,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # TODO: Fix this to make it work natively in torch.
         p = compat_fns.to_numpy(p)
 
-        indexes = np.random.choice(range(len(p)), size=n, p=p)
+        rng = np.random.default_rng(seed=seed)
+        indexes = rng.choice(range(len(p)), size=n, p=p)
         samples = []
         index_to_state = {}
         for index in indexes:
