@@ -1015,7 +1015,7 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False):
+    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False, seed=None):
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1036,6 +1036,9 @@ class DAG(nx.DiGraph):
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
 
+        seed: int (default: None)
+            The seed for the random number generator.
+
         Returns
         -------
         Random DAG: pgmpy.base.DAG
@@ -1051,7 +1054,8 @@ class DAG(nx.DiGraph):
         OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
         """
         # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
-        adj_mat = np.random.choice(
+        gen = np.random.default_rng(seed=seed)
+        adj_mat = gen.choice(
             [0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob]
         )
 
@@ -1069,9 +1073,7 @@ class DAG(nx.DiGraph):
 
         if latents:
             dag.latents = set(
-                np.random.choice(
-                    dag.nodes(), np.random.randint(low=0, high=len(dag.nodes()))
-                )
+                gen.choice(dag.nodes(), gen.randint(low=0, high=len(dag.nodes())))
             )
         return dag
 

@@ -1007,7 +1007,12 @@ class BayesianNetwork(DAG):
 
     @staticmethod
     def get_random(
-        n_nodes=5, edge_prob=0.5, node_names=None, n_states=None, latents=False
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names=None,
+        n_states=None,
+        latents=False,
+        seed=None,
     ):
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
@@ -1035,6 +1040,9 @@ class BayesianNetwork(DAG):
         latents: bool (default: False)
             If True, also creates latent variables.
 
+        seed: int (default: None)
+            The seed value for random number generators.
+
         Returns
         -------
         Random DAG: pgmpy.base.DAG
@@ -1059,7 +1067,8 @@ class BayesianNetwork(DAG):
             node_names = list(range(n_nodes))
 
         if n_states is None:
-            n_states = np.random.randint(low=1, high=5, size=n_nodes)
+            gen = np.random.default_rng(seed=seed)
+            n_states = gen.randint(low=1, high=5, size=n_nodes)
             n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
         elif isinstance(n_states, int):
@@ -1070,7 +1079,11 @@ class BayesianNetwork(DAG):
             n_states_dict = n_states
 
         dag = DAG.get_random(
-            n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
+            n_nodes=n_nodes,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+            seed=seed,
         )
         bn_model = BayesianNetwork(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
@@ -1080,14 +1093,17 @@ class BayesianNetwork(DAG):
             parents = list(bn_model.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
-                    variable=node, evidence=parents, cardinality=n_states_dict
+                    variable=node,
+                    evidence=parents,
+                    cardinality=n_states_dict,
+                    seed=seed,
                 )
             )
 
         bn_model.add_cpds(*cpds)
         return bn_model
 
-    def get_random_cpds(self, n_states=None, inplace=False):
+    def get_random_cpds(self, n_states=None, inplace=False, seed=None):
         """
         Given a `model`, generates and adds random `TabularCPD` for each node resulting in a fully parameterized network.
 
@@ -1100,6 +1116,10 @@ class BayesianNetwork(DAG):
         inplace: bool (default: False)
             If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
             a copy of the model.
+
+        seed: int (default: None)
+            The seed value for random number generators.
+
         """
         if isinstance(n_states, int):
             n_states = {var: n_states for var in self.nodes()}
@@ -1107,8 +1127,9 @@ class BayesianNetwork(DAG):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
+            gen = np.random.default_rng(seed=seed)
             n_states = {
-                var: np.random.randint(low=1, high=5, size=1)[0] for var in self.nodes()
+                var: gen.randint(low=1, high=5, size=1)[0] for var in self.nodes()
             }
 
         model = self if inplace else self.copy()
@@ -1117,7 +1138,7 @@ class BayesianNetwork(DAG):
             parents = list(model.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
-                    variable=node, evidence=parents, cardinality=n_states
+                    variable=node, evidence=parents, cardinality=n_states, seed=seed
                 )
             )
 
