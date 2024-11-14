@@ -1073,7 +1073,7 @@ class DAG(nx.DiGraph):
 
         if latents:
             dag.latents = set(
-                gen.choice(dag.nodes(), gen.randint(low=0, high=len(dag.nodes())))
+                gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
             )
         return dag
 

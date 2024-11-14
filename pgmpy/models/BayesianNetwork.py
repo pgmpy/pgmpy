@@ -1068,7 +1068,7 @@ class BayesianNetwork(DAG):
 
         if n_states is None:
             gen = np.random.default_rng(seed=seed)
-            n_states = gen.randint(low=1, high=5, size=n_nodes)
+            n_states = gen.integers(low=1, high=5, size=n_nodes)
             n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
         elif isinstance(n_states, int):
@@ -1129,7 +1129,7 @@ class BayesianNetwork(DAG):
         elif n_states is None:
             gen = np.random.default_rng(seed=seed)
             n_states = {
-                var: gen.randint(low=1, high=5, size=1)[0] for var in self.nodes()
+                var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()
             }
 
         model = self if inplace else self.copy()
