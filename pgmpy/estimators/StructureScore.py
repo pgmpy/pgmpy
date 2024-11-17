@@ -561,10 +561,19 @@ class CondGaussScore(StructureScore):
             c = [var for var in parents if self.dtypes[var] == "N"]
             d2 = list(set(parents) - set(c))
 
+            if len(c) == 0:
+                if len(d2) == 0:
+                    # Compute log-likelihood of a discrete variable using P(D1)
+                    df_d1 = df.loc[:, d1]
+                    return (
+                        np.log(df_d1.value_counts() / df_d1.shape[0])
+                        * df_d1.value_counts()
+                    ).sum()
+
             log_like = 0
             for d_states, df_d1d2 in df.groupby([d1] + d2, observed=True):
                 # Check if df_d1d2 also has the discrete variables.
-                # If C={}, p(C1 | D1, D2) = 1.
+                # If C={}, p(C | D1, D2) = 1.
                 if len(c) == 0:
                     p_c_d1d2 = 1
                 else:
@@ -574,7 +583,7 @@ class CondGaussScore(StructureScore):
                         cov=CondGaussScore._adjusted_cov(df_d1d2.loc[:, c]),
                     )
 
-                # Check this step for getting the correct values.
+                # P(D1, D2)
                 p_d1d2 = df_d1d2.shape[0] / df.shape[0]
 
                 # If D2 = {}, p(D1 | C, D2) = (p(C | D1, D2) p(D1, D2)) / p(C)
