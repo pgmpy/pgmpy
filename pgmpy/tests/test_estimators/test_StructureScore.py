@@ -247,22 +247,38 @@ class TestCondGauss(unittest.TestCase):
         self.m1 = BayesianNetwork([("A", "C"), ("A_cat", "C"), ("A", "B_int")])
 
     def test_score(self):
+        # Values and code from/for bnlearn.
+        # score(model2network("[A]"), d[c('A')], type='loglik-g') -> -119.7228
         self.assertAlmostEqual(
-            self.score_fn.local_score(variable="A", parents=[]), -123.984, places=3
+            self.score_fn.local_score(variable="A", parents=[]), -119.7228, places=3
+        )
+
+        # score(model2network("[B][A|B]"), d[c('A', 'B')], type='loglik-g') -> 376.5078
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=["B"]), -119.4935, places=3
         )
         self.assertAlmostEqual(
-            self.score_fn.local_score(variable="A", parents=["B"]), -123.984, places=3
+            self.score_fn.local_score(variable="B", parents=[]), -257.0067, places=3
         )
+
+        # score(model2network("[B_cat][A|B_cat]"), d[c('A', 'B_cat')], type='loglik-cg') -> 200.2201
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A", parents=["B_cat"]),
-            -123.707,
+            -118.5250,
             places=3,
         )
         self.assertAlmostEqual(
+            self.score_fn.local_score(variable="B_cat", parents=[]), -4.3125, places=3
+        )
+
+        # score(model2network("[B][B_cat][A|B:B_cat]"), d[c('A', 'B', 'B_cat')], type='loglik-cg') -> 452.0991
+        self.assertAlmostEqual(
             self.score_fn.local_score(variable="A", parents=["B_cat", "B"]),
-            -123.707,
+            -113.2371,
             places=3,
         )
+
+        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
         self.assertAlmostEqual(
             self.score_fn.local_score(
                 variable="A", parents=["B_cat", "B", "C_cat", "C"]
@@ -271,24 +287,33 @@ class TestCondGauss(unittest.TestCase):
             places=3,
         )
 
+        # score(model2network("[A_cat]"), d[c('A_cat')], type='loglik') -> -121.527
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A_cat", parents=[]), -6.535, places=3
         )
+
+        #  score(model2network("[B_cat][A_cat|B_cat]"), d[c('A_cat', 'B_cat')], type='loglik') -> -199.3171
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A_cat", parents=["B_cat"]),
             -17.130,
             places=3,
         )
+
+        # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A_cat", parents=["B"]),
             -85.542,
             places=3,
         )
+
+        # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A_cat", parents=["B_cat", "A"]),
             -89.032,
             places=3,
         )
+
+        # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
         self.assertAlmostEqual(
             self.score_fn.local_score(
                 variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]

@@ -501,11 +501,10 @@ class CondGaussScore(StructureScore):
         # If the matrix is not positive semidefinite, add a small error to make it.
         df_cov = df.cov()
         if np.any(np.isclose(np.linalg.eig(df_cov)[0], 0)):
-            return df_cov + 1e-6
+            df_cov = df_cov + 1e-6
+        return df_cov
 
     def local_score(self, variable, parents):
-        # TODO: For all covariance computation, if the number of samples is 1, set the covariance to 1.
-
         df = self.data.loc[:, [variable] + parents]
 
         # If variable is continuous, the probability is computed as:
