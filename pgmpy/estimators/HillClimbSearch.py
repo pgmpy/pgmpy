@@ -14,6 +14,7 @@ from pgmpy.estimators import (
     BDsScore,
     BicScore,
     BicScoreGauss,
+    CondGaussScore,
     K2Score,
     ScoreCache,
     StructureEstimator,
@@ -231,6 +232,7 @@ class HillClimbSearch(StructureEstimator):
             "aic": AICScore,
             "aic-g": AICScoreGauss,
             "bic-g": BicScoreGauss,
+            "cond-gauss": CondGaussScore,
         }
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [

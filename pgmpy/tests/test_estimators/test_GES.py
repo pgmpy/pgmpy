@@ -69,4 +69,4 @@ class TestGESMixed(unittest.TestCase):
 
     def test_estimate(self):
         est = GES(self.data)
-        dag = est.estimate(scoring_method="cond-gauss", debug=True)
+        dag = est.estimate(scoring_method="cond-gauss")
