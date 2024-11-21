@@ -519,18 +519,25 @@ class CondGaussScore(StructureScore):
                 # If C2 = {}, p(C1, C2 | D) = p(C1) and p(C2 | D) = 1.
                 if len(c2) == 0:
                     p_c1c2_d = multivariate_normal.pdf(
-                        x=df, mean=df.mean(axis=0), cov=CondGaussScore._adjusted_cov(df)
+                        x=df,
+                        mean=df.mean(axis=0),
+                        cov=CondGaussScore._adjusted_cov(df),
+                        allow_singular=True,
                     )
                     return np.sum(np.log(p_c1c2_d))
                 else:
                     p_c1c2_d = multivariate_normal.pdf(
-                        x=df, mean=df.mean(axis=0), cov=CondGaussScore._adjusted_cov(df)
+                        x=df,
+                        mean=df.mean(axis=0),
+                        cov=CondGaussScore._adjusted_cov(df),
+                        allow_singular=True,
                     )
                     df_c2 = df.loc[:, c2]
                     p_c2_d = multivariate_normal.pdf(
                         x=df_c2,
                         mean=df_c2.mean(axis=0),
                         cov=CondGaussScore._adjusted_cov(df_c2),
+                        allow_singular=True,
                     )
 
                     return np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -541,6 +548,7 @@ class CondGaussScore(StructureScore):
                         x=df_d.loc[:, [c1] + c2],
                         mean=df_d.loc[:, [c1] + c2].mean(axis=0),
                         cov=CondGaussScore._adjusted_cov(df_d.loc[:, [c1] + c2]),
+                        allow_singular=True,
                     )
                     if len(c2) == 0:
                         p_c2_d = 1
@@ -549,6 +557,7 @@ class CondGaussScore(StructureScore):
                             x=df_d.loc[:, c2],
                             mean=df_d.loc[:, c2].mean(axis=0),
                             cov=CondGaussScore._adjusted_cov(df_d.loc[:, c2]),
+                            allow_singular=True,
                         )
 
                     log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -572,6 +581,7 @@ class CondGaussScore(StructureScore):
                         x=df_d1d2.loc[:, c],
                         mean=df_d1d2.loc[:, c].mean(axis=0),
                         cov=CondGaussScore._adjusted_cov(df_d1d2.loc[:, c]),
+                        allow_singular=True,
                     )
 
                 # P(D1, D2)
@@ -586,6 +596,7 @@ class CondGaussScore(StructureScore):
                             x=df_d1d2.loc[:, c],
                             mean=df.loc[:, c].mean(axis=0),
                             cov=CondGaussScore._adjusted_cov(df.loc[:, c]),
+                            allow_singular=True,
                         )
 
                     log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
@@ -601,6 +612,7 @@ class CondGaussScore(StructureScore):
                             x=df_d1d2.loc[:, c],
                             mean=df_d2.loc[:, c].mean(axis=0),
                             cov=CondGaussScore._adjusted_cov(df_d2.loc[:, c]),
+                            allow_singular=True,
                         )
 
                     p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]
