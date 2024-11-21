@@ -865,25 +865,33 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         titanic.fit(self.titanic_data2[500:])
 
         p1 = titanic.predict(
-            self.titanic_data2[["Sex", "Pclass"]][:30], stochastic=True
+            self.titanic_data2[["Sex", "Pclass"]][:30],
+            stochastic=True,
+            seed=42,
         )
         p2 = titanic.predict(
-            self.titanic_data2[["Survived", "Pclass"]][:30], stochastic=True
+            self.titanic_data2[["Survived", "Pclass"]][:30],
+            stochastic=True,
+            seed=42,
         )
         p3 = titanic.predict(
-            self.titanic_data2[["Survived", "Sex"]][:30], stochastic=True
+            self.titanic_data2[["Survived", "Sex"]][:30],
+            stochastic=True,
+            seed=42,
         )
 
-        # Acceptable range between 15 - 20.
-        # TODO: Is there a better way to test this?
-        self.assertTrue(p1["Survived"].value_counts().values[0] <= 23)
-        self.assertTrue(p1["Survived"].value_counts().values[0] >= 15)
+        self.assertEqual(p1.shape, (30, 3))
+        self.assertEqual(p1["Survived"].value_counts().loc["0"], 15)
+        self.assertEqual(p1["Survived"].value_counts().loc["1"], 15)
 
-        self.assertTrue(p2["Sex"].value_counts().values[0] <= 22)
-        self.assertTrue(p2["Sex"].value_counts().values[0] >= 15)
+        self.assertEqual(p2.shape, (30, 3))
+        self.assertEqual(p2["Sex"].value_counts()["male"], 23)
+        self.assertEqual(p2["Sex"].value_counts()["female"], 7)
 
-        self.assertTrue(p3["Pclass"].value_counts().values[0] <= 19)
-        self.assertTrue(p3["Pclass"].value_counts().values[0] >= 8)
+        self.assertEqual(p3.shape, (30, 3))
+        self.assertEqual(p3["Pclass"].value_counts().loc["1"], 6)
+        self.assertEqual(p3["Pclass"].value_counts().loc["2"], 3)
+        self.assertEqual(p3["Pclass"].value_counts().loc["3"], 21)
 
     def test_connected_predict(self):
         np.random.seed(42)
