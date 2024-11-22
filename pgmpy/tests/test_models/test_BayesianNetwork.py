@@ -414,23 +414,29 @@ class TestBayesianModelMethods(unittest.TestCase):
             DAG.get_random(n_nodes=5, edge_prob=0.5, seed=42).edges()
         )
 
-        param_model = model.get_random_cpds()
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
+        cpds = model.get_random_cpds()
+        self.assertEqual(len(cpds), 5)
 
-        param_model = model.get_random_cpds(n_states=4, seed=42)
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
+
+        cpds = model.get_random_cpds(n_states=4, seed=42)
+        self.assertEqual(len(cpds), 5)
+
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
         self.assertTrue(
-            all([card == 4 for var, card in param_model.get_cardinality().items()])
+            all([card == 4 for var, card in model.get_cardinality().items()])
         )
 
         n_states_dict = {0: 3, 1: 5, 2: 4, 3: 9, 4: 3}
-        param_model = model.get_random_cpds(n_states=n_states_dict, seed=42)
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
+        cpds = model.get_random_cpds(n_states=n_states_dict, seed=42)
+        self.assertEqual(len(cpds), 5)
+
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
         for var in range(5):
-            self.assertEqual(param_model.get_cardinality(var), n_states_dict[var])
+            self.assertEqual(model.get_cardinality(var), n_states_dict[var])
 
         model.get_random_cpds(inplace=True, seed=42)
         self.assertEqual(len(model.cpds), 5)

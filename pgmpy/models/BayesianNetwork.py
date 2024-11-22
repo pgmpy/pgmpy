@@ -1132,19 +1132,19 @@ class BayesianNetwork(DAG):
                 var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()
             }
 
-        model = self if inplace else self.copy()
         cpds = []
-        for node in model.nodes():
-            parents = list(model.predecessors(node))
+        for node in self.nodes():
+            parents = list(self.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
                     variable=node, evidence=parents, cardinality=n_states, seed=seed
                 )
             )
 
-        model.add_cpds(*cpds)
-        if not inplace:
-            return model
+        if inplace:
+            self.add_cpds(*cpds)
+        else:
+            return cpds
 
     def do(self, nodes, inplace=False):
         """
