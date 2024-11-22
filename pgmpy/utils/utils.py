@@ -74,6 +74,9 @@ def get_example_model(model):
         "magic-niab",
         "magic-irri",
         "arth150",
+    }
+
+    hybrid_models = {
         "sangiovese",
         "mehra",
     }
@@ -112,13 +115,14 @@ def get_example_model(model):
     }
 
     if model not in filenames:
-        raise ValueError(f"Unknown model name: {model}")
+        raise ValueError(
+            f"Unknown model name: {model}. Please refer documentation for valid model names."
+        )
 
     path = filenames[model]
 
     # Determine the model type
     if model in cat_models:
-        # Handle reading of categorical models
         if path.endswith(".bif.gz"):
             from pgmpy.readwrite import BIFReader
 
@@ -127,14 +131,13 @@ def get_example_model(model):
                 content = f.read()
             reader = BIFReader(string=content.decode("utf-8"))
             return reader.get_model()
+
     elif model in cont_models:
         from pgmpy.factors.continuous import LinearGaussianCPD
         from pgmpy.models import LinearGaussianBayesianNetwork
 
-        # Handle reading of continuous models
-        if path.endswith(".json"):
-            with open(files("pgmpy") / path, "r") as f:
-                data = json.load(f)
+        with open(files("pgmpy") / path, "r") as f:
+            data = json.load(f)
 
         # Extract nodes, arcs, and CPDs from the JSON file
         nodes = data.get("nodes")
@@ -148,7 +151,7 @@ def get_example_model(model):
         cpds = []
         for node, cpd_info in cpds_data.items():
             coefficients = cpd_info["coefficients"]
-            variance = cpd_info["variance"]
+            variance = cpd_info["variance"][0]
             parents = cpd_info["parents"]
 
             # Extract the intercept
@@ -169,8 +172,9 @@ def get_example_model(model):
         # Add CPDs to the model
         model.add_cpds(*cpds)
         return model
-    else:
-        raise NotImplementedError(f"The specified dataset {model} isn't available.")
+
+    elif model in hybrid_models:
+        raise ValueError("Hybrid models aren't supported yet.")
 
 
 def discretize(data, cardinality, labels=dict(), method="rounding"):
