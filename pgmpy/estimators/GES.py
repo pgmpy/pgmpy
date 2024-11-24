@@ -6,14 +6,14 @@ import numpy as np
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    AICScore,
-    AICScoreGauss,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    CondGaussScore,
-    K2Score,
+    AIC,
+    AICGauss,
+    BDeu,
+    BDs,
+    BIC,
+    BICGauss,
+    LogLikelihoodCondGauss,
+    K2,
     ScoreCache,
     StructureEstimator,
     StructureScore,
@@ -116,14 +116,14 @@ class GES(StructureEstimator):
 
         # Step 0: Initial checks and setup for arguments
         supported_methods = {
-            "k2": K2Score,
-            "bdeu": BDeuScore,
-            "bds": BDsScore,
-            "bic": BicScore,
-            "aic": AICScore,
-            "aic-g": AICScoreGauss,
-            "bic-g": BicScoreGauss,
-            "cond-gauss": CondGaussScore,
+            "k2": K2,
+            "bdeu": BDeu,
+            "bds": BDs,
+            "bic": BIC,
+            "aic": AIC,
+            "aic-g": AICGauss,
+            "bic-g": BICGauss,
+            "cond-gauss": LogLikelihoodCondGauss,
         }
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [

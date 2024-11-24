@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import BDeuScore, HillClimbSearch, StructureEstimator
+from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.independencies import IndependenceAssertion, Independencies
 from pgmpy.models import BayesianNetwork
@@ -44,7 +44,7 @@ class MmhcEstimator(StructureEstimator):
         significance_level: float, default: 0.01
             The significance level to use for conditional independence tests in the data set. See `mmpc`-method.
 
-        scoring_method: instance of a Scoring method (default: BDeuScore)
+        scoring_method: instance of a Scoring method (default: BDeu)
             The method to use for scoring during Hill Climb Search. Can be an instance of any of the
             scoring methods implemented in pgmpy.
 
@@ -77,7 +77,7 @@ class MmhcEstimator(StructureEstimator):
         [('Z', 'sum'), ('X', 'sum'), ('W', 'sum'), ('Y', 'sum')]
         """
         if scoring_method is None:
-            scoring_method = BDeuScore(self.data, equivalent_sample_size=10)
+            scoring_method = BDeu(self.data, equivalent_sample_size=10)
 
         skel = self.mmpc(significance_level)
 

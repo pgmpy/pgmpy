@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from pgmpy.estimators import MmhcEstimator, K2Score
+from pgmpy.estimators import MmhcEstimator
 from pgmpy.factors.discrete import TabularCPD
 
 

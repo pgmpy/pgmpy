@@ -3,21 +3,21 @@ import unittest
 import pandas as pd
 
 from pgmpy.estimators import (
-    AICScore,
-    AICScoreGauss,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    CondGaussScore,
-    K2Score,
+    AIC,
+    AICGauss,
+    BDeu,
+    BDs,
+    BIC,
+    BICGauss,
+    LogLikelihoodCondGauss,
+    K2,
 )
 from pgmpy.models import BayesianNetwork
 
 # Score values in the tests are compared to R package bnlearn
 
 
-class TestBDeuScore(unittest.TestCase):
+class TestBDeu(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
@@ -32,12 +32,12 @@ class TestBDeuScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BDeuScore(self.d1).score(self.m1), -9.907103407446435)
-        self.assertAlmostEqual(BDeuScore(self.d1).score(self.m2), -9.839964104608821)
-        self.assertEqual(BDeuScore(self.d1).score(BayesianNetwork()), 0)
+        self.assertAlmostEqual(BDeu(self.d1).score(self.m1), -9.907103407446435)
+        self.assertAlmostEqual(BDeu(self.d1).score(self.m2), -9.839964104608821)
+        self.assertEqual(BDeu(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
-        scorer = BDeuScore(self.titanic_data2, equivalent_sample_size=25)
+        scorer = BDeu(self.titanic_data2, equivalent_sample_size=25)
         titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1892.7383393910427)
         titanic2 = BayesianNetwork([("Pclass", "Sex")])
@@ -52,7 +52,7 @@ class TestBDeuScore(unittest.TestCase):
         del self.titanic_data2
 
 
-class TestBDsScore(unittest.TestCase):
+class TestBDs(unittest.TestCase):
     def setUp(self):
         """Example taken from https://arxiv.org/pdf/1708.00689.pdf"""
         self.d1 = pd.DataFrame(
@@ -69,11 +69,11 @@ class TestBDsScore(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(
-            BDsScore(self.d1, equivalent_sample_size=1).score(self.m1),
+            BDs(self.d1, equivalent_sample_size=1).score(self.m1),
             -36.82311976667139,
         )
         self.assertAlmostEqual(
-            BDsScore(self.d1, equivalent_sample_size=1).score(self.m2),
+            BDs(self.d1, equivalent_sample_size=1).score(self.m2),
             -45.788991276221964,
         )
 
@@ -83,7 +83,7 @@ class TestBDsScore(unittest.TestCase):
         del self.m2
 
 
-class TestBicScore(unittest.TestCase):
+class TestBIC(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
@@ -98,12 +98,12 @@ class TestBicScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -10.698440814229318)
-        self.assertAlmostEqual(BicScore(self.d1).score(self.m2), -9.625886526130714)
-        self.assertEqual(BicScore(self.d1).score(BayesianNetwork()), 0)
+        self.assertAlmostEqual(BIC(self.d1).score(self.m1), -10.698440814229318)
+        self.assertAlmostEqual(BIC(self.d1).score(self.m2), -9.625886526130714)
+        self.assertEqual(BIC(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
-        scorer = BicScore(self.titanic_data2)
+        scorer = BIC(self.titanic_data2)
         titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1896.7250012840179)
         titanic2 = BayesianNetwork([("Pclass", "Sex")])
@@ -118,10 +118,10 @@ class TestBicScore(unittest.TestCase):
         del self.titanic_data2
 
 
-class TestBicScoreGauss(unittest.TestCase):
+class TestBICGauss(unittest.TestCase):
     def setUp(self):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
-        self.score_fn = BicScoreGauss(data)
+        self.score_fn = BICGauss(data)
 
         self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
@@ -143,7 +143,7 @@ class TestBicScoreGauss(unittest.TestCase):
         self.assertAlmostEqual(self.score_fn.score(self.m2), -587.8711, places=3)
 
 
-class TestK2Score(unittest.TestCase):
+class TestK2(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
@@ -158,12 +158,12 @@ class TestK2Score(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(K2Score(self.d1).score(self.m1), -10.73813429536977)
-        self.assertAlmostEqual(K2Score(self.d1).score(self.m2), -10.345091707260167)
-        self.assertEqual(K2Score(self.d1).score(BayesianNetwork()), 0)
+        self.assertAlmostEqual(K2(self.d1).score(self.m1), -10.73813429536977)
+        self.assertAlmostEqual(K2(self.d1).score(self.m2), -10.345091707260167)
+        self.assertEqual(K2(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
-        scorer = K2Score(self.titanic_data2)
+        scorer = K2(self.titanic_data2)
         titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1891.0630673606006)
         titanic2 = BayesianNetwork([("Pclass", "Sex")])
@@ -178,7 +178,7 @@ class TestK2Score(unittest.TestCase):
         del self.titanic_data2
 
 
-class TestAICScore(unittest.TestCase):
+class TestAIC(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
@@ -193,12 +193,12 @@ class TestAICScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(AICScore(self.d1).score(self.m1), -15.205379370888767)
-        self.assertAlmostEqual(AICScore(self.d1).score(self.m2), -13.68213122712422)
-        self.assertEqual(AICScore(self.d1).score(BayesianNetwork()), 0)
+        self.assertAlmostEqual(AIC(self.d1).score(self.m1), -15.205379370888767)
+        self.assertAlmostEqual(AIC(self.d1).score(self.m2), -13.68213122712422)
+        self.assertEqual(AIC(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
-        scorer = AICScore(self.titanic_data2)
+        scorer = AIC(self.titanic_data2)
         titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1875.1594513603993)
         titanic2 = BayesianNetwork([("Pclass", "Sex")])
@@ -213,10 +213,10 @@ class TestAICScore(unittest.TestCase):
         del self.titanic_data2
 
 
-class TestAICScoreGauss(unittest.TestCase):
+class TestAICGauss(unittest.TestCase):
     def setUp(self):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
-        self.score_fn = AICScoreGauss(data)
+        self.score_fn = AICGauss(data)
 
         self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
@@ -238,13 +238,13 @@ class TestAICScoreGauss(unittest.TestCase):
         self.assertAlmostEqual(self.score_fn.score(self.m2), -577.4505, places=3)
 
 
-class TestCondGauss(unittest.TestCase):
+class TestLogLikelihoodCondGauss(unittest.TestCase):
     def setUp(self):
         data = pd.read_csv(
             "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
         )
-        self.score_fn = CondGaussScore(data)
-        self.score_fn_manual = CondGaussScore(data.iloc[:2, :])
+        self.score_fn = LogLikelihoodCondGauss(data)
+        self.score_fn_manual = LogLikelihoodCondGauss(data.iloc[:2, :])
 
     def test_score_manual(self):
         self.assertAlmostEqual(

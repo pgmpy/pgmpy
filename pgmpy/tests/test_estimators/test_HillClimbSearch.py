@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import HillClimbSearch, K2Score
+from pgmpy.estimators import HillClimbSearch, K2
 from pgmpy.models import BayesianNetwork
 
 
@@ -14,7 +14,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = HillClimbSearch(self.rand_data)
-        k2score = K2Score(self.rand_data)
+        k2score = K2(self.rand_data)
         self.score_rand = k2score.local_score
         self.score_structure_prior = k2score.structure_prior_ratio
 
@@ -38,11 +38,11 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             ["Survived", "Sex", "Pclass", "Age", "Embarked"]
         ]
         self.est_titanic1 = HillClimbSearch(self.titanic_data1)
-        self.score_titanic1 = K2Score(self.titanic_data1).local_score
+        self.score_titanic1 = K2(self.titanic_data1).local_score
 
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
         self.est_titanic2 = HillClimbSearch(self.titanic_data2)
-        self.score_titanic2 = K2Score(self.titanic_data2).local_score
+        self.score_titanic2 = K2(self.titanic_data2).local_score
 
     def test_legal_operations(self):
         model2_legal_ops = list(
@@ -241,7 +241,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
 
     def test_estimate(self):
-        for score in ["k2", "bdeu", "bds", "bic", "AIC"]:
+        for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
             dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
 
@@ -280,4 +280,4 @@ class TestHillClimbEstimatorMixed(unittest.TestCase):
 
     def test_estimate(self):
         est = HillClimbSearch(self.data)
-        dag = est.estimate(scoring_method="cond-gauss")
+        dag = est.estimate(scoring_method="ll-cg")

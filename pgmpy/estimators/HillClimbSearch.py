@@ -8,14 +8,14 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    AICScore,
-    AICScoreGauss,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    CondGaussScore,
-    K2Score,
+    AIC,
+    AICGauss,
+    BDeu,
+    BDs,
+    BIC,
+    BICGauss,
+    LogLikelihoodCondGauss,
+    K2,
     ScoreCache,
     StructureEstimator,
     StructureScore,
@@ -225,14 +225,14 @@ class HillClimbSearch(StructureEstimator):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
         supported_methods = {
-            "k2": K2Score,
-            "bdeu": BDeuScore,
-            "bds": BDsScore,
-            "bic": BicScore,
-            "aic": AICScore,
-            "aic-g": AICScoreGauss,
-            "bic-g": BicScoreGauss,
-            "cond-gauss": CondGaussScore,
+            "k2": K2,
+            "bdeu": BDeu,
+            "bds": BDs,
+            "bic-d": BIC,
+            "aic-d": AIC,
+            "aic-g": AICGauss,
+            "bic-g": BICGauss,
+            "ll-cg": LogLikelihoodCondGauss,
         }
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [

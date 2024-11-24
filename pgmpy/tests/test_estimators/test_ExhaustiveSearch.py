@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import BDeuScore, BicScore, ExhaustiveSearch
+from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch
 
 
 class TestBaseEstimator(unittest.TestCase):
@@ -15,10 +15,10 @@ class TestBaseEstimator(unittest.TestCase):
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = ExhaustiveSearch(self.rand_data)
         self.est_rand_bdeu = ExhaustiveSearch(
-            self.rand_data, scoring_method=BDeuScore(self.rand_data)
+            self.rand_data, scoring_method=BDeu(self.rand_data)
         )
         self.est_rand_bic = ExhaustiveSearch(
-            self.rand_data, scoring_method=BicScore(self.rand_data)
+            self.rand_data, scoring_method=BIC(self.rand_data)
         )
 
         # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
