@@ -450,6 +450,7 @@ class AIC(StructureScore):
 
         return score
 
+
 class LogLikelihoodGauss(StructureScore):
     def __init__(self, data, **kwargs):
         super(LogLikelihoodGauss, self).__init__(data, **kwargs)
@@ -505,6 +506,7 @@ class LogLikelihoodCondGauss(StructureScore):
         Networks of Mixed Variables. International journal of data science and
         analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
     """
+
     def __init__(self, data, **kwargs):
         super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
 
@@ -568,7 +570,9 @@ class LogLikelihoodCondGauss(StructureScore):
                     p_c1c2_d = multivariate_normal.pdf(
                         x=df_d.loc[:, [c1] + c2],
                         mean=df_d.loc[:, [c1] + c2].mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, [c1] + c2]),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(
+                            df_d.loc[:, [c1] + c2]
+                        ),
                         allow_singular=True,
                     )
                     if len(c2) == 0:

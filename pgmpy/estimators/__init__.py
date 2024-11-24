@@ -53,5 +53,5 @@ __all__ = [
     "MarginalEstimator",
     "MirrorDescentEstimator",
     "GES",
-    "LogLikelihoodCondGauss"
+    "LogLikelihoodCondGauss",
 ]
