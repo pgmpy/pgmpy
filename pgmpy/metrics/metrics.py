@@ -205,8 +205,8 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
         The dataset against which to score the model.
 
     scoring_method: str ( k2 | bdeu | bds | bic )
-        The following four scoring methods are supported currently: 1) K2Score
-        2) BDeuScore 3) BDsScore 4) BicScore
+        The following four scoring methods are supported currently: 1) K2
+        2) BDeu 3) BDs 4) BIC
 
     kwargs: kwargs
         Any additional parameters that needs to be passed to the
@@ -226,13 +226,13 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     >>> structure_score(model, data, scoring_method="bic")
     -106665.9383064447
     """
-    from pgmpy.estimators import BDeuScore, BDsScore, BicScore, K2Score
+    from pgmpy.estimators import BIC, K2, BDeu, BDs
 
     supported_methods = {
-        "k2": K2Score,
-        "bdeu": BDeuScore,
-        "bds": BDsScore,
-        "bic": BicScore,
+        "k2": K2,
+        "bdeu": BDeu,
+        "bds": BDs,
+        "bic": BIC,
     }
 
     # Step 1: Test the inputs
