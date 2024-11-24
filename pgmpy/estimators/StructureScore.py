@@ -455,7 +455,7 @@ class LogLikelihoodGauss(StructureScore):
     def __init__(self, data, **kwargs):
         super(LogLikelihoodGauss, self).__init__(data, **kwargs)
 
-    def local_score(self, variable, parents):
+    def _log_likelihood(self, variable, parents):
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
@@ -463,39 +463,34 @@ class LogLikelihoodGauss(StructureScore):
                 formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
             ).fit()
 
-        return glm_model.llf
+        return (glm_model.llf, glm_model.df_model)
+
+    def local_score(self, variable, parents):
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
+        return ll
 
 
-class BICGauss(StructureScore):
+class BICGauss(LogLikelihoodGauss):
     def __init__(self, data, **kwargs):
         super(BICGauss, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
-        else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
         # Adding +2 to model df to compute the likelihood df.
-        return glm_model.llf - (
-            ((glm_model.df_model + 2) / 2) * np.log(self.data.shape[0])
-        )
+        return ll - (((df_model + 2) / 2) * np.log(self.data.shape[0]))
 
 
-class AICGauss(StructureScore):
+class AICGauss(LogLikelihoodGauss):
     def __init__(self, data, **kwargs):
         super(AICGauss, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
-        else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
         # Adding +2 to model df to compute the likelihood df.
-        return glm_model.llf - (glm_model.df_model + 2)
+        return ll - (df_model + 2)
 
 
 class LogLikelihoodCondGauss(StructureScore):
