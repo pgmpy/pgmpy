@@ -7,13 +7,13 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
     AIC,
+    BIC,
+    K2,
     AICGauss,
     BDeu,
     BDs,
-    BIC,
     BICGauss,
     LogLikelihoodCondGauss,
-    K2,
     ScoreCache,
     StructureEstimator,
     StructureScore,
@@ -81,7 +81,7 @@ class GES(StructureEstimator):
             current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic", debug=False):
+    def estimate(self, scoring_method="bic", min_improvement=1e-6, debug=False):
         """
         Estimates the DAG from the data.
 
@@ -91,6 +91,10 @@ class GES(StructureEstimator):
             The score to be optimized during structure estimation.  Supported
             structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g, cond-gauss. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
+
+        min_improvement: float
+            The operation (edge addition, removal, or flipping) would only be performed if the
+            model score improves by atleast `min_improvement`.
 
         Returns
         -------
@@ -170,7 +174,7 @@ class GES(StructureEstimator):
                 )
                 score_deltas[index] = score_delta
 
-            if (len(potential_edges) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
                 break
 
             edge_to_add = potential_edges[np.argmax(score_deltas)]
@@ -190,7 +194,9 @@ class GES(StructureEstimator):
                 score_deltas[index] = score_fn(
                     v, [node for node in current_parents if node != u]
                 ) - score_fn(v, current_parents)
-            if (len(potential_removals) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_removals) == 0) or (
+                np.all(score_deltas < min_improvement)
+            ):
                 break
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_remove[0], edge_to_remove[1])
@@ -213,7 +219,7 @@ class GES(StructureEstimator):
                     - score_fn(u, u_parents)
                 )
 
-            if (len(potential_flips) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_flips) == 0) or (np.all(score_deltas < min_improvement)):
                 break
             edge_to_flip = potential_flips[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_flip[1], edge_to_flip[0])
