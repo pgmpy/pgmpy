@@ -556,11 +556,14 @@ class LogLikelihoodCondGauss(StructureScore):
                         allow_singular=True,
                     )
                     df_c2 = df.loc[:, c2]
-                    p_c2_d = multivariate_normal.pdf(
-                        x=df_c2,
-                        mean=df_c2.mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df_c2),
-                        allow_singular=True,
+                    p_c2_d = np.maximum(
+                        1e-8,
+                        multivariate_normal.pdf(
+                            x=df_c2,
+                            mean=df_c2.mean(axis=0),
+                            cov=LogLikelihoodCondGauss._adjusted_cov(df_c2),
+                            allow_singular=True,
+                        ),
                     )
 
                     return np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -578,11 +581,16 @@ class LogLikelihoodCondGauss(StructureScore):
                     if len(c2) == 0:
                         p_c2_d = 1
                     else:
-                        p_c2_d = multivariate_normal.pdf(
-                            x=df_d.loc[:, c2],
-                            mean=df_d.loc[:, c2].mean(axis=0),
-                            cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, c2]),
-                            allow_singular=True,
+                        p_c2_d = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d.loc[:, c2],
+                                mean=df_d.loc[:, c2].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(
+                                    df_d.loc[:, c2]
+                                ),
+                                allow_singular=True,
+                            ),
                         )
 
                     log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
@@ -617,11 +625,14 @@ class LogLikelihoodCondGauss(StructureScore):
                     if len(c) == 0:
                         p_c_d2 = 1
                     else:
-                        p_c_d2 = multivariate_normal.pdf(
-                            x=df_d1d2.loc[:, c],
-                            mean=df.loc[:, c].mean(axis=0),
-                            cov=LogLikelihoodCondGauss._adjusted_cov(df.loc[:, c]),
-                            allow_singular=True,
+                        p_c_d2 = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d1d2.loc[:, c],
+                                mean=df.loc[:, c].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df.loc[:, c]),
+                                allow_singular=True,
+                            ),
                         )
 
                     log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
@@ -633,11 +644,16 @@ class LogLikelihoodCondGauss(StructureScore):
                         for var, state in zip(d2, d_states[1:]):
                             df_d2 = df_d2.loc[df_d2[var] == state]
 
-                        p_c_d2 = multivariate_normal.pdf(
-                            x=df_d1d2.loc[:, c],
-                            mean=df_d2.loc[:, c].mean(axis=0),
-                            cov=LogLikelihoodCondGauss._adjusted_cov(df_d2.loc[:, c]),
-                            allow_singular=True,
+                        p_c_d2 = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d1d2.loc[:, c],
+                                mean=df_d2.loc[:, c].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(
+                                    df_d2.loc[:, c]
+                                ),
+                                allow_singular=True,
+                            ),
                         )
 
                     p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]
