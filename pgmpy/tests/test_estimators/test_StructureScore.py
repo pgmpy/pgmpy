@@ -240,16 +240,33 @@ class TestAICGauss(unittest.TestCase):
         self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
 
     def test_score(self):
+        # score(model2network("[A]"), df_cont[c('A')], type='aic-g') -> -121.7228
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=[]), -121.7202, places=3
+        )
+
+        # score(model2network("[B]"), df_cont[c('B')], type='aic-g') -> -259.0067
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="B", parents=[]), -259.0042, places=3
+        )
+
+        # score(model2network("[C]"), df_cont[c('C')], type='aic-g') -> -330.2386
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="C", parents=[]), -330.2361, places=3
+        )
+
+        # score(model2network("[A][B][C|A:B]"), df_cont[c('A', 'B', 'C')], type='aic-g') -> -463.1339
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="C", parents=["A", "B"]),
             -82.3815,
             places=3,
         )
+
+        # score(model2network("[A][B][C][D|A:B:C]"), df_cont[c('A', 'B', 'C', 'D')], type='aic-g')
         self.assertAlmostEqual(
-            self.score_fn.local_score(variable="A", parents=[]), -121.7202, places=3
-        )
-        self.assertAlmostEqual(
-            self.score_fn.local_score(variable="B", parents=[]), -259.0042, places=3
+            self.score_fn.local_score(variable="D", parents=["A", "B", "C"]),
+            -32.1936,
+            places=3,
         )
 
         self.assertAlmostEqual(self.score_fn.score(self.m1), -463.1059, places=3)
