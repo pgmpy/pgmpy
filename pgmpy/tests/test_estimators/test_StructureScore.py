@@ -198,15 +198,32 @@ class TestLogLikeGauss(unittest.TestCase):
         self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
 
     def test_score(self):
+        # score(model2network("[A]"), df[c('A')], type='loglik-g') -> -119.7228
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="A", parents=[]), -119.7202, places=3
         )
+
+        # score(model2network("[B]"), df[c('B')], type='loglik-g') -> -257.0067
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="B", parents=[]), -257.0042, places=3
         )
+
+        # score(model2network("[C]"), df[c('C')], type='loglik-g')
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="C", parents=[]), -328.2361, places=3
+        )
+
+        # score(model2network("[A][B][C|A:B]"), df[c('A', 'B', 'C')], type='loglik-g') -> -455.1339
         self.assertAlmostEqual(
             self.score_fn.local_score(variable="C", parents=["A", "B"]),
             -78.3815,
+            places=3,
+        )
+
+        # score(model2network("[A][B][C][D|A:B:C]"), df[c('A', 'B', 'C', 'D')], type='loglik-g') -> -732.2027
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="D", parents=["A", "B", "C"]),
+            -27.1936,
             places=3,
         )
 
