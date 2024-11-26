@@ -522,7 +522,7 @@ class LogLikelihoodCondGauss(StructureScore):
             df_cov = df_cov + 1e-6
         return df_cov
 
-    def local_score(self, variable, parents):
+    def _log_likelihood(self, variable, parents):
         df = self.data.loc[:, [variable] + parents]
 
         # If variable is continuous, the probability is computed as:
@@ -659,3 +659,15 @@ class LogLikelihoodCondGauss(StructureScore):
                         np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0]))
                     )
             return log_like
+
+    def local_score(self, variable, parents):
+        ll = self._log_likelihood(variable=variable, parents=parents)
+        return ll
+
+
+class BICCondGauss(LogLikelihoodCondGauss):
+    def __init__(self, data, **kwargs):
+        super(BICCondGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        ll = self._log_likelihood(variable=variable, parents=parents)

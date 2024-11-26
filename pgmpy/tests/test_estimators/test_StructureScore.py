@@ -4,13 +4,14 @@ import pandas as pd
 
 from pgmpy.estimators import (
     AIC,
+    BIC,
+    K2,
     AICGauss,
     BDeu,
     BDs,
-    BIC,
     BICGauss,
     LogLikelihoodCondGauss,
-    K2,
+    LogLikelihoodGauss,
 )
 from pgmpy.models import BayesianNetwork
 
@@ -118,31 +119,6 @@ class TestBIC(unittest.TestCase):
         del self.titanic_data2
 
 
-class TestBICGauss(unittest.TestCase):
-    def setUp(self):
-        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
-        self.score_fn = BICGauss(data)
-
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
-
-    def test_score(self):
-        self.assertAlmostEqual(
-            self.score_fn.local_score(variable="C", parents=["A", "B"]),
-            -87.5918,
-            places=3,
-        )
-        self.assertAlmostEqual(
-            self.score_fn.local_score(variable="A", parents=[]), -124.3254, places=3
-        )
-        self.assertAlmostEqual(
-            self.score_fn.local_score(variable="B", parents=[]), -261.6093, places=3
-        )
-
-        self.assertAlmostEqual(self.score_fn.score(self.m1), -473.5265, places=3)
-        self.assertAlmostEqual(self.score_fn.score(self.m2), -587.8711, places=3)
-
-
 class TestK2(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
@@ -213,6 +189,31 @@ class TestAIC(unittest.TestCase):
         del self.titanic_data2
 
 
+class TestLogLikeGauss(unittest.TestCase):
+    def setUp(self):
+        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
+        self.score_fn = LogLikelihoodGauss(data)
+
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
+        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
+
+    def test_score(self):
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=[]), -119.7202, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="B", parents=[]), -257.0042, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="C", parents=["A", "B"]),
+            -78.3815,
+            places=3,
+        )
+
+        self.assertAlmostEqual(self.score_fn.score(self.m1), -455.1058, places=3)
+        self.assertAlmostEqual(self.score_fn.score(self.m2), -569.4505, places=3)
+
+
 class TestAICGauss(unittest.TestCase):
     def setUp(self):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
@@ -236,6 +237,31 @@ class TestAICGauss(unittest.TestCase):
 
         self.assertAlmostEqual(self.score_fn.score(self.m1), -463.1059, places=3)
         self.assertAlmostEqual(self.score_fn.score(self.m2), -577.4505, places=3)
+
+
+class TestBICGauss(unittest.TestCase):
+    def setUp(self):
+        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
+        self.score_fn = BICGauss(data)
+
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
+        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
+
+    def test_score(self):
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="C", parents=["A", "B"]),
+            -87.5918,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="A", parents=[]), -124.3254, places=3
+        )
+        self.assertAlmostEqual(
+            self.score_fn.local_score(variable="B", parents=[]), -261.6093, places=3
+        )
+
+        self.assertAlmostEqual(self.score_fn.score(self.m1), -473.5265, places=3)
+        self.assertAlmostEqual(self.score_fn.score(self.m2), -587.8711, places=3)
 
 
 class TestLogLikelihoodCondGauss(unittest.TestCase):
