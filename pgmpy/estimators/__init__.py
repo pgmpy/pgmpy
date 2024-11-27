@@ -8,8 +8,10 @@ from pgmpy.estimators.StructureScore import (
     BDs,
     BIC,
     BICGauss,
+    BICCondGauss,
     AIC,
     AICGauss,
+    AICCondGauss,
     LogLikelihoodGauss,
     LogLikelihoodCondGauss,
 )
@@ -55,4 +57,6 @@ __all__ = [
     "GES",
     "LogLikelihoodGauss",
     "LogLikelihoodCondGauss",
+    "AICCondGauss",
+    "BICCondGauss",
 ]
