@@ -165,8 +165,9 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
-            custom score, but it should be an instance of `StructureScore`.
+            structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
+            ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
+            be an instance of `StructureScore`.
 
         start_dag: DAG instance
             The starting point for the local search. By default, a completely
@@ -218,7 +219,7 @@ class HillClimbSearch(StructureEstimator):
         >>> # Learn the model structure using HillClimbSearch algorithm from `df`
         >>> from pgmpy.estimators import HillClimbSearch
         >>> est = HillClimbSearch(data)
-        >>> dag = est.estimate(scoring_method='bic')
+        >>> dag = est.estimate(scoring_method='bic-d')
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())

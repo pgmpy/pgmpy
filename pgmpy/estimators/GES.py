@@ -92,8 +92,9 @@ class GES(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g, cond-gauss. Also accepts a
-            custom score, but it should be an instance of `StructureScore`.
+            structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
+            ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
+            be an instance of `StructureScore`.
 
         min_improvement: float
             The operation (edge addition, removal, or flipping) would only be performed if the
@@ -114,7 +115,7 @@ class GES(StructureEstimator):
         >>> # Learn the model structure using GES algorithm from `df`
         >>> from pgmpy.estimators import GES
         >>> est = GES(data)
-        >>> dag = est.estimate(scoring_method='bic')
+        >>> dag = est.estimate(scoring_method='bic-d')
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())
