@@ -9,11 +9,14 @@ from pgmpy.estimators import (
     AIC,
     BIC,
     K2,
+    AICCondGauss,
     AICGauss,
     BDeu,
     BDs,
+    BICCondGauss,
     BICGauss,
     LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
     ScoreCache,
     StructureEstimator,
     StructureScore,
@@ -81,7 +84,7 @@ class GES(StructureEstimator):
             current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic", min_improvement=1e-6, debug=False):
+    def estimate(self, scoring_method="bic-d", min_improvement=1e-6, debug=False):
         """
         Estimates the DAG from the data.
 
@@ -123,11 +126,14 @@ class GES(StructureEstimator):
             "k2": K2,
             "bdeu": BDeu,
             "bds": BDs,
-            "bic": BIC,
-            "aic": AIC,
+            "bic-d": BIC,
+            "aic-d": AIC,
+            "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
             "bic-g": BICGauss,
-            "cond-gauss": LogLikelihoodCondGauss,
+            "ll-cg": LogLikelihoodCondGauss,
+            "aic-cg": AICCondGauss,
+            "bic-cg": BICCondGauss,
         }
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [

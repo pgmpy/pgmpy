@@ -226,13 +226,32 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     >>> structure_score(model, data, scoring_method="bic")
     -106665.9383064447
     """
-    from pgmpy.estimators import BIC, K2, BDeu, BDs
+    from pgmpy.estimators import (
+        AIC,
+        BIC,
+        K2,
+        AICCondGauss,
+        AICGauss,
+        BDeu,
+        BDs,
+        BICCondGauss,
+        BICGauss,
+        LogLikelihoodCondGauss,
+        LogLikelihoodGauss,
+    )
 
     supported_methods = {
         "k2": K2,
         "bdeu": BDeu,
         "bds": BDs,
-        "bic": BIC,
+        "bic-d": BIC,
+        "aic-d": AIC,
+        "ll-g": LogLikelihoodGauss,
+        "aic-g": AICGauss,
+        "bic-g": BICGauss,
+        "ll-cg": LogLikelihoodCondGauss,
+        "aic-cg": AICCondGauss,
+        "bic-cg": BICCondGauss,
     }
 
     # Step 1: Test the inputs

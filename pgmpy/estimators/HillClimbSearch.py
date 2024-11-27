@@ -9,13 +9,16 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
     AIC,
+    BIC,
+    K2,
+    AICCondGauss,
     AICGauss,
     BDeu,
     BDs,
-    BIC,
+    BICCondGauss,
     BICGauss,
     LogLikelihoodCondGauss,
-    K2,
+    LogLikelihoodGauss,
     ScoreCache,
     StructureEstimator,
     StructureScore,
@@ -230,10 +233,14 @@ class HillClimbSearch(StructureEstimator):
             "bds": BDs,
             "bic-d": BIC,
             "aic-d": AIC,
+            "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
             "bic-g": BICGauss,
             "ll-cg": LogLikelihoodCondGauss,
+            "aic-cg": AICCondGauss,
+            "bic-cg": BICCondGauss,
         }
+
         if isinstance(scoring_method, str):
             if scoring_method.lower() in [
                 "k2score",
