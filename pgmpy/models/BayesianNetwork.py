@@ -1301,7 +1301,13 @@ class BayesianNetwork(DAG):
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
 
         Simulation with missing values:
-        >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> model.simulate(n_samples, include_missing="MCAR", missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
+
+        >>> cpd = TabularCPD("HISTORY", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
+                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3])
+
+        >>> model.simulate(n_samples=10, missing_scheme="MAR", missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
 
@@ -1414,10 +1420,26 @@ class BayesianNetwork(DAG):
                     "TabularCPD for MAR must define two states: missing and not missing."
                 )
 
+            for obs in observed_vars:
+                if obs != missing_prob.variable:
+                    cpd = self.get_cpds(obs)
+                    original_cardinality = cpd.cardinality[cpd.variables.index(obs)]
+                    if not (
+                        missing_prob.cardinality[missing_prob.variables.index(obs)]
+                        == original_cardinality
+                    ):
+                        raise ValueError(
+                            f"Cardinality between CPD of missing_prob and original cpd should be same for {obs}."
+                        )
+
             missingness_probs = []
-            for _, row in samples.iterrows():
-                state_idx = tuple(row[observed_vars])
-                prob = missing_prob.values[1][state_idx]
+            for i, row in samples.iterrows():
+                idxs = []
+                for obs in observed_vars:
+                    idxs.append(self.get_cpds(obs).state_names[obs].index(row[obs]))
+
+                idxs = tuple(idxs)
+                prob = missing_prob.values[1][idxs]
                 missingness_probs.append(prob)
 
             rng = np.random.default_rng(seed)

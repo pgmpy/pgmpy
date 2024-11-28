@@ -214,10 +214,10 @@ class TestIndependencies(unittest.TestCase):
 
     def test_reduce(self):
         ind1 = Independencies(["X", "Y", "Z"], ["X", "Y", "Z"])
-        self.assertEqual(len(ind1.reduce()), 1)
+        self.assertEqual(len(ind1.reduce().independencies), 1)
 
         ind2 = Independencies(["A", "B", "C"], ["D", "E", "F"])
-        reduced = ind2.reduce()
+        reduced = ind2.reduce().independencies
         self.assertEqual(len(reduced), 2)
         self.assertTrue(
             all(assertion in reduced for assertion in ind2.get_assertions())
@@ -225,16 +225,20 @@ class TestIndependencies(unittest.TestCase):
 
         ind3 = Independencies(["W", ["X", "Y", "Z"]], ["W", "X", "Y"])
         reduced = ind3.reduce()
-        self.assertEqual(len(reduced), 1)
-        self.assertEqual(reduced[0], IndependenceAssertion("W", ["X", "Y", "Z"]))
+        self.assertEqual(len(reduced.independencies), 1)
+        self.assertEqual(
+            reduced.independencies[0], IndependenceAssertion("W", ["X", "Y", "Z"])
+        )
 
         ind4 = Independencies(
             ["A", ["B", "C"], "D"], ["A", "B", "D"], ["A", "C", "D"], ["E", "F", "G"]
         )
         reduced = ind4.reduce()
-        self.assertEqual(len(reduced), 2)
-        self.assertTrue(IndependenceAssertion("A", ["B", "C"], "D") in reduced)
-        self.assertTrue(IndependenceAssertion("E", "F", "G") in reduced)
+        self.assertEqual(len(reduced.independencies), 2)
+        self.assertTrue(
+            IndependenceAssertion("A", ["B", "C"], "D") in reduced.independencies
+        )
+        self.assertTrue(IndependenceAssertion("E", "F", "G") in reduced.independencies)
 
         ind5 = Independencies(["X", "Y", "Z"], ["X", "Y", "Z"], ["A", "B", "C"])
         original_assertions = ind5.get_assertions()
@@ -243,10 +247,10 @@ class TestIndependencies(unittest.TestCase):
         self.assertEqual(len(ind5.get_assertions()), 2)
 
         ind6 = Independencies()
-        self.assertEqual(len(ind6.reduce()), 0)
+        self.assertEqual(len(ind6.reduce().independencies), 0)
 
         ind7 = Independencies(["X", "Y", "Z"])
-        reduced = ind7.reduce()
+        reduced = ind7.reduce().independencies
         self.assertEqual(len(reduced), 1)
         self.assertEqual(reduced[0], IndependenceAssertion("X", "Y", "Z"))
 
