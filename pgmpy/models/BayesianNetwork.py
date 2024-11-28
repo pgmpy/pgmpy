@@ -1208,7 +1208,7 @@ class BayesianNetwork(DAG):
         partial_samples=None,
         seed=None,
         show_progress=True,
-        include_missing=False,
+        missing_scheme=None,
         missing_prob=0.1,
         missing_columns=None,
     ):
@@ -1253,15 +1253,20 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        include_missing: bool (default: False)
-            If True, include missing values in the samples.
+        include_missing: str (default: None)
+            If None, no missing value.
+            MCAR : missing completely at random.
+            MAR : missing at random.
+            MNAR : missing not at random.
 
-        missing_prob: float (default: 0.1)
-            The probability that there is missing values in the samples.
+        missing_prob: float, TabularCPD (default: 0.1)
+            The probability that there is missing values in the samples (CPD in case of MAR and MNAR).
+            The variable of the CPD is the missing column while value of remaining columns of samples are to be specified as evidence.
 
         missing_columns: list (default: None)
             The list of columns where there will be missing values in the samples.
             If None, then all columns could contain the missing values.
+            Not necessary for MNAR and MAR
 
         Returns
         -------
@@ -1385,15 +1390,48 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 5: If include_missing; include missing values in samples.
-        if include_missing:
+        # Step 5: If missing_scheme; include missing values in samples.
+        if missing_scheme == "MAR":
+            if not isinstance(missing_prob, TabularCPD):
+                raise ValueError("For MAR, missing_prob must be a TabularCPD instance.")
+
+            if missing_prob.variable not in samples.columns:
+                raise ValueError(
+                    f"Missing_prob variable {missing_prob.variable} not in dataset columns."
+                )
+
+            observed_vars = missing_prob.variables[1:]
+            if any(var not in samples.columns for var in observed_vars):
+                raise ValueError("Observed variables in CPD are not in the dataset.")
+
+            if any(var in self.latents for var in observed_vars):
+                raise ValueError(
+                    "Observed variables in CPD should not be latent variables."
+                )
+
+            if len(missing_prob.values) != 2:
+                raise ValueError(
+                    "TabularCPD for MAR must define two states: missing and not missing."
+                )
+
+            missingness_probs = []
+            for _, row in samples.iterrows():
+                state_idx = tuple(row[observed_vars])
+                prob = missing_prob.values[1][state_idx]
+                missingness_probs.append(prob)
+
+            rng = np.random.default_rng(seed)
+            missing_mask = rng.random(size=len(samples)) < np.array(missingness_probs)
+
+            samples.loc[missing_mask, missing_prob.variable] = np.nan
+
+        elif missing_scheme == "MCAR":
             if missing_prob <= 0:
                 raise ValueError("Missingness probability should be greater than 0")
             if missing_prob >= 1:
                 raise ValueError("Missingness probability should be less than 1")
 
-            rng = np.random.Generator(np.random.PCG64(seed))
-
+            rng = np.random.default_rng(seed)
             mask = rng.random(size=samples.shape)
             missing_mask = mask < missing_prob
 
@@ -1406,6 +1444,25 @@ class BayesianNetwork(DAG):
                 missing_mask[:, col_indices] = 0
 
             samples = samples.mask(missing_mask)
+
+        elif missing_scheme == "MNAR":
+            if not isinstance(missing_prob, TabularCPD):
+                raise ValueError("For MAR, missing_prob must be a TabularCPD instance.")
+
+            if missing_prob.variable not in samples.columns:
+                raise ValueError(
+                    f"Missing_prob variable {missing_prob.variable} not in dataset columns."
+                )
+
+            if not missing_prob.values.shape == (2,):
+                raise ValueError(
+                    "Missingness for MNAR must depend only the variable itself."
+                )
+
+            rng = np.random.Generator(np.random.PCG64(seed))
+            missing_mask = rng.random(size=len(samples)) < missing_prob.values[1]
+
+            samples.loc[missing_mask, missing_prob.variable] = np.nan
 
         # Step 6: Postprocess and return
         if include_latents:

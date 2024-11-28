@@ -130,7 +130,9 @@ class BayesianModelSampling(BayesianModelInference):
                     sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
-        if not include_latents:
+        if not include_latents and any(
+            latent in samples_df.columns for latent in self.model.latents
+        ):
             samples_df.drop(self.model.latents, axis=1, inplace=True)
         return samples_df
 
