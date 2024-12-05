@@ -972,8 +972,6 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_bayesian_fit(self):
-        print(isinstance(BayesianEstimator, BaseEstimator))
-        print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
         self.model2.fit(
             self.data1,
             estimator=BayesianEstimator,
@@ -1807,124 +1805,77 @@ class TestSimulation(unittest.TestCase):
         samples = self.con_model.simulate(n_samples=1000)
         self.assertFalse(samples.isnull().values.any())
 
-        samples = self.con_model.simulate(
-            n_samples=1000, missing_scheme="MCAR", missing_prob=0.9
+        cpd = TabularCPD(
+            "Z*",
+            2,
+            [[0.5], [0.5]],
         )
-        self.assertTrue(samples.isnull().values.any())
+        samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
+        self.assertTrue(samples["Z"].isnull().values.any())
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
-        miss_columns = ["X", "U"]
-        samples = self.con_model.simulate(
-            n_samples=1000,
-            seed=42,
-            missing_scheme="MCAR",
-            missing_prob=0.9,
-            missing_columns=miss_columns,
+        cpd = TabularCPD(
+            "Z*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["X", "Y"], [2, 2]
         )
-        self.assertTrue(samples[miss_columns].isnull().values.any())
-        self.assertFalse(samples.drop(columns=miss_columns).isnull().values.any())
+        samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
+        self.assertTrue(samples["Z"].isnull().values.any())
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
-        with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MCAR", missing_prob=0
-            )
-        with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MCAR", missing_prob=1
-            )
+        cpd = TabularCPD("Z*", 2, [[0.5, 0.5], [0.5, 0.5]], ["Z"], [2])
+        samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
+        self.assertTrue(samples["Z"].isnull().values.any())
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
-        miss_column = ["X"]
+        cpd = TabularCPD(
+            "U*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["U", "Z"], [2, 2]
+        )
+        samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
+        self.assertTrue(samples["U"].isnull().values.any())
+        self.assertFalse(samples.drop(columns=["U"]).isnull().values.any())
+
         cpd_1 = TabularCPD(
-            "X", 2, [[0.9, 0.9, 0.9, 0.9], [0.1, 0.1, 0.1, 0.1]], ["Z", "U"], [2, 2]
+            "U*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["X", "Z"], [2, 2]
         )
-        cpd_2 = TabularCPD(
-            "X", 2, [[0.1, 0.1, 0.1, 0.1], [0.9, 0.9, 0.9, 0.9]], ["Z", "U"], [2, 2]
-        )
+        cpd_2 = TabularCPD("Y*", 2, [[0.5, 0.5], [0.5, 0.5]], ["Y"], [2])
+
+        cpd_3 = TabularCPD("Z*", 2, [[0.5], [0.5]])
 
         samples = self.con_model.simulate(
-            n_samples=1000, missing_scheme="MAR", missing_prob=cpd_1
+            n_samples=1000, missing_prob=[cpd_1, cpd_2, cpd_3]
         )
-        self.assertTrue(samples[miss_column].isnull().values.any())
-
-        samples = self.con_model.simulate(
-            n_samples=1000, missing_scheme="MAR", missing_prob=cpd_2
-        )
-        self.assertTrue(samples[miss_column].isnull().values.any())
+        self.assertTrue(samples["U"].isnull().values.any())
+        self.assertTrue(samples["Y"].isnull().values.any())
+        self.assertTrue(samples["Z"].isnull().values.any())
+        self.assertFalse(samples.drop(columns=["U", "Y", "Z"]).isnull().values.any())
 
         with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MAR", missing_prob=0.5
-            )
-
+            self.con_model.simulate(n_samples=100, missing_prob=0.5)
         with self.assertRaises(ValueError):
-            cpd_3 = TabularCPD(
-                "X",
-                3,
-                [[0.1, 0.1, 0.1, 0.1], [0.4, 0.4, 0.4, 0.4], [0.5, 0.5, 0.5, 0.5]],
-                ["Z", "U"],
-                [2, 2],
-            )
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MAR", missing_prob=cpd_3
-            )
-
-        with self.assertRaises(ValueError):
-            cpd_4 = TabularCPD(
-                "X",
+            cpd = TabularCPD(
+                "Z",
                 2,
-                [
-                    [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                    [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
-                ],
-                ["Z", "U", "B"],
-                [2, 2, 2],
+                [[0.5], [0.5]],
             )
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MAR", missing_prob=cpd_4
-            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD("Z*", 2, [[0.5, 0.5], [0.5, 0.5]], ["A"], [2])
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
 
         with self.assertRaises(ValueError):
-            cpd_5 = TabularCPD(
-                "B", 2, [[0.1, 0.1, 0.1, 0.1], [0.9, 0.9, 0.9, 0.9]], ["Z", "Y"], [2, 2]
-            )
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MAR", missing_prob=cpd_5
-            )
-
-        miss_column = ["X"]
-        cpd_6 = TabularCPD("X", 2, [[0.9], [0.1]])
-        cpd_7 = TabularCPD("X", 2, [[0.1], [0.9]])
-
-        samples = self.con_model.simulate(
-            n_samples=1000, missing_scheme="MNAR", missing_prob=cpd_6
-        )
-        self.assertTrue(samples[miss_column].isnull().values.any())
-
-        samples = self.con_model.simulate(
-            n_samples=1000, missing_scheme="MNAR", missing_prob=cpd_7
-        )
-        self.assertTrue(samples[miss_column].isnull().values.any())
+            self.con_model.simulate(n_samples=100, missing_prob=[cpd, 0.5])
 
         with self.assertRaises(ValueError):
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MNAR", missing_prob=0.5
+            cpd = TabularCPD(
+                "M*",
+                2,
+                [[0.5], [0.5]],
             )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
 
         with self.assertRaises(ValueError):
-            cpd_8 = TabularCPD("X", 3, [[0.1], [0.4], [0.5]])
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MNAR", missing_prob=cpd_8
+            cpd = TabularCPD(
+                "Z*",
+                3,
+                [[0.3], [0.5], [0.2]],
             )
-
-        with self.assertRaises(ValueError):
-            cpd_9 = TabularCPD(
-                "X", 2, [[0.1, 0.1, 0.1, 0.1], [0.9, 0.9, 0.9, 0.9]], ["A", "B"], [2, 2]
-            )
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MNAR", missing_prob=cpd_9
-            )
-
-        with self.assertRaises(ValueError):
-            cpd_10 = TabularCPD("B", 2, [[0.1], [0.9]])
-            self.con_model.simulate(
-                n_samples=100, missing_scheme="MNAR", missing_prob=cpd_10
-            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
