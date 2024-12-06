@@ -1251,9 +1251,9 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        missing_prob: float, list, TabularCPD (default: 0.1)
-            The probability that there is missing values in the samples (CPD in case of MAR).
-            The variable of the CPD is the missing column while value of remaining columns of samples are to be specified as evidence.
+        missing_prob: TabularCPD, list  (default: None)
+            The probability of missing value for the variable of TabularCPD.
+            In case of missing value for more than one variable, provide list of TabularCPD.
 
         Returns
         -------
@@ -1289,12 +1289,13 @@ class BayesianNetwork(DAG):
 
         Simulation with missing values:
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> model.simulate(n_samples, include_missing="MCAR", missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HYPOVOLEMIA"], [2])
+        >>> model.simulate(n_samples, missing_prob=cpd)
 
-        >>> cpd = TabularCPD("HISTORY", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
                             ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3])
 
-        >>> model.simulate(n_samples=10, missing_scheme="MAR", missing_prob=cpd)
+        >>> model.simulate(n_samples=10, missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
 
