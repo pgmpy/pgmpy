@@ -1254,6 +1254,8 @@ class BayesianNetwork(DAG):
         missing_prob: TabularCPD, list  (default: None)
             The probability of missing value for the variable of TabularCPD.
             In case of missing value for more than one variable, provide list of TabularCPD.
+            The variable name of each TabularCPD should end with the name of node in BayesianNetwork with * at the end of the name.
+            The state names of each TabularCPD should be the same as the state names of the corresponding node in BayesianNetwork.
 
         Returns
         -------
@@ -1289,12 +1291,16 @@ class BayesianNetwork(DAG):
 
         Simulation with missing values:
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HYPOVOLEMIA"], [2])
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
+        >>> model.simulate(n_samples, missing_prob=cpd)
+
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HISTORY"], [2], state_names={"HISTORY*" : [0,1],
+                        "HISTORY" : ['TRUE', 'FALSE']})
         >>> model.simulate(n_samples, missing_prob=cpd)
 
         >>> cpd = TabularCPD("HISTORY*", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
-                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3])
-
+                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3], state_names={"HISTORY*" : [0,1],
+                        "HYPOVOLEMIA" : ['TRUE', 'FALSE'], 'LVEDVOLUME': ['LOW', 'NORMAL', 'HIGH']})
         >>> model.simulate(n_samples=10, missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
@@ -1364,33 +1370,37 @@ class BayesianNetwork(DAG):
                 evidence[new_var] = 0
 
         # Step 3: If missing_prob; include missing values in samples.
-        if missing_prob:
+        if missing_prob is not None:
             if isinstance(missing_prob, list):
                 for cpd in missing_prob:
                     if not isinstance(cpd, TabularCPD):
                         raise ValueError(
-                            "Missing probability should only contain TabularCPD."
+                            f"missing_prob must be a list of TabularCPD objects. Got {type(cpd)}"
                         )
             else:
                 if isinstance(missing_prob, TabularCPD):
                     missing_prob = [missing_prob]
                 else:
-                    raise ValueError("Missing probability should be TabularCPD.")
+                    raise ValueError(
+                        f"missing_prob should be TabularCPD. Got {type(missing_prob)}"
+                    )
 
             for cpd in missing_prob:
                 variable = cpd.variables[0]
 
-                if "*" not in variable:
+                if not variable.endswith("*"):
                     raise ValueError(
-                        "TabularCPD variable should end with * symbol to represent missingnness variable."
+                        f"Got {variable}. TabularCPD variable should end with * symbol to represent missingnness variable."
                     )
 
                 if variable.split("*")[0] not in model.nodes:
-                    raise ValueError("TabularCPD variable not in model nodes.")
+                    raise ValueError(
+                        f"Got {variable}. TabularCPD variable not in model nodes."
+                    )
 
                 if cpd.cardinality[0] != 2:
                     raise ValueError(
-                        "Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
+                        f"Got cardinality of variable = {cpd.cardinality[0]}. Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
                     )
 
                 model.add_node(variable)

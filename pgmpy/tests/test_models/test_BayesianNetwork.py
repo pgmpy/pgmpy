@@ -1811,27 +1811,31 @@ class TestSimulation(unittest.TestCase):
             [[0.5], [0.5]],
         )
         samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
-        self.assertTrue(samples["Z"].isnull().values.any())
+        missing_fraction = samples["Z"].isnull().mean()
+        self.assertGreaterEqual(missing_fraction, 0.45)
+        self.assertLessEqual(missing_fraction, 0.55)
         self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
         cpd = TabularCPD(
             "Z*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["X", "Y"], [2, 2]
         )
         samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
-        self.assertTrue(samples["Z"].isnull().values.any())
+        grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
+        for (x, y), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd.values[0][x, y]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.15
+            )
         self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
         cpd = TabularCPD("Z*", 2, [[0.5, 0.5], [0.5, 0.5]], ["Z"], [2])
         samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
-        self.assertTrue(samples["Z"].isnull().values.any())
-        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
-        cpd = TabularCPD(
-            "U*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["U", "Z"], [2, 2]
-        )
-        samples = self.con_model.simulate(n_samples=1000, missing_prob=cpd)
-        self.assertTrue(samples["U"].isnull().values.any())
-        self.assertFalse(samples.drop(columns=["U"]).isnull().values.any())
+        missing_fraction = samples["Z"].isnull().mean()
+        expected_missing_fraction = 0.5
+        self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.15)
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
         cpd_1 = TabularCPD(
             "U*", 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]], ["X", "Z"], [2, 2]
@@ -1843,10 +1847,21 @@ class TestSimulation(unittest.TestCase):
         samples = self.con_model.simulate(
             n_samples=1000, missing_prob=[cpd_1, cpd_2, cpd_3]
         )
-        self.assertTrue(samples["U"].isnull().values.any())
-        self.assertTrue(samples["Y"].isnull().values.any())
-        self.assertTrue(samples["Z"].isnull().values.any())
-        self.assertFalse(samples.drop(columns=["U", "Y", "Z"]).isnull().values.any())
+        grouped = samples.groupby(["X", "Z"], observed=False)["U"]
+        for (x, z), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd_1.values[0][int(x), int(z)]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.15
+            )
+
+        missing_fraction = samples["Y"].isnull().mean()
+        expected_missing_fraction = 0.5
+        self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.15)
+
+        missing_fraction = samples["Z"].isnull().mean()
+        expected_missing_fraction = 0.5
+        self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.15)
 
         with self.assertRaises(ValueError):
             self.con_model.simulate(n_samples=100, missing_prob=0.5)
