@@ -1209,6 +1209,7 @@ class BayesianNetwork(DAG):
         seed=None,
         show_progress=True,
         missing_prob=None,
+        return_full=False,
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1256,6 +1257,9 @@ class BayesianNetwork(DAG):
             In case of missing value for more than one variable, provide list of TabularCPD.
             The variable name of each TabularCPD should end with the name of node in BayesianNetwork with * at the end of the name.
             The state names of each TabularCPD should be the same as the state names of the corresponding node in BayesianNetwork.
+
+        return_full: bool (default: False)
+            If True, return both full samples and samples with missing values (if performed).
 
         Returns
         -------
@@ -1440,15 +1444,28 @@ class BayesianNetwork(DAG):
 
         # Step 6: If missing_prob; perform masking
         if missing_prob:
+            if return_full:
+                full_samples = samples.copy()
+
             for cpd in missing_prob:
                 variable = cpd.variables[0]
                 samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
                 samples.drop(columns=[variable], inplace=True)
 
+                if return_full:
+                    full_samples.drop(columns=[variable], inplace=True)
+
         # Step 7: Postprocess and return
         if include_latents:
+            if return_full:
+                return samples.astype("category"), full_samples
             return samples.astype("category")
         else:
+            if return_full:
+                return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
+                    "category"
+                ), full_samples
+
             return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
                 "category"
             )
