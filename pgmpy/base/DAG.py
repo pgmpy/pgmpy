@@ -426,7 +426,7 @@ class DAG(nx.DiGraph):
                 if minimal_separator is not None:
                     independencies.add_assertions([x, y, minimal_separator])
 
-        independencies.reduce()
+        independencies = independencies.reduce()
 
         if not latex:
             return independencies
