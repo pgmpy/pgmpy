@@ -182,8 +182,8 @@ class HillClimbSearch(StructureEstimator):
 
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
             Expert knowledge to be used with the algorithm. Expert knowledge
-            includes whitelisted/blacklisted edges in the search space, fixed edges
-            in the final network etc.
+            includes whitelisted/blacklisted edges in the search space and fixed edges
+            in the final network.
 
         epsilon: float (default: 1e-4)
             Defines the exit condition. If the improvement in score is less than `epsilon`,

@@ -18,26 +18,24 @@ class ExpertKnowledge:
             will never change it.
     """
 
-    def _check_list(self, edge_list):
-        if type(edge_list) not in [list, set]:
-            raise TypeError(f"TypeError: expected list data type for white/black list")
-
-    def _check_set(self, edge_set):
-        if not hasattr(edge_set, "__iter__"):
-            raise ValueError("fixed_edges must be an iterable")
+    def _validate_edges(self, edge_list):
+        if not hasattr(edge_list, "__iter__"):
+            raise TypeError(
+                f"expected iterator type for edge information. Recieved {type(edge_list)} instead"
+            )
 
     def __init__(self, white_list=None, black_list=None, fixed_edges=set(), **kwargs):
 
         if white_list:
-            self._check_list(white_list)
+            self._validate_edges(white_list)
         if black_list:
-            self._check_list(black_list)
+            self._validate_edges(black_list)
         if fixed_edges:
-            self._check_set(fixed_edges)
+            self._validate_edges(fixed_edges)
 
         self.white_list = white_list if white_list is not None else None
         self.black_list = black_list if black_list is not None else None
-        self.fixed_edges = set(fixed_edges)
+        self.fixed_edges = fixed_edges
 
     def check_against_dag(self):
         pass
