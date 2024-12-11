@@ -1208,9 +1208,8 @@ class BayesianNetwork(DAG):
         partial_samples=None,
         seed=None,
         show_progress=True,
-        include_missing=False,
-        missing_prob=0.1,
-        missing_columns=None,
+        missing_prob=None,
+        return_full=False,
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1253,15 +1252,14 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        include_missing: bool (default: False)
-            If True, include missing values in the samples.
+        missing_prob: TabularCPD, list  (default: None)
+            The probability of missing value for the variable of TabularCPD.
+            In case of missing value for more than one variable, provide list of TabularCPD.
+            The variable name of each TabularCPD should end with the name of node in BayesianNetwork with * at the end of the name.
+            The state names of each TabularCPD should be the same as the state names of the corresponding node in BayesianNetwork.
 
-        missing_prob: float (default: 0.1)
-            The probability that there is missing values in the samples.
-
-        missing_columns: list (default: None)
-            The list of columns where there will be missing values in the samples.
-            If None, then all columns could contain the missing values.
+        return_full: bool (default: False)
+            If True, return both full samples and samples with missing values (if performed).
 
         Returns
         -------
@@ -1296,7 +1294,18 @@ class BayesianNetwork(DAG):
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
 
         Simulation with missing values:
-        >>> model.simulate(n_samples, include_missing=True, missing_prob=0.4, missing_columns=['MINVOLSET', 'VENTLUNG'])
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
+        >>> model.simulate(n_samples, missing_prob=cpd)
+
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HISTORY"], [2], state_names={"HISTORY*" : [0,1],
+                        "HISTORY" : ['TRUE', 'FALSE']})
+        >>> model.simulate(n_samples, missing_prob=cpd)
+
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
+                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3], state_names={"HISTORY*" : [0,1],
+                        "HYPOVOLEMIA" : ['TRUE', 'FALSE'], 'LVEDVOLUME': ['LOW', 'NORMAL', 'HIGH']})
+        >>> model.simulate(n_samples=10, missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
 
@@ -1364,7 +1373,55 @@ class BayesianNetwork(DAG):
                 model.add_cpds(new_cpd)
                 evidence[new_var] = 0
 
-        # Step 3: If no evidence do a forward sampling
+        # Step 3: If missing_prob; include missing values in samples.
+        if missing_prob is not None:
+            if isinstance(missing_prob, list):
+                for cpd in missing_prob:
+                    if not isinstance(cpd, TabularCPD):
+                        raise ValueError(
+                            f"missing_prob must be a list of TabularCPD objects. Got {type(cpd)}"
+                        )
+            else:
+                if isinstance(missing_prob, TabularCPD):
+                    missing_prob = [missing_prob]
+                else:
+                    raise ValueError(
+                        f"missing_prob should be TabularCPD. Got {type(missing_prob)}"
+                    )
+
+            for cpd in missing_prob:
+                variable = cpd.variables[0]
+
+                if not variable.endswith("*"):
+                    raise ValueError(
+                        f"Got {variable}. TabularCPD variable should end with * symbol to represent missingnness variable."
+                    )
+
+                if variable.split("*")[0] not in model.nodes:
+                    raise ValueError(
+                        f"Got {variable}. TabularCPD variable not in model nodes."
+                    )
+
+                if cpd.cardinality[0] != 2:
+                    raise ValueError(
+                        f"Got cardinality of variable = {cpd.cardinality[0]}. Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
+                    )
+
+                model.add_node(variable)
+
+                if len(cpd.variables) > 1:
+                    evidences = cpd.variables[1:]
+                    for node in evidences:
+                        if node not in model.nodes():
+                            raise ValueError(
+                                f"TabularCPD evidence {node} not in model nodes."
+                            )
+                        else:
+                            model.add_edge(node, variable)
+
+                model.add_cpds(cpd)
+
+        # Step 4: If no evidence do a forward sampling
         if len(evidence) == 0:
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
@@ -1374,7 +1431,7 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 4: If evidence; do a rejection sampling
+        # Step 5: If evidence; do a rejection sampling
         else:
             samples = BayesianModelSampling(model).rejection_sample(
                 size=n_samples,
@@ -1385,33 +1442,23 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 5: If include_missing; include missing values in samples.
-        if include_missing:
-            if missing_prob <= 0:
-                raise ValueError("Missingness probability should be greater than 0")
-            if missing_prob >= 1:
-                raise ValueError("Missingness probability should be less than 1")
+        # Step 6: If missing_prob; perform masking
+        if missing_prob:
+            for cpd in missing_prob:
+                variable = cpd.variables[0]
+                if return_full:
+                    samples[variable.split("*")[0] + "_full"] = samples.loc[
+                        :, variable.split("*")[0]
+                    ]
 
-            rng = np.random.Generator(np.random.PCG64(seed))
+                samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
+                samples.drop(columns=[variable], inplace=True)
 
-            mask = rng.random(size=samples.shape)
-            missing_mask = mask < missing_prob
-
-            if missing_columns:
-                col_indices = [
-                    samples.columns.get_loc(col)
-                    for col in samples.columns
-                    if col not in missing_columns
-                ]
-                missing_mask[:, col_indices] = 0
-
-            samples = samples.mask(missing_mask)
-
-        # Step 6: Postprocess and return
+        # Step 7: Postprocess and return
         if include_latents:
             return samples.astype("category")
         else:
-            return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
+            return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype(
                 "category"
             )
 

@@ -972,8 +972,6 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_bayesian_fit(self):
-        print(isinstance(BayesianEstimator, BaseEstimator))
-        print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
         self.model2.fit(
             self.data1,
             estimator=BayesianEstimator,
@@ -1803,27 +1801,108 @@ class TestSimulation(unittest.TestCase):
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
-    def test_missing_scheme_sample(self):
-        samples = self.con_model.simulate(n_samples=1000)
+    def test_stimulate_missing_mcar(self):
+        samples = self.con_model.simulate(n_samples=3000)
         self.assertFalse(samples.isnull().values.any())
 
-        samples = self.con_model.simulate(
-            n_samples=1000, include_missing=True, missing_prob=0.9
+        cpd = TabularCPD(
+            "Z*",
+            2,
+            [[0.2], [0.8]],
         )
-        self.assertTrue(samples.isnull().values.any())
-
-        miss_columns = ["X", "U"]
-        samples = self.con_model.simulate(
-            n_samples=1000,
-            seed=42,
-            include_missing=True,
-            missing_prob=0.9,
-            missing_columns=miss_columns,
-        )
-        self.assertTrue(samples[miss_columns].isnull().values.any())
-        self.assertFalse(samples.drop(columns=miss_columns).isnull().values.any())
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        missing_fraction = samples["Z"].isnull().mean()
+        self.assertGreaterEqual(missing_fraction, 0.75)
+        self.assertLessEqual(missing_fraction, 0.85)
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
 
         with self.assertRaises(ValueError):
-            self.con_model.simulate(n_samples=100, include_missing=True, missing_prob=0)
+            self.con_model.simulate(n_samples=100, missing_prob=0.5)
         with self.assertRaises(ValueError):
-            self.con_model.simulate(n_samples=100, include_missing=True, missing_prob=1)
+            cpd = TabularCPD(
+                "Z",
+                2,
+                [[0.5], [0.5]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD("Z*", 2, [[0.5, 0.5], [0.5, 0.5]], ["A"], [2])
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(n_samples=100, missing_prob=[cpd, 0.5])
+
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD(
+                "M*",
+                2,
+                [[0.5], [0.5]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD(
+                "Z*",
+                3,
+                [[0.3], [0.5], [0.2]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+    def test_stimulate_missing_mnar(self):
+        cpd = TabularCPD("Z*", 2, [[0.6, 0.3], [0.4, 0.7]], ["Z"], [2])
+        samples = self.con_model.simulate(
+            n_samples=3000, missing_prob=cpd, return_full=True
+        )
+        missing_fraction_z0 = samples[samples["Z_full"] == 0]["Z"].isnull().mean()
+        missing_fraction_z1 = samples[samples["Z_full"] == 1]["Z"].isnull().mean()
+
+        expected_missing_z0 = 0.4
+        expected_missing_z1 = 0.7
+        self.assertAlmostEqual(missing_fraction_z0, expected_missing_z0, delta=0.1)
+        self.assertAlmostEqual(missing_fraction_z1, expected_missing_z1, delta=0.1)
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
+
+    def test_stimulate_missing_mar(self):
+        cpd = TabularCPD(
+            "Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2]
+        )
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
+        for (x, y), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd.values[1][x, y]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.1
+            )
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
+
+        # Testing all three missingness at one sampling as list of CPD.
+        cpd_1 = TabularCPD(
+            "Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2]
+        )
+        cpd_2 = TabularCPD("Y*", 2, [[0.6, 0.4], [0.4, 0.6]], ["Y"], [2])
+        cpd_3 = TabularCPD("U*", 2, [[0.2], [0.8]])
+        samples = self.con_model.simulate(
+            n_samples=3000, missing_prob=[cpd_1, cpd_2, cpd_3], return_full=True
+        )
+        # MAR
+        grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
+        for (x, z), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd_1.values[1][int(x), int(z)]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.1
+            )
+
+        # MNAR
+        missing_fraction_z0 = samples[samples["Y_full"] == 0]["Y"].isnull().mean()
+        missing_fraction_z1 = samples[samples["Y_full"] == 1]["Y"].isnull().mean()
+        expected_missing_z0 = 0.4
+        expected_missing_z1 = 0.6
+        self.assertAlmostEqual(missing_fraction_z0, expected_missing_z0, delta=0.1)
+        self.assertAlmostEqual(missing_fraction_z1, expected_missing_z1, delta=0.1)
+
+        # MCAR
+        missing_fraction = samples["U"].isnull().mean()
+        expected_missing_fraction = 0.8
+        self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)

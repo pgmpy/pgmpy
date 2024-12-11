@@ -373,7 +373,7 @@ class Independencies(object):
         if inplace:
             self.independencies = reduced_assertions
 
-        return reduced_assertions
+        return Independencies(*reduced_assertions)
 
     def latex_string(self):
         """
