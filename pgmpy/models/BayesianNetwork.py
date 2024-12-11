@@ -1444,29 +1444,21 @@ class BayesianNetwork(DAG):
 
         # Step 6: If missing_prob; perform masking
         if missing_prob:
-            if return_full:
-                full_samples = samples.copy()
-
             for cpd in missing_prob:
                 variable = cpd.variables[0]
+                if return_full:
+                    samples[variable.split("*")[0] + "_full"] = samples.loc[
+                        :, variable.split("*")[0]
+                    ]
+
                 samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
                 samples.drop(columns=[variable], inplace=True)
 
-                if return_full:
-                    full_samples.drop(columns=[variable], inplace=True)
-
         # Step 7: Postprocess and return
         if include_latents:
-            if return_full:
-                return samples.astype("category"), full_samples
             return samples.astype("category")
         else:
-            if return_full:
-                return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
-                    "category"
-                ), full_samples
-
-            return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
+            return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype(
                 "category"
             )
 
