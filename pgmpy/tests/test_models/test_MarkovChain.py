@@ -277,7 +277,7 @@ class TestMarkovChain(unittest.TestCase):
             2: {0: 0.7, 1: 0.15, 2: 0.15},
         }
         model.add_transition_model("diff", diff_tm)
-        self.assertFalse(model.is_stationarity(0.002, None))
+        self.assertFalse(model.is_stationarity(0.0002, None))
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
     def test_generate_sample(self, sample_discrete):
