@@ -6,6 +6,7 @@ from itertools import chain
 import numpy as np
 from joblib import Parallel, delayed
 
+from pgmpy.base import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
@@ -19,14 +20,19 @@ class BayesianEstimator(ParameterEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, (DAG, BayesianNetwork)):
             raise NotImplementedError(
-                "Bayesian Parameter Estimation is only implemented for BayesianNetwork"
+                "Bayesian Parameter Estimation is only implemented for DAG or BayesianNetwork"
             )
-        elif len(model.latents) != 0:
-            raise ValueError(
-                f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
-            )
+
+        if isinstance(model, (DAG, BayesianNetwork)):
+            if len(model.latents) != 0:
+                raise ValueError(
+                    f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+                )
+
+            if isinstance(model, DAG):
+                model = BayesianNetwork(model.edges())
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 

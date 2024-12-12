@@ -3,13 +3,17 @@ from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.StructureScore import (
     StructureScore,
-    K2Score,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    AICScore,
-    AICScoreGauss,
+    K2,
+    BDeu,
+    BDs,
+    BIC,
+    BICGauss,
+    BICCondGauss,
+    AIC,
+    AICGauss,
+    AICCondGauss,
+    LogLikelihoodGauss,
+    LogLikelihoodCondGauss,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
@@ -24,7 +28,6 @@ from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
 from pgmpy.estimators.expert import ExpertInLoop
 from pgmpy.estimators.GES import GES
 
-
 __all__ = [
     "BaseEstimator",
     "ParameterEstimator",
@@ -35,13 +38,13 @@ __all__ = [
     "HillClimbSearch",
     "TreeSearch",
     "StructureScore",
-    "K2Score",
-    "BDeuScore",
-    "BDsScore",
-    "BicScore",
-    "BicScoreGauss",
-    "AICScore",
-    "AICScoreGauss",
+    "K2",
+    "BDeu",
+    "BDs",
+    "BIC",
+    "BICGauss",
+    "AIC",
+    "AICGauss",
     "ScoreCache",
     "SEMEstimator",
     "IVEstimator",
@@ -52,4 +55,8 @@ __all__ = [
     "MarginalEstimator",
     "MirrorDescentEstimator",
     "GES",
+    "LogLikelihoodGauss",
+    "LogLikelihoodCondGauss",
+    "AICCondGauss",
+    "BICCondGauss",
 ]

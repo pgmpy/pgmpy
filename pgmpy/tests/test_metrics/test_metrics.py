@@ -71,7 +71,7 @@ class TestStructureScore(unittest.TestCase):
 
     def test_discrete_network(self):
         for model in {self.alarm, self.alarm_no_cpd}:
-            for scoring_method in {"k2", "bdeu", "bds", "bic"}:
+            for scoring_method in {"k2", "bdeu", "bds", "bic-d"}:
                 metric = structure_score(self.alarm, self.data, scoring_method)
                 self.assertTrue(isinstance(metric, float))
             for scoring_method in {"bdeu", "bds"}:

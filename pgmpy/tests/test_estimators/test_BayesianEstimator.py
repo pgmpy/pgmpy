@@ -8,12 +8,14 @@ from pgmpy import config
 from pgmpy.estimators import BayesianEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.base import DAG
 
 
 class TestBayesianEstimator(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.model_latent = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
+        self.dag_with_latents = DAG([("A", "B")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
@@ -30,6 +32,7 @@ class TestBayesianEstimator(unittest.TestCase):
 
     def test_error_latent_model(self):
         self.assertRaises(ValueError, BayesianEstimator, self.model_latent, self.d1)
+        self.assertRaises(ValueError, BayesianEstimator, self.dag_with_latents, self.d1)
 
     def test_estimate_cpd_dirichlet(self):
         cpd_A = self.est1.estimate_cpd(

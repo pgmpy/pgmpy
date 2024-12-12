@@ -1,0 +1,52 @@
+{
+    "version": "v1.0.0",
+    "entity": {
+        "type": "individual",
+        "role": "maintainer",
+        "name": "Ankur Ankan",
+        "email": "ankurankan@gmail.com",
+        "description": "I lead the development and maintain the pgmpy package.",
+        "webpageUrl": {
+            "url": "https://github.com/pgmpy/pgmpy"
+        }
+    },
+    "projects": [{
+     "guid": "pgmpy",
+     "name": "pgmpy",
+     "description": "pgmpy is a Python package for learning (Structure and Parameter), inference (Probabilistic and Causal), and simulations in Bayesian Networks.",
+     "webpageUrl": {
+         "url": "https://github.com/pgmpy/pgmpy"
+     },
+     "repositoryUrl": {
+         "url": "https://github.com/pgmpy/pgmpy"
+     },
+     "licenses": ["spdx:MIT"],
+     "tags": ["machine-learning", "causal-inference", "bayesian-networks", "statistics", "python"]
+    }],
+
+    "funding": {
+        "channels": [{
+            "guid": "github",
+            "type": "other",
+            "address": "https://github.com/sponsors/pgmpy",
+            "description": "Github Sponsor"
+        },
+	{
+            "guid": "bank",
+            "type": "bank",
+            "description": "Please reach out for bank details"
+        }
+	],
+
+        "plans": [{
+            "guid": "dev-part",
+            "status": "active",
+            "name": "Part-time Developer",
+            "description": "This would go towards funding a part-time developer",
+            "amount": 25000,
+            "currency": "USD",
+            "frequency": "yearly",
+            "channels": ["github", "bank"]
+        }]
+    }
+}

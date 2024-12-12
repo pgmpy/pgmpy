@@ -2,8 +2,10 @@
 from math import lgamma, log
 
 import numpy as np
+import pandas as pd
 import statsmodels.formula.api as smf
 from scipy.special import gammaln
+from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
 
@@ -11,7 +13,7 @@ from pgmpy.estimators import BaseEstimator
 class StructureScore(BaseEstimator):
     """
     Abstract base class for structure scoring classes in pgmpy. Use any of the
-    derived classes K2Score, BDeuScore, BicScore or AICScore. Scoring classes
+    derived classes K2, BDeu, BIC or AIC. Scoring classes
     are used to measure how well a model is able to describe the given data
     set.
 
@@ -58,13 +60,13 @@ class StructureScore(BaseEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.estimators import K2Score
+        >>> from pgmpy.estimators import K2
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         >>> data['C'] = data['B']
-        >>> K2Score(data).score(BayesianNetwork([['A','B'], ['A','C']]))
+        >>> K2(data).score(BayesianNetwork([['A','B'], ['A','C']]))
         -24242.367348745247
-        >>> K2Score(data).score(BayesianNetwork([['A','B'], ['B','C']]))
+        >>> K2(data).score(BayesianNetwork([['A','B'], ['B','C']]))
         -16273.793897051042
         """
 
@@ -84,7 +86,7 @@ class StructureScore(BaseEstimator):
         return 0
 
 
-class K2Score(StructureScore):
+class K2(StructureScore):
     """
     Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
     The K2 score is the result of setting all Dirichlet hyperparameters/pseudo_counts to 1.
@@ -111,7 +113,7 @@ class K2Score(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(K2Score, self).__init__(data, **kwargs)
+        super(K2, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         'Computes a score that measures how much a \
@@ -150,7 +152,7 @@ class K2Score(StructureScore):
         return score
 
 
-class BDeuScore(StructureScore):
+class BDeu(StructureScore):
     """
     Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
     The BDeu score is the result of setting all Dirichlet hyperparameters/pseudo_counts to
@@ -183,7 +185,7 @@ class BDeuScore(StructureScore):
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
         self.equivalent_sample_size = equivalent_sample_size
-        super(BDeuScore, self).__init__(data, **kwargs)
+        super(BDeu, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         'Computes a score that measures how much a \
@@ -225,7 +227,7 @@ class BDeuScore(StructureScore):
         return score
 
 
-class BDsScore(BDeuScore):
+class BDs(BDeu):
     """
     Class for Bayesian structure scoring for BayesianNetworks with
     Dirichlet priors.  The BDs score is the result of setting all Dirichlet
@@ -261,7 +263,7 @@ class BDsScore(BDeuScore):
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
-        super(BDsScore, self).__init__(data, equivalent_sample_size, **kwargs)
+        super(BDs, self).__init__(data, equivalent_sample_size, **kwargs)
 
     def structure_prior_ratio(self, operation):
         """Return the log ratio of the prior probabilities for a given proposed change to
@@ -324,7 +326,7 @@ class BDsScore(BDeuScore):
         return score
 
 
-class BicScore(StructureScore):
+class BIC(StructureScore):
     """
     Class for Bayesian structure scoring for BayesianNetworks with
     Dirichlet priors.  The BIC/MDL score ("Bayesian Information Criterion",
@@ -354,7 +356,7 @@ class BicScore(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(BicScore, self).__init__(data, **kwargs)
+        super(BIC, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         'Computes a score that measures how much a \
@@ -387,24 +389,7 @@ class BicScore(StructureScore):
         return score
 
 
-class BicScoreGauss(StructureScore):
-    def __init__(self, data, **kwargs):
-        super(BicScoreGauss, self).__init__(data, **kwargs)
-
-    def local_score(self, variable, parents):
-        if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
-        else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
-        # Adding +2 to model df to compute the likelihood df.
-        return glm_model.llf - (
-            ((glm_model.df_model + 2) / 2) * np.log(self.data.shape[0])
-        )
-
-
-class AICScore(StructureScore):
+class AIC(StructureScore):
     """
     Class for Bayesian structure scoring for BayesianNetworks with
     Dirichlet priors.  The AIC score ("Akaike Information Criterion) is a log-likelihood score with an
@@ -433,7 +418,7 @@ class AICScore(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(AICScore, self).__init__(data, **kwargs)
+        super(AIC, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         'Computes a score that measures how much a \
@@ -466,16 +451,266 @@ class AICScore(StructureScore):
         return score
 
 
-class AICScoreGauss(StructureScore):
+class LogLikelihoodGauss(StructureScore):
     def __init__(self, data, **kwargs):
-        super(AICScoreGauss, self).__init__(data, **kwargs)
+        super(LogLikelihoodGauss, self).__init__(data, **kwargs)
 
-    def local_score(self, variable, parents):
+    def _log_likelihood(self, variable, parents):
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
             glm_model = smf.glm(
                 formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
             ).fit()
+
+        return (glm_model.llf, glm_model.df_model)
+
+    def local_score(self, variable, parents):
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
+        return ll
+
+
+class BICGauss(LogLikelihoodGauss):
+    def __init__(self, data, **kwargs):
+        super(BICGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
         # Adding +2 to model df to compute the likelihood df.
-        return glm_model.llf - (glm_model.df_model + 2)
+        return ll - (((df_model + 2) / 2) * np.log(self.data.shape[0]))
+
+
+class AICGauss(LogLikelihoodGauss):
+    def __init__(self, data, **kwargs):
+        super(AICGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+
+        # Adding +2 to model df to compute the likelihood df.
+        return ll - (df_model + 2)
+
+
+class LogLikelihoodCondGauss(StructureScore):
+    """
+    References
+    ----------
+    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
+        Networks of Mixed Variables. International journal of data science and
+        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    """
+
+    def __init__(self, data, **kwargs):
+        super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
+
+    @staticmethod
+    def _adjusted_cov(df):
+        """
+        Computes an adjusted covariance matrix from the given dataframe.
+        """
+        # If a number of rows less than number of variables, return variance 1 with no covariance.
+        if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
+            return pd.DataFrame(
+                np.eye(len(df.columns)), index=df.columns, columns=df.columns
+            )
+
+        # If the matrix is not positive semidefinite, add a small error to make it.
+        df_cov = df.cov()
+        if np.any(np.isclose(np.linalg.eig(df_cov)[0], 0)):
+            df_cov = df_cov + 1e-6
+        return df_cov
+
+    def _cat_parents_product(self, parents):
+        k = 1
+        for pa in parents:
+            if self.dtypes[pa] != "N":
+                n_states = self.data[pa].nunique()
+                if n_states > 1:
+                    k *= self.data[pa].nunique()
+        return k
+
+    def _get_num_parameters(self, variable, parents):
+        parent_dtypes = [self.dtypes[pa] for pa in parents]
+        n_cont_parents = parent_dtypes.count("N")
+
+        if self.dtypes[variable] == "N":
+            k = self._cat_parents_product(parents=parents) * (n_cont_parents + 2)
+        else:
+            if n_cont_parents == 0:
+                k = self._cat_parents_product(parents=parents) * (
+                    self.data[variable].nunique() - 1
+                )
+            else:
+                k = (
+                    self._cat_parents_product(parents=parents)
+                    * (self.data[variable].nunique() - 1)
+                    * (n_cont_parents + 2)
+                )
+
+        return k
+
+    def _log_likelihood(self, variable, parents):
+        df = self.data.loc[:, [variable] + parents]
+
+        # If variable is continuous, the probability is computed as:
+        # P(C1 | C2, D) = p(C1, C2 | D) / p(C2 | D)
+        if self.dtypes[variable] == "N":
+            c1 = variable
+            c2 = [var for var in parents if self.dtypes[var] == "N"]
+            d = list(set(parents) - set(c2))
+
+            # If D = {}, p(C1, C2 | D) = p(C1, C2) and p(C2 | D) = p(C2)
+            if len(d) == 0:
+                # If C2 = {}, p(C1, C2 | D) = p(C1) and p(C2 | D) = 1.
+                if len(c2) == 0:
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df,
+                        mean=df.mean(axis=0),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(df),
+                        allow_singular=True,
+                    )
+                    return np.sum(np.log(p_c1c2_d))
+                else:
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df,
+                        mean=df.mean(axis=0),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(df),
+                        allow_singular=True,
+                    )
+                    df_c2 = df.loc[:, c2]
+                    p_c2_d = np.maximum(
+                        1e-8,
+                        multivariate_normal.pdf(
+                            x=df_c2,
+                            mean=df_c2.mean(axis=0),
+                            cov=LogLikelihoodCondGauss._adjusted_cov(df_c2),
+                            allow_singular=True,
+                        ),
+                    )
+
+                    return np.sum(np.log(p_c1c2_d / p_c2_d))
+            else:
+                log_like = 0
+                for d_states, df_d in df.groupby(d, observed=True):
+                    p_c1c2_d = multivariate_normal.pdf(
+                        x=df_d.loc[:, [c1] + c2],
+                        mean=df_d.loc[:, [c1] + c2].mean(axis=0),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(
+                            df_d.loc[:, [c1] + c2]
+                        ),
+                        allow_singular=True,
+                    )
+                    if len(c2) == 0:
+                        p_c2_d = 1
+                    else:
+                        p_c2_d = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d.loc[:, c2],
+                                mean=df_d.loc[:, c2].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(
+                                    df_d.loc[:, c2]
+                                ),
+                                allow_singular=True,
+                            ),
+                        )
+
+                    log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
+                return log_like
+
+        # If variable is discrete, the probability is computed as:
+        # P(D1 | C, D2) = (p(C| D1, D2) p(D1, D2)) / (p(C| D2) p(D2))
+        else:
+            d1 = variable
+            c = [var for var in parents if self.dtypes[var] == "N"]
+            d2 = list(set(parents) - set(c))
+
+            log_like = 0
+            for d_states, df_d1d2 in df.groupby([d1] + d2, observed=True):
+                # Check if df_d1d2 also has the discrete variables.
+                # If C={}, p(C | D1, D2) = 1.
+                if len(c) == 0:
+                    p_c_d1d2 = 1
+                else:
+                    p_c_d1d2 = multivariate_normal.pdf(
+                        x=df_d1d2.loc[:, c],
+                        mean=df_d1d2.loc[:, c].mean(axis=0),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d1d2.loc[:, c]),
+                        allow_singular=True,
+                    )
+
+                # P(D1, D2)
+                p_d1d2 = np.repeat(df_d1d2.shape[0] / df.shape[0], df_d1d2.shape[0])
+
+                # If D2 = {}, p(D1 | C, D2) = (p(C | D1, D2) p(D1, D2)) / p(C)
+                if len(d2) == 0:
+                    if len(c) == 0:
+                        p_c_d2 = 1
+                    else:
+                        p_c_d2 = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d1d2.loc[:, c],
+                                mean=df.loc[:, c].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df.loc[:, c]),
+                                allow_singular=True,
+                            ),
+                        )
+
+                    log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
+                else:
+                    if len(c) == 0:
+                        p_c_d2 = 1
+                    else:
+                        df_d2 = df
+                        for var, state in zip(d2, d_states[1:]):
+                            df_d2 = df_d2.loc[df_d2[var] == state]
+
+                        p_c_d2 = np.maximum(
+                            1e-8,
+                            multivariate_normal.pdf(
+                                x=df_d1d2.loc[:, c],
+                                mean=df_d2.loc[:, c].mean(axis=0),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(
+                                    df_d2.loc[:, c]
+                                ),
+                                allow_singular=True,
+                            ),
+                        )
+
+                    p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]
+                    for var, value in zip(d2, d_states[1:]):
+                        p_d2 = p_d2.loc[p_d2.index.get_level_values(var) == value]
+
+                    log_like += np.sum(
+                        np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0]))
+                    )
+            return log_like
+
+    def local_score(self, variable, parents):
+        ll = self._log_likelihood(variable=variable, parents=parents)
+        return ll
+
+
+class BICCondGauss(LogLikelihoodCondGauss):
+    def __init__(self, data, **kwargs):
+        super(BICCondGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        ll = self._log_likelihood(variable=variable, parents=parents)
+        k = self._get_num_parameters(variable=variable, parents=parents)
+
+        return ll - ((k / 2) * np.log(self.data.shape[0]))
+
+
+class AICCondGauss(LogLikelihoodCondGauss):
+    def __init__(self, data, **kwargs):
+        super(AICCondGauss, self).__init__(data, **kwargs)
+
+    def local_score(self, variable, parents):
+        ll = self._log_likelihood(variable=variable, parents=parents)
+        k = self._get_num_parameters(variable=variable, parents=parents)
+
+        return ll - k

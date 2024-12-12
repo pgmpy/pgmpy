@@ -1,4 +1,5 @@
 import gzip
+import json
 import os
 
 import pandas as pd
@@ -23,42 +24,12 @@ def get_example_model(model):
         Any model from bnlearn repository (http://www.bnlearn.com/bnrepository).
 
         Discrete Bayesian Network Options:
-            Small Networks:
-                1. asia
-                2. cancer
-                3. earthquake
-                4. sachs
-                5. survey
-            Medium Networks:
-                1. alarm
-                2. barley
-                3. child
-                4. insurance
-                5. mildew
-                6. water
-            Large Networks:
-                1. hailfinder
-                2. hepar2
-                3. win95pts
-            Very Large Networks:
-                1. andes
-                2. diabetes
-                3. link
-                4. munin1
-                5. munin2
-                6. munin3
-                7. munin4
-                8. pathfinder
-                9. pigs
-                10. munin
-        Gaussian Bayesian Network Options:
-                1. ecoli70
-                2. magic-niab
-                3. magic-irri
-                4. arth150
-        Conditional Linear Gaussian Bayesian Network Options:
-                1. sangiovese
-                2. mehra
+            Small Networks: asia, cancer, earthquake, sachs, survey
+            Medium Networks: alarm, barley, child, insurance, mildew, water
+            Large Networks: hailfinder, hepar2, win95pts
+            Very Large Networks: andes, diabetes, link, munin1, munin2, munin3, munin4, pathfinder, pigs, munin
+        Gaussian Bayesian Network Options: ecoli70, magic-niab, magic-irri, arth150
+        Conditional Linear Gaussian Bayesian Network Options: sangiovese, mehra
 
     Example
     -------
@@ -71,7 +42,44 @@ def get_example_model(model):
     pgmpy.models instance: An instance of one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    from pgmpy.readwrite import BIFReader
+    cat_models = {
+        "asia",
+        "cancer",
+        "earthquake",
+        "sachs",
+        "survey",
+        "alarm",
+        "barley",
+        "child",
+        "insurance",
+        "mildew",
+        "water",
+        "hailfinder",
+        "hepar2",
+        "win95pts",
+        "andes",
+        "diabetes",
+        "link",
+        "munin1",
+        "munin2",
+        "munin3",
+        "munin4",
+        "pathfinder",
+        "pigs",
+        "munin",
+    }
+
+    cont_models = {
+        "ecoli70",
+        "magic-niab",
+        "magic-irri",
+        "arth150",
+    }
+
+    hybrid_models = {
+        "sangiovese",
+        "mehra",
+    }
 
     filenames = {
         "asia": "utils/example_models/asia.bif.gz",
@@ -98,25 +106,75 @@ def get_example_model(model):
         "pathfinder": "utils/example_models/pathfinder.bif.gz",
         "pigs": "utils/example_models/pigs.bif.gz",
         "munin": "utils/example_models/munin.bif.gz",
-        "ecoli70": "",
-        "magic-niab": "",
-        "magic-irri": "",
-        "arth150": "",
+        "ecoli70": "utils/example_models/ecoli70.json",
+        "magic-niab": "utils/example_models/magic-niab.json",
+        "magic-irri": "utils/example_models/magic-irri.json",
+        "arth150": "utils/example_models/arth150.json",
         "sangiovese": "",
         "mehra": "",
     }
 
-    if model not in filenames.keys():
-        raise ValueError("dataset should be one of the options")
-    if filenames[model] == "":
-        raise NotImplementedError("The specified dataset isn't available.")
+    if model not in filenames:
+        raise ValueError(
+            f"Unknown model name: {model}. Please refer documentation for valid model names."
+        )
 
     path = filenames[model]
-    ref = files("pgmpy") / path
-    with gzip.open(ref) as f:
-        content = f.read()
-    reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
-    return reader.get_model()
+
+    # Determine the model type
+    if model in cat_models:
+        if path.endswith(".bif.gz"):
+            from pgmpy.readwrite import BIFReader
+
+            ref = files("pgmpy") / path
+            with gzip.open(ref) as f:
+                content = f.read()
+            reader = BIFReader(string=content.decode("utf-8"))
+            return reader.get_model()
+
+    elif model in cont_models:
+        from pgmpy.factors.continuous import LinearGaussianCPD
+        from pgmpy.models import LinearGaussianBayesianNetwork
+
+        with open(files("pgmpy") / path, "r") as f:
+            data = json.load(f)
+
+        # Extract nodes, arcs, and CPDs from the JSON file
+        nodes = data.get("nodes")
+        arcs = data.get("arcs")
+        cpds_data = data.get("cpds")
+
+        model = LinearGaussianBayesianNetwork(arcs)
+        model.add_nodes_from(nodes)
+
+        # Create CPDs and add them to the model
+        cpds = []
+        for node, cpd_info in cpds_data.items():
+            coefficients = cpd_info["coefficients"]
+            variance = cpd_info["variance"][0]
+            parents = cpd_info["parents"]
+
+            # Extract the intercept
+            intercept = coefficients["(Intercept)"][0]
+
+            # Extract the parent coefficients
+            parent_coeffs = [coefficients[parent][0] for parent in parents]
+
+            # Create LinearGaussianCPD for the node
+            cpd = LinearGaussianCPD(
+                variable=node,
+                evidence_mean=[intercept] + parent_coeffs,
+                evidence_variance=variance,
+                evidence=parents,
+            )
+            cpds.append(cpd)
+
+        # Add CPDs to the model
+        model.add_cpds(*cpds)
+        return model
+
+    elif model in hybrid_models:
+        raise ValueError("Hybrid models aren't supported yet.")
 
 
 def discretize(data, cardinality, labels=dict(), method="rounding"):

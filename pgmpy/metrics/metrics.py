@@ -188,7 +188,7 @@ def log_likelihood_score(model, data):
     return BayesianModelProbability(model).score(data)
 
 
-def structure_score(model, data, scoring_method="bic", **kwargs):
+def structure_score(model, data, scoring_method="bic-g", **kwargs):
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretebility but can be
@@ -204,9 +204,8 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     data: pd.DataFrame instance
         The dataset against which to score the model.
 
-    scoring_method: str ( k2 | bdeu | bds | bic )
-        The following four scoring methods are supported currently: 1) K2Score
-        2) BDeuScore 3) BDsScore 4) BicScore
+    scoring_method: str
+        Options are: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg
 
     kwargs: kwargs
         Any additional parameters that needs to be passed to the
@@ -223,16 +222,35 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     >>> from pgmpy.metrics import structure_score
     >>> model = get_example_model('alarm')
     >>> data = model.simulate(int(1e4))
-    >>> structure_score(model, data, scoring_method="bic")
+    >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
     """
-    from pgmpy.estimators import BDeuScore, BDsScore, BicScore, K2Score
+    from pgmpy.estimators import (
+        AIC,
+        BIC,
+        K2,
+        AICCondGauss,
+        AICGauss,
+        BDeu,
+        BDs,
+        BICCondGauss,
+        BICGauss,
+        LogLikelihoodCondGauss,
+        LogLikelihoodGauss,
+    )
 
     supported_methods = {
-        "k2": K2Score,
-        "bdeu": BDeuScore,
-        "bds": BDsScore,
-        "bic": BicScore,
+        "k2": K2,
+        "bdeu": BDeu,
+        "bds": BDs,
+        "bic-d": BIC,
+        "aic-d": AIC,
+        "ll-g": LogLikelihoodGauss,
+        "aic-g": AICGauss,
+        "bic-g": BICGauss,
+        "ll-cg": LogLikelihoodCondGauss,
+        "aic-cg": AICCondGauss,
+        "bic-cg": BICCondGauss,
     }
 
     # Step 1: Test the inputs

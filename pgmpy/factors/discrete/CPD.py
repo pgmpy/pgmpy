@@ -597,7 +597,9 @@ class TabularCPD(DiscreteFactor):
         return self.variables[:0:-1]
 
     @staticmethod
-    def get_random(variable, evidence=None, cardinality=None, state_names={}, seed=42):
+    def get_random(
+        variable, evidence=None, cardinality=None, state_names={}, seed=None
+    ):
         """
         Generates a TabularCPD instance with random values on `variable` with
         parents/evidence `evidence` with cardinality/number of states as given

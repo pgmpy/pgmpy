@@ -86,6 +86,36 @@ class TestContinuousFactorMethods(unittest.TestCase):
         self.phi3 = ContinuousFactor(["x", "y", "z"], self.pdf3)
         self.phi4 = ContinuousFactor(["x1", "x2", "x3"], self.pdf4)
 
+    def test_cdf(self):
+        limits = [(-np.inf, 1), (-np.inf, 1)]
+        expected_cdf_value = multivariate_normal.cdf(
+            [1, 1], mean=[0, 0], cov=[[1, 0], [0, 1]]
+        )
+        result = self.phi2.cdf(limits)
+        self.assertAlmostEqual(result, expected_cdf_value, places=5)
+
+        limits = [(-np.inf, 1)]
+        phi1 = ContinuousFactor(
+            ["x"], lambda x: multivariate_normal.pdf(x, mean=0, cov=1)
+        )
+        expected_cdf_value = multivariate_normal.cdf(1, mean=0, cov=1)
+        result = phi1.cdf(limits)
+        self.assertAlmostEqual(result, expected_cdf_value, places=5)
+
+        with self.assertRaises(ValueError):
+            self.phi2.cdf([(-np.inf, 1)])
+
+        limits = [(-np.inf, -1), (-np.inf, -1)]
+        expected_cdf_value = multivariate_normal.cdf(
+            [-1, -1], mean=[0, 0], cov=[[1, 0], [0, 1]]
+        )
+        result = self.phi2.cdf(limits)
+        self.assertAlmostEqual(result, expected_cdf_value, places=5)
+
+        limits = [(-np.inf, np.inf), (-np.inf, np.inf)]
+        result = self.phi2.cdf(limits)
+        self.assertAlmostEqual(result, 1.0, places=5)
+
     def test_scope(self):
         self.assertEqual(self.phi1.scope(), self.phi1.scope())
         self.assertEqual(self.phi2.scope(), self.phi2.scope())

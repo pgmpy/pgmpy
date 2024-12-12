@@ -394,7 +394,7 @@ class DAG(nx.DiGraph):
 
     def get_independencies(self, latex=False, include_latents=False):
         """
-        Computes independencies in the DAG, by checking d-seperation.
+        Computes independencies in the DAG, by checking minimal d-seperation.
 
         Parameters
         ----------
@@ -412,37 +412,21 @@ class DAG(nx.DiGraph):
         >>> chain = DAG([('X', 'Y'), ('Y', 'Z')])
         >>> chain.get_independencies()
         (X \u27C2 Z | Y)
-        (Z \u27C2 X | Y)
         """
         nodes = set(self.nodes())
         if not include_latents:
-            nodes = set(self.nodes()) - self.latents
+            nodes -= self.latents
 
         independencies = Independencies()
-        for start in nodes:
-            if not include_latents:
-                rest = set(self.nodes()) - {start} - self.latents
-            else:
-                rest = set(self.nodes()) - {start}
+        for x, y in itertools.combinations(nodes, 2):
+            if not self.has_edge(x, y) and not self.has_edge(y, x):
+                minimal_separator = self.minimal_dseparator(
+                    start=x, end=y, include_latents=include_latents
+                )
+                if minimal_separator is not None:
+                    independencies.add_assertions([x, y, minimal_separator])
 
-            for r in range(len(rest)):
-                for observed in itertools.combinations(rest, r):
-                    d_seperated_variables = (
-                        rest
-                        - set(observed)
-                        - set(
-                            self.active_trail_nodes(
-                                start,
-                                observed=observed,
-                                include_latents=include_latents,
-                            )[start]
-                        )
-                    )
-                    if d_seperated_variables:
-                        independencies.add_assertions(
-                            [start, d_seperated_variables, observed]
-                        )
-        independencies.reduce()
+        independencies = independencies.reduce()
 
         if not latex:
             return independencies
@@ -545,16 +529,18 @@ class DAG(nx.DiGraph):
         >>> student.get_immoralities()
         {('diff', 'intel')}
         """
-        immoralities = set()
+        immoralities = dict()
         for node in self.nodes():
+            parent_pairs = []
             for parents in itertools.combinations(self.predecessors(node), 2):
                 if not self.has_edge(parents[0], parents[1]) and not self.has_edge(
                     parents[1], parents[0]
                 ):
-                    immoralities.add(tuple(sorted(parents)))
+                    parent_pairs.append(tuple(sorted(parents)))
+            immoralities[node] = parent_pairs
         return immoralities
 
-    def is_dconnected(self, start, end, observed=None):
+    def is_dconnected(self, start, end, observed=None, include_latents=False):
         """
         Returns True if there is an active trail (i.e. d-connection) between
         `start` and `end` node given that `observed` is observed.
@@ -568,6 +554,9 @@ class DAG(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to
             be observed.
 
+        include_latents: boolean (default: False)
+            If true, latent variables are return as part of the active trail.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -580,12 +569,17 @@ class DAG(nx.DiGraph):
         >>> student.is_dconnected('grades', 'sat')
         True
         """
-        if end in self.active_trail_nodes(start, observed)[start]:
+        if (
+            end
+            in self.active_trail_nodes(
+                variables=start, observed=observed, include_latents=include_latents
+            )[start]
+        ):
             return True
         else:
             return False
 
-    def minimal_dseparator(self, start, end):
+    def minimal_dseparator(self, start, end, include_latents=False):
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -596,6 +590,9 @@ class DAG(nx.DiGraph):
 
         end: node
             The second node.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are consider for minimal d-seperator.
 
         Examples
         --------
@@ -615,14 +612,17 @@ class DAG(nx.DiGraph):
         separator = set(
             itertools.chain(self.predecessors(start), self.predecessors(end))
         )
-        # If any of the parents were latents, take the latent's parent
-        while len(separator.intersection(self.latents)) != 0:
-            separator_copy = separator.copy()
-            for u in separator:
-                if u in self.latents:
-                    separator_copy.remove(u)
-                    separator_copy.update(set(self.predecessors(u)))
-            separator = separator_copy
+
+        if not include_latents:
+            # If any of the parents were latents, take the latent's parent
+            while len(separator.intersection(self.latents)) != 0:
+                separator_copy = separator.copy()
+                for u in separator:
+                    if u in self.latents:
+                        separator_copy.remove(u)
+                        separator_copy.update(set(self.predecessors(u)))
+                separator = separator_copy
+
         # Remove the start and end nodes in case it reaches there while removing latents.
         separator.difference_update({start, end})
 
@@ -779,7 +779,7 @@ class DAG(nx.DiGraph):
 
         for node in nodes:
             if node not in self.nodes():
-                raise ValueError(f"Node {node} not in not in graph")
+                raise ValueError(f"Node {node} not in graph")
 
         ancestors_list = set()
         nodes_list = set(nodes)
@@ -1015,7 +1015,7 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False):
+    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False, seed=None):
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1036,6 +1036,9 @@ class DAG(nx.DiGraph):
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
 
+        seed: int (default: None)
+            The seed for the random number generator.
+
         Returns
         -------
         Random DAG: pgmpy.base.DAG
@@ -1051,7 +1054,8 @@ class DAG(nx.DiGraph):
         OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
         """
         # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
-        adj_mat = np.random.choice(
+        gen = np.random.default_rng(seed=seed)
+        adj_mat = gen.choice(
             [0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob]
         )
 
@@ -1069,9 +1073,7 @@ class DAG(nx.DiGraph):
 
         if latents:
             dag.latents = set(
-                np.random.choice(
-                    dag.nodes(), np.random.randint(low=0, high=len(dag.nodes()))
-                )
+                gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
             )
         return dag
 
@@ -1089,6 +1091,77 @@ class DAG(nx.DiGraph):
         >>> model.draw('model.png', prog='neato')
         """
         return nx.nx_agraph.to_agraph(self)
+
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs):
+        """
+        Estimates the CPD for each variable based on a given data set.
+
+        Parameters
+        ----------
+        data: pandas DataFrame object
+            DataFrame object with column names identical to the variable names of the network.
+            (If some values in the data are missing the data cells should be set to `numpy.nan`.
+            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+
+        estimator: Estimator class
+            One of:
+            - MaximumLikelihoodEstimator (default)
+            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
+            or 'equivalent_sample_size' as additional keyword arguments.
+            See `BayesianEstimator.get_parameters()` for usage.
+            - ExpectationMaximization
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
+
+        Returns
+        -------
+        Fitted Model: BayesianNetwork
+            Returns a BayesianNetwork object with learned CPDs.
+            The DAG structure is preserved, and parameters (CPDs) are added.
+            This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.base import DAG
+        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        >>> model = DAG([('A', 'C'), ('B', 'C')])
+        >>> fitted_model = model.fit(data)
+        >>> fitted_model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x17945372c30>,
+        <TabularCPD representing P(B:2) at 0x17945a19760>,
+        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
+        """
+        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
+        from pgmpy.models import BayesianNetwork
+
+        if isinstance(self, BayesianNetwork):
+            bn = self
+        else:
+            bn = BayesianNetwork(self.edges())
+
+        if estimator is None:
+            estimator = MaximumLikelihoodEstimator
+        else:
+            if not issubclass(estimator, BaseEstimator):
+                raise TypeError("Estimator object should be a valid pgmpy estimator.")
+
+        _estimator = estimator(
+            bn,
+            data,
+            state_names=state_names,
+        )
+        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
+        bn.add_cpds(*cpds_list)
+        return bn
 
 
 class PDAG(nx.DiGraph):

@@ -4,9 +4,16 @@ import unittest
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
+from pgmpy.estimators import (
+    BayesianEstimator,
+    MaximumLikelihoodEstimator,
+    ExpectationMaximization,
+)
+from pgmpy.factors.discrete import TabularCPD
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -291,6 +298,43 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(len(dag.latents) == 0)
 
         dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
+
+    def test_dag_fit(self):
+        self.model = DAG([("A", "C"), ("B", "C")])
+        self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        self.pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+        }
+
+        self.fitted_model_bayesian = self.model.fit(
+            self.data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=self.pseudo_counts,
+        )
+
+        self.fitted_model_mle = self.model.fit(
+            self.data, estimator=MaximumLikelihoodEstimator
+        )
+
+        self.fitted_model_em = self.model.fit(
+            self.data, estimator=ExpectationMaximization
+        )
+
+        self.assertEqual(
+            self.fitted_model_bayesian.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+        self.assertEqual(
+            self.fitted_model_mle.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+        self.assertEqual(
+            self.fitted_model_em.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
 
     def tearDown(self):
         del self.graph

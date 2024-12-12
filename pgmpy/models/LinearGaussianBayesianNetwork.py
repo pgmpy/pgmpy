@@ -127,7 +127,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
 
-    def get_random_cpds(self, loc=0, scale=1, seed=None):
+    def get_random_cpds(self, loc=0, scale=1, inplace=False, seed=None):
         """
         Generates random Linear Gaussian CPDs for the model. The coefficients
         are sampled from a normal distribution with mean `loc` and standard
@@ -142,6 +142,10 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         scale: float
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
+
+        inplace: bool (default: False)
+            If inplace=True, adds the generated LinearGaussianCPDs to `model` itself,
+            else creates a copy of the model.
 
         seed: int
             The seed for the random number generator.
@@ -161,7 +165,10 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                     evidence=parents,
                 )
             )
-        return cpds
+        if inplace:
+            self.add_cpds(*cpds)
+        else:
+            return cpds
 
     def to_joint_gaussian(self):
         """
