@@ -95,7 +95,7 @@ class HillClimbSearch(StructureEstimator):
                 if (
                     (operation not in tabu_list)
                     and ((X, Y) not in black_list)
-                    and ((X, Y) in white_list)
+                    and ((white_list is None) or ((X, Y) in white_list))
                 ):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
@@ -125,7 +125,7 @@ class HillClimbSearch(StructureEstimator):
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
                     and ((X, Y) not in fixed_edges)
                     and ((Y, X) not in black_list)
-                    and ((Y, X) in white_list)
+                    and ((white_list is None) or ((Y, X) in white_list))
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
@@ -274,29 +274,17 @@ class HillClimbSearch(StructureEstimator):
 
         if expert_knowledge:
             # Step 1.3: Check fixed_edges
-            if expert_knowledge.fixed_edges == set():
-                fixed_edges = set()
-            else:
-                fixed_edges = set(expert_knowledge.fixed_edges)
-                start_dag.add_edges_from(fixed_edges)
-                if not nx.is_directed_acyclic_graph(start_dag):
-                    raise ValueError(
-                        "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
-                    )
-
+            fixed_edges = expert_knowledge.fixed_edges
+            start_dag.add_edges_from(fixed_edges)
+            if not nx.is_directed_acyclic_graph(start_dag):
+                raise ValueError(
+                    "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
+                )
             # Step 1.4: Check black list and white list
-            black_list = (
-                set()
-                if expert_knowledge.black_list is None
-                else set(expert_knowledge.black_list)
-            )
-            white_list = (
-                set([(u, v) for u in self.variables for v in self.variables])
-                if expert_knowledge.white_list is None
-                else set(expert_knowledge.white_list)
-            )
+            white_list = expert_knowledge.white_list
+            black_list = expert_knowledge.black_list
         else:
-            white_list = set([(u, v) for u in self.variables for v in self.variables])
+            white_list = None
             black_list = set()
             fixed_edges = set()
 

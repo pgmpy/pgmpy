@@ -1,8 +1,12 @@
 class ExpertKnowledge:
     """
     Class to specify expert knowledge for causal discovery algorithms.
-    Currently, expert knowledge can provide information about edges that have to be present/absent in
-    the final learned graph and a limited search space for edges.
+
+    Expert knowledge is the prior knowledge about edges in the final structure of the
+    graph learned by causal discovery algorithms. Currently, expert knowledge can
+    provide information about edges that have to be present/absent in the final
+    learned graph and a limited search space for edges.
+
     Parameters
     ----------
     white_list: list or None
@@ -24,6 +28,12 @@ class ExpertKnowledge:
                 f"expected iterator type for edge information. Recieved {type(edge_list)} instead"
             )
 
+    def _convert_to_set(self, edge_list):
+        if type(edge_list) != set:
+            return set(edge_list)
+        else:
+            return edge_list
+
     def __init__(self, white_list=None, black_list=None, fixed_edges=set(), **kwargs):
 
         if white_list:
@@ -33,9 +43,15 @@ class ExpertKnowledge:
         if fixed_edges:
             self._validate_edges(fixed_edges)
 
-        self.white_list = white_list if white_list is not None else None
-        self.black_list = black_list if black_list is not None else None
-        self.fixed_edges = fixed_edges
+        self.white_list = (
+            None if white_list is None else self._convert_to_set(white_list)
+        )
+        self.black_list = (
+            set() if black_list is None else self._convert_to_set(black_list)
+        )
+        self.fixed_edges = (
+            set() if fixed_edges is None else self._convert_to_set(fixed_edges)
+        )
 
     def check_against_dag(self):
         pass
