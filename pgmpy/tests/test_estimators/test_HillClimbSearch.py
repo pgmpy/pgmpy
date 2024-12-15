@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import HillClimbSearch, K2
+from pgmpy.estimators import K2, ExpertKnowledge, HillClimbSearch
 from pgmpy.models import BayesianNetwork
 
 
@@ -202,8 +202,10 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
-
-        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")], show_progress=False)
+        expert_knowledge = ExpertKnowledge(fixed_edges=[("B", "C")])
+        est3 = self.est_rand.estimate(
+            expert_knowledge=expert_knowledge, show_progress=False
+        )
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
@@ -212,10 +214,15 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
+        fixed_edges = [("Pclass", "Survived")]
+        black_list = [("Sex", "Pclass")]
+        expert_knowledge = ExpertKnowledge(
+            black_list=black_list, fixed_edges=fixed_edges
+        )
         self.assertTrue(
             ("Pclass", "Survived")
             in self.est_titanic2.estimate(
-                fixed_edges=[("Pclass", "Survived")], show_progress=False
+                expert_knowledge=expert_knowledge, show_progress=False
             ).edges()
         )
 
@@ -231,9 +238,11 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             columns=list("ABCDEFGHI"),
         )
         est = HillClimbSearch(data)
+        expert_knowledge = ExpertKnowledge(
+            fixed_edges=[("A", "B"), ("B", "C")], white_list=[("F", "C")]
+        )
         best_model = est.estimate(
-            fixed_edges=[("A", "B"), ("B", "C")],
-            white_list=[("F", "C")],
+            expert_knowledge=expert_knowledge,
             show_progress=False,
         )
         self.assertEqual(
