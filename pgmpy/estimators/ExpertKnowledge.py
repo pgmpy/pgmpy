@@ -24,6 +24,7 @@ class ExpertKnowledge:
             model. The algorithm will add these edges at the start of the
             algorithm and will never change it.
     """
+
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(
