@@ -10,18 +10,20 @@ class ExpertKnowledge:
     Parameters
     ----------
     white_list: list or None
-            If a list of edges is provided as `white_list`, the search is limited to those
-            edges. The resulting model will then only contain edges that are in `white_list`.
-            Default: None
-    black_list: list or None
-            If a list of edges is provided as `black_list`, they are excluded from the search
-            and the resulting model will not contain any of those edges. Default: None
-    fixed_edges: iterable
-            A list of edges that will always be there in the final learned model.
-            The algorithm will add these edges at the start of the algorithm and
-            will never change it.
-    """
+            If a list of edges is provided as `white_list`, the search is
+            limited to those edges. The resulting model will then only contain
+            edges that are in `white_list`. Default: None
 
+    black_list: list or None
+            If a list of edges is provided as `black_list`, they are excluded
+            from the search and the resulting model will not contain any of
+            those edges. Default: None
+
+    fixed_edges: iterable
+            A list of edges that will always be there in the final learned
+            model. The algorithm will add these edges at the start of the
+            algorithm and will never change it.
+    """
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(

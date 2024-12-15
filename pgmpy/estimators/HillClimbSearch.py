@@ -172,9 +172,9 @@ class HillClimbSearch(StructureEstimator):
             disconnected network is used.
 
         tabu_length: int
-            If provided, the last `tabu_length` graph modifications cannot be reversed
-            during the search procedure. This serves to enforce a wider exploration
-            of the search space. Default value: 100.
+            If provided, the last `tabu_length` graph modifications cannot be
+            reversed during the search procedure. This serves to enforce a
+            wider exploration of the search space. Default value: 100.
 
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
@@ -182,16 +182,16 @@ class HillClimbSearch(StructureEstimator):
 
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
             Expert knowledge to be used with the algorithm. Expert knowledge
-            includes whitelisted/blacklisted edges in the search space and fixed edges
-            in the final network.
+            includes whitelisted/blacklisted edges in the search space and
+            fixed edges in the final network.
 
         epsilon: float (default: 1e-4)
-            Defines the exit condition. If the improvement in score is less than `epsilon`,
-            the learned model is returned.
+            Defines the exit condition. If the improvement in score is less
+            than `epsilon`, the learned model is returned.
 
         max_iter: int (default: 1e6)
-            The maximum number of iterations allowed. Returns the learned model when the
-            number of iterations is greater than `max_iter`.
+            The maximum number of iterations allowed. Returns the learned model
+            when the number of iterations is greater than `max_iter`.
 
         Returns
         -------
@@ -272,7 +272,7 @@ class HillClimbSearch(StructureEstimator):
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        if expert_knowledge:
+        if expert_knowledge is not None:
             # Step 1.3: Check fixed_edges
             fixed_edges = expert_knowledge.fixed_edges
             start_dag.add_edges_from(fixed_edges)
