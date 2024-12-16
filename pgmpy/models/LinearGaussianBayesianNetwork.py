@@ -157,11 +157,9 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
             parents = self.get_parents(var)
             cpds.append(
                 LinearGaussianCPD(
-                    var,
-                    evidence_mean=rng.normal(
-                        loc=loc, scale=scale, size=(len(parents) + 1)
-                    ),
-                    evidence_variance=abs(rng.normal(loc=loc, scale=scale)),
+                    variable=var,
+                    beta=rng.normal(loc=loc, scale=scale, size=(len(parents) + 1)),
+                    std=abs(rng.normal(loc=loc, scale=scale)),
                     evidence=parents,
                 )
             )
@@ -208,7 +206,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         for var in variables:
             cpd = self.get_cpds(node=var)
             mean[var] = (
-                cpd.mean * (np.array([1] + [mean[u] for u in cpd.evidence]))
+                cpd.beta * (np.array([1] + [mean[u] for u in cpd.evidence]))
             ).sum()
         mean = np.array([mean[u] for u in variables])
 
@@ -218,8 +216,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         for var in variables:
             cpd = self.get_cpds(node=var)
             for i, evidence_var in enumerate(cpd.evidence):
-                B[var_to_index[evidence_var], var_to_index[var]] = cpd.mean[i + 1]
-            omega[var_to_index[var], var_to_index[var]] = cpd.variance
+                B[var_to_index[evidence_var], var_to_index[var]] = cpd.beta[i + 1]
+            omega[var_to_index[var], var_to_index[var]] = cpd.std
 
         # Step 3: Compute the implied covariance matrix
         I = np.eye(n_nodes)
@@ -344,8 +342,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        evidence_mean=[data.loc[:, node].mean()],
-                        evidence_variance=data.loc[:, node].var(),
+                        beta=[data.loc[:, node].mean()],
+                        std=data.loc[:, node].var(),
                     )
                 )
 
@@ -357,8 +355,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        evidence_mean=np.append([lm.intercept_], lm.coef_),
-                        evidence_variance=error_var,
+                        beta=np.append([lm.intercept_], lm.coef_),
+                        std=error_var,
                         evidence=parents,
                     )
                 )
