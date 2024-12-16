@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
+from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.independencies import IndependenceAssertion, Independencies
 from pgmpy.models import BayesianNetwork
@@ -83,10 +83,12 @@ class MmhcEstimator(StructureEstimator):
 
         hc = HillClimbSearch(self.data)
 
+        expert_knowledge = ExpertKnowledge(white_list=skel.to_directed().edges())
+
         model = hc.estimate(
             scoring_method=scoring_method,
-            white_list=skel.to_directed().edges(),
             tabu_length=tabu_length,
+            expert_knowledge=expert_knowledge,
         )
 
         return model

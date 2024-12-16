@@ -16,6 +16,7 @@ from pgmpy.estimators.StructureScore import (
     LogLikelihoodCondGauss,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
@@ -34,6 +35,7 @@ __all__ = [
     "MaximumLikelihoodEstimator",
     "BayesianEstimator",
     "StructureEstimator",
+    "ExpertKnowledge",
     "ExhaustiveSearch",
     "HillClimbSearch",
     "TreeSearch",
