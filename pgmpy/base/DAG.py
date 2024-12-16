@@ -1213,19 +1213,25 @@ class PDAG(nx.DiGraph):
         """
         cycle_graph = nx.DiGraph()
         cycle_graph.add_edges_from(self.directed_edges)
-        
+
         try:
             cycles = list(nx.simple_cycles(cycle_graph))
-            
+
             if cycles:
                 out_str = "Cycles are not allowed in a PDAG. "
                 out_str += "The following path forms a loop: "
-                out_str += "".join([f"({u},{v}) " for cycle in cycles for (u, v) in zip(cycle, cycle[1:] + [cycle[0]])])
+                out_str += "".join(
+                    [
+                        f"({u},{v}) "
+                        for cycle in cycles
+                        for (u, v) in zip(cycle, cycle[1:] + [cycle[0]])
+                    ]
+                )
                 raise ValueError(out_str)
-        
+
         except nx.NetworkXNoCycle:
             pass
-        
+
     def copy(self):
         """
         Returns a copy of the object instance.
