@@ -5,7 +5,6 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 

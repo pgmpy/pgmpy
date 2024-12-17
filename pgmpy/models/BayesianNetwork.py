@@ -12,7 +12,6 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,
@@ -252,8 +251,8 @@ class BayesianNetwork(DAG):
         +---------+------+--------+---------+------+--------+--------+
         """
         for cpd in cpds:
-            if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
-                raise ValueError("Only TabularCPD or ContinuousFactor can be added.")
+            if not isinstance(cpd, TabularCPD):
+                raise ValueError("Only TabularCPD can be added.")
 
             if set(cpd.scope()) - set(cpd.scope()).intersection(set(self.nodes())):
                 raise ValueError("CPD defined on variable not in the model", cpd)
@@ -422,8 +421,8 @@ class BayesianNetwork(DAG):
             if cpd is None:
                 raise ValueError(f"No CPD associated with {node}")
 
-            # Check if the CPD is an instance of either TabularCPD or ContinuousFactor.
-            elif isinstance(cpd, (TabularCPD, ContinuousFactor)):
+            # Check if the CPD is an instance of TabularCPD.
+            elif isinstance(cpd, TabularCPD):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
 
