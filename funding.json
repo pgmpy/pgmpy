@@ -5,7 +5,7 @@
         "role": "maintainer",
         "name": "Ankur Ankan",
         "email": "ankurankan@gmail.com",
-        "description": "I lead the development and maintain the pgmpy package.",
+        "description": "Contributor to multiple open-source projects in the Python data science ecosystem. Creator and maintainer of the pgmpy project.",
         "webpageUrl": {
             "url": "https://github.com/pgmpy/pgmpy"
         }
@@ -13,7 +13,7 @@
     "projects": [{
      "guid": "pgmpy",
      "name": "pgmpy",
-     "description": "pgmpy is a Python package for learning (Structure and Parameter), inference (Probabilistic and Causal), and simulations in Bayesian Networks.",
+     "description": "Python package for learning (Structure and Parameter), inference (Probabilistic and Causal), and simulations in Bayesian Networks.",
      "webpageUrl": {
          "url": "https://github.com/pgmpy/pgmpy"
      },
@@ -42,7 +42,7 @@
             "guid": "dev-part",
             "status": "active",
             "name": "Part-time Developer",
-            "description": "This would go towards funding a part-time developer",
+            "description": "Support towards covering the cost of maintainers working part-time on the project.",
             "amount": 25000,
             "currency": "USD",
             "frequency": "yearly",
