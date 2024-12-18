@@ -58,6 +58,7 @@ class PC(StructureEstimator):
         return_type="dag",
         significance_level=0.01,
         n_jobs=-1,
+        expert_knowledge=None,
         show_progress=True,
         **kwargs,
     ):
@@ -120,6 +121,11 @@ class PC(StructureEstimator):
                 2. pearsonr: If p-value > significance_level, it assumes that the
                     independence condition satisfied in the data.
 
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes whitelisted/blacklisted edges in the search space and
+            fixed edges in the final network.
+
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
@@ -176,6 +182,7 @@ class PC(StructureEstimator):
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
+            expert_knowledge=expert_knowledge,
             ci_test=ci_test,
             max_cond_vars=max_cond_vars,
             significance_level=significance_level,
@@ -206,6 +213,7 @@ class PC(StructureEstimator):
 
     def build_skeleton(
         self,
+        expert_knowledge=None,
         ci_test="chi_square",
         max_cond_vars=5,
         significance_level=0.01,
@@ -262,59 +270,79 @@ class PC(StructureEstimator):
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
-        # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        if expert_knowledge is not None:
+            fixed_edges = expert_knowledge.fixed_edges
+            white_list = expert_knowledge.white_list
+            black_list = expert_knowledge.black_list
+        else:
+            white_list = None
+            black_list = set()
+            fixed_edges = set()
+
+        # Step 1: Initialize a fully connected undirected graph, or choose the white list(if provided)
+        if white_list is not None:
+            graph = nx.graph(white_list)
+        else:
+            graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+            if len(black_list) != 0:
+                graph.remove_edges_from(black_list)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
         while not all(
             [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
         ):
-            # Step 2: Iterate over the edges and find a conditioning set of
+            # Step 2: Iterate over the edges (besides any fixed edge) and find a conditioning set of
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
-                    ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges):
+                        for separating_set in chain(
+                            combinations(
+                                set(graph.neighbors(u)) - set([v]), lim_neighbors
+                            ),
+                            combinations(
+                                set(graph.neighbors(v)) - set([u]), lim_neighbors
+                            ),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the separating set
+                            # and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                        combinations(set(neighbors[v]) - set([u]), lim_neighbors),
-                    ):
-                        # If a conditioning set exists remove the edge, store the
-                        # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges):
+                        for separating_set in chain(
+                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
+                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the
+                            # separating set and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "parallel":
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
@@ -336,7 +364,9 @@ class PC(StructureEstimator):
                             return (u, v), separating_set
 
                 results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
+                    delayed(_parallel_fun)(u, v)
+                    for (u, v) in graph.edges()
+                    if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges)
                 )
                 for result in results:
                     if result is not None:
