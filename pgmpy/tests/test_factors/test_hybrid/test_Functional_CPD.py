@@ -30,18 +30,14 @@ class TestFCPD(unittest.TestCase):
         """
         Test the equivalence of FunctionalCPD with LinearGaussianCPD sampling.
         """
-        x1_cpd = LinearGaussianCPD(
-            variable="x1", evidence_mean=[0], evidence_variance=1.0, evidence=[]
-        )
+        x1_cpd = LinearGaussianCPD("x1", [0], 1.0)
 
-        x2_cpd = LinearGaussianCPD(
-            variable="x2", evidence_mean=[0], evidence_variance=1.0, evidence=[]
-        )
+        x2_cpd = LinearGaussianCPD("x2", [0], 1.0)
 
         x3_cpd = LinearGaussianCPD(
-            variable="x3",
-            evidence_mean=[1.0, 0.2, 0.3],
-            evidence_variance=1.0,
+            "x3",
+            [1.0, 0.2, 0.3],
+            1.0,
             evidence=["x1", "x2"],
         )
         num_samples = 2000
