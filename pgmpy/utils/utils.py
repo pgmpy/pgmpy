@@ -151,7 +151,7 @@ def get_example_model(model):
         cpds = []
         for node, cpd_info in cpds_data.items():
             coefficients = cpd_info["coefficients"]
-            variance = cpd_info["variance"][0]
+            std = cpd_info["variance"][0]
             parents = cpd_info["parents"]
 
             # Extract the intercept
@@ -163,8 +163,8 @@ def get_example_model(model):
             # Create LinearGaussianCPD for the node
             cpd = LinearGaussianCPD(
                 variable=node,
-                evidence_mean=[intercept] + parent_coeffs,
-                evidence_variance=variance,
+                beta=[intercept] + parent_coeffs,
+                std=std,
                 evidence=parents,
             )
             cpds.append(cpd)

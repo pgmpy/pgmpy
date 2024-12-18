@@ -8,192 +8,70 @@ from pgmpy.factors.base import BaseFactor
 
 class LinearGaussianCPD(BaseFactor):
     r"""
-    For, X -> Y the Linear Gaussian model assumes that the mean
-    of Y is a linear function of mean of X and the variance of Y does
-    not depend on X.
+    Defines a Linear Gaussian CPD.
+
+    The Linear Gaussian CPD makes the following assumptions:
+        1) The variable is Gaussian/Normally distributed.
+        2) The mean of the variable depends on the values of the parents and the
+            intercept term.
+        3) The variance is independent of other variables.
 
     For example,
 
     .. math::
 
-      p(Y|X) = N(-2x + 0.9 ; 1)
+      p(Y|X) = N(0.9 - 2x; 1)
 
-    Here, :math:`x` is the mean of the variable :math:`X`.
+    Here, :math:`0.9 - 2x` is the mean of the variable :math:`Y` and the
+    standard deviation is 1.
 
-    Let :math:`Y` be a continuous variable with continuous parents
-    :math:`X1, X2, \cdots, Xk`. We say that :math:`Y` has a linear Gaussian CPD
-    if there are parameters :math:`\beta_0, \beta_1, ..., \beta_k`
-    and :math:`\sigma_2` such that,
+    In generalized terms, let :math:`Y` be a Gaussian variable with parents
+    :math:`X_1, X_2, \cdots, X_k`. Assuming linear relationship between Y and
+    \mathbf{X}, the conditional distribution of Y can be defined as:
 
-    .. math:: p(Y |x1, x2, ..., xk) = \mathcal{N}(\beta_0 + x1*\beta_1 + ......... + xk*\beta_k ; \sigma_2)
-
-    In vector notation,
-
-    .. math:: p(Y |x) = \mathcal{N}(\beta_0 + \boldmath{β}.T * \boldmath{x} ; \sigma_2)
+    .. math:: p(Y |x1, x2, ..., xk) = \mathcal{N}(\beta_0 + x1*\beta_1 + ......... + xk*\beta_k ; \sigma)
 
     References
     ----------
     .. [1] https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
+
+    Parameters
+    ----------
+
+    variable: any hashable python object
+        The variable whose CPD is defined.
+
+    beta: list (array-like)
+        The coefficients corresponding to each of the evidence variable. The first
+        term of the `beta` array is the intercept term.
+
+    std: float
+        The standard deviation of `variable`.
+
+    evidence: iterator (array-like)
+        List of parents/evidence variables of `variable`. The order in which `evidence`
+        is specified should match the order of `beta`.
+
+    Examples
+    --------
+    # To represent the conditional distribution, P(Y| X1, X2, X3) = N(0.2 - 2*x1 + 3*x2 + 7*x3 ; 9.6), we can write:
+
+    >>> from pgmpy.factors.continuous import LinearGaussianCPD
+    >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
+    >>> cpd.variable
+    'Y'
+    >>> cpd.evidence
+    ['x1', 'x2', 'x3']
+    >>> cpd.beta_vector
+    [0.2, -2, 3, 7]
     """
 
-    def __init__(
-        self, variable, evidence_mean, evidence_variance, evidence=[], beta=None
-    ):
-        """
-        Parameters
-        ----------
-
-        variable: any hashable python object
-            The variable whose CPD is defined.
-
-        evidence_mean: list (array-like)
-            Mean vector (numpy array) of the joint distribution, X
-
-        evidence_variance: int, float
-            The variance of the multivariate gaussian, X = ['x1', 'x2', ..., 'xn']
-
-        evidence: iterable of any hashable python objects
-            An iterable of the parents of the variable. None if there are no parents.
-
-        beta (optional): iterable of int or float
-            An iterable representing the coefficient vector of the linear equation.
-            The first term represents the constant term in the linear equation.
-
-        Examples
-        --------
-
-        # For P(Y| X1, X2, X3) = N(-2x1 + 3x2 + 7x3 + 0.2; 9.6)
-
-        >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
-        >>> cpd.variable
-        'Y'
-        >>> cpd.evidence
-        ['x1', 'x2', 'x3']
-        >>> cpd.beta_vector
-        [0.2, -2, 3, 7]
-
-        """
+    def __init__(self, variable, beta, std, evidence=[]):
         self.variable = variable
-        self.mean = np.array(evidence_mean)
-        self.variance = evidence_variance
-        self.evidence = evidence
-        self.sigma_yx = None
-
+        self.beta = np.array(beta)
+        self.std = std
+        self.evidence = list(evidence)
         self.variables = [variable] + evidence
-        super(LinearGaussianCPD, self).__init__(
-            self.variables, pdf="gaussian", mean=self.mean, covariance=self.variance
-        )
-
-    def sum_of_product(self, xi, xj):
-        prod_xixj = xi * xj
-        return np.sum(prod_xixj)
-
-    def maximum_likelihood_estimator(self, data, states):
-        """
-        Fit using MLE method.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame or 2D array
-            Dataframe of values containing samples from the conditional distribution, (Y|X)
-            and corresponding X values.
-
-        states: All the input states that are jointly gaussian.
-
-        Returns
-        -------
-        beta, variance (tuple): Returns estimated betas and the variance.
-        """
-        x_df = pd.DataFrame(data, columns=states)
-        x_len = len(self.evidence)
-
-        sym_coefs = []
-        for i in range(0, x_len):
-            sym_coefs.append("b" + str(i + 1) + "_coef")
-
-        sum_x = x_df.sum()
-        x = [sum_x["(Y|X)"]]
-        coef_matrix = pd.DataFrame(columns=sym_coefs)
-
-        # First we compute just the coefficients of beta_1 to beta_N.
-        # Later we compute beta_0 and append it.
-        for i in range(0, x_len):
-            x.append(self.sum_of_product(x_df["(Y|X)"], x_df[self.evidence[i]]))
-            for j in range(0, x_len):
-                coef_matrix.loc[i, sym_coefs[j]] = self.sum_of_product(
-                    x_df[self.evidence[i]], x_df[self.evidence[j]]
-                )
-
-        coef_matrix.insert(0, "b0_coef", sum_x[self.evidence].values)
-        row_1 = np.append([len(x_df)], sum_x[self.evidence].values)
-        coef_matrix.loc[-1] = row_1
-        coef_matrix.index = coef_matrix.index + 1  # shifting index
-        coef_matrix.sort_index(inplace=True)
-
-        beta_coef_matrix = np.matrix(coef_matrix.values, dtype="float")
-        coef_inv = np.linalg.inv(beta_coef_matrix)
-        beta_est = np.array(np.matmul(coef_inv, np.transpose(x)))
-        self.beta = beta_est[0]
-
-        sigma_est = 0
-        x_len_df = len(x_df)
-        for i in range(0, x_len):
-            for j in range(0, x_len):
-                sigma_est += (
-                    self.beta[i + 1]
-                    * self.beta[j + 1]
-                    * (
-                        self.sum_of_product(
-                            x_df[self.evidence[i]], x_df[self.evidence[j]]
-                        )
-                        / x_len_df
-                        - np.mean(x_df[self.evidence[i]])
-                        * np.mean(x_df[self.evidence[j]])
-                    )
-                )
-
-        sigma_est = np.sqrt(
-            self.sum_of_product(x_df["(Y|X)"], x_df["(Y|X)"]) / x_len_df
-            - np.mean(x_df["(Y|X)"]) * np.mean(x_df["(Y|X)"])
-            - sigma_est
-        )
-        self.sigma_yx = sigma_est
-        return self.beta, self.sigma_yx
-
-    def fit(self, data, states, estimator=None, **kwargs):
-        """
-        Determine βs from data
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            Dataframe containing samples from the conditional distribution, p(Y|X)
-            estimator: 'MLE' or 'MAP'
-        """
-        if estimator == "MLE":
-            mean, variance = self.maximum_likelihood_estimator(data, states)
-        elif estimator == "MAP":
-            raise NotImplementedError(
-                "fit method has not been implemented using Maximum A-Priori (MAP)"
-            )
-
-        return mean, variance
-
-    @property
-    def pdf(self):
-        def _pdf(*args):
-            # The first element of args is the value of the variable on which CPD is defined
-            # and the rest of the elements give the mean values of the parent
-            # variables.
-            mean = (
-                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.mean)])
-                + self.mean[0]
-            )
-            return multivariate_normal.pdf(
-                args[0], np.array(mean), np.array([[self.variance]])
-            )
-
-        return _pdf
 
     def copy(self):
         """
@@ -214,15 +92,18 @@ class LinearGaussianCPD(BaseFactor):
         ['X1', 'X2', 'X3']
         """
         copy_cpd = LinearGaussianCPD(
-            self.variable, self.beta, self.variance, list(self.evidence)
+            variable=self.variable,
+            beta=self.beta,
+            std=self.std,
+            evidence=list(self.evidence),
         )
 
         return copy_cpd
 
     def __str__(self):
-        mean = self.mean.round(3)
-        variance = round(self.variance, 3)
-        if self.evidence and list(self.mean):
+        mean = self.beta.round(3)
+        std = round(self.std, 3)
+        if self.evidence and list(self.beta):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
                 node=str(self.variable),
@@ -234,11 +115,11 @@ class LinearGaussianCPD(BaseFactor):
                     ]
                 ),
                 b_0=str(mean[0]),
-                sigma=str(variance),
+                sigma=str(std),
             )
         else:
             # P(X) = N(1, 4)
-            rep_str = f"P({str(self.variable)}) = N({str(mean[0])}; {str(variance)})"
+            rep_str = f"P({str(self.variable)}) = N({str(mean[0])}; {str(std)})"
         return rep_str
 
     def __repr__(self):

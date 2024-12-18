@@ -95,7 +95,7 @@ class HillClimbSearch(StructureEstimator):
                 if (
                     (operation not in tabu_list)
                     and ((X, Y) not in black_list)
-                    and ((X, Y) in white_list)
+                    and ((white_list is None) or ((X, Y) in white_list))
                 ):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
@@ -125,7 +125,7 @@ class HillClimbSearch(StructureEstimator):
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
                     and ((X, Y) not in fixed_edges)
                     and ((Y, X) not in black_list)
-                    and ((Y, X) in white_list)
+                    and ((white_list is None) or ((Y, X) in white_list))
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
@@ -145,11 +145,9 @@ class HillClimbSearch(StructureEstimator):
         self,
         scoring_method="k2",
         start_dag=None,
-        fixed_edges=set(),
         tabu_length=100,
         max_indegree=None,
-        black_list=None,
-        white_list=None,
+        expert_knowledge=None,
         epsilon=1e-4,
         max_iter=1e6,
         show_progress=True,
@@ -173,36 +171,27 @@ class HillClimbSearch(StructureEstimator):
             The starting point for the local search. By default, a completely
             disconnected network is used.
 
-        fixed_edges: iterable
-            A list of edges that will always be there in the final learned model.
-            The algorithm will add these edges at the start of the algorithm and
-            will never change it.
-
         tabu_length: int
-            If provided, the last `tabu_length` graph modifications cannot be reversed
-            during the search procedure. This serves to enforce a wider exploration
-            of the search space. Default value: 100.
+            If provided, the last `tabu_length` graph modifications cannot be
+            reversed during the search procedure. This serves to enforce a
+            wider exploration of the search space. Default value: 100.
 
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
 
-        black_list: list or None
-            If a list of edges is provided as `black_list`, they are excluded from the search
-            and the resulting model will not contain any of those edges. Default: None
-
-        white_list: list or None
-            If a list of edges is provided as `white_list`, the search is limited to those
-            edges. The resulting model will then only contain edges that are in `white_list`.
-            Default: None
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes whitelisted/blacklisted edges in the search space and
+            fixed edges in the final network.
 
         epsilon: float (default: 1e-4)
-            Defines the exit condition. If the improvement in score is less than `epsilon`,
-            the learned model is returned.
+            Defines the exit condition. If the improvement in score is less
+            than `epsilon`, the learned model is returned.
 
         max_iter: int (default: 1e6)
-            The maximum number of iterations allowed. Returns the learned model when the
-            number of iterations is greater than `max_iter`.
+            The maximum number of iterations allowed. Returns the learned model
+            when the number of iterations is greater than `max_iter`.
 
         Returns
         -------
@@ -283,24 +272,21 @@ class HillClimbSearch(StructureEstimator):
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        # Step 1.3: Check fixed_edges
-        if not hasattr(fixed_edges, "__iter__"):
-            raise ValueError("fixed_edges must be an iterable")
-        else:
-            fixed_edges = set(fixed_edges)
+        if expert_knowledge is not None:
+            # Step 1.3: Check fixed_edges
+            fixed_edges = expert_knowledge.fixed_edges
             start_dag.add_edges_from(fixed_edges)
             if not nx.is_directed_acyclic_graph(start_dag):
                 raise ValueError(
                     "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
                 )
-
-        # Step 1.4: Check black list and white list
-        black_list = set() if black_list is None else set(black_list)
-        white_list = (
-            set([(u, v) for u in self.variables for v in self.variables])
-            if white_list is None
-            else set(white_list)
-        )
+            # Step 1.4: Check black list and white list
+            white_list = expert_knowledge.white_list
+            black_list = expert_knowledge.black_list
+        else:
+            white_list = None
+            black_list = set()
+            fixed_edges = set()
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         if max_indegree is None:
