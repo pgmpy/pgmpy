@@ -37,14 +37,21 @@ class TabularCPD(DiscreteFactor):
     evidence_card: array-like
         cardinality/no. of states of variables in `evidence`(if any)
 
+    state_names: dict (default: dict())
+        A dictionary of the form {variable: list of states} specifying the
+        names of possible states for each variable (variable + evidence) in
+        the TabularCPD. The order in which the states are specified should
+        match the order in the values array. If state_names is not specified,
+        auto-assigns state names starting from 0.
+
     Examples
     --------
     For a distribution of P(grade|diff, intel)
 
     +---------+-------------------------+------------------------+
-    |diff:    |          easy           |         hard           |
+    |diff     |          easy           |         hard           |
     +---------+------+--------+---------+------+--------+--------+
-    |aptitude:| low  | medium |  high   | low  | medium |  high  |
+    |intel    | low  | medium |  high   | low  | medium |  high  |
     +---------+------+--------+---------+------+--------+--------+
     |gradeA   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
     +---------+------+--------+---------+------+--------+--------+
@@ -53,27 +60,33 @@ class TabularCPD(DiscreteFactor):
     |gradeC   | 0.8  | 0.8    |   0.8   |  0.8 |  0.8   |   0.8  |
     +---------+------+--------+---------+------+--------+--------+
 
-    values should be
+    the values array should be
     [[0.1,0.1,0.1,0.1,0.1,0.1],
-    [0.1,0.1,0.1,0.1,0.1,0.1],
-    [0.8,0.8,0.8,0.8,0.8,0.8]]
+     [0.1,0.1,0.1,0.1,0.1,0.1],
+     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
-    >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                             [0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                             [0.8,0.8,0.8,0.8,0.8,0.8]],
-    ...                             evidence=['diff', 'intel'], evidence_card=[2,3])
+    >>> cpd = TabularCPD(variable='grade',
+    ...                  variable_card=3,
+    ...                  values=[[0.1,0.1,0.1,0.1,0.1,0.1],
+    ...                          [0.1,0.1,0.1,0.1,0.1,0.1],
+    ...                          [0.8,0.8,0.8,0.8,0.8,0.8]],
+    ...                  evidence=['diff', 'intel'],
+    ...                  evidence_card=[2, 3],
+    ...                  state_names={'diff': ['easy', 'hard'],
+    ...                               'intel': ['low', 'mid', 'high'],
+    ...                               'grade': ['A', 'B', 'C']})
     >>> print(cpd)
-    +---------+---------+---------+---------+---------+---------+---------+
-    | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | intel   | intel_0 | intel_1 | intel_2 | intel_0 | intel_1 | intel_2 |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_0 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_1 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_2 | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     |
-    +---------+---------+---------+---------+---------+---------+---------+
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | diff    |diff(easy)|diff(easy)|diff(easy) |diff(hard)|diff(hard)|diff(hard) |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | intel   |intel(low)|intel(mid)|intel(high)|intel(low)|intel(mid)|intel(high)|
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(A)| 0.1      | 0.1      | 0.1       | 0.1      | 0.1      | 0.1       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(B)| 0.1      | 0.1      | 0.1       | 0.1      | 0.1      | 0.1       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(C)| 0.8      | 0.8      | 0.8       | 0.8      | 0.8      | 0.8       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
     >>> cpd.values
     array([[[ 0.1,  0.1,  0.1],
             [ 0.1,  0.1,  0.1]],
