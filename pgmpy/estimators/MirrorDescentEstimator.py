@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Optional
 import numpy as np
 from scipy.special import logsumexp
 from tqdm.auto import tqdm
@@ -84,10 +85,10 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     def estimate(
         self,
-        marginals,
+        marginals: list[tuple[str, ...]],
         metric="L2",
         iterations=100,
-        stepsize=None,
+        stepsize: Optional[float]=None,
         show_progress=True,
     ):
         """
@@ -95,7 +96,7 @@ class MirrorDescentEstimator(MarginalEstimator):
 
         Parameters
         ----------
-        marginals: List[Tuple[str, ...]]
+        marginals: List[tuple[str, ...]]
             The names of the marginals to be estimated. These marginals must be present
             in the data passed to the `__init__()` method.
 

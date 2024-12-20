@@ -2,6 +2,7 @@
 import copy
 import itertools
 from functools import reduce
+from typing import Hashable, Optional
 
 import networkx as nx
 import numpy as np
@@ -241,9 +242,9 @@ class VariableElimination(Inference):
 
     def query(
         self,
-        variables,
-        evidence=None,
-        virtual_evidence=None,
+        variables: list[Hashable],
+        evidence: Optional[dict[Hashable, int]]=None,
+        virtual_evidence: Optional[list]=None,
         elimination_order="greedy",
         joint=True,
         show_progress=True,

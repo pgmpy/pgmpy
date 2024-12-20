@@ -892,7 +892,7 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos="circular",
+        node_pos: str | dict[Hashable, tuple[int, int]] ="circular",
         latex=True,
         pgm_params={},
         edge_params={},
