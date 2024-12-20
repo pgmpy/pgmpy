@@ -23,6 +23,10 @@ class ExpertKnowledge:
             A list of edges that will always be there in the final learned
             model. The algorithm will add these edges at the start of the
             algorithm and will never change it.
+
+    max_cond_vars: int
+            The maximum number of conditional variables to be used for statistical
+            independce tests (e.g. Peter Clark algorithm). Default: 5
     """
 
     def _validate_edges(self, edge_list):
@@ -35,7 +39,14 @@ class ExpertKnowledge:
         else:
             return edge_list
 
-    def __init__(self, white_list=None, black_list=None, fixed_edges=None, **kwargs):
+    def __init__(
+        self,
+        white_list=None,
+        black_list=None,
+        fixed_edges=None,
+        max_cond_vars=5,
+        **kwargs,
+    ):
         self.white_list = (
             self._validate_edges(white_list) if white_list is not None else None
         )
@@ -45,6 +56,7 @@ class ExpertKnowledge:
         self.fixed_edges = (
             self._validate_edges(fixed_edges) if fixed_edges is not None else set()
         )
+        self.max_cond_vars = max_cond_vars
 
     def check_against_dag(self):
         pass

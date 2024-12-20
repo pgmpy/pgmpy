@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
-from pgmpy.estimators import PC
+from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
@@ -63,8 +63,11 @@ class TestPCFakeCITest(unittest.TestCase):
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
+        cond_vars = ExpertKnowledge(max_cond_vars=0)
         skel, sep_set = self.estimator.build_skeleton(
-            ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant="orig"
+            ci_test=TestPCFakeCITest.fake_ci_t,
+            expert_knowledge=cond_vars,
+            variant="orig",
         )
         expected_edges = {("A", "B"), ("A", "C"), ("A", "D")}
         for u, v in skel.edges():
@@ -78,8 +81,11 @@ class TestPCFakeCITest(unittest.TestCase):
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
+        cond_vars = ExpertKnowledge(max_cond_vars=0)
         skel, sep_set = self.estimator.build_skeleton(
-            ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant="stable"
+            ci_test=TestPCFakeCITest.fake_ci_t,
+            expert_knowledge=cond_vars,
+            variant="stable",
         )
         expected_edges = {("A", "B"), ("A", "C"), ("A", "D")}
         for u, v in skel.edges():
@@ -458,14 +464,16 @@ class TestPCRealModels(unittest.TestCase):
         alarm_model = get_example_model("alarm")
         data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e5), seed=42)
         est = PC(data)
+        cond_vars = ExpertKnowledge(max_cond_vars=5)
         dag = est.estimate(
-            variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False
+            variant="stable", expert_knowledge=cond_vars, n_jobs=2, show_progress=False
         )
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
         data = BayesianModelSampling(asia_model).forward_sample(size=int(1e3), seed=42)
         est = PC(data)
+        cond_vars = ExpertKnowledge(max_cond_vars=1)
         dag = est.estimate(
-            variant="stable", max_cond_vars=1, n_jobs=2, show_progress=False
+            variant="stable", expert_knowledge=cond_vars, n_jobs=2, show_progress=False
         )

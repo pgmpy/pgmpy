@@ -54,7 +54,6 @@ class PC(StructureEstimator):
         self,
         variant="stable",
         ci_test="chi_square",
-        max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
         n_jobs=-1,
@@ -97,10 +96,6 @@ class PC(StructureEstimator):
                 "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
                 "neyman": Neyman test. Works only for discrete variables.
                 "cressie_read": Cressie Read test. Works only for discrete variables.
-
-        max_cond_vars: int
-            The maximum number of conditional variables allowed to do the statistical
-            test with.
 
         return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
             The type of structure to return.
@@ -184,7 +179,6 @@ class PC(StructureEstimator):
         skel, separating_sets = self.build_skeleton(
             expert_knowledge=expert_knowledge,
             ci_test=ci_test,
-            max_cond_vars=max_cond_vars,
             significance_level=significance_level,
             variant=variant,
             n_jobs=n_jobs,
@@ -196,7 +190,7 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
-        pdag = self.skeleton_to_pdag(skel, separating_sets)
+        pdag = self.skeleton_to_pdag(skel, separating_sets, expert_knowledge)
 
         # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
         if self.data is not None:
@@ -215,7 +209,6 @@ class PC(StructureEstimator):
         self,
         expert_knowledge=None,
         ci_test="chi_square",
-        max_cond_vars=5,
         significance_level=0.01,
         variant="stable",
         n_jobs=-1,
@@ -266,26 +259,29 @@ class PC(StructureEstimator):
                     f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
                 )
 
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=max_cond_vars)
-            pbar.set_description("Working for n conditional variables: 0")
-
         if expert_knowledge is not None:
             fixed_edges = expert_knowledge.fixed_edges
             white_list = expert_knowledge.white_list
             black_list = expert_knowledge.black_list
+            max_cond_vars = expert_knowledge.max_cond_vars
         else:
             white_list = None
             black_list = set()
             fixed_edges = set()
+            max_cond_vars = 5
+
+        if show_progress and config.SHOW_PROGRESS:
+            pbar = tqdm(total=max_cond_vars)
+            pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph, or choose the white list(if provided)
         if white_list is not None:
             graph = nx.graph(white_list)
         else:
             graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
-            if len(black_list) != 0:
-                graph.remove_edges_from(black_list)
+
+        if len(black_list) != 0:
+            graph.remove_edges_from(black_list)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -399,7 +395,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skeleton, separating_sets):
+    def skeleton_to_pdag(skeleton, separating_sets, expert_knowledge=None):
         """Orients the edges of a graph skeleton based on information from
         `separating_sets` to form a DAG pattern (DAG).
 
@@ -442,8 +438,18 @@ class PC(StructureEstimator):
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """
 
+        if expert_knowledge is not None:
+            fixed_edges = expert_knowledge.fixed_edges
+        else:
+            fixed_edges = set()
         pdag = skeleton.to_directed()
         node_pairs = list(permutations(pdag.nodes(), 2))
+
+        # 0) If there are fixed edges, orient them in the direction specified.
+        for edge in fixed_edges:
+            u, v = edge
+            if pdag.has_edge(v, u):
+                pdag.remove_edge(v, u)
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
