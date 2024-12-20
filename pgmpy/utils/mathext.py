@@ -10,7 +10,7 @@ from pgmpy.utils import compat_fns
 State = namedtuple("State", ["var", "state"])
 
 
-def cartesian(arrays, out=None):
+def cartesian(arrays: np.typing.ArrayLike, out=None):
     """Generate a cartesian product of input arrays.
 
     Parameters

@@ -7,9 +7,18 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import StructureEstimator
-from pgmpy.estimators.CITests import *
+from pgmpy.estimators.CITests import (
+    chi_square,
+    independence_match,
+    pearsonr,
+    pillai_trace,
+    g_sq,
+    log_likelihood,
+    modified_log_likelihood,
+    power_divergence,
+)
 from pgmpy.global_vars import logger
 
 CI_TESTS = {
@@ -369,7 +378,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skeleton, separating_sets):
+    def skeleton_to_pdag(skeleton: UndirectedGraph, separating_sets):
         """Orients the edges of a graph skeleton based on information from
         `separating_sets` to form a DAG pattern (DAG).
 

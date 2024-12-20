@@ -10,7 +10,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
-from typing import Iterable, Optional, Sequence, Tuple, Hashable, Union
+from typing import Iterable, Optional, Sequence, Hashable
 
 class DAG(nx.DiGraph):
     """
@@ -72,7 +72,7 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]]=None, latents: set[Hashable]=set()):
+    def __init__(self, ebunch: Optional[Iterable[tuple[Hashable, Hashable]]]=None, latents: set[Hashable]=set()):
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
         cycles = []
@@ -227,7 +227,7 @@ class DAG(nx.DiGraph):
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch: Iterable[Tuple[Hashable, Hashable]], weights: list[float] | tuple[float] | None=None):
+    def add_edges_from(self, ebunch: Iterable[tuple[Hashable, Hashable]], weights: list[float] | tuple[float] | None=None):
         """
         Add all the edges in ebunch.
 
@@ -450,7 +450,7 @@ class DAG(nx.DiGraph):
         else:
             return independencies.latex_string()
 
-    def local_independencies(self, variables: list | tuple | str):
+    def local_independencies(self, variables: list[Hashable] | tuple[Hashable, ...] | str):
         """
         Returns an instance of Independencies containing the local independencies
         of each of the variables.
@@ -675,7 +675,7 @@ class DAG(nx.DiGraph):
         blanket_nodes.discard(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables: ArrayLike | str, observed: Optional[Hashable | list[Hashable] | tuple[Hashable, Hashable]]=None, include_latents=False) -> dict[Hashable, set[Hashable]]:
+    def active_trail_nodes(self, variables: list[Hashable] | Hashable, observed: Optional[Hashable | list[Hashable] | tuple[Hashable, Hashable]]=None, include_latents=False) -> dict[Hashable, set[Hashable]]:
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -1173,7 +1173,7 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch: list[Hashable] | np.ndarray[Tuple[Hashable, Hashable]]=[], undirected_ebunch: Union[list[Hashable], Iterable[Tuple[Hashable, Hashable]]]=[], latents: Iterable[Hashable]=[]):
+    def __init__(self, directed_ebunch: list[tuple[Hashable, Hashable]]=[], undirected_ebunch: list[tuple[Hashable, Hashable]]=[], latents: Iterable[Hashable]=[]):
         """
         Initializes a PDAG class.
 
