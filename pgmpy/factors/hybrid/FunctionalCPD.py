@@ -96,29 +96,3 @@ class FunctionalCPD(BaseFactor):
 
     def __repr__(self):
         return f"<FunctionalCPD: {self.__str__()}> at {hex(id(self))}"
-
-
-# cpd = FunctionalCPD(
-#     variable="x3",
-#     fn=lambda parent_sample: np.random.normal(
-#         0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
-#     parents=["x1", "x2"]
-# )
-# print(cpd)
-
-# import pandas as pd
-# # Create a DataFrame for parent samples
-# parent_df = pd.DataFrame({
-#     "x1": np.random.normal(0, 1, 100),
-#     "x2": np.random.normal(0, 1, 100)
-# })
-
-# # Sample values for x3
-# samples = cpd.sample(n_samples=100, parent_sample=parent_df)
-# print(samples)
-
-# cpd = FunctionalCPD(
-#     variable="x1",
-#     fn=lambda _: np.random.normal(1, 1))
-
-# print(cpd.sample())

@@ -120,20 +120,3 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             )
 
         return samples
-
-
-FBNetwork = FunctionalBayesianNetwork([("x1", "x3"), ("x2", "x3")])
-
-x1_cpd = FunctionalCPD(variable="x1", fn=lambda _: np.random.normal(0, 1))
-x2_cpd = FunctionalCPD("x2", lambda _: np.random.normal(0, 1))
-x3_cpd = FunctionalCPD(
-    variable="x3",
-    fn=lambda parent_sample: np.random.normal(
-        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1.0
-    ),
-    parents=["x1", "x2"],
-)
-
-FBNetwork.add_cpds(x1_cpd, x2_cpd, x3_cpd)
-# print(FBNetwork.check_model())
-# print(FBNetwork.simulate())
