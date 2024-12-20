@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import pandas as pd
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -54,12 +55,9 @@ class TestFCPD(unittest.TestCase):
             ),
         )
 
-        functional_samples = []
-        for _, row in linear_gaussian_samples[["x1", "x2"]].iterrows():
-            parent_sample = {"x1": row["x1"], "x2": row["x2"]}
-            functional_samples.append(functional_cpd.sample(parent_sample))
-
-        functional_samples = np.array(functional_samples)
+        functional_samples = functional_cpd.sample(
+            num_samples, linear_gaussian_samples[["x1", "x2"]]
+        )
 
         functional_mean = functional_samples.mean()
         functional_variance = functional_samples.var()
@@ -89,3 +87,27 @@ class TestFCPD(unittest.TestCase):
             0.05,
             msg=f"Kolmogorov-Smirnov test failed. KS Statistic: {ks_stat}, P-Value: {p_value}",
         )
+
+    def test_different_distributions(self):
+        exp_cpd = FunctionalCPD(
+            "exponential", lambda _: np.random.exponential(scale=2.0)
+        )
+
+        exp_samples = exp_cpd.sample(n_samples=2000)
+        self.assertTrue(np.all(exp_samples >= 0))
+        self.assertAlmostEqual(np.mean(exp_samples), 2.0, delta=0.2)
+
+        uni_cpd = FunctionalCPD(
+            "uniform",
+            lambda parent: np.random.uniform(
+                low=parent["exponential"], high=parent["exponential"] + 5
+            ),
+            parents=["exponential"],
+        )
+
+        exp_samples = pd.DataFrame({"exponential": exp_samples})
+
+        uni_samples = uni_cpd.sample(n_samples=2000, parent_sample=exp_samples)
+
+        self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
+        self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
