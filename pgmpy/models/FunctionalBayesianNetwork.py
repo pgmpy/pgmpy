@@ -17,6 +17,19 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         ----------
         cpds  :  instances of FunctionalCPD
             List of FunctionalCPDs which will be associated with the model
+
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> import numpy as np
+
+        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(0, 1))
+        >>> cpd2 = FunctionalCPD("x2", lambda parent: np.random.normal(parent["x1"] + 2.0, 1), parents=["x1"])
+        >>> cpd3 = FunctionalCPD("x3", lambda parent: np.random.normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+
         """
         for cpd in cpds:
             if not isinstance(cpd, FunctionalCPD):
@@ -47,6 +60,19 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         Returns
         -------
         A list of Functional CPDs.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> import numpy as np
+
+        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(0, 1))
+        >>> cpd2 = FunctionalCPD("x2", lambda parent: np.random.normal(parent["x1"] + 2.0, 1), parents=["x1"])
+        >>> cpd3 = FunctionalCPD("x3", lambda parent: np.random.normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> model.get_cpds()
         """
         return super(FunctionalBayesianNetwork, self).get_cpds(node)
 
@@ -60,6 +86,24 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         *cpds: FunctionalCPD object
             A FunctionalCPD object on any subset of the variables
             of the model which is to be associated with the model.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> import numpy as np
+
+        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(0, 1))
+        >>> cpd2 = FunctionalCPD("x2", lambda parent: np.random.normal(parent["x1"] + 2.0, 1), parents=["x1"])
+        >>> cpd3 = FunctionalCPD("x3", lambda parent: np.random.normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> for cpd in model.get_cpds():
+        ...     print(cpd)
+
+        >>> model.remove_cpds(cpd2, cpd3)
+        >>> for cpd in model.get_cpds():
+        ...     print(cpd)
         """
         return super(FunctionalBayesianNetwork, self).remove_cpds(*cpds)
 
@@ -93,7 +137,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Parameters
         ----------
-
         n_samples : int, optional (default=1000)
             Number of samples to generate
 
@@ -102,9 +145,21 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Returns
         -------
-
         pandas.DataFrame
             Simulated samples with columns corresponding to network variables
+
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> import numpy as np
+
+        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(0, 1))
+        >>> cpd2 = FunctionalCPD("x2", lambda parent: np.random.normal(parent["x1"] + 2.0, 1), parents=["x1"])
+        >>> cpd3 = FunctionalCPD("x3", lambda parent: np.random.normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> model.simulate(n_samples=1000)
         """
         if seed is not None:
             np.random.seed(seed)

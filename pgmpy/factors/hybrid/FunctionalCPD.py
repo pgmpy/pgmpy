@@ -63,6 +63,18 @@ class FunctionalCPD(BaseFactor):
         sampled_values: numpy.ndarray
             Array of sampled values for the variable.
 
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> cpd = FunctionalCPD(
+        ...    variable="x3",
+        ...    fn=lambda parent_sample: np.random.normal(
+        ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
+        ...    parents=["x1", "x2"])
+
+        >>> parent_samples = pd.DataFrame({'x1' : [5, 10], 'x2' : [1, -1]})
+        >>> cpd.sample(2, parent_samples)
+
         """
         if parent_sample is not None:
             if not isinstance(parent_sample, pd.DataFrame):
