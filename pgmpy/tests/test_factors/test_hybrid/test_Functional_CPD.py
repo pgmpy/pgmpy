@@ -2,6 +2,8 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pyro
+import pyro.distributions as dist
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -15,8 +17,11 @@ class TestFCPD(unittest.TestCase):
         """
         cpd = FunctionalCPD(
             variable="x3",
-            fn=lambda parent_sample: np.random.normal(
-                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+            fn=lambda parent_sample: pyro.sample(
+                "x3",
+                dist.Normal(
+                    1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+                ),
             ),
             parents=["x1", "x2"],
         )
@@ -50,9 +55,13 @@ class TestFCPD(unittest.TestCase):
 
         functional_cpd = FunctionalCPD(
             variable="x3",
-            fn=lambda parent_sample: np.random.normal(
-                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1.0
+            fn=lambda parent_sample: pyro.sample(
+                "x3",
+                dist.Normal(
+                    1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+                ),
             ),
+            parents=["x1", "x2"],
         )
 
         functional_samples = functional_cpd.sample(
@@ -90,24 +99,25 @@ class TestFCPD(unittest.TestCase):
 
     def test_different_distributions(self):
         exp_cpd = FunctionalCPD(
-            "exponential", lambda _: np.random.exponential(scale=2.0)
+            "exponential", lambda _: pyro.sample("x", dist.Exponential(rate=2.0))
         )
 
-        exp_samples = exp_cpd.sample(n_samples=2000)
+        exp_samples = exp_cpd.sample(n_samples=5000)
         self.assertTrue(np.all(exp_samples >= 0))
-        self.assertAlmostEqual(np.mean(exp_samples), 2.0, delta=0.2)
+        self.assertAlmostEqual(np.mean(exp_samples), 0.5, delta=0.1)
 
         uni_cpd = FunctionalCPD(
             "uniform",
-            lambda parent: np.random.uniform(
-                low=parent["exponential"], high=parent["exponential"] + 5
+            lambda parent: pyro.sample(
+                "x",
+                dist.Uniform(low=parent["exponential"], high=parent["exponential"] + 5),
             ),
             parents=["exponential"],
         )
 
         exp_samples = pd.DataFrame({"exponential": exp_samples})
 
-        uni_samples = uni_cpd.sample(n_samples=2000, parent_sample=exp_samples)
+        uni_samples = uni_cpd.sample(n_samples=5000, parent_sample=exp_samples)
 
         self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
         self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
