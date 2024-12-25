@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pyro
 
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
@@ -8,6 +9,16 @@ from pgmpy.models import BayesianNetwork
 
 
 class FunctionalBayesianNetwork(BayesianNetwork):
+    """
+    A Functional Gaussian Bayesian Network is a Bayesian Network,
+    whose variables can be discrete or continuous, and where all of the CPDs
+    are defined by FunctionalCPD.
+
+    An important result is that the Functional Bayesian Networks
+    provide flexible representation for the class of multiples uni/multi-variate
+    distributions.
+    """
+
     def add_cpds(self, *cpds):
         """
         Add Functional CPD (Conditional Probability Distribution)
@@ -20,8 +31,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Examples
         --------
-        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
-        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -63,8 +74,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Examples
         --------
-        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
-        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -89,8 +100,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Examples
         --------
-        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
-        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -150,8 +161,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Examples
         --------
-        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
-        >>> from pgmpy.models.FunctionalBayesianNetwork import FunctionalBayesianNetwork
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -162,7 +173,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> model.simulate(n_samples=1000)
         """
         if seed is not None:
-            np.random.seed(seed)
+            pyro.set_rng_seed(seed)
 
         nodes = list(nx.topological_sort(self))
         samples = pd.DataFrame(index=range(n_samples))

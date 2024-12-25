@@ -5,18 +5,24 @@ from pgmpy.factors.base import BaseFactor
 
 
 class FunctionalCPD(BaseFactor):
-    def __init__(self, variable, fn, parents=None):
+    """
+    Defines a Functional CPD.
+
+    Functional CPD can represent any arbitrary conditional probability distribution
+    where the distributio to represented is defined by function (input as parameter) which calls pyro.sample function.
+    """
+
+    def __init__(self, variable, fn, parents=[]):
         """
 
         Parameters:
         ----------
-
         variable: str
             Name of the variable for which this CPD is defined.
 
         fn: callable
-            A function that takes a dictionary of parent variable values
-            and returns a sampled value for the variable.
+            A lambda function that takes a dictionary of parent variable values
+            and returns a sampled value for the variable by calling pyro.sample.
 
         parents: list[str], optional
             List of parent variable names (default is None for no parents).
@@ -25,7 +31,7 @@ class FunctionalCPD(BaseFactor):
         --------
         # For P(X3| X1, X2) = N(0.2x1 + 0.3x2 + 1.0; 1), we can write
 
-        >>> from pgmpy.factors.hybrid import LinearGaussianCPD
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
         ...    fn=lambda parent_sample: np.random.normal(
@@ -65,7 +71,7 @@ class FunctionalCPD(BaseFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
         ...    fn=lambda parent_sample: np.random.normal(
@@ -90,7 +96,11 @@ class FunctionalCPD(BaseFactor):
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
 
-            sampled_values = self.fn(parent_sample)
+            sampled_values = []
+            for _, row in parent_sample.iterrows():
+                sampled_values.append(self.fn(row))
+
+            sampled_values = np.array(sampled_values)
         else:
             sampled_values = []
             for _ in range(n_samples):
@@ -101,7 +111,9 @@ class FunctionalCPD(BaseFactor):
         return sampled_values
 
     def __str__(self):
-        fn_name = "f(mean, std)" if self.fn.__name__ == "<lambda>" else self.fn.__name__
+        fn_name = (
+            "lambda(mean, std)" if self.fn.__name__ == "<lambda>" else self.fn.__name__
+        )
         if self.parents:
             return f"P({self.variable} | {', '.join(self.parents)}) = {fn_name}"
         return f"P({self.variable}) = {fn_name}"
