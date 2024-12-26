@@ -207,10 +207,10 @@ class PC(StructureEstimator):
 
     def build_skeleton(
         self,
-        expert_knowledge=None,
         ci_test="chi_square",
         significance_level=0.01,
         variant="stable",
+        expert_knowledge=None,
         n_jobs=-1,
         show_progress=True,
         **kwargs,

@@ -26,7 +26,7 @@ class ExpertKnowledge:
 
     max_cond_vars: int
             The maximum number of conditional variables to be used for statistical
-            independce tests (e.g. Peter Clark algorithm). Default: 5
+            independence tests (e.g. PC algorithm). Default: 5
     """
 
     def _validate_edges(self, edge_list):
