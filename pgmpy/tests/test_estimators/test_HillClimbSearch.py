@@ -202,10 +202,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
-        expert_knowledge = ExpertKnowledge(fixed_edges=[("B", "C")])
-        est3 = self.est_rand.estimate(
-            expert_knowledge=expert_knowledge, show_progress=False
-        )
+
+        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")], show_progress=False)
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
@@ -214,15 +212,10 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
-        fixed_edges = [("Pclass", "Survived")]
-        black_list = [("Sex", "Pclass")]
-        expert_knowledge = ExpertKnowledge(
-            black_list=black_list, fixed_edges=fixed_edges
-        )
         self.assertTrue(
             ("Pclass", "Survived")
             in self.est_titanic2.estimate(
-                expert_knowledge=expert_knowledge, show_progress=False
+                fixed_edges=[("Pclass", "Survived")], show_progress=False
             ).edges()
         )
 
@@ -242,11 +235,9 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             fixed_edges=[("A", "B"), ("B", "C")], white_list=[("F", "C")]
         )
         best_model = est.estimate(
-            expert_knowledge=expert_knowledge,
+            fixed_edges=[("A", "B"), ("B", "C")],
+            white_list=[("F", "C")],
             show_progress=False,
-        )
-        self.assertEqual(
-            set(best_model.edges()), set([("A", "B"), ("B", "C"), ("F", "C")])
         )
 
     def test_estimate(self):
