@@ -58,6 +58,7 @@ class PC(StructureEstimator):
         return_type="dag",
         significance_level=0.01,
         n_jobs=-1,
+        expert_knowledge=None,
         show_progress=True,
         **kwargs,
     ):
@@ -97,10 +98,6 @@ class PC(StructureEstimator):
                 "neyman": Neyman test. Works only for discrete variables.
                 "cressie_read": Cressie Read test. Works only for discrete variables.
 
-        max_cond_vars: int
-            The maximum number of conditional variables allowed to do the statistical
-            test with.
-
         return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
             The type of structure to return.
 
@@ -119,6 +116,11 @@ class PC(StructureEstimator):
                     independence condition satisfied in the data.
                 2. pearsonr: If p-value > significance_level, it assumes that the
                     independence condition satisfied in the data.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes required/forbidden edges in the final graph,
+            temporal information about the variables etc.
 
         Returns
         -------
@@ -177,10 +179,10 @@ class PC(StructureEstimator):
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
-            max_cond_vars=max_cond_vars,
             significance_level=significance_level,
             variant=variant,
             n_jobs=n_jobs,
+            expert_knowledge=expert_knowledge,
             show_progress=show_progress,
             **kwargs,
         )
@@ -189,7 +191,7 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
-        pdag = self.skeleton_to_pdag(skel, separating_sets)
+        pdag = self.skeleton_to_pdag(skel, separating_sets, expert_knowledge)
 
         # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
         if self.data is not None:
@@ -207,9 +209,9 @@ class PC(StructureEstimator):
     def build_skeleton(
         self,
         ci_test="chi_square",
-        max_cond_vars=5,
         significance_level=0.01,
         variant="stable",
+        expert_knowledge=None,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -257,6 +259,11 @@ class PC(StructureEstimator):
                 raise ValueError(
                     f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
                 )
+
+        if expert_knowledge is not None:
+            max_cond_vars = expert_knowledge.max_cond_vars
+        else:
+            max_cond_vars = 5
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
@@ -369,7 +376,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skeleton, separating_sets):
+    def skeleton_to_pdag(skeleton, separating_sets, expert_knowledge=None):
         """Orients the edges of a graph skeleton based on information from
         `separating_sets` to form a DAG pattern (DAG).
 

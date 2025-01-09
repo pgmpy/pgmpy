@@ -9,20 +9,15 @@ class ExpertKnowledge:
 
     Parameters
     ----------
-    white_list: list or None
-            If a list of edges is provided as `white_list`, the search is
-            limited to those edges. The resulting model will then only contain
-            edges that are in `white_list`. Default: None
-
-    black_list: list or None
-            If a list of edges is provided as `black_list`, they are excluded
-            from the search and the resulting model will not contain any of
-            those edges. Default: None
-
-    fixed_edges: iterable
-            A list of edges that will always be there in the final learned
-            model. The algorithm will add these edges at the start of the
-            algorithm and will never change it.
+    forbidden_edges: iterable
+            The set of directed edges that must be absent in the final
+            graph structure. Defaults to None.
+    required_edges: iterable
+            The set of directed edges that must be present in the final
+            graph structure. Defaults to None.
+    max_cond_vars: int
+            The maximum number of conditional variables to be used for statistical
+            independce tests (e.g. PC algorithm). Default is 5.
     """
 
     def _validate_edges(self, edge_list):
@@ -35,16 +30,25 @@ class ExpertKnowledge:
         else:
             return edge_list
 
-    def __init__(self, white_list=None, black_list=None, fixed_edges=None, **kwargs):
-        self.white_list = (
-            self._validate_edges(white_list) if white_list is not None else None
+    def __init__(
+        self,
+        forbidden_edges=None,
+        required_edges=None,
+        temporal_order=None,
+        max_cond_vars=5,
+        **kwargs,
+    ):
+        self.forbidden_edges = (
+            self._validate_edges(forbidden_edges)
+            if forbidden_edges is not None
+            else set()
         )
-        self.black_list = (
-            self._validate_edges(black_list) if black_list is not None else set()
+        self.required_edges = (
+            self._validate_edges(required_edges)
+            if required_edges is not None
+            else set()
         )
-        self.fixed_edges = (
-            self._validate_edges(fixed_edges) if fixed_edges is not None else set()
-        )
+        self.max_cond_vars = max_cond_vars
 
     def check_against_dag(self):
         pass
