@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import PDAG
-from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import *
 from pgmpy.global_vars import logger
 
@@ -54,7 +54,6 @@ class PC(StructureEstimator):
         self,
         variant="stable",
         ci_test="chi_square",
-        max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
         n_jobs=-1,
@@ -176,6 +175,9 @@ class PC(StructureEstimator):
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
@@ -190,10 +192,48 @@ class PC(StructureEstimator):
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
-        # Step 2: Orient the edges based on build the PDAG/CPDAG.
+        # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets, expert_knowledge)
 
         # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
+
+        if (
+            expert_knowledge.required_edges != set()
+            or expert_knowledge.forbidden_edges != set()
+        ):
+            progress = True
+            while progress:
+                for edge in expert_knowledge.forbidden_edges:
+                    u, v = edge
+                    if pdag.has_edge(u, v):
+                        raise RuntimeError(
+                            f"Specified expert knowledge is incompatible with the learned graph."
+                        )
+                for edge in expert_knowledge.required_edges:
+                    u, v = edge
+                    if pdag.has_edge(v, u) or v not in pdag[u]:
+                        raise RuntimeError(
+                            f"Specified expert knowledge is incompatible with the learned graph."
+                        )
+
+                if expert_knowledge.required_edges == set():
+                    break
+                req_edge = expert_knowledge.required_edges.pop()
+                u, v = req_edge
+                if pdag.has_edge(v, u):
+                    pdag.remove_edge(v, u)
+                pdag = self.skeleton_to_pdag(
+                    pdag,
+                    separating_sets,
+                    expert_knowledge,
+                    skip_v_structures=True,
+                    r4=True,
+                )
+
+                # Terminate when there are no more required edges
+                if expert_knowledge.required_edges == set():
+                    progress = False
+
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
 
@@ -260,13 +300,11 @@ class PC(StructureEstimator):
                     f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
                 )
 
-        if expert_knowledge is not None:
-            max_cond_vars = expert_knowledge.max_cond_vars
-        else:
-            max_cond_vars = 5
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
 
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=max_cond_vars)
+            pbar = tqdm(total=expert_knowledge.max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
@@ -358,7 +396,7 @@ class PC(StructureEstimator):
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
-            if lim_neighbors >= max_cond_vars:
+            if lim_neighbors >= expert_knowledge.max_cond_vars:
                 logger.info(
                     "Reached maximum number of allowed conditional variables. Exiting"
                 )
@@ -376,7 +414,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skeleton, separating_sets, expert_knowledge=None):
+    def skeleton_to_pdag(skeleton, separating_sets, skip_v_structures=False, r4=False):
         """Orients the edges of a graph skeleton based on information from
         `separating_sets` to form a DAG pattern (DAG).
 
@@ -422,14 +460,15 @@ class PC(StructureEstimator):
         pdag = skeleton.to_directed()
         node_pairs = list(permutations(pdag.nodes(), 2))
 
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
-        # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for pair in node_pairs:
-            X, Y = pair
-            if not skeleton.has_edge(X, Y):
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        pdag.remove_edges_from([(Z, X), (Z, Y)])
+        if skip_v_structures is not True:
+            # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
+            # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
+            for pair in node_pairs:
+                X, Y = pair
+                if not skeleton.has_edge(X, Y):
+                    for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+                        if Z not in separating_sets[frozenset((X, Y))]:
+                            pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         progress = True
         while progress:  # as long as edges can be oriented (removed)
@@ -473,6 +512,22 @@ class PC(StructureEstimator):
                         & (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))
                     ):
                         pdag.remove_edge(W, Z)
+
+            if r4 is not False:
+                # 5) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
+                # the dotted line above represents the possibility of either a directed or an undirected edge
+                for pair in node_pairs:
+                    X, Y = pair
+                    for Z in (
+                        set(pdag.successors(X))
+                        & set(pdag.predecessors(X))
+                        & set(pdag.predecessors(Y))
+                        & set(pdag.successors(Y))
+                    ):
+                        for W in (
+                            set(pdag.successors(Y)) - set(pdag.predecessors(Y))
+                        ) & (set(pdag.predecessors(Z)) | set(pdag.successors(Z))):
+                            pdag.remove_edge(X, Z)
 
             progress = num_edges > pdag.number_of_edges()
 
