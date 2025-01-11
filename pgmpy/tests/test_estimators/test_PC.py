@@ -462,7 +462,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
 class TestPCRealModels(unittest.TestCase):
     def test_pc_alarm(self):
         alarm_model = get_example_model("alarm")
-        data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e5), seed=42)
+        data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
         est = PC(data)
         cond_vars = ExpertKnowledge(max_cond_vars=5)
         dag = est.estimate(
@@ -471,9 +471,17 @@ class TestPCRealModels(unittest.TestCase):
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e3), seed=42)
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
         est = PC(data)
-        cond_vars = ExpertKnowledge(max_cond_vars=1)
-        dag = est.estimate(
-            variant="stable", expert_knowledge=cond_vars, n_jobs=2, show_progress=False
-        )
+        req_edges = [("tub", "asia"), ("lung", "smoke")]
+        background = ExpertKnowledge(required_edges=req_edges, max_cond_vars=4)
+        with self.assertRaises(
+            RuntimeError,
+            msg="Specified expert knowledge is incompatible with the learned graph.",
+        ):
+            dag = est.estimate(
+                variant="stable",
+                expert_knowledge=background,
+                n_jobs=2,
+                show_progress=False,
+            )

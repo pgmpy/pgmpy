@@ -195,8 +195,7 @@ class PC(StructureEstimator):
         # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets, expert_knowledge)
 
-        # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
-
+        # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if (
             expert_knowledge.required_edges != set()
             or expert_knowledge.forbidden_edges != set()
@@ -229,10 +228,11 @@ class PC(StructureEstimator):
                     skip_v_structures=True,
                     r4=True,
                 )
-
                 # Terminate when there are no more required edges
                 if expert_knowledge.required_edges == set():
                     progress = False
+
+            return pdag
 
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
@@ -429,6 +429,13 @@ class PC(StructureEstimator):
             separating set ("witnessing set") of variables that makes then
             conditionally independent. (needed for edge orientation)
 
+        skip_v_structures: boolean
+            If true, skip the initial step of orienting v-structures. Defaults to False.
+
+        r4: boolean
+            If true, use Rule 4 of Meek's rules to integrate background knowledge into
+            the phase of orienting edges. Defaults to False.
+
         Returns
         -------
         Model after edge orientation: pgmpy.base.DAG
@@ -513,6 +520,8 @@ class PC(StructureEstimator):
                     ):
                         pdag.remove_edge(W, Z)
 
+            # This rule (rule 4 in Meek's rules) is only used in the case of a knowledge base of required and forbidden edges.
+            # For a comprehensive explanation, check out Meek's original paper - https://doi.org/10.48550/arXiv.1302.4972
             if r4 is not False:
                 # 5) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
                 # the dotted line above represents the possibility of either a directed or an undirected edge
