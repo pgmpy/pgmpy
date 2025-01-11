@@ -200,6 +200,7 @@ class PC(StructureEstimator):
             expert_knowledge.required_edges != set()
             or expert_knowledge.forbidden_edges != set()
         ):
+            # Algorithm to check consistency of background knowledge with the learned graph. Phase II'' in  https://doi.org/10.48550/arXiv.1302.4972
             progress = True
             while progress:
                 for edge in expert_knowledge.forbidden_edges:
@@ -228,7 +229,7 @@ class PC(StructureEstimator):
                     skip_v_structures=True,
                     r4=True,
                 )
-                # Terminate when there are no more required edges
+                # Terminate when all required edges have been added
                 if expert_knowledge.required_edges == set():
                     progress = False
 
