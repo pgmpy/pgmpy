@@ -8,8 +8,9 @@ class FunctionalCPD(BaseFactor):
     """
     Defines a Functional CPD.
 
-    Functional CPD can represent any arbitrary conditional probability distribution
-    where the distributio to represented is defined by function (input as parameter) which calls pyro.sample function.
+    Functional CPD can represent any arbitrary conditional probability
+    distribution where the distribution to represented is defined by function
+    (input as parameter) which calls pyro.sample function.
     """
 
     def __init__(self, variable, fn, parents=[]):
@@ -111,9 +112,7 @@ class FunctionalCPD(BaseFactor):
         return sampled_values
 
     def __str__(self):
-        fn_name = (
-            "lambda(mean, std)" if self.fn.__name__ == "<lambda>" else self.fn.__name__
-        )
+        fn_name = "lambda fun." if self.fn.__name__ == "<lambda>" else self.fn.__name__
         if self.parents:
             return f"P({self.variable} | {', '.join(self.parents)}) = {fn_name}"
         return f"P({self.variable}) = {fn_name}"

@@ -44,10 +44,14 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         """
         for cpd in cpds:
             if not isinstance(cpd, FunctionalCPD):
-                raise ValueError("Only FunctionalCPD can be added.")
+                raise ValueError(
+                    f"Only FunctionalCPD instances can be added. Got {type(cpd)}"
+                )
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(self.nodes())):
-                raise ValueError("CPD defined on variable not in the model", cpd)
+                raise ValueError(
+                    f"CPD defined on variable that is not present in the model: {cpd}"
+                )
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
