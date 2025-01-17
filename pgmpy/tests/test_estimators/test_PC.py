@@ -163,22 +163,26 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "B"}): tuple(),
             frozenset({"D", "B"}): ("A",),
         }
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_v_structures(skel, sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
+        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
-            set(PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets).edges()),
+            set(pdag.edges()),
             set([("B", "A"), ("C", "A")]),
         )
 
         sep_sets = {frozenset({"B", "C"}): ("A",)}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
-            set(PC.skeleton_to_pdag(skel, sep_sets).edges()),
+            set(pdag.edges()),
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
@@ -188,21 +192,24 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "D"}): ("C",),
             frozenset({"B", "D"}): ("C",),
         }
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
         )
 
         skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
         sep_sets = {frozenset({"A", "C"}): ("B",)}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_meek_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()),
             set(
