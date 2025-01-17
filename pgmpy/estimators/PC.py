@@ -457,7 +457,7 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(permutations(pdag.nodes(), 2))
+        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
@@ -522,7 +522,7 @@ class PC(StructureEstimator):
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """
 
-        node_pairs = list(permutations(pdag.nodes(), 2))
+        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
 
         progress = True
         while progress:  # as long as edges can be oriented (removed)
