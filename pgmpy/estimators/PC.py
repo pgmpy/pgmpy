@@ -233,6 +233,7 @@ class PC(StructureEstimator):
         significance_level=0.01,
         variant="stable",
         expert_knowledge=None,
+        enforce_background_knowledge=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -290,6 +291,8 @@ class PC(StructureEstimator):
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        if enforce_background_knowledge:
+            graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -300,47 +303,57 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                    if (enforce_background_knowledge is False) or (
+                        (u, v) not in expert_knowledge.required_edges
                     ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                        for separating_set in chain(
+                            combinations(
+                                set(graph.neighbors(u)) - set([v]), lim_neighbors
+                            ),
+                            combinations(
+                                set(graph.neighbors(v)) - set([u]), lim_neighbors
+                            ),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the separating set
+                            # and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                        combinations(set(neighbors[v]) - set([u]), lim_neighbors),
+                    if (enforce_background_knowledge is False) or (
+                        (u, v) not in expert_knowledge.required_edges
                     ):
-                        # If a conditioning set exists remove the edge, store the
-                        # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                        for separating_set in chain(
+                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
+                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the
+                            # separating set and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "parallel":
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
@@ -362,7 +375,10 @@ class PC(StructureEstimator):
                             return (u, v), separating_set
 
                 results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
+                    delayed(_parallel_fun)(u, v)
+                    for (u, v) in graph.edges()
+                    if (enforce_background_knowledge is False)
+                    or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:
                     if result is not None:
@@ -472,7 +488,7 @@ class PC(StructureEstimator):
             A  partial DAG produced by orienting v-structures in
             the skeleton.
 
-        r4: boolean
+        apply_r4: boolean
             If true, use Rule 4 of Meek's rules to integrate background knowledge into
             the phase of orienting edges. Defaults to False.
 

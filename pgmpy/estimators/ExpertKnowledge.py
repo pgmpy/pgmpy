@@ -47,6 +47,16 @@ class ExpertKnowledge:
     >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges,
                                            max_cond_vars=4)
 
+    **Use during structure learning**
+
+    >>> from pgmpy.estimators import PC
+    >>> data = BayesianModelSampling(asia_model).forward_sample(size=int(1e4))
+    >>> est = PC(data)
+    >>> est.estimate(
+                variant="stable",
+                expert_knowledge=expert_knowledge,
+                show_progress=False,
+            )
     """
 
     def _validate_edges(self, edge_list):
