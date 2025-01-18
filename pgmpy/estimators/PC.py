@@ -56,8 +56,9 @@ class PC(StructureEstimator):
         ci_test="chi_square",
         return_type="dag",
         significance_level=0.01,
-        n_jobs=-1,
         expert_knowledge=None,
+        enforce_background_knowledge=False,
+        n_jobs=-1,
         show_progress=True,
         **kwargs,
     ):
@@ -120,6 +121,13 @@ class PC(StructureEstimator):
             Expert knowledge to be used with the algorithm. Expert knowledge
             includes required/forbidden edges in the final graph,
             temporal information about the variables etc.
+
+        enforce_expert_knowledge: boolean (default: False)
+            If True, the algorith modifies the search space according to the
+            edges specified in expert knowledge object. This ensures that the
+            specified knowledge is guaranteed to be reflected in the final PDAG structure.
+            If False, the algorithm accounts for the edges specified in the expert
+            knowledge object after creating a CPDAG then integrating the background knowledge.
 
         Returns
         -------
@@ -185,6 +193,7 @@ class PC(StructureEstimator):
             variant=variant,
             n_jobs=n_jobs,
             expert_knowledge=expert_knowledge,
+            enforce_background_knowledge=enforce_background_knowledge,
             show_progress=show_progress,
             **kwargs,
         )
@@ -193,43 +202,16 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
-        pdag = self.orient_v_structures(skel, separating_sets)
-        pdag = self.orient_meek_rules(pdag)
+        pdag = self.orient_colliders(skel, separating_sets)
+        pdag = self.apply_orientation_rules(pdag)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if (
             expert_knowledge.required_edges != set()
             or expert_knowledge.forbidden_edges != set()
-        ):
-            # Algorithm to check consistency of background knowledge with the learned graph. Phase II'' in  https://doi.org/10.48550/arXiv.1302.4972
-            progress = True
-            while progress:
-                for edge in expert_knowledge.forbidden_edges:
-                    u, v = edge
-                    if pdag.has_edge(u, v):
-                        raise RuntimeError(
-                            f"Specified expert knowledge is incompatible with the learned graph."
-                        )
-                for edge in expert_knowledge.required_edges:
-                    u, v = edge
-                    if pdag.has_edge(v, u) or v not in pdag[u]:
-                        raise RuntimeError(
-                            f"Specified expert knowledge is incompatible with the learned graph."
-                        )
-
-                if expert_knowledge.required_edges == set():
-                    break
-                req_edge = expert_knowledge.required_edges.pop()
-                u, v = req_edge
-                if pdag.has_edge(v, u):
-                    pdag.remove_edge(v, u)
-                pdag = self.orient_meek_rules(
-                    pdag,
-                    r4=True,
-                )
-                # Terminate when all required edges have been added
-                if expert_knowledge.required_edges == set():
-                    progress = False
+        ) and enforce_background_knowledge is False:
+            pdag = expert_knowledge.check_against_pdag(pdag)
+            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
 
             return pdag
 
@@ -413,7 +395,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def orient_v_structures(skeleton, separating_sets):
+    def orient_colliders(skeleton, separating_sets):
         """Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
 
@@ -480,9 +462,9 @@ class PC(StructureEstimator):
         return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
 
     @staticmethod
-    def orient_meek_rules(pdag, r4=False):
+    def apply_orientation_rules(pdag, apply_r4=False):
         """Orients the edges of a graph skeleton based on information from
-        `separating_sets` to form a DAG pattern (CPDAG).
+        `separating_sets` to form a DAG pattern (CPDAG/MPDAG).
 
         Parameters
         ----------
@@ -569,7 +551,7 @@ class PC(StructureEstimator):
 
             # This rule (rule 4 in Meek's rules) is only used in the case of a knowledge base of required and forbidden edges.
             # For a comprehensive explanation, check out Meek's original paper - https://doi.org/10.48550/arXiv.1302.4972
-            if r4 is not False:
+            if apply_r4 is not False:
                 # 4) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
                 # the dotted line above represents the possibility of either a directed or an undirected edge
                 for pair in node_pairs:

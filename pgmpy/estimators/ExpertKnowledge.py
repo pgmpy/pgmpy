@@ -1,3 +1,6 @@
+import warnings
+
+
 class ExpertKnowledge:
     """
     Class to specify expert knowledge for causal discovery algorithms.
@@ -5,19 +8,45 @@ class ExpertKnowledge:
     Expert knowledge is the prior knowledge about edges in the final structure of the
     graph learned by causal discovery algorithms. Currently, expert knowledge can
     provide information about edges that have to be present/absent in the final
-    learned graph and a limited search space for edges.
+    learned graph, maximum number of conditioning variables and temporal ordering
+    of the variables.
 
     Parameters
     ----------
     forbidden_edges: iterable
-            The set of directed edges that must be absent in the final
-            graph structure. Defaults to None.
+            The set of directed edges that are to be absent in the final
+            graph structure. If present, a warning will be issued and
+            the edge will be ignored. Defaults to None.
+
     required_edges: iterable
-            The set of directed edges that must be present in the final
-            graph structure. Defaults to None.
+            The set of directed edges that are to be present in the final
+            graph structure. If absent, a warning will be issued and
+            the edge will be ignored. Defaults to None.
+
+    temporal order: list of lists
+            The temporal ordering of variables according to prior knowledge.
+            Each list in the list of lists contains variables with the same
+            temporal significance; the more prior (parental) variables (list) are at
+            the start while the prioority decreases as we go down the list.
+
     max_cond_vars: int
             The maximum number of conditional variables to be used for statistical
             independce tests (e.g. PC algorithm). Default is 5.
+
+    Examples
+    --------
+    Import an example model from pgmpy.utils
+
+    >>> from pgmpy.utils import get_example_model
+    >>> asia_model = get_example_model("asia")
+
+    **Required and forbidden edges**
+
+    >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
+    >>> req_edges = [("smoke","bronc")]
+    >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges,
+                                           max_cond_vars=4)
+
     """
 
     def _validate_edges(self, edge_list):
@@ -50,5 +79,46 @@ class ExpertKnowledge:
         )
         self.max_cond_vars = max_cond_vars
 
-    def check_against_dag(self):
-        pass
+    def check_against_pdag(self, pdag):
+        """
+        Method to check consistency and orient edges in a graph based on expert knowledge.
+
+        The required and forbidden edges, if specified by the user, are correctly
+        oriented in the graph object passed. In case of any conflict between the
+        graph structure and a required/forbidden edge, the edge is ignored and
+        a user warning is raised at the end. Ref:https://doi.org/10.48550/arXiv.2306.01638
+
+        Parameters
+        ----------
+        pdag: pgmpy.base.PDAG
+            A  partial DAG with directed and undirected edges.
+
+        Returns
+        --------
+        Model after edge orientation: pgmpy.base.DAG
+            The partial DAG after accounting for specified required
+            and forbidden edges.
+        """
+        flag = False
+        for edge in self.forbidden_edges:
+            u, v = edge
+
+            if pdag.has_edge(u, v) and pdag.has_edge(v, u):
+                pdag.remove_edge(u, v)
+            elif pdag.has_edge(u, v):
+                flag = True
+
+        for edge in self.required_edges:
+            u, v = edge
+
+            if pdag.has_edge(u, v) and pdag.has_edge(v, u):
+                pdag.remove_edge(v, u)
+            elif pdag.has_edge(u, v) is False:
+                flag = True
+
+        if flag is True:
+            warnings.warn(
+                "Specified expert knowledge conflicts with learned structure.Ignoring conflicting edges",
+                UserWarning,
+            )
+        return pdag

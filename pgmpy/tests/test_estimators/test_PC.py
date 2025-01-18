@@ -163,24 +163,24 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "B"}): tuple(),
             frozenset({"D", "B"}): ("A",),
         }
-        pdag = PC.orient_v_structures(skel, sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skel, sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
-        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()),
             set([("B", "A"), ("C", "A")]),
         )
 
         sep_sets = {frozenset({"B", "C"}): ("A",)}
-        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()),
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
@@ -192,24 +192,24 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "D"}): ("C",),
             frozenset({"B", "D"}): ("C",),
         }
-        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
-        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
         )
 
         skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
         sep_sets = {frozenset({"A", "C"}): ("B",)}
-        pdag = PC.orient_v_structures(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.orient_meek_rules(pdag)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()),
             set(
@@ -478,13 +478,13 @@ class TestPCRealModels(unittest.TestCase):
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e5), seed=42)
         est = PC(data)
-        req_edges = [("tub", "asia"), ("lung", "smoke")]
+        req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges, max_cond_vars=4)
-        with self.assertRaises(
-            RuntimeError,
-            msg="Specified expert knowledge is incompatible with the learned graph.",
+        with self.assertWarns(
+            UserWarning,
+            msg="Specified expert knowledge conflicts with learned structure. Ignoring conflicting edges",
         ):
             dag = est.estimate(
                 variant="stable",
