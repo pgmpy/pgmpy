@@ -101,13 +101,13 @@ class FunctionalCPD(BaseFactor):
 
             sampled_values = []
             for _, row in parent_sample.iterrows():
-                sampled_values.append(self.fn(row))
+                sampled_values.append(self.fn(row)())
 
             sampled_values = np.array(sampled_values)
         else:
             sampled_values = []
             for _ in range(n_samples):
-                sampled_values.append(self.fn(parent_sample))
+                sampled_values.append(self.fn(parent_sample)())
 
             sampled_values = np.array(sampled_values)
 
