@@ -482,13 +482,16 @@ class TestPCRealModels(unittest.TestCase):
         est = PC(data)
         req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges, max_cond_vars=4)
-        with self.assertWarns(
-            UserWarning,
-            msg="Specified expert knowledge conflicts with learned structure. Ignoring conflicting edges",
-        ):
+        with self.assertLogs(level="WARNING") as cm:
             dag = est.estimate(
                 variant="stable",
                 expert_knowledge=background,
                 n_jobs=2,
                 show_progress=False,
             )
+        self.assertEqual(
+            cm.output,
+            [
+                "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
+            ],
+        )

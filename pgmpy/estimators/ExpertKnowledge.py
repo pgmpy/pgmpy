@@ -1,4 +1,4 @@
-import warnings
+from pgmpy.global_vars import logger
 
 
 class ExpertKnowledge:
@@ -15,19 +15,21 @@ class ExpertKnowledge:
     ----------
     forbidden_edges: iterable
             The set of directed edges that are to be absent in the final
-            graph structure. If present, a warning will be issued and
-            the edge will be ignored. Defaults to None.
+            graph structure. Refer to the algorithm documentation for details
+            on what to expect from the output. Defaults to None.
 
     required_edges: iterable
             The set of directed edges that are to be present in the final
-            graph structure. If absent, a warning will be issued and
+            graph structure. Refer to the algorithm documentation for details
+            on what to expect from the output.
+            If absent, a warning will be issued and
             the edge will be ignored. Defaults to None.
 
     temporal order: list of lists
             The temporal ordering of variables according to prior knowledge.
             Each list in the list of lists contains variables with the same
             temporal significance; the more prior (parental) variables (list) are at
-            the start while the prioority decreases as we go down the list.
+            the start while the prioority decreases as we go down the list. Defaul None.
 
     max_cond_vars: int
             The maximum number of conditional variables to be used for statistical
@@ -89,14 +91,33 @@ class ExpertKnowledge:
         )
         self.max_cond_vars = max_cond_vars
 
-    def check_against_pdag(self, pdag):
+    def check_edges(self):
+        """
+        Method to check whether the ExpertKnowledge instance has user specified fixed/required edges.
+
+        Parameters
+        ----------
+
+        Returns
+        --------
+        edge information: boolean
+            Boolean specifying whether the instance of the class has required and/or forbidden
+            edges specified by the user.
+        """
+
+        if self.required_edges != set() or self.forbidden_edges != set():
+            return True
+        else:
+            return False
+
+    def orient_pdag(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
 
         The required and forbidden edges, if specified by the user, are correctly
         oriented in the graph object passed. In case of any conflict between the
         graph structure and a required/forbidden edge, the edge is ignored and
-        a user warning is raised at the end. Ref:https://doi.org/10.48550/arXiv.2306.01638
+        a user warning is raised at the end.
 
         Parameters
         ----------
@@ -108,15 +129,21 @@ class ExpertKnowledge:
         Model after edge orientation: pgmpy.base.DAG
             The partial DAG after accounting for specified required
             and forbidden edges.
+
+        References
+        ----------
+        [1] https://doi.org/10.48550/arXiv.2306.01638
         """
-        flag = False
+
         for edge in self.forbidden_edges:
             u, v = edge
 
             if pdag.has_edge(u, v) and pdag.has_edge(v, u):
                 pdag.remove_edge(u, v)
             elif pdag.has_edge(u, v):
-                flag = True
+                logger.warning(
+                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from forbidden edges"
+                )
 
         for edge in self.required_edges:
             u, v = edge
@@ -124,11 +151,8 @@ class ExpertKnowledge:
             if pdag.has_edge(u, v) and pdag.has_edge(v, u):
                 pdag.remove_edge(v, u)
             elif pdag.has_edge(u, v) is False:
-                flag = True
+                logger.warning(
+                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from required edges"
+                )
 
-        if flag is True:
-            warnings.warn(
-                "Specified expert knowledge conflicts with learned structure.Ignoring conflicting edges",
-                UserWarning,
-            )
         return pdag

@@ -57,7 +57,7 @@ class PC(StructureEstimator):
         return_type="dag",
         significance_level=0.01,
         expert_knowledge=None,
-        enforce_background_knowledge=False,
+        enforce_expert_knowledge=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -127,7 +127,8 @@ class PC(StructureEstimator):
             edges specified in expert knowledge object. This ensures that the
             specified knowledge is guaranteed to be reflected in the final PDAG structure.
             If False, the algorithm accounts for the edges specified in the expert
-            knowledge object after creating a CPDAG then integrating the background knowledge.
+            knowledge object after creating a CPDAG, then integrating the background knowledge.
+            In case of conflicting edges, the edges are ignored and a warning is issued.
 
         Returns
         -------
@@ -193,7 +194,7 @@ class PC(StructureEstimator):
             variant=variant,
             n_jobs=n_jobs,
             expert_knowledge=expert_knowledge,
-            enforce_background_knowledge=enforce_background_knowledge,
+            enforce_expert_knowledge=enforce_expert_knowledge,
             show_progress=show_progress,
             **kwargs,
         )
@@ -206,14 +207,9 @@ class PC(StructureEstimator):
         pdag = self.apply_orientation_rules(pdag)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
-        if (
-            expert_knowledge.required_edges != set()
-            or expert_knowledge.forbidden_edges != set()
-        ) and enforce_background_knowledge is False:
-            pdag = expert_knowledge.check_against_pdag(pdag)
+        if (expert_knowledge.check_edges()) and (enforce_expert_knowledge is False):
+            pdag = expert_knowledge.orient_pdag(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
-
-            return pdag
 
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
@@ -233,7 +229,7 @@ class PC(StructureEstimator):
         significance_level=0.01,
         variant="stable",
         expert_knowledge=None,
-        enforce_background_knowledge=False,
+        enforce_expert_knowledge=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -291,7 +287,7 @@ class PC(StructureEstimator):
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
-        if enforce_background_knowledge:
+        if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
@@ -303,7 +299,7 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_background_knowledge is False) or (
+                    if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in chain(
@@ -333,7 +329,7 @@ class PC(StructureEstimator):
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
-                    if (enforce_background_knowledge is False) or (
+                    if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in chain(
@@ -377,7 +373,7 @@ class PC(StructureEstimator):
                 results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
-                    if (enforce_background_knowledge is False)
+                    if (enforce_expert_knowledge is False)
                     or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:
@@ -449,9 +445,9 @@ class PC(StructureEstimator):
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
         >>> c = PC(data)
-        >>> pdag = c.skeleton_to_pdag(*c.build_skeleton())
+        >>> pdag = c.orient_colliders(*c.build_skeleton())
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
-        [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
+        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
 
         pdag = skeleton.to_directed()
@@ -511,13 +507,17 @@ class PC(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
+        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 4)), columns=list('ABDE'))
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
+        >>> data['E'] += data['C']
         >>> c = PC(data)
-        >>> pdag = c.skeleton_to_pdag(*c.build_skeleton())
-        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
-        [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
+        >>> pdag = c.apply_orientation_rules(*c.build_skeleton())
+        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed), C--E (not directed)
+        OutEdgeView([('B', 'C'), ('C', 'E'), ('A', 'C'), ('A', 'D'), ('E', 'C'), ('D', 'A')])
+        >>> pdag = c.apply_orientation_rules(pdag)
+        >>> pdag.edges()
+        OutEdgeView([('C', 'E'), ('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
 
         node_pairs = list(permutations(sorted(pdag.nodes()), 2))
