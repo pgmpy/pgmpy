@@ -128,7 +128,7 @@ class PC(StructureEstimator):
             specified knowledge is guaranteed to be reflected in the final PDAG structure.
             If False, the algorithm accounts for the edges specified in the expert
             knowledge object after creating a CPDAG, then integrating the background knowledge.
-            In case of conflicting edges, the edges are ignored and a warning is issued.
+            In case of conflicting edges, the edge is ignored and a warning is issued.
 
         Returns
         -------

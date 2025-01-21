@@ -21,9 +21,7 @@ class ExpertKnowledge:
     required_edges: iterable
             The set of directed edges that are to be present in the final
             graph structure. Refer to the algorithm documentation for details
-            on what to expect from the output.
-            If absent, a warning will be issued and
-            the edge will be ignored. Defaults to None.
+            on what to expect from the output. Defaults to None.
 
     temporal order: list of lists
             The temporal ordering of variables according to prior knowledge.
@@ -117,7 +115,7 @@ class ExpertKnowledge:
         The required and forbidden edges, if specified by the user, are correctly
         oriented in the graph object passed. In case of any conflict between the
         graph structure and a required/forbidden edge, the edge is ignored and
-        a user warning is raised at the end.
+        a warning is raised at the end.
 
         Parameters
         ----------
