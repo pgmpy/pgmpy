@@ -9,7 +9,7 @@ class FunctionalCPD(BaseFactor):
     Defines a Functional CPD.
 
     Functional CPD can represent any arbitrary conditional probability distribution
-    where the distributio to represented is defined by function (input as parameter) which calls pyro.sample function.
+    where the distribution to represented is defined by function (input as parameter) which calls pyro.sample function.
     """
 
     def __init__(self, variable, fn, parents=[]):
@@ -32,9 +32,10 @@ class FunctionalCPD(BaseFactor):
         # For P(X3| X1, X2) = N(0.2x1 + 0.3x2 + 1.0; 1), we can write
 
         >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> import pyro.distributions as dist
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
-        ...    fn=lambda parent_sample: np.random.normal(
+        ...    fn=lambda parent_sample: dist.Normal(
         ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
         ...    parents=["x1", "x2"])
 
@@ -72,9 +73,10 @@ class FunctionalCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> import pyro.distributions as dist
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
-        ...    fn=lambda parent_sample: np.random.normal(
+        ...    fn=lambda parent_sample: dist.Normal(
         ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
         ...    parents=["x1", "x2"])
 
@@ -98,22 +100,20 @@ class FunctionalCPD(BaseFactor):
 
             sampled_values = []
             for _, row in parent_sample.iterrows():
-                sampled_values.append(self.fn(row))
+                sampled_values.append(self.fn(row)().detach().numpy())
 
             sampled_values = np.array(sampled_values)
         else:
             sampled_values = []
             for _ in range(n_samples):
-                sampled_values.append(self.fn(parent_sample))
+                sampled_values.append(self.fn(parent_sample)().detach().numpy())
 
             sampled_values = np.array(sampled_values)
 
         return sampled_values
 
     def __str__(self):
-        fn_name = (
-            "lambda(mean, std)" if self.fn.__name__ == "<lambda>" else self.fn.__name__
-        )
+        fn_name = "lambda fn." if self.fn.__name__ == "<lambda>" else self.fn.__name__
         if self.parents:
             return f"P({self.variable} | {', '.join(self.parents)}) = {fn_name}"
         return f"P({self.variable}) = {fn_name}"
