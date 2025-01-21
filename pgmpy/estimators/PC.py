@@ -119,23 +119,36 @@ class PC(StructureEstimator):
 
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
             Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph,
-            temporal information about the variables etc.
+            includes required/forbidden edges in the final graph, temporal
+            information about the variables etc. Please refer
+            pgmpy.estimators.ExpertKnowledge class for more details.
 
         enforce_expert_knowledge: boolean (default: False)
-            If True, the algorith modifies the search space according to the
-            edges specified in expert knowledge object. This ensures that the
-            specified knowledge is guaranteed to be reflected in the final PDAG structure.
-            If False, the algorithm accounts for the edges specified in the expert
-            knowledge object after creating a CPDAG, then integrating the background knowledge.
-            In case of conflicting edges, the edge is ignored and a warning is issued.
+            If True, the algorithm modifies the search space according to the
+            edges specified in expert knowledge object. This implies the following:
+            1. For every edge (u, v) specified in `forbidden_edges`, there will
+                be no edge between u and v.
+            2. For every edge (u, v) specified in `required_edges`, one of the
+                following would be present in the final model: u -> v, u <-
+                v, or u - v (if CPDAG is returned).
+
+            If False, the algorithm attempts to make the edge orientations as
+            specified by expert knowledge after learning the skeleton. This
+            implies the following:
+            1. For every edge (u, v) specified in `forbidden_edges`, the final
+                graph would have either v <- u or no edge except if u -> v is part
+                of a collider structure in the learned skeleton.
+            2. For every edge (u, v) specified in `required_edges`, the final graph
+                would either have u -> v or no edge except if v <- u is part of a
+                collider structure in the learned skeleton.
 
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
-                The estimated model structure, can be a partially directed graph (PDAG)
-                or a fully directed graph (DAG), or (Undirected Graph, separating sets)
-                depending on the value of `return_type` argument.
+                The estimated model structure:
+                1. Partially Directed Graph (PDAG) if `return_type='pdag'` or `return_type='cpdag'`.
+                2. Directed Acyclic Graph (DAG) if `return_type='dag'`.
+                3. (nx.Graph, separating sets) if `return_type='skeleton'`.
 
         References
         ----------
@@ -146,6 +159,9 @@ class PC(StructureEstimator):
         [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
                     discovery with multi-core PCs." IEEE/ACM transactions on computational
                     biology and bioinformatics (2016).
+        [4] Expert Knowledge: Meek, Christopher. "Causal inference and causal
+                explanation with background knowledge." arXiv preprint arXiv:1302.4972
+                (2013).
 
         Examples
         --------
@@ -408,23 +424,24 @@ class PC(StructureEstimator):
 
     @staticmethod
     def orient_colliders(skeleton, separating_sets):
-        """Orients the edges that form v-structures in a graph skeleton
+        """
+        Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
 
         Parameters
         ----------
-        skeleton: UndirectedGraph
+        skeleton: nx.Graph
             An undirected graph skeleton as e.g. produced by the
             estimate_skeleton method.
 
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes then
-            conditionally independent. (needed for edge orientation)
+            separating set ("witnessing set") of variables that makes them
+            conditionally independent.
 
         Returns
         -------
-        Model after edge orientation: pgmpy.base.DAG
+        Model after edge orientation: pgmpy.base.PDAG
             An estimate for the DAG pattern of the BN underlying the data. The
             graph might contain some nodes with both-way edges (X->Y and Y->X).
             Any completion by (removing one of the both-way edges for each such
@@ -432,9 +449,9 @@ class PC(StructureEstimator):
 
         References
         ----------
-        Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-
+        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
+                10.2 (page 550)
+        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
 
         Examples
         --------
@@ -453,8 +470,8 @@ class PC(StructureEstimator):
         pdag = skeleton.to_directed()
         node_pairs = list(permutations(sorted(pdag.nodes()), 2))
 
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
-        # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
+        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
+        # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
         for pair in node_pairs:
             X, Y = pair
             if not skeleton.has_edge(X, Y):
@@ -462,7 +479,6 @@ class PC(StructureEstimator):
                     if Z not in separating_sets[frozenset((X, Y))]:
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
-        # TODO: This is temp fix to get a PDAG object.
         edges = set(pdag.edges())
         undirected_edges = []
         directed_edges = []
@@ -565,11 +581,14 @@ class PC(StructureEstimator):
                     ):
                         pdag.remove_edge(W, Z)
 
-            # This rule (rule 4 in Meek's rules) is only used in the case of a knowledge base of required and forbidden edges.
-            # For a comprehensive explanation, check out Meek's original paper - https://doi.org/10.48550/arXiv.1302.4972
+            # This rule (rule 4 in Meek's rules) is only used in the case of a
+            #   knowledge base of required and forbidden edges.
+            # For a comprehensive explanation, check out Meek's original paper
+            # - https://doi.org/10.48550/arXiv.1302.4972
             if apply_r4 is not False:
                 # 4) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
-                # the dotted line above represents the possibility of either a directed or an undirected edge
+                #    the dotted line above represents the possibility of either a
+                #    directed or an undirected edge
                 for pair in node_pairs:
                     X, Y = pair
                     for Z in (
@@ -585,7 +604,6 @@ class PC(StructureEstimator):
 
             progress = num_edges > pdag.number_of_edges()
 
-        # TODO: This is temp fix to get a PDAG object.
         edges = set(pdag.edges())
         undirected_edges = []
         directed_edges = []

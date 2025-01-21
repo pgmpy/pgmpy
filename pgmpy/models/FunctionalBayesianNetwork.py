@@ -1,7 +1,6 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
-import pyro
 
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
@@ -177,6 +176,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> model.simulate(n_samples=1000)
         """
         if seed is not None:
+            import pyro
+
             pyro.set_rng_seed(seed)
 
         nodes = list(nx.topological_sort(self))

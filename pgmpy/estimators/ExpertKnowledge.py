@@ -3,35 +3,34 @@ from pgmpy.global_vars import logger
 
 class ExpertKnowledge:
     """
-    Class to specify expert knowledge for causal discovery algorithms.
+    Class to specify expert knowledge for causal discovery / structure learning algorithms.
 
-    Expert knowledge is the prior knowledge about edges in the final structure of the
-    graph learned by causal discovery algorithms. Currently, expert knowledge can
-    provide information about edges that have to be present/absent in the final
-    learned graph, maximum number of conditioning variables and temporal ordering
-    of the variables.
+    Expert knowledge is the prior knowledge about edges in the final structure
+    of the graph learned by causal discovery algorithms. Users can provide
+    information about edges that have to be present/absent in the final learned
+    graph temporal ordering of the variables.
 
     Parameters
     ----------
-    forbidden_edges: iterable
+    forbidden_edges: iterable (default: None)
             The set of directed edges that are to be absent in the final
             graph structure. Refer to the algorithm documentation for details
-            on what to expect from the output. Defaults to None.
+            on how the argument is handled.
 
-    required_edges: iterable
+    required_edges: iterable (default: None)
             The set of directed edges that are to be present in the final
             graph structure. Refer to the algorithm documentation for details
-            on what to expect from the output. Defaults to None.
+            on how the argument is handled.
 
-    temporal order: list of lists
+    temporal order: list of lists (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list in the list of lists contains variables with the same
             temporal significance; the more prior (parental) variables (list) are at
-            the start while the prioority decreases as we go down the list. Defaul None.
+            the start while the priority decreases as we go down the list.
 
     max_cond_vars: int
             The maximum number of conditional variables to be used for statistical
-            independce tests (e.g. PC algorithm). Default is 5.
+            independence tests (e.g. PC algorithm). Default is 5.
 
     Examples
     --------
@@ -45,7 +44,7 @@ class ExpertKnowledge:
     >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
     >>> req_edges = [("smoke","bronc")]
     >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges,
-                                           max_cond_vars=4)
+    ...                                    max_cond_vars=4)
 
     **Use during structure learning**
 
@@ -53,16 +52,16 @@ class ExpertKnowledge:
     >>> data = BayesianModelSampling(asia_model).forward_sample(size=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
-                variant="stable",
-                expert_knowledge=expert_knowledge,
-                show_progress=False,
-            )
+    ...         variant="stable",
+    ...         expert_knowledge=expert_knowledge,
+    ...         show_progress=False,
+    ...     )
     """
 
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(
-                f"expected iterator type for edge information. Recieved {type(edge_list)} instead"
+                f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
         elif type(edge_list) != set:
             return set(edge_list)
@@ -87,6 +86,10 @@ class ExpertKnowledge:
             if required_edges is not None
             else set()
         )
+
+        if temporal_order is not None:
+            raise ValueError(f"Specification of temporal order isn't supported yet.")
+
         self.max_cond_vars = max_cond_vars
 
     def check_edges(self):
@@ -115,7 +118,7 @@ class ExpertKnowledge:
         The required and forbidden edges, if specified by the user, are correctly
         oriented in the graph object passed. In case of any conflict between the
         graph structure and a required/forbidden edge, the edge is ignored and
-        a warning is raised at the end.
+        a warning is raised.
 
         Parameters
         ----------
@@ -140,7 +143,7 @@ class ExpertKnowledge:
                 pdag.remove_edge(u, v)
             elif pdag.has_edge(u, v):
                 logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from forbidden edges"
+                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from forbidden edges."
                 )
 
         for edge in self.required_edges:
