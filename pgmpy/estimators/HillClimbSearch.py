@@ -95,7 +95,7 @@ class HillClimbSearch(StructureEstimator):
                 if (
                     (operation not in tabu_list)
                     and ((X, Y) not in black_list)
-                    and ((white_list is None) or ((X, Y) in white_list))
+                    and ((X, Y) in white_list)
                 ):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
@@ -125,7 +125,7 @@ class HillClimbSearch(StructureEstimator):
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
                     and ((X, Y) not in fixed_edges)
                     and ((Y, X) not in black_list)
-                    and ((white_list is None) or ((Y, X) in white_list))
+                    and ((Y, X) in white_list)
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
@@ -145,9 +145,11 @@ class HillClimbSearch(StructureEstimator):
         self,
         scoring_method="k2",
         start_dag=None,
+        fixed_edges=set(),
         tabu_length=100,
         max_indegree=None,
-        expert_knowledge=None,
+        white_list=None,
+        black_list=None,
         epsilon=1e-4,
         max_iter=1e6,
         show_progress=True,
@@ -272,22 +274,24 @@ class HillClimbSearch(StructureEstimator):
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        if expert_knowledge is not None:
-            # Step 1.3: Check fixed_edges
-            fixed_edges = expert_knowledge.fixed_edges
+        # Step 1.3: Check fixed_edges
+        if not hasattr(fixed_edges, "__iter__"):
+            raise ValueError("fixed_edges must be an iterable")
+        else:
+            fixed_edges = set(fixed_edges)
             start_dag.add_edges_from(fixed_edges)
             if not nx.is_directed_acyclic_graph(start_dag):
                 raise ValueError(
                     "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
                 )
-            # Step 1.4: Check black list and white list
-            white_list = expert_knowledge.white_list
-            black_list = expert_knowledge.black_list
-        else:
-            white_list = None
-            black_list = set()
-            fixed_edges = set()
 
+        # Step 1.4: Check black list and white list
+        black_list = set() if black_list is None else set(black_list)
+        white_list = (
+            set([(u, v) for u in self.variables for v in self.variables])
+            if white_list is None
+            else set(white_list)
+        )
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         if max_indegree is None:
             max_indegree = float("inf")

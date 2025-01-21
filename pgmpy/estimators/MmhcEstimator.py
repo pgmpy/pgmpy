@@ -83,12 +83,10 @@ class MmhcEstimator(StructureEstimator):
 
         hc = HillClimbSearch(self.data)
 
-        expert_knowledge = ExpertKnowledge(white_list=skel.to_directed().edges())
-
         model = hc.estimate(
             scoring_method=scoring_method,
+            white_list=skel.to_directed().edges(),
             tabu_length=tabu_length,
-            expert_knowledge=expert_knowledge,
         )
 
         return model

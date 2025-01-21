@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
-from pgmpy.estimators import PC
+from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
@@ -63,8 +63,11 @@ class TestPCFakeCITest(unittest.TestCase):
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
+        cond_vars = ExpertKnowledge(max_cond_vars=0)
         skel, sep_set = self.estimator.build_skeleton(
-            ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant="orig"
+            ci_test=TestPCFakeCITest.fake_ci_t,
+            expert_knowledge=cond_vars,
+            variant="orig",
         )
         expected_edges = {("A", "B"), ("A", "C"), ("A", "D")}
         for u, v in skel.edges():
@@ -78,8 +81,11 @@ class TestPCFakeCITest(unittest.TestCase):
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
+        cond_vars = ExpertKnowledge(max_cond_vars=0)
         skel, sep_set = self.estimator.build_skeleton(
-            ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant="stable"
+            ci_test=TestPCFakeCITest.fake_ci_t,
+            expert_knowledge=cond_vars,
+            variant="stable",
         )
         expected_edges = {("A", "B"), ("A", "C"), ("A", "D")}
         for u, v in skel.edges():
@@ -157,22 +163,26 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "B"}): tuple(),
             frozenset({"D", "B"}): ("A",),
         }
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_colliders(skel, sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
-            set(PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets).edges()),
+            set(pdag.edges()),
             set([("B", "A"), ("C", "A")]),
         )
 
         sep_sets = {frozenset({"B", "C"}): ("A",)}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
-            set(PC.skeleton_to_pdag(skel, sep_sets).edges()),
+            set(pdag.edges()),
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
@@ -182,21 +192,24 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset({"A", "D"}): ("C",),
             frozenset({"B", "D"}): ("C",),
         }
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
 
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
         )
 
         skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
         sep_sets = {frozenset({"A", "C"}): ("B",)}
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        pdag = PC.apply_orientation_rules(pdag)
         self.assertSetEqual(
             set(pdag.edges()),
             set(
@@ -456,16 +469,29 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
 class TestPCRealModels(unittest.TestCase):
     def test_pc_alarm(self):
         alarm_model = get_example_model("alarm")
-        data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e5), seed=42)
+        data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
         est = PC(data)
+        cond_vars = ExpertKnowledge(max_cond_vars=5)
         dag = est.estimate(
-            variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False
+            variant="stable", expert_knowledge=cond_vars, n_jobs=2, show_progress=False
         )
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e3), seed=42)
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e5), seed=42)
         est = PC(data)
-        dag = est.estimate(
-            variant="stable", max_cond_vars=1, n_jobs=2, show_progress=False
+        req_edges = [("xray", "either")]
+        background = ExpertKnowledge(required_edges=req_edges, max_cond_vars=4)
+        with self.assertLogs(level="WARNING") as cm:
+            dag = est.estimate(
+                variant="stable",
+                expert_knowledge=background,
+                n_jobs=2,
+                show_progress=False,
+            )
+        self.assertEqual(
+            cm.output,
+            [
+                "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
+            ],
         )

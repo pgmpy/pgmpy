@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import PDAG
-from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import *
 from pgmpy.global_vars import logger
 
@@ -54,9 +54,10 @@ class PC(StructureEstimator):
         self,
         variant="stable",
         ci_test="chi_square",
-        max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
+        expert_knowledge=None,
+        enforce_expert_knowledge=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -97,10 +98,6 @@ class PC(StructureEstimator):
                 "neyman": Neyman test. Works only for discrete variables.
                 "cressie_read": Cressie Read test. Works only for discrete variables.
 
-        max_cond_vars: int
-            The maximum number of conditional variables allowed to do the statistical
-            test with.
-
         return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
             The type of structure to return.
 
@@ -119,6 +116,19 @@ class PC(StructureEstimator):
                     independence condition satisfied in the data.
                 2. pearsonr: If p-value > significance_level, it assumes that the
                     independence condition satisfied in the data.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes required/forbidden edges in the final graph,
+            temporal information about the variables etc.
+
+        enforce_expert_knowledge: boolean (default: False)
+            If True, the algorith modifies the search space according to the
+            edges specified in expert knowledge object. This ensures that the
+            specified knowledge is guaranteed to be reflected in the final PDAG structure.
+            If False, the algorithm accounts for the edges specified in the expert
+            knowledge object after creating a CPDAG, then integrating the background knowledge.
+            In case of conflicting edges, the edge is ignored and a warning is issued.
 
         Returns
         -------
@@ -174,13 +184,17 @@ class PC(StructureEstimator):
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
-            max_cond_vars=max_cond_vars,
             significance_level=significance_level,
             variant=variant,
             n_jobs=n_jobs,
+            expert_knowledge=expert_knowledge,
+            enforce_expert_knowledge=enforce_expert_knowledge,
             show_progress=show_progress,
             **kwargs,
         )
@@ -188,10 +202,15 @@ class PC(StructureEstimator):
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
-        # Step 2: Orient the edges based on build the PDAG/CPDAG.
-        pdag = self.skeleton_to_pdag(skel, separating_sets)
+        # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
+        pdag = self.orient_colliders(skel, separating_sets)
+        pdag = self.apply_orientation_rules(pdag)
 
-        # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
+        # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
+        if (expert_knowledge.check_edges()) and (enforce_expert_knowledge is False):
+            pdag = expert_knowledge.orient_pdag(pdag)
+            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
 
@@ -207,9 +226,10 @@ class PC(StructureEstimator):
     def build_skeleton(
         self,
         ci_test="chi_square",
-        max_cond_vars=5,
         significance_level=0.01,
         variant="stable",
+        expert_knowledge=None,
+        enforce_expert_knowledge=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -258,12 +278,17 @@ class PC(StructureEstimator):
                     f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
                 )
 
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=max_cond_vars)
+            pbar = tqdm(total=expert_knowledge.max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        if enforce_expert_knowledge:
+            graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -274,47 +299,57 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                    if (enforce_expert_knowledge is False) or (
+                        (u, v) not in expert_knowledge.required_edges
                     ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                        for separating_set in chain(
+                            combinations(
+                                set(graph.neighbors(u)) - set([v]), lim_neighbors
+                            ),
+                            combinations(
+                                set(graph.neighbors(v)) - set([u]), lim_neighbors
+                            ),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the separating set
+                            # and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
-                    for separating_set in chain(
-                        combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                        combinations(set(neighbors[v]) - set([u]), lim_neighbors),
+                    if (enforce_expert_knowledge is False) or (
+                        (u, v) not in expert_knowledge.required_edges
                     ):
-                        # If a conditioning set exists remove the edge, store the
-                        # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
+                        for separating_set in chain(
+                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
+                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            # If a conditioning set exists remove the edge, store the
+                            # separating set and move on to finding conditioning set for next edge.
+                            if ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break
 
             elif variant == "parallel":
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
@@ -336,7 +371,10 @@ class PC(StructureEstimator):
                             return (u, v), separating_set
 
                 results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
+                    delayed(_parallel_fun)(u, v)
+                    for (u, v) in graph.edges()
+                    if (enforce_expert_knowledge is False)
+                    or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:
                     if result is not None:
@@ -351,7 +389,7 @@ class PC(StructureEstimator):
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
-            if lim_neighbors >= max_cond_vars:
+            if lim_neighbors >= expert_knowledge.max_cond_vars:
                 logger.info(
                     "Reached maximum number of allowed conditional variables. Exiting"
                 )
@@ -369,9 +407,9 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skeleton, separating_sets):
-        """Orients the edges of a graph skeleton based on information from
-        `separating_sets` to form a DAG pattern (DAG).
+    def orient_colliders(skeleton, separating_sets):
+        """Orients the edges that form v-structures in a graph skeleton
+        based on information from `separating_sets` to form a DAG pattern (PDAG).
 
         Parameters
         ----------
@@ -407,13 +445,13 @@ class PC(StructureEstimator):
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
         >>> c = PC(data)
-        >>> pdag = c.skeleton_to_pdag(*c.build_skeleton())
+        >>> pdag = c.orient_colliders(*c.build_skeleton())
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
-        [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
+        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(permutations(pdag.nodes(), 2))
+        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
@@ -424,11 +462,71 @@ class PC(StructureEstimator):
                     if Z not in separating_sets[frozenset((X, Y))]:
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
+        # TODO: This is temp fix to get a PDAG object.
+        edges = set(pdag.edges())
+        undirected_edges = []
+        directed_edges = []
+        for u, v in edges:
+            if (v, u) in edges:
+                undirected_edges.append((u, v))
+            else:
+                directed_edges.append((u, v))
+        return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+    @staticmethod
+    def apply_orientation_rules(pdag, apply_r4=False):
+        """Orients the edges of a graph skeleton based on information from
+        `separating_sets` to form a DAG pattern (CPDAG/MPDAG).
+
+        Parameters
+        ----------
+        pdag: pgmpy.base.PDAG
+            A  partial DAG produced by orienting v-structures in
+            the skeleton.
+
+        apply_r4: boolean
+            If true, use Rule 4 of Meek's rules to integrate background knowledge into
+            the phase of orienting edges. Defaults to False.
+
+        Returns
+        -------
+        Model after edge orientation: pgmpy.base.DAG
+            An estimate for the DAG pattern of the BN underlying the data. The
+            graph might contain some nodes with both-way edges (X->Y and Y->X).
+            Any completion by (removing one of the both-way edges for each such
+            pair) results in a I-equivalent Bayesian network DAG.
+
+        References
+        ----------
+        Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.estimators import PC
+        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 4)), columns=list('ABDE'))
+        >>> data['C'] = data['A'] - data['B']
+        >>> data['D'] += data['A']
+        >>> data['E'] += data['C']
+        >>> c = PC(data)
+        >>> pdag = c.apply_orientation_rules(*c.build_skeleton())
+        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed), C--E (not directed)
+        OutEdgeView([('B', 'C'), ('C', 'E'), ('A', 'C'), ('A', 'D'), ('E', 'C'), ('D', 'A')])
+        >>> pdag = c.apply_orientation_rules(pdag)
+        >>> pdag.edges()
+        OutEdgeView([('C', 'E'), ('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        """
+
+        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
+
         progress = True
         while progress:  # as long as edges can be oriented (removed)
             num_edges = pdag.number_of_edges()
 
-            # 2) for each X->Z-Y, orient edges to Z->Y
+            # 1) for each X->Z-Y, orient edges to Z->Y
             # (Explanation in Koller & Friedman PGM, page 88)
             for pair in node_pairs:
                 X, Y = pair
@@ -438,7 +536,7 @@ class PC(StructureEstimator):
                     ):
                         pdag.remove_edge(Y, Z)
 
-            # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
+            # 2) for each X-Y with a directed path from X to Y, orient edges to X->Y
             for pair in node_pairs:
                 X, Y = pair
                 if pdag.has_edge(Y, X) and pdag.has_edge(X, Y):
@@ -451,7 +549,7 @@ class PC(StructureEstimator):
                             pdag.remove_edge(Y, X)
                             break
 
-            # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
+            # 3) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
             for pair in node_pairs:
                 X, Y = pair
                 for Z in (
@@ -467,6 +565,24 @@ class PC(StructureEstimator):
                     ):
                         pdag.remove_edge(W, Z)
 
+            # This rule (rule 4 in Meek's rules) is only used in the case of a knowledge base of required and forbidden edges.
+            # For a comprehensive explanation, check out Meek's original paper - https://doi.org/10.48550/arXiv.1302.4972
+            if apply_r4 is not False:
+                # 4) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
+                # the dotted line above represents the possibility of either a directed or an undirected edge
+                for pair in node_pairs:
+                    X, Y = pair
+                    for Z in (
+                        set(pdag.successors(X))
+                        & set(pdag.predecessors(X))
+                        & set(pdag.predecessors(Y))
+                        & set(pdag.successors(Y))
+                    ):
+                        for W in (
+                            set(pdag.successors(Y)) - set(pdag.predecessors(Y))
+                        ) & (set(pdag.predecessors(Z)) | set(pdag.successors(Z))):
+                            pdag.remove_edge(X, Z)
+
             progress = num_edges > pdag.number_of_edges()
 
         # TODO: This is temp fix to get a PDAG object.
@@ -478,4 +594,5 @@ class PC(StructureEstimator):
                 undirected_edges.append((u, v))
             else:
                 directed_edges.append((u, v))
+
         return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
