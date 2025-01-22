@@ -62,6 +62,11 @@ class TestFBNMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.model.add_cpds, 1)
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
 
+        # Test that duplicate CPDs get replaced.
+        self.assertEqual(len(self.model.cpds), 3)
+        self.model.add_cpds(self.cpd1)
+        self.assertEqual(len(self.model.cpds), 3)
+
     def test_check_model(self):
         self.assertEqual(self.model.check_model(), True)
 

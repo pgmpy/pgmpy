@@ -56,7 +56,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
                     logger.warning(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
-                    continue
+                    break
             else:
                 self.cpds.append(cpd)
 
