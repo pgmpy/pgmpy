@@ -8,7 +8,7 @@ class ExpertKnowledge:
     Expert knowledge is the prior knowledge about edges in the final structure
     of the graph learned by causal discovery algorithms. Users can provide
     information about edges that have to be present/absent in the final learned
-    graph temporal ordering of the variables.
+    graph and the temporal / causal ordering of the variables.
 
     Parameters
     ----------
@@ -28,10 +28,6 @@ class ExpertKnowledge:
             temporal significance; the more prior (parental) variables (list) are at
             the start while the priority decreases as we go down the list.
 
-    max_cond_vars: int
-            The maximum number of conditional variables to be used for statistical
-            independence tests (e.g. PC algorithm). Default is 5.
-
     Examples
     --------
     Import an example model from pgmpy.utils
@@ -43,8 +39,7 @@ class ExpertKnowledge:
 
     >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
     >>> req_edges = [("smoke","bronc")]
-    >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges,
-    ...                                    max_cond_vars=4)
+    >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges)
 
     **Use during structure learning**
 
@@ -73,7 +68,6 @@ class ExpertKnowledge:
         forbidden_edges=None,
         required_edges=None,
         temporal_order=None,
-        max_cond_vars=5,
         **kwargs,
     ):
         self.forbidden_edges = (
@@ -89,8 +83,6 @@ class ExpertKnowledge:
 
         if temporal_order is not None:
             raise ValueError(f"Specification of temporal order isn't supported yet.")
-
-        self.max_cond_vars = max_cond_vars
 
     def check_edges(self):
         """

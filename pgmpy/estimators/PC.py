@@ -54,8 +54,9 @@ class PC(StructureEstimator):
         self,
         variant="stable",
         ci_test="chi_square",
-        return_type="dag",
+        return_type="pdag",
         significance_level=0.01,
+        max_cond_vars=5,
         expert_knowledge=None,
         enforce_expert_knowledge=False,
         n_jobs=-1,
@@ -241,9 +242,10 @@ class PC(StructureEstimator):
 
     def build_skeleton(
         self,
+        variant="stable",
         ci_test="chi_square",
         significance_level=0.01,
-        variant="stable",
+        max_cond_vars=5,
         expert_knowledge=None,
         enforce_expert_knowledge=False,
         n_jobs=-1,
@@ -298,7 +300,7 @@ class PC(StructureEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=expert_knowledge.max_cond_vars)
+            pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
@@ -405,7 +407,7 @@ class PC(StructureEstimator):
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
-            if lim_neighbors >= expert_knowledge.max_cond_vars:
+            if lim_neighbors >= max_cond_vars:
                 logger.info(
                     "Reached maximum number of allowed conditional variables. Exiting"
                 )
