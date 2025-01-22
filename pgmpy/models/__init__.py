@@ -2,6 +2,7 @@ from .BayesianNetwork import BayesianNetwork
 from .ClusterGraph import ClusterGraph
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
 from .FactorGraph import FactorGraph
+from .FunctionalBayesianNetwork import FunctionalBayesianNetwork
 from .JunctionTree import JunctionTree
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .MarkovChain import MarkovChain
@@ -22,4 +23,5 @@ __all__ = [
     "SEMGraph",
     "SEMAlg",
     "SEM",
+    "FunctionalBayesianNetwork",
 ]

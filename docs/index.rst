@@ -90,7 +90,7 @@ Supported Data Types
      - Yes (partial)
      - Yes
    * - **Mixed**
-     - Yes (only PC)
+     - Yes
      - No
      - No
      - No
@@ -126,23 +126,21 @@ If you use pgmpy in your scientific work, please consider citing us:
 
 .. code-block:: text
 
-   Ankan, Ankur, Abinash, Panda. "pgmpy: Probabilistic Graphical Models using Python." Proceedings of the Python in Science Conference. SciPy, 2015.
+   Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
 
 Bibtex:
 
 .. code-block:: text
 
-   @inproceedings{Ankan2015,
-     series = {SciPy},
-     title = {pgmpy: Probabilistic Graphical Models using Python},
-     ISSN = {2575-9752},
-     url = {http://dx.doi.org/10.25080/Majora-7b98e3ed-001},
-     DOI = {10.25080/majora-7b98e3ed-001},
-     booktitle = {Proceedings of the Python in Science Conference},
-     publisher = {SciPy},
-     author = {Ankan,  Ankur and Panda,  Abinash},
-     year = {2015},
-     collection = {SciPy}
+   @article{Ankan2024,
+     author  = {Ankur Ankan and Johannes Textor},
+     title   = {pgmpy: A Python Toolkit for Bayesian Networks},
+     journal = {Journal of Machine Learning Research},
+     year    = {2024},
+     volume  = {25},
+     number  = {265},
+     pages   = {1--8},
+     url     = {http://jmlr.org/papers/v25/23-0487.html}
    }
 
 Indices and tables
