@@ -84,26 +84,7 @@ class ExpertKnowledge:
         if temporal_order is not None:
             raise ValueError(f"Specification of temporal order isn't supported yet.")
 
-    def check_edges(self):
-        """
-        Method to check whether the ExpertKnowledge instance has user specified fixed/required edges.
-
-        Parameters
-        ----------
-
-        Returns
-        --------
-        edge information: boolean
-            Boolean specifying whether the instance of the class has required and/or forbidden
-            edges specified by the user.
-        """
-
-        if self.required_edges != set() or self.forbidden_edges != set():
-            return True
-        else:
-            return False
-
-    def orient_pdag(self, pdag):
+    def apply_expert_knowledge(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
 

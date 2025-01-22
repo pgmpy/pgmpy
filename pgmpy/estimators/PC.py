@@ -52,7 +52,7 @@ class PC(StructureEstimator):
 
     def estimate(
         self,
-        variant="stable",
+        variant="parallel",
         ci_test="chi_square",
         return_type="pdag",
         significance_level=0.01,
@@ -224,8 +224,8 @@ class PC(StructureEstimator):
         pdag = self.apply_orientation_rules(pdag)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
-        if (expert_knowledge.check_edges()) and (enforce_expert_knowledge is False):
-            pdag = expert_knowledge.orient_pdag(pdag)
+        if not enforce_expert_knowledge:
+            pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
 
         if self.data is not None:
