@@ -512,7 +512,7 @@ class PC(StructureEstimator):
         >>> data['D'] += data['A']
         >>> data['E'] += data['C']
         >>> c = PC(data)
-        >>> pdag = c.apply_orientation_rules(*c.build_skeleton())
+        >>> pdag = c.orient_colliders(*c.build_skeleton())
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed), C--E (not directed)
         OutEdgeView([('B', 'C'), ('C', 'E'), ('A', 'C'), ('A', 'D'), ('E', 'C'), ('D', 'A')])
         >>> pdag = c.apply_orientation_rules(pdag)
