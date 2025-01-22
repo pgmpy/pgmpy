@@ -33,9 +33,10 @@ class FunctionalCPD(BaseFactor):
         # For P(X3| X1, X2) = N(0.2x1 + 0.3x2 + 1.0; 1), we can write
 
         >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> import pyro.distributions as dist
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
-        ...    fn=lambda parent_sample: np.random.normal(
+        ...    fn=lambda parent_sample: dist.Normal(
         ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
         ...    parents=["x1", "x2"])
 
@@ -73,9 +74,10 @@ class FunctionalCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> import pyro.distributions as dist
         >>> cpd = FunctionalCPD(
         ...    variable="x3",
-        ...    fn=lambda parent_sample: np.random.normal(
+        ...    fn=lambda parent_sample: dist.Normal(
         ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
         ...    parents=["x1", "x2"])
 
@@ -99,13 +101,13 @@ class FunctionalCPD(BaseFactor):
 
             sampled_values = []
             for _, row in parent_sample.iterrows():
-                sampled_values.append(self.fn(row))
+                sampled_values.append(self.fn(row)())
 
             sampled_values = np.array(sampled_values)
         else:
             sampled_values = []
             for _ in range(n_samples):
-                sampled_values.append(self.fn(parent_sample))
+                sampled_values.append(self.fn(parent_sample)())
 
             sampled_values = np.array(sampled_values)
 

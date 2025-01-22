@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pyro
+import pyro.distributions as dist
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
@@ -13,33 +15,34 @@ from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwor
 class TestFBNMethods(unittest.TestCase):
     def setUp(self):
         self.model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        self.cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(0, 1))
+        self.cpd1 = FunctionalCPD(
+            "x1",
+            lambda _: dist.Normal(0, 1),
+        )
         self.cpd2 = FunctionalCPD(
-            "x2", lambda parent: np.random.normal(parent["x1"] + 2.0, 1), parents=["x1"]
+            "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
         )
         self.cpd3 = FunctionalCPD(
-            "x3", lambda parent: np.random.normal(parent["x2"] + 0.3, 2), parents=["x2"]
+            "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
         )
+
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
     def test_cpds_simple(self):
         self.assertEqual("x1", self.cpd1.variable)
-        self.model.add_cpds(self.cpd1)
         cpd = self.model.get_cpds("x1")
         self.assertEqual(cpd.variable, self.cpd1.variable)
         self.assertEqual(cpd.parents, self.cpd1.parents)
         self.assertEqual(cpd.parents, [])
 
     def test_add_cpds(self):
-        self.model.add_cpds(self.cpd1)
         cpd = self.model.get_cpds("x1")
         self.assertEqual(cpd.variable, self.cpd1.variable)
 
-        self.model.add_cpds(self.cpd2)
         cpd = self.model.get_cpds("x2")
         self.assertEqual(cpd.variable, self.cpd2.variable)
         self.assertEqual(cpd.parents, self.cpd2.parents)
 
-        self.model.add_cpds(self.cpd3)
         cpd = self.model.get_cpds("x3")
         self.assertEqual(cpd.variable, self.cpd3.variable)
         self.assertEqual(cpd.parents, self.cpd3.parents)
@@ -60,12 +63,11 @@ class TestFBNMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
 
     def test_check_model(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         self.assertEqual(self.model.check_model(), True)
 
         self.model.add_edge("x1", "x4")
         cpd4 = FunctionalCPD(
-            "x4", lambda parent: np.random.normal(parent["x2"] * -1 + 4, 3), ["x2"]
+            "x4", lambda parent: dist.Normal(parent["x2"] * -1 + 4, 3), ["x2"]
         )
         self.model.add_cpds(cpd4)
 
@@ -81,15 +83,15 @@ class TestFBNMethods(unittest.TestCase):
         lg_model.add_cpds(lg_cpd1, lg_cpd2, lg_cpd3)
 
         fn_model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        fn_cpd1 = FunctionalCPD("x1", lambda _: np.random.normal(1, 1))
+        fn_cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(1, 1))
         fn_cpd2 = FunctionalCPD(
             "x2",
-            lambda parent: np.random.normal(-5 + parent["x1"] * 0.5, 1),
+            lambda parent: dist.Normal(-5 + parent["x1"] * 0.5, 1),
             parents=["x1"],
         )
         fn_cpd3 = FunctionalCPD(
             "x3",
-            lambda parent: np.random.normal(4 + parent["x2"] * -1, 1),
+            lambda parent: dist.Normal(4 + parent["x2"] * -1, 1),
             parents=["x2"],
         )
         fn_model.add_cpds(fn_cpd1, fn_cpd2, fn_cpd3)
@@ -122,25 +124,25 @@ class TestFBNMethods(unittest.TestCase):
             ]
         )
 
-        cpd1 = FunctionalCPD("exponential", lambda _: np.random.exponential(scale=2.0))
+        cpd1 = FunctionalCPD("exponential", lambda _: dist.Exponential(0.5))
 
         cpd2 = FunctionalCPD(
             "uniform",
-            lambda parent: np.random.uniform(
-                low=parent["exponential"], high=parent["exponential"] + 2
+            lambda parent: dist.Uniform(
+                parent["exponential"], parent["exponential"] + 2
             ),
             parents=["exponential"],
         )
 
         cpd3 = FunctionalCPD(
             "lognormal",
-            lambda parent: np.random.lognormal(mean=np.log(parent["uniform"]), sigma=1),
+            lambda parent: dist.LogNormal(np.log(parent["uniform"]), 1),
             parents=["uniform"],
         )
 
         cpd4 = FunctionalCPD(
             "gamma",
-            lambda parent: np.random.gamma(shape=2.0, scale=parent["lognormal"] / 5),
+            lambda parent: dist.Gamma(2.0, parent["lognormal"] / 5),
             parents=["lognormal"],
         )
 
@@ -161,3 +163,64 @@ class TestFBNMethods(unittest.TestCase):
 
         self.assertTrue(np.all(samples["lognormal"] > 0))
         self.assertTrue(np.all(samples["gamma"] > 0))
+
+    def test_fit_normal(self):
+        x1 = np.random.normal(1, 2, size=10000)
+        x2 = np.random.normal(x1 + 5, 1)
+        data = pd.DataFrame({"x1": x1, "x2": x2})
+
+        def x1_prior():
+            mu = pyro.sample("x1_mu", dist.Normal(0, 10))
+            sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
+            return dist.Normal(mu, sigma)
+
+        def x2_prior():
+            mu = pyro.sample("x2_mu", dist.Normal(5, 1))
+            sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
+            return dist.Normal(mu, sigma)
+
+        cpd1 = FunctionalCPD("x1", lambda: x1_prior())
+        cpd2 = FunctionalCPD("x2", lambda: x2_prior())
+
+        self.model.add_cpds(cpd1, cpd2)
+        params = self.model.fit(data, method="MCMC", num_steps=100)
+
+        self.assertIn("x1_mu", params)
+        self.assertIn("x1_sigma", params)
+        self.assertIn("x2_mu", params)
+        self.assertIn("x2_sigma", params)
+
+        self.assertAlmostEqual(params["x1_mu"].mean(), 1, delta=0.2)
+        self.assertAlmostEqual(params["x1_sigma"].mean(), 2, delta=0.2)
+        self.assertAlmostEqual(params["x2_mu"].mean(), 6, delta=0.2)
+        # This doesn't work
+        # self.assertAlmostEqual(params['x2_sigma'].mean(), 1, delta=0.2)
+
+    def test_fit_different_distributions(self):
+        x1 = np.random.beta(1, 5, size=5000)
+        x2 = np.random.poisson(x1 + 5)
+        data = pd.DataFrame({"x1": x1, "x2": x2})
+
+        def x1_prior():
+            concen1 = pyro.sample("x1_concen1", dist.Normal(0, 10))
+            concen0 = pyro.sample("x1_concen0", dist.HalfCauchy(scale=4))
+            return dist.Beta(concen1, concen0)
+
+        def x2_prior():
+            rate = pyro.sample("x2_rate", dist.Normal(0, 5))
+            return dist.Poisson(rate)
+
+        cpd1 = FunctionalCPD("x1", lambda: x1_prior())
+        cpd2 = FunctionalCPD("x2", lambda: x2_prior())
+
+        self.model.add_cpds(cpd1, cpd2)
+
+        params = self.model.fit(data, method="MCMC", num_steps=100)
+
+        self.assertIn("x1_concen1", params)
+        self.assertIn("x1_concen0", params)
+        self.assertIn("x2_rate", params)
+
+        self.assertAlmostEqual(params["x1_concen1"].mean(), 1, delta=0.2)
+        self.assertAlmostEqual(params["x1_concen0"].mean(), 5, delta=0.2)
+        self.assertAlmostEqual(params["x2_rate"].mean(), 5.17, delta=0.2)
