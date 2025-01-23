@@ -1232,14 +1232,9 @@ class PDAG(nx.DiGraph):
             latents=self.latents,
         )
 
-    def to_dag(self, required_edges=[]):
+    def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
-
-        Parameters
-        ----------
-        required_edges: list, array-like of 2-tuples
-            The list of edges that should be included in the DAG.
 
         Returns
         -------
