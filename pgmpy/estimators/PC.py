@@ -600,8 +600,10 @@ class PC(StructureEstimator):
                         & set(pdag.successors(Y))
                     ):
                         for W in (
-                            set(pdag.successors(Y)) - set(pdag.predecessors(Y))
-                        ) & (set(pdag.predecessors(Z)) | set(pdag.successors(Z))):
+                            (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
+                            & (set(pdag.predecessors(Z)) | set(pdag.successors(Z)))
+                            & set(pdag.predecessors(X))
+                        ):
                             pdag.remove_edge(X, Z)
 
             progress = num_edges > pdag.number_of_edges()
