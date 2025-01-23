@@ -85,6 +85,8 @@ class FunctionalCPD(BaseFactor):
         >>> cpd.sample(2, parent_samples)
 
         """
+        sampled_values = []
+
         if parent_sample is not None:
             if not isinstance(parent_sample, pd.DataFrame):
                 raise TypeError("`parent_sample` must be a pandas DataFrame.")
@@ -99,17 +101,21 @@ class FunctionalCPD(BaseFactor):
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
 
-            sampled_values = []
+            test_sample = self.fn(parent_sample.iloc[0])
             for _, row in parent_sample.iterrows():
-                sampled_values.append(self.fn(row)())
-
-            sampled_values = np.array(sampled_values)
+                if isinstance(test_sample, float):
+                    sampled_values.append(self.fn(row))
+                else:
+                    sampled_values.append(self.fn(row)())
         else:
-            sampled_values = []
+            test_sample = self.fn(parent_sample)
             for _ in range(n_samples):
-                sampled_values.append(self.fn(parent_sample)())
+                if isinstance(test_sample, float):
+                    sampled_values.append(self.fn(parent_sample))
+                else:
+                    sampled_values.append(self.fn(parent_sample)())
 
-            sampled_values = np.array(sampled_values)
+        sampled_values = np.array(sampled_values)
 
         return sampled_values
 
