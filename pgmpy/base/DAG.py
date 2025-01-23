@@ -950,7 +950,8 @@ class DAG(nx.DiGraph):
             from daft import PGM
         except ImportError as e:
             raise ImportError(
-                "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+                e.msg
+                + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
             )
 
         if isinstance(node_pos, str):

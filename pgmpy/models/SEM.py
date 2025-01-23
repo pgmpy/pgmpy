@@ -1035,7 +1035,7 @@ class SEM(SEMGraph):
                 )
             except ImportError as e:
                 raise ImportError(
-                    e.message()
+                    e.msg
                     + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
                 )
 

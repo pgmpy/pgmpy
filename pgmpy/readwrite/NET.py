@@ -19,9 +19,9 @@ try:
         nums,
         printables,
     )
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        e.message()
+        e.msg
         + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     )
 

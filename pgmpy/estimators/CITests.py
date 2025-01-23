@@ -484,7 +484,7 @@ def _get_predictions(X, Y, Z, data, **kwargs):
         from xgboost import XGBClassifier, XGBRegressor
     except ImportError as e:
         raise ImportError(
-            e.message
+            e.msg
             + ". xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
         )
 
