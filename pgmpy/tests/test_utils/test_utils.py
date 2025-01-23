@@ -258,14 +258,14 @@ class TestGetExampleModel(unittest.TestCase):
 
     def test_invalid_state_name(self):
         """Test handling of invalid state names."""
-        cat_model = get_example_model('alarm')
+        cat_model = get_example_model("alarm")
         infer = VariableElimination(cat_model)
         with self.assertRaises(KeyError):
-            infer.query(['HISTORY'], evidence={'PVSAT': 'RANDOM'})
+            infer.query(["HISTORY"], evidence={"PVSAT": "RANDOM"})
 
     def test_invalid_variable_name(self):
         """Test handling of invalid state names."""
-        cat_model = get_example_model('alarm')
+        cat_model = get_example_model("alarm")
         infer = VariableElimination(cat_model)
         with self.assertRaises(ValueError):
-            infer.query(['HISTORY'], evidence={'wrong_variable': 'HIGH'})
+            infer.query(["HISTORY"], evidence={"wrong_variable": "HIGH"})
