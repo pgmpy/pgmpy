@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 from tqdm.auto import tqdm
 
+from pgmpy.inference import VariableElimination
 from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
@@ -254,3 +255,17 @@ class TestGetExampleModel(unittest.TestCase):
 
         cont_model = get_example_model("magic-irri")
         self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)
+
+    def test_invalid_state_name(self):
+        """Test handling of invalid state names."""
+        cat_model = get_example_model('alarm')
+        infer = VariableElimination(cat_model)
+        with self.assertRaises(KeyError):
+            infer.query(['HISTORY'], evidence={'PVSAT': 'RANDOM'})
+
+    def test_invalid_variable_name(self):
+        """Test handling of invalid state names."""
+        cat_model = get_example_model('alarm')
+        infer = VariableElimination(cat_model)
+        with self.assertRaises(ValueError):
+            infer.query(['HISTORY'], evidence={'wrong_variable': 'HIGH'})
