@@ -73,7 +73,7 @@ class StateNameMixin:
                 return self.name_to_no[var][state_name]
             except KeyError:
                 raise KeyError(
-                    f"{state_name} is an unknown state name. It must be one of {list(self.name_to_no[var].keys())}"
+                    f"state: {state_name} is an unknown for variable: {var}. It must be one of {list(self.name_to_no[var].keys())}"
                 )
         else:
             return state_name
