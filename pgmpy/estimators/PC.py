@@ -183,7 +183,8 @@ class PC(StructureEstimator):
             raise ValueError(
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
-        elif (not callable(ci_test)) and (
+
+        if (not callable(ci_test)) and (
             ci_test.lower() not in (list(CI_TESTS.keys()) + ["independence_match"])
         ):
             raise ValueError(
@@ -194,7 +195,7 @@ class PC(StructureEstimator):
             raise ValueError(
                 "For using independence_match, independencies argument must be specified"
             )
-        elif (ci_test in set(CI_TESTS.keys()) - set(["independence_match"])) and (
+        if (ci_test in set(CI_TESTS.keys()) - set(["independence_match"])) and (
             self.data is None
         ):
             raise ValueError(
@@ -288,13 +289,7 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        if not callable(ci_test):
-            try:
-                ci_test = CI_TESTS[ci_test]
-            except KeyError:
-                raise ValueError(
-                    f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
-                )
+        ci_test = get_supported_test(ci_test, full=True, data=None)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

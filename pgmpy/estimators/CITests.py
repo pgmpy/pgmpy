@@ -651,7 +651,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         return coef, p_value
 
 
-def get_supported_test(test):
+def get_supported_test(test, full=False, data=None):
     supported_tests = {
         "chi_square": chi_square,
         "g_sq": g_sq,
@@ -660,8 +660,14 @@ def get_supported_test(test):
         "pearsonr": pearsonr,
         "pillai": pillai_trace,
     }
+    if full:
+        supported_tests["power_divergence"] = power_divergence
+        supported_tests["independence_match"] = independence_match
+
     if callable(test):
         return test
     if test not in supported_tests.keys():
-        raise ValueError(f"test not supported and not a callable")
+        raise ValueError(
+            f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
+        )
     return supported_tests[test]
