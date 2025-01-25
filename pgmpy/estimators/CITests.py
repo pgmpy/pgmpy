@@ -649,3 +649,19 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
             return False
     else:
         return coef, p_value
+
+
+def get_supported_test(test):
+    supported_tests = {
+        "chi_square": chi_square,
+        "g_sq": g_sq,
+        "log_likelihood": log_likelihood,
+        "modified_log_likelihood": modified_log_likelihood,
+        "pearsonr": pearsonr,
+        "pillai": pillai_trace,
+    }
+    if callable(test):
+        return test
+    if test not in supported_tests.keys():
+        raise ValueError(f"test not supported and not a callable")
+    return supported_tests[test]
