@@ -166,8 +166,8 @@ def check_scoring_method(scoring_method, data, use_cache):
         score = scoring_method
 
     if use_cache:
-        score_fn = ScoreCache(score, data).local_score
+        score_c = ScoreCache(score, data)
     else:
-        score_fn = score.local_score
+        score_c = score
 
-    return score, score_fn
+    return score, score_c

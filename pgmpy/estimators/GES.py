@@ -124,7 +124,8 @@ class GES(StructureEstimator):
         """
 
         # Step 0: Initial checks and setup for arguments
-        _, score_fn = check_scoring_method(scoring_method, self.data, self.use_cache)
+        _, score_c = check_scoring_method(scoring_method, self.data, self.use_cache)
+        score_fn = score_c.local_score
 
         # Step 1: Initialize an empty model.
         current_model = DAG()
