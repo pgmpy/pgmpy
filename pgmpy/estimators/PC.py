@@ -548,7 +548,7 @@ class PC(StructureEstimator):
             # (Explanation in Koller & Friedman PGM, page 88)
             for pair in node_pairs:
                 X, Y = pair
-                if not pdag.has_edge(X, Y):
+                if not pdag.has_edge(X, Y) and not pdag.has_edge(Y, X):
                     for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
                         set(pdag.successors(Y)) & set(pdag.predecessors(Y))
                     ):
@@ -600,8 +600,10 @@ class PC(StructureEstimator):
                         & set(pdag.successors(Y))
                     ):
                         for W in (
-                            set(pdag.successors(Y)) - set(pdag.predecessors(Y))
-                        ) & (set(pdag.predecessors(Z)) | set(pdag.successors(Z))):
+                            (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
+                            & (set(pdag.predecessors(Z)) | set(pdag.successors(Z)))
+                            & set(pdag.predecessors(X))
+                        ):
                             pdag.remove_edge(X, Z)
 
             progress = num_edges > pdag.number_of_edges()
