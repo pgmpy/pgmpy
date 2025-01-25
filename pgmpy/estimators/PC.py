@@ -184,23 +184,9 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        if (not callable(ci_test)) and (
-            ci_test.lower() not in (list(CI_TESTS.keys()) + ["independence_match"])
-        ):
-            raise ValueError(
-                "ci_test must be a callable or one of the tests defined in CITests.py"
-            )
-
-        if (ci_test == "independence_match") and (self.independencies is None):
-            raise ValueError(
-                "For using independence_match, independencies argument must be specified"
-            )
-        if (ci_test in set(CI_TESTS.keys()) - set(["independence_match"])) and (
-            self.data is None
-        ):
-            raise ValueError(
-                "For using Chi Square or Pearsonr, data argument must be specified"
-            )
+        ci_test = get_supported_test(
+            ci_test, full=True, data=self.data, indep=self.independencies
+        )
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

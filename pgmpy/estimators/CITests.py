@@ -651,7 +651,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         return coef, p_value
 
 
-def get_supported_test(test, full=False, data=None):
+def get_supported_test(test, full=False, data=None, indep=None):
     supported_tests = {
         "chi_square": chi_square,
         "g_sq": g_sq,
@@ -666,8 +666,20 @@ def get_supported_test(test, full=False, data=None):
 
     if callable(test):
         return test
+    test = test.lower()
     if test not in supported_tests.keys():
         raise ValueError(
             f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
         )
+
+    if test == "independence_match":
+        if indep is None:
+            raise ValueError(
+                "For using independence_match, independencies argument must be specified"
+            )
+    elif data is None:
+        raise ValueError(
+            "For using Chi Square or Pearsonr, data argument must be specified"
+        )
+
     return supported_tests[test]
