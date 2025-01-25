@@ -37,3 +37,7 @@ jobs:
           pip freeze
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 3 --group ${{ matrix.group }} --verbose
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
