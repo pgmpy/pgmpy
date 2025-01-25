@@ -156,6 +156,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             )
 
     def test_skeleton_to_pdag(self):
+        # D - A - C - B  ==> D - A -> C <- B
         skel = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
         sep_sets = {
             frozenset({"D", "C"}): ("A",),
@@ -168,6 +169,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
+        # C - A - B  ==> C -> A <- B
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
@@ -177,6 +179,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set([("B", "A"), ("C", "A")]),
         )
 
+        # C - A - B ==> C - A - B
         sep_sets = {frozenset({"B", "C"}): ("A",)}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
         pdag = PC.apply_orientation_rules(pdag)
@@ -185,6 +188,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
+        # {A, B} - C - D ==> {A, B} -> C -> D
         skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
         sep_sets = {
             frozenset({"A", "B"}): tuple(),
@@ -197,6 +201,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
 
+        # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
