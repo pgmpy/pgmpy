@@ -224,6 +224,44 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             ),
         )
 
+        undirected_edges = [("A", "C"), ("B", "C"), ("D", "C")]
+        directed_edges = [("B", "D"), ("D", "A")]
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        mpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(mpdag.edges()),
+            set(
+                [
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        pdag = PC.apply_orientation_rules(pdag)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
     def test_estimate_dag(self):
         for variant in ["orig", "stable", "parallel"]:
             ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
