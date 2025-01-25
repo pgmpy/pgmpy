@@ -39,14 +39,6 @@ class ExhaustiveSearch(StructureEstimator):
     """
 
     def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
-        # if scoring_method is not None:
-        #     if use_cache:
-        #         self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
-        #     else:
-        #         self.scoring_method = scoring_method
-        # else:
-        #     self.scoring_method = ScoreCache.ScoreCache(K2(data, **kwargs), data)
-
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
         _, self.scoring_method = check_scoring_method(
             scoring_method, self.data, use_cache

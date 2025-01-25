@@ -12,7 +12,6 @@ from pgmpy.estimators import (
     BICGauss,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
-    StructureEstimator,
 )
 
 

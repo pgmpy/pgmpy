@@ -20,7 +20,7 @@ from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
-from pgmpy.estimators.ScoreCache import ScoreCache, check_scoring_method
+from pgmpy.estimators.ScoreCache import check_scoring_method
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 from pgmpy.estimators.EM import ExpectationMaximization
 from pgmpy.estimators.PC import PC

@@ -185,7 +185,7 @@ class PC(StructureEstimator):
             )
 
         ci_test = get_supported_test(
-            ci_test, full=True, data=self.data, indep=self.independencies
+            ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
         if expert_knowledge is None:
