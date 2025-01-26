@@ -85,8 +85,10 @@ class BayesianModelInference(Inference):
         sc_values: list
             list of list of states (corresponding to variable_evid) to which to
             reduce the CPD.
+
         state_as_index: bool
             states are already converted to indices, rather than state_name.
+
         Returns
         -------
         list: List of np.array with each element representing the reduced

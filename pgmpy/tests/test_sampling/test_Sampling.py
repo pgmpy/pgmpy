@@ -637,7 +637,7 @@ class TestGibbsSampling(unittest.TestCase):
 
 class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
     def setUp(self):
-        # Bayesian Model with integer state names issue #1877 https://github.com/pgmpy/pgmpy/issues/1877
+        # Bayesian Model with integer state names.
         self.bayesian_model_names = BayesianNetwork([("X", "Y")])
         cpd_x_names = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": [1, 2]})
         cpd_y_names = TabularCPD(

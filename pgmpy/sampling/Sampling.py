@@ -177,6 +177,7 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples: pandas.DataFrame
             A pandas dataframe specifying samples on some of the variables in the model. If
             specified, the sampling procedure uses these sample values, instead of generating them.
+
         state_as_index: bool
             states are already converted to indices, rather than state_name.
 
