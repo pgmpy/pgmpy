@@ -633,3 +633,39 @@ class TestGibbsSampling(unittest.TestCase):
         samples = [sample for sample in gen]
         random_state.assert_called_once_with(self.gibbs)
         self.assertEqual(len(samples), 2)
+
+
+class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
+    def setUp(self):
+        # Bayesian Model with integer state names issue #1877 https://github.com/pgmpy/pgmpy/issues/1877
+        self.bayesian_model_names = BayesianNetwork([("X", "Y")])
+        cpd_x_names = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": [1, 2]})
+        cpd_y_names = TabularCPD(
+            "Y",
+            2,
+            [[1.0, 0.0], [0.0, 1.0]],
+            ["X"],
+            [2],
+            state_names={"Y": [1, 2], "X": [1, 2]},
+        )
+        self.bayesian_model_names.add_cpds(cpd_x_names, cpd_y_names)
+
+        self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
+
+    def test_rejection_sample_basic(self):
+
+        sampled_y = self.sampling_inference_names.rejection_sample(
+            evidence=[State("X", 1)], size=1
+        )["Y"][0]
+        self.assertEqual(sampled_y, 1)
+
+    def test_rejection_sample_with_flag(self):
+
+        sampled_y = self.sampling_inference_names.rejection_sample(
+            evidence=[State("X", 2)], size=1
+        )["Y"][0]
+        self.assertEqual(sampled_y, 1, "Undesired Behaviour without the flag")
+        sampled_y = self.sampling_inference_names.rejection_sample(
+            evidence=[State("X", 2)], size=1, state_as_index=True
+        )["Y"][0]
+        self.assertEqual(sampled_y, 2)
