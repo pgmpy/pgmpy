@@ -19,7 +19,7 @@ from pgmpy.estimators import (
     LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
-    check_scoring_method,
+    get_scoring_method,
 )
 from pgmpy.global_vars import logger
 
@@ -123,7 +123,7 @@ class GES(StructureEstimator):
         """
 
         # Step 0: Initial checks and setup for arguments
-        _, score_c = check_scoring_method(scoring_method, self.data, self.use_cache)
+        _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
 
         # Step 1: Initialize an empty model.

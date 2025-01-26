@@ -21,7 +21,7 @@ from pgmpy.estimators import (
     LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
-    check_scoring_method,
+    get_scoring_method,
 )
 
 
@@ -220,7 +220,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
 
-        score, score_c = check_scoring_method(scoring_method, self.data, self.use_cache)
+        score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
         # Step 1.2: Check the start_dag
         if start_dag is None:

@@ -8,7 +8,7 @@ from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
 
 
-def get_supported_test(test, full=False, data=None, independencies=None):
+def get_ci_test(test, full=False, data=None, independencies=None):
     if callable(test):
         return test
 

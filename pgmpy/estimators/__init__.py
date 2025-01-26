@@ -2,7 +2,7 @@ from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEs
 from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.StructureScore import (
-    check_scoring_method,
+    get_scoring_method,
     StructureScore,
     K2,
     BDeu,

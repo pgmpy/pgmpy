@@ -9,19 +9,8 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import PDAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import *
+from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
-
-CI_TESTS = {
-    "chi_square": chi_square,
-    "independence_match": independence_match,
-    "pearsonr": pearsonr,
-    "pillai": pillai_trace,
-    "g_sq": g_sq,
-    "log_likelihood": log_likelihood,
-    "modified_log_likelihood": modified_log_likelihood,
-    "power_divergence": power_divergence,
-}
 
 
 class PC(StructureEstimator):
@@ -184,7 +173,7 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_supported_test(
+        ci_test = get_ci_test(
             ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
@@ -275,7 +264,7 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_supported_test(ci_test, full=True, data=None)
+        ci_test = get_ci_test(ci_test, full=True, data=None)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

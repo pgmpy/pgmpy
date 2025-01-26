@@ -5,7 +5,7 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.estimators import StructureEstimator, check_scoring_method
+from pgmpy.estimators import StructureEstimator, get_scoring_method
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
 
@@ -39,7 +39,7 @@ class ExhaustiveSearch(StructureEstimator):
 
     def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
-        _, self.scoring_method = check_scoring_method(
+        _, self.scoring_method = get_scoring_method(
             scoring_method, self.data, use_cache
         )
 
