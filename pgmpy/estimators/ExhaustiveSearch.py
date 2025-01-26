@@ -5,10 +5,9 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import StructureEstimator, check_scoring_method
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
-from pgmpy.estimators.ScoreCache import check_scoring_method
 
 
 class ExhaustiveSearch(StructureEstimator):

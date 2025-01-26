@@ -21,8 +21,8 @@ from pgmpy.estimators import (
     LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
+    check_scoring_method,
 )
-from pgmpy.estimators.ScoreCache import check_scoring_method
 
 
 class HillClimbSearch(StructureEstimator):
