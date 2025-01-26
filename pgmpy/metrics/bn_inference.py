@@ -74,7 +74,10 @@ class BayesianModelProbability(BayesianModelInference):
             unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
             unique = [tuple(u) for u in unique]
             state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                variable=node, evidence=evidence, state_combinations=unique
+                variable=node,
+                evidence=evidence,
+                state_combinations=unique,
+                state_as_index=False,
             )
             weights = np.array(
                 [index_to_weight[state_to_index[tuple(u)]] for u in unique]

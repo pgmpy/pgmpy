@@ -38,6 +38,7 @@ class BayesianModelSampling(BayesianModelInference):
         show_progress=True,
         partial_samples=None,
         n_jobs=-1,
+        state_as_index=False,
     ):
         """
         Generates sample(s) from joint distribution of the Bayesian Network.
@@ -112,7 +113,10 @@ class BayesianModelSampling(BayesianModelInference):
                     )
                     unique = [tuple(u) for u in unique]
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                        variable=node, evidence=evidence, state_combinations=unique
+                        variable=node,
+                        evidence=evidence,
+                        state_combinations=unique,
+                        state_as_index=state_as_index,
                     )
                     if config.get_backend() == "numpy":
                         weight_index = np.array([state_to_index[u] for u in unique])[
@@ -144,6 +148,7 @@ class BayesianModelSampling(BayesianModelInference):
         seed=None,
         show_progress=True,
         partial_samples=None,
+        state_as_index=False,
     ):
         """
         Generates sample(s) from joint distribution of the Bayesian Network,
@@ -227,6 +232,7 @@ class BayesianModelSampling(BayesianModelInference):
                 include_latents=True,
                 show_progress=False,
                 partial_samples=partial_samples,
+                state_as_index=state_as_index,
             )
 
             for var, state in evidence:
@@ -346,7 +352,10 @@ class BayesianModelSampling(BayesianModelInference):
                 )
                 unique = [tuple(u) for u in unique]
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node, evidence=evidence, state_combinations=unique
+                    variable=node,
+                    evidence=evidence,
+                    state_combinations=unique,
+                    state_as_index=False,
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse
