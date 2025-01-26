@@ -5,9 +5,10 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.estimators import K2, ScoreCache, StructureEstimator
+from pgmpy.estimators import StructureEstimator
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
+from pgmpy.estimators.ScoreCache import check_scoring_method
 
 
 class ExhaustiveSearch(StructureEstimator):
@@ -37,16 +38,11 @@ class ExhaustiveSearch(StructureEstimator):
         give wrong results in case of custom scoring methods.
     """
 
-    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
-        if scoring_method is not None:
-            if use_cache:
-                self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
-            else:
-                self.scoring_method = scoring_method
-        else:
-            self.scoring_method = ScoreCache.ScoreCache(K2(data, **kwargs), data)
-
+    def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
+        _, self.scoring_method = check_scoring_method(
+            scoring_method, self.data, use_cache
+        )
 
     def all_dags(self, nodes=None):
         """
