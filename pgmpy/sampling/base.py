@@ -134,6 +134,9 @@ class BayesianModelInference(Inference):
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
 
+        state_as_index: bool
+            states are already converted to indices, rather than state_name.
+
         Returns
         -------
         dict: dictionary with probability array-index for node as function of conditional dependency values,
