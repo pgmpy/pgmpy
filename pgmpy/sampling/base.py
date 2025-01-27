@@ -66,7 +66,7 @@ class BayesianModelInference(Inference):
 
     @staticmethod
     def _reduce_marg(
-        variable_cpd, variable_evid, reduce_index, sc
+        variable_cpd, reduce_index, sc
     ):
         """
         Method to compute values of the `variable_cpd` when it it reduced on
@@ -79,12 +79,8 @@ class BayesianModelInference(Inference):
         variable_cpd: Instance of pgmpy.factors.discrete.TabularCPD
             The CPD that will be reduced.
 
-        variable_evid: list
-            List of variable name that need to be reduced.
-
-        sc_values: list
-            list of list of states (corresponding to variable_evid) to which to
-            reduce the CPD.
+        sc: list
+            list of list of states indices to which to reduce the CPD.
 
         Returns
         -------
@@ -150,7 +146,6 @@ class BayesianModelInference(Inference):
             [
                 BayesianModelInference._reduce_marg(
                     variable_cpd,
-                    evidence,
                     reduce_index,
                     sc,
                 )
