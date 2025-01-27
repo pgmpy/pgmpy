@@ -85,7 +85,6 @@ class BayesianModelInference(Inference):
         list: List of np.array with each element representing the reduced
                 values correponding to the states in sc_values.
         """
-
         values = sc
 
         slice_ = [slice(None) for i in range(len(variable_cpd.variables))]
@@ -141,9 +140,7 @@ class BayesianModelInference(Inference):
         weights_list = compat_fns.stack(
             [
                 BayesianModelInference._reduce_marg(
-                    variable_cpd,
-                    reduce_index,
-                    sc,
+                    variable_cpd, evidence, reduce_index, sc
                 )
                 for sc in state_combinations
             ]
