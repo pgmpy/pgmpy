@@ -65,9 +65,7 @@ class BayesianModelInference(Inference):
         return cached_values
 
     @staticmethod
-    def _reduce_marg(
-        variable_cpd, reduce_index, sc
-    ):
+    def _reduce_marg(variable_cpd, reduce_index, sc):
         """
         Method to compute values of the `variable_cpd` when it it reduced on
         `variable_evid` with states `sc_values`. Rest of the evidence variables
@@ -98,9 +96,7 @@ class BayesianModelInference(Inference):
         marg_values = compat_fns.einsum(reduced_values, range(reduced_values.ndim), [0])
         return marg_values / marg_values.sum()
 
-    def pre_compute_reduce_maps(
-        self, variable, evidence=None, state_combinations=None
-    ):
+    def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
