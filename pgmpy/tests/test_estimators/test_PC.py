@@ -256,6 +256,44 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         # cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
         # self.assertSetEqual(set(cpdag.edges()), {('A', 'B'), ('B', 'C'), ('A', 'C'), ('D', 'C')})
 
+        # Examples taken from Perkovi\`c 2017.
+        pdag = PDAG(
+            directed_ebunch=[("V1", "X")],
+            undirected_ebunch=[("X", "V2"), ("V2", "Y"), ("X", "Y")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {("V1", "X"), ("X", "V2"), ("X", "Y"), ("V2", "Y"), ("Y", "V2")},
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("Y", "X")],
+            undirected_ebunch=[("V1", "X"), ("X", "V2"), ("V2", "Y")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {
+                ("X", "V1"),
+                ("Y", "X"),
+                ("X", "V2"),
+                ("V2", "X"),
+                ("V2", "Y"),
+                ("Y", "V2"),
+            },
+        )
+
+        # Exmaples from Bang 2024
+        pdag = PDAG(
+            directed_ebunch=[("B", "D"), ("C", "D")],
+            undirected_ebunch=[("A", "D"), ("A", "C")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()), {("B", "D"), ("D", "A"), ("C", "A"), ("C", "D")}
+        )
+
         pdag = PDAG(
             directed_ebunch=[("A", "B"), ("C", "B")],
             undirected_ebunch=[("D", "B"), ("D", "A"), ("D", "C")],
