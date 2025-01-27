@@ -652,20 +652,8 @@ class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
 
         self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
 
-    def test_rejection_sample_basic(self):
-
-        sampled_y = self.sampling_inference_names.rejection_sample(
-            evidence=[State("X", 1)], size=1
-        )["Y"][0]
-        self.assertEqual(sampled_y, 1)
-
-    def test_rejection_sample_with_flag(self):
-
+    def test_rejection_sample(self):
         sampled_y = self.sampling_inference_names.rejection_sample(
             evidence=[State("X", 2)], size=1
-        )["Y"][0]
-        self.assertEqual(sampled_y, 1, "Undesired Behaviour without the flag")
-        sampled_y = self.sampling_inference_names.rejection_sample(
-            evidence=[State("X", 2)], size=1, state_as_index=True
         )["Y"][0]
         self.assertEqual(sampled_y, 2)

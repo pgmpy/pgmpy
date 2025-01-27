@@ -38,7 +38,6 @@ class BayesianModelSampling(BayesianModelInference):
         show_progress=True,
         partial_samples=None,
         n_jobs=-1,
-        state_as_index=False,
     ):
         """
         Generates sample(s) from joint distribution of the Bayesian Network.
@@ -63,9 +62,6 @@ class BayesianModelSampling(BayesianModelInference):
 
         n_jobs: int (default: -1)
             The number of CPU cores to use. Default uses all cores.
-
-        state_as_index: bool
-            states are already converted to indices, rather than state_name.
 
         Returns
         -------
@@ -119,7 +115,6 @@ class BayesianModelSampling(BayesianModelInference):
                         variable=node,
                         evidence=evidence,
                         state_combinations=unique,
-                        state_as_index=state_as_index,
                     )
                     if config.get_backend() == "numpy":
                         weight_index = np.array([state_to_index[u] for u in unique])[
@@ -151,7 +146,6 @@ class BayesianModelSampling(BayesianModelInference):
         seed=None,
         show_progress=True,
         partial_samples=None,
-        state_as_index=False,
     ):
         """
         Generates sample(s) from joint distribution of the Bayesian Network,
@@ -177,9 +171,6 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples: pandas.DataFrame
             A pandas dataframe specifying samples on some of the variables in the model. If
             specified, the sampling procedure uses these sample values, instead of generating them.
-
-        state_as_index: bool
-            states are already converted to indices, rather than state_name.
 
         Returns
         -------
@@ -238,7 +229,6 @@ class BayesianModelSampling(BayesianModelInference):
                 include_latents=True,
                 show_progress=False,
                 partial_samples=partial_samples,
-                state_as_index=state_as_index,
             )
 
             for var, state in evidence:
@@ -361,7 +351,6 @@ class BayesianModelSampling(BayesianModelInference):
                     variable=node,
                     evidence=evidence,
                     state_combinations=unique,
-                    state_as_index=False,
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse

@@ -77,7 +77,6 @@ class BayesianModelProbability(BayesianModelInference):
                 variable=node,
                 evidence=evidence,
                 state_combinations=unique,
-                state_as_index=False,
             )
             weights = np.array(
                 [index_to_weight[state_to_index[tuple(u)]] for u in unique]

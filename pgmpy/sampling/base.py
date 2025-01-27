@@ -66,7 +66,7 @@ class BayesianModelInference(Inference):
 
     @staticmethod
     def _reduce_marg(
-        variable_cpd, variable_evid, reduce_index, sc, state_as_index=False
+        variable_cpd, variable_evid, reduce_index, sc
     ):
         """
         Method to compute values of the `variable_cpd` when it it reduced on
@@ -86,26 +86,13 @@ class BayesianModelInference(Inference):
             list of list of states (corresponding to variable_evid) to which to
             reduce the CPD.
 
-        state_as_index: bool
-            states are already converted to indices, rather than state_name.
-
         Returns
         -------
         list: List of np.array with each element representing the reduced
                 values correponding to the states in sc_values.
         """
-        if state_as_index:
-            values = sc
-        else:
-            try:
-                values = [
-                    variable_cpd.get_state_no(variable_evid[i], sc[i])
-                    for i in range(len(sc))
-                ]
-            except KeyError as e:
-                print(e)
-                print("KeyError: ", sc, variable_cpd)
-                values = sc
+
+        values = sc
 
         slice_ = [slice(None) for i in range(len(variable_cpd.variables))]
         for i, index in enumerate(reduce_index):
@@ -116,7 +103,7 @@ class BayesianModelInference(Inference):
         return marg_values / marg_values.sum()
 
     def pre_compute_reduce_maps(
-        self, variable, evidence=None, state_combinations=None, state_as_index=False
+        self, variable, evidence=None, state_combinations=None
     ):
         """
         Get probability array-maps for a node as function of conditional dependencies
@@ -135,9 +122,6 @@ class BayesianModelInference(Inference):
 
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
-
-        state_as_index: bool
-            states are already converted to indices, rather than state_name.
 
         Returns
         -------
@@ -169,7 +153,6 @@ class BayesianModelInference(Inference):
                     evidence,
                     reduce_index,
                     sc,
-                    state_as_index=state_as_index,
                 )
                 for sc in state_combinations
             ]
