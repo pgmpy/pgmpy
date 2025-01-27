@@ -103,14 +103,14 @@ class TestSEMEstimator(unittest.TestCase):
         estimator = SEMEstimator(self.demo)
         summary = estimator.fit(self.demo_data, method="ml")
 
-    @unittest.skip
+    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
     def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(
             self.union_data, method="ml", opt="adam", max_iter=10**6, exit_delta=1e-1
         )
 
-    @unittest.skip
+    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
     def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(
@@ -127,7 +127,7 @@ class TestSEMEstimator(unittest.TestCase):
             W=np.ones((3, 3)),
         )
 
-    @unittest.skip
+    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
     def test_union_estimator_std_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(
@@ -139,7 +139,7 @@ class TestSEMEstimator(unittest.TestCase):
             exit_delta=1e-1,
         )
 
-    @unittest.skip
+    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
     def test_custom_estimator_std_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(

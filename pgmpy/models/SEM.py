@@ -873,8 +873,8 @@ class SEMAlg:
                     self.y.append(self.eta[index])
 
         if fixed_values:
-            self.B_fixed_mask = fixed_values["B"]
-            self.zeta_fixed_mask = fixed_values["zeta"]
+            self.B_fixed_mask = np.nan_to_num(fixed_values["B"])
+            self.zeta_fixed_mask = np.nan_to_num(fixed_values["zeta"])
         else:
             self.B_fixed_mask = np.zeros(self.B.shape)
             self.zeta_fixed_mask = np.zeros(self.zeta.shape)
