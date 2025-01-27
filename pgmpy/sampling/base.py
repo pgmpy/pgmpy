@@ -140,7 +140,7 @@ class BayesianModelInference(Inference):
         weights_list = compat_fns.stack(
             [
                 BayesianModelInference._reduce_marg(
-                    variable_cpd, evidence, reduce_index, sc
+                    variable_cpd, reduce_index, sc
                 )
                 for sc in state_combinations
             ]
