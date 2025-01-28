@@ -186,7 +186,7 @@ class DAG(nx.DiGraph):
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
 
-    def add_edge(self, u, v, weight=None):
+    def add_edge(self, u, v, weight: int | float = None):
         """
         Add an edge between u and v.
 
@@ -226,7 +226,7 @@ class DAG(nx.DiGraph):
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch, weights=None):
+    def add_edges_from(self, ebunch, weights: list | tuple = None):
         """
         Add all the edges in ebunch.
 
@@ -283,7 +283,10 @@ class DAG(nx.DiGraph):
                 self.add_edge(ebunch[index][0], ebunch[index][1], weight=weights[index])
         else:
             for edge in ebunch:
-                self.add_edge(edge[0], edge[1])
+                if len(edge) == 2:
+                    self.add_edge(edge[0], edge[1])
+                else:
+                    self.add_edge(edge[0], edge[1], edge[2])
 
     def get_parents(self, node):
         """
