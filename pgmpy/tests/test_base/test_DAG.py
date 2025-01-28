@@ -38,6 +38,28 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(self.graph.latents, set(["b"]))
 
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {'a': {'b': {"weight": 4}, 'c': {"weight": 3}}, 'b': {'c': {"weight": 2}}}
+        self.graph = DAG(adj, latents=set(['a']))
+        self.assertEqual(self.graph.latents, set('a'))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        # Weight is not yet converted
+        # self.assertEqual(self.graph.adj["b"]["c"]["weight"], 2) # None
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {'a': ['b', 'c'], 'b': ['c']}
+        self.graph = DAG(adj, latents=set(['a']))
+        self.assertEqual(self.graph.latents, set('a'))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = DAG(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0,1])
+        # Weight is not yet converted
+        # self.assertEqual(self.graph.adj[0][1]["weight"], 2) # None
+
     def test_add_node_string(self):
         self.graph = DAG()
         self.graph.add_node("a")
@@ -153,25 +175,15 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edge_weight(self):
         self.graph.add_edge("a", "b", weight=0.3)
-        if nx.__version__.startswith("1"):
-            self.assertEqual(self.graph.edge["a"]["b"]["weight"], 0.3)
-        else:
-            self.assertEqual(self.graph.adj["a"]["b"]["weight"], 0.3)
+        self.assertEqual(self.graph.adj["a"]["b"]["weight"], 0.3)
 
     def test_add_edges_from_weight(self):
         self.graph.add_edges_from([("b", "c"), ("c", "d")], weights=[0.5, 0.6])
-        if nx.__version__.startswith("1"):
-            self.assertEqual(self.graph.edge["b"]["c"]["weight"], 0.5)
-            self.assertEqual(self.graph.edge["c"]["d"]["weight"], 0.6)
+        self.assertEqual(self.graph.adj["b"]["c"]["weight"], 0.5)
+        self.assertEqual(self.graph.adj["c"]["d"]["weight"], 0.6)
 
-            self.graph.add_edges_from([("e", "f")])
-            self.assertEqual(self.graph.edge["e"]["f"]["weight"], None)
-        else:
-            self.assertEqual(self.graph.adj["b"]["c"]["weight"], 0.5)
-            self.assertEqual(self.graph.adj["c"]["d"]["weight"], 0.6)
-
-            self.graph.add_edges_from([("e", "f")])
-            self.assertEqual(self.graph.adj["e"]["f"]["weight"], None)
+        self.graph.add_edges_from([("e", "f")])
+        self.assertEqual(self.graph.adj["e"]["f"]["weight"], None)
 
     def test_update_node_parents_bm_constructor(self):
         self.graph = DAG([("a", "b"), ("b", "c")])
