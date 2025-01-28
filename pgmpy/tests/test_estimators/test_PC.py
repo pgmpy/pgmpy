@@ -241,9 +241,13 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
 
         # Failing
-        # pdag = PDAG(directed_ebunch=[('A', 'B'), ('D', 'C')], undirected_ebunch=[('B', 'C')])
-        # cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        # self.assertSetEqual(set(cpdag.edges()), {('A', 'B'), ('D', 'C'), ('B', 'C'), ('C', 'B')})
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
+        )
 
         pdag = PDAG(
             directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
@@ -251,7 +255,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
         self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C")})
 
-        # Failing
+        # Failing - D-->C--A gets oriented as D-->C-->A, creating a cycle
         # pdag = PDAG(directed_ebunch=[('A', 'B'), ('B', 'C'), ('D', 'C')], undirected_ebunch=[('A', 'C')])
         # cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
         # self.assertSetEqual(set(cpdag.edges()), {('A', 'B'), ('B', 'C'), ('A', 'C'), ('D', 'C')})
