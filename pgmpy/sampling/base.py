@@ -78,18 +78,18 @@ class BayesianModelInference(Inference):
             The CPD that will be reduced.
 
         sc: list
-            list of list of states indices to which to reduce the CPD.
+            list of list of states indices to which to reduce the CPD. The i-th
+            element of sc corresponds to the (i+1)-th variable in
+            variable_cpd.variables, i.e., i-th evidence variable.
 
         Returns
         -------
         list: List of np.array with each element representing the reduced
                 values correponding to the states in sc_values.
         """
-        values = sc
-
         slice_ = [slice(None) for i in range(len(variable_cpd.variables))]
         for i, index in enumerate(reduce_index):
-            slice_[index] = values[i]
+            slice_[index] = sc[i]
 
         reduced_values = variable_cpd.values[tuple(slice_)]
         marg_values = compat_fns.einsum(reduced_values, range(reduced_values.ndim), [0])
@@ -139,9 +139,7 @@ class BayesianModelInference(Inference):
 
         weights_list = compat_fns.stack(
             [
-                BayesianModelInference._reduce_marg(
-                    variable_cpd, reduce_index, sc
-                )
+                BayesianModelInference._reduce_marg(variable_cpd, reduce_index, sc)
                 for sc in state_combinations
             ]
         )
