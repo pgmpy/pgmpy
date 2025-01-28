@@ -589,20 +589,20 @@ class SEMGraph(DAG):
         """
         nodelist = list(self.observed) + list(self.latents)
         graph_adj = nx.to_numpy_array(self.graph, nodelist=nodelist, weight=None)
-        graph_fixed = nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight")
+        graph_fixed = np.nan_to_num(
+            nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight")
+        )
 
         err_adj = nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight=None)
         np.fill_diagonal(err_adj, 1.0)  # Variance exists for each error term.
-        err_fixed = nx.to_numpy_array(
-            self.err_graph, nodelist=nodelist, weight="weight"
+        err_fixed = np.nan_to_num(
+            nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight="weight")
         )
 
         # Add the variance of the error terms.
         for index, node in enumerate(nodelist):
-            try:
-                err_fixed[index, index] = self.err_graph.nodes[node]["weight"]
-            except KeyError:
-                err_fixed[index, index] = 0.0
+            weight = self.err_graph.nodes[node]["weight"]
+            err_fixed[index, index] = 0.0 if np.isnan(weight) else weight
 
         wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
         for index, obs_var in enumerate(self.observed):
