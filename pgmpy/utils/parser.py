@@ -1,4 +1,3 @@
-
 def parse_lavaan(lines):
     # Step 0: Check if pyparsing is installed
     try:
@@ -19,36 +18,34 @@ def parse_lavaan(lines):
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)
     reg_gram = (
-            OneOrMore(
-                var.setResultsName("predictors", listAllMatches=True)
-                + Optional(Suppress("+"))
-            )
-            + "~"
-            + OneOrMore(
-        var.setResultsName("covariates", listAllMatches=True)
-        + Optional(Suppress("+"))
-    )
+        OneOrMore(
+            var.setResultsName("predictors", listAllMatches=True)
+            + Optional(Suppress("+"))
+        )
+        + "~"
+        + OneOrMore(
+            var.setResultsName("covariates", listAllMatches=True)
+            + Optional(Suppress("+"))
+        )
     )
     intercept_gram = var("inter_var") + "~" + Word("1")
     covar_gram = (
-            var("covar_var1")
-            + "~~"
-            + OneOrMore(
-        var.setResultsName("covar_var2", listAllMatches=True)
-        + Optional(Suppress("+"))
-    )
+        var("covar_var1")
+        + "~~"
+        + OneOrMore(
+            var.setResultsName("covar_var2", listAllMatches=True)
+            + Optional(Suppress("+"))
+        )
     )
     latent_gram = (
-            var("latent")
-            + "=~"
-            + OneOrMore(
-        var.setResultsName("obs", listAllMatches=True)
-        + Optional(Suppress("+"))
-    )
+        var("latent")
+        + "=~"
+        + OneOrMore(
+            var.setResultsName("obs", listAllMatches=True) + Optional(Suppress("+"))
+        )
     )
 
     # Step 2: Preprocess string to lines
-
 
     # Step 3: Initialize arguments and fill them by parsing each line.
     ebunch = []
@@ -64,10 +61,7 @@ def parse_lavaan(lines):
                 results = reg_gram.parseString(line, parseAll=True)
                 for pred in results["predictors"]:
                     ebunch.extend(
-                        [
-                            (covariate, pred)
-                            for covariate in results["covariates"]
-                        ]
+                        [(covariate, pred) for covariate in results["covariates"]]
                     )
             elif covar_gram.matches(line):
                 results = covar_gram.parseString(line, parseAll=True)
@@ -77,7 +71,5 @@ def parse_lavaan(lines):
             elif latent_gram.matches(line):
                 results = latent_gram.parseString(line, parseAll=True)
                 latents.append(results["latent"])
-                ebunch.extend(
-                    [(results["latent"], obs) for obs in results["obs"]]
-                )
+                ebunch.extend([(results["latent"], obs) for obs in results["obs"]])
     return ebunch, latents, err_corr, err_var

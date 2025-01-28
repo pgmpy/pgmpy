@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import unittest
 
 import networkx as nx
@@ -338,6 +339,56 @@ class TestDAGCreation(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestDAGParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = """# %load model.lav
+                       # measurement model
+                         ind60 =~ x1 + x2 + x3
+                         dem60 =~ y1 + y2 + y3 + y4
+                         dem65 =~ y5 + y6 + y7 + y8
+                       # regressions
+                         dem60 ~ ind60
+                         dem65 ~ ind60 + dem60
+                       # residual correlations
+                         y1 ~~ y5
+                         y2 ~~ y4 + y6
+                         y3 ~~ y7
+                         y4 ~~ y8
+                         y6 ~~ y8
+                       """
+        model_from_str = DAG.from_lavaan(string=model_str)
+
+        with open("test_model.lav", "w") as f:
+            f.write(model_str)
+        model_from_file = DAG.from_lavaan(filename="test_model.lav")
+        os.remove("test_model.lav")
+
+        expected_edges = set(
+            [
+                ("ind60", "x1"),
+                ("ind60", "x2"),
+                ("ind60", "x3"),
+                ("ind60", "dem60"),
+                ("ind60", "dem65"),
+                ("dem60", "dem65"),
+                ("dem60", "y1"),
+                ("dem60", "y2"),
+                ("dem60", "y3"),
+                ("dem60", "y4"),
+                ("dem65", "y5"),
+                ("dem65", "y6"),
+                ("dem65", "y7"),
+                ("dem65", "y8"),
+            ]
+        )
+
+        expected_latents = set(["dem60", "dem65", "ind60"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
 
 
 class TestDAGMoralization(unittest.TestCase):
