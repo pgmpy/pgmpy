@@ -395,12 +395,8 @@ class TestXBNWriter(unittest.TestCase):
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        if nx.__version__.startswith("1"):
-            for var, properties in nodes.items():
-                model.nodes[var] = properties
-        else:
-            for var, properties in nodes.items():
-                model._node[var] = properties
+        for var, properties in nodes.items():
+            model._node[var] = properties
 
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
@@ -899,12 +895,8 @@ class TestXBNWriterTorch(unittest.TestCase):
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        if nx.__version__.startswith("1"):
-            for var, properties in nodes.items():
-                model.nodes[var] = properties
-        else:
-            for var, properties in nodes.items():
-                model._node[var] = properties
+        for var, properties in nodes.items():
+            model._node[var] = properties
 
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)

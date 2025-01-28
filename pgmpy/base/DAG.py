@@ -346,16 +346,10 @@ class DAG(nx.DiGraph):
         return [node for node, out_degree in self.out_degree_iter() if out_degree == 0]
 
     def out_degree_iter(self, nbunch=None, weight=None):
-        if nx.__version__.startswith("1"):
-            return super(DAG, self).out_degree_iter(nbunch, weight)
-        else:
-            return iter(self.out_degree(nbunch, weight))
+        return iter(self.out_degree(nbunch, weight))
 
     def in_degree_iter(self, nbunch=None, weight=None):
-        if nx.__version__.startswith("1"):
-            return super(DAG, self).in_degree_iter(nbunch, weight)
-        else:
-            return iter(self.in_degree(nbunch, weight))
+        return iter(self.in_degree(nbunch, weight))
 
     def get_roots(self):
         """
