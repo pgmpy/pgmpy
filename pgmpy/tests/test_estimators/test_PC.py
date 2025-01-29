@@ -240,7 +240,6 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
         self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
 
-        # Failing
         pdag = PDAG(
             directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
         )
@@ -248,6 +247,15 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         self.assertSetEqual(
             set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
         )
+
+        # Failing
+        # pdag = PDAG(
+        #     directed_ebunch=[("A", "B"), ("D", "C"), ('D', 'B')], undirected_ebunch=[("B", "C")]
+        # )
+        # cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        # self.assertSetEqual(
+        #     set(cpdag.edges()), {("A", "B"), ("D", "C"), ('D', 'B'), ("B", "C")}
+        # )
 
         pdag = PDAG(
             directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
