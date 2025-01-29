@@ -9,7 +9,7 @@ import pandas as pd
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.utils.parser import parse_lavaan
+from pgmpy.utils.parser import parse_lavaan, parse_dagitty
 
 
 class DAG(nx.DiGraph):
@@ -72,9 +72,13 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, syntax=None):
+    def __init__(
+        self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None, syntax=None
+    ):
         if syntax == "lavaan":
             ebunch, latents, _, _ = parse_lavaan(lavaan_str)
+        elif syntax == "dagitty":
+            ebunch, latents = parse_dagitty(dagitty_str)
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -120,6 +124,33 @@ class DAG(nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
 
         return cls(syntax="lavaan", lavaan_str=lavaan_str)
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes a `DAG` instance using lavaan syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `lavaan` style multiline set of regression equation representing the model.
+            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+
+        filename: str (default: None)
+            The filename of the file containing the model in lavaan syntax.
+
+        Examples
+        --------
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        return cls(syntax="dagitty", dagitty_str=dagitty_str)
 
     def add_node(self, node, weight=None, latent=False):
         """
