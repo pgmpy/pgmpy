@@ -426,6 +426,7 @@ class PC(StructureEstimator):
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
+        "Used for checking whether a new v-structure is getting formed"
         for predecessor in pdag.predecessors(v):
             if (
                 not pdag.has_edge(
