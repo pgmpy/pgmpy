@@ -29,11 +29,11 @@ class TestPCFakeCITest(unittest.TestCase):
         """
         A mock CI testing function which gives False for every condition
         except for the following:
-            1. B \u27C2 C
-            2. B \u27C2 D
-            3. C \u27C2 D
-            4. A \u27C2 B | C
-            5. A \u27C2 C | B
+            1. B \u27c2 C
+            2. B \u27c2 D
+            3. C \u27c2 D
+            4. A \u27c2 B | C
+            5. A \u27c2 C | B
         """
         Z = list(Z)
         if X == "B":
@@ -91,7 +91,7 @@ class TestPCFakeCITest(unittest.TestCase):
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
 
-class TestPCEstimatorFromIndependencies(unittest.TestCase):
+class TestPCEstimatorFromIndependences(unittest.TestCase):
     def test_build_skeleton_from_ind(self):
         # Specify a set of independencies
         for variant in ["orig", "stable", "parallel"]:
@@ -156,6 +156,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             )
 
     def test_skeleton_to_pdag(self):
+        # D - A - C - B  ==> D - A -> C <- B
         skel = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
         sep_sets = {
             frozenset({"D", "C"}): ("A",),
@@ -168,6 +169,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
+        # C - A - B  ==> C -> A <- B
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
@@ -177,6 +179,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set([("B", "A"), ("C", "A")]),
         )
 
+        # C - A - B ==> C - A - B
         sep_sets = {frozenset({"B", "C"}): ("A",)}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
         pdag = PC.apply_orientation_rules(pdag)
@@ -185,6 +188,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
+        # {A, B} - C - D ==> {A, B} -> C -> D
         skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
         sep_sets = {
             frozenset({"A", "B"}): tuple(),
@@ -197,6 +201,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
 
+        # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
@@ -219,6 +224,143 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
                     ("C", "B"),
                     ("A", "D"),
                     ("B", "D"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+    def test_pdag_to_cpdag(self):
+        pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C"), ("D", "B")],
+            undirected_ebunch=[("B", "C")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("D", "B"), ("B", "C")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "C")],
+            undirected_ebunch=[("A", "C")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C"), ("D", "C")}
+        )
+
+        # Examples taken from Perkovi\`c 2017.
+        pdag = PDAG(
+            directed_ebunch=[("V1", "X")],
+            undirected_ebunch=[("X", "V2"), ("V2", "Y"), ("X", "Y")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {("V1", "X"), ("X", "V2"), ("X", "Y"), ("V2", "Y"), ("Y", "V2")},
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("Y", "X")],
+            undirected_ebunch=[("V1", "X"), ("X", "V2"), ("V2", "Y")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {
+                ("X", "V1"),
+                ("Y", "X"),
+                ("X", "V2"),
+                ("V2", "X"),
+                ("V2", "Y"),
+                ("Y", "V2"),
+            },
+        )
+
+        # Exmaples from Bang 2024
+        pdag = PDAG(
+            directed_ebunch=[("B", "D"), ("C", "D")],
+            undirected_ebunch=[("A", "D"), ("A", "C")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()), {("B", "D"), ("D", "A"), ("C", "A"), ("C", "D")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("C", "B")],
+            undirected_ebunch=[("D", "B"), ("D", "A"), ("D", "C")],
+        )
+        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()),
+            {
+                ("A", "B"),
+                ("C", "B"),
+                ("D", "B"),
+                ("D", "A"),
+                ("A", "D"),
+                ("D", "C"),
+                ("C", "D"),
+            },
+        )
+
+        undirected_edges = [("A", "C"), ("B", "C"), ("D", "C")]
+        directed_edges = [("B", "D"), ("D", "A")]
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        mpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
+        self.assertSetEqual(
+            set(mpdag.edges()),
+            set(
+                [
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        pdag = PC.apply_orientation_rules(pdag)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
                     ("C", "D"),
                 ]
             ),
