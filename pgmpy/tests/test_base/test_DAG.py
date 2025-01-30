@@ -410,7 +410,7 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_file.latents), expected_latents)
 
     def test_failing(self):
-        # dag1 = DAG.from_dagitty("dag{ X-> {Y Z}  Z->A}")
+        dag1 = DAG.from_dagitty("dag{ X-> {Y Z}  Z->A}")
         dag2 = DAG.from_dagitty(
             """
                 dag {
