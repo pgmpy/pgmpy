@@ -10,19 +10,19 @@ from pgmpy.independencies import IndependenceAssertion
 
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
-    Checks if `X \u27C2 Y | Z` is in `independencies`. This method is implemented to
+    Checks if `X \u27c2 Y | Z` is in `independencies`. This method is implemented to
     have an uniform API when the independencies are provided instead of data.
 
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame The dataset in which to test the indepenedence condition.
 
@@ -72,7 +72,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -132,7 +132,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -192,7 +192,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -251,7 +251,7 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -325,7 +325,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -381,14 +381,14 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                 if isinstance(z_state, str):
                     logger.info(
-                        f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
+                        f"Skipping the test {X} \u27c2 {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
                     logger.info(
-                        f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
+                        f"Skipping the test {X} \u27c2 {Y} | {z_str}. Not enough samples"
                     )
             else:
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
@@ -412,13 +412,13 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.
@@ -550,13 +550,13 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.

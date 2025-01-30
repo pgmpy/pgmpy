@@ -411,7 +411,7 @@ class DAG(nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> chain = DAG([('X', 'Y'), ('Y', 'Z')])
         >>> chain.get_independencies()
-        (X \u27C2 Z | Y)
+        (X \u27c2 Z | Y)
         """
         nodes = set(self.nodes())
         if not include_latents:
@@ -451,7 +451,7 @@ class DAG(nx.DiGraph):
         >>>                         ('grade', 'letter'), ('intel', 'SAT')])
         >>> ind = student.local_independencies('grade')
         >>> ind
-        (grade \u27C2 SAT | diff, intel)
+        (grade \u27c2 SAT | diff, intel)
         """
 
         independencies = Independencies()

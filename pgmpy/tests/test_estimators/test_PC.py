@@ -29,11 +29,11 @@ class TestPCFakeCITest(unittest.TestCase):
         """
         A mock CI testing function which gives False for every condition
         except for the following:
-            1. B \u27C2 C
-            2. B \u27C2 D
-            3. C \u27C2 D
-            4. A \u27C2 B | C
-            5. A \u27C2 C | B
+            1. B \u27c2 C
+            2. B \u27c2 D
+            3. C \u27c2 D
+            4. A \u27c2 B | C
+            5. A \u27c2 C | B
         """
         Z = list(Z)
         if X == "B":
