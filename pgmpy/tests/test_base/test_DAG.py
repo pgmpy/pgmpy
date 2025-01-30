@@ -361,12 +361,6 @@ class TestDAGParser(unittest.TestCase):
                        # regressions
                          dem60 ~ ind60
                          dem65 ~ ind60 + dem60
-                       # residual correlations
-                         y1 ~~ y5
-                         y2 ~~ y4 + y6
-                         y3 ~~ y7
-                         y4 ~~ y8
-                         y6 ~~ y8
                        """
         model_from_str = DAG.from_lavaan(string=model_str)
 
@@ -395,6 +389,37 @@ class TestDAGParser(unittest.TestCase):
         )
 
         expected_latents = set(["dem60", "dem65", "ind60"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_from_lavaan_with_residual_correlation(self):
+        model_str = """# %load model_with_residual_correlation.lav
+                       # measurement model
+                         ind60 =~ x1 + x2 + x3
+                       # regressions
+                         dem60 ~ ind60
+                       # residual correlations
+                         y1 ~~ y5
+                       """
+        model_from_str = DAG.from_lavaan(string=model_str)
+
+        with open("test_model_with_residual_correlation.lav", "w") as f:
+            f.write(model_str)
+        model_from_file = DAG.from_lavaan(filename="test_model_with_residual_correlation.lav")
+        os.remove("test_model_with_residual_correlation.lav")
+
+        expected_edges = set(
+            [
+                ("ind60", "x1"),
+                ("ind60", "x2"),
+                ("ind60", "x3"),
+                ("ind60", "dem60"),
+            ]
+        )
+
+        expected_latents = set(["ind60"])
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
