@@ -163,23 +163,23 @@ class Independencies(object):
         >>> from pgmpy.independencies import Independencies
         >>> ind1 = Independencies(('A', ['B', 'C'], 'D'))
         >>> ind1.closure()
-        (A \u27C2 B | D, C)
-        (A \u27C2 B, C | D)
-        (A \u27C2 B | D)
-        (A \u27C2 C | D, B)
-        (A \u27C2 C | D)
+        (A \u27c2 B | D, C)
+        (A \u27c2 B, C | D)
+        (A \u27c2 B | D)
+        (A \u27c2 C | D, B)
+        (A \u27c2 C | D)
 
         >>> ind2 = Independencies(('W', ['X', 'Y', 'Z']))
         >>> ind2.closure()
-        (W \u27C2 Y)
-        (W \u27C2 Y | X)
-        (W \u27C2 Z | Y)
-        (W \u27C2 Z, X, Y)
-        (W \u27C2 Z)
-        (W \u27C2 Z, X)
-        (W \u27C2 X, Y)
-        (W \u27C2 Z | X)
-        (W \u27C2 Z, Y | X)
+        (W \u27c2 Y)
+        (W \u27c2 Y | X)
+        (W \u27c2 Z | Y)
+        (W \u27c2 Z, X, Y)
+        (W \u27c2 Z)
+        (W \u27c2 Z, X)
+        (W \u27c2 X, Y)
+        (W \u27c2 Z | X)
+        (W \u27c2 Z, Y | X)
         [..]
         """
 
@@ -464,13 +464,13 @@ class IndependenceAssertion(object):
 
     def __str__(self):
         if self.event3:
-            return "({event1} \u27C2 {event2} | {event3})".format(
+            return "({event1} \u27c2 {event2} | {event3})".format(
                 event1=", ".join([str(e) for e in self.event1]),
                 event2=", ".join([str(e) for e in self.event2]),
                 event3=", ".join([str(e) for e in self.event3]),
             )
         else:
-            return "({event1} \u27C2 {event2})".format(
+            return "({event1} \u27c2 {event2})".format(
                 event1=", ".join([str(e) for e in self.event1]),
                 event2=", ".join([str(e) for e in self.event2]),
             )

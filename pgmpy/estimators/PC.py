@@ -395,6 +395,24 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
+    def _check_incoming_edges(pdag, u, v):
+        "Used for checking whether a new v-structure is getting formed"
+        for predecessor in pdag.predecessors(v):
+            if (
+                not pdag.has_edge(
+                    v, predecessor
+                )  # this ignores bidirected edges of 'v'
+                and not pdag.has_edge(
+                    predecessor, u
+                )  # prevent the case (by returning true) when a new unshielded
+                and not pdag.has_edge(
+                    u, predecessor
+                )  # collider may form at 'v'  i.e. predecessor--> v <--u
+            ):
+                return True
+        return False
+
+    @staticmethod
     def orient_colliders(skeleton, separating_sets):
         """
         Orients the edges that form v-structures in a graph skeleton
@@ -518,11 +536,21 @@ class PC(StructureEstimator):
             # (Explanation in Koller & Friedman PGM, page 88)
             for pair in node_pairs:
                 X, Y = pair
-                if not pdag.has_edge(X, Y):
+                if not pdag.has_edge(X, Y) and not pdag.has_edge(Y, X):
                     for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
                         set(pdag.successors(Y)) & set(pdag.predecessors(Y))
                     ):
-                        pdag.remove_edge(Y, Z)
+                        if not PC._check_incoming_edges(pdag, Z, Y):
+                            any_directed = False
+                            for path in nx.all_simple_paths(pdag, Y, Z):
+                                is_directed = True
+                                for src, dst in list(zip(path, path[1:])):
+                                    if pdag.has_edge(dst, src):
+                                        is_directed = False
+                                if is_directed:
+                                    any_directed = True
+                            if not any_directed:
+                                pdag.remove_edge(Y, Z)
 
             # 2) for each X-Y with a directed path from X to Y, orient edges to X->Y
             for pair in node_pairs:
@@ -551,6 +579,7 @@ class PC(StructureEstimator):
                         & (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
                         & (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))
                     ):
+                        # if not PC.check_incoming_edges(pdag, W):
                         pdag.remove_edge(W, Z)
 
             # This rule (rule 4 in Meek's rules) is only used in the case of a
@@ -570,8 +599,10 @@ class PC(StructureEstimator):
                         & set(pdag.successors(Y))
                     ):
                         for W in (
-                            set(pdag.successors(Y)) - set(pdag.predecessors(Y))
-                        ) & (set(pdag.predecessors(Z)) | set(pdag.successors(Z))):
+                            (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
+                            & (set(pdag.predecessors(Z)) | set(pdag.successors(Z)))
+                            & set(pdag.predecessors(X))
+                        ):
                             pdag.remove_edge(X, Z)
 
             progress = num_edges > pdag.number_of_edges()
