@@ -52,9 +52,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set(),
-                white_list=self.model2_possible_edges,
-                fixed_edges=set(),
+                required_edges=set(),
+                forbidden_edges=set(),
             )
         )
         model2_legal_ops_ref = [
@@ -70,7 +69,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             set([op for op, score in model2_legal_ops_ref]),
         )
 
-    def test_legal_operations_blacklist_whitelist(self):
+    def test_legal_operations_forbidden_required(self):
         model2_legal_ops_bl = list(
             self.est_rand._legal_operations(
                 model=self.model2,
@@ -78,9 +77,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set([("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]),
-                white_list=self.model2_possible_edges,
-                fixed_edges=set(),
+                forbidden_edges=set([("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]),
+                required_edges=set(),
             )
         )
         model2_legal_ops_bl_ref = [
@@ -99,9 +97,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set(),
-                white_list=set([("A", "B"), ("A", "C"), ("C", "A"), ("A", "B")]),
-                fixed_edges=set(),
+                forbidden_edges=set([("B", "C"), ("C", "B"), ("B", "A")]),
+                required_edges=set(),
             )
         )
         model2_legal_ops_wl_ref = [
@@ -126,9 +123,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=float("inf"),
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops)), 20)
 
@@ -143,9 +139,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=float("inf"),
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops_tabu)), 18)
 
@@ -155,9 +150,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=1,
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops_indegree)), 11)
 
@@ -167,9 +161,8 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=1,
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
 
         legal_ops_both_ref = {
@@ -203,7 +196,10 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
 
-        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")], show_progress=False)
+        expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
+        est3 = self.est_rand.estimate(
+            expert_knowledge=expert_knowledge, show_progress=False
+        )
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
@@ -212,10 +208,11 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
+        expert_knowledge = ExpertKnowledge(required_edges=[("Pclass", "Survived")])
         self.assertTrue(
             ("Pclass", "Survived")
             in self.est_titanic2.estimate(
-                fixed_edges=[("Pclass", "Survived")], show_progress=False
+                expert_knowledge=expert_knowledge, show_progress=False
             ).edges()
         )
 
@@ -232,13 +229,10 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
         est = HillClimbSearch(data)
         expert_knowledge = ExpertKnowledge(
-            fixed_edges=[("A", "B"), ("B", "C")], white_list=[("F", "C")]
+            required_edges=[("A", "B"), ("B", "C")],
+            forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
         )
-        best_model = est.estimate(
-            fixed_edges=[("A", "B"), ("B", "C")],
-            white_list=[("F", "C")],
-            show_progress=False,
-        )
+        best_model = est.estimate(expert_knowledge=expert_knowledge)
 
     def test_estimate(self):
         for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:

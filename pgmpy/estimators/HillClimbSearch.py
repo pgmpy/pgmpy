@@ -17,6 +17,7 @@ from pgmpy.estimators import (
     BDs,
     BICCondGauss,
     BICGauss,
+    ExpertKnowledge,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
     StructureEstimator,
@@ -65,9 +66,8 @@ class HillClimbSearch(StructureEstimator):
         structure_score,
         tabu_list,
         max_indegree,
-        black_list,
-        white_list,
-        fixed_edges,
+        forbidden_edges,
+        required_edges,
     ):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
@@ -92,11 +92,7 @@ class HillClimbSearch(StructureEstimator):
             # Check if adding (X, Y) will create a cycle.
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
-                if (
-                    (operation not in tabu_list)
-                    and ((X, Y) not in black_list)
-                    and ((X, Y) in white_list)
-                ):
+                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if len(new_parents) <= max_indegree:
@@ -107,7 +103,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
-            if (operation not in tabu_list) and ((X, Y) not in fixed_edges):
+            if (operation not in tabu_list) and ((X, Y) not in required_edges):
                 old_parents = model.get_parents(Y)
                 new_parents = [var for var in old_parents if var != X]
                 score_delta = score(Y, new_parents) - score(Y, old_parents)
@@ -123,9 +119,8 @@ class HillClimbSearch(StructureEstimator):
                 operation = ("flip", (X, Y))
                 if (
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                    and ((X, Y) not in fixed_edges)
-                    and ((Y, X) not in black_list)
-                    and ((Y, X) in white_list)
+                    and ((X, Y) not in required_edges)
+                    and ((Y, X) not in forbidden_edges)
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
@@ -145,11 +140,9 @@ class HillClimbSearch(StructureEstimator):
         self,
         scoring_method="k2",
         start_dag=None,
-        fixed_edges=set(),
         tabu_length=100,
         max_indegree=None,
-        white_list=None,
-        black_list=None,
+        expert_knowledge=None,
         epsilon=1e-4,
         max_iter=1e6,
         show_progress=True,
@@ -233,24 +226,22 @@ class HillClimbSearch(StructureEstimator):
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        # Step 1.3: Check fixed_edges
-        if not hasattr(fixed_edges, "__iter__"):
-            raise ValueError("fixed_edges must be an iterable")
-        else:
-            fixed_edges = set(fixed_edges)
-            start_dag.add_edges_from(fixed_edges)
-            if not nx.is_directed_acyclic_graph(start_dag):
-                raise ValueError(
-                    "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
-                )
+        # Step 1.3: Check if expert knowledge was specified
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
 
-        # Step 1.4: Check black list and white list
-        black_list = set() if black_list is None else set(black_list)
-        white_list = (
-            set([(u, v) for u in self.variables for v in self.variables])
-            if white_list is None
-            else set(white_list)
-        )
+        # Step 1.4: Check if required edges cause a cycle
+        start_dag.add_edges_from(
+            expert_knowledge.required_edges
+        )  # check for adding redundant edges?
+        if not nx.is_directed_acyclic_graph(start_dag):
+            raise ValueError(
+                "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
+            )
+        start_dag.remove_edges_from(
+            expert_knowledge.forbidden_edges
+        )  # check cycle here?
+
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         if max_indegree is None:
             max_indegree = float("inf")
@@ -274,9 +265,8 @@ class HillClimbSearch(StructureEstimator):
                     score.structure_prior_ratio,
                     tabu_list,
                     max_indegree,
-                    black_list,
-                    white_list,
-                    fixed_edges,
+                    expert_knowledge.forbidden_edges,
+                    expert_knowledge.required_edges,
                 ),
                 key=lambda t: t[1],
                 default=(None, None),
