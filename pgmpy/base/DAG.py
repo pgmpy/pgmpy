@@ -76,7 +76,7 @@ class DAG(nx.DiGraph):
         if lavaan_str:
             ebunch, latents, _, _ = parse_lavaan(lavaan_str)
 
-        super(DAG, self).__init__(ebunch=ebunch)
+        super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
         cycles = []
         try:
