@@ -78,20 +78,36 @@ def parse_dagitty(lines):
         if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(
             edge_stat
         ) > 3:
-            n = len(edge_stat) // 2
-            for i in range(n):
+            l = len(edge_stat)
+            start_i = 0
+            while start_i <= l - 1:
+                # Parse {a -> b -> c}
+                if edge_stat[start_i + 1] in ["->", "<-", "<->"]:
+                    end_i = start_i + 2
+                # Parse {a b c d}
+                else:
+                    end_i = start_i + 1
+
                 all_vars.update(
-                    handle_edge_stat(edge_stat[0 + 2 * i : 3 + 2 * i], latents, ebunch)
+                    handle_edge_stat(edge_stat[start_i : end_i + 1], latents, ebunch)
                 )
+                start_i = end_i
+
             return all_vars
 
+        l = len(edge_stat)
+        right_i = 1 if l == 2 else 2
         # length is three. Now check if any node is a subgraph
         left_vars = handle_edge_stat(edge_stat[0], latents, ebunch)
-        right_vars = handle_edge_stat(edge_stat[2], latents, ebunch)
+        right_vars = handle_edge_stat(edge_stat[right_i], latents, ebunch)
         all_vars.update(left_vars)
         all_vars.update(right_vars)
 
-        # Now connect the every pair of left and right vars with the given edge.
+        # No edges created for subgraph {X Y}
+        if l == 2:
+            return all_vars
+
+        # Now connect the every pair of left and right vars with the given edge for {X <- Y}
         for left_var in list(left_vars):
             for right_var in list(right_vars):
                 # connect with the given edge.
@@ -119,6 +135,7 @@ def parse_dagitty(lines):
     # Step 0: Check if pyparsing is installed
     try:
         from pyparsing import (
+            Combine,
             OneOrMore,
             Optional,
             ParseResults,
@@ -155,8 +172,15 @@ def parse_dagitty(lines):
     statement = edge_relation.setResultsName("edge_stat*") ^ var_stat.setResultsName(
         "var_stat*"
     )
+    # Display info bb="1,2,3,4" will be parsed and discarded
+    bbre = Combine("bb=" + QuotedString('"'))
     # different statements on the same line without semicolon
-    dagitty_line = statement + ZeroOrMore(Optional(";") + statement)
+    dagitty_line = (
+        Optional(bbre)
+        + Optional(";")
+        + Optional(statement)
+        + ZeroOrMore(Optional(";") + statement)
+    )
 
     # Step 2:
     # Clean the opening of the enclosing dag{ .. } or dag Smoking { .. }
@@ -169,7 +193,6 @@ def parse_dagitty(lines):
                 assert first_line[:3] == "dag"
                 cleaned_dag = True
                 first_line = first_line[3:]
-                print(first_line)
             # Try to find and remove {, either same line as 'dag' or next lines.
             if (
                 cleaned_dag
@@ -178,7 +201,6 @@ def parse_dagitty(lines):
                 if start_loc >= 0:
                     first_line = first_line[start_loc + 1 :].strip()
                     lines.insert(0, first_line)
-                    print(first_line)
                     break
 
     # Clean the tail of the enclosing dag{ .. } or dag Smoking { .. }
@@ -189,19 +211,23 @@ def parse_dagitty(lines):
             assert last_line[-1] == "}", "dag { }"
             lines.append(last_line[:-1])
             break
-    print(lines)
     # Step 3: Initialize arguments and fill them by parsing each line.
     ebunch = []
     latents = []
     for line in lines:
         line = line.strip()
-        print(line)
         if line != "":
             results = dagitty_line.parseString(line, parseAll=True)
 
             for var_stat in results.get("var_stat", []):
-                if len(var_stat) == 2 and var_stat[1][0].lower() in ["latent", "l"]:
-                    latents.append(var_stat[0].strip('"'))
+                if len(var_stat) == 2:
+                    option = var_stat[1][0].lower()
+                    if (
+                        option[:6] == "latent"
+                        or option == "l"
+                        or option.startswith("l,")
+                    ):
+                        latents.append(var_stat[0].strip('"'))
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch)
 

@@ -126,16 +126,17 @@ class DAG(nx.DiGraph):
     @classmethod
     def from_dagitty(cls, string=None, filename=None):
         """
-        Initializes a `DAG` instance using lavaan syntax.
+        Initializes a `DAG` instance using DAGitty syntax.
 
         Parameters
         ----------
         string: str (default: None)
-            A `lavaan` style multiline set of regression equation representing the model.
-            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+            A `DAGitty` style multiline set of regression equation representing the model.
+            Refer https://www.dagitty.net/manual-3.x.pdf#page=3.58 and
+            https://github.com/jtextor/dagitty/blob/7a657776dc8f5e5ba4e323edb028e2c2aaf29327/gui/js/dagitty.js#L3417
 
         filename: str (default: None)
-            The filename of the file containing the model in lavaan syntax.
+            The filename of the file containing the model in DAGitty syntax.
 
         Examples
         --------
@@ -148,7 +149,7 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        return cls(syntax="dagitty", dagitty_str=dagitty_str)
+        return cls(dagitty_str=dagitty_str)
 
     def add_node(self, node, weight=None, latent=False):
         """
