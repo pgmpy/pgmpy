@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -72,12 +73,14 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(
-        self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None, syntax=None
-    ):
-        if syntax == "lavaan":
-            ebunch, latents, _, _ = parse_lavaan(lavaan_str)
-        elif syntax == "dagitty":
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        if lavaan_str:
+            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+            if err_corr:
+                warn(
+                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+                )
+        elif dagitty_str:
             ebunch, latents = parse_dagitty(dagitty_str)
 
         super(DAG, self).__init__(ebunch)
@@ -92,11 +95,6 @@ class DAG(nx.DiGraph):
             out_str += "\nEdges indicating the path taken for a loop: "
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
-
-            ebunch, latents, err_corr, err_var = parse_lavaan(kwargs["lavaan_str"])
-
-            # Call the parent __init__ with the arguments
-            super(DAG, self).__init__(ebunch=ebunch, latents=latents, err_corr=err_corr)
 
     @classmethod
     def from_lavaan(cls, string=None, filename=None):
@@ -123,7 +121,7 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        return cls(syntax="lavaan", lavaan_str=lavaan_str)
+        return cls(lavaan_str=lavaan_str)
 
     @classmethod
     def from_dagitty(cls, string=None, filename=None):
