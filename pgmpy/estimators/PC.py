@@ -9,19 +9,8 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import PDAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import *
+from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
-
-CI_TESTS = {
-    "chi_square": chi_square,
-    "independence_match": independence_match,
-    "pearsonr": pearsonr,
-    "pillai": pillai_trace,
-    "g_sq": g_sq,
-    "log_likelihood": log_likelihood,
-    "modified_log_likelihood": modified_log_likelihood,
-    "power_divergence": power_divergence,
-}
 
 
 class PC(StructureEstimator):
@@ -183,23 +172,10 @@ class PC(StructureEstimator):
             raise ValueError(
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
-        elif (not callable(ci_test)) and (
-            ci_test.lower() not in (list(CI_TESTS.keys()) + ["independence_match"])
-        ):
-            raise ValueError(
-                "ci_test must be a callable or one of the tests defined in CITests.py"
-            )
 
-        if (ci_test == "independence_match") and (self.independencies is None):
-            raise ValueError(
-                "For using independence_match, independencies argument must be specified"
-            )
-        elif (ci_test in set(CI_TESTS.keys()) - set(["independence_match"])) and (
-            self.data is None
-        ):
-            raise ValueError(
-                "For using Chi Square or Pearsonr, data argument must be specified"
-            )
+        ci_test = get_ci_test(
+            ci_test, full=True, data=self.data, independencies=self.independencies
+        )
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -288,13 +264,7 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        if not callable(ci_test):
-            try:
-                ci_test = CI_TESTS[ci_test]
-            except KeyError:
-                raise ValueError(
-                    f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
-                )
+        ci_test = get_ci_test(ci_test, full=True, data=None)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

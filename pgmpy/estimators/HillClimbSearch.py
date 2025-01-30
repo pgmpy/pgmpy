@@ -19,9 +19,9 @@ from pgmpy.estimators import (
     BICGauss,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
-    ScoreCache,
     StructureEstimator,
     StructureScore,
+    get_scoring_method,
 )
 
 
@@ -219,50 +219,9 @@ class HillClimbSearch(StructureEstimator):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
-        supported_methods = {
-            "k2": K2,
-            "bdeu": BDeu,
-            "bds": BDs,
-            "bic-d": BIC,
-            "aic-d": AIC,
-            "ll-g": LogLikelihoodGauss,
-            "aic-g": AICGauss,
-            "bic-g": BICGauss,
-            "ll-cg": LogLikelihoodCondGauss,
-            "aic-cg": AICCondGauss,
-            "bic-cg": BICCondGauss,
-        }
 
-        if isinstance(scoring_method, str):
-            if scoring_method.lower() in [
-                "k2score",
-                "bdeuscore",
-                "bdsscore",
-                "bicscore",
-                "aicscore",
-            ]:
-                raise ValueError(
-                    f"The scoring method names have been changed. Please refer the documentation."
-                )
-            elif scoring_method.lower() not in list(supported_methods.keys()):
-                raise ValueError(
-                    f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
-                )
-        elif not isinstance(scoring_method, StructureScore):
-            raise ValueError(
-                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
-            )
-
-        if isinstance(scoring_method, str):
-            score = supported_methods[scoring_method.lower()](data=self.data)
-        else:
-            score = scoring_method
-
-        if self.use_cache:
-            score_fn = ScoreCache.ScoreCache(score, self.data).local_score
-        else:
-            score_fn = score.local_score
-
+        score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
+        score_fn = score_c.local_score
         # Step 1.2: Check the start_dag
         if start_dag is None:
             start_dag = DAG()
