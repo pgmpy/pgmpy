@@ -11,8 +11,8 @@ import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import (
     BayesianEstimator,
-    MaximumLikelihoodEstimator,
     ExpectationMaximization,
+    MaximumLikelihoodEstimator,
 )
 from pgmpy.factors.discrete import TabularCPD
 
@@ -408,6 +408,23 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
         self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_failing(self):
+        # dag1 = DAG.from_dagitty("dag{ X-> {Y Z}  Z->A}")
+        dag2 = DAG.from_dagitty(
+            """
+                dag {
+                bb="-1.728,-4.67,2.587,4.156"
+                A [pos="2.087,3.420"]
+                X [pos="-1.228,-1.145"]
+                Y [pos="-0.725,-3.934"]
+                Z [pos="-0.135,1.659"]
+                X -> Y
+                X -> Z
+                Z -> A
+                }
+        """
+        )
 
 
 class TestDAGMoralization(unittest.TestCase):
