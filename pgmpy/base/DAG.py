@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -74,7 +75,11 @@ class DAG(nx.DiGraph):
 
     def __init__(self, ebunch=None, latents=set(), lavaan_str=None):
         if lavaan_str:
-            ebunch, latents, _, _ = parse_lavaan(lavaan_str)
+            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+            if err_corr:
+                warn(
+                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+                )
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -88,7 +93,6 @@ class DAG(nx.DiGraph):
             out_str += "\nEdges indicating the path taken for a loop: "
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
-
 
     @classmethod
     def from_lavaan(cls, string=None, filename=None):

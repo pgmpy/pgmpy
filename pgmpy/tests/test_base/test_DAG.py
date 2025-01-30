@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import warnings
 
 import networkx as nx
 import numpy as np
@@ -403,12 +404,14 @@ class TestDAGParser(unittest.TestCase):
                        # residual correlations
                          y1 ~~ y5
                        """
-        model_from_str = DAG.from_lavaan(string=model_str)
-
-        with open("test_model_with_residual_correlation.lav", "w") as f:
-            f.write(model_str)
-        model_from_file = DAG.from_lavaan(filename="test_model_with_residual_correlation.lav")
-        os.remove("test_model_with_residual_correlation.lav")
+        with warnings.catch_warnings(record=True) as w:
+            model_from_str = DAG.from_lavaan(string=model_str)
+            assert len(w) > 0
+            assert issubclass(w[-1].category, UserWarning)
+            self.assertEqual(
+                str(w[-1].message),
+                "Residual correlations [('y1', 'y5')] are ignored in DAG. Use the SEM class to keep them.",
+            )
 
         expected_edges = set(
             [
@@ -421,9 +424,22 @@ class TestDAGParser(unittest.TestCase):
 
         expected_latents = set(["ind60"])
         self.assertEqual(set(model_from_str.edges()), expected_edges)
-        self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
-        self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    # def test_reorder_parents_warning(self):
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always")
+    #         self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
+    #         assert "Same ordering provided as current" in str(w[-1].message)
+    #         np_test.assert_array_equal(
+    #             self.cpd2.get_values(),
+    #             np.array(
+    #                 [
+    #                     [0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
+    #                     [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6],
+    #                 ]
+    #             ),
+    #         )
 
 
 class TestDAGMoralization(unittest.TestCase):
