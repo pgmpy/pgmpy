@@ -419,6 +419,60 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
 
+    def test_from_dagitty(self):
+        model_str = """
+            dag{
+                smoking "carry matches" [e] ; cancer [o]
+                smoking -> {"carry matches" -> cancer} smoking <-> coffee
+            }"""
+        model_from_str = DAG.from_dagitty(string=model_str)
+
+        with open("test_model.dagitty", "w") as f:
+            f.write(model_str)
+        model_from_file = DAG.from_dagitty(filename="test_model.dagitty")
+        os.remove("test_model.dagitty")
+
+        expected_edges = set(
+            [
+                ("smoking", "cancer"),
+                ("smoking", "carry matches"),
+                ("carry matches", "cancer"),
+                ("u_coffee_smoking", "coffee"),
+                ("u_coffee_smoking", "smoking"),
+            ]
+        )
+
+        expected_latents = set(["u_coffee_smoking"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_from_daggitty_single_line_with_group_of_vars(self):
+        dag = DAG.from_dagitty(
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}'
+        )
+        self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
+        self.assertEqual(set(dag.latents), set(["X"]))
+
+    def test_from_dagitty_multiline_with_display_info(self):
+        dag = DAG.from_dagitty(
+            """
+                dag {
+                bb="-1.728,-4.67,2.587,4.156"
+                A [pos="2.087,3.420"]
+                X [pos="-1.228,-1.145"]
+                Y [pos="-0.725,-3.934"]
+                Z [latent, pos="-0.135,1.659"]
+                X -> Y
+                X -> Z
+                Z -> A
+                }
+        """
+        )
+        self.assertEqual(set(dag.edges()), set([("X", "Y"), ("X", "Z"), ("Z", "A")]))
+        self.assertEqual(set(dag.latents), set(["Z"]))
+
 
 class TestDAGMoralization(unittest.TestCase):
     def setUp(self):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -9,7 +10,7 @@ import pandas as pd
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.utils.parser import parse_lavaan
+from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
 class DAG(nx.DiGraph):
@@ -72,13 +73,15 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None):
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
             if err_corr:
                 logger.warning(
                     f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
                 )
+        elif dagitty_str:
+            ebunch, latents = parse_dagitty(dagitty_str)
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -119,6 +122,34 @@ class DAG(nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
 
         return cls(lavaan_str=lavaan_str)
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes a `DAG` instance using DAGitty syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline set of regression equation representing the model.
+            Refer https://www.dagitty.net/manual-3.x.pdf#page=3.58 and
+            https://github.com/jtextor/dagitty/blob/7a657776dc8f5e5ba4e323edb028e2c2aaf29327/gui/js/dagitty.js#L3417
+
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Examples
+        --------
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        return cls(dagitty_str=dagitty_str)
 
     def add_node(self, node, weight=None, latent=False):
         """
