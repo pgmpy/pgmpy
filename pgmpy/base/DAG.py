@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import itertools
-from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -77,7 +76,7 @@ class DAG(nx.DiGraph):
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
             if err_corr:
-                warn(
+                logger.warning(
                     f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
                 )
 

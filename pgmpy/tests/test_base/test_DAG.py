@@ -12,8 +12,8 @@ import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import (
     BayesianEstimator,
-    MaximumLikelihoodEstimator,
     ExpectationMaximization,
+    MaximumLikelihoodEstimator,
 )
 from pgmpy.factors.discrete import TabularCPD
 
@@ -404,15 +404,8 @@ class TestDAGParser(unittest.TestCase):
                        # residual correlations
                          y1 ~~ y5
                        """
-        with warnings.catch_warnings(record=True) as w:
-            model_from_str = DAG.from_lavaan(string=model_str)
-            assert len(w) > 0
-            assert issubclass(w[-1].category, UserWarning)
-            self.assertEqual(
-                str(w[-1].message),
-                "Residual correlations [('y1', 'y5')] are ignored in DAG. Use the SEM class to keep them.",
-            )
 
+        model_from_str = DAG.from_lavaan(string=model_str)
         expected_edges = set(
             [
                 ("ind60", "x1"),
