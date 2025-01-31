@@ -5,7 +5,6 @@ import itertools
 import networkx as nx
 import numpy as np
 import pandas as pd
-from typing import List
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
@@ -77,8 +76,8 @@ class DAG(nx.DiGraph):
         self,
         ebunch=None,
         latents=set(),
-        lavaan_str: List[str] = None,
-        dagitty_str: List[str] = None,
+        lavaan_str=None,
+        dagitty_str=None,
     ):
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
