@@ -315,18 +315,25 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 for node in sort_nodes:
                     if node in data.columns:
                         cpd = self.get_cpds(node)
+                        parents = cpd.parents
 
-                        dist_fn = cpd.fn()
+                        if len(parents) > 0:
+                            parent_sample = {
+                                parent: torch.tensor(data[parent].values).float()
+                                for parent in parents
+                            }
+                        else:
+                            parent_sample = None
+
+                        dist_fn = cpd.fn(parent_sample)
                         obs_data = torch.tensor(data[node].values).float()
 
                         with pyro.plate(f"plate_{node}", len(data)):
                             pyro.sample(node, dist_fn, obs=obs_data)
 
             nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
-
             mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
             mcmc.run()
 
             samples = mcmc.get_samples()
-
             return samples

@@ -170,8 +170,9 @@ class TestFBNMethods(unittest.TestCase):
         self.assertTrue(np.all(samples["gamma"] > 0))
 
     def test_fit_normal(self):
+        alpha = 0.23
         x1 = np.random.normal(1, 2, size=10000)
-        x2 = np.random.normal(x1 + 5, 1)
+        x2 = np.random.normal((x1 * alpha) + 5, 1)
         data = pd.DataFrame({"x1": x1, "x2": x2})
 
         def x1_prior():
@@ -179,27 +180,32 @@ class TestFBNMethods(unittest.TestCase):
             sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
             return dist.Normal(mu, sigma)
 
-        def x2_prior():
+        def x2_prior(parent):
             mu = pyro.sample("x2_mu", dist.Normal(5, 1))
             sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
-            return dist.Normal(mu, sigma)
+            alpha = pyro.sample("x2_alpha", dist.Normal(1, 3))
 
-        cpd1 = FunctionalCPD("x1", lambda: x1_prior())
-        cpd2 = FunctionalCPD("x2", lambda: x2_prior())
+            return dist.Normal(mu + (alpha * parent), sigma)
+
+        cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
+        cpd2 = FunctionalCPD(
+            "x2", lambda parent: x2_prior(parent["x1"]), parents=["x1"]
+        )
 
         self.model.add_cpds(cpd1, cpd2)
-        params = self.model.fit(data, method="MCMC", num_steps=100)
+        params = self.model.fit(data, method="MCMC", num_steps=1000)
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
         self.assertIn("x2_mu", params)
         self.assertIn("x2_sigma", params)
+        self.assertIn("x2_alpha", params)
 
         self.assertAlmostEqual(params["x1_mu"].mean(), 1, delta=0.2)
         self.assertAlmostEqual(params["x1_sigma"].mean(), 2, delta=0.2)
-        self.assertAlmostEqual(params["x2_mu"].mean(), 6, delta=0.2)
-        # This doesn't work
-        # self.assertAlmostEqual(params['x2_sigma'].mean(), 1, delta=0.2)
+        self.assertAlmostEqual(params["x2_mu"].mean(), 5, delta=0.2)
+        self.assertAlmostEqual(params["x2_sigma"].mean(), 1, delta=0.2)
+        self.assertAlmostEqual(params["x2_alpha"].mean(), 0.23, delta=0.2)
 
     def test_fit_different_distributions(self):
         x1 = np.random.beta(1, 5, size=5000)
@@ -207,20 +213,22 @@ class TestFBNMethods(unittest.TestCase):
         data = pd.DataFrame({"x1": x1, "x2": x2})
 
         def x1_prior():
-            concen1 = pyro.sample("x1_concen1", dist.Normal(0, 10))
-            concen0 = pyro.sample("x1_concen0", dist.HalfCauchy(scale=4))
+            concen1 = pyro.sample("x1_concen1", dist.HalfNormal(3))
+            concen0 = pyro.sample("x1_concen0", dist.HalfNormal(4))
             return dist.Beta(concen1, concen0)
 
-        def x2_prior():
-            rate = pyro.sample("x2_rate", dist.Normal(0, 5))
-            return dist.Poisson(rate)
+        def x2_prior(parent):
+            rate = pyro.sample("x2_rate", dist.Gamma(2, 1))
+            return dist.Poisson(rate + parent)
 
-        cpd1 = FunctionalCPD("x1", lambda: x1_prior())
-        cpd2 = FunctionalCPD("x2", lambda: x2_prior())
+        cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
+        cpd2 = FunctionalCPD(
+            "x2", lambda parent: x2_prior(parent["x1"]), parents=["x1"]
+        )
 
         self.model.add_cpds(cpd1, cpd2)
 
-        params = self.model.fit(data, method="MCMC", num_steps=100)
+        params = self.model.fit(data, method="MCMC", num_steps=1000)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
@@ -228,4 +236,4 @@ class TestFBNMethods(unittest.TestCase):
 
         self.assertAlmostEqual(params["x1_concen1"].mean(), 1, delta=0.2)
         self.assertAlmostEqual(params["x1_concen0"].mean(), 5, delta=0.2)
-        self.assertAlmostEqual(params["x2_rate"].mean(), 5.17, delta=0.2)
+        self.assertAlmostEqual(params["x2_rate"].mean(), 5, delta=0.2)
