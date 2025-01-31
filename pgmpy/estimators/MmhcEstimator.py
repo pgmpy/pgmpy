@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import networkx as nx
+
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
@@ -80,15 +82,20 @@ class MmhcEstimator(StructureEstimator):
             scoring_method = BDeu(self.data, equivalent_sample_size=10)
 
         skel = self.mmpc(significance_level)
-
         hc = HillClimbSearch(self.data)
 
-        expert_knowledge = ExpertKnowledge(white_list=skel.to_directed().edges())
+        possible_edges = nx.complete_graph(
+            n=self.state_names.keys(), create_using=nx.Graph
+        ).edges()
+
+        expert_knowledge = ExpertKnowledge(
+            forbidden_edges=possible_edges - skel.to_directed().edges()
+        )
 
         model = hc.estimate(
             scoring_method=scoring_method,
-            tabu_length=tabu_length,
             expert_knowledge=expert_knowledge,
+            tabu_length=tabu_length,
         )
 
         return model

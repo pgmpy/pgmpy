@@ -8,9 +8,10 @@ import numpy as np
 
 try:
     import pyparsing as pp
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        e.msg
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     )
 
 from pgmpy.factors.discrete import State, TabularCPD

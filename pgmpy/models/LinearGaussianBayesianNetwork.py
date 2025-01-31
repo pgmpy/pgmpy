@@ -9,7 +9,7 @@ from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 
 
-class LinearGaussianBayesianNetwork(BayesianNetwork):
+class LinearGaussianBayesianNetwork(DAG):
     """
     A Linear Gaussian Bayesian Network is a Bayesian Network, all
     of whose variables are continuous, and where all of the CPDs
@@ -20,6 +20,12 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
     Gaussian distributions.
 
     """
+
+    def __init__(self, ebunch=None, latents=set()):
+        super(LinearGaussianBayesianNetwork, self).__init__(
+            ebunch=ebunch, latents=latents
+        )
+        self.cpds = []
 
     def add_cpds(self, *cpds):
         """
@@ -89,7 +95,15 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
-        return super(LinearGaussianBayesianNetwork, self).get_cpds(node)
+        if node is not None:
+            if node not in self.nodes():
+                raise ValueError("Node not present in the Directed Graph")
+            else:
+                for cpd in self.cpds:
+                    if cpd.variable == node:
+                        return cpd
+        else:
+            return self.cpds
 
     def remove_cpds(self, *cpds):
         """

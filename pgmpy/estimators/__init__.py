@@ -2,6 +2,7 @@ from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEs
 from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.StructureScore import (
+    get_scoring_method,
     StructureScore,
     K2,
     BDeu,
@@ -20,7 +21,6 @@ from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
-from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 from pgmpy.estimators.EM import ExpectationMaximization
 from pgmpy.estimators.PC import PC

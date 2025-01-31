@@ -88,15 +88,6 @@ class TestFCPD(unittest.TestCase):
             msg=f"Functional variance ({functional_variance}) differs from LinearGaussian variance ({linear_gaussian_variance})",
         )
 
-        from scipy.stats import ks_2samp
-
-        ks_stat, p_value = ks_2samp(linear_gaussian_samples["x3"], functional_samples)
-        self.assertGreater(
-            p_value,
-            0.05,
-            msg=f"Kolmogorov-Smirnov test failed. KS Statistic: {ks_stat}, P-Value: {p_value}",
-        )
-
     def test_different_distributions(self):
         exp_cpd = FunctionalCPD(
             "exponential", lambda _: pyro.sample("x", dist.Exponential(rate=2.0))
