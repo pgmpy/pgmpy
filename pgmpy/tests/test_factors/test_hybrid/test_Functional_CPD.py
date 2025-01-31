@@ -46,7 +46,7 @@ class TestFCPD(unittest.TestCase):
             1.0,
             evidence=["x1", "x2"],
         )
-        num_samples = 2000
+        num_samples = 10000
 
         lgbn = LinearGaussianBayesianNetwork([("x1", "x3"), ("x2", "x3")])
         lgbn.add_cpds(x1_cpd, x2_cpd, x3_cpd)
