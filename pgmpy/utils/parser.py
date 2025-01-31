@@ -154,8 +154,8 @@ def parse_dagitty(lines):
     # Step 1: DAGitty Grammar in pyparsing
     # Reference: https://www.dagitty.net/manual-3.x.pdf#page=3.58
     # Drawing and Analyzing Causal DAGs with DAGitty by Johannes Textor
-    # Variable name. Double-quote if with special characters
-    var = Word(alphanums) ^ QuotedString('"')
+    # Variable name like X.1, a_b, 123. Double-quote if with special characters
+    var = Word(alphanums + "_" + ".") ^ QuotedString('"')
     # Exposure, outcome, latent, adjusted
     option = nestedExpr("[", "]")
     # The variable statements: variable name + list of option(s)
@@ -168,19 +168,21 @@ def parse_dagitty(lines):
     edge = Word("><-")
     # edge chaining
     edge_relation = var_or_subgraph + OneOrMore(edge + var_or_subgraph)
+
+    # Display info bb="1,2,3,4", [pos="1,2"] will be parsed and discarded
+    bb_re = Combine("bb=" + QuotedString('"'))
+    pos_re = Combine("[pos=" + QuotedString('"') + "]")
+
     # If possible, try to match with edge_relation with arrow, rather than only reading varnames as var_stat
-    statement = edge_relation.setResultsName("edge_stat*") ^ var_stat.setResultsName(
-        "var_stat*"
+    statement = (
+        edge_relation.setResultsName("edge_stat*")
+        ^ var_stat.setResultsName("var_stat*")
+        ^ bb_re
+        ^ pos_re
     )
-    # Display info bb="1,2,3,4" will be parsed and discarded
-    bbre = Combine("bb=" + QuotedString('"'))
+
     # different statements on the same line without semicolon
-    dagitty_line = (
-        Optional(bbre)
-        + Optional(";")
-        + Optional(statement)
-        + ZeroOrMore(Optional(";") + statement)
-    )
+    dagitty_line = ZeroOrMore(statement + Optional(";"))
 
     # Step 2:
     # Clean the opening of the enclosing dag{ .. } or dag Smoking { .. }

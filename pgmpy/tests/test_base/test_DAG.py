@@ -460,17 +460,19 @@ class TestDAGParser(unittest.TestCase):
             """
                 dag {
                 bb="-1.728,-4.67,2.587,4.156"
-                A [pos="2.087,3.420"]
-                X [pos="-1.228,-1.145"]
+                123 [pos="2.087,3.420"]
+                X.1 [pos="-1.228,-1.145"]
                 Y [pos="-0.725,-3.934"]
                 Z [latent, pos="-0.135,1.659"]
-                X -> Y
-                X -> Z
-                Z -> A
+                X.1 -> Y [pos="-0.300,-0.082"]
+                X.1 -> Z
+                Z -> 123
                 }
         """
         )
-        self.assertEqual(set(dag.edges()), set([("X", "Y"), ("X", "Z"), ("Z", "A")]))
+        self.assertEqual(
+            set(dag.edges()), set([("X.1", "Y"), ("X.1", "Z"), ("Z", "123")])
+        )
         self.assertEqual(set(dag.latents), set(["Z"]))
 
 
