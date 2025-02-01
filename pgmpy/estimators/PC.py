@@ -199,17 +199,17 @@ class PC(StructureEstimator):
         pdag = self.orient_colliders(skel, separating_sets)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
-        if not enforce_expert_knowledge:
-            pdag = self.apply_orientation_rules(pdag)
+        if expert_knowledge.temporal_order != [[]]:
+            expert_knowledge.forbidden_edges = expert_knowledge.forbidden_edges.union(
+                PC._orient_temporal_forbidden_edges(
+                    pdag, expert_knowledge.temporal_order
+                )
+            )
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
 
-        elif (
-            variant == "temporal"
-        ):  # check for correct arguments with variant==temporal
-            expert_knowledge.forbidden_edges = PC._orient_temporal_forbidden_edges(
-                pdag, expert_knowledge.temporal_order
-            )
+        elif not enforce_expert_knowledge:
+            pdag = self.apply_orientation_rules(pdag)
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
 
@@ -301,15 +301,22 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
+                    temporal_neighbours = PC._get_temporal_separating_set(
+                        u, v, lim_neighbors, temporal_ordering, temporal_order
+                    )
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in chain(
                             combinations(
-                                set(graph.neighbors(u)) - set([v]), lim_neighbors
+                                set(graph.neighbors(u))
+                                - set([v] - temporal_neighbours),
+                                lim_neighbors,
                             ),
                             combinations(
-                                set(graph.neighbors(v)) - set([u]), lim_neighbors
+                                set(graph.neighbors(v))
+                                - set([u] - temporal_neighbours),
+                                lim_neighbors,
                             ),
                         ):
                             # If a conditioning set exists remove the edge, store the separating set
@@ -326,30 +333,6 @@ class PC(StructureEstimator):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
                                 break
-
-            elif variant == "temporal":
-                for u, v in graph.edges():
-                    temporal_neighbours = PC._get_temporal_separating_set(
-                        u, v, lim_neighbors, temporal_ordering, temporal_order
-                    )
-                    for separating_set in chain(
-                        combinations(temporal_neighbours, lim_neighbors),
-                        combinations(temporal_neighbours, lim_neighbors),
-                    ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
-                        ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
