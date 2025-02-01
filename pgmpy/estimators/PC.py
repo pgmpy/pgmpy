@@ -302,7 +302,7 @@ class PC(StructureEstimator):
             if variant == "orig":
                 for u, v in graph.edges():
                     temporal_neighbours = PC._get_temporal_separating_set(
-                        u, v, lim_neighbors, temporal_ordering, temporal_order
+                        u, v, temporal_ordering, temporal_order
                     )
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
@@ -310,12 +310,14 @@ class PC(StructureEstimator):
                         for separating_set in chain(
                             combinations(
                                 set(graph.neighbors(u))
-                                - set([v] - temporal_neighbours),
+                                - set([v])
+                                - temporal_neighbours,
                                 lim_neighbors,
                             ),
                             combinations(
                                 set(graph.neighbors(v))
-                                - set([u] - temporal_neighbours),
+                                - set([u])
+                                - temporal_neighbours,
                                 lim_neighbors,
                             ),
                         ):
@@ -426,10 +428,14 @@ class PC(StructureEstimator):
 
     @staticmethod
     def _get_temporal_separating_set(u, v, temporal_ordering, temporal_order):
+        if temporal_ordering == {}:
+            return set()
+
         max_order = min(temporal_ordering[u], temporal_ordering[v])
         separating_set = set()
         for tier in range(max_order):
-            separating_set.union(set(temporal_order[tier]))
+            separating_set = separating_set.union(set(temporal_order[tier]))
+
         separating_set.discard(u)
         separating_set.discard(v)
 
