@@ -21,8 +21,7 @@ def get_example_model(model):
     Parameter
     ---------
     model: str
-        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository).
-
+        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository) and dagitty (https://www.dagitty.net/)
         Discrete Bayesian Network Options:
             Small Networks: asia, cancer, earthquake, sachs, survey
             Medium Networks: alarm, barley, child, insurance, mildew, water
@@ -30,6 +29,7 @@ def get_example_model(model):
             Very Large Networks: andes, diabetes, link, munin1, munin2, munin3, munin4, pathfinder, pigs, munin
         Gaussian Bayesian Network Options: ecoli70, magic-niab, magic-irri, arth150
         Conditional Linear Gaussian Bayesian Network Options: sangiovese, mehra
+        DAG Options: M-bias, confounding, mediator, paths, Sebastiani, Polzer, Schipf, Shrier, Acid, Thoemmes, Kampen, Didelelez
 
     Example
     -------
@@ -81,6 +81,22 @@ def get_example_model(model):
         "mehra",
     }
 
+    # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd
+    dag_models = {
+        "M-bias",
+        "confounding",
+        "mediator",
+        "paths",
+        "Sebastiani",
+        "Polzer",
+        "Schipf",
+        "Shrier",
+        "Acid",
+        "Thoemmes",
+        "Kampen",
+        "Didelez",
+    }
+
     filenames = {
         "asia": "utils/example_models/asia.bif.gz",
         "cancer": "utils/example_models/cancer.bif.gz",
@@ -110,8 +126,18 @@ def get_example_model(model):
         "magic-niab": "utils/example_models/magic-niab.json",
         "magic-irri": "utils/example_models/magic-irri.json",
         "arth150": "utils/example_models/arth150.json",
-        "sangiovese": "",
-        "mehra": "",
+        "M-bias": "utils/example_models/M-bias.txt",
+        "confounding": "utils/example_models/confounding.txt",
+        "mediator": "utils/example_models/mediator.txt",
+        "paths": "utils/example_models/paths.txt",
+        "Sebastiani": "utils/example_models/Sebastiani.txt",
+        "Polzer": "utils/example_models/Polzer.txt",
+        "Schipf": "utils/example_models/Schipf.txt",
+        "Shrier": "utils/example_models/Shrier.txt",
+        "Acid": "utils/example_models/Acid.txt",
+        "Thoemmes": "utils/example_models/Thoemmes.txt",
+        "Kampen": "utils/example_models/Kampen.txt",
+        "Didelez": "utils/example_models/Didelez.txt",
     }
 
     if model not in filenames:
@@ -172,6 +198,11 @@ def get_example_model(model):
         # Add CPDs to the model
         model.add_cpds(*cpds)
         return model
+
+    elif model in dag_models:
+        from pgmpy.base import DAG
+
+        return DAG.from_dagitty(filename=path)
 
     elif model in hybrid_models:
         raise ValueError("Hybrid models aren't supported yet.")
@@ -281,7 +312,7 @@ def llm_pairwise_orient(
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
 
-    prompt = f""" {system_prompt}. You are given two variables with the following descriptions:
+    prompt = f"""{system_prompt}. You are given two variables with the following descriptions:
         <A>: {descriptions[x]}
         <B>: {descriptions[y]}
 
@@ -366,6 +397,6 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
+        f"Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
     )
     return (df, dtypes)

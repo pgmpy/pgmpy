@@ -51,6 +51,28 @@ class TestDAGCreation(unittest.TestCase):
             m = get_example_model(model=model)
             del m
 
+    def test_get_example_model_dagitty(self):
+        all_models = [
+            "M-bias",
+            "confounding",
+            "mediator",
+            "paths",
+            "Sebastiani",
+            "Polzer",
+            "Schipf",
+            "Shrier",
+            "Acid",
+            "Thoemmes",
+            "Kampen",
+            "Didelez",
+        ]
+        # Would take too much time to load all the models. Hence, randomly select
+        # 3 and try to load them.
+        choices = random.choices(all_models, k=3)
+        for model in tqdm(choices):
+            m = get_example_model(model=model)
+            del m
+
 
 class TestDiscretization(unittest.TestCase):
     def setUp(self):
