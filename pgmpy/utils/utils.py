@@ -81,20 +81,20 @@ def get_example_model(model):
         "mehra",
     }
 
-    # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd
+    # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd + year
     dag_models = {
         "M-bias",
         "confounding",
         "mediator",
         "paths",
-        "Sebastiani",
-        "Polzer",
-        "Schipf",
-        "Shrier",
-        "Acid",
-        "Thoemmes",
-        "Kampen",
-        "Didelez",
+        "Sebastiani_2005",
+        "Polzer_2012",
+        "Schipf_2010",
+        "Shrier_2008",
+        "Acid_1996",
+        "Thoemmes_2013",
+        "Kampen_2014",
+        "Didelez_2010",
     }
 
     filenames = {

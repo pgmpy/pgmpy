@@ -17,8 +17,8 @@ from pgmpy.utils import (
 
 
 class TestDAGCreation(unittest.TestCase):
-    def test_get_example_model(self):
-        all_models = [
+    def test_get_example_model_cat(self):
+        cat_models = [
             "asia",
             "cancer",
             "earthquake",
@@ -46,13 +46,27 @@ class TestDAGCreation(unittest.TestCase):
         ]
         # Would take too much time to load all the models. Hence, randomly select
         # 5 and try to load them.
-        choices = random.choices(all_models, k=5)
+        choices = random.choices(cat_models, k=5)
+        for model in tqdm(choices):
+            m = get_example_model(model=model)
+            del m
+
+    def test_get_example_model_cont(self):
+        cont_models = [
+            "ecoli70",
+            "magic-niab",
+            "magic-irri",
+            "arth150",
+        ]
+        # Would take too much time to load all the models. Hence, randomly select
+        # 1 and try to load them.
+        choices = random.choices(cont_models, k=1)
         for model in tqdm(choices):
             m = get_example_model(model=model)
             del m
 
     def test_get_example_model_dagitty(self):
-        all_models = [
+        dag_models = [
             "M-bias",
             "confounding",
             "mediator",
@@ -68,7 +82,7 @@ class TestDAGCreation(unittest.TestCase):
         ]
         # Would take too much time to load all the models. Hence, randomly select
         # 3 and try to load them.
-        choices = random.choices(all_models, k=3)
+        choices = random.choices(dag_models, k=3)
         for model in tqdm(choices):
             m = get_example_model(model=model)
             del m
