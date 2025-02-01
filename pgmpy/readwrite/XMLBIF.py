@@ -34,8 +34,8 @@ class XMLBIFReader(object):
 
     Examples
     --------
-    # xmlbif_test.xml is the file present in
-    # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+    >>> # xmlbif_test.xml is the file present in
+    >>> # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
     >>> from pgmpy.readwrite import XMLBIFReader
     >>> reader = XMLBIFReader("xmlbif_test.xml")
     >>> model = reader.get_model()

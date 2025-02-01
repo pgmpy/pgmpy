@@ -28,7 +28,7 @@ class GES(StructureEstimator):
     """
     Implementation of Greedy Equivalence Search (GES) causal discovery / structure learning algorithm.
 
-    GES is a score-based casual discovery / structure learning algorithm that works in three phases:
+    GES is a score-based causal discovery / structure learning algorithm that works in three phases:
         1. Forward phase: New edges are added such that the model score improves.
         2. Backward phase: Edges are removed from the model such that the model score improves.
         3. Edge flipping phase: Edge orientations are flipped such that model score improves.

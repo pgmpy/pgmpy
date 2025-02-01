@@ -180,9 +180,11 @@ class DAG(nx.DiGraph):
         ['A']
 
         Adding a node with some weight.
+
         >>> G.add_node(node='B', weight=0.3)
 
         The weight of these nodes can be accessed as:
+
         >>> G.nodes['B']
         {'weight': 0.3}
         >>> G.nodes['A']
@@ -231,6 +233,7 @@ class DAG(nx.DiGraph):
         NodeView(('A', 'B', 'C'))
 
         Adding nodes with weights:
+
         >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
         >>> G.nodes['D']
         {'weight': 0.3}
@@ -284,6 +287,7 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob')])
 
         When the node is not already present in the graph:
+
         >>> G.add_edge(u='Alice', v='Ankur')
         >>> G.nodes()
         NodeView(('Alice', 'Ankur', 'Bob', 'Charles'))
@@ -291,6 +295,7 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
+
         >>> G.add_edge('Ankur', 'Maria', weight=0.1)
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.1}
@@ -329,6 +334,7 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
 
         When the node is not already in the model:
+
         >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
@@ -336,12 +342,17 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
 
         Adding edges with weights:
+
         >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
         ...                  weights=[0.3, 0.5])
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.3}
         >>> G.edge['Maria']['Mason']
         {'weight': 0.5}
+
+        or
+
+        >>> G.add_edges_from([('Ankur', 'Maria', 0.3), ('Maria', 'Mason', 0.5)])
         """
         ebunch = list(ebunch)
 
@@ -899,6 +910,7 @@ class DAG(nx.DiGraph):
         Examples
         --------
         Initialize a DAG
+
         >>> graph = DAG()
         >>> graph.add_edges_from([('X', 'A'),
         ...                       ('A', 'Y'),
@@ -934,7 +946,7 @@ class DAG(nx.DiGraph):
     def get_ancestral_graph(self, nodes):
         """
         Returns the ancestral graph of the given `nodes`. The ancestral graph only
-        contains the nodes which are ancestors of atleast one of the variables in
+        contains the nodes which are ancestors of at least one of the variables in
         node.
 
         Parameters

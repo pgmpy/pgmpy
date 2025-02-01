@@ -75,7 +75,7 @@ Supported Data Types
    :header-rows: 1
 
    * -
-     - Casual Discovery
+     - Causal Discovery
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference

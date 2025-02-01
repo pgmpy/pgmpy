@@ -41,7 +41,8 @@ class SEMGraph(DAG):
 
     Examples
     --------
-    Defining a model (Union sentiment model[1]) without setting any paramaters.
+    Defining a model (Union sentiment model[1]) without setting any paramaters:
+
     >>> from pgmpy.models import SEMGraph
     >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
     ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
@@ -52,6 +53,7 @@ class SEMGraph(DAG):
 
     Defining a model (Education [2]) with all the parameters set. For not setting any
     parameter `np.nan` can be explicitly passed.
+
     >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
     ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
     ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
@@ -1116,6 +1118,7 @@ class SEM(SEMGraph):
         Examples
         --------
         Defining a model (Union sentiment model[1]) without setting any paramaters.
+
         >>> from pgmpy.models import SEM
         >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
         ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
@@ -1126,6 +1129,7 @@ class SEM(SEMGraph):
 
         Defining a model (Education [2]) with all the parameters set. For not setting any
         parameter `np.nan` can be explicitly passed.
+
         >>> sem_edu = SEM.from_graph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
         ...                                  ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
         ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),

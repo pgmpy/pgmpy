@@ -63,13 +63,13 @@ class PC(StructureEstimator):
         ----------
         variant: str (one of "orig", "stable", "parallel")
             The variant of PC algorithm to run.
-            "orig": The original PC algorithm. Might not give the same
-                    results in different runs but does less independence
-                    tests compared to stable.
-            "stable": Gives the same result in every run but does needs to
-                    do more statistical independence tests.
-            "parallel": Parallel version of PC Stable. Can run on multiple
-                    cores with the same result on each run.
+                "orig": The original PC algorithm. Might not give the same
+                        results in different runs but does less independence
+                        tests compared to stable.
+                "stable": Gives the same result in every run but does needs to
+                        do more statistical independence tests.
+                "parallel": Parallel version of PC Stable. Can run on multiple
+                        cores with the same result on each run.
 
         ci_test: str or fun
             The statistical test to use for testing conditional independence in
@@ -116,26 +116,26 @@ class PC(StructureEstimator):
         enforce_expert_knowledge: boolean (default: False)
             If True, the algorithm modifies the search space according to the
             edges specified in expert knowledge object. This implies the following:
-            1. For every edge (u, v) specified in `forbidden_edges`, there will
-                be no edge between u and v.
-            2. For every edge (u, v) specified in `required_edges`, one of the
-                following would be present in the final model: u -> v, u <-
-                v, or u - v (if CPDAG is returned).
+                1. For every edge (u, v) specified in `forbidden_edges`, there will
+                    be no edge between u and v.
+                2. For every edge (u, v) specified in `required_edges`, one of the
+                    following would be present in the final model: u -> v, u <-
+                    v, or u - v (if CPDAG is returned).
 
             If False, the algorithm attempts to make the edge orientations as
             specified by expert knowledge after learning the skeleton. This
             implies the following:
-            1. For every edge (u, v) specified in `forbidden_edges`, the final
-                graph would have either v <- u or no edge except if u -> v is part
-                of a collider structure in the learned skeleton.
-            2. For every edge (u, v) specified in `required_edges`, the final graph
-                would either have u -> v or no edge except if v <- u is part of a
-                collider structure in the learned skeleton.
+                1. For every edge (u, v) specified in `forbidden_edges`, the final
+                    graph would have either v <- u or no edge except if u -> v is part
+                    of a collider structure in the learned skeleton.
+                2. For every edge (u, v) specified in `required_edges`, the final graph
+                    would either have u -> v or no edge except if v <- u is part of a
+                    collider structure in the learned skeleton.
 
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
-                The estimated model structure:
+            The estimated model structure:
                 1. Partially Directed Graph (PDAG) if `return_type='pdag'` or `return_type='cpdag'`.
                 2. Directed Acyclic Graph (DAG) if `return_type='dag'`.
                 3. (nx.Graph, separating sets) if `return_type='skeleton'`.

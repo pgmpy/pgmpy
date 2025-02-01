@@ -28,7 +28,7 @@ class BayesianNetwork(DAG):
     A models stores nodes and edges with conditional probability
     distribution (cpd) and other attributes.
 
-    models hold directed edges.  Self loops are not allowed neither
+    Models hold directed edges.  Self loops are not allowed neither
     multiple (parallel) edges.
 
     Nodes can be any hashable python object.
