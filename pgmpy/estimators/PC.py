@@ -195,14 +195,26 @@ class PC(StructureEstimator):
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
-        # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
+        # Step 2: Orient the edges based on collider structures.
         pdag = self.orient_colliders(skel, separating_sets)
-        pdag = self.apply_orientation_rules(pdag)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if not enforce_expert_knowledge:
+            pdag = self.apply_orientation_rules(pdag)
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+
+        elif (
+            variant == "temporal"
+        ):  # check for correct arguments with variant==temporal
+            expert_knowledge.forbidden_edges = PC._orient_temporal_forbidden_edges(
+                pdag, expert_knowledge.temporal_order
+            )
+            pdag = expert_knowledge.apply_expert_knowledge(pdag)
+            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+
+        else:
+            pdag = self.apply_orientation_rules(pdag)
 
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
@@ -430,9 +442,7 @@ class PC(StructureEstimator):
         return ordering
 
     @staticmethod
-    def _get_temporal_separating_set(
-        u, v, limit_neighbours, temporal_ordering, temporal_order
-    ):
+    def _get_temporal_separating_set(u, v, temporal_ordering, temporal_order):
         max_order = min(temporal_ordering[u], temporal_ordering[v])
         separating_set = set()
         for tier in range(max_order):
@@ -441,6 +451,17 @@ class PC(StructureEstimator):
         separating_set.discard(v)
 
         return separating_set
+
+    @staticmethod
+    def _orient_temporal_forbidden_edges(skel, temporal_order):
+
+        forbidden_edges = []
+        for node in skel.nodes:
+            for neighbor in skel.neighbors(node):
+                if temporal_order[neighbor] < temporal_order[node]:
+                    forbidden_edges.append((node, neighbor))
+
+        return forbidden_edges
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
