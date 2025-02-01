@@ -81,8 +81,7 @@ class ExpertKnowledge:
             else set()
         )
 
-        if temporal_order is not None:
-            raise ValueError(f"Specification of temporal order isn't supported yet.")
+        self.temporal_order = temporal_order if temporal_order is not None else [[]]
 
     def apply_expert_knowledge(self, pdag):
         """

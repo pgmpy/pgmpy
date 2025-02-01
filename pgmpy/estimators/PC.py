@@ -277,6 +277,8 @@ class PC(StructureEstimator):
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
+        temporal_order = expert_knowledge.temporal_order
+        temporal_ordering = PC._get_temporal_ordering(temporal_order)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -312,6 +314,30 @@ class PC(StructureEstimator):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
                                 break
+
+            elif variant == "temporal":
+                for u, v in graph.edges():
+                    temporal_neighbours = PC._get_temporal_separating_set(
+                        u, v, lim_neighbors, temporal_ordering, temporal_order
+                    )
+                    for separating_set in chain(
+                        combinations(temporal_neighbours, lim_neighbors),
+                        combinations(temporal_neighbours, lim_neighbors),
+                    ):
+                        # If a conditioning set exists remove the edge, store the separating set
+                        # and move on to finding conditioning set for next edge.
+                        if ci_test(
+                            u,
+                            v,
+                            separating_set,
+                            data=self.data,
+                            independencies=self.independencies,
+                            significance_level=significance_level,
+                            **kwargs,
+                        ):
+                            separating_sets[frozenset((u, v))] = separating_set
+                            graph.remove_edge(u, v)
+                            break
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
@@ -393,6 +419,28 @@ class PC(StructureEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar.close()
         return graph, separating_sets
+
+    @staticmethod
+    def _get_temporal_ordering(temporal_order):
+        ordering = {}
+        for order, tier in enumerate(temporal_order):
+            for node in tier:
+                ordering[node] = order
+
+        return ordering
+
+    @staticmethod
+    def _get_temporal_separating_set(
+        u, v, limit_neighbours, temporal_ordering, temporal_order
+    ):
+        max_order = min(temporal_ordering[u], temporal_ordering[v])
+        separating_set = set()
+        for tier in range(max_order):
+            separating_set.union(set(temporal_order[tier]))
+        separating_set.discard(u)
+        separating_set.discard(v)
+
+        return separating_set
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
