@@ -29,7 +29,7 @@ def get_example_model(model):
             Very Large Networks: andes, diabetes, link, munin1, munin2, munin3, munin4, pathfinder, pigs, munin
         Gaussian Bayesian Network Options: ecoli70, magic-niab, magic-irri, arth150
         Conditional Linear Gaussian Bayesian Network Options: sangiovese, mehra
-        DAG Options: M-bias, confounding, mediator, paths, Sebastiani, Polzer, Schipf, Shrier, Acid, Thoemmes, Kampen, Didelelez
+        DAG Options: M-bias, confounding, mediator, paths, Sebastiani_2005, Polzer_2012, Schipf_2010, Shrier_2008, Acid_1996, Thoemmes_2013, Kampen_2014, Didelez_2010
 
     Example
     -------
