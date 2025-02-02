@@ -315,7 +315,7 @@ def llm_pairwise_orient(
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
 
-    prompt = f"""{system_prompt}. You are given two variables with the following descriptions:
+    prompt = f""" {system_prompt}. You are given two variables with the following descriptions:
         <A>: {descriptions[x]}
         <B>: {descriptions[y]}
 
@@ -400,6 +400,6 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f"Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
