@@ -211,20 +211,24 @@ class TestGetExampleModel(unittest.TestCase):
             "confounding",
             "mediator",
             "paths",
-            "Sebastiani",
-            "Polzer",
-            "Schipf",
-            "Shrier",
-            "Acid",
-            "Thoemmes",
-            "Kampen",
-            "Didelez",
+            "Sebastiani_2005",
+            "Polzer_2012",
+            "Schipf_2010",
+            "Shrier_2008",
+            "Acid_1996",
+            "Thoemmes_2013",
+            "Kampen_2014",
+            "Didelez_2010",
         ]
         # Would take too much time to load all the models. Hence, randomly select
         # 3 and try to load them.
-        # choices = random.choices(dag_models, k=3)
-        for model in tqdm(dag_models):
+        choices = random.sample(dag_models, k=3)
+        for model in tqdm(choices):
+            print(model)
             m = get_example_model(model=model)
+            self.assertIsNotNone(m)
+            self.assertTrue(hasattr(m, "nodes"))
+            self.assertTrue(hasattr(m, "edges"))
             del m
 
     def test_invalid_model_name(self):

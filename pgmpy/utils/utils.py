@@ -132,14 +132,14 @@ def get_example_model(model):
         "confounding": "utils/example_models/confounding.txt",
         "mediator": "utils/example_models/mediator.txt",
         "paths": "utils/example_models/paths.txt",
-        "Sebastiani": "utils/example_models/Sebastiani.txt",
-        "Polzer": "utils/example_models/Polzer.txt",
-        "Schipf": "utils/example_models/Schipf.txt",
-        "Shrier": "utils/example_models/Shrier.txt",
-        "Acid": "utils/example_models/Acid.txt",
-        "Thoemmes": "utils/example_models/Thoemmes.txt",
-        "Kampen": "utils/example_models/Kampen.txt",
-        "Didelez": "utils/example_models/Didelez.txt",
+        "Sebastiani_2005": "utils/example_models/Sebastiani_2005.txt",
+        "Polzer_2012": "utils/example_models/Polzer_2012.txt",
+        "Schipf_2010": "utils/example_models/Schipf_2010.txt",
+        "Shrier_2008": "utils/example_models/Shrier_2008.txt",
+        "Acid_1996": "utils/example_models/Acid_1996.txt",
+        "Thoemmes_2013": "utils/example_models/Thoemmes_2013.txt",
+        "Kampen_2014": "utils/example_models/Kampen_2014.txt",
+        "Didelez_2010": "utils/example_models/Didelez_2010.txt",
     }
 
     if model not in filenames:
