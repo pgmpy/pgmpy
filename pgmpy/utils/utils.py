@@ -126,6 +126,8 @@ def get_example_model(model):
         "magic-niab": "utils/example_models/magic-niab.json",
         "magic-irri": "utils/example_models/magic-irri.json",
         "arth150": "utils/example_models/arth150.json",
+        "sangiovese": "",
+        "mehra": "",
         "M-bias": "utils/example_models/M-bias.txt",
         "confounding": "utils/example_models/confounding.txt",
         "mediator": "utils/example_models/mediator.txt",
@@ -202,7 +204,8 @@ def get_example_model(model):
     elif model in dag_models:
         from pgmpy.base import DAG
 
-        return DAG.from_dagitty(filename=path)
+        fullpath = files("pgmpy") / path
+        return DAG.from_dagitty(filename=fullpath)
 
     elif model in hybrid_models:
         raise ValueError("Hybrid models aren't supported yet.")
