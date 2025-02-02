@@ -57,14 +57,14 @@ class TestPCFakeCITest(unittest.TestCase):
         return False
 
     def test_build_skeleton_orig(self):
-        skel, sep_set = self.estimator.build_skeleton(
+        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="orig"
         )
         expected_edges = {("A", "C"), ("A", "D")}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set = self.estimator.build_skeleton(
+        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t,
             max_cond_vars=0,
             variant="orig",
@@ -74,14 +74,14 @@ class TestPCFakeCITest(unittest.TestCase):
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
     def test_build_skeleton_stable(self):
-        skel, sep_set = self.estimator.build_skeleton(
+        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="stable"
         )
         expected_edges = {("A", "C"), ("A", "D")}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set = self.estimator.build_skeleton(
+        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t,
             max_cond_vars=0,
             variant="stable",
