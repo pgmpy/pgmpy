@@ -63,6 +63,20 @@ class ExpertKnowledge:
         else:
             return edge_list
 
+    def _check_complete_temporal_order(self, pdag_nodes):
+        if self.temporal_order == [[]]:
+            return
+        tier_set = set()
+
+        for tier in self.temporal_order:
+            tier_set = tier_set.union(tier)
+
+        if tier_set != set(pdag_nodes):
+            final_tier = set(pdag_nodes) - tier_set
+            self.temporal_order.append(list(final_tier))
+        print(self.temporal_order)
+        return
+
     def __init__(
         self,
         forbidden_edges=None,

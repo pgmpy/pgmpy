@@ -179,9 +179,10 @@ class PC(StructureEstimator):
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+        expert_knowledge._check_complete_temporal_order(self.variables)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
-        skel, separating_sets = self.build_skeleton(
+        skel, separating_sets, temporal_ordering = self.build_skeleton(
             ci_test=ci_test,
             significance_level=significance_level,
             variant=variant,
@@ -196,14 +197,16 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on collider structures.
-        pdag = self.orient_colliders(skel, separating_sets)
+        pdag = self.orient_colliders(skel, separating_sets, temporal_ordering)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
+            print(pdag.edges())
+            temporal_ordering = PC._get_temporal_ordering(
+                expert_knowledge.temporal_order
+            )
             expert_knowledge.forbidden_edges = expert_knowledge.forbidden_edges.union(
-                PC._orient_temporal_forbidden_edges(
-                    pdag, expert_knowledge.temporal_order
-                )
+                PC._orient_temporal_forbidden_edges(pdag, temporal_ordering)
             )
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
@@ -415,11 +418,11 @@ class PC(StructureEstimator):
 
         if show_progress and config.SHOW_PROGRESS:
             pbar.close()
-        return graph, separating_sets
+        return graph, separating_sets, temporal_ordering
 
     @staticmethod
     def _get_temporal_ordering(temporal_order):
-        ordering = {}
+        ordering = dict()
         for order, tier in enumerate(temporal_order):
             for node in tier:
                 ordering[node] = order
@@ -432,8 +435,9 @@ class PC(StructureEstimator):
             return set()
 
         max_order = min(temporal_ordering[u], temporal_ordering[v])
+        overall_max_order = max(temporal_ordering.items())
         separating_set = set()
-        for tier in range(max_order):
+        for tier in range(max_order + 1, overall_max_order + 1):
             separating_set = separating_set.union(set(temporal_order[tier]))
 
         separating_set.discard(u)
@@ -442,15 +446,15 @@ class PC(StructureEstimator):
         return separating_set
 
     @staticmethod
-    def _orient_temporal_forbidden_edges(skel, temporal_order):
+    def _orient_temporal_forbidden_edges(skel, temporal_ordering):
 
         forbidden_edges = []
         for node in skel.nodes:
             for neighbor in skel.neighbors(node):
-                if temporal_order[neighbor] < temporal_order[node]:
+                if temporal_ordering[neighbor] < temporal_ordering[node]:
                     forbidden_edges.append((node, neighbor))
 
-        return forbidden_edges
+        return set(forbidden_edges)
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
@@ -471,7 +475,7 @@ class PC(StructureEstimator):
         return False
 
     @staticmethod
-    def orient_colliders(skeleton, separating_sets):
+    def orient_colliders(skeleton, separating_sets, temporal_ordering=dict()):
         """
         Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
@@ -520,12 +524,18 @@ class PC(StructureEstimator):
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
         # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
+        print(separating_sets, temporal_ordering)
         for pair in node_pairs:
             X, Y = pair
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
-                        pdag.remove_edges_from([(Z, X), (Z, Y)])
+                        if (temporal_ordering == dict()) or (
+                            (temporal_ordering[Z] >= temporal_ordering[X])
+                            and (temporal_ordering[Z] >= temporal_ordering[Y])
+                        ):
+                            print([(Z, X), (Z, Y)])
+                            pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
         undirected_edges = []

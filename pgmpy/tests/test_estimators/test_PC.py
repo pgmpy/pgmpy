@@ -636,3 +636,28 @@ class TestPCRealModels(unittest.TestCase):
                 "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
             ],
         )
+
+    def test_temporal_pc_cancer(self):
+        asia_model = get_example_model("cancer")
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
+        est = PC(data)
+        background = ExpertKnowledge(
+            temporal_order=[["Pollution", "Smoker"], ["Cancer"]], max_cond_vars=4
+        )
+        pdag = est.estimate(
+            variant="stable",
+            expert_knowledge=background,
+            n_jobs=2,
+            show_progress=False,
+        )
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("Cancer", "Xray"),
+                    ("Cancer", "Dyspnoea"),
+                    ("Smoker", "Cancer"),
+                    ("Pollution", "Cancer"),
+                ]
+            ),
+        )
