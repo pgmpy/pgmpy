@@ -579,7 +579,7 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
         return position_bar, momentum_bar, grad_log
 
 
-def _return_samples(samples, state_names_map=None, columns_with_state_names=[]):
+def _return_samples(samples, state_names_map=None):
     """
     A utility function to return samples according to type
     """
@@ -587,6 +587,6 @@ def _return_samples(samples, state_names_map=None, columns_with_state_names=[]):
         samples = pd.DataFrame(samples)
     if state_names_map is not None:
         for var in samples.columns:
-            if var != "_weight" and var not in columns_with_state_names:
+            if var != "_weight":
                 samples[var] = samples[var].map(state_names_map[var])
     return samples

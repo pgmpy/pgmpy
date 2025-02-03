@@ -98,10 +98,8 @@ class BayesianModelSampling(BayesianModelInference):
         for node in pbar:
             if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
-            # If values specified in partial_samples, use them. Else generate the values.
-            if (partial_samples is not None) and (node in partial_samples.columns):
-                sampled[node] = partial_samples.loc[:, node].values
-            else:
+            # For columns not in partial_samples, generate the values. If categorical, fill with state indices.
+            if (partial_samples is None) or (node not in partial_samples.columns):
                 cpd = self.model.get_cpds(node)
                 states = range(self.cardinality[node])
                 evidence = cpd.variables[1:]
@@ -129,10 +127,14 @@ class BayesianModelSampling(BayesianModelInference):
                     weights = cpd.values
                     sampled[node] = sample_discrete(states, weights, size)
 
-        # The data in partial_samples are already in state_name. The other columns are in indices.
-        samples_df = _return_samples(
-            sampled, self.state_names_map, partial_samples.columns
-        )
+        # Convert state indices into state names.
+        samples_df = _return_samples(sampled, self.state_names_map)
+
+        # For the columns in partial_samples, copy the values (state names).
+        if partial_samples is not None:
+            for node in partial_samples.columns:
+                sampled[node] = partial_samples.loc[:, node].values
+
         if not include_latents and any(
             latent in samples_df.columns for latent in self.model.latents
         ):
