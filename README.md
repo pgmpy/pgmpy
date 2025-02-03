@@ -88,6 +88,7 @@ $ python setup.py install
 To run the tests, you can use pytest:
 ```
 $ pytest -v pgmpy
+$ pytest -v pgmpy/tests/test_base/test_DAG.py::TestDAGCreation::test_class_init_without_data
 ```
 
 If you face any problems during installation let us know, via issues, mail or at our discord channel.
