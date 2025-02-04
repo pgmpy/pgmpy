@@ -57,14 +57,14 @@ class TestPCFakeCITest(unittest.TestCase):
         return False
 
     def test_build_skeleton_orig(self):
-        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
+        skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="orig"
         )
         expected_edges = {("A", "C"), ("A", "D")}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
+        skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t,
             max_cond_vars=0,
             variant="orig",
@@ -74,14 +74,14 @@ class TestPCFakeCITest(unittest.TestCase):
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
     def test_build_skeleton_stable(self):
-        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
+        skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="stable"
         )
         expected_edges = {("A", "C"), ("A", "D")}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set, temporal_ordering = self.estimator.build_skeleton(
+        skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t,
             max_cond_vars=0,
             variant="stable",
@@ -641,8 +641,9 @@ class TestPCRealModels(unittest.TestCase):
         asia_model = get_example_model("cancer")
         data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
         est = PC(data)
-        background = ExpertKnowledge(
-            temporal_order=[["Pollution", "Smoker"], ["Cancer"]], max_cond_vars=4
+        background = ExpertKnowledge(  # e.g. we only know "Pollution", "Smoker", "Cancer" can be the causes of others
+            temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
+            max_cond_vars=4,
         )
         pdag = est.estimate(
             variant="stable",

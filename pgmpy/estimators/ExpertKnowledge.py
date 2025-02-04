@@ -63,18 +63,82 @@ class ExpertKnowledge:
         else:
             return edge_list
 
-    def _check_complete_temporal_order(self, pdag_nodes):
+    def _validate_temporal_order(self, nodes):
+        """
+        Method to check consistency of temporal order with nodes of a graph.
+
+        The temporal order, if specified by the user, is currently used by the PC
+        algorithm. The temporal order of all nodes present in the graph/dataset
+        need to be present in the ExpertKnowledge instance.
+
+        Parameters
+        ----------
+        nodes: iterable
+            A collection of nodes present in a dataset/graph object.
+        """
         if self.temporal_order == [[]]:
             return
-        tier_set = set()
 
+        tier_set = set()
         for tier in self.temporal_order:
             tier_set = tier_set.union(tier)
 
-        if tier_set != set(pdag_nodes):
-            final_tier = set(pdag_nodes) - tier_set
-            self.temporal_order.append(list(final_tier))
-        print(self.temporal_order)
+        if tier_set != set(nodes):
+            raise ValueError(
+                f"Missing nodes in temporal order - {set(nodes) - tier_set}"
+            )
+
+        return
+
+    def _get_temporal_ordering(self, temporal_order):
+        """
+        Method to check consistency of temporal order with nodes of a graph.
+
+        The temporal order, if specified by the user, is currently used by the PC
+        algorithm. The temporal order of all nodes present in the graph/dataset
+        need to be present in the ExpertKnowledge instance.
+
+        Parameters
+        ----------
+        temporal_order: list of lists
+            The temporal ordering of variables according to prior knowledge.
+
+        Returns
+        --------
+        temporal_ordering: dict
+            Dictionary with the tier (0, 1, 2, 3 etc.) for each node.
+        """
+        if type(temporal_order) != list:
+            raise TypeError(
+                f"Expected list type for temporal order. Got {type(temporal_order)} instead."
+            )
+
+        temporal_ordering = dict()
+        for order, tier in enumerate(self.temporal_order):
+            for node in tier:
+                temporal_ordering[node] = order
+
+        return temporal_ordering
+
+    def _orient_temporal_forbidden_edges(self, graph):
+        """
+        Add edge directions forbidden by the temporal order to forbidden_edges.
+
+        Parameters
+        ----------
+        graph: variable
+            The graph for which temporal order is specified.
+        """
+        if self.temporal_ordering == dict():
+            return
+
+        forbidden_edges = []
+        for node in graph.nodes:
+            for neighbor in graph.neighbors(node):
+                if self.temporal_ordering[neighbor] < self.temporal_ordering[node]:
+                    forbidden_edges.append((node, neighbor))
+
+        self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
         return
 
     def __init__(
@@ -96,20 +160,22 @@ class ExpertKnowledge:
         )
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
+        self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def apply_expert_knowledge(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
 
-        The required and forbidden edges, if specified by the user, are correctly
-        oriented in the graph object passed. In case of any conflict between the
-        graph structure and a required/forbidden edge, the edge is ignored and
-        a warning is raised.
+        The required and forbidden edges, if specified by the user,
+        are correctly oriented in the graph object passed. Temporal order,
+        as specified, is also taken into account. In case of any conflict
+        between the graph structure and a required/forbidden edge, the edge is
+        ignored and a warning is raised.
 
         Parameters
         ----------
         pdag: pgmpy.base.PDAG
-            A  partial DAG with directed and undirected edges.
+            A partial DAG with directed and undirected edges.
 
         Returns
         --------
@@ -121,6 +187,8 @@ class ExpertKnowledge:
         ----------
         [1] https://doi.org/10.48550/arXiv.2306.01638
         """
+        self._validate_temporal_order(pdag.nodes())
+        self._orient_temporal_forbidden_edges(pdag)
 
         for edge in self.forbidden_edges:
             u, v = edge

@@ -179,10 +179,9 @@ class PC(StructureEstimator):
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
-        expert_knowledge._check_complete_temporal_order(self.variables)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
-        skel, separating_sets, temporal_ordering = self.build_skeleton(
+        skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
             significance_level=significance_level,
             variant=variant,
@@ -197,17 +196,12 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on collider structures.
-        pdag = self.orient_colliders(skel, separating_sets, temporal_ordering)
+        pdag = self.orient_colliders(
+            skel, separating_sets, expert_knowledge.temporal_ordering
+        )
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
-            print(pdag.edges())
-            temporal_ordering = PC._get_temporal_ordering(
-                expert_knowledge.temporal_order
-            )
-            expert_knowledge.forbidden_edges = expert_knowledge.forbidden_edges.union(
-                PC._orient_temporal_forbidden_edges(pdag, temporal_ordering)
-            )
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
 
@@ -290,10 +284,9 @@ class PC(StructureEstimator):
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
-        temporal_order = expert_knowledge.temporal_order
-        temporal_ordering = PC._get_temporal_ordering(temporal_order)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -304,23 +297,20 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    temporal_neighbours = PC._get_temporal_separating_set(
-                        u, v, temporal_ordering, temporal_order
-                    )
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in chain(
                             combinations(
-                                set(graph.neighbors(u))
-                                - set([v])
-                                - temporal_neighbours,
+                                PC._get_separating_superset(
+                                    u, v, temporal_ordering, graph
+                                ),
                                 lim_neighbors,
                             ),
                             combinations(
-                                set(graph.neighbors(v))
-                                - set([u])
-                                - temporal_neighbours,
+                                PC._get_separating_superset(
+                                    v, u, temporal_ordering, graph
+                                ),
                                 lim_neighbors,
                             ),
                         ):
@@ -418,43 +408,46 @@ class PC(StructureEstimator):
 
         if show_progress and config.SHOW_PROGRESS:
             pbar.close()
-        return graph, separating_sets, temporal_ordering
+        return graph, separating_sets
 
     @staticmethod
-    def _get_temporal_ordering(temporal_order):
-        ordering = dict()
-        for order, tier in enumerate(temporal_order):
-            for node in tier:
-                ordering[node] = order
+    def _get_separating_superset(u, v, temporal_ordering, graph):
+        """
+        Return the temporally consistent superset of separating set of u, v.
 
-        return ordering
+        The temporal order (if specified) of the superset can only be smaller
+        ("earlier") than the particular node. The neighbors of 'u' satisfying
+        this condition are returned.
 
-    @staticmethod
-    def _get_temporal_separating_set(u, v, temporal_ordering, temporal_order):
-        if temporal_ordering == {}:
-            return set()
+        Parameters
+        ----------
+        u: variable
+            The node whose neighbors are being considered for separating set.
 
-        max_order = min(temporal_ordering[u], temporal_ordering[v])
-        overall_max_order = max(temporal_ordering.items())
-        separating_set = set()
-        for tier in range(max_order + 1, overall_max_order + 1):
-            separating_set = separating_set.union(set(temporal_order[tier]))
+        v: variable
+            The node along with u whose separating set is being calculated.
 
-        separating_set.discard(u)
+        temporal_ordering: dict
+            The temporal ordering of variables according to prior knowledgee.
+
+        graph: UndirectedGraph
+            The graph where separating sets are being calculated for the edges.
+
+        Returns
+        --------
+        separating_set: set
+            Set containing the superset of separating set of u, v.
+        """
+        separating_set = set(graph.neighbors(u))
         separating_set.discard(v)
+        if temporal_ordering == dict():
+            return separating_set
+
+        for neigh in list(separating_set):
+            if temporal_ordering[neigh] > temporal_ordering[u]:
+                separating_set.discard(neigh)
 
         return separating_set
-
-    @staticmethod
-    def _orient_temporal_forbidden_edges(skel, temporal_ordering):
-
-        forbidden_edges = []
-        for node in skel.nodes:
-            for neighbor in skel.neighbors(node):
-                if temporal_ordering[neighbor] < temporal_ordering[node]:
-                    forbidden_edges.append((node, neighbor))
-
-        return set(forbidden_edges)
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
@@ -524,7 +517,6 @@ class PC(StructureEstimator):
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
         # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        print(separating_sets, temporal_ordering)
         for pair in node_pairs:
             X, Y = pair
             if not skeleton.has_edge(X, Y):
@@ -534,7 +526,6 @@ class PC(StructureEstimator):
                             (temporal_ordering[Z] >= temporal_ordering[X])
                             and (temporal_ordering[Z] >= temporal_ordering[Y])
                         ):
-                            print([(Z, X), (Z, Y)])
                             pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
