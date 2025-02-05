@@ -347,9 +347,8 @@ class PC(StructureEstimator):
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                    for separating_set in PC._get_potential_sepsets(
+                        u, v, temporal_ordering, graph, lim_neighbors
                     ):
                         if ci_test(
                             u,
