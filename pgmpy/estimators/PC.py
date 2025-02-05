@@ -300,19 +300,8 @@ class PC(StructureEstimator):
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in chain(
-                            combinations(
-                                PC._get_potential_sepsets(
-                                    u, v, temporal_ordering, graph
-                                ),
-                                lim_neighbors,
-                            ),
-                            combinations(
-                                PC._get_potential_sepsets(
-                                    v, u, temporal_ordering, graph
-                                ),
-                                lim_neighbors,
-                            ),
+                        for separating_set in PC._get_potential_sepsets(
+                            u, v, temporal_ordering, graph, lim_neighbors
                         ):
                             # If a conditioning set exists remove the edge, store the separating set
                             # and move on to finding conditioning set for next edge.
@@ -336,19 +325,8 @@ class PC(StructureEstimator):
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in chain(
-                            combinations(
-                                PC._get_potential_sepsets(
-                                    v, u, temporal_ordering, graph
-                                ),
-                                lim_neighbors,
-                            ),
-                            combinations(
-                                PC._get_potential_sepsets(
-                                    v, u, temporal_ordering, graph
-                                ),
-                                lim_neighbors,
-                            ),
+                        for separating_set in PC._get_potential_sepsets(
+                            u, v, temporal_ordering, graph, lim_neighbors
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.
@@ -421,7 +399,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def _get_potential_sepsets(u, v, temporal_ordering, graph):
+    def _get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
         """
         Return the temporally consistent superset of separating set of u, v.
 
@@ -443,22 +421,33 @@ class PC(StructureEstimator):
         graph: UndirectedGraph
             The graph where separating sets are being calculated for the edges.
 
+        lim_neighbors: int
+            The maximum number of neighbours (conditioning variables) for u, v.
+
         Returns
         --------
         separating_set: set
             Set containing the superset of separating set of u, v.
         """
-        separating_set = set(graph.neighbors(u))
-        separating_set.discard(v)
-        if temporal_ordering == dict():
-            return separating_set
+        separating_set_u = set(graph.neighbors(u))
+        separating_set_v = set(graph.neighbors(v))
+        separating_set_u.discard(v)
+        separating_set_v.discard(u)
 
-        max_order = min(temporal_ordering[u], temporal_ordering[u])
-        for neigh in list(separating_set):
-            if temporal_ordering[neigh] > max_order:
-                separating_set.discard(neigh)
+        if temporal_ordering != dict():
+            max_order = min(temporal_ordering[u], temporal_ordering[u])
+            for neigh in list(separating_set_u):
+                if temporal_ordering[neigh] > max_order:
+                    separating_set_u.discard(neigh)
 
-        return separating_set
+            for neigh in list(separating_set_v):
+                if temporal_ordering[neigh] > max_order:
+                    separating_set_v.discard(neigh)
+
+        return chain(
+            combinations(separating_set_u, lim_neighbors),
+            combinations(separating_set_v, lim_neighbors),
+        )
 
     @staticmethod
     def _check_incoming_edges(pdag, u, v):
