@@ -33,7 +33,10 @@ class ExpertKnowledge:
     Import an example model from pgmpy.utils
 
     >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.estimators import ExpertKnowledge, PC
+    >>> from pgmpy.sampling import BayesianModelSampling
     >>> asia_model = get_example_model("asia")
+    >>> cancer_model = get_example_model("cancer")
 
     **Required and forbidden edges**
 
@@ -43,8 +46,21 @@ class ExpertKnowledge:
 
     **Use during structure learning**
 
-    >>> from pgmpy.estimators import PC
     >>> data = BayesianModelSampling(asia_model).forward_sample(size=int(1e4))
+    >>> est = PC(data)
+    >>> est.estimate(
+    ...         variant="stable",
+    ...         expert_knowledge=expert_knowledge,
+    ...         show_progress=False,
+    ...     )
+
+    **Temporal order**
+
+    >>> expert_knowledge = ExpertKnowledge(temporal_order=[["Pollution", "Smoker"], ["Cancer"], ["Dyspnoea", "Xray"]])
+
+    **Use during structure learning**
+
+    >>> data = BayesianModelSampling(cancer_model).forward_sample(size=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
     ...         variant="stable",
@@ -87,8 +103,6 @@ class ExpertKnowledge:
             raise ValueError(
                 f"Missing nodes in temporal order - {set(nodes) - tier_set}"
             )
-
-        return
 
     def _get_temporal_ordering(self, temporal_order):
         """
@@ -139,7 +153,6 @@ class ExpertKnowledge:
                     forbidden_edges.append((node, neighbor))
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
-        return
 
     def __init__(
         self,

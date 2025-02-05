@@ -302,13 +302,13 @@ class PC(StructureEstimator):
                     ):
                         for separating_set in chain(
                             combinations(
-                                PC._get_separating_superset(
+                                PC._get_potential_sepsets(
                                     u, v, temporal_ordering, graph
                                 ),
                                 lim_neighbors,
                             ),
                             combinations(
-                                PC._get_separating_superset(
+                                PC._get_potential_sepsets(
                                     v, u, temporal_ordering, graph
                                 ),
                                 lim_neighbors,
@@ -337,8 +337,18 @@ class PC(StructureEstimator):
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in chain(
-                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
+                            combinations(
+                                PC._get_potential_sepsets(
+                                    v, u, temporal_ordering, graph
+                                ),
+                                lim_neighbors,
+                            ),
+                            combinations(
+                                PC._get_potential_sepsets(
+                                    v, u, temporal_ordering, graph
+                                ),
+                                lim_neighbors,
+                            ),
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.
@@ -411,7 +421,7 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def _get_separating_superset(u, v, temporal_ordering, graph):
+    def _get_potential_sepsets(u, v, temporal_ordering, graph):
         """
         Return the temporally consistent superset of separating set of u, v.
 
@@ -443,8 +453,9 @@ class PC(StructureEstimator):
         if temporal_ordering == dict():
             return separating_set
 
+        max_order = min(temporal_ordering[u], temporal_ordering[u])
         for neigh in list(separating_set):
-            if temporal_ordering[neigh] > temporal_ordering[u]:
+            if temporal_ordering[neigh] > max_order:
                 separating_set.discard(neigh)
 
         return separating_set
