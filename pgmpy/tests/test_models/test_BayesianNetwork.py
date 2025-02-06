@@ -526,6 +526,16 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         samples = barley.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
+    def test_simulate_with_partial_samples(self):
+        alarm = get_example_model("alarm")
+        partial_cvp = pd.DataFrame(
+            np.random.choice(["LOW", "NORMAL", "HIGH"], int(1e1)), columns=["CVP"]
+        )
+        samples = alarm.simulate(
+            n_samples=int(1e1), partial_samples=partial_cvp, show_progress=False
+        )
+        self.assertEqual(samples.CVP.tolist(), partial_cvp["CVP"].tolist())
+
     def test_load_save(self):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")

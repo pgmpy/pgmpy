@@ -1,0 +1,85 @@
+dag {
+Age [pos="-0.039,-1.762"]
+Alcohol [pos="0.054,-3.594"]
+Caries [pos="-1.879,-1.875"]
+Diabetes [pos="-0.888,0.322"]
+Hypertension [pos="1.780,-0.157"]
+Lipids [pos="2.026,-1.650"]
+Mortality [outcome,pos="1.900,2.360"]
+Obesity [pos="-0.904,-1.340"]
+Periodontitis [pos="-0.335,1.703"]
+Psychosocial [pos="-0.088,0.266"]
+Sex [pos="-0.844,-3.340"]
+Smoking [pos="0.772,0.379"]
+Sport [pos="0.914,-3.396"]
+ToothLoss [exposure,pos="-1.677,2.421"]
+Age -> Alcohol
+Age -> Caries
+Age -> Diabetes
+Age -> Hypertension
+Age -> Lipids
+Age -> Mortality
+Age -> Obesity
+Age -> Periodontitis
+Age -> Psychosocial
+Age -> Smoking
+Age -> Sport
+Age -> ToothLoss
+Alcohol -> Diabetes
+Alcohol -> Hypertension
+Alcohol -> Lipids
+Alcohol -> Mortality
+Alcohol -> Obesity
+Alcohol -> Smoking
+Alcohol -> ToothLoss
+Caries -> ToothLoss
+Diabetes -> Hypertension
+Diabetes -> Lipids
+Diabetes -> Mortality
+Diabetes -> Periodontitis
+Hypertension -> Mortality
+Lipids -> Mortality
+Obesity -> Diabetes
+Obesity -> Hypertension
+Obesity -> Lipids
+Obesity -> Mortality
+Obesity -> Periodontitis
+Periodontitis -> ToothLoss
+Psychosocial -> Alcohol
+Psychosocial -> Caries
+Psychosocial -> Diabetes
+Psychosocial -> Hypertension
+Psychosocial -> Lipids
+Psychosocial -> Mortality
+Psychosocial -> Obesity
+Psychosocial -> Periodontitis
+Psychosocial -> Smoking
+Psychosocial -> Sport
+Psychosocial -> ToothLoss
+Sex -> Alcohol
+Sex -> Caries
+Sex -> Diabetes
+Sex -> Hypertension
+Sex -> Lipids
+Sex -> Mortality
+Sex -> Obesity
+Sex -> Periodontitis
+Sex -> Psychosocial
+Sex -> Smoking
+Sex -> Sport
+Sex -> ToothLoss
+Smoking -> Diabetes
+Smoking -> Hypertension
+Smoking -> Mortality
+Smoking -> Obesity
+Smoking -> Periodontitis
+Smoking -> Sport
+Smoking -> ToothLoss
+Sport -> Diabetes
+Sport -> Hypertension
+Sport -> Lipids
+Sport -> Mortality
+Sport -> Obesity
+Sport -> Periodontitis
+ToothLoss -> Mortality
+}

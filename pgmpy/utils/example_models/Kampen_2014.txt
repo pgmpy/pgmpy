@@ -1,0 +1,38 @@
+dag {
+AFF [pos="0.262,0.477"]
+AIS [pos="0.123,0.736"]
+ALN [pos="0.438,0.506"]
+APA [pos="0.376,0.147"]
+CDR [pos="0.628,0.332"]
+DET [pos="0.920,0.561"]
+EGC [outcome,pos="0.916,1.016"]
+FTW [pos="0.667,0.639"]
+HOS [pos="0.886,0.727"]
+PER [pos="0.920,0.382"]
+SAN [pos="0.031,0.371"]
+SUS [exposure,pos="0.295,1.003"]
+AFF -> ALN
+AFF -> APA
+AFF -> CDR
+AIS -> AFF
+AIS -> EGC
+AIS -> SUS
+ALN -> APA
+ALN -> DET
+ALN -> FTW
+ALN -> PER
+ALN -> SUS
+CDR -> DET
+EGC -> HOS
+FTW -> DET
+FTW -> EGC
+PER -> DET
+SAN -> AFF
+SAN -> AIS
+SAN -> ALN
+SAN -> APA
+SAN -> CDR
+SUS -> EGC
+SUS -> FTW
+SUS -> HOS
+}

@@ -21,8 +21,7 @@ def get_example_model(model):
     Parameter
     ---------
     model: str
-        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository).
-
+        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository) and dagitty (https://www.dagitty.net/)
         Discrete Bayesian Network Options:
             Small Networks: asia, cancer, earthquake, sachs, survey
             Medium Networks: alarm, barley, child, insurance, mildew, water
@@ -30,6 +29,7 @@ def get_example_model(model):
             Very Large Networks: andes, diabetes, link, munin1, munin2, munin3, munin4, pathfinder, pigs, munin
         Gaussian Bayesian Network Options: ecoli70, magic-niab, magic-irri, arth150
         Conditional Linear Gaussian Bayesian Network Options: sangiovese, mehra
+        DAG Options: M-bias, confounding, mediator, paths, Sebastiani_2005, Polzer_2012, Schipf_2010, Shrier_2008, Acid_1996, Thoemmes_2013, Kampen_2014, Didelez_2010
 
     Example
     -------
@@ -81,6 +81,22 @@ def get_example_model(model):
         "mehra",
     }
 
+    # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd + year
+    dag_models = {
+        "M-bias",
+        "confounding",
+        "mediator",
+        "paths",
+        "Sebastiani_2005",
+        "Polzer_2012",
+        "Schipf_2010",
+        "Shrier_2008",
+        "Acid_1996",
+        "Thoemmes_2013",
+        "Kampen_2014",
+        "Didelez_2010",
+    }
+
     filenames = {
         "asia": "utils/example_models/asia.bif.gz",
         "cancer": "utils/example_models/cancer.bif.gz",
@@ -112,6 +128,18 @@ def get_example_model(model):
         "arth150": "utils/example_models/arth150.json",
         "sangiovese": "",
         "mehra": "",
+        "M-bias": "utils/example_models/M-bias.txt",
+        "confounding": "utils/example_models/confounding.txt",
+        "mediator": "utils/example_models/mediator.txt",
+        "paths": "utils/example_models/paths.txt",
+        "Sebastiani_2005": "utils/example_models/Sebastiani_2005.txt",
+        "Polzer_2012": "utils/example_models/Polzer_2012.txt",
+        "Schipf_2010": "utils/example_models/Schipf_2010.txt",
+        "Shrier_2008": "utils/example_models/Shrier_2008.txt",
+        "Acid_1996": "utils/example_models/Acid_1996.txt",
+        "Thoemmes_2013": "utils/example_models/Thoemmes_2013.txt",
+        "Kampen_2014": "utils/example_models/Kampen_2014.txt",
+        "Didelez_2010": "utils/example_models/Didelez_2010.txt",
     }
 
     if model not in filenames:
@@ -172,6 +200,12 @@ def get_example_model(model):
         # Add CPDs to the model
         model.add_cpds(*cpds)
         return model
+
+    elif model in dag_models:
+        from pgmpy.base import DAG
+
+        fullpath = files("pgmpy") / path
+        return DAG.from_dagitty(filename=fullpath)
 
     elif model in hybrid_models:
         raise ValueError("Hybrid models aren't supported yet.")

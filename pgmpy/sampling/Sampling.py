@@ -129,7 +129,11 @@ class BayesianModelSampling(BayesianModelInference):
                     weights = cpd.values
                     sampled[node] = sample_discrete(states, weights, size)
 
-        samples_df = _return_samples(sampled, self.state_names_map)
+        samples_df = _return_samples(
+            sampled,
+            self.state_names_map,
+            partial_samples.columns.tolist() if partial_samples is not None else [],
+        )
         if not include_latents and any(
             latent in samples_df.columns for latent in self.model.latents
         ):
