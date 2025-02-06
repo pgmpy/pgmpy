@@ -200,8 +200,8 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(len(cpds), len(model.nodes()))
 
     def test_get_random(self):
-        model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
-        model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.2)
+        model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
+        model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
         self.assertNotEqual(model1.edges(), model2.edges())
         self.assertIsInstance(
             model1, LinearGaussianBayesianNetwork, "Incorrect instance"
