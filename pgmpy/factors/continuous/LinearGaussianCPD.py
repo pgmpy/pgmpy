@@ -125,3 +125,36 @@ class LinearGaussianCPD(BaseFactor):
     def __repr__(self):
         str_repr = self.__str__()
         return f"<LinearGaussianCPD: {str_repr} at {hex(id(self))}"
+
+    @staticmethod
+    def get_random(variable, evidence, loc=0.0, scale=1.0, seed=None):
+        """
+        Generates a LinearGaussianCPD instance with random values on `variable` with
+        parents/evidence `evidence` with beta and std sampled from loc and scale
+
+        Parameters
+        ----------
+        variable: str, int or any hashable python object.
+            The variable on which to define the TabularCPD.
+
+        evidence: list, array-like
+            A list of variable names which are the parents/evidence of `variable`.
+
+        Returns
+        -------
+        Random CPD: pgmpy.factors.continuous.LinearGaussianCPD
+            A LinearGaussianCPD object on `variable` with `evidence` as evidence with random values.
+        """
+        rng = np.random.default_rng(seed=seed)
+
+        beta = rng.normal(loc=loc, scale=scale, size=(len(evidence) + 1))
+        std = abs(rng.normal(loc=loc, scale=scale))
+
+        node_cpd = LinearGaussianCPD(
+            variable=variable,
+            beta=beta,
+            std=std,
+            evidence=evidence,
+        )
+
+        return node_cpd
