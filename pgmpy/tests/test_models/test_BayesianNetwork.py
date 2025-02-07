@@ -148,7 +148,9 @@ class TestBayesianNetworkParser(unittest.TestCase):
         self.assertEqual(set(model_from_str.latents), expected_latents)
 
     def test_from_daggitty(self):
-        dag = BayesianNetwork.from_dagitty('dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}')
+        dag = BayesianNetwork.from_dagitty(
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}'
+        )
         self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
         self.assertEqual(set(dag.latents), set(["X"]))
 
