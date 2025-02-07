@@ -138,6 +138,21 @@ class TestBaseModelCreation(unittest.TestCase):
         del self.G
 
 
+class TestBayesianNetworkParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "i =~ x1 + x2 + x3"
+        model_from_str = BayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("i", "x1"), ("i", "x2"), ("i", "x3")])
+        expected_latents = set(["i"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+
+    def test_from_daggitty(self):
+        dag = BayesianNetwork.from_dagitty('dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}')
+        self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
+        self.assertEqual(set(dag.latents), set(["X"]))
+
+
 class TestBayesianNetworkMethods(unittest.TestCase):
     def setUp(self):
         self.G = BayesianNetwork([("a", "d"), ("b", "d"), ("d", "e"), ("b", "c")])

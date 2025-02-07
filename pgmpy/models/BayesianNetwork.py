@@ -91,8 +91,13 @@ class BayesianNetwork(DAG):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set()):
-        super(BayesianNetwork, self).__init__(ebunch=ebunch, latents=latents)
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        super(BayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
         self.cpds = []
         self.cardinalities = defaultdict(int)
 

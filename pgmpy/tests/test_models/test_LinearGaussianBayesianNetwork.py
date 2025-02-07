@@ -245,3 +245,17 @@ class TestLGBNCreation(unittest.TestCase):
         self.assertEqual(self.graph.latents, set([0]))
         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+
+
+class TestDAGParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "d ~ i"
+        model_from_str = LinearGaussianBayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("i", "d")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+    def test_from_dagitty(self):
+        model_str = """dag{ smoking -> "carry matches" }"""
+        model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
+        expected_edges = set([("smoking", "carry matches")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
