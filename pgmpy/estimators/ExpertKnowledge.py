@@ -1,3 +1,5 @@
+from itertools import chain
+
 from pgmpy.global_vars import logger
 
 
@@ -22,11 +24,12 @@ class ExpertKnowledge:
             graph structure. Refer to the algorithm documentation for details
             on how the argument is handled.
 
-    temporal order: list of lists (default: None)
+    temporal order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
-            Each list in the list of lists contains variables with the same
-            temporal significance; the more prior (parental) variables (list) are at
-            the start while the priority decreases as we go down the list.
+            Each list/structure in the (2 dimensional) iterator contains
+            variables with the same temporal significance; the more prior
+            (parental) variables are at the start while the priority decreases
+            as we go move towards the end of the structure (iterator).
 
     Examples
     --------
@@ -95,9 +98,7 @@ class ExpertKnowledge:
         if self.temporal_order == [[]]:
             return
 
-        tier_set = set()
-        for tier in self.temporal_order:
-            tier_set = tier_set.union(tier)
+        tier_set = set(chain(*self.temporal_order))
 
         if tier_set != set(nodes):
             raise ValueError(
@@ -114,7 +115,7 @@ class ExpertKnowledge:
 
         Parameters
         ----------
-        temporal_order: list of lists
+        temporal_order: iterator
             The temporal ordering of variables according to prior knowledge.
 
         Returns
@@ -122,14 +123,18 @@ class ExpertKnowledge:
         temporal_ordering: dict
             Dictionary with the tier (0, 1, 2, 3 etc.) for each node.
         """
-        if type(temporal_order) != list:
+        if not hasattr(temporal_order, "__iter__"):
             raise TypeError(
-                f"Expected list type for temporal order. Got {type(temporal_order)} instead."
+                f"Expected iterator type for temporal order. Got {type(temporal_order)} instead."
             )
 
         temporal_ordering = dict()
         for order, tier in enumerate(self.temporal_order):
             for node in tier:
+                if node in temporal_ordering:
+                    raise ValueError(
+                        f"Variable {node} present in multiple tiers. Aborting"
+                    )
                 temporal_ordering[node] = order
 
         return temporal_ordering
