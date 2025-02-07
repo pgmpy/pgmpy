@@ -662,3 +662,55 @@ class TestPCRealModels(unittest.TestCase):
                 ]
             ),
         )
+
+    def test_temporal_pc_sachs(self):
+        temporal_order = [
+            ["PKC", "Plcg"],
+            [
+                "PKA",
+                "Raf",
+                "Jnk",
+                "P38",
+                "PIP3",
+                "PIP2",
+                "Mek",
+                "Erk",
+            ],
+            ["Akt"],
+        ]
+        temporal_forbidden_edges = set(
+            [
+                ("PKA", "PKC"),
+                ("PKA", "Plcg"),
+                ("Raf", "PKC"),
+                ("Raf", "Plcg"),
+                ("Jnk", "PKC"),
+                ("Jnk", "Plcg"),
+                ("P38", "PKC"),
+                ("P38", "Plcg"),
+                ("PIP3", "PKC"),
+                ("PIP3", "Plcg"),
+                ("PIP2", "PKC"),
+                ("PIP2", "Plcg"),
+                ("Mek", "PKC"),
+                ("Mek", "Plcg"),
+                ("Erk", "PKC"),
+                ("Erk", "Plcg"),
+                ("Akt", "PKC"),
+                ("Akt", "Plcg"),
+                ("Akt", "PKA"),
+                ("Akt", "Raf"),
+                ("Akt", "Jnk"),
+                ("Akt", "P38"),
+                ("Akt", "PIP3"),
+                ("Akt", "PIP2"),
+                ("Akt", "Mek"),
+                ("Akt", "Erk"),
+            ]
+        )
+
+        model = get_example_model("sachs")
+        df = model.simulate(int(1e3))
+        expert = ExpertKnowledge(temporal_order=temporal_order)
+        pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
+        self.assertTrue(temporal_forbidden_edges.isdisjoint(set(pdag.edges())))
