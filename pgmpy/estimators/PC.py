@@ -195,14 +195,23 @@ class PC(StructureEstimator):
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
-        # Step 2: Orient the edges based on Meek's rules to build the PDAG/CPDAG.
-        pdag = self.orient_colliders(skel, separating_sets)
-        pdag = self.apply_orientation_rules(pdag)
+        # Step 2: Orient the edges based on collider structures.
+        pdag = self.orient_colliders(
+            skel, separating_sets, expert_knowledge.temporal_ordering
+        )
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
-        if not enforce_expert_knowledge:
+        if expert_knowledge.temporal_order != [[]]:
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+
+        elif not enforce_expert_knowledge:
+            pdag = self.apply_orientation_rules(pdag)
+            pdag = expert_knowledge.apply_expert_knowledge(pdag)
+            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+
+        else:
+            pdag = self.apply_orientation_rules(pdag)
 
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
@@ -275,6 +284,7 @@ class PC(StructureEstimator):
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
@@ -290,13 +300,8 @@ class PC(StructureEstimator):
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in chain(
-                            combinations(
-                                set(graph.neighbors(u)) - set([v]), lim_neighbors
-                            ),
-                            combinations(
-                                set(graph.neighbors(v)) - set([u]), lim_neighbors
-                            ),
+                        for separating_set in PC._get_potential_sepsets(
+                            u, v, temporal_ordering, graph, lim_neighbors
                         ):
                             # If a conditioning set exists remove the edge, store the separating set
                             # and move on to finding conditioning set for next edge.
@@ -320,9 +325,8 @@ class PC(StructureEstimator):
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in chain(
-                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
+                        for separating_set in PC._get_potential_sepsets(
+                            u, v, temporal_ordering, graph, lim_neighbors
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.
@@ -343,9 +347,8 @@ class PC(StructureEstimator):
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
-                    for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                    for separating_set in PC._get_potential_sepsets(
+                        u, v, temporal_ordering, graph, lim_neighbors
                     ):
                         if ci_test(
                             u,
@@ -395,6 +398,57 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
+    def _get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
+        """
+        Return the temporally consistent superset of separating set of u, v.
+
+        The temporal order (if specified) of the superset can only be smaller
+        ("earlier") than the particular node. The neighbors of 'u' satisfying
+        this condition are returned.
+
+        Parameters
+        ----------
+        u: variable
+            The node whose neighbors are being considered for separating set.
+
+        v: variable
+            The node along with u whose separating set is being calculated.
+
+        temporal_ordering: dict
+            The temporal ordering of variables according to prior knowledgee.
+
+        graph: UndirectedGraph
+            The graph where separating sets are being calculated for the edges.
+
+        lim_neighbors: int
+            The maximum number of neighbours (conditioning variables) for u, v.
+
+        Returns
+        --------
+        separating_set: set
+            Set containing the superset of separating set of u, v.
+        """
+        separating_set_u = set(graph.neighbors(u))
+        separating_set_v = set(graph.neighbors(v))
+        separating_set_u.discard(v)
+        separating_set_v.discard(u)
+
+        if temporal_ordering != dict():
+            max_order = min(temporal_ordering[u], temporal_ordering[u])
+            for neigh in list(separating_set_u):
+                if temporal_ordering[neigh] > max_order:
+                    separating_set_u.discard(neigh)
+
+            for neigh in list(separating_set_v):
+                if temporal_ordering[neigh] > max_order:
+                    separating_set_v.discard(neigh)
+
+        return chain(
+            combinations(separating_set_u, lim_neighbors),
+            combinations(separating_set_v, lim_neighbors),
+        )
+
+    @staticmethod
     def _check_incoming_edges(pdag, u, v):
         "Used for checking whether a new v-structure is getting formed"
         for predecessor in pdag.predecessors(v):
@@ -413,7 +467,7 @@ class PC(StructureEstimator):
         return False
 
     @staticmethod
-    def orient_colliders(skeleton, separating_sets):
+    def orient_colliders(skeleton, separating_sets, temporal_ordering=dict()):
         """
         Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
@@ -467,7 +521,11 @@ class PC(StructureEstimator):
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
-                        pdag.remove_edges_from([(Z, X), (Z, Y)])
+                        if (temporal_ordering == dict()) or (
+                            (temporal_ordering[Z] >= temporal_ordering[X])
+                            and (temporal_ordering[Z] >= temporal_ordering[Y])
+                        ):
+                            pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
         undirected_edges = []

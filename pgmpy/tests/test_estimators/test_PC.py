@@ -636,3 +636,81 @@ class TestPCRealModels(unittest.TestCase):
                 "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
             ],
         )
+
+    def test_temporal_pc_cancer(self):
+        asia_model = get_example_model("cancer")
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
+        est = PC(data)
+        background = ExpertKnowledge(  # e.g. we only know "Pollution", "Smoker", "Cancer" can be the causes of others
+            temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
+            max_cond_vars=4,
+        )
+        pdag = est.estimate(
+            variant="stable",
+            expert_knowledge=background,
+            n_jobs=2,
+            show_progress=False,
+        )
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("Cancer", "Xray"),
+                    ("Cancer", "Dyspnoea"),
+                    ("Smoker", "Cancer"),
+                    ("Pollution", "Cancer"),
+                ]
+            ),
+        )
+
+    def test_temporal_pc_sachs(self):
+        temporal_order = [
+            ["PKC", "Plcg"],
+            [
+                "PKA",
+                "Raf",
+                "Jnk",
+                "P38",
+                "PIP3",
+                "PIP2",
+                "Mek",
+                "Erk",
+            ],
+            ["Akt"],
+        ]
+        temporal_forbidden_edges = set(
+            [
+                ("PKA", "PKC"),
+                ("PKA", "Plcg"),
+                ("Raf", "PKC"),
+                ("Raf", "Plcg"),
+                ("Jnk", "PKC"),
+                ("Jnk", "Plcg"),
+                ("P38", "PKC"),
+                ("P38", "Plcg"),
+                ("PIP3", "PKC"),
+                ("PIP3", "Plcg"),
+                ("PIP2", "PKC"),
+                ("PIP2", "Plcg"),
+                ("Mek", "PKC"),
+                ("Mek", "Plcg"),
+                ("Erk", "PKC"),
+                ("Erk", "Plcg"),
+                ("Akt", "PKC"),
+                ("Akt", "Plcg"),
+                ("Akt", "PKA"),
+                ("Akt", "Raf"),
+                ("Akt", "Jnk"),
+                ("Akt", "P38"),
+                ("Akt", "PIP3"),
+                ("Akt", "PIP2"),
+                ("Akt", "Mek"),
+                ("Akt", "Erk"),
+            ]
+        )
+
+        model = get_example_model("sachs")
+        df = model.simulate(int(1e3))
+        expert = ExpertKnowledge(temporal_order=temporal_order)
+        pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
+        self.assertTrue(temporal_forbidden_edges.isdisjoint(set(pdag.edges())))
