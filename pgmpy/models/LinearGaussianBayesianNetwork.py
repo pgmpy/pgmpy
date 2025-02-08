@@ -21,9 +21,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
     """
 
-    def __init__(self, ebunch=None, latents=set()):
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
         super(LinearGaussianBayesianNetwork, self).__init__(
-            ebunch=ebunch, latents=latents
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
         )
         self.cpds = []
 

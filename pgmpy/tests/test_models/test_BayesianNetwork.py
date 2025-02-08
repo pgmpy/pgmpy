@@ -42,6 +42,26 @@ class TestBaseModelCreation(unittest.TestCase):
     def test_class_init_with_data_nonstring(self):
         BayesianNetwork([(1, 2), (2, 3)])
 
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+        self.graph = BayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {"a": ["b", "c"], "b": ["c"]}
+        self.graph = BayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = BayesianNetwork(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+
     def test_add_node_string(self):
         self.G.add_node("a")
         self.assertListEqual(list(self.G.nodes()), ["a"])
@@ -116,6 +136,23 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def tearDown(self):
         del self.G
+
+
+class TestBayesianNetworkParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "i =~ x1 + x2 + x3"
+        model_from_str = BayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("i", "x1"), ("i", "x2"), ("i", "x3")])
+        expected_latents = set(["i"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+
+    def test_from_daggitty(self):
+        dag = BayesianNetwork.from_dagitty(
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}'
+        )
+        self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
+        self.assertEqual(set(dag.latents), set(["X"]))
 
 
 class TestBayesianNetworkMethods(unittest.TestCase):

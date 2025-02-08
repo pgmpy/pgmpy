@@ -215,6 +215,7 @@ class HillClimbSearch(StructureEstimator):
 
         score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
+
         # Step 1.2: Check the start_dag
         if start_dag is None:
             start_dag = DAG()
@@ -231,16 +232,12 @@ class HillClimbSearch(StructureEstimator):
             expert_knowledge = ExpertKnowledge()
 
         # Step 1.4: Check if required edges cause a cycle
-        start_dag.add_edges_from(
-            expert_knowledge.required_edges
-        )  # check for adding redundant edges?
+        start_dag.add_edges_from(expert_knowledge.required_edges)
         if not nx.is_directed_acyclic_graph(start_dag):
             raise ValueError(
                 "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
             )
-        start_dag.remove_edges_from(
-            expert_knowledge.forbidden_edges
-        )  # check cycle here?
+        start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         if max_indegree is None:

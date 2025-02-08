@@ -91,12 +91,17 @@ class BayesianNetwork(DAG):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set()):
-        super(BayesianNetwork, self).__init__(ebunch=ebunch, latents=latents)
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        super(BayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
-    def add_edge(self, u, v, **kwargs):
+    def add_edge(self, u, v, w=None, **kwargs):
         """
         Add an edge between u and v.
 
@@ -123,7 +128,10 @@ class BayesianNetwork(DAG):
                 % (u, v)
             )
         else:
-            super(BayesianNetwork, self).add_edge(u, v, **kwargs)
+            if w:
+                super(BayesianNetwork, self).add_edge(u, v, w, **kwargs)
+            else:
+                super(BayesianNetwork, self).add_edge(u, v, **kwargs)
 
     def remove_node(self, node):
         """

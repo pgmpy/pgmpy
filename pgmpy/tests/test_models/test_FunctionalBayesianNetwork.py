@@ -161,3 +161,39 @@ class TestFBNMethods(unittest.TestCase):
 
         self.assertTrue(np.all(samples["lognormal"] > 0))
         self.assertTrue(np.all(samples["gamma"] > 0))
+
+
+class TestFBNCreation(unittest.TestCase):
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+        self.graph = FunctionalBayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {"a": ["b", "c"], "b": ["c"]}
+        self.graph = FunctionalBayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = FunctionalBayesianNetwork(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+
+
+class TestDAGParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "ind60 =~ x1"
+        model_from_str = FunctionalBayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("ind60", "x1")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+    def test_from_dagitty(self):
+        model_str = """dag{X -> Y}"""
+        model_from_str = FunctionalBayesianNetwork.from_dagitty(string=model_str)
+        expected_edges = set([("X", "Y")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
