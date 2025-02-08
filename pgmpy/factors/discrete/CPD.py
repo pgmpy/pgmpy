@@ -332,7 +332,8 @@ class TabularCPD(DiscreteFactor):
         Moderate   FiftyThou True      0.998000      0.0  0.001000  0.001000
         None       FiftyThou True      0.950000      0.0  0.010000  0.040000
         Severe     FiftyThou True      0.999998      0.0  0.000001  0.000001
-        >>> df.sum(axis=1) # Probability sums up to zero, for every combination of evidence variables
+        >>> # Probability sums up to zero, for every combination of evidence variables
+        >>> df.sum(axis=1)
         ThisCarDam  CarValue    Theft
         Mild        FiftyThou   False    1.0
                                 True     1.0
@@ -342,12 +343,15 @@ class TabularCPD(DiscreteFactor):
                                 True     1.0
         """
         state_combinations_with_all_variables = pd.MultiIndex.from_product(
-            [self.state_names[s] for s in self.variables], names=self.variables
+            [self.state_names[var] for var in self.variables], names=self.variables
         )
         df_with_1_column = pd.DataFrame(
-            {"p": self.values.flatten()}, index=state_combinations_with_all_variables
+            {"probability": self.values.flatten()},
+            index=state_combinations_with_all_variables,
         )
-        df_with_prob_rowsum_to_1 = df_with_1_column["p"].unstack(self.variable)
+        df_with_prob_rowsum_to_1 = df_with_1_column["probability"].unstack(
+            self.variable
+        )
         return df_with_prob_rowsum_to_1
 
     def copy(self):
