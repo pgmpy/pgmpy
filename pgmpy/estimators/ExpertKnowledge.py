@@ -103,7 +103,7 @@ class ExpertKnowledge:
             raise ValueError("Node found in multiple tiers of temporal order.")
 
         # Check if all nodes are present in the temporal order
-        if set(chain(*set.temporal_order)) != set(nodes):
+        if set(chain(*self.temporal_order)) != set(nodes):
             raise ValueError(
                 f"Missing nodes in temporal order - {set(nodes) - tier_set}"
             )
