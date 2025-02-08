@@ -98,9 +98,12 @@ class ExpertKnowledge:
         if self.temporal_order == [[]]:
             return
 
-        tier_set = set(chain(*self.temporal_order))
+        # Check if no node is present in multiple tiers
+        if len(set.intersection(*map(set, self.temporal_order))) != 0:
+            raise ValueError("Node found in multiple tiers of temporal order.")
 
-        if tier_set != set(nodes):
+        # Check if all nodes are present in the temporal order
+        if set(chain(*set.temporal_order)) != set(nodes):
             raise ValueError(
                 f"Missing nodes in temporal order - {set(nodes) - tier_set}"
             )
