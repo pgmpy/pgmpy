@@ -397,6 +397,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         for var in chain(X, Y):
             if var not in self.model.nodes():
                 raise ValueError(f"{var} not found in the model.")
@@ -447,6 +452,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
         for x, y in zip(X, Y):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
