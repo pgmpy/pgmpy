@@ -105,7 +105,7 @@ class ExpertKnowledge:
         # Check if all nodes are present in the temporal order
         if set(chain(*self.temporal_order)) != set(nodes):
             raise ValueError(
-                f"Missing nodes in temporal order - {set(nodes) - tier_set}"
+                f"Missing nodes in temporal order - {set(nodes) - set(chain(*self.temporal_order))}"
             )
 
     def _get_temporal_ordering(self, temporal_order):
