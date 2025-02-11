@@ -6,6 +6,7 @@
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
+[![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy)
 [![Version](https://img.shields.io/pypi/v/pgmpy?color=blue)](https://pypi.org/project/pgmpy/)
 [![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
 [![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)

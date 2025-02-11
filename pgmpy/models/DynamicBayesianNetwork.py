@@ -87,6 +87,7 @@ class DynamicBayesianNetwork(DAG):
     Examples
     --------
     Create an empty Dynamic Bayesian Network with no nodes and no edges:
+
     >>> from pgmpy.models import DynamicBayesianNetwork as DBN
     >>> dbn = DBN()
 
@@ -103,6 +104,7 @@ class DynamicBayesianNetwork(DAG):
     ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
 
     We can query the edges and nodes in the network as:
+
     >>> dbn.nodes()
     ['G', 'D', 'I', 'L']
     >>> dbn.edges()
@@ -118,6 +120,7 @@ class DynamicBayesianNetwork(DAG):
     slice as it is common in all the time slices. And therefore pgmpy
     automatically replicated it all the time slices. For example, for
     adding a new variable `S` in the above network we can simply do:
+
     >>> dbn.add_node('S')
     >>> dbn.nodes()
     ['S', 'G', 'D', 'I', 'L']

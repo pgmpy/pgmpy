@@ -80,25 +80,9 @@ def correlation_score(
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
     0.911957950065703
     """
-    from pgmpy.estimators.CITests import (
-        chi_square,
-        g_sq,
-        log_likelihood,
-        modified_log_likelihood,
-        pearsonr,
-        pillai_trace,
-    )
+    from pgmpy.estimators.CITests import get_ci_test
 
     # Step 1: Checks for input arguments.
-    supported_tests = {
-        "chi_square": chi_square,
-        "g_sq": g_sq,
-        "log_likelihood": log_likelihood,
-        "modified_log_likelihood": modified_log_likelihood,
-        "pearsonr": pearsonr,
-        "pillai": pillai_trace,
-    }
-
     if not isinstance(model, (DAG, BayesianNetwork)):
         raise ValueError(
             f"model must be an instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork. Got {type(model)}"
@@ -109,16 +93,16 @@ def correlation_score(
         raise ValueError(
             f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
         )
-    elif (test not in supported_tests.keys()) and (not callable(test)):
-        raise ValueError(f"test not supported and not a callable")
 
-    elif not callable(score):
+    supported_test = get_ci_test(test)
+
+    if not callable(score):
         raise ValueError(f"score should be scikit-learn classification metric.")
 
     # Step 2: Create a dataframe of every 2 combination of variables
     results = []
     for i, j in combinations(model.nodes(), 2):
-        test_result = supported_tests[test](
+        test_result = supported_test(
             X=i,
             Y=j,
             Z=[],

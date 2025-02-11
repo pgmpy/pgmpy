@@ -75,11 +75,13 @@ Supported Data Types
    :header-rows: 1
 
    * -
-     - Casual Discovery
+     - Causal Discovery
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference
+     - Simulations
    * - **Categorical**
+     - Yes
      - Yes
      - Yes
      - Yes
@@ -89,15 +91,18 @@ Supported Data Types
      - Yes
      - Yes (partial)
      - Yes
+     - Yes
    * - **Mixed**
      - Yes
      - No
      - No
      - No
+     - Yes
    * - **Time Series**
      - No
      - Yes
      - Yes (ApproximateInference)
+     - Yes
      - Yes
 
 |

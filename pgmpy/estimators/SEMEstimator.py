@@ -341,7 +341,7 @@ class SEMEstimator(object):
         # Compute chi-square value.
         likelihood_ratio = -(N - 1) * (
             np.log(np.linalg.det(sigma_hat))
-            + (np.linalg.inv(sigma_hat) @ S).trace()
+            + (np.linalg.inv(sigma_hat) @ sample_cov).trace()
             - np.log(np.linalg.det(S))
             - S.shape[0]
         )
@@ -368,7 +368,7 @@ class SEMEstimator(object):
 
         # Update the model with the learned params
         self.model.set_params(
-            B=params["B"].detach().numpy(), zeta=params["B"].detach().numpy()
+            B=params["B"].detach().numpy(), zeta=params["zeta"].detach().numpy()
         )
         return summary
 

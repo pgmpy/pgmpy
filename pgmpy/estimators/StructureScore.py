@@ -10,6 +10,56 @@ from scipy.stats import multivariate_normal
 from pgmpy.estimators import BaseEstimator
 
 
+def get_scoring_method(scoring_method, data, use_cache):
+    supported_methods = {
+        "k2": K2,
+        "bdeu": BDeu,
+        "bds": BDs,
+        "bic-d": BIC,
+        "aic-d": AIC,
+        "ll-g": LogLikelihoodGauss,
+        "aic-g": AICGauss,
+        "bic-g": BICGauss,
+        "ll-cg": LogLikelihoodCondGauss,
+        "aic-cg": AICCondGauss,
+        "bic-cg": BICCondGauss,
+    }
+
+    if isinstance(scoring_method, str):
+        if scoring_method.lower() in [
+            "k2score",
+            "bdeuscore",
+            "bdsscore",
+            "bicscore",
+            "aicscore",
+        ]:
+            raise ValueError(
+                f"The scoring method names have been changed. Please refer the documentation."
+            )
+        elif scoring_method.lower() not in list(supported_methods.keys()):
+            raise ValueError(
+                f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
+            )
+    elif not isinstance(scoring_method, StructureScore):
+        raise ValueError(
+            "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
+        )
+
+    if isinstance(scoring_method, str):
+        score = supported_methods[scoring_method.lower()](data=data)
+    else:
+        score = scoring_method
+
+    if use_cache:
+        from pgmpy.estimators.ScoreCache import ScoreCache
+
+        score_c = ScoreCache(score, data)
+    else:
+        score_c = score
+
+    return score, score_c
+
+
 class StructureScore(BaseEstimator):
     """
     Abstract base class for structure scoring classes in pgmpy. Use any of the

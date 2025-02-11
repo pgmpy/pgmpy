@@ -106,10 +106,7 @@ class TestUAIReader(unittest.TestCase):
         }
 
         self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        if nx.__version__.startswith("1"):
-            self.assertDictEqual(dict(model.edge), edge_expected)
-        else:
-            self.assertDictEqual(dict(model.adj), edge_expected)
+        self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -370,10 +367,7 @@ class TestUAIReaderTorch(unittest.TestCase):
         }
 
         self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        if nx.__version__.startswith("1"):
-            self.assertDictEqual(dict(model.edge), edge_expected)
-        else:
-            self.assertDictEqual(dict(model.adj), edge_expected)
+        self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
         model = self.reader_file.get_model()

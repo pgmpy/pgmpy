@@ -9,6 +9,7 @@ import pandas as pd
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
+from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
 class DAG(nx.DiGraph):
@@ -71,7 +72,22 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set()):
+    def __init__(
+        self,
+        ebunch=None,
+        latents=set(),
+        lavaan_str=None,
+        dagitty_str=None,
+    ):
+        if lavaan_str:
+            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+            if err_corr:
+                logger.warning(
+                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+                )
+        elif dagitty_str:
+            ebunch, latents = parse_dagitty(dagitty_str)
+
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
         cycles = []
@@ -84,6 +100,61 @@ class DAG(nx.DiGraph):
             out_str += "\nEdges indicating the path taken for a loop: "
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
+
+    @classmethod
+    def from_lavaan(cls, string=None, filename=None):
+        """
+        Initializes a `DAG` instance using lavaan syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `lavaan` style multiline set of regression equation representing the model.
+            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+
+        filename: str (default: None)
+            The filename of the file containing the model in lavaan syntax.
+
+        Examples
+        --------
+        """
+        if filename:
+            with open(filename, "r") as f:
+                lavaan_str = f.readlines()
+        elif string:
+            lavaan_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        return cls(lavaan_str=lavaan_str)
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes a `DAG` instance using DAGitty syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline set of regression equation representing the model.
+            Refer https://www.dagitty.net/manual-3.x.pdf#page=3.58 and
+            https://github.com/jtextor/dagitty/blob/7a657776dc8f5e5ba4e323edb028e2c2aaf29327/gui/js/dagitty.js#L3417
+
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Examples
+        --------
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        return cls(dagitty_str=dagitty_str)
 
     def add_node(self, node, weight=None, latent=False):
         """
@@ -109,9 +180,11 @@ class DAG(nx.DiGraph):
         ['A']
 
         Adding a node with some weight.
+
         >>> G.add_node(node='B', weight=0.3)
 
         The weight of these nodes can be accessed as:
+
         >>> G.nodes['B']
         {'weight': 0.3}
         >>> G.nodes['A']
@@ -160,6 +233,7 @@ class DAG(nx.DiGraph):
         NodeView(('A', 'B', 'C'))
 
         Adding nodes with weights:
+
         >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
         >>> G.nodes['D']
         {'weight': 0.3}
@@ -186,7 +260,7 @@ class DAG(nx.DiGraph):
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
 
-    def add_edge(self, u, v, weight=None):
+    def add_edge(self, u, v, weight: int | float = None):
         """
         Add an edge between u and v.
 
@@ -213,6 +287,7 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob')])
 
         When the node is not already present in the graph:
+
         >>> G.add_edge(u='Alice', v='Ankur')
         >>> G.nodes()
         NodeView(('Alice', 'Ankur', 'Bob', 'Charles'))
@@ -220,13 +295,14 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
+
         >>> G.add_edge('Ankur', 'Maria', weight=0.1)
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.1}
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch, weights=None):
+    def add_edges_from(self, ebunch, weights: list | tuple = None):
         """
         Add all the edges in ebunch.
 
@@ -258,6 +334,7 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
 
         When the node is not already in the model:
+
         >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
@@ -265,12 +342,17 @@ class DAG(nx.DiGraph):
         OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
 
         Adding edges with weights:
+
         >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
         ...                  weights=[0.3, 0.5])
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.3}
         >>> G.edge['Maria']['Mason']
         {'weight': 0.5}
+
+        or
+
+        >>> G.add_edges_from([('Ankur', 'Maria', 0.3), ('Maria', 'Mason', 0.5)])
         """
         ebunch = list(ebunch)
 
@@ -283,7 +365,10 @@ class DAG(nx.DiGraph):
                 self.add_edge(ebunch[index][0], ebunch[index][1], weight=weights[index])
         else:
             for edge in ebunch:
-                self.add_edge(edge[0], edge[1])
+                if len(edge) == 2:
+                    self.add_edge(edge[0], edge[1])
+                else:
+                    self.add_edge(edge[0], edge[1], edge[2])
 
     def get_parents(self, node):
         """
@@ -346,16 +431,10 @@ class DAG(nx.DiGraph):
         return [node for node, out_degree in self.out_degree_iter() if out_degree == 0]
 
     def out_degree_iter(self, nbunch=None, weight=None):
-        if nx.__version__.startswith("1"):
-            return super(DAG, self).out_degree_iter(nbunch, weight)
-        else:
-            return iter(self.out_degree(nbunch, weight))
+        return iter(self.out_degree(nbunch, weight))
 
     def in_degree_iter(self, nbunch=None, weight=None):
-        if nx.__version__.startswith("1"):
-            return super(DAG, self).in_degree_iter(nbunch, weight)
-        else:
-            return iter(self.in_degree(nbunch, weight))
+        return iter(self.in_degree(nbunch, weight))
 
     def get_roots(self):
         """
@@ -411,7 +490,7 @@ class DAG(nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> chain = DAG([('X', 'Y'), ('Y', 'Z')])
         >>> chain.get_independencies()
-        (X \u27C2 Z | Y)
+        (X \u27c2 Z | Y)
         """
         nodes = set(self.nodes())
         if not include_latents:
@@ -451,7 +530,7 @@ class DAG(nx.DiGraph):
         >>>                         ('grade', 'letter'), ('intel', 'SAT')])
         >>> ind = student.local_independencies('grade')
         >>> ind
-        (grade \u27C2 SAT | diff, intel)
+        (grade \u27c2 SAT | diff, intel)
         """
 
         independencies = Independencies()
@@ -831,6 +910,7 @@ class DAG(nx.DiGraph):
         Examples
         --------
         Initialize a DAG
+
         >>> graph = DAG()
         >>> graph.add_edges_from([('X', 'A'),
         ...                       ('A', 'Y'),
@@ -866,7 +946,7 @@ class DAG(nx.DiGraph):
     def get_ancestral_graph(self, nodes):
         """
         Returns the ancestral graph of the given `nodes`. The ancestral graph only
-        contains the nodes which are ancestors of atleast one of the variables in
+        contains the nodes which are ancestors of at least one of the variables in
         node.
 
         Parameters
@@ -950,7 +1030,8 @@ class DAG(nx.DiGraph):
             from daft import PGM
         except ImportError as e:
             raise ImportError(
-                "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+                e.msg
+                + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
             )
 
         if isinstance(node_pos, str):
@@ -1232,14 +1313,9 @@ class PDAG(nx.DiGraph):
             latents=self.latents,
         )
 
-    def to_dag(self, required_edges=[]):
+    def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
-
-        Parameters
-        ----------
-        required_edges: list, array-like of 2-tuples
-            The list of edges that should be included in the DAG.
 
         Returns
         -------
@@ -1248,6 +1324,9 @@ class PDAG(nx.DiGraph):
         Examples
         --------
 
+        References
+        ----------
+        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.

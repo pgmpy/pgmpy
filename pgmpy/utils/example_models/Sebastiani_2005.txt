@@ -1,0 +1,98 @@
+dag {
+ADCY9.8 [pos="2.198,9.855"]
+ANXA2.11 [pos="0.105,12.599"]
+ANXA2.12 [pos="-1.329,13.465"]
+ANXA2.13 [pos="1.437,15.415"]
+ANXA2.5 [pos="-3.410,11.227"]
+ANXA2.7 [pos="-1.418,9.206"]
+ANXA2.8 [pos="3.987,20.108"]
+BMP6 [pos="-1.985,4.558"]
+BMP6.10 [pos="-3.086,2.250"]
+BMP6.11 [pos="-1.179,-0.789"]
+BMP6.12 [pos="-2.382,-7.072"]
+BMP6.13 [pos="-3.207,-4.786"]
+BMP6.14 [pos="-4.254,-6.607"]
+BMP6.9 [pos="-2.416,-2.349"]
+CAT [pos="4.501,12.816"]
+CSF2.3 [pos="2.509,-8.195"]
+CSF2.4 [pos="-1.283,-8.195"]
+ECE1.12 [pos="1.202,8.772"]
+ECE1.13 [pos="-0.280,7.260"]
+EDN1.10 [pos="-0.282,22.274"]
+EDN1.3 [exposure,pos="-2.643,16.642"]
+EDN1.9 [pos="-4.064,21.051"]
+EDNI1.6 [pos="1.697,21.769"]
+EDNI1.7 [outcome,pos="-1.234,18.664"]
+MET.5 [pos="4.320,3.489"]
+MET.6 [pos="3.562,11.155"]
+SELP.12 [pos="3.144,5.234"]
+SELP.14 [pos="3.655,-1.126"]
+SELP.17 [pos="-1.367,3.939"]
+SELP.22 [pos="-0.481,2.644"]
+Stroke [pos="1.418,3.285"]
+TGFBR3.10 [pos="2.902,-3.702"]
+TGFBR3.2 [pos="1.355,-2.058"]
+TGFBR3.7 [pos="4.445,-7.336"]
+TGFBR3.8 [pos="-0.092,-5.524"]
+TGFBR3.9 [pos="1.494,-6.462"]
+ANXA2.12 -> ANXA2.11
+ANXA2.12 -> ANXA2.13
+ANXA2.12 -> ANXA2.5
+ANXA2.12 -> ANXA2.7
+ANXA2.13 -> ANXA2.11
+ANXA2.7 -> ANXA2.11
+ANXA2.7 -> ANXA2.5
+ANXA2.8 -> ADCY9.8
+ANXA2.8 -> ANXA2.13
+ANXA2.8 -> BMP6
+ANXA2.8 -> CAT
+ANXA2.8 -> ECE1.12
+ANXA2.8 -> EDN1.3
+ANXA2.8 -> EDNI1.6
+BMP6 -> BMP6.10
+BMP6.10 -> BMP6.11
+BMP6.10 -> BMP6.13
+BMP6.11 -> BMP6.9
+BMP6.13 -> BMP6.12
+BMP6.13 -> BMP6.9
+BMP6.14 -> BMP6.12
+CAT -> MET.5
+CSF2.3 -> CSF2.4
+ECE1.12 -> ECE1.13
+ECE1.13 -> SELP.17
+EDN1.10 -> EDNI1.7
+EDN1.3 -> ANXA2.12
+EDN1.3 -> EDNI1.7
+EDN1.9 -> BMP6.14
+EDN1.9 -> EDN1.10
+EDN1.9 -> EDN1.3
+EDNI1.6 -> EDN1.10
+EDNI1.6 -> EDNI1.7
+MET.5 -> MET.6
+MET.5 -> SELP.14
+MET.5 -> TGFBR3.7
+MET.6 -> SELP.12
+SELP.17 -> SELP.22
+Stroke -> ADCY9.8
+Stroke -> BMP6.10
+Stroke -> BMP6.11
+Stroke -> BMP6.12
+Stroke -> BMP6.13
+Stroke -> CSF2.4
+Stroke -> ECE1.12
+Stroke -> ECE1.13
+Stroke -> MET.5
+Stroke -> MET.6
+Stroke -> SELP.12
+Stroke -> SELP.14
+Stroke -> SELP.22
+Stroke -> TGFBR3.10
+Stroke -> TGFBR3.8
+TGFBR3.10 -> TGFBR3.2
+TGFBR3.10 -> TGFBR3.9
+TGFBR3.2 -> TGFBR3.9
+TGFBR3.7 -> CSF2.3
+TGFBR3.7 -> TGFBR3.10
+TGFBR3.8 -> TGFBR3.2
+TGFBR3.8 -> TGFBR3.9
+}

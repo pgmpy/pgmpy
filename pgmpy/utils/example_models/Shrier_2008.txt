@@ -1,0 +1,34 @@
+dag {
+Coach [pos="-4.392,-7.906"]
+ConnectiveTissueDisorder [pos="3.494,-5.099"]
+ContactSport [pos="-1.157,2.548"]
+FitnessLevel [pos="-1.489,-4.530"]
+Genetics [pos="2.022,-7.906"]
+Injury [outcome,pos="4.969,8.605"]
+IntraGameProprioception [pos="-1.196,8.487"]
+NeuromuscularFatigue [pos="1.501,-1.235"]
+PreGameProprioception [pos="-3.638,-1.235"]
+PreviousInjury [pos="-4.293,4.175"]
+TeamMotivation [pos="-7.175,-0.950"]
+TissueWeakness [pos="4.236,1.857"]
+WarmUpExercises [exposure,pos="-7.000,8.650"]
+Coach -> FitnessLevel
+Coach -> TeamMotivation
+ConnectiveTissueDisorder -> NeuromuscularFatigue
+ConnectiveTissueDisorder -> TissueWeakness
+ContactSport -> IntraGameProprioception
+ContactSport -> PreviousInjury
+FitnessLevel -> NeuromuscularFatigue
+FitnessLevel -> PreGameProprioception
+Genetics -> ConnectiveTissueDisorder
+Genetics -> FitnessLevel
+Genetics -> NeuromuscularFatigue
+IntraGameProprioception -> Injury
+NeuromuscularFatigue -> Injury
+NeuromuscularFatigue -> IntraGameProprioception
+PreGameProprioception -> WarmUpExercises
+TeamMotivation -> PreviousInjury
+TeamMotivation -> WarmUpExercises
+TissueWeakness -> Injury
+WarmUpExercises -> IntraGameProprioception
+}

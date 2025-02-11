@@ -9,9 +9,9 @@ from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 
 
-class LinearGaussianBayesianNetwork(BayesianNetwork):
+class LinearGaussianBayesianNetwork(DAG):
     """
-    A Linear Gaussian Bayesian Network is a Bayesian Network, all
+    A linear Gaussian Bayesian Network is a Bayesian Network, all
     of whose variables are continuous, and where all of the CPDs
     are linear Gaussians.
 
@@ -20,6 +20,15 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
     Gaussian distributions.
 
     """
+
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        super(LinearGaussianBayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
+        self.cpds = []
 
     def add_cpds(self, *cpds):
         """
@@ -42,7 +51,6 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.cpds:
         ...     print(cpd)
-
         P(x1) = N(1; 4)
         P(x2| x1) = N(0.5*x1_mu); -5)
         P(x3| x2) = N(-1*x2_mu); 4)
@@ -68,8 +76,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         node: any hashable python object (optional)
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
@@ -89,7 +97,15 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
-        return super(LinearGaussianBayesianNetwork, self).get_cpds(node)
+        if node is not None:
+            if node not in self.nodes():
+                raise ValueError("Node not present in the Directed Graph")
+            else:
+                for cpd in self.cpds:
+                    if cpd.variable == node:
+                        return cpd
+        else:
+            return self.cpds
 
     def remove_cpds(self, *cpds):
         """
