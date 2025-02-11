@@ -8,9 +8,10 @@ import numpy as np
 
 try:
     import pyparsing as pp
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        e.msg
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     )
 
 from pgmpy.factors.discrete import State, TabularCPD
@@ -33,8 +34,8 @@ class XMLBIFReader(object):
 
     Examples
     --------
-    # xmlbif_test.xml is the file present in
-    # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+    >>> # xmlbif_test.xml is the file present in
+    >>> # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
     >>> from pgmpy.readwrite import XMLBIFReader
     >>> reader = XMLBIFReader("xmlbif_test.xml")
     >>> model = reader.get_model()

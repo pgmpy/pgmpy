@@ -1,5 +1,18 @@
 #!/usr/bin/env python
-from pgmpy.estimators import StructureScore
+from pgmpy.estimators import (
+    AIC,
+    BIC,
+    K2,
+    AICCondGauss,
+    AICGauss,
+    BDeu,
+    BDs,
+    BICCondGauss,
+    BICGauss,
+    LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
+    StructureScore,
+)
 
 
 class ScoreCache(StructureScore):

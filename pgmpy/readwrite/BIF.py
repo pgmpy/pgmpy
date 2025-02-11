@@ -22,9 +22,9 @@ try:
         nums,
         printables,
     )
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        e.message()
+        e.msg
         + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     )
 
@@ -53,8 +53,8 @@ class BIFReader(object):
 
     Examples
     --------
-    # dog-problem.bif file is present at
-    # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
+    >>> # dog-problem.bif file is present at
+    >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
     >>> from pgmpy.readwrite import BIFReader
     >>> reader = BIFReader("bif_test.bif")
     <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>

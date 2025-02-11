@@ -16,42 +16,6 @@ from pgmpy.utils import (
 )
 
 
-class TestDAGCreation(unittest.TestCase):
-    def test_get_example_model(self):
-        all_models = [
-            "asia",
-            "cancer",
-            "earthquake",
-            "sachs",
-            "survey",
-            "alarm",
-            "barley",
-            "child",
-            "insurance",
-            "mildew",
-            "water",
-            "hailfinder",
-            "hepar2",
-            "win95pts",
-            "andes",
-            "diabetes",
-            "link",
-            "munin1",
-            "munin2",
-            "munin3",
-            "munin4",
-            "pathfinder",
-            "pigs",
-            "munin",
-        ]
-        # Would take too much time to load all the models. Hence, randomly select
-        # 5 and try to load them.
-        choices = random.choices(all_models, k=5)
-        for model in tqdm(choices):
-            m = get_example_model(model=model)
-            del m
-
-
 class TestDiscretization(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(42)
@@ -240,6 +204,32 @@ class TestGetExampleModel(unittest.TestCase):
         self.assertEqual(cpd.variable, "aceB")
         self.assertEqual(len(cpd.evidence), 1)
         self.assertIn("icdA", cpd.evidence)
+
+    def test_get_example_model_dagitty(self):
+        dag_models = [
+            "M-bias",
+            "confounding",
+            "mediator",
+            "paths",
+            "Sebastiani_2005",
+            "Polzer_2012",
+            "Schipf_2010",
+            "Shrier_2008",
+            "Acid_1996",
+            "Thoemmes_2013",
+            "Kampen_2014",
+            "Didelez_2010",
+        ]
+        # Would take too much time to load all the models. Hence, randomly select
+        # 3 and try to load them.
+        choices = random.sample(dag_models, k=3)
+        for model in tqdm(choices):
+            print(model)
+            m = get_example_model(model=model)
+            self.assertIsNotNone(m)
+            self.assertTrue(hasattr(m, "nodes"))
+            self.assertTrue(hasattr(m, "edges"))
+            del m
 
     def test_invalid_model_name(self):
         """Test handling of invalid model names."""

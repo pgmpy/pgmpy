@@ -200,8 +200,8 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(len(cpds), len(model.nodes()))
 
     def test_get_random(self):
-        model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
-        model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.2)
+        model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
+        model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
         self.assertNotEqual(model1.edges(), model2.edges())
         self.assertIsInstance(
             model1, LinearGaussianBayesianNetwork, "Incorrect instance"
@@ -223,3 +223,39 @@ class TestLGBNMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
+
+
+class TestLGBNCreation(unittest.TestCase):
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+        self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {"a": ["b", "c"], "b": ["c"]}
+        self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = LinearGaussianBayesianNetwork(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+
+
+class TestDAGParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "d ~ i"
+        model_from_str = LinearGaussianBayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("i", "d")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+    def test_from_dagitty(self):
+        model_str = """dag{ smoking -> "carry matches" }"""
+        model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
+        expected_edges = set([("smoking", "carry matches")])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)

@@ -1,0 +1,23 @@
+dag {
+A [pos="-1.429,-2.311"]
+PA [pos="1.661,-2.186"]
+S [pos="-1.423,2.555"]
+T2DM [outcome,pos="1.666,2.693"]
+TT [exposure,pos="-0.443,-0.942"]
+U [pos="-0.459,1.159"]
+WC [pos="0.829,-0.735"]
+A -> PA
+A -> S
+A -> TT
+A -> U
+A -> WC
+PA -> T2DM
+PA -> WC
+S -> T2DM
+S -> TT
+U -> T2DM
+U -> TT
+WC -> T2DM
+WC -> TT
+WC -> U
+}

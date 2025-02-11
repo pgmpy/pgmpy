@@ -455,7 +455,7 @@ class CausalInference(object):
 
     def get_minimal_adjustment_set(self, X, Y):
         """
-        Method to test whether `adjustment_set` is a valid adjustment set for
+        Returns a minimal adjustment set for
         identifying the causal effect of `X` on `Y`.
 
         Parameters

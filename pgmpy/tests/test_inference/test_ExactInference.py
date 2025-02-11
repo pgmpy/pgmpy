@@ -345,6 +345,20 @@ class TestVariableElimination(unittest.TestCase):
         )
         self.assertEqual(2, result_width)
 
+    def test_invalid_state_name(self):
+        """Test handling of invalid state names."""
+        with self.assertRaises(KeyError):
+            self.bayesian_inference.query(
+                variables=["J"], evidence={"A": -1}, show_progress=False
+            )
+
+    def test_invalid_variable_name(self):
+        """Test handling of invalid variable names."""
+        with self.assertRaises(ValueError):
+            self.bayesian_inference.query(
+                variables=["J"], evidence={"wrong_variable": 0}, show_progress=False
+            )
+
     def tearDown(self):
         del self.bayesian_inference
         del self.bayesian_model
