@@ -3,6 +3,8 @@ import pandas as pd
 
 from pgmpy.factors.base import BaseFactor
 
+import pyro
+
 
 class FunctionalCPD(BaseFactor):
     """
@@ -101,19 +103,13 @@ class FunctionalCPD(BaseFactor):
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
 
-            test_sample = self.fn(parent_sample.iloc[0])
-            for _, row in parent_sample.iterrows():
-                if isinstance(test_sample, float):
-                    sampled_values.append(self.fn(row))
-                else:
-                    sampled_values.append(self.fn(row)())
+            for i in range(n_samples):
+                sampled_values.append(pyro.sample(f"{self.variable}", 
+                    self.fn(parent_sample.iloc[i, :])).item())
         else:
-            test_sample = self.fn(parent_sample)
-            for _ in range(n_samples):
-                if isinstance(test_sample, float):
-                    sampled_values.append(self.fn(parent_sample))
-                else:
-                    sampled_values.append(self.fn(parent_sample)())
+            for i in range(n_samples):
+                sampled_values.append(pyro.sample(f"{self.variable}", 
+                    self.fn(parent_sample)).item())
 
         sampled_values = np.array(sampled_values)
 

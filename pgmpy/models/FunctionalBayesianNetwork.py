@@ -179,8 +179,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> model.simulate(n_samples=1000)
         """
         if seed is not None:
-            import pyro
-
             pyro.set_rng_seed(seed)
 
         nodes = list(nx.topological_sort(self))
@@ -198,7 +196,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
     def fit(
         self,
         data,
-        guides=None,
         method="SVI",
         learning_rate=1e-4,
         num_steps=100,
@@ -210,7 +207,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Parameters:
             data (pd.DataFrame) : DataFrame with observations of variables.
-            guides (dict) : Dictionary of Pyro guide functions for variational inference.
             method (str) : Approximation methods for posterior distribution.
             learning_rate (float) : Learning rate for optimization
             num_steps (int) : Number of optimization steps for each variable.
@@ -225,17 +221,39 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> import numpy as np
         >>> import pyro.distributions as dist
 
-        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> model = FunctionalBayesianNetwork([("x1", "x2")])
         >>> x1 = np.random.normal(1, 2, size=10000)
-        >>> data = pd.DataFrame({"x1": x1})
+        >>> x2 = np.random.normal(5 + x1, 1)
+        >>> data = pd.DataFrame({"x1": x1, "x2": x2})
+        >>> def x1_prior():
+        ...    mu = pyro.sample("x1_mu", dist.Normal(0, 10))
+        ...    sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
+        ...    return dist.Normal(mu, sigma)
+        >>> def x2_prior(parent):
+        ...    mu = pyro.param("x2_mu", torch.tensor(1.0)) + parent["x1"]
+        ...    sigma = positive_param("x2_sigma", 1.0)
+        ...    return dist.Normal(mu, sigma)
+
+        >>> cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
+        >>> cpd2 = FunctionalCPD('x2', fn=lambda parent: x2_prior(parent), parents=['x1'])
+        >>> model.add_cpds(cpd1, cpd2)
+        >>> params = model.fit(data, method="SVI", learning_rate=0.05, num_steps=100)
+        >>> print(params)
+
         >>> def x1_prior():
         ...    mu = pyro.sample("x1_mu", dist.Normal(0, 10))
         ...    sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
         ...    return dist.Normal(mu, sigma)
 
-        >>> cpd1 = FunctionalCPD("x1", lambda: x1_prior())
-        >>> model.add_cpds(cpd1)
-        >>> params = model.fit(data, method="MCMC", num_steps=100)
+        >>> def x2_prior(parent):
+        ...    mu = pyro.sample("x2_mu", dist.Normal(5, 1))
+        ...    sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
+        ...    return dist.Normal(mu + parent['x1'], sigma)
+
+        >>> cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
+        >>> cpd2 = FunctionalCPD('x2', fn=lambda parent: x2_prior(parent), parents=['x1'])
+
+        >>> params = model.fit(data, method="MCMC", num_steps=100, mcmc_kwargs={"mp_context": "fork"})
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
 
@@ -255,44 +273,26 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         sort_nodes = list(nx.topological_sort(self))
 
         if method == "SVI":
-            if guides is None:
-                raise ValueError("Specify guides function for SVI.")
-            else:
-                if not isinstance(guides, dict):
-                    raise ValueError(
-                        f"Specify guides as dictionary, not {type(guides)}"
-                    )
-                for variable in data.columns:
-                    if variable not in guides.keys():
-                        raise ValueError(f"Guide not found for variable {variable}.")
-
             def model():
-                for node in self.nodes:
-                    if node in data.columns:
-                        cpd = self.get_cpds(node)
-                        parents = cpd.parents
+                with pyro.plate(f"data", data.shape[0]):
+                    for node in self.nodes:
+                        if node in data.columns:
+                            cpd = self.get_cpds(node)
+                            parents = cpd.parents
 
-                        parent_data = (
-                            {p: torch.tensor(data[p].values).float() for p in parents}
-                            if parents
-                            else None
-                        )
-
-                        with pyro.plate(f"plate_{node}", len(data[node])):
-                            pyro.condition(
-                                cpd.fn(parent_data),
-                                data={"data_dist": torch.tensor(data[node].values)},
+                            parent_data = (
+                                {p: torch.tensor(data[p].values).float() for p in parents}
+                                if parents
+                                else None
                             )
-
+                            
+                            pyro.sample(f"{node}", cpd.fn(parent_data), obs=torch.tensor(data[node].values))
+                            
             def guide():
-                for node in self.nodes:
-                    if node in guides:
-                        with pyro.plate(f"plate_{node}", len(data[node])):
-                            guides[node]()
+                # No latent variables to approximate
+                pass
 
-            gamma = 0.01
-            lrd = gamma ** (1 / num_steps)
-            optimizer = pyro.optim.ClippedAdam({"lr": learning_rate, "lrd": lrd})
+            optimizer = pyro.optim.Adam({"lr": learning_rate})
             svi = pyro.infer.SVI(
                 model=model,
                 guide=guide,
@@ -302,8 +302,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
             for step in range(num_steps):
                 loss = svi.step()
-                if step % 250 == 0:
-                    print(f"Loss : {loss}")
+                if step % 50 == 0:
+                    print(f"Step {step} | Loss: {loss:.4f}")
 
             params = pyro.get_param_store()
             return {name: params[name].detach().numpy() for name in params.keys()}
@@ -337,3 +337,58 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
             samples = mcmc.get_samples()
             return samples
+
+    def inference(self, method, data):
+        sort_nodes = list(nx.topological_sort(self))
+        inference_data = {}
+
+        if method == "SVI":
+            for node in sort_nodes:
+                if node not in data.keys():
+                    cpd = self.get_cpds(node)
+                    parents = cpd.parents
+
+                    parent_data = {}
+                    if parents:
+                        for p in parents:
+                            if p in data.columns:
+                                parent_data[p] = torch.tensor(data[p]).float()
+                            else:
+                                parent_data[p] = torch.tensor(inference_data[p]).float()
+                    else:
+                        parent_data = None
+
+                    inference_data[node] = pyro.sample(f"{node}_infer", cpd.fn(parent_data), obs=None).item()
+        else:
+            def inference_model(sample):
+                for node in sort_nodes:
+                    if node in data.keys():
+                        cpd = self.get_cpds(node)
+                        parents = cpd.parents
+
+                        parent_data = {}
+                        if parents:
+                            for p in parents:
+                                if p in sample.columns:
+                                    parent_data[p] = torch.tensor(sample[p]).float()
+                                else:
+                                    parent_data[p] = torch.tensor(inference_data[p]).float()
+                        else:
+                            parent_data = None
+
+                    inference_data[node] = pyro.sample(f"{node}_infer", cpd.fn(parent_data), obs=None).item()
+
+            nuts_kernel = NUTS(inference_model)
+            mcmc = MCMC(nuts_kernel, num_samples=num_samples, warmup_steps=num_samples * 2)
+
+            result_means = []
+            for i, sample in data.iterrows():
+                mcmc.run(sample.to_dict())
+                samples = mcmc.get_samples()
+                for node in sort_nodes:
+                    result_means.append(samples[node].mean().item())
+
+            return result_means
+
+        return inference_data
+                            
