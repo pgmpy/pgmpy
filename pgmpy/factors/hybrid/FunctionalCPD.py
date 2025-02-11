@@ -104,12 +104,16 @@ class FunctionalCPD(BaseFactor):
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
 
             for i in range(n_samples):
-                sampled_values.append(pyro.sample(f"{self.variable}", 
-                    self.fn(parent_sample.iloc[i, :])).item())
+                sampled_values.append(
+                    pyro.sample(
+                        f"{self.variable}", self.fn(parent_sample.iloc[i, :])
+                    ).item()
+                )
         else:
             for i in range(n_samples):
-                sampled_values.append(pyro.sample(f"{self.variable}", 
-                    self.fn(parent_sample)).item())
+                sampled_values.append(
+                    pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
+                )
 
         sampled_values = np.array(sampled_values)
 

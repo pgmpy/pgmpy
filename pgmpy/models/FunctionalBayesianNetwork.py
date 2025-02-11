@@ -273,6 +273,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         sort_nodes = list(nx.topological_sort(self))
 
         if method == "SVI":
+
             def model():
                 with pyro.plate(f"data", data.shape[0]):
                     for node in self.nodes:
@@ -281,13 +282,20 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                             parents = cpd.parents
 
                             parent_data = (
-                                {p: torch.tensor(data[p].values).float() for p in parents}
+                                {
+                                    p: torch.tensor(data[p].values).float()
+                                    for p in parents
+                                }
                                 if parents
                                 else None
                             )
-                            
-                            pyro.sample(f"{node}", cpd.fn(parent_data), obs=torch.tensor(data[node].values))
-                            
+
+                            pyro.sample(
+                                f"{node}",
+                                cpd.fn(parent_data),
+                                obs=torch.tensor(data[node].values),
+                            )
+
             def guide():
                 # No latent variables to approximate
                 pass
@@ -358,8 +366,11 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                     else:
                         parent_data = None
 
-                    inference_data[node] = pyro.sample(f"{node}_infer", cpd.fn(parent_data), obs=None).item()
+                    inference_data[node] = pyro.sample(
+                        f"{node}_infer", cpd.fn(parent_data), obs=None
+                    ).item()
         else:
+
             def inference_model(sample):
                 for node in sort_nodes:
                     if node in data.keys():
@@ -372,14 +383,20 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                                 if p in sample.columns:
                                     parent_data[p] = torch.tensor(sample[p]).float()
                                 else:
-                                    parent_data[p] = torch.tensor(inference_data[p]).float()
+                                    parent_data[p] = torch.tensor(
+                                        inference_data[p]
+                                    ).float()
                         else:
                             parent_data = None
 
-                    inference_data[node] = pyro.sample(f"{node}_infer", cpd.fn(parent_data), obs=None).item()
+                    inference_data[node] = pyro.sample(
+                        f"{node}_infer", cpd.fn(parent_data), obs=None
+                    ).item()
 
             nuts_kernel = NUTS(inference_model)
-            mcmc = MCMC(nuts_kernel, num_samples=num_samples, warmup_steps=num_samples * 2)
+            mcmc = MCMC(
+                nuts_kernel, num_samples=num_samples, warmup_steps=num_samples * 2
+            )
 
             result_means = []
             for i, sample in data.iterrows():
@@ -391,4 +408,3 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             return result_means
 
         return inference_data
-                            

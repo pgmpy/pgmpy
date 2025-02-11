@@ -178,17 +178,25 @@ class TestFBNMethods(unittest.TestCase):
 
         def x1_prior():
             mu = pyro.param("x1_mu", torch.tensor(0.5))
-            sigma = pyro.param("x1_sigma", torch.tensor(3.0), constraint=torch.distributions.constraints.positive)
+            sigma = pyro.param(
+                "x1_sigma",
+                torch.tensor(3.0),
+                constraint=torch.distributions.constraints.positive,
+            )
             return dist.Normal(mu, sigma)
 
         def x2_prior(parent):
-            mu = pyro.param("x2_mu", torch.tensor(3.0)) 
-            sigma = pyro.param("x2_sigma", torch.tensor(2.0), constraint=torch.distributions.constraints.positive)
+            mu = pyro.param("x2_mu", torch.tensor(3.0))
+            sigma = pyro.param(
+                "x2_sigma",
+                torch.tensor(2.0),
+                constraint=torch.distributions.constraints.positive,
+            )
             alpha = pyro.param("x2_alpha", torch.tensor(1.0))
             return dist.Normal(mu + (parent["x1"] * alpha), sigma)
 
-        cpd1 = FunctionalCPD('x1', fn=lambda _: x1_prior())
-        cpd2 = FunctionalCPD('x2', fn=lambda parent: x2_prior(parent), parents=['x1'])
+        cpd1 = FunctionalCPD("x1", fn=lambda _: x1_prior())
+        cpd2 = FunctionalCPD("x2", fn=lambda parent: x2_prior(parent), parents=["x1"])
 
         self.model.add_cpds(cpd1, cpd2)
 
@@ -237,7 +245,6 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x1_concen0"].mean(), 5, delta=0.2)
         self.assertAlmostEqual(params["x2_rate"].mean(), 5, delta=0.2)
 
-
     def test_mcmc_fit_normal(self):
         alpha = 0.23
         x1 = np.random.normal(1, 2, size=10000)
@@ -254,12 +261,10 @@ class TestFBNMethods(unittest.TestCase):
             sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
             alpha = pyro.sample("x2_alpha", dist.Normal(1, 3))
 
-            return dist.Normal(mu + (alpha * parent['x1']), sigma)
+            return dist.Normal(mu + (alpha * parent["x1"]), sigma)
 
         cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        cpd2 = FunctionalCPD(
-            "x2", lambda parent: x2_prior(parent), parents=["x1"]
-        )
+        cpd2 = FunctionalCPD("x2", lambda parent: x2_prior(parent), parents=["x1"])
 
         self.model.add_cpds(cpd1, cpd2)
         params = self.model.fit(data, method="MCMC", num_steps=2000)
@@ -291,9 +296,7 @@ class TestFBNMethods(unittest.TestCase):
             return dist.Poisson(rate + parent["x1"])
 
         cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        cpd2 = FunctionalCPD(
-            "x2", lambda parent: x2_prior(parent), parents=["x1"]
-        )
+        cpd2 = FunctionalCPD("x2", lambda parent: x2_prior(parent), parents=["x1"])
 
         self.model.add_cpds(cpd1, cpd2)
 
@@ -306,6 +309,7 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x1_concen1"].mean(), 1, delta=0.2)
         self.assertAlmostEqual(params["x1_concen0"].mean(), 5, delta=0.2)
         self.assertAlmostEqual(params["x2_rate"].mean(), 5, delta=0.2)
+
 
 class TestFBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
