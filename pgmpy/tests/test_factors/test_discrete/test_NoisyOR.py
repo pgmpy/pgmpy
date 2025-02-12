@@ -24,6 +24,17 @@ class TestNoisyORInit(unittest.TestCase):
             ),
         )
 
+        self.assertRaises(
+            ValueError, NoisyORCPD, variable="X", prob_values=[0.7, 0.8], evidence=["Y"]
+        )
+        self.assertRaises(
+            ValueError,
+            NoisyORCPD,
+            variable="X",
+            prob_values=[0.7, 1.1],
+            evidence=["Y", "Z"],
+        )
+
     def test_inference(self):
         model = BayesianNetwork([("A", "B"), ("C", "B"), ("B", "D")])
 
