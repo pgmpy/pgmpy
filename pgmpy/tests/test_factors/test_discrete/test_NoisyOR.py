@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors.discrete import NoisyORCPD
+from pgmpy.factors.discrete import NoisyORCPD, TabularCPD
+from pgmpy.models import BayesianNetwork
 
 
 class TestNoisyORInit(unittest.TestCase):
@@ -21,4 +22,28 @@ class TestNoisyORInit(unittest.TestCase):
                     [0.024, 0.12, 0.06, 0.3, 0.08, 0.4, 0.2, 1.0],
                 ]
             ),
+        )
+
+    def test_inference(self):
+        model = BayesianNetwork([("A", "B"), ("C", "B"), ("B", "D")])
+
+        cpd_a = TabularCPD("A", 2, [[0.2], [0.8]], state_names={"A": ["True", "False"]})
+        cpd_c = TabularCPD("C", 2, [[0.1], [0.9]], state_names={"C": ["True", "False"]})
+        cpd_b = NoisyORCPD("B", [0.4, 0.3], evidence=["A", "C"])
+        cpd_d = NoisyORCPD("D", [0.8], evidence=["B"])
+
+        model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d)
+
+        from pgmpy.inference import VariableElimination
+
+        infer = VariableElimination(model)
+        np.testing.assert_allclose(infer.query(["A"]).values, [0.2, 0.8])
+        np.testing.assert_allclose(infer.query(["C"]).values, [0.1, 0.9])
+        np.testing.assert_allclose(infer.query(["B"]).values, [0.1076, 0.8924])
+
+        np.testing.assert_allclose(
+            infer.query(["D"], evidence={"B": "True"}).values, [0.8, 0.2]
+        )
+        np.testing.assert_allclose(
+            infer.query(["D"], evidence={"B": "False"}).values, [0, 1.0]
         )
