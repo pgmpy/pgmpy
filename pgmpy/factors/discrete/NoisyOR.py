@@ -10,6 +10,11 @@ class NoisyORCPD(TabularCPD):
         """
         Initializes the NoisyORCPD class.
 
+        The NoisyOR CPD is a special case of TabularCPD for binary variables
+        where a given variable can be activated by each of the parent variables
+        with a specified probability. This activation probability is defined
+        in the `prob_values` argument.
+
         Parameters
         ----------
         variable: str
@@ -26,6 +31,15 @@ class NoisyORCPD(TabularCPD):
         --------
         >>> from pgmpy.factors.discrete import NoisyORCPD
         >>> cpd = NoisyORCPD(variable='Y', prob_values=[0.3, 0.5], evidence=['X1', 'X2'])
+
+        # Defining a model containing NoisyORCPD
+        >>> from pgmpy.models import BayesianNetwork
+        >>> model = BayesianNetwork(['A', 'B'])
+
+        # With nodes with no parents, we can not define a NoisyORCPD.
+        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]], state_names={'A': ['True', 'False']})
+        >>> cpd_b = NoisyORCPD('B', [0.8], evidence=['A'])
+        >>> model.add_cpds(cpd_a, cpd_b)
         """
         if len(prob_values) != len(evidence):
             raise ValueError(
