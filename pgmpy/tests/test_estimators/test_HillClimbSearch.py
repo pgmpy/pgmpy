@@ -216,6 +216,18 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             ).edges()
         )
 
+        temporal_knowledge = ExpertKnowledge(
+            temporal_order=[["Pclass", "Sex"], ["Survived"]]
+        )
+        self.assertSetEqual(
+            set([("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")]),
+            set(
+                self.est_titanic2.estimate(
+                    expert_knowledge=temporal_knowledge, show_progress=False
+                ).edges()
+            ),
+        )
+
     def test_no_legal_operation(self):
         data = pd.DataFrame(
             [

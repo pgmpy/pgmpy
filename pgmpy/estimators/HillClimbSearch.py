@@ -237,6 +237,7 @@ class HillClimbSearch(StructureEstimator):
             raise ValueError(
                 "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
             )
+        expert_knowledge._orient_temporal_forbidden_edges(start_dag)
         start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar

@@ -155,10 +155,18 @@ class ExpertKnowledge:
             return
 
         forbidden_edges = []
-        for node in graph.nodes:
-            for neighbor in graph.neighbors(node):
-                if self.temporal_ordering[neighbor] < self.temporal_ordering[node]:
-                    forbidden_edges.append((node, neighbor))
+        if len(graph.edges) != 0:
+            for node in graph.nodes:
+                for neighbor in graph.neighbors(node):
+                    if self.temporal_ordering[neighbor] < self.temporal_ordering[node]:
+                        forbidden_edges.append((node, neighbor))
+        # Case when the graph has only the nodes but no edges
+        else:
+            for tier in range(1, len(self.temporal_order)):
+                for node in self.temporal_order[tier]:
+                    for lower_tier in range(tier):
+                        for lower_node in self.temporal_order[lower_tier]:
+                            forbidden_edges.append((node, lower_node))
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
 
