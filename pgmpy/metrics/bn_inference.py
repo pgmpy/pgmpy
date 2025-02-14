@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.sampling import BayesianModelInference
+from pgmpy.utils import compat_fns
 
 
 class BayesianModelProbability(BayesianModelInference):
@@ -77,13 +78,18 @@ class BayesianModelProbability(BayesianModelInference):
                 variable=node, evidence=evidence, state_combinations=unique
             )
             weights = np.array(
-                [index_to_weight[state_to_index[tuple(u)].item()].cpu() for u in unique]
+                [
+                    compat_fns.to_numpy(
+                        index_to_weight[state_to_index[tuple(u)].item()]
+                    )
+                    for u in unique
+                ]
             )[inverse]
         else:
             # there are NO conditional dependencies for this node
             # retrieve array: p(x[n]).  We do this for each x in data.
             # We pick the specific node value from the arrays below.
-            weights = np.array([cpd.values.cpu()] * len(data))
+            weights = np.array([compat_fns.to_numpy(cpd.values)] * len(data))
 
         # pick the specific node value x[n] from the array p(x[n]|E) or p(x[n])
         # We do this for each x in data.
