@@ -352,9 +352,9 @@ class BayesianModelSampling(BayesianModelInference):
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                     variable=node, evidence=evidence, state_combinations=unique
                 )
-                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
-                    inverse
-                ]
+                weight_index = np.array(
+                    [state_to_index[tuple(u)].item() for u in unique]
+                )[inverse]
 
                 if node in evidence_dict:
                     evidence_value = evidence_dict[node]
@@ -364,7 +364,7 @@ class BayesianModelSampling(BayesianModelInference):
                             map(
                                 lambda i: index_to_weight[weight_index[i]][
                                     evidence_value
-                                ],
+                                ].item(),
                                 range(size),
                             )
                         )
@@ -378,7 +378,10 @@ class BayesianModelSampling(BayesianModelInference):
                     sampled[node] = evidence_dict[node]
                     sampled.loc[:, "_weight"] *= np.array(
                         list(
-                            map(lambda _: cpd.values[evidence_dict[node]], range(size))
+                            map(
+                                lambda _: cpd.values[evidence_dict[node]].item(),
+                                range(size),
+                            )
                         )
                     )
                 else:

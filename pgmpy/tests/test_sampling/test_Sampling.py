@@ -9,6 +9,9 @@ from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 from pgmpy.sampling.base import BayesianModelInference
 
+from numpy import testing as np_test
+from torch import testing as torch_test
+
 
 class TestBayesianModelSampling(unittest.TestCase):
     def setUp(self):
@@ -610,17 +613,16 @@ class TestBayesianModelSamplingTorch(unittest.TestCase):
         )
         self.assertEqual(state_to_index[(1, 1)], 0)
         self.assertEqual(state_to_index[(1, 0)], 1)
-        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
-        self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
-
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[0]], [0.1, 0.9])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[1]], [0.6, 0.4])
         # Make sure the order of the evidence variables doen't matter
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
             "J", ["R", "A"], [(1, 1), (1, 0)]
         )
         self.assertEqual(state_to_index[(1, 1)], 0)
         self.assertEqual(state_to_index[(1, 0)], 1)
-        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
-        self.assertEqual(list(index_to_weight[1]), [0.7, 0.3])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[0]], [0.1, 0.9])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[1]], [0.7, 0.3])
 
     def test_pred_compute_reduce_maps_partial_evidence(self):
         base_infer = BayesianModelInference(self.bayesian_model)
@@ -629,8 +631,8 @@ class TestBayesianModelSamplingTorch(unittest.TestCase):
         )
         self.assertEqual(state_to_index[(1,)], 0)
         self.assertEqual(state_to_index[(0,)], 1)
-        self.assertEqual(list(index_to_weight[0].round(2)), [0.35, 0.65])
-        self.assertEqual(list(index_to_weight[1].round(2)), [0.8, 0.2])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[0]], [0.35, 0.65])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[1]], [0.8, 0.2])
 
         # Make sure the order of the evidence variables doen't matter
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
@@ -638,8 +640,8 @@ class TestBayesianModelSamplingTorch(unittest.TestCase):
         )
         self.assertEqual(state_to_index[(1,)], 0)
         self.assertEqual(state_to_index[(0,)], 1)
-        self.assertEqual(list(index_to_weight[0].round(2)), [0.4, 0.6])
-        self.assertEqual(list(index_to_weight[1].round(2)), [0.75, 0.25])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[0]], [0.4, 0.6])
+        self.assertEqual([round(e.item(), 2) for e in index_to_weight[1]], [0.75, 0.25])
 
     def test_forward_sample(self):
         # Test without state names
@@ -667,9 +669,10 @@ class TestBayesianModelSamplingTorch(unittest.TestCase):
 
         for node in self.bayesian_model.nodes():
             for state in [0, 1]:
-                self.assertEqual(
-                    round(self.forward_marginals[node].get_value(**{node: state}), 1),
-                    round(sample_marginals[node].loc[state], 1),
+                np_test.assert_almost_equal(
+                    self.forward_marginals[node].get_value(**{node: state}).item(),
+                    sample_marginals[node].loc[state],
+                    decimal=1,
                 )
 
         # Test without state names and with latents
@@ -760,9 +763,10 @@ class TestBayesianModelSamplingTorch(unittest.TestCase):
 
         for node in ["Q", "G", "L"]:
             for state in [0, 1]:
-                self.assertEqual(
-                    round(self.rejection_marginals[node].get_value(**{node: state}), 1),
-                    round(sample_marginals[node].loc[state], 1),
+                np_test.assert_almost_equal(
+                    self.rejection_marginals[node].get_value(**{node: state}).item(),
+                    sample_marginals[node].loc[state],
+                    1,
                 )
 
         # Test without state names with latent variables
