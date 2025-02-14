@@ -15,6 +15,7 @@ from pgmpy.estimators import (
     BDs,
     BICCondGauss,
     BICGauss,
+    ExpertKnowledge,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
     StructureEstimator,
@@ -84,7 +85,13 @@ class GES(StructureEstimator):
             current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic-d", min_improvement=1e-6, debug=False):
+    def estimate(
+        self,
+        scoring_method="bic-d",
+        min_improvement=1e-6,
+        expert_knowledge=None,
+        debug=False,
+    ):
         """
         Estimates the DAG from the data.
 
@@ -129,10 +136,17 @@ class GES(StructureEstimator):
         # Step 1: Initialize an empty model.
         current_model = DAG()
         current_model.add_nodes_from(list(self.data.columns))
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        expert_knowledge._orient_temporal_forbidden_edges(current_model)
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
-            potential_edges = self._legal_edge_additions(current_model)
+            potential_edges = [
+                edge
+                for edge in self._legal_edge_additions(current_model)
+                if edge not in expert_knowledge.forbidden_edges
+            ]
             score_deltas = np.zeros(len(potential_edges))
             for index, (u, v) in enumerate(potential_edges):
                 current_parents = current_model.get_parents(v)
@@ -153,7 +167,11 @@ class GES(StructureEstimator):
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
-            potential_removals = list(current_model.edges())
+            potential_removals = [
+                edge
+                for edge in list(current_model.edges())
+                if edge not in expert_knowledge.required_edges
+            ]
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
@@ -174,7 +192,14 @@ class GES(StructureEstimator):
 
         # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
         while True:
-            potential_flips = self._legal_edge_flips(current_model)
+            potential_flips = [
+                (u, v)
+                for (u, v) in self._legal_edge_flips(current_model)
+                if (
+                    (u, v) not in expert_knowledge.forbidden_edges
+                    and (v, u) not in expert_knowledge.required_edges
+                )
+            ]
             score_deltas = np.zeros(len(potential_flips))
             for index, (u, v) in enumerate(potential_flips):
                 v_parents = current_model.get_parents(v)
