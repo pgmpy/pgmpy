@@ -6,6 +6,8 @@ from .metrics import (
     implied_cis,
     log_likelihood_score,
     structure_score,
+    mi,
+    mutual_info_with_percents,
 )
 
 __all__ = [
@@ -15,4 +17,6 @@ __all__ = [
     "implied_cis",
     "fisher_c",
     "SHD",
+    "mi",
+    "mutual_info_with_percents",
 ]
