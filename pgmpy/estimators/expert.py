@@ -14,6 +14,7 @@ from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data=None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
+        self.orientations_llm = set([])
 
     def test_all(self, dag):
         """
@@ -60,6 +61,8 @@ class ExpertInLoop(StructureEstimator):
         llm_model="gemini/gemini-1.5-flash",
         variable_descriptions=None,
         show_progress=True,
+        orientations=set([]),
+        use_cache=True,
         **kwargs,
     ):
         """
@@ -100,6 +103,12 @@ class ExpertInLoop(StructureEstimator):
 
         show_progress: bool (default: True)
             If True, prints info of the running status.
+
+        orientations: set
+            preferred orientation for edges
+
+        use_cache: bool
+            If False, ask LLM (the same question multiple times)
 
         kwargs: kwargs
             Any additional parameters to pass to litellm.completion method.
@@ -178,30 +187,42 @@ class ExpertInLoop(StructureEstimator):
                 break
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
+            edge_direction = None
             if use_llm:
-                edge_direction = llm_pairwise_orient(
-                    selected_edge.u,
-                    selected_edge.v,
-                    variable_descriptions,
-                    llm_model=llm_model,
-                    **kwargs,
-                )
+                if use_cache:
+                    if (selected_edge.u, selected_edge.v) in self.orientations_llm:
+                        edge_direction = (selected_edge.u, selected_edge.v)
+                    elif (selected_edge.v, selected_edge.u) in self.orientations_llm:
+                        edge_direction = (selected_edge.v, selected_edge.u)
+                if edge_direction is None:
+                    edge_direction = llm_pairwise_orient(
+                        selected_edge.u,
+                        selected_edge.v,
+                        variable_descriptions,
+                        llm_model=llm_model,
+                        **kwargs,
+                    )
+                    self.orientations_llm.add(edge_direction)
 
                 if config.SHOW_PROGRESS and show_progress:
                     sys.stdout.write(
                         f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
                     )
                     sys.stdout.flush()
-
-            else:
+            elif orientations:
+                if (selected_edge.u, selected_edge.v) in orientations:
+                    edge_direction = (selected_edge.u, selected_edge.v)
+                elif (selected_edge.v, selected_edge.u) in orientations:
+                    edge_direction = (selected_edge.v, selected_edge.u)
+            if edge_direction is None:
                 edge_direction = manual_pairwise_orient(
                     selected_edge.u, selected_edge.v
                 )
+                orientations.add(edge_direction)
 
             # Step 3.3: Blacklist the edge if it creates a cycle, else add it to the DAG.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 blacklisted_edges.append(edge_direction)
             else:
                 dag.add_edges_from([edge_direction])
-
         return dag
