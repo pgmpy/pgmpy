@@ -118,6 +118,19 @@ class TestLogLikelihoodScore(unittest.TestCase):
         )
 
 
+class TestLogLikelihoodScoreTorch(unittest.TestCase):
+    def setUp(self):
+        from pgmpy import config
+
+        config.set_backend("torch")
+        self.model = get_example_model("alarm")
+        self.data = self.model.simulate(int(1e4), show_progress=False)
+
+    def test_discrete_network(self):
+        metric = log_likelihood_score(self.model, self.data)
+        self.assertTrue(isinstance(metric, float))
+
+
 class TestImpliedCI(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(42)
