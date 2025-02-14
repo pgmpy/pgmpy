@@ -1244,6 +1244,12 @@ class DAG(nx.DiGraph):
         bn.add_cpds(*cpds_list)
         return bn
 
+    def variable_name_contains_non_string(self):
+        for node in list(self.nodes()):
+            if not isinstance(node, str):
+                return (node, type(node))
+        return False
+
 
 class PDAG(nx.DiGraph):
     """
