@@ -220,9 +220,10 @@ class ExpertInLoop(StructureEstimator):
                 )
                 orientations.add(edge_direction)
 
-            # Step 3.3: Blacklist the edge if it creates a cycle, else add it to the DAG.
+            # Step 3.3: If the edge creates a cycle add the reverse edge. If no cycle, add the original edge.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 blacklisted_edges.append(edge_direction)
+                dag.add_edges_from([(edge_direction[1], edge_direction[0])])
             else:
                 dag.add_edges_from([edge_direction])
         return dag
