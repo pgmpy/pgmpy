@@ -156,7 +156,7 @@ class GES(StructureEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, all_edges=False
+            current_model, graph_all_edges=False
         )
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
