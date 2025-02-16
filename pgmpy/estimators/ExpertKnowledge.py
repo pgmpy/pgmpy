@@ -142,20 +142,28 @@ class ExpertKnowledge:
 
         return temporal_ordering
 
-    def _orient_temporal_forbidden_edges(self, graph):
+    def _orient_temporal_forbidden_edges(self, graph, graph_edges=True):
         """
         Add edge directions forbidden by the temporal order to forbidden_edges.
+
+        If the graph contains the edge information, the edges are checked against
+        the temporal order. In case the edges are not contained in the graph,
+        the temporal order is used to find the forbidden edge directions.
 
         Parameters
         ----------
         graph: variable
             The graph for which temporal order is specified.
+
+        graph_edges: boolean
+            Boolean to specify if the graph object contains its respective
+            edges. Default: True
         """
         if self.temporal_ordering == dict():
             return
 
         forbidden_edges = []
-        if len(graph.edges) != 0:
+        if graph_edges:
             for node in graph.nodes:
                 for neighbor in graph.neighbors(node):
                     if self.temporal_ordering[neighbor] < self.temporal_ordering[node]:
