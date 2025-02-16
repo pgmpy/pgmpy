@@ -105,8 +105,8 @@ class GES(StructureEstimator):
     def estimate(
         self,
         scoring_method="bic-d",
-        min_improvement=1e-6,
         expert_knowledge=None,
+        min_improvement=1e-6,
         debug=False,
     ):
         """
@@ -119,6 +119,11 @@ class GES(StructureEstimator):
             structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
             ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
             be an instance of `StructureScore`.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            allows specification of required and forbidden edges, as well as temporal
+            order of nodes.
 
         min_improvement: float
             The operation (edge addition, removal, or flipping) would only be performed if the
@@ -156,7 +161,7 @@ class GES(StructureEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, graph_all_edges=False
+            current_model, only_edges=False
         )
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
