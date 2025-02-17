@@ -1,7 +1,7 @@
 import unittest
 from mock import Mock, MagicMock, call
 from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache
-from pgmpy.estimators import BicScore
+from pgmpy.estimators import BIC
 import pandas as pd
 
 
@@ -66,7 +66,7 @@ class TestScoreCache(unittest.TestCase):
             assert False, "Unhandled arguments"
 
         data = pd.DataFrame({"key1": [1, 2], "key2": [1, 2]})
-        base_scorer = MagicMock(spec=BicScore)
+        base_scorer = MagicMock(spec=BIC)
         base_scorer.local_score = Mock(side_effect=local_scores)
         cache = ScoreCache(base_scorer, data)
 

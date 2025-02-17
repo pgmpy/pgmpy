@@ -1,6 +1,8 @@
-Structure Learning, Parameter Learning, Probabilistic Inference, Causal Inference
+Causal Discovery / Structure Learning, Parameter Estimation, Probabilistic Inference, Causal Inference
 PC with variants, Maximum Likelihood, Variable Elimination, do-operation
-Hill-Climb Search, Bayesian Estimator, Belief Propagation, adjustment sets
-Tree Search, Expectation Maximization, MPLP,
-Max-Min Hill-Climb,, Sampling methods,
+Greedy Equivalence Search(GES), Bayesian Estimator, Belief Propagation, adjustment sets
+Hill-Climb Search, Expectation Maximization (EM), MPLP,
+Expert In The Loop,, Sampling methods,
+Tree Search,,,
+Max-Min Hill-Climb,,,
 Exhaustive Search,,,

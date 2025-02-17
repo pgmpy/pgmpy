@@ -1,57 +1,51 @@
 #!/usr/bin/env python
 
-from itertools import chain
-
+import xml.etree.ElementTree as etree
 from io import BytesIO
-import pyparsing as pp
-
-
-# TODO input and output state
-
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.ElementTree as etree
-    except ImportError:
-        # try:
-        #    import xml.etree.cElementTree as etree
-        #    commented out because xml.etree.cElementTree is giving errors with dictionary attributes
-        print("Failed to import ElementTree from any known place")
+from itertools import chain
 
 import numpy as np
 
+try:
+    import pyparsing as pp
+except ImportError as e:
+    raise ImportError(
+        e.msg
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
+
+from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import BayesianNetwork
-from pgmpy.factors.discrete import TabularCPD, State
+from pgmpy.utils import compat_fns
 
 
 class XMLBIFReader(object):
     """
-    Base class for reading network file in XMLBIF format.
+    Initialisation of XMLBIFReader object.
+
+    Parameters
+    ----------
+    path : file or str
+        File of XMLBIF data
+        File of XMLBIF data
+
+    string : str
+        String of XMLBIF data
+
+    Examples
+    --------
+    >>> # xmlbif_test.xml is the file present in
+    >>> # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+    >>> from pgmpy.readwrite import XMLBIFReader
+    >>> reader = XMLBIFReader("xmlbif_test.xml")
+    >>> model = reader.get_model()
+
+    Reference
+    ---------
+    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initialisation of XMLBIFReader object.
-
-        Parameters
-        ----------
-        path : file or str
-            File of XMLBIF data
-            File of XMLBIF data
-
-        string : str
-            String of XMLBIF data
-
-        Examples
-        --------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
-        >>> from pgmpy.readwrite import XMLBIFReader
-        >>> reader = XMLBIFReader("xmlbif_test.xml")
-        >>> model = reader.get_model()
-        """
         if path:
             self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
         elif string:
@@ -260,32 +254,33 @@ class XMLBIFReader(object):
 
 class XMLBIFWriter(object):
     """
-    Base class for writing XMLBIF network file format.
+    Initialise a XMLBIFWriter object.
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+        Model to write
+
+    encoding: str (optional)
+        Encoding for text data
+
+    prettyprint: Bool(optional)
+        Indentation in output XML if true
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import XMLBIFWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model('asia')
+    >>> writer = XMLBIFWriter(model)
+    >>> writer.write_xmlbif('asia.xml')
+
+    Reference
+    ---------
+    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        """
-        Initialise a XMLBIFWriter object.
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-            Model to write
-
-        encoding: str (optional)
-            Encoding for text data
-
-        prettyprint: Bool(optional)
-            Indentation in output XML if true
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import XMLBIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
-        >>> writer = XMLBIFWriter(model)
-        >>> writer.write_xmlbif('asia.xml')
-        """
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must an instance of BayesianNetwork")
         self.model = model
@@ -494,7 +489,7 @@ class XMLBIFWriter(object):
                 definition_tag[cpd.variable], "TABLE"
             )
             table_tag[cpd.variable].text = ""
-            for val in cpd.get_values().ravel(order="F"):
+            for val in compat_fns.ravel_f(cpd.get_values()):
                 table_tag[cpd.variable].text += str(val) + " "
 
         return table_tag

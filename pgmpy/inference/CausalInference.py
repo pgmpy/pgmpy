@@ -5,41 +5,38 @@ import networkx as nx
 import numpy as np
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.models import BayesianNetwork
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
 class CausalInference(object):
     """
-    This is an inference class for performing Causal Inference over Bayesian Networks or Structural Equation Models.
-
-    This class will accept queries of the form: P(Y | do(X)) and utilize its methods to provide an estimand which:
-     * Identifies adjustment variables
-     * Backdoor Adjustment
-     * Front Door Adjustment
-     * Instrumental Variable Adjustment
+    This is an inference class for performing Causal Inference over Bayesian
+    Networks or Structural Equation Models.
 
     Parameters
     ----------
-    model: CausalGraph
+    model: pgmpy.base.DAG | pgmpy.models.BayesianNetwork
         The model that we'll perform inference over.
 
     set_nodes: list[node:str] or None
-        A list (or set/tuple) of nodes in the Bayesian Network which have been set to a specific value per the
-        do-operator.
+        A list (or set/tuple) of nodes in the Bayesian Network which have been
+        set to a specific value per the do-operator.
 
     Examples
     --------
     Create a small Bayesian Network.
+
     >>> from pgmpy.models import BayesianNetwork
     >>> game = BayesianNetwork([('X', 'A'),
     ...                         ('A', 'Y'),
     ...                         ('A', 'B')])
 
     Load the graph into the CausalInference object to make causal queries.
+
     >>> from pgmpy.inference.CausalInference import CausalInference
     >>> inference = CausalInference(game)
     >>> inference.get_all_backdoor_adjustment_sets(X="X", Y="Y")
@@ -48,15 +45,17 @@ class CausalInference(object):
     References
     ----------
     'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
-
-    Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as an invaluable
-    reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
 
     def __init__(self, model, set_nodes=None):
         if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
+            )
+        bad_variable = model._variable_name_contains_non_string()
+        if bad_variable != False:
+            raise NotImplementedError(
+                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
             )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
@@ -74,14 +73,15 @@ class CausalInference(object):
 
         Parameters
         ----------
-        X: str
-            Intervention Variable
 
-        Y: str
-            Target Variable
+        X: str (variable name)
+            The cause/exposure variables.
 
-        Z: str or set[str]
-            Adjustment variables
+        Y: str (variable name)
+            The outcome variable.
+
+        Z: list (array-like)
+            List of adjustment variables.
 
         Returns
         -------
@@ -113,19 +113,13 @@ class CausalInference(object):
             (i) no node in Z is a descendant of Xi; and
             (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
 
-        TODO:
-          * Backdoors are great, but the most general things we could implement would be Ilya Shpitser's ID and
-            IDC algorithms. See [his Ph.D. thesis for a full explanation]
-            (https://ftp.cs.ucla.edu/pub/stat_ser/shpitser-thesis.pdf). After doing a little reading it is clear
-            that we do not need to immediatly implement this.  However, in order for us to truly account for
-            unobserved variables, we will need not only these algorithms, but a more general implementation of a DAG.
-            Most DAGs do not allow for bidirected edges, but it is an important piece of notation which Pearl and
-            Shpitser use to denote graphs with latent variables.
-
         Parameters
         ----------
-        X: str
-            Intervention Variable
+        X: str (variable name)
+            The cause/exposure variables.
+
+        Y: str (variable name)
+            The outcome variable.
 
         Returns
         -------
@@ -142,10 +136,6 @@ class CausalInference(object):
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
-
-        References
-        ----------
-        "Causality: Models, Reasoning, and Inference", Judea Pearl (2000). p.79.
         """
         try:
             assert X in self.observed_variables
@@ -185,14 +175,14 @@ class CausalInference(object):
 
         Parameters
         ----------
-        X: str
-            Intervention Variable
+        X: str (variable name)
+            The cause/exposure variables.
 
-        Y: str
-            Target Variable
+        Y: str (variable name)
+            The outcome variable.
 
-        Z: set
-            Adjustment variables
+        Z: list (array-like)
+            List of adjustment variables.
 
         Returns
         -------
@@ -241,13 +231,17 @@ class CausalInference(object):
           (ii)   there is no backdoor path from X to Z
           (iii)  all back-door paths from Z to Y are blocked by X
 
+        Parameters
+        ----------
+        X: str (variable name)
+            The cause/exposure variables.
+
+        Y: str (variable name)
+            The outcome variable
+
         Returns
         -------
         frozenset: a frozenset of frozensets
-
-        References
-        ----------
-        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.82.
         """
         assert X in self.observed_variables
         assert Y in self.observed_variables
@@ -264,27 +258,7 @@ class CausalInference(object):
 
         return valid_adjustment_sets
 
-    def get_distribution(self):
-        """
-        Returns a string representing the factorized distribution implied by the CGM.
-        """
-        products = []
-        for node in nx.topological_sort(self.model):
-            if node in self.set_nodes:
-                continue
-
-            parents = list(self.model.predecessors(node))
-            if not parents:
-                p = f"P({node})"
-            else:
-                parents = [
-                    f"do({n})" if n in self.set_nodes else str(n) for n in parents
-                ]
-                p = f"P({node}|{','.join(parents)})"
-            products.append(p)
-        return "".join(products)
-
-    def simple_decision(self, adjustment_sets=[]):
+    def _simple_decision(self, adjustment_sets=[]):
         """
         Selects the smallest set from provided adjustment sets.
 
@@ -316,11 +290,11 @@ class CausalInference(object):
 
         Parameters
         ----------
-        X: str
-            Intervention Variable
+        X: str (variable name)
+            The cause/exposure variables.
 
-        Y: str
-            Target Variable
+        Y: str (variable name)
+            The outcome variable
 
         data: pandas.DataFrame
             All observed data for this Bayesian Network.
@@ -382,7 +356,7 @@ class CausalInference(object):
                     adjustment_sets = self.get_all_backdoor_adjustment_sets(x1, x2)
                     if estimand_strategy == "smallest":
                         adjustment_sets = frozenset(
-                            {self.simple_decision(adjustment_sets)}
+                            {self._simple_decision(adjustment_sets)}
                         )
 
                 if estimator_type == "linear":
@@ -428,6 +402,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         for var in chain(X, Y):
             if var not in self.model.nodes():
                 raise ValueError(f"{var} not found in the model.")
@@ -478,6 +457,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
         for x, y in zip(X, Y):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
@@ -486,7 +470,7 @@ class CausalInference(object):
 
     def get_minimal_adjustment_set(self, X, Y):
         """
-        Method to test whether `adjustment_set` is a valid adjustment set for
+        Returns a minimal adjustment set for
         identifying the causal effect of `X` on `Y`.
 
         Parameters
@@ -505,12 +489,18 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.inference import CausalInference
+        >>> dag = BayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        >>> infer = CausalInference(dag)
+        >>> infer.get_minimal_adjustment_set("X_1", "X_2")
+        {'Z'}
 
         References
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
-        backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
+        backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)
 
     def query(
@@ -672,7 +662,7 @@ class CausalInference(object):
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
         # Step 4.2: Iterate over states of adjustment set and compute values.
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
         for state_comb in product(*adj_states):
@@ -685,7 +675,7 @@ class CausalInference(object):
                 * p_z.get_value(**adj_evidence)
             )
 
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
 
         return sum(values).normalize(inplace=False)

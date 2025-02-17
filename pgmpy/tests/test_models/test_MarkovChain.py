@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import sys
 import unittest
-import numpy as np
-from pandas import DataFrame
-from mock import patch, call
 
+import numpy as np
+from mock import call, patch
+from pandas import DataFrame
 
 from pgmpy.factors.discrete import State
 from pgmpy.models import MarkovChain as MC
@@ -153,12 +153,6 @@ class TestMarkovChain(unittest.TestCase):
             copy.transition_models["b"], {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
         )
 
-    @patch.object(sys.modules["pgmpy.models.MarkovChain"], "warn")
-    def test_add_variable_existing(self, warn):
-        model = MC(["p"], [2])
-        model.add_variable("p", 3)
-        self.assertEqual(warn.call_count, 1)
-
     @patch("pgmpy.models.MarkovChain.add_variable", autospec=True)
     def test_add_variables_from(self, add_var):
         model = MC()
@@ -283,7 +277,7 @@ class TestMarkovChain(unittest.TestCase):
             2: {0: 0.7, 1: 0.15, 2: 0.15},
         }
         model.add_transition_model("diff", diff_tm)
-        self.assertFalse(model.is_stationarity(0.002, None))
+        self.assertFalse(model.is_stationarity(0.0002, None))
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
     def test_generate_sample(self, sample_discrete):

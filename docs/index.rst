@@ -7,132 +7,66 @@
 
    <br />
 
-.. image:: logo.png
-        :width: 250px
-        :align: center
-        :alt: logo
-|
-
 .. image:: https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev
    :target: https://github.com/pgmpy/pgmpy/actions?query=branch%3Adev
-
-.. image:: https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg
-   :target: https://codecov.io/gh/pgmpy/pgmpy
-
-.. image:: https://api.codacy.com/project/badge/Grade/78a8256c90654c6892627f6d8bbcea14
-   :target: https://www.codacy.com/gh/pgmpy/pgmpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pgmpy/pgmpy&amp;utm_campaign=Badge_Grade
 
 .. image:: https://img.shields.io/pypi/dm/pgmpy.svg
    :target: https://pypistats.org/packages/pgmpy
 
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+.. image:: https://img.shields.io/pypi/v/pgmpy?color=blue
+   :target: https://pypi.org/project/pgmpy/
 
+.. image:: https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue
+   :target: https://pypi.org/project/pgmpy/
+
+.. image:: https://img.shields.io/github/license/pgmpy/pgmpy
+   :target: https://github.com/pgmpy/pgmpy/blob/dev/LICENSE
+
+.. image:: http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat
+   :target: http://pgmpy.org/pgmpy-benchmarks/
+
+.. |br| raw:: html
+
+   <br />
+   <br />
+
+
+.. image:: https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white
+   :align: center
+   :target: https://discord.gg/DRkdKaumBs
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :hidden:
-   :caption: Getting Started
 
-   started/install.rst
-   started/contributing.rst
-   started/license.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Base Structures
-
+   started/base.rst
    base/base.rst
-
-.. toctree:: :maxdepth: 3
-   :hidden:
-   :caption: Models
-
-   models/bayesiannetwork.rst
-   models/dbn.rst
-   models/sem.rst
-   models/naive.rst
-   models/noisyor.rst
-   models/markovnetwork.rst
-   models/junctiontree.rst
-   models/clustergraph.rst
-   models/factorgraph.rst
-   models/markovchain.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Parameterization
-
-   factors/discrete.rst
-   factors/continuous.rst
-   factors/discretize.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Exact Inference
-
-   exact_infer/ve.rst
-   exact_infer/bp.rst
-   exact_infer/causal.rst
-   exact_infer/mplp.rst
-   exact_infer/dbn_infer.rst
+   models/base.rst
+   factors/base.rst
+   exact_infer/base.rst
    exact_infer/model_testing.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Approximate Inference
-
-   approx_infer/approx_infer.rst
-   approx_infer/bn_sampling.rst
-   approx_infer/gibbs.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Parameter Estimation
-
-   param_estimator/mle.rst
-   param_estimator/bayesian_est.rst
-   param_estimator/em.rst
-   param_estimator/sem_estimator.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Structure Learning
-
-   structure_estimator/pc.rst
-   structure_estimator/hill.rst
-   structure_estimator/tree.rst
-   structure_estimator/mmhc.rst
-   structure_estimator/exhaustive.rst
-
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Model Testing
-
+   approx_infer/base.rst
+   param_estimator/base.rst
+   structure_estimator/base.rst
    metrics/metrics.rst
+   readwrite/base.rst
+   plotting.rst
+   examples.rst
+   tutorial.rst
 
-.. toctree::
-   :maxdepth: 3
-   :hidden:
-   :caption: Input/Output
+pgmpy is a Python package for causal inference and probabilistic inference
+using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
+modularity and extensibility. Implementations of various algorithms for Causal
+Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
+(Sampling Based) and Exact inference, and Causal Inference are available.
 
-   readwrite/bif.rst
-   readwrite/uai.rst
-   readwrite/xmlbif.rst
-   readwrite/pomdpx.rst
-   readwrite/xmlbelief.rst
+|
 
-pgmpy is a pure python implementation for Bayesian Networks with a focus on
-modularity and extensibility. Implementations of various alogrithms for Structure
-Learning, Parameter Estimation, Approximate (Sampling Based) and Exact
-inference, and Causal Inference are available.
+.. figure:: pgmpy_workflow.png
+
+   Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
+
+|
 
 Supported Data Types
 ====================
@@ -141,30 +75,37 @@ Supported Data Types
    :header-rows: 1
 
    * -
-     - Structure Learning
+     - Causal Discovery
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference
-   * - Discrete
+     - Simulations
+   * - **Categorical**
      - Yes
      - Yes
      - Yes
      - Yes
-   * - Continuous
-     - Yes (only PC)
-     - No
+     - Yes
+   * - **Continuous**
+     - Yes
+     - Yes
      - Yes (partial)
-     - No
-   * - Hybrid
-     - No
-     - No
-     - No
-     - No
-   * - Time Series
-     - No
+     - Yes
+     - Yes
+   * - **Mixed**
      - Yes
      - No
+     - No
+     - No
      - Yes
+   * - **Time Series**
+     - No
+     - Yes
+     - Yes (ApproximateInference)
+     - Yes
+     - Yes
+
+|
 
 Algorithms
 ==========
@@ -173,44 +114,39 @@ Algorithms
    :file: algorithms.csv
    :header-rows: 1
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Example Notebooks
-   :numbered:
+|
 
-   examples/Earthquake.ipynb
-   examples/Monty Hall Problem.ipynb
-   examples/Creating a Discrete Bayesian Network.ipynb
-   examples/Inference in Discrete Bayesian Networks.ipynb
-   examples/Causal Games.ipynb
-   examples/Causal Inference.ipynb
-   examples/Learning Parameters in Discrete Bayesian Networks.ipynb
-   examples/Structure Learning in Bayesian Networks.ipynb
-   examples/Structure Learning with Chow-Liu.ipynb
-   examples/Structure Learning with TAN.ipynb
-   examples/Simulating Data.ipynb
-   examples/Extending pgmpy.ipynb
+Examples
+========
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Tutorial Notebooks
-   :numbered:
+**Example notebooks:** https://pgmpy.org/examples.html
 
-   detailed_notebooks/1. Introduction to Probabilistic Graphical Models.ipynb
-   detailed_notebooks/2. Bayesian Networks.ipynb
-   detailed_notebooks/3. Causal Bayesian Networks.ipynb
-   detailed_notebooks/4. Markov Models.ipynb
-   detailed_notebooks/5. Exact Inference in Graphical Models.ipynb
-   detailed_notebooks/6. Approximate Inference in Graphical Models.ipynb
-   detailed_notebooks/7. Parameterizing with Continuous Variables.ipynb
-   detailed_notebooks/8. Sampling Algorithms.ipynb
-   detailed_notebooks/9. Reading and Writing from pgmpy file formats.ipynb
-   detailed_notebooks/10. Learning Bayesian Networks from Data.ipynb
-   detailed_notebooks/11. A Bayesian Network to model the influence of energy consumption on greenhouse gases in Italy.ipynb
+**Tutorial notebooks:** https://pgmpy.org/tutorial.html
 
+|
 
-All example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
-All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
+Citation
+========
+If you use pgmpy in your scientific work, please consider citing us:
+
+.. code-block:: text
+
+   Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
+
+Bibtex:
+
+.. code-block:: text
+
+   @article{Ankan2024,
+     author  = {Ankur Ankan and Johannes Textor},
+     title   = {pgmpy: A Python Toolkit for Bayesian Networks},
+     journal = {Journal of Machine Learning Research},
+     year    = {2024},
+     volume  = {25},
+     number  = {265},
+     pages   = {1--8},
+     url     = {http://jmlr.org/papers/v25/23-0487.html}
+   }
 
 Indices and tables
 ==================

@@ -4,6 +4,94 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.26] - 2024-08-09
+### Added
+1. Support for returning Belief Propagation messages in Factor Graph BP.
+2. Maximum Likelihood Estimator for Junction Tree.
+3. Adds a simple discretization method: `pgmpy.utils.discretize`.
+4. Two new metrics for model testing: `pgmpy.metrics.implied_cis` and `pgmpy.metrics.fisher_c`.
+5. Support for Linear Gaussian Bayesian Networks: estimation, prediction, simulation and random model generation.
+7. New mixed data Conditional Independence test based on canonical correlations.
+8. New LLM based structure learning / causal discovery algorithm. Also LLM based pairwise variable orientation method.
+
+
+### Fixed
+1. Reading and Writing from XBN file format.
+2. Documentation for plotting models.
+3. Fixes PC algorithm to add disconnected nodes in the final model.
+4. Allows `.` in variables names in BIF file format.
+
+### Changed
+1. Allows `virtual_evidence` parameter in inference methods to accept DiscreteFactor objects.
+
+## [0.1.25] - 2024-03-08
+### Added
+1. `init_cpds` argument to `ExpecattionMaximiation.get_parameters` to specify initialization values.
+2. BeliefPropagation with message passing for Factor Graphs.
+3. Marginal Inference for undirected graphs.
+
+### Fixed
+1. Incompatibality with networkx==3.2.
+2. `CausalInference.get_minimal_adjustment_set` to accept string variable names.
+3. Bug in EM when latent varaibles are present.
+4. `compat_fns.copy` to consider the case when int or float is passed.
+5. Fixes issue with `BayesianNetwork.fit_update` when running with CUDA backend.
+
+### Changed
+1. Documentation Updates
+2. Optimizations for Hill Climb Search algorithm.
+3. Tests shutdown parallel workers in teardown.
+4. Removes the `complete_samples_only` argument from `BaseEstimator.state_counts`.
+5. Default number of cores to use changed to 1 for parameter estimation methods.
+
+## [0.1.24] - 2023-06-30
+### Added
+1. Added support for python 3.11.
+2. Adds `DAG.to_graphviz` and `PDAG.to_graphviz` methods to convert model to graphviz objects.
+3. Adds pytorch as an alternative backend.
+4. Adds unicode support for BIFReader.
+
+### Fixed
+1. Warnings use a logger instance.
+2. Fixes documentation.
+3. Fixes variables name arguments for `CausalInference.get_minimal_adjustment_set`
+
+### Changed
+1. Adds argument to specify samples for ApproxInference.
+2. Memory optimizations for computing structure scores.
+3. Switches joblib backed to loky.
+4. Runtime optimizations for sampling.
+5. Runtime optimizations for Variable Elimination.
+6. All config variables moved to `pgmpy.global_vars`.
+
+## [0.1.23] - 2023-06-30
+### Added
+1. BIFReader made compatible with the output of PyAgrum
+2. Support for all available CI tests in PC algorithm.
+3. References for read/write file formats.
+
+### Removed
+1. Removes `DAG.to_pdag` method.
+
+### Changed
+1. Fixes for ApproxInference for DBNs.
+2. Make `xml.etree` the default parser instead of using lxml.
+
+## [0.1.22] - 2023-04-08
+### Added
+1. AIC score metric from score based structure learning.
+2. Adds support for NET (HUGIN) file format.
+3. Adds argument reindex to `state_counts` method.
+
+### Fixed
+1. Bug in GibbsSampling when sampling from Bayesian Networks.
+2. Fix seed for all simulation methods.
+3. Memory leaks when using `lru_cache`.
+
+### Changed
+1. Caching disabled for computing state name counts during structure learning.
+2. Pre-computation for sampling methods are optimized.
+
 ## [0.1.21] - 2022-12-31
 ### Added
 1. `BayesianNetwork.get_state_probability` method to compute the probability of a given evidence.

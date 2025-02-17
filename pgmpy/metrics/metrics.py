@@ -1,8 +1,14 @@
+import math
 from itertools import combinations
 
+import networkx as nx
+import numpy as np
 import pandas as pd
+from scipy import stats
 from sklearn.metrics import f1_score
+from tqdm import tqdm
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import BayesianNetwork
 
@@ -74,29 +80,9 @@ def correlation_score(
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
     0.911957950065703
     """
-    from pgmpy.estimators.CITests import (
-        chi_square,
-        cressie_read,
-        freeman_tuckey,
-        g_sq,
-        log_likelihood,
-        modified_log_likelihood,
-        neyman,
-        pearsonr,
-    )
+    from pgmpy.estimators.CITests import get_ci_test
 
     # Step 1: Checks for input arguments.
-    supported_tests = {
-        "chi_square": chi_square,
-        "g_sq": g_sq,
-        "log_likelihood": log_likelihood,
-        "freeman_tuckey": freeman_tuckey,
-        "modified_log_likelihood": modified_log_likelihood,
-        "neyman": neyman,
-        "cressie_read": cressie_read,
-        "pearsonr": pearsonr,
-    }
-
     if not isinstance(model, (DAG, BayesianNetwork)):
         raise ValueError(
             f"model must be an instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork. Got {type(model)}"
@@ -107,16 +93,16 @@ def correlation_score(
         raise ValueError(
             f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
         )
-    elif (test not in supported_tests.keys()) and (not callable(test)):
-        raise ValueError(f"test not supported and not a callable")
 
-    elif not callable(score):
+    supported_test = get_ci_test(test)
+
+    if not callable(score):
         raise ValueError(f"score should be scikit-learn classification metric.")
 
     # Step 2: Create a dataframe of every 2 combination of variables
     results = []
     for i, j in combinations(model.nodes(), 2):
-        test_result = supported_tests[test](
+        test_result = supported_test(
             X=i,
             Y=j,
             Z=[],
@@ -186,7 +172,7 @@ def log_likelihood_score(model, data):
     return BayesianModelProbability(model).score(data)
 
 
-def structure_score(model, data, scoring_method="bic", **kwargs):
+def structure_score(model, data, scoring_method="bic-g", **kwargs):
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretebility but can be
@@ -202,9 +188,8 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     data: pd.DataFrame instance
         The dataset against which to score the model.
 
-    scoring_method: str ( k2 | bdeu | bds | bic )
-        The following four scoring methods are supported currently: 1) K2Score
-        2) BDeuScore 3) BDsScore 4) BicScore
+    scoring_method: str
+        Options are: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg
 
     kwargs: kwargs
         Any additional parameters that needs to be passed to the
@@ -221,16 +206,35 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     >>> from pgmpy.metrics import structure_score
     >>> model = get_example_model('alarm')
     >>> data = model.simulate(int(1e4))
-    >>> structure_score(model, data, scoring_method="bic")
+    >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
     """
-    from pgmpy.estimators import BDeuScore, BDsScore, BicScore, K2Score
+    from pgmpy.estimators import (
+        AIC,
+        BIC,
+        K2,
+        AICCondGauss,
+        AICGauss,
+        BDeu,
+        BDs,
+        BICCondGauss,
+        BICGauss,
+        LogLikelihoodCondGauss,
+        LogLikelihoodGauss,
+    )
 
     supported_methods = {
-        "k2": K2Score,
-        "bdeu": BDeuScore,
-        "bds": BDsScore,
-        "bic": BicScore,
+        "k2": K2,
+        "bdeu": BDeu,
+        "bds": BDs,
+        "bic-d": BIC,
+        "aic-d": AIC,
+        "ll-g": LogLikelihoodGauss,
+        "aic-g": AICGauss,
+        "bic-g": BICGauss,
+        "ll-cg": LogLikelihoodCondGauss,
+        "aic-cg": AICCondGauss,
+        "bic-cg": BICCondGauss,
     }
 
     # Step 1: Test the inputs
@@ -250,4 +254,214 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
         raise ValueError(f"scoring method not supported and not a callable")
 
     # Step 2: Compute the score and return
-    return supported_methods[scoring_method](data).score(model, **kwargs)
+    return supported_methods[scoring_method](data, **kwargs).score(model)
+
+
+def implied_cis(model, data, ci_test, show_progress=True):
+    """
+        Tests the implied Conditional Independences (CI) of the DAG in the given data.
+
+        Each missing edge in a model structure implies a CI statement. If the
+        distribution of the data is faithful to the constraints of the model
+        structure, these CI statements should hold in the data as well. This
+        function runs statistical tests for each implied CI on the given data.
+
+        Parameters
+        ==========
+        model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
+            The model whose structure need to be tested against the given data.
+
+        data: pd.DataFrame
+            Dataset to use for testing.
+
+        ci_test: function
+            The function for statistical test. Can be either any of the tests in
+            pgmpy.estimators.CITests or any custom function of the same form.
+
+        show_progress: bool (default: True)
+            Whether to show the progress of testing.
+
+        Returns
+        =======
+        pd.DataFrame: Returns a dataframe with each implied CI of the model and a p-value
+            corresponding to it from the statistical test. A low p-value (e.g. <0.05)
+            represents that the CI does not hold in the data.
+
+        Examples
+        ========
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.metrics import implied_cis
+        >>> from pgmpy.estimators.CITests import chi_square
+        >>> model = get_example_model('cancer')
+        >>> df = model.simulate(int(1e3))
+        >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
+               u         v cond_vars   p-value
+    0  Pollution    Smoker        []  0.189851
+    1  Pollution      Xray  [Cancer]  0.404149
+    2  Pollution  Dyspnoea  [Cancer]  0.613370
+    3     Smoker      Xray  [Cancer]  0.352665
+    4     Smoker  Dyspnoea  [Cancer]  1.000000
+    5       Xray  Dyspnoea  [Cancer]  0.888619
+    """
+    if not isinstance(model, (DAG, BayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+        )
+
+    cis = []
+
+    if show_progress and config.SHOW_PROGRESS:
+        comb_iter = tqdm(
+            combinations(model.nodes(), 2), total=math.comb(len(model.nodes()), 2)
+        )
+    else:
+        comb_iter = combinations(model.nodes(), 2)
+
+    for u, v in comb_iter:
+        if not ((u in model[v]) or (v in model[u])):
+            Z = list(model.minimal_dseparator(u, v))
+            test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
+            cis.append([u, v, Z, test_results[1]])
+    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
+    return cis
+
+
+def fisher_c(model, data, ci_test, show_progress=True):
+    """
+    Returns a p-value for testing whether the given data is faithful to the
+    model structure's constraints.
+
+    Each missing edge in a model structure implies a CI statement. This test
+    uses constructs implied CIs such that they are independent of each other,
+    run statistical tests for each of them on the data, and finally combines
+    them using the Fisher's method.
+
+    Parameters
+    ==========
+    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
+        The model whose structure need to be tested against the given data.
+
+    data: pd.DataFrame
+        Dataset to use for testing.
+
+    ci_test: function
+        The function for statistical test. Can be either any of the tests in
+        pgmpy.estimators.CITests or any custom function of the same form.
+
+    show_progress: bool (default: True)
+        Whether to show the progress of testing.
+
+    Returns
+    =======
+    float: The p-value for the fit of the model structure to the data. A low
+        p-value (e.g. <0.05) represents that the model structure doesn't fit the
+        data well.
+
+    Examples
+    ========
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import implied_cis
+    >>> from pgmpy.estimators.CITests import chi_square
+    >>> model = get_example_model('cancer')
+    >>> df = model.simulate(int(1e3))
+    >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
+    0.7504
+    """
+    if not isinstance(model, (DAG, BayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+        )
+
+    if len(model.latents) > 0:
+        raise ValueError(
+            f"This test can not be performed on models with latent variables."
+        )
+
+    cis = []
+
+    if show_progress and config.SHOW_PROGRESS:
+        comb_iter = tqdm(
+            combinations(model.nodes(), 2), total=math.comb(len(model.nodes()), 2)
+        )
+    else:
+        comb_iter = combinations(model.nodes(), 2)
+
+    for u, v in comb_iter:
+        if not ((u in model[v]) or (v in model[u])):
+            Z = set(model.predecessors(u)).union(model.predecessors(v))
+            test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
+            cis.append([u, v, Z, test_results[1]])
+    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
+    cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
+
+    C = -2 * np.log(cis.loc[:, "p_value"]).sum()
+    p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
+    return p_value
+
+
+def SHD(true_model, est_model):
+    """
+    Computes the Structural Hamming Distance between `true_model` and `est_model`.
+
+    SHD is defined as total number of basic operations: adding edges, removing
+    edges, and reversing edges required to transform one graph to the other. It
+    is a symmetrical measure.
+
+    The code first accounts for edges that need to be deleted (from true_model),
+    added (to true_model) and finally edges that need to be reversed. All operations
+    count as 1.
+
+    Parameters
+    ----------
+    true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The first model to compare.
+    est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+        The second model to compare.
+
+    Returns
+    -------
+    int:
+        If both true_model and est_model are DAGs or Bayesian Networks returns
+        an integer.
+
+    Examples
+    --------
+    >>> from pgmpy.metrics import SHD
+    >>> from pgmpy.models import BayesianNetwork
+    >>> dag1 = BayesianNetwork([(1, 2), (2, 3)])
+    >>> dag2 = BayesianNetwork([(2, 1), (2, 3)])
+    >>> SHD(dag1, dag2)
+    1
+    """
+    if set(true_model.nodes()) != set(est_model.nodes()):
+        raise ValueError("The graphs must have the same nodes.")
+
+    nodes_list = true_model.nodes()
+
+    dag_true = nx.DiGraph(true_model.edges())
+    m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
+
+    dag_est = nx.DiGraph(est_model.edges())
+    m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
+
+    shd = 0
+
+    s1 = m1 + m1.T
+    s2 = m2 + m2.T
+
+    # Edges that are in m1 but not in m2 (deletions from m1)
+    ds = s1 - s2
+    ind = np.where(ds > 0)
+    m1[ind] = 0
+    shd = shd + (len(ind[0]) / 2)
+
+    # Edges that are in m2 but not in m1 (additions to m1)
+    ind = np.where(ds < 0)
+    m1[ind] = m2[ind]
+    shd = shd + (len(ind[0]) / 2)
+
+    # Edges that need to be simply reversed
+    d = np.abs(m1 - m2)
+    shd = shd + (np.sum((d + d.T) > 0) / 2)
+
+    return int(shd)

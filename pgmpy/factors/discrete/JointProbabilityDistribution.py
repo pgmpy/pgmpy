@@ -1,6 +1,6 @@
 import itertools
-from operator import mul
 from functools import reduce
+from operator import mul
 
 import numpy as np
 
@@ -227,9 +227,9 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.get_independencies()
-        (x1 \u27C2 x2)
-        (x1 \u27C2 x3)
-        (x2 \u27C2 x3)
+        (x1 \u27c2 x2)
+        (x1 \u27c2 x3)
+        (x2 \u27c2 x3)
         """
         JPD = self.copy()
         if condition:
@@ -350,7 +350,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         Returns
         -------
         Is IMAP: bool
-            True if given bayesian model is Imap for Joint Probability Distribution False otherwise
+            True if given Bayesian Network is Imap for Joint Probability Distribution False otherwise
 
         Examples
         --------

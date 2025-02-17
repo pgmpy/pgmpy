@@ -13,44 +13,45 @@ from sklearn.metrics import (
 )
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class TreeSearch(StructureEstimator):
+    """
+    Search class for learning tree related graph structure. The algorithms
+    supported are Chow-Liu and Tree-augmented naive bayes (TAN).
+
+    Chow-Liu constructs the maximum-weight spanning tree with mutual information
+    score as edge weights.
+
+    TAN is an extension of Naive Bayes classifier to allow a tree structure over
+    the independent variables to account for interaction.
+
+    Parameters
+    ----------
+    data: pandas.DataFrame object
+        dataframe object where each column represents one variable.
+
+    root_node: str, int, or any hashable python object, default is None.
+        The root node of the tree structure. If None then root node is auto-picked
+        as the node with the highest sum of edge weights.
+
+    n_jobs: int (default: -1)
+        Number of jobs to run in parallel. `-1` means use all processors.
+
+    References
+    ----------
+    [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
+        distributions with dependence trees", IEEE Transactions on Information
+        Theory, IT-14 (3): 462–467
+
+    [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
+        Machine Learning 29: 131–163
+    """
+
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
-        """
-        Search class for learning tree related graph structure. The algorithms
-        supported are Chow-Liu and Tree-augmented naive bayes (TAN).
-
-        Chow-Liu constructs the maximum-weight spanning tree with mutual information
-        score as edge weights.
-
-        TAN is an extension of Naive Bayes classifier to allow a tree structure over
-        the independent variables to account for interaction.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame object
-            dataframe object where each column represents one variable.
-
-        root_node: str, int, or any hashable python object, default is None.
-            The root node of the tree structure. If None then root node is auto-picked
-            as the node with the highest sum of edge weights.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        References
-        ----------
-        [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-            distributions with dependence trees", IEEE Transactions on Information
-            Theory, IT-14 (3): 462–467
-
-        [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
-            Machine Learning 29: 131–163
-        """
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 
@@ -243,10 +244,10 @@ class TreeSearch(StructureEstimator):
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs, prefer="threads")(
+        vals = Parallel(n_jobs=n_jobs)(
             delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))
@@ -318,7 +319,7 @@ class TreeSearch(StructureEstimator):
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
         def _conditional_edge_weights_fn(u, v):
@@ -327,14 +328,14 @@ class TreeSearch(StructureEstimator):
             """
             cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0
-            for index, marg_prob in cond_marginal.iteritems():
+            for index, marg_prob in cond_marginal.items():
                 df_cond_subset = data[data.loc[:, class_node] == index]
                 cond_edge_weight += marg_prob * edge_weights_fn(
                     df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
                 )
             return cond_edge_weight
 
-        vals = Parallel(n_jobs=1, prefer="threads")(
+        vals = Parallel(n_jobs=n_jobs)(
             delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))

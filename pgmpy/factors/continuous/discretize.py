@@ -1,10 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import integrate
 
 
-class BaseDiscretizer(ABCMeta):
+class BaseDiscretizer(ABC):
     """
     Base class for the discretizer classes in pgmpy. The discretizer
     classes are used to discretize a continuous random variable
@@ -12,7 +12,7 @@ class BaseDiscretizer(ABCMeta):
 
     Parameters
     ----------
-    factor: A ContinuousNode or a ContinuousFactor object
+    factor: A ContinuousFactor object
         the continuous node or factor representing the distribution
         to be discretized.
 
@@ -25,15 +25,14 @@ class BaseDiscretizer(ABCMeta):
     Examples
     --------
     >>> from scipy.stats import norm
-    >>> from pgmpy.factors.continuous import ContinuousNode
-    >>> normal = ContinuousNode(norm(0, 1).pdf)
-    >>> from pgmpy.discretize import BaseDiscretizer
+    >>> from pgmpy.factors.continuous import ContinuousFactor, BaseDiscretizer
+    >>> normal = ContinuousFactor(['x'],norm(0, 1).pdf)
     >>> class ChildDiscretizer(BaseDiscretizer):
     ...     def get_discrete_values(self):
     ...         pass
     >>> discretizer = ChildDiscretizer(normal, -3, 3, 10)
     >>> discretizer.factor
-    <pgmpy.factors.continuous.ContinuousNode.ContinuousNode object at 0x04C98190>
+    <pgmpy.factors.continuous.ContinuousFactor.ContinuousFactor object at 0x1316f4da0>
     >>> discretizer.cardinality
     10
     >>> discretizer.get_labels()
@@ -73,13 +72,13 @@ class BaseDiscretizer(ABCMeta):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousNode
+        >>> from pgmpy.factors.continuous import ContinuousFactor
         >>> from pgmpy.discretize import BaseDiscretizer
         >>> class ChildDiscretizer(BaseDiscretizer):
         ...     def get_discrete_values(self):
         ...         pass
         >>> from scipy.stats import norm
-        >>> node = ContinuousNode(norm(0).pdf)
+        >>> node = ContinuousFactor(['x'],norm(0).pdf)
         >>> child = ChildDiscretizer(node, -5, 5, 20)
         >>> chld.get_labels()
         ['x=-5.0', 'x=-4.5', 'x=-4.0', 'x=-3.5', 'x=-3.0', 'x=-2.5',
@@ -112,10 +111,9 @@ class RoundingDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors.continuous import ContinuousNode
-    >>> from pgmpy.factors.continuous import RoundingDiscretizer
+    >>> from pgmpy.factors.continuous import ContinuousFactor,RoundingDiscretizer
     >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-    >>> std_normal = ContinuousNode(std_normal_pdf)
+    >>> std_normal = ContinuousFactor(['x'],std_normal_pdf)
     >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3,
     ...                       cardinality=12)
     [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
@@ -129,14 +127,16 @@ class RoundingDiscretizer(BaseDiscretizer):
 
         # for x=[low]
         discrete_values = [
-            self.factor.cdf(self.low + step / 2) - self.factor.cdf(self.low)
+            self.factor.cdf([(-np.inf, self.low + step / 2)])
+            - self.factor.cdf([(-np.inf, self.low)])
         ]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 1)
         discrete_values.extend(
             [
-                self.factor.cdf(i + step / 2) - self.factor.cdf(i - step / 2)
+                self.factor.cdf([(-np.inf, i + step / 2)])
+                - self.factor.cdf([(-np.inf, i - step / 2)])
                 for i in points
             ]
         )
@@ -177,11 +177,10 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors import ContinuousNode
-    >>> from pgmpy.factors.continuous import UnbiasedDiscretizer
+    >>> from pgmpy.factors.continuous import ContinuousFactor,UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
-    >>> exp_node = ContinuousNode(exp_pdf)
+    >>> exp_node = ContinuousFactor(['x'],exp_pdf)
     >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, cardinality=10)
     [0.39627368905806137, 0.4049838434034298, 0.13331784003148325,
      0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
@@ -198,7 +197,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         discrete_values = [
             (lev(self.low) - lev(self.low + step)) / step
             + 1
-            - self.factor.cdf(self.low)
+            - self.factor.cdf([(-np.inf, self.low)])
         ]
 
         # for x=[low+step, low+2*step, ........., high-step]
@@ -211,7 +210,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         discrete_values.append(
             (lev(self.high) - lev(self.high - step)) / step
             - 1
-            + self.factor.cdf(self.high)
+            + self.factor.cdf([(-np.inf, self.high)])
         )
 
         return discrete_values
@@ -245,7 +244,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
             return np.power(x, order) * self.factor.pdf(x)
 
         return integrate.quad(fun, -np.inf, u)[0] + np.power(u, order) * (
-            1 - self.factor.cdf(u)
+            1 - self.factor.cdf([(-np.inf, u)])
         )
 
     def get_labels(self):

@@ -163,23 +163,23 @@ class Independencies(object):
         >>> from pgmpy.independencies import Independencies
         >>> ind1 = Independencies(('A', ['B', 'C'], 'D'))
         >>> ind1.closure()
-        (A \u27C2 B | D, C)
-        (A \u27C2 B, C | D)
-        (A \u27C2 B | D)
-        (A \u27C2 C | D, B)
-        (A \u27C2 C | D)
+        (A \u27c2 B | D, C)
+        (A \u27c2 B, C | D)
+        (A \u27c2 B | D)
+        (A \u27c2 C | D, B)
+        (A \u27c2 C | D)
 
         >>> ind2 = Independencies(('W', ['X', 'Y', 'Z']))
         >>> ind2.closure()
-        (W \u27C2 Y)
-        (W \u27C2 Y | X)
-        (W \u27C2 Z | Y)
-        (W \u27C2 Z, X, Y)
-        (W \u27C2 Z)
-        (W \u27C2 Z, X)
-        (W \u27C2 X, Y)
-        (W \u27C2 Z | X)
-        (W \u27C2 Z, Y | X)
+        (W \u27c2 Y)
+        (W \u27c2 Y | X)
+        (W \u27c2 Z | Y)
+        (W \u27c2 Z, X, Y)
+        (W \u27c2 Z)
+        (W \u27c2 Z, X)
+        (W \u27c2 X, Y)
+        (W \u27c2 Z | X)
+        (W \u27c2 Z, Y | X)
         [..]
         """
 
@@ -326,13 +326,54 @@ class Independencies(object):
         """
         return self.entails(other) and other.entails(self)
 
-        # TODO: write reduce function.
+    def reduce(self, inplace=False):
+        """
+        Return list of Independence Assertions without any duplicate or redundant Independence assertions.
 
-    def reduce(self):
+        Might be very slow due to bidirectional entailment being checked.
+
+        Assumption:
+            If an assertion A entails assertion B and assertion B doesn't entails assertion A then
+            assertion A is consider more informative and assertion B is removed.
+
+        Parameters
+        ----------
+
+        inplace: bool (default: False)
+            If True, the Independencies object will permanently removes duplicate or redundant Independence Assertions.
+
         """
-        Add function to remove duplicate Independence Assertions
-        """
-        pass
+        unique_assertions = set(self.independencies)
+        reduced_assertions = []
+
+        for assertion in unique_assertions:
+            temp_independencies = Independencies(*reduced_assertions)
+            assertion_temp = Independencies(assertion)
+
+            if not temp_independencies.entails(assertion_temp):
+                removed_any = True
+                while removed_any:
+                    removed_any = False
+                    # Create a copy to iterate over since we might modify reduced_assertions
+                    for existing_assertion in reduced_assertions[:]:
+                        existing_temp = Independencies(existing_assertion)
+
+                        if existing_temp != assertion_temp:
+                            remove_old = not existing_temp.entails(
+                                assertion_temp
+                            ) and assertion_temp.entails(existing_temp)
+
+                            if remove_old:
+                                reduced_assertions.remove(existing_assertion)
+                                removed_any = True
+                                break
+
+                reduced_assertions.append(assertion)
+
+        if inplace:
+            self.independencies = reduced_assertions
+
+        return Independencies(*reduced_assertions)
 
     def latex_string(self):
         """
@@ -423,13 +464,13 @@ class IndependenceAssertion(object):
 
     def __str__(self):
         if self.event3:
-            return "({event1} \u27C2 {event2} | {event3})".format(
+            return "({event1} \u27c2 {event2} | {event3})".format(
                 event1=", ".join([str(e) for e in self.event1]),
                 event2=", ".join([str(e) for e in self.event2]),
                 event3=", ".join([str(e) for e in self.event3]),
             )
         else:
-            return "({event1} \u27C2 {event2})".format(
+            return "({event1} \u27c2 {event2})".format(
                 event1=", ".join([str(e) for e in self.event1]),
                 event2=", ".join([str(e) for e in self.event2]),
             )

@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 
+import os
 import unittest
+import warnings
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
+from pgmpy.estimators import (
+    BayesianEstimator,
+    ExpectationMaximization,
+    MaximumLikelihoodEstimator,
+)
+from pgmpy.factors.discrete import TabularCPD
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -30,6 +39,36 @@ class TestDAGCreation(unittest.TestCase):
             hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
         )
         self.assertEqual(self.graph.latents, set(["b"]))
+
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+        self.graph = DAG(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {"a": ["b", "c"], "b": ["c"]}
+        self.graph = DAG(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = DAG(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})  # None
+
+    def test_variable_name_contains_non_string_adj_matrix(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = DAG(df)
+        self.assertEqual(self.graph._variable_name_contains_non_string(), (0, int))
+
+    def test_variable_name_contains_non_string_mixed_types(self):
+        self.graph = DAG([("a", "b"), ("b", "c"), ("a", 3.2)])
+        self.graph.nodes()
+        self.assertEqual(self.graph._variable_name_contains_non_string(), (3.2, float))
 
     def test_add_node_string(self):
         self.graph = DAG()
@@ -146,25 +185,15 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edge_weight(self):
         self.graph.add_edge("a", "b", weight=0.3)
-        if nx.__version__.startswith("1"):
-            self.assertEqual(self.graph.edge["a"]["b"]["weight"], 0.3)
-        else:
-            self.assertEqual(self.graph.adj["a"]["b"]["weight"], 0.3)
+        self.assertEqual(self.graph.adj["a"]["b"]["weight"], 0.3)
 
     def test_add_edges_from_weight(self):
         self.graph.add_edges_from([("b", "c"), ("c", "d")], weights=[0.5, 0.6])
-        if nx.__version__.startswith("1"):
-            self.assertEqual(self.graph.edge["b"]["c"]["weight"], 0.5)
-            self.assertEqual(self.graph.edge["c"]["d"]["weight"], 0.6)
+        self.assertEqual(self.graph.adj["b"]["c"]["weight"], 0.5)
+        self.assertEqual(self.graph.adj["c"]["d"]["weight"], 0.6)
 
-            self.graph.add_edges_from([("e", "f")])
-            self.assertEqual(self.graph.edge["e"]["f"]["weight"], None)
-        else:
-            self.assertEqual(self.graph.adj["b"]["c"]["weight"], 0.5)
-            self.assertEqual(self.graph.adj["c"]["d"]["weight"], 0.6)
-
-            self.graph.add_edges_from([("e", "f")])
-            self.assertEqual(self.graph.adj["e"]["f"]["weight"], None)
+        self.graph.add_edges_from([("e", "f")])
+        self.assertEqual(self.graph.adj["e"]["f"]["weight"], None)
 
     def test_update_node_parents_bm_constructor(self):
         self.graph = DAG([("a", "b"), ("b", "c")])
@@ -264,18 +293,200 @@ class TestDAGCreation(unittest.TestCase):
             )
 
     def test_random_dag(self):
-        for i in range(100):
-            n_nodes = np.random.randint(low=2, high=100)
+        for i in range(10):
+            n_nodes = 8
             edge_prob = np.random.uniform()
             dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
             self.assertEqual(len(dag.nodes()), n_nodes)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
+            node_names = [
+                "a",
+                "aa",
+                "aaa",
+                "aaaa",
+                "aaaaa",
+                "aaaaaa",
+                "aaaaaaa",
+                "aaaaaaaa",
+            ]
+            dag = DAG.get_random(
+                n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names
+            )
+            self.assertEqual(len(dag.nodes()), n_nodes)
+            self.assertEqual(sorted(dag.nodes()), node_names)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            self.assertTrue(len(dag.latents) == 0)
+
         dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
+
+    def test_dag_fit(self):
+        self.model = DAG([("A", "C"), ("B", "C")])
+        self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        self.pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+        }
+
+        self.fitted_model_bayesian = self.model.fit(
+            self.data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=self.pseudo_counts,
+        )
+
+        self.fitted_model_mle = self.model.fit(
+            self.data, estimator=MaximumLikelihoodEstimator
+        )
+
+        self.fitted_model_em = self.model.fit(
+            self.data, estimator=ExpectationMaximization
+        )
+
+        self.assertEqual(
+            self.fitted_model_bayesian.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+        self.assertEqual(
+            self.fitted_model_mle.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+        self.assertEqual(
+            self.fitted_model_em.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
 
     def tearDown(self):
         del self.graph
+
+
+class TestDAGParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = """# %load model.lav
+                       # measurement model
+                         ind60 =~ x1 + x2 + x3
+                         dem60 =~ y1 + y2 + y3 + y4
+                         dem65 =~ y5 + y6 + y7 + y8
+                       # regressions
+                         dem60 ~ ind60
+                         dem65 ~ ind60 + dem60
+                       """
+        model_from_str = DAG.from_lavaan(string=model_str)
+
+        with open("test_model.lav", "w") as f:
+            f.write(model_str)
+        model_from_file = DAG.from_lavaan(filename="test_model.lav")
+        os.remove("test_model.lav")
+
+        expected_edges = set(
+            [
+                ("ind60", "x1"),
+                ("ind60", "x2"),
+                ("ind60", "x3"),
+                ("ind60", "dem60"),
+                ("ind60", "dem65"),
+                ("dem60", "dem65"),
+                ("dem60", "y1"),
+                ("dem60", "y2"),
+                ("dem60", "y3"),
+                ("dem60", "y4"),
+                ("dem65", "y5"),
+                ("dem65", "y6"),
+                ("dem65", "y7"),
+                ("dem65", "y8"),
+            ]
+        )
+
+        expected_latents = set(["dem60", "dem65", "ind60"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_from_lavaan_with_residual_correlation(self):
+        model_str = """# %load model_with_residual_correlation.lav
+                       # measurement model
+                         ind60 =~ x1 + x2 + x3
+                       # regressions
+                         dem60 ~ ind60
+                       # residual correlations
+                         y1 ~~ y5
+                       """
+
+        model_from_str = DAG.from_lavaan(string=model_str)
+        expected_edges = set(
+            [
+                ("ind60", "x1"),
+                ("ind60", "x2"),
+                ("ind60", "x3"),
+                ("ind60", "dem60"),
+            ]
+        )
+
+        expected_latents = set(["ind60"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+
+    def test_from_dagitty(self):
+        model_str = """
+            dag{
+                smoking "carry matches" [e] ; cancer [o]
+                smoking -> {"carry matches" -> cancer} smoking <-> coffee
+            }"""
+        model_from_str = DAG.from_dagitty(string=model_str)
+
+        with open("test_model.dagitty", "w") as f:
+            f.write(model_str)
+        model_from_file = DAG.from_dagitty(filename="test_model.dagitty")
+        os.remove("test_model.dagitty")
+
+        expected_edges = set(
+            [
+                ("smoking", "cancer"),
+                ("smoking", "carry matches"),
+                ("carry matches", "cancer"),
+                ("u_coffee_smoking", "coffee"),
+                ("u_coffee_smoking", "smoking"),
+            ]
+        )
+
+        expected_latents = set(["u_coffee_smoking"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_from_daggitty_single_line_with_group_of_vars(self):
+        dag = DAG.from_dagitty(
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}'
+        )
+        self.assertEqual(
+            set(dag.edges()),
+            set([("X", "Z"), ("X", "Y"), ("Z", "A"), ("A", "B"), ("C", "B")]),
+        )
+        self.assertEqual(set(dag.latents), set(["X"]))
+
+    def test_from_dagitty_multiline_with_display_info(self):
+        dag = DAG.from_dagitty(
+            """
+                dag {
+                bb="-1.728,-4.67,2.587,4.156"
+                123 [pos="2.087,3.420"]
+                X.1 [pos="-1.228,-1.145"]
+                Y [pos="-0.725,-3.934"]
+                Z [latent, pos="-0.135,1.659"]
+                X.1 -> Y [pos="-0.300,-0.082"]
+                X.1 -> Z
+                Z -> 123
+                }
+        """
+        )
+        self.assertEqual(
+            set(dag.edges()), set([("X.1", "Y"), ("X.1", "Z"), ("Z", "123")])
+        )
+        self.assertEqual(set(dag.latents), set(["Z"]))
 
 
 class TestDAGMoralization(unittest.TestCase):

@@ -3,6 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.estimators import TreeSearch
 from pgmpy.factors.discrete import TabularCPD
@@ -132,7 +133,7 @@ class TestTreeSearch(unittest.TestCase):
             "adjusted_mutual_info",
             "normalized_mutual_info",
         ]:
-            for n_jobs in [-1, 1]:
+            for n_jobs in [2, 1]:
                 # learn graph structure
                 est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
                 dag = est.estimate(
@@ -173,7 +174,7 @@ class TestTreeSearch(unittest.TestCase):
             "adjusted_mutual_info",
             "normalized_mutual_info",
         ]:
-            for n_jobs in [-1, 1]:
+            for n_jobs in [2, 1]:
                 # learn graph structure
                 est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
                 dag = est.estimate(
@@ -250,6 +251,8 @@ class TestTreeSearch(unittest.TestCase):
         del self.data12
         del self.data22
 
+        get_reusable_executor().shutdown(wait=True)
+
 
 class TestTreeSearchRealDataSet(unittest.TestCase):
     def setUp(self):
@@ -323,3 +326,6 @@ class TestTreeSearchRealDataSet(unittest.TestCase):
             estimator_type="tan", class_node=target, show_progress=False
         ).edges()
         self.assertEqual(set(expected_edges), set(edges))
+
+    def tearDown(self):
+        get_reusable_executor().shutdown(wait=True)

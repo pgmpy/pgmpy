@@ -19,6 +19,7 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.independencies import Independencies
+from pgmpy.inference import ApproxInference, BeliefPropagation
 from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
@@ -40,6 +41,26 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_class_init_with_data_nonstring(self):
         BayesianNetwork([(1, 2), (2, 3)])
+
+    def test_class_init_with_adj_matrix_dict_of_dict(self):
+        adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+        self.graph = BayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+    def test_class_init_with_adj_matrix_dict_of_list(self):
+        adj = {"a": ["b", "c"], "b": ["c"]}
+        self.graph = BayesianNetwork(adj, latents=set(["a"]))
+        self.assertEqual(self.graph.latents, set("a"))
+        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+    def test_class_init_with_pd_adj_df(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = BayesianNetwork(df, latents=set([0]))
+        self.assertEqual(self.graph.latents, set([0]))
+        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
 
     def test_add_node_string(self):
         self.G.add_node("a")
@@ -117,7 +138,24 @@ class TestBaseModelCreation(unittest.TestCase):
         del self.G
 
 
-class TestBayesianModelMethods(unittest.TestCase):
+class TestBayesianNetworkParser(unittest.TestCase):
+    def test_from_lavaan(self):
+        model_str = "i =~ x1 + x2 + x3"
+        model_from_str = BayesianNetwork.from_lavaan(string=model_str)
+        expected_edges = set([("i", "x1"), ("i", "x2"), ("i", "x3")])
+        expected_latents = set(["i"])
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+
+    def test_from_daggitty(self):
+        dag = BayesianNetwork.from_dagitty(
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}'
+        )
+        self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
+        self.assertEqual(set(dag.latents), set(["X"]))
+
+
+class TestBayesianNetworkMethods(unittest.TestCase):
     def setUp(self):
         self.G = BayesianNetwork([("a", "d"), ("b", "d"), ("d", "e"), ("b", "c")])
         self.G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
@@ -294,13 +332,27 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_get_immoralities(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
-        self.assertEqual(G.get_immoralities(), {("w", "x"), ("w", "z")})
+        imm = G.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
+
         G1 = BayesianNetwork([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
-        self.assertEqual(G1.get_immoralities(), {("w", "x"), ("w", "z")})
+        imm = G1.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
+
         G2 = BayesianNetwork(
             [("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")]
         )
-        self.assertEqual(G2.get_immoralities(), {("w", "z")})
+        imm = G2.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(imm["y"], [("w", "z")])
 
     def test_is_iequivalent(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
@@ -326,6 +378,11 @@ class TestBayesianModelMethods(unittest.TestCase):
                 if i != j:
                     self.assertFalse(dags[i].is_iequivalent(dags[j]))
 
+        # Example from Issue #1806.
+        G1 = DAG([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
+        G2 = DAG([("B", "A"), ("C", "A"), ("D", "B"), ("D", "C")])
+        self.assertFalse(G1.is_iequivalent(G2))
+
     def test_copy(self):
         model_copy = self.G1.copy()
         self.assertEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
@@ -350,42 +407,93 @@ class TestBayesianModelMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        # With node names
+        node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
+        model = BayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.5, node_names=node_names
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
         model = BayesianNetwork.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        # With node names
         model = BayesianNetwork.get_random(
-            n_nodes=5, edge_prob=0.6, n_states=range(2, 7)
+            n_nodes=5, edge_prob=0.6, node_names=node_names, n_states=5
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.6, n_states={0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
         )
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        # With node names
+        model = BayesianNetwork.get_random(
+            n_nodes=5,
+            edge_prob=0.6,
+            node_names=node_names,
+            n_states={"a": 2, "aa": 3, "aaa": 4, "aaaa": 5, "aaaaa": 6},
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(
+            model.states,
+            {
+                "a": [0, 1],
+                "aa": [0, 1, 2],
+                "aaa": [0, 1, 2, 3],
+                "aaaa": [0, 1, 2, 3, 4],
+                "aaaaa": [0, 1, 2, 3, 4, 5],
+            },
+        )
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
     def test_get_random_cpds(self):
         model = BayesianNetwork(DAG.get_random(n_nodes=5, edge_prob=0.5).edges())
+        model.add_nodes_from(list(range(5)))
 
-        param_model = model.get_random_cpds()
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
+        cpds = model.get_random_cpds()
+        self.assertEqual(len(cpds), 5)
 
-        param_model = model.get_random_cpds(n_states=4)
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
+
+        cpds = model.get_random_cpds(n_states=4, seed=42)
+        self.assertEqual(len(cpds), 5)
+
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
         self.assertTrue(
-            all([card == 4 for var, card in param_model.get_cardinality().items()])
+            all([card == 4 for var, card in model.get_cardinality().items()])
         )
 
         n_states_dict = {0: 3, 1: 5, 2: 4, 3: 9, 4: 3}
-        param_model = model.get_random_cpds(n_states=n_states_dict)
-        self.assertEqual(len(param_model.cpds), 5)
-        self.assertTrue(param_model.check_model())
-        for var in range(5):
-            self.assertEqual(param_model.get_cardinality(var), n_states_dict[var])
+        cpds = model.get_random_cpds(n_states=n_states_dict, seed=42)
+        self.assertEqual(len(cpds), 5)
 
-        model.get_random_cpds(inplace=True)
+        model.add_cpds(*cpds)
+        self.assertTrue(model.check_model())
+        for var in range(5):
+            self.assertEqual(model.get_cardinality(var), n_states_dict[var])
+
+        model.get_random_cpds(inplace=True, seed=42)
         self.assertEqual(len(model.cpds), 5)
         self.assertTrue(model.check_model())
 
@@ -455,6 +563,16 @@ class TestBayesianModelMethods(unittest.TestCase):
         samples = barley.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
+    def test_simulate_with_partial_samples(self):
+        alarm = get_example_model("alarm")
+        partial_cvp = pd.DataFrame(
+            np.random.choice(["LOW", "NORMAL", "HIGH"], int(1e1)), columns=["CVP"]
+        )
+        samples = alarm.simulate(
+            n_samples=int(1e1), partial_samples=partial_cvp, show_progress=False
+        )
+        self.assertEqual(samples.CVP.tolist(), partial_cvp["CVP"].tolist())
+
     def test_load_save(self):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")
@@ -495,7 +613,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         del self.G1
 
 
-class TestBayesianModelCPD(unittest.TestCase):
+class TestBayesianNetworkCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianNetwork([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
@@ -816,7 +934,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         del self.G
 
 
-class TestBayesianModelSampleProb(unittest.TestCase):
+class TestBayesianNetworkSampleProb(unittest.TestCase):
     def setUp(self):
         self.model = get_example_model("asia")
         self.samples = self.model.simulate(int(1e5), seed=42)
@@ -875,7 +993,7 @@ class TestBayesianModelSampleProb(unittest.TestCase):
         )
 
 
-class TestBayesianModelFitPredict(unittest.TestCase):
+class TestBayesianNetworkFitPredict(unittest.TestCase):
     def setUp(self):
         self.model_disconnected = BayesianNetwork()
         self.model_disconnected.add_nodes_from(["A", "B", "C", "D", "E"])
@@ -887,10 +1005,10 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.data1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.data2 = pd.DataFrame(
             data={
-                "A": [0, np.NaN, 1],
+                "A": [0, np.nan, 1],
                 "B": [0, 1, 0],
-                "C": [1, 1, np.NaN],
-                "D": [np.NaN, "Y", np.NaN],
+                "C": [1, 1, np.nan],
+                "D": [np.nan, "Y", np.nan],
             }
         )
 
@@ -901,8 +1019,6 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_bayesian_fit(self):
-        print(isinstance(BayesianEstimator, BaseEstimator))
-        print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
         self.model2.fit(
             self.data1,
             estimator=BayesianEstimator,
@@ -935,9 +1051,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             )
 
     def test_fit_missing_data(self):
-        self.model2.fit(
-            self.data2, state_names={"C": [0, 1]}, complete_samples_only=False
-        )
+        self.model2.fit(self.data2, state_names={"C": [0, 1]})
         cpds = set(
             [
                 TabularCPD("A", 2, [[0.5], [0.5]]),
@@ -976,116 +1090,43 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
         titanic.fit(self.titanic_data2[500:])
 
-        p1 = titanic.predict(self.titanic_data2[["Sex", "Pclass"]][:30])
-        p2 = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
+        p1_ve = titanic.predict(self.titanic_data2[["Sex", "Pclass"]][:30])
+
+        p1_bp = titanic.predict(
+            self.titanic_data2[["Sex", "Pclass"]][:30], algo=BeliefPropagation
+        )
+
+        self.assertEqual(p1_ve.shape, (30, 3))
+        self.assertEqual(p1_bp.shape, (30, 3))
+        self.assertTrue((p1_ve.value_counts() == [10, 9, 3, 3, 3, 2]).all())
+        self.assertTrue((p1_bp.value_counts() == [10, 9, 3, 3, 3, 2]).all())
+
+        p2_ve = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
+
+        p2_app = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30],
+            algo=ApproxInference,
+            seed=42,
+        )
+
+        self.assertEqual(p2_ve.shape, (30, 3))
+        self.assertEqual(p2_app.shape, (30, 3))
+        self.assertTrue((p2_ve.value_counts() == [12, 7, 4, 4, 2, 1]).all())
+        self.assertTrue((p2_app.value_counts() == [12, 7, 4, 4, 2, 1]).all())
+
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
 
-        p1_res = np.array(
-            [
-                "0",
-                "1",
-                "0",
-                "1",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "1",
-                "0",
-                "1",
-                "0",
-                "0",
-                "0",
-                "1",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-                "0",
-            ]
+        gen = np.random.default_rng(seed=42)
+        mask = gen.choice(
+            [True, False], size=self.titanic_data2[["Survived", "Sex"]][:30].shape
         )
-        p2_res = np.array(
-            [
-                "male",
-                "female",
-                "female",
-                "female",
-                "male",
-                "male",
-                "male",
-                "male",
-                "female",
-                "female",
-                "female",
-                "female",
-                "male",
-                "male",
-                "male",
-                "female",
-                "male",
-                "female",
-                "male",
-                "female",
-                "male",
-                "female",
-                "female",
-                "female",
-                "male",
-                "female",
-                "male",
-                "male",
-                "female",
-                "male",
-            ]
+        p3_nans = titanic.predict(
+            self.titanic_data2[["Survived", "Sex"]][:30].mask(mask)
         )
-        p3_res = np.array(
-            [
-                "3",
-                "1",
-                "1",
-                "1",
-                "3",
-                "3",
-                "3",
-                "3",
-                "1",
-                "1",
-                "1",
-                "1",
-                "3",
-                "3",
-                "3",
-                "1",
-                "3",
-                "1",
-                "3",
-                "1",
-                "3",
-                "1",
-                "1",
-                "1",
-                "3",
-                "1",
-                "3",
-                "3",
-                "1",
-                "3",
-            ]
-        )
-
-        np_test.assert_array_equal(p1.values.ravel(), p1_res)
-        np_test.assert_array_equal(p2.values.ravel(), p2_res)
-        np_test.assert_array_equal(p3.values.ravel(), p3_res)
+        self.assertEqual(p3.shape, (30, 3))
+        self.assertEqual(p3_nans.shape, (30, 3))
+        self.assertTrue((p3.value_counts() == [12, 12, 3, 3]).all())
+        self.assertTrue((p3_nans.value_counts() == [15, 8, 7]).all())
 
     def test_predict_stochastic(self):
         titanic = BayesianNetwork()
@@ -1093,25 +1134,33 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         titanic.fit(self.titanic_data2[500:])
 
         p1 = titanic.predict(
-            self.titanic_data2[["Sex", "Pclass"]][:30], stochastic=True
+            self.titanic_data2[["Sex", "Pclass"]][:30],
+            stochastic=True,
+            seed=42,
         )
         p2 = titanic.predict(
-            self.titanic_data2[["Survived", "Pclass"]][:30], stochastic=True
+            self.titanic_data2[["Survived", "Pclass"]][:30],
+            stochastic=True,
+            seed=42,
         )
         p3 = titanic.predict(
-            self.titanic_data2[["Survived", "Sex"]][:30], stochastic=True
+            self.titanic_data2[["Survived", "Sex"]][:30],
+            stochastic=True,
+            seed=42,
         )
 
-        # Acceptable range between 15 - 20.
-        # TODO: Is there a better way to test this?
-        self.assertTrue(p1.value_counts().values[0] <= 23)
-        self.assertTrue(p1.value_counts().values[0] >= 15)
+        self.assertEqual(p1.shape, (30, 3))
+        self.assertEqual(p1["Survived"].value_counts().loc["0"], 15)
+        self.assertEqual(p1["Survived"].value_counts().loc["1"], 15)
 
-        self.assertTrue(p2.value_counts().values[0] <= 22)
-        self.assertTrue(p2.value_counts().values[0] >= 15)
+        self.assertEqual(p2.shape, (30, 3))
+        self.assertEqual(p2["Sex"].value_counts()["male"], 23)
+        self.assertEqual(p2["Sex"].value_counts()["female"], 7)
 
-        self.assertTrue(p3.value_counts().values[0] <= 19)
-        self.assertTrue(p3.value_counts().values[0] >= 8)
+        self.assertEqual(p3.shape, (30, 3))
+        self.assertEqual(p3["Pclass"].value_counts().loc["1"], 6)
+        self.assertEqual(p3["Pclass"].value_counts().loc["2"], 3)
+        self.assertEqual(p3["Pclass"].value_counts().loc["3"], 21)
 
     def test_connected_predict(self):
         np.random.seed(42)
@@ -1126,7 +1175,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         predict_data.drop("E", axis=1, inplace=True)
         e_predict = self.model_connected.predict(predict_data)
         np_test.assert_array_equal(
-            e_predict.values.ravel(),
+            e_predict["E"].values.ravel(),
             np.array(
                 [
                     1,
@@ -1798,3 +1847,109 @@ class TestSimulation(unittest.TestCase):
             ),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_stimulate_missing_mcar(self):
+        samples = self.con_model.simulate(n_samples=3000)
+        self.assertFalse(samples.isnull().values.any())
+
+        cpd = TabularCPD(
+            "Z*",
+            2,
+            [[0.2], [0.8]],
+        )
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        missing_fraction = samples["Z"].isnull().mean()
+        self.assertGreaterEqual(missing_fraction, 0.75)
+        self.assertLessEqual(missing_fraction, 0.85)
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
+
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(n_samples=100, missing_prob=0.5)
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD(
+                "Z",
+                2,
+                [[0.5], [0.5]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD("Z*", 2, [[0.5, 0.5], [0.5, 0.5]], ["A"], [2])
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(n_samples=100, missing_prob=[cpd, 0.5])
+
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD(
+                "M*",
+                2,
+                [[0.5], [0.5]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+        with self.assertRaises(ValueError):
+            cpd = TabularCPD(
+                "Z*",
+                3,
+                [[0.3], [0.5], [0.2]],
+            )
+            self.con_model.simulate(n_samples=100, missing_prob=cpd)
+
+    def test_stimulate_missing_mnar(self):
+        cpd = TabularCPD("Z*", 2, [[0.6, 0.3], [0.4, 0.7]], ["Z"], [2])
+        samples = self.con_model.simulate(
+            n_samples=3000, missing_prob=cpd, return_full=True
+        )
+        missing_fraction_z0 = samples[samples["Z_full"] == 0]["Z"].isnull().mean()
+        missing_fraction_z1 = samples[samples["Z_full"] == 1]["Z"].isnull().mean()
+
+        expected_missing_z0 = 0.4
+        expected_missing_z1 = 0.7
+        self.assertAlmostEqual(missing_fraction_z0, expected_missing_z0, delta=0.1)
+        self.assertAlmostEqual(missing_fraction_z1, expected_missing_z1, delta=0.1)
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
+
+    def test_stimulate_missing_mar(self):
+        cpd = TabularCPD(
+            "Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2]
+        )
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
+        for (x, y), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd.values[1][x, y]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.1
+            )
+        self.assertFalse(samples.drop(columns=["Z"]).isnull().values.any())
+
+        # Testing all three missingness at one sampling as list of CPD.
+        cpd_1 = TabularCPD(
+            "Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2]
+        )
+        cpd_2 = TabularCPD("Y*", 2, [[0.6, 0.4], [0.4, 0.6]], ["Y"], [2])
+        cpd_3 = TabularCPD("U*", 2, [[0.2], [0.8]])
+        samples = self.con_model.simulate(
+            n_samples=3000, missing_prob=[cpd_1, cpd_2, cpd_3], return_full=True
+        )
+        # MAR
+        grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
+        for (x, z), group in grouped:
+            missing_fraction = group.isnull().mean()
+            expected_missing_fraction = cpd_1.values[1][int(x), int(z)]
+            self.assertAlmostEqual(
+                missing_fraction, expected_missing_fraction, delta=0.1
+            )
+
+        # MNAR
+        missing_fraction_z0 = samples[samples["Y_full"] == 0]["Y"].isnull().mean()
+        missing_fraction_z1 = samples[samples["Y_full"] == 1]["Y"].isnull().mean()
+        expected_missing_z0 = 0.4
+        expected_missing_z1 = 0.6
+        self.assertAlmostEqual(missing_fraction_z0, expected_missing_z0, delta=0.1)
+        self.assertAlmostEqual(missing_fraction_z1, expected_missing_z1, delta=0.1)
+
+        # MCAR
+        missing_fraction = samples["U"].isnull().mean()
+        expected_missing_fraction = 0.8
+        self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)

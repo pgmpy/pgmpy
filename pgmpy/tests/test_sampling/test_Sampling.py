@@ -148,12 +148,40 @@ class TestBayesianModelSampling(unittest.TestCase):
     def test_pre_compute_reduce_maps(self):
         base_infer = BayesianModelInference(self.bayesian_model)
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-            "J", [(1, 1), (1, 0)]
+            "J", ["A", "R"], [(1, 1), (1, 0)]
         )
         self.assertEqual(state_to_index[(1, 1)], 0)
         self.assertEqual(state_to_index[(1, 0)], 1)
         self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
         self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
+
+        # Make sure the order of the evidence variables doen't matter
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["R", "A"], [(1, 1), (1, 0)]
+        )
+        self.assertEqual(state_to_index[(1, 1)], 0)
+        self.assertEqual(state_to_index[(1, 0)], 1)
+        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
+        self.assertEqual(list(index_to_weight[1]), [0.7, 0.3])
+
+    def test_pred_compute_reduce_maps_partial_evidence(self):
+        base_infer = BayesianModelInference(self.bayesian_model)
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["A"], [(1,), (0,)]
+        )
+        self.assertEqual(state_to_index[(1,)], 0)
+        self.assertEqual(state_to_index[(0,)], 1)
+        self.assertEqual(list(index_to_weight[0].round(2)), [0.35, 0.65])
+        self.assertEqual(list(index_to_weight[1].round(2)), [0.8, 0.2])
+
+        # Make sure the order of the evidence variables doen't matter
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["R"], [(1,), (0,)]
+        )
+        self.assertEqual(state_to_index[(1,)], 0)
+        self.assertEqual(state_to_index[(0,)], 1)
+        self.assertEqual(list(index_to_weight[0].round(2)), [0.4, 0.6])
+        self.assertEqual(list(index_to_weight[1].round(2)), [0.75, 0.25])
 
     def test_forward_sample(self):
         # Test without state names
@@ -605,3 +633,27 @@ class TestGibbsSampling(unittest.TestCase):
         samples = [sample for sample in gen]
         random_state.assert_called_once_with(self.gibbs)
         self.assertEqual(len(samples), 2)
+
+
+class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
+    def setUp(self):
+        # Bayesian Model with integer state names.
+        self.bayesian_model_names = BayesianNetwork([("X", "Y")])
+        cpd_x_names = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": [1, 2]})
+        cpd_y_names = TabularCPD(
+            "Y",
+            2,
+            [[1.0, 0.0], [0.0, 1.0]],
+            ["X"],
+            [2],
+            state_names={"Y": [1, 2], "X": [1, 2]},
+        )
+        self.bayesian_model_names.add_cpds(cpd_x_names, cpd_y_names)
+
+        self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
+
+    def test_rejection_sample(self):
+        sampled_y = self.sampling_inference_names.rejection_sample(
+            evidence=[State("X", 2)], size=1
+        )["Y"][0]
+        self.assertEqual(sampled_y, 2)

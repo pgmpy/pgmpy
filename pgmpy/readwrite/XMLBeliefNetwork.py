@@ -1,49 +1,36 @@
 import itertools
+import xml.etree.ElementTree as etree
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.ElementTree as etree
-    except ImportError:
-        # try:
-        #    import xml.etree.cElementTree as etree
-        # except ImportError:
-        # commented out as causing problem with dictionary attributes
-        print("Failed to import ElementTree from any known place")
-
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import BayesianNetwork
 
 
 class XBNReader(object):
     """
-    Base class for reading XML Belief Network File Format.
+    Initializer for XBNReader class.
+
+    Parameters
+    ----------
+    path: str or file
+        Path of the file containing XBN data.
+
+    string: str
+        String of XBN data
+
+    Examples
+    --------
+    >>> reader = XBNReader('test_XBN.xml')
+
+    Reference
+    ---------
+    [1] Microsoft Research. XML belief network file format.
+        http://xml.coverpages.org/xbn-MSdefault19990414.html, 1999.
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initializer for XBNReader class.
-
-        Parameters
-        ----------
-        path: str or file
-            Path of the file containing XBN data.
-
-        string: str
-            String of XBN data
-
-        Examples
-        --------
-        reader = XBNReader('test_XBN.xml')
-
-        Reference
-        ---------
-        http://xml.coverpages.org/xbn-MSdefault19990414.html
-        """
         if path:
             self.network = etree.parse(path).getroot()
         elif string:
@@ -94,10 +81,13 @@ class XBNReader(object):
         >>> reader.get_static_properties()
         {'FORMAT': 'MSR DTAS XML', 'VERSION': '0.2', 'CREATOR': 'Microsoft Research DTAS'}
         """
-        return {
-            tags.tag: tags.get("VALUE")
-            for tags in self.bnmodel.find("STATICPROPERTIES")
-        }
+        if self.bnmodel.find("STATICPROPERTIES") is not None:
+            return {
+                tags.tag: tags.get("VALUE")
+                for tags in self.bnmodel.find("STATICPROPERTIES")
+            }
+        else:
+            return {}
 
     def get_variables(self):
         """
@@ -236,30 +226,27 @@ class XBNReader(object):
 
 class XBNWriter(object):
     """
-    Base class for writing XML Belief Network file format.
+    Initializer for XBNWriter class
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+        Model to write
+    encoding: str(optional)
+        Encoding for test data
+    prettyprint: Bool(optional)
+        Indentation in output XML if true
+
+    Reference
+    ---------
+    http://xml.coverpages.org/xbn-MSdefault19990414.html
+
+    Examples
+    --------
+    >>> writer = XBNWriter(model)
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        """
-        Initializer for XBNWriter class
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-            Model to write
-        encoding: str(optional)
-            Encoding for test data
-        prettyprint: Bool(optional)
-            Indentation in output XML if true
-
-        Reference
-        ---------
-        http://xml.coverpages.org/xbn-MSdefault19990414.html
-
-        Examples
-        --------
-        >>> writer = XBNWriter(model)
-        """
         if not isinstance(model, BayesianNetwork):
             raise TypeError("Model must be an instance of Bayesian Model.")
         self.model = model
@@ -384,17 +371,17 @@ class XBNWriter(object):
                 "VAR",
                 attrib={
                     "NAME": var,
-                    "TYPE": data[var]["TYPE"],
-                    "XPOS": data[var]["XPOS"],
-                    "YPOS": data[var]["YPOS"],
+                    "TYPE": data[var].get("TYPE", ""),
+                    "XPOS": data[var].get("XPOS", ""),
+                    "YPOS": data[var].get("YPOS", ""),
                 },
             )
             etree.SubElement(
                 variable,
                 "DESCRIPTION",
-                attrib={"DESCRIPTION": data[var]["DESCRIPTION"]},
+                attrib={"DESCRIPTION": data[var].get("DESCRIPTION", "")},
             )
-            for state in data[var]["STATES"]:
+            for state in self.model.states[var]:
                 etree.SubElement(variable, "STATENAME").text = state
 
     def set_edges(self, edge_list):
@@ -436,7 +423,9 @@ class XBNWriter(object):
             cpd_values = cpd.get_values().transpose()
             var = cpd.variable
             dist = etree.SubElement(
-                distributions, "DIST", attrib={"TYPE": self.model.nodes[var]["TYPE"]}
+                distributions,
+                "DIST",
+                attrib={"TYPE": self.model.nodes[var].get("TYPE", "")},
             )
             etree.SubElement(dist, "PRIVATE", attrib={"NAME": var})
             dpis = etree.SubElement(dist, "DPIS")
@@ -458,3 +447,23 @@ class XBNWriter(object):
                 etree.SubElement(dpis, "DPI").text = (
                     " " + " ".join(map(str, cpd_values[0])) + " "
                 )
+
+    def write_xbn(self, filename):
+        """
+        Writes the BIF data into a file
+
+        Parameters
+        ----------
+        filename : Name of the file
+
+        Example
+        -------
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> asia = get_example_model('asia')
+        >>> writer = XBNWriter(asia)
+        >>> writer.write_xbn(filename='asia.xbn')
+        """
+        writer = self.__str__()
+        with open(filename, "wb") as fout:
+            fout.write(writer)

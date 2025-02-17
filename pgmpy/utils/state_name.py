@@ -69,7 +69,12 @@ class StateNameMixin:
         Given `var` and `state_name` return the state number.
         """
         if self.state_names:
-            return self.name_to_no[var][state_name]
+            try:
+                return self.name_to_no[var][state_name]
+            except KeyError:
+                raise KeyError(
+                    f"state: {state_name} is an unknown for variable: {var}. It must be one of {list(self.name_to_no[var].keys())}"
+                )
         else:
             return state_name
 

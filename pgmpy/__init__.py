@@ -1,4 +1,4 @@
-from .global_vars import HAS_PANDAS, device, no_progress
+from .global_vars import config
 
-__all__ = ["HAS_PANDAS", "device"]
-__version__ = "0.1.21"
+__all__ = ["config", "logger"]
+__version__ = "0.1.26"

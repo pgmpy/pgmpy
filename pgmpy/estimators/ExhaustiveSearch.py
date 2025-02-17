@@ -1,58 +1,47 @@
 #!/usr/bin/env python
 
-import logging
 from itertools import combinations
 
 import networkx as nx
 
-from pgmpy.estimators import StructureEstimator, ScoreCache
-from pgmpy.estimators import K2Score
-from pgmpy.utils.mathext import powerset
 from pgmpy.base import DAG
+from pgmpy.estimators import StructureEstimator, get_scoring_method
+from pgmpy.global_vars import logger
+from pgmpy.utils.mathext import powerset
 
 
 class ExhaustiveSearch(StructureEstimator):
-    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
-        """
-        Search class for exhaustive searches over all DAGs with a given set of variables.
-        Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
+    """
+    Search class for exhaustive searches over all DAGs with a given set of variables.
+    Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
 
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
-        scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
-            An instance of `K2Score`, `BDeuScore`, `BicScore` or 'AICScore'.
-            This score is optimized during structure estimation by the `estimate`-method.
+    scoring_method: Instance of a `StructureScore`-subclass (`K2` is used as default)
+        An instance of `K2`, `BDeu`, `BIC` or 'AIC'.
+        This score is optimized during structure estimation by the `estimate`-method.
 
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
 
-        use_caching: boolean
-            If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposable. Can
-            give wrong results in case of custom scoring methods.
+    use_caching: boolean
+        If True, uses caching of score for faster computation.
+        Note: Caching only works for scoring methods which are decomposable. Can
+        give wrong results in case of custom scoring methods.
+    """
 
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-        """
-        if scoring_method is not None:
-            if use_cache:
-                self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
-            else:
-                self.scoring_method = scoring_method
-        else:
-            self.scoring_method = ScoreCache.ScoreCache(K2Score(data, **kwargs), data)
-
+    def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
+        _, self.scoring_method = get_scoring_method(
+            scoring_method, self.data, use_cache
+        )
 
     def all_dags(self, nodes=None):
         """
@@ -92,8 +81,8 @@ class ExhaustiveSearch(StructureEstimator):
         if nodes is None:
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
-            logging.info("Generating all DAGs of n nodes likely not feasible for n>6!")
-            logging.info(
+            logger.info("Generating all DAGs of n nodes likely not feasible for n>6!")
+            logger.info(
                 "Attempting to search through {n} graphs".format(
                     n=2 ** (len(nodes) * (len(nodes) - 1))
                 )
@@ -123,11 +112,11 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ExhaustiveSearch, K2Score
+        >>> from pgmpy.estimators import ExhaustiveSearch, K2
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         >>> data['C'] = data['B']
-        >>> searcher = ExhaustiveSearch(data, scoring_method=K2Score(data))
+        >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> for score, model in searcher.all_scores():
         ...   print("{0}\t{1}".format(score, model.edges()))
         -24234.44977974726      [('A', 'B'), ('A', 'C')]

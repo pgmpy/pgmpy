@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import itertools
-import logging
 from collections import defaultdict
 from functools import reduce
 from operator import mul
@@ -13,93 +12,96 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,
     TabularCPD,
 )
+from pgmpy.global_vars import logger
 from pgmpy.models.MarkovNetwork import MarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class BayesianNetwork(DAG):
     """
-    Base class for Bayesian Models.
+    Initializes a Bayesian Network.
+    A models stores nodes and edges with conditional probability
+    distribution (cpd) and other attributes.
+
+    Models hold directed edges.  Self loops are not allowed neither
+    multiple (parallel) edges.
+
+    Nodes can be any hashable python object.
+
+    Edges are represented as links between nodes.
+
+    Parameters
+    ----------
+    ebunch: input graph
+        Data to initialize graph.  If ebunch=None (default) an empty
+        graph is created.  The ebunch can be an edge list, or any
+        NetworkX graph object.
+
+    latents: list, array-like
+        List of variables which are latent (i.e. unobserved) in the model.
+
+    Examples
+    --------
+    Create an empty Bayesian Network with no nodes and no edges.
+
+    >>> from pgmpy.models import BayesianNetwork
+    >>> G = BayesianNetwork()
+
+    G can be grown in several ways.
+
+    **Nodes:**
+
+    Add one node at a time:
+
+    >>> G.add_node('a')
+
+    Add the nodes from any container (a list, set or tuple or the nodes
+    from another graph).
+
+    >>> G.add_nodes_from(['a', 'b'])
+
+    **Edges:**
+
+    G can also be grown by adding edges.
+
+    Add one edge,
+
+    >>> G.add_edge('a', 'b')
+
+    a list of edges,
+
+    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+
+    If some edges connect nodes not yet in the model, the nodes
+    are added automatically.  There are no errors when adding
+    nodes or edges that already exist.
+
+    **Shortcuts:**
+
+    Many common graph features allow python syntax for speed reporting.
+
+    >>> 'a' in G     # check if node in graph
+    True
+    >>> len(G)  # number of nodes in graph
+    3
     """
 
-    def __init__(self, ebunch=None, latents=set()):
-        """
-        Initializes a Bayesian Model.
-        A models stores nodes and edges with conditional probability
-        distribution (cpd) and other attributes.
-
-        models hold directed edges.  Self loops are not allowed neither
-        multiple (parallel) edges.
-
-        Nodes can be any hashable python object.
-
-        Edges are represented as links between nodes.
-
-        Parameters
-        ----------
-        data : input graph
-            Data to initialize graph.  If data=None (default) an empty
-            graph is created.  The data can be an edge list, or any
-            NetworkX graph object.
-
-        latents: list, array-like
-            List of variables which are latent (i.e. unobserved) in the model.
-
-        Examples
-        --------
-        Create an empty bayesian model with no nodes and no edges.
-
-        >>> from pgmpy.models import BayesianNetwork
-        >>> G = BayesianNetwork()
-
-        G can be grown in several ways.
-
-        **Nodes:**
-
-        Add one node at a time:
-
-        >>> G.add_node('a')
-
-        Add the nodes from any container (a list, set or tuple or the nodes
-        from another graph).
-
-        >>> G.add_nodes_from(['a', 'b'])
-
-        **Edges:**
-
-        G can also be grown by adding edges.
-
-        Add one edge,
-
-        >>> G.add_edge('a', 'b')
-
-        a list of edges,
-
-        >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
-
-        If some edges connect nodes not yet in the model, the nodes
-        are added automatically.  There are no errors when adding
-        nodes or edges that already exist.
-
-        **Shortcuts:**
-
-        Many common graph features allow python syntax for speed reporting.
-
-        >>> 'a' in G     # check if node in graph
-        True
-        >>> len(G)  # number of nodes in graph
-        3
-        """
-        super(BayesianNetwork, self).__init__(ebunch=ebunch, latents=latents)
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        super(BayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
-    def add_edge(self, u, v, **kwargs):
+    def add_edge(self, u, v, w=None, **kwargs):
         """
         Add an edge between u and v.
 
@@ -126,7 +128,10 @@ class BayesianNetwork(DAG):
                 % (u, v)
             )
         else:
-            super(BayesianNetwork, self).add_edge(u, v, **kwargs)
+            if w:
+                super(BayesianNetwork, self).add_edge(u, v, w, **kwargs)
+            else:
+                super(BayesianNetwork, self).add_edge(u, v, **kwargs)
 
     def remove_node(self, node):
         """
@@ -231,35 +236,38 @@ class BayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grades'), ('intel', 'grades')])
+        >>> student = BayesianNetwork([('diff', 'grades'), ('aptitude', 'grades')])
         >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.8,0.8,0.8,0.8,0.8,0.8]],
-        ...                         evidence=['diff', 'intel'], evidence_card=[2, 3])
+        ...                         evidence=['diff', 'aptitude'], evidence_card=[2, 3],
+        ...                         state_names={'grades': ['gradeA', 'gradeB', 'gradeC'],
+        ...                                      'diff': ['easy', 'hard'],
+        ...                                      'aptitude': ['low', 'medium', 'high']})
         >>> student.add_cpds(grades_cpd)
 
-        +------+-----------------------+---------------------+
-        |diff: |          easy         |         hard        |
-        +------+------+------+---------+------+------+-------+
-        |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
-        +------+------+------+---------+------+------+-------+
-        |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
-        +------+------+------+---------+------+------+-------+
+        +---------+-------------------------+------------------------+
+        |diff:    |          easy           |         hard           |
+        +---------+------+--------+---------+------+--------+--------+
+        |aptitude:| low  | medium |  high   | low  | medium |  high  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeA   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeB   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeC   | 0.8  | 0.8    |   0.8   |  0.8 |  0.8   |   0.8  |
+        +---------+------+--------+---------+------+--------+--------+
         """
         for cpd in cpds:
-            if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
-                raise ValueError("Only TabularCPD or ContinuousFactor can be added.")
+            if not isinstance(cpd, TabularCPD):
+                raise ValueError("Only TabularCPD can be added.")
 
             if set(cpd.scope()) - set(cpd.scope()).intersection(set(self.nodes())):
                 raise ValueError("CPD defined on variable not in the model", cpd)
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.info(f"Replacing existing CPD for {cpd.variable}")
+                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -278,18 +286,32 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        A list of TabularCPDs: list
+        cpd : TabularCPD object or list of TabularCPD objects
+            If 'node' is specified, returns the 'TabularCPD' object corresponding to the node.
+            If 'node' is not specified, returns a list of all 'TabularCPD' objects added to the model.
+
+        Raises
+        ------
+        ValueError
+            If the specified node is not present in the model.
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
-        ...                               [0.9, 0.1, 0.8, 0.3]],
-        ...                  ['intel', 'diff'], [2, 2])
-        >>> student.add_cpds(cpd)
-        >>> student.get_cpds()
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> cpds = model.get_cpds()
+        >>> cpds
+        [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>,
+        <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x7dbbd9bd8550>,
+        <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x7dbbd9bda800>,
+        <TabularCPD representing P(lung:2 | smoke:2) at 0x7dbbd9bd89d0>,
+        <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
+        <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
+        <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
+        >>> cpd = model.get_cpds('bronc')
+        >>> cpd
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
         """
         if node is not None:
             if node not in self.nodes():
@@ -407,8 +429,8 @@ class BayesianNetwork(DAG):
             if cpd is None:
                 raise ValueError(f"No CPD associated with {node}")
 
-            # Check if the CPD is an instance of either TabularCPD or ContinuousFactor.
-            elif isinstance(cpd, (TabularCPD, ContinuousFactor)):
+            # Check if the CPD is an instance of TabularCPD.
+            elif isinstance(cpd, TabularCPD):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
 
@@ -418,15 +440,15 @@ class BayesianNetwork(DAG):
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
 
+                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
+                    raise ValueError(
+                        f"CPD for {node} doesn't have state names defined for all the variables."
+                    )
+
                 # Check if the values of the CPD sum to 1.
                 if not cpd.is_valid_cpd():
                     raise ValueError(
                         f"Sum or integral of conditional probabilities for node {node} is not equal to 1."
-                    )
-
-                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
-                    raise ValueError(
-                        f"CPD for {node} doesn't have state names defined for all the variables."
                     )
 
         for node in self.nodes():
@@ -448,8 +470,8 @@ class BayesianNetwork(DAG):
 
     def to_markov_model(self):
         """
-        Converts bayesian model to markov model. The markov model created would
-        be the moral graph of the bayesian model.
+        Converts Bayesian Network to Markov Model. The Markov Model created would
+        be the moral graph of the Bayesian Network.
 
         Examples
         --------
@@ -471,7 +493,7 @@ class BayesianNetwork(DAG):
 
     def to_junction_tree(self):
         """
-        Creates a junction tree (or clique tree) for a given bayesian model.
+        Creates a junction tree (or clique tree) for a given Bayesian Network.
 
         For converting a Bayesian Model into a Clique tree, first it is converted
         into a Markov one.
@@ -509,84 +531,7 @@ class BayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(
-        self,
-        data,
-        estimator=None,
-        state_names=[],
-        complete_samples_only=True,
-        n_jobs=-1,
-        **kwargs,
-    ):
-        """
-        Estimates the CPD for each variable based on a given data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names of the network.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        estimator: Estimator class
-            One of:
-            - MaximumLikelihoodEstimator (default)
-            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-            or 'equivalent_sample_size' as additional keyword arguments.
-            See `BayesianEstimator.get_parameters()` for usage.
-            - ExpectationMaximization
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values
-            in the data set are taken to be the only possible states.
-
-        complete_samples_only: bool (default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-
-        n_jobs: int (default: -1)
-            Number of threads/processes to use for estimation. It improves speed only
-            for large networks (>100 nodes). For smaller networks might reduce
-            performance.
-
-        Returns
-        -------
-        Fitted Model: None
-            Modifies the network inplace and adds the `cpds` property.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.estimators import MaximumLikelihoodEstimator
-        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = BayesianNetwork([('A', 'C'), ('B', 'C')])
-        >>> model.fit(data)
-        >>> model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x7fb98a7d50f0>,
-        <TabularCPD representing P(B:2) at 0x7fb98a7d5588>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
-        """
-        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-
-        if estimator is None:
-            estimator = MaximumLikelihoodEstimator
-        else:
-            if not issubclass(estimator, BaseEstimator):
-                raise TypeError("Estimator object should be a valid pgmpy estimator.")
-
-        _estimator = estimator(
-            self,
-            data,
-            state_names=state_names,
-            complete_samples_only=complete_samples_only,
-        )
-        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
-        self.add_cpds(*cpds_list)
-
-    def fit_update(self, data, n_prev_samples=None, n_jobs=-1):
+    def fit_update(self, data, n_prev_samples=None, n_jobs=1):
         """
         Method to update the parameters of the BayesianNetwork with more data.
         Internally, uses BayesianEstimator with dirichlet prior, and uses
@@ -602,10 +547,9 @@ class BayesianNetwork(DAG):
             This parameter determines how much weight should the new data be given.
             If None, n_prev_samples = nrow(data).
 
-        n_jobs: int (default: -1)
-            Number of threads/processes to use for estimation. It improves speed only
-            for large networks (>100 nodes). For smaller networks might reduce
-            performance.
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
 
         Returns
         -------
@@ -628,7 +572,7 @@ class BayesianNetwork(DAG):
 
         # Step 1: Compute the pseudo_counts for the dirichlet prior.
         pseudo_counts = {
-            var: self.get_cpds(var).get_values() * n_prev_samples
+            var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples
             for var in data.columns
         }
 
@@ -642,9 +586,15 @@ class BayesianNetwork(DAG):
         cpds = _est.get_parameters(
             prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs
         )
-        self.add_cpds(*cpds)
 
-    def predict(self, data, stochastic=False, n_jobs=-1):
+        # Temporarily disable logger to stop giving warning about replacing CPDs.
+        logger.disabled = True
+        self.add_cpds(*cpds)
+        logger.disabled = False
+
+    def predict(
+        self, data, algo=None, stochastic=False, n_jobs=-1, seed=None, **kwargs
+    ):
         """
         Predicts states of all the missing variables.
 
@@ -652,6 +602,9 @@ class BayesianNetwork(DAG):
         ----------
         data: pandas DataFrame object
             A DataFrame object with column names same as the variables in the model.
+
+        algo: a subclass of pgmpy.inference.Inference or pgmpy.inference.ApproxInference
+            An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
 
         stochastic: boolean
             If True, does prediction by sampling from the distribution of predicted variable(s).
@@ -661,11 +614,66 @@ class BayesianNetwork(DAG):
         n_jobs: int (default: -1)
             The number of CPU cores to use. If -1, uses all available cores.
 
+        seed: int (default: None)
+            When `stochastic=True`, the seed value to use for random number generators.
+
+        **kwargs
+            Optional keyword arguments specific to the selected algorithm.
+
+            - Variable Elimination:
+
+              - elimination_order: str or list (default='greedy')
+                Order in which to eliminate the variables in the algorithm. If list is provided,
+                should contain all variables in the model except the ones in `variables`. str options
+                are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
+                refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
+                for details.
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+            - Belief Propagation:
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+
+            - Approx Inference:
+
+              - n_samples: int
+                The number of samples to generate for computing the distributions. Higher `n_samples`
+                results in more accurate results at the cost of more computation time.
+
+              - samples: pd.DataFrame (default: None)
+                If provided, uses these samples to compute the distribution instead
+                of generating samples. `samples` **must** conform with the
+                `evidence` and `virtual_evidence`.
+
+              - state_names: dict (default: None)
+                A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+                If None, inferred from the data but is possible that the final distribution misses some states.
+
+              - seed: int (default: None)
+                Sets the seed for the random generators.
+
+              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                If True, returns a Joint Distribution over `variables`.
+                If False, returns a dict of distributions over each of the `variables`.
+
+        Returns
+        -------
+        Inference results: Pandas DataFrame
+            If `stochastic` is True, returns state(s) by sampling from the distribution of predicted variables.
+            If `stochastic` is False, returns state(s) with the highest probability value.
+
         Examples
         --------
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.inference import ApproxInference
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> train_data = values[:800]
@@ -674,24 +682,28 @@ class BayesianNetwork(DAG):
         >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('E', axis=1, inplace=True)
-        >>> y_pred = model.predict(predict_data)
-        >>> y_pred
+        >>> approx_inf_parameters = {'n_samples':int(1e3),'seed':42}
+        >>> y_pred = model.predict(predict_data,algo=ApproxInference,**approx_inf_parameters)
+        >>> y_pred['E']
             E
-        800 0
-        801 1
+        800 1
+        801 0
         802 1
         803 1
-        804 0
+        804 1
         ... ...
-        993 0
-        994 0
         995 1
         996 1
-        997 0
-        998 0
+        997 1
+        998 1
         999 0
         """
-        from pgmpy.inference import VariableElimination
+        from pgmpy.inference import (
+            ApproxInference,
+            BeliefPropagation,
+            Inference,
+            VariableElimination,
+        )
 
         if set(data.columns) == set(self.nodes()):
             raise ValueError("No variable missing in data. Nothing to predict")
@@ -700,53 +712,60 @@ class BayesianNetwork(DAG):
             raise ValueError("Data has variables which are not in the model")
 
         missing_variables = set(self.nodes()) - set(data.columns)
-        model_inference = VariableElimination(self)
 
-        if stochastic:
-            data_unique_indexes = data.groupby(list(data.columns)).apply(
-                lambda t: t.index.tolist()
-            )
-            data_unique = data_unique_indexes.index.to_frame()
-
-            pred_values = Parallel(n_jobs=n_jobs)(
-                delayed(model_inference.query)(
-                    variables=missing_variables,
-                    evidence=data_point.to_dict(),
-                    show_progress=False,
-                )
-                for index, data_point in tqdm(
-                    data_unique.iterrows(), total=data_unique.shape[0]
-                )
-            )
-            predictions = pd.DataFrame()
-            for i, row in enumerate(data_unique_indexes):
-                p = pred_values[i].sample(n=len(row))
-                p.index = row
-                predictions = pd.concat((predictions, p), copy=False)
-
-            return predictions.reindex(data.index)
-
+        if algo is None:
+            algo = VariableElimination
         else:
-            data_unique = data.drop_duplicates()
-            pred_values = []
+            if not issubclass(algo, Inference) and algo is not ApproxInference:
+                raise TypeError(
+                    f"Algorithm should be a valid pgmpy inference method. Got {type(algo)} instead."
+                )
 
-            # Send state_names dict from one of the estimated CPDs to the inference class.
-            pred_values = Parallel(n_jobs=n_jobs)(
-                delayed(model_inference.map_query)(
-                    variables=missing_variables,
-                    evidence=data_point.to_dict(),
-                    show_progress=False,
-                )
-                for index, data_point in tqdm(
-                    data_unique.iterrows(), total=data_unique.shape[0]
-                )
+        model_inference = algo(self)
+        data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
+            lambda t: t.index.tolist()
+        )
+        data_unique = data_unique_indexes.index.to_frame()
+        pred_values = Parallel(n_jobs=n_jobs)(
+            delayed(model_inference.query if stochastic else model_inference.map_query)(
+                variables=missing_variables.union(
+                    set(data_point.index[data_point.isna()])
+                ),
+                evidence=data_point[~data_point.isna()].to_dict(),
+                show_progress=False,
+                **kwargs,
             )
+            for index, data_point in tqdm(
+                data_unique.iterrows(), total=data_unique.shape[0]
+            )
+        )
 
-            df_results = pd.DataFrame(pred_values, index=data_unique.index)
-            data_with_results = pd.concat([data_unique, df_results], axis=1)
-            return data.merge(data_with_results, how="left").loc[
-                :, list(missing_variables)
-            ]
+        all_columns = data.columns.tolist() + [col for col in missing_variables]
+        predictions = pd.DataFrame()
+
+        for i, row in enumerate(data_unique_indexes):
+            if stochastic:
+                predicted_df = (
+                    pred_values[i].sample(n=len(row), seed=seed).reset_index(drop=True)
+                )
+            else:
+                predicted = pd.DataFrame(pred_values[i], index=[0])
+                predicted_df = predicted.loc[
+                    predicted.index.repeat(len(row))
+                ].reset_index(drop=True)
+
+            initial_variables = data_unique.iloc[[i]].reset_index(drop=True)
+            known_variables = initial_variables.dropna(axis=1)
+            known_df = known_variables.loc[
+                known_variables.index.repeat(len(row))
+            ].reset_index(drop=True)
+
+            complete_data = pd.concat([predicted_df, known_df], axis="columns")
+            complete_data.index = row
+            complete_data = complete_data.reindex(columns=all_columns)
+            predictions = pd.concat([predictions, complete_data], copy=False)
+
+        return predictions.sort_index()
 
     def predict_probability(self, data):
         """
@@ -879,7 +898,7 @@ class BayesianNetwork(DAG):
 
     def is_imap(self, JPD):
         """
-        Checks whether the bayesian model is Imap of given JointProbabilityDistribution
+        Checks whether the Bayesian Network is Imap of given JointProbabilityDistribution
 
         Parameters
         ----------
@@ -888,7 +907,7 @@ class BayesianNetwork(DAG):
         Returns
         -------
         is IMAP: True or False
-            True if bayesian model is Imap for given Joint Probability Distribution False otherwise
+            True if Bayesian Network is Imap for given Joint Probability Distribution False otherwise
 
         Examples
         --------
@@ -994,9 +1013,16 @@ class BayesianNetwork(DAG):
         return list(blanket_nodes)
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
+    def get_random(
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names=None,
+        n_states=None,
+        latents=False,
+        seed=None,
+    ):
         """
-        Returns a randomly generated bayesian network on `n_nodes` variables
+        Returns a randomly generated Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
 
         Parameters
@@ -1008,12 +1034,21 @@ class BayesianNetwork(DAG):
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
-        n_states: int or list (array-like) (default: None)
-            The number of states of each variable. When None randomly
-            generates the number of states.
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
+
+        n_states: int or dict (default: None)
+            The number of states of each variable in the form
+            {variable: no_of_states}. If a single value is provided,
+            all nodes will have the same number of states. When None
+            randomly generates the number of states.
 
         latents: bool (default: False)
             If True, also creates latent variables.
+
+        seed: int (default: None)
+            The seed value for random number generators.
 
         Returns
         -------
@@ -1035,16 +1070,28 @@ class BayesianNetwork(DAG):
          <TabularCPD representing P(4:4 | 1:1, 3:3) at 0x7f97e16eae80>,
          <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
         """
+        if node_names is None:
+            node_names = list(range(n_nodes))
+
         if n_states is None:
-            n_states = np.random.randint(low=1, high=5, size=n_nodes)
+            gen = np.random.default_rng(seed=seed)
+            n_states = gen.integers(low=1, high=5, size=n_nodes)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
+
         elif isinstance(n_states, int):
             n_states = np.array([n_states] * n_nodes)
-        else:
-            n_states = np.array(n_states)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
-        n_states_dict = {i: n_states[i] for i in range(n_nodes)}
+        elif isinstance(n_states, dict):
+            n_states_dict = n_states
 
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, latents=latents)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+            seed=seed,
+        )
         bn_model = BayesianNetwork(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
 
@@ -1053,14 +1100,17 @@ class BayesianNetwork(DAG):
             parents = list(bn_model.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
-                    variable=node, evidence=parents, cardinality=n_states_dict
+                    variable=node,
+                    evidence=parents,
+                    cardinality=n_states_dict,
+                    seed=seed,
                 )
             )
 
         bn_model.add_cpds(*cpds)
         return bn_model
 
-    def get_random_cpds(self, n_states=None, inplace=False):
+    def get_random_cpds(self, n_states=None, inplace=False, seed=None):
         """
         Given a `model`, generates and adds random `TabularCPD` for each node resulting in a fully parameterized network.
 
@@ -1073,6 +1123,10 @@ class BayesianNetwork(DAG):
         inplace: bool (default: False)
             If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
             a copy of the model.
+
+        seed: int (default: None)
+            The seed value for random number generators.
+
         """
         if isinstance(n_states, int):
             n_states = {var: n_states for var in self.nodes()}
@@ -1080,23 +1134,24 @@ class BayesianNetwork(DAG):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
+            gen = np.random.default_rng(seed=seed)
             n_states = {
-                var: np.random.randint(low=1, high=5, size=1)[0] for var in self.nodes()
+                var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()
             }
 
-        model = self if inplace else self.copy()
         cpds = []
-        for node in model.nodes():
-            parents = list(model.predecessors(node))
+        for node in self.nodes():
+            parents = list(self.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
-                    variable=node, evidence=parents, cardinality=n_states
+                    variable=node, evidence=parents, cardinality=n_states, seed=seed
                 )
             )
 
-        model.add_cpds(*cpds)
-        if not inplace:
-            return model
+        if inplace:
+            self.add_cpds(*cpds)
+        else:
+            return cpds
 
     def do(self, nodes, inplace=False):
         """
@@ -1160,6 +1215,8 @@ class BayesianNetwork(DAG):
         partial_samples=None,
         seed=None,
         show_progress=True,
+        missing_prob=None,
+        return_full=False,
     ):
         """
         Simulates data from the given model. Internally uses methods from
@@ -1202,6 +1259,15 @@ class BayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
+        missing_prob: TabularCPD, list  (default: None)
+            The probability of missing value for the variable of TabularCPD.
+            In case of missing value for more than one variable, provide list of TabularCPD.
+            The variable name of each TabularCPD should end with the name of node in BayesianNetwork with * at the end of the name.
+            The state names of each TabularCPD should be the same as the state names of the corresponding node in BayesianNetwork.
+
+        return_full: bool (default: False)
+            If True, return both full samples and samples with missing values (if performed).
+
         Returns
         -------
         A dataframe with the simulated data: pd.DataFrame
@@ -1233,6 +1299,20 @@ class BayesianNetwork(DAG):
 
         >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]], state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
+
+        Simulation with missing values:
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
+        >>> model.simulate(n_samples, missing_prob=cpd)
+
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HISTORY"], [2], state_names={"HISTORY*" : [0,1],
+                        "HISTORY" : ['TRUE', 'FALSE']})
+        >>> model.simulate(n_samples, missing_prob=cpd)
+
+        >>> cpd = TabularCPD("HISTORY*", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
+                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3], state_names={"HISTORY*" : [0,1],
+                        "HYPOVOLEMIA" : ['TRUE', 'FALSE'], 'LVEDVOLUME': ['LOW', 'NORMAL', 'HIGH']})
+        >>> model.simulate(n_samples=10, missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
 
@@ -1286,7 +1366,9 @@ class BayesianNetwork(DAG):
                 var = cpd.variables[0]
                 new_var = "__" + var
                 model.add_edge(var, new_var)
-                values = np.vstack((cpd.values, 1 - cpd.values))
+                values = compat_fns.get_compute_backend().vstack(
+                    (cpd.values, 1 - cpd.values)
+                )
                 new_cpd = TabularCPD(
                     variable=new_var,
                     variable_card=2,
@@ -1298,7 +1380,55 @@ class BayesianNetwork(DAG):
                 model.add_cpds(new_cpd)
                 evidence[new_var] = 0
 
-        # Step 3: If no evidence do a forward sampling
+        # Step 3: If missing_prob; include missing values in samples.
+        if missing_prob is not None:
+            if isinstance(missing_prob, list):
+                for cpd in missing_prob:
+                    if not isinstance(cpd, TabularCPD):
+                        raise ValueError(
+                            f"missing_prob must be a list of TabularCPD objects. Got {type(cpd)}"
+                        )
+            else:
+                if isinstance(missing_prob, TabularCPD):
+                    missing_prob = [missing_prob]
+                else:
+                    raise ValueError(
+                        f"missing_prob should be TabularCPD. Got {type(missing_prob)}"
+                    )
+
+            for cpd in missing_prob:
+                variable = cpd.variables[0]
+
+                if not variable.endswith("*"):
+                    raise ValueError(
+                        f"Got {variable}. TabularCPD variable should end with * symbol to represent missingnness variable."
+                    )
+
+                if variable.split("*")[0] not in model.nodes:
+                    raise ValueError(
+                        f"Got {variable}. TabularCPD variable not in model nodes."
+                    )
+
+                if cpd.cardinality[0] != 2:
+                    raise ValueError(
+                        f"Got cardinality of variable = {cpd.cardinality[0]}. Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
+                    )
+
+                model.add_node(variable)
+
+                if len(cpd.variables) > 1:
+                    evidences = cpd.variables[1:]
+                    for node in evidences:
+                        if node not in model.nodes():
+                            raise ValueError(
+                                f"TabularCPD evidence {node} not in model nodes."
+                            )
+                        else:
+                            model.add_edge(node, variable)
+
+                model.add_cpds(cpd)
+
+        # Step 4: If no evidence do a forward sampling
         if len(evidence) == 0:
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
@@ -1308,7 +1438,7 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 4: If evidence; do a rejection sampling
+        # Step 5: If evidence; do a rejection sampling
         else:
             samples = BayesianModelSampling(model).rejection_sample(
                 size=n_samples,
@@ -1319,11 +1449,25 @@ class BayesianNetwork(DAG):
                 partial_samples=partial_samples,
             )
 
-        # Step 5: Postprocess and return
+        # Step 6: If missing_prob; perform masking
+        if missing_prob:
+            for cpd in missing_prob:
+                variable = cpd.variables[0]
+                if return_full:
+                    samples[variable.split("*")[0] + "_full"] = samples.loc[
+                        :, variable.split("*")[0]
+                    ]
+
+                samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
+                samples.drop(columns=[variable], inplace=True)
+
+        # Step 7: Postprocess and return
         if include_latents:
-            return samples
+            return samples.astype("category")
         else:
-            return samples.loc[:, list(set(self.nodes()) - self.latents)]
+            return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype(
+                "category"
+            )
 
     def save(self, filename, filetype="bif"):
         """

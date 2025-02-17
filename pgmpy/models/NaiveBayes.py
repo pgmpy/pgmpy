@@ -159,7 +159,7 @@ class NaiveBayes(BayesianNetwork):
         >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
         >>> ind = model.local_independencies('b')
         >>> ind
-        (b \u27C2 d, c | a)
+        (b \u27c2 d, c | a)
         """
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:

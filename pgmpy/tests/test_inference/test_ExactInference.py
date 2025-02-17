@@ -6,7 +6,8 @@ import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
+from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -344,6 +345,20 @@ class TestVariableElimination(unittest.TestCase):
         )
         self.assertEqual(2, result_width)
 
+    def test_invalid_state_name(self):
+        """Test handling of invalid state names."""
+        with self.assertRaises(KeyError):
+            self.bayesian_inference.query(
+                variables=["J"], evidence={"A": -1}, show_progress=False
+            )
+
+    def test_invalid_variable_name(self):
+        """Test handling of invalid variable names."""
+        with self.assertRaises(ValueError):
+            self.bayesian_inference.query(
+                variables=["J"], evidence={"wrong_variable": 0}, show_progress=False
+            )
+
     def tearDown(self):
         del self.bayesian_inference
         del self.bayesian_model
@@ -481,109 +496,126 @@ class TestSnowNetwork(unittest.TestCase):
                 self.assertEqual(query_joint[var], query_expected[var])
 
     def test_virt_evidence(self):
-        virt_evidence = TabularCPD(
+        virt_evidence_cpd = TabularCPD(
             "Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]}
         )
-        for algo in [VariableElimination, BeliefPropagation]:
-            infer = algo(self.model)
-            query1 = infer.query(
-                ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
+        virt_evidence_factor = DiscreteFactor(
+            ["Traffic"], [2], [0.3, 0.7], state_names={"Traffic": ["normal", "slow"]}
+        )
+        for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
+            for algo in [VariableElimination, BeliefPropagation]:
+                infer = algo(self.model)
+                query1 = infer.query(
+                    ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
 
-            map1 = infer.map_query(
-                ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            self.assertEqual(map1, {"Snow": "no"})
+                map1 = infer.map_query(
+                    ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                self.assertEqual(map1, {"Snow": "no"})
 
-            query2 = infer.query(
-                ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
+                query2 = infer.query(
+                    ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
 
-            map2 = infer.map_query(
-                ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            self.assertEqual(map2, {"Risk": "yes"})
+                map2 = infer.map_query(
+                    ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                self.assertEqual(map2, {"Risk": "yes"})
 
-            query3 = infer.query(
-                ["Late"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
+                query3 = infer.query(
+                    ["Late"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
 
-            map3 = infer.map_query(
-                ["Late"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            self.assertEqual(map3, {"Late": "yes"})
+                map3 = infer.map_query(
+                    ["Late"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                self.assertEqual(map3, {"Late": "yes"})
 
-            query4 = infer.query(
-                ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
+                query4 = infer.query(
+                    ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
 
-            # TODO: State name should be returned here.
-            map4 = infer.map_query(
-                ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
-            )
-            self.assertTrue(map4 in [{"Traffic": "slow"}, {"Traffic": 1}])
+                # TODO: State name should be returned here.
+                map4 = infer.map_query(
+                    ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
+                )
+                self.assertTrue(map4 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
-        virt_evidence1 = TabularCPD(
+        virt_evidence1_cpd = TabularCPD(
             "Risk", 2, [[0.7], [0.3]], state_names={"Risk": ["yes", "no"]}
         )
-        for algo in [VariableElimination, BeliefPropagation]:
-            infer = algo(self.model)
-            query1 = infer.query(
-                ["Snow"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
+        virt_evidence1_factor = DiscreteFactor(
+            ["Risk"], [2], [0.7, 0.3], state_names={"Risk": ["yes", "no"]}
+        )
+        for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
+            for virt_evidence1 in [virt_evidence1_cpd, virt_evidence1_factor]:
+                for algo in [VariableElimination, BeliefPropagation]:
+                    infer = algo(self.model)
+                    query1 = infer.query(
+                        ["Snow"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    np_test.assert_array_almost_equal(
+                        query1.values, [0.52443609, 0.47556391]
+                    )
 
-            map1 = infer.map_query(
-                ["Snow"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            self.assertEqual(map1, {"Snow": "yes"})
+                    map1 = infer.map_query(
+                        ["Snow"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    self.assertEqual(map1, {"Snow": "yes"})
 
-            query2 = infer.query(
-                ["Risk"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
-            map2 = infer.map_query(
-                ["Risk"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            self.assertTrue(map2 in [{"Risk": 0}, {"Risk": "yes"}])
+                    query2 = infer.query(
+                        ["Risk"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    np_test.assert_array_almost_equal(
+                        query2.values, [0.76315789, 0.23684211]
+                    )
+                    map2 = infer.map_query(
+                        ["Risk"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    self.assertTrue(map2 in [{"Risk": 0}, {"Risk": "yes"}])
 
-            query3 = infer.query(
-                ["Traffic"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
-            map3 = infer.map_query(
-                ["Traffic"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            self.assertTrue(map3 in [{"Traffic": "slow"}, {"Traffic": 1}])
+                    query3 = infer.query(
+                        ["Traffic"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    np_test.assert_array_almost_equal(
+                        query3.values, [0.32730263, 0.67269737]
+                    )
+                    map3 = infer.map_query(
+                        ["Traffic"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    self.assertTrue(map3 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
-            query4 = infer.query(
-                ["Late"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
-            map4 = infer.map_query(
-                ["Late"],
-                virtual_evidence=[virt_evidence, virt_evidence1],
-                show_progress=False,
-            )
-            self.assertEqual(map4, {"Late": "yes"})
+                    query4 = infer.query(
+                        ["Late"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    np_test.assert_array_almost_equal(
+                        query4.values, [0.66480263, 0.33519737]
+                    )
+                    map4 = infer.map_query(
+                        ["Late"],
+                        virtual_evidence=[virt_evidence, virt_evidence1],
+                        show_progress=False,
+                    )
+                    self.assertEqual(map4, {"Late": "yes"})
 
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
@@ -1110,3 +1142,155 @@ class TestBeliefPropagation(unittest.TestCase):
     def tearDown(self):
         del self.junction_tree
         del self.bayesian_model
+
+
+class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
+    def setUp(self):
+        self.factor_graph = FactorGraph()
+        self.factor_graph.add_nodes_from(["A", "B", "C", "D"])
+
+        phi1 = DiscreteFactor(["A"], [2], [0.4, 0.6])
+        phi2 = DiscreteFactor(
+            ["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]]
+        )
+        phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
+        phi4 = DiscreteFactor(
+            ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
+        )
+
+        self.factor_graph.add_factors(phi1, phi2, phi3, phi4)
+
+        self.factor_graph.add_edges_from(
+            [
+                (phi1, "A"),
+                ("A", phi2),
+                (phi2, "B"),
+                ("B", phi3),
+                (phi3, "C"),
+                ("B", phi4),
+                (phi4, "D"),
+            ]
+        )
+
+        self.belief_propagation = BeliefPropagationWithMessagePassing(self.factor_graph)
+
+    def test_query_single_variable(self):
+        res = self.belief_propagation.query(["C"])
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+
+    def test_query_multiple_variable(self):
+        res = self.belief_propagation.query(["A", "B", "C", "D"])
+        assert np.allclose(res["A"].values, np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(res["D"].values, np.array([0.168, 0.143, 0.689]), atol=1e-20)
+
+    def test_query_single_variable_with_evidence(self):
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        assert np.allclose(
+            res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
+        )
+
+    def test_query_multiple_variable_with_evidence(self):
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        assert np.allclose(
+            res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
+        )
+
+    def test_query_single_variable_with_virtual_evidence(self):
+        ve = [TabularCPD("A", 2, [[0.1], [0.9]])]
+        res = self.belief_propagation.query(["B"], virtual_evidence=ve)
+        assert np.allclose(
+            res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
+        )
+
+    def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
+        ve = [
+            TabularCPD("A", 2, [[0.027], [0.972]]),
+            TabularCPD("B", 3, [[0.3], [0.6], [0.1]]),
+        ]
+        res = self.belief_propagation.query(
+            ["B", "C"], evidence={"D": 0}, virtual_evidence=ve
+        )
+        assert np.allclose(
+            res["B"].values, np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20
+        )
+
+    def test_query_allows_multiple_virtual_evidence_per_variable(self):
+        ve1 = [
+            TabularCPD("A", 2, [[0.1], [0.9]]),
+            TabularCPD("A", 2, [[0.3], [0.7]]),
+        ]
+        res1 = self.belief_propagation.query(["B"], virtual_evidence=ve1)
+        cpd = TabularCPD("A", 2, [[0.1 * 0.3], [0.9 * 0.7]])
+        cpd.normalize()
+        res2 = self.belief_propagation.query(["B"], virtual_evidence=[cpd])
+        assert np.allclose(res1["B"].values, res2["B"].values, atol=1e-20)
+        assert np.allclose(
+            res2["B"].values, np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20
+        )
+
+    def test_query_error_obs_var_has_evidence(self):
+        with self.assertRaises(
+            ValueError,
+            msg="Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {'A'}",
+        ):
+            self.belief_propagation.query(
+                ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
+            )
+
+    def test_query_single_variable_can_return_all_computed_messages(self):
+        res, messages = self.belief_propagation.query(["B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        # Assert on messages values
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+
+    def test_query_multiple_variable_returns_each_message_once(self):
+        res, messages = self.belief_propagation.query(["C", "B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+
+        # Message common to both B and C
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+
+        # Message specific to B
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+
+        # Messages specific to C
+        assert np.allclose(
+            messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
+        )

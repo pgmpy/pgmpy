@@ -1,9 +1,14 @@
-from .mathext import cartesian, sample_discrete
-from .state_name import StateNameMixin
 from .check_functions import _check_1d_array_object, _check_length_equal
+from .mathext import cartesian, sample_discrete
 from .optimizer import optimize, pinverse
-from .utils import get_example_model
-
+from .state_name import StateNameMixin
+from .utils import (
+    discretize,
+    get_example_model,
+    llm_pairwise_orient,
+    manual_pairwise_orient,
+    preprocess_data,
+)
 
 __all__ = [
     "cartesian",
@@ -14,4 +19,8 @@ __all__ = [
     "optimize",
     "pinverse",
     "get_example_model",
+    "discretize",
+    "llm_pairwise_orient",
+    "manual_pairwise_orient",
+    "preprocess_data",
 ]

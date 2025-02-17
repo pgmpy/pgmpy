@@ -5,7 +5,8 @@ from collections import defaultdict
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors import factor_product
+from pgmpy.factors import FactorDict, factor_product
+from pgmpy.utils import compat_fns
 
 
 class ClusterGraph(UndirectedGraph):
@@ -212,6 +213,35 @@ class ClusterGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
+    @property
+    def clique_beliefs(self) -> FactorDict:
+        """
+        Return a mapping from the cliques to their factor representations.
+
+        Returns
+        -------
+        FactorDict: mapping from cliques to factors
+
+        Examples
+        --------
+        >>> from pgmpy.models import ClusterGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> G = ClusterGraph()
+        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
+        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
+        ...                   (('a', 'b', 'c'), ('a', 'c'))])
+        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.clique_beliefs
+        """
+        return FactorDict({clique: self.get_factors(clique) for clique in self.nodes()})
+
+    @clique_beliefs.setter
+    def clique_beliefs(self, clique_beliefs: FactorDict) -> None:
+        self.remove_factors(*self.get_factors())
+        self.add_factors(*clique_beliefs.values())
+
     def get_cardinality(self, node=None):
         """
         Returns the cardinality of the node
@@ -288,7 +318,7 @@ class ClusterGraph(UndirectedGraph):
             factor = factor_product(
                 factor, *[self.factors[i] for i in range(1, len(self.factors))]
             )
-            return np.sum(factor.values)
+            return compat_fns.sum(factor.values)
 
     def check_model(self):
         """

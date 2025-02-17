@@ -1,126 +1,114 @@
-pgmpy
-=====
+<div align="center">
+  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="318" height="300"/>
+</div>
+<br/>
+<div align="center">
+
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
-[![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg)](https://codecov.io/gh/pgmpy/pgmpy)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/78a8256c90654c6892627f6d8bbcea14)](https://www.codacy.com/gh/pgmpy/pgmpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pgmpy/pgmpy&amp;utm_campaign=Badge_Grade)
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
-[![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy)
+[![Version](https://img.shields.io/pypi/v/pgmpy?color=blue)](https://pypi.org/project/pgmpy/)
+[![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
+[![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
 
-pgmpy is a python library for working with Probabilistic Graphical Models.  
 
-Documentation  and list of algorithms supported is at our official site http://pgmpy.org/  
-Examples on using pgmpy: https://github.com/pgmpy/pgmpy/tree/dev/examples  
-Basic tutorial on Probabilistic Graphical models using pgmpy: https://github.com/pgmpy/pgmpy_notebook  
+</div>
 
-Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
+<div align="center">
 
-We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
+[![Join the pgmpy Discord server](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/DRkdKaumBs)
+[![Read the Docs](https://img.shields.io/badge/-Docs-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white&link=https://inseq.org)](https://pgmpy.org)
+[![Examples](https://img.shields.io/badge/-Examples-orange?style=for-the-badge&logo=Jupyter&logoColor=white&link=https://github.com/pgmpy/pgmpy/tree/dev/examples)](https://github.com/pgmpy/pgmpy/tree/dev/examples)
+[![Tutorial](https://img.shields.io/badge/-Tutorial-orange?style=for-the-badge&logo=Jupyter&logoColor=white&link=https://github.com/pgmpy/pgmpy_notebook)](https://github.com/pgmpy/pgmpy_notebook)
 
-Dependencies
-=============
-pgmpy has the following non-optional dependencies:
-- python 3.6 or higher
-- networkX
-- scipy 
-- numpy
-- pytorch
+</div>
 
-Some of the functionality would also require:
-- tqdm
-- pandas
-- pyparsing
-- statsmodels
-- joblib
+pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from causal inference and probabilistic inference literature to allow users to seamlessly work between them. It implements algorithms for structure learning, causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
 
-Installation
-=============
-pgmpy is available both on pypi and anaconda. For installing through anaconda use:
-```bash
-$ conda install -c ankurankan pgmpy
+- **Documentation:** https://pgmpy.org/
+- **Installation:** https://pgmpy.org/started/install.html
+- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
+- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
+
+
+Examples
+--------
+- Creating a Bayesian Network: [view](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Structure Learning/Causal Discovery: [view](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Parameter Learning: [view](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Probabilistic Inference: [view](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Causal Inference: [view](https://pgmpy.org/examples/Causal%20Inference.html) | <a target="_blank" href="https://colab.research.google.com/github/https://pgmpy.org/examples/Causal%20Inference.html"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Extending pgmpy: [view](https://pgmpy.org/examples/Extending%20pgmpy.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Extending%20pgmpy.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+
+<br/>
+
+- Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
+- Tutorials: https://github.com/pgmpy/pgmpy_notebook/
+
+Citing
+======
+If you use `pgmpy` in your scientific work, please consider citing us:
+
+```
+Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
 ```
 
-For installing through pip:
-```bash
-$ pip install -r requirements.txt  # only if you want to run unittests
-$ pip install pgmpy
+Bibtex:
 ```
-
-To install pgmpy from the source code:
+@article{Ankan2024,
+  author  = {Ankur Ankan and Johannes Textor},
+  title   = {pgmpy: A Python Toolkit for Bayesian Networks},
+  journal = {Journal of Machine Learning Research},
+  year    = {2024},
+  volume  = {25},
+  number  = {265},
+  pages   = {1--8},
+  url     = {http://jmlr.org/papers/v25/23-0487.html}
+}
 ```
-$ git clone https://github.com/pgmpy/pgmpy 
-$ cd pgmpy/
-$ pip install -r requirements.txt
-$ python setup.py install
-```
-
-If you face any problems during installation let us know, via issues, mail or at our gitter channel.
 
 Development
 ============
 
 Code
 ----
-Our latest codebase is available on the `dev` branch of the repository.
+The latest codebase is available in the `dev` branch of the repository.
+
+Building from Source
+--------------------
+To install pgmpy from the source code:
+```
+$ git clone https://github.com/pgmpy/pgmpy
+$ cd pgmpy/
+$ pip install -r requirements.txt
+$ python setup.py install
+```
+
+To run the tests, you can use pytest:
+```
+$ pytest -v pgmpy
+```
+
+If you face any problems during installation let us know, via issues, mail or at our discord channel.
 
 Contributing
 ------------
-Issues can be reported at our [issues section](https://github.com/pgmpy/pgmpy/issues).
+Please feel free to report any issues on GitHub: https://github.com/pgmpy/pgmpy/issues.
 
 Before opening a pull request, please have a look at our [contributing guide](
-https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
+https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md) If you face any
+problems in pull request, feel free to ask them on the mailing list or gitter.
 
-Contributing guide contains some points that will make our life's easier in reviewing and merging your PR.
+If you would like to implement any new features, please have a discussion about it before starting to work on it.
+If you are looking for some ideas for projects, we a list of **mentored projects** available at: https://github.com/pgmpy/pgmpy/wiki/Mentored-Projects.
 
-If you face any problems in pull request, feel free to ask them on the mailing list or gitter.
+Building Documentation
+----------------------
+We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
 
-If you want to implement any new features, please have a discussion about it on the issue tracker or the mailing
-list before starting to work on it.
 
-Testing
--------
-
-After installation, you can launch the test form pgmpy
-source directory (you will need to have the ``pytest`` package installed):
-```bash
-$ pytest -v
-```
-to see the coverage of existing code use following command
-```
-$ pytest --cov-report html --cov=pgmpy
-```
-
-Documentation and usage
-=======================
-
-The documentation is hosted at: http://pgmpy.org/
-
-We use sphinx to build the documentation. To build the documentation on your local system use:
-```
-$ cd /path/to/pgmpy/docs
-$ make html
-```
-The generated docs will be in _build/html
-
-Examples
-========
-We have a few example jupyter notebooks here: https://github.com/pgmpy/pgmpy/tree/dev/examples
-For more detailed jupyter notebooks and basic tutorials on Graphical Models check: https://github.com/pgmpy/pgmpy_notebook/
-
-Citing
-======
-Please use the following bibtex for citing `pgmpy` in your research:
-```
-@inproceedings{ankan2015pgmpy,
-  title={pgmpy: Probabilistic graphical models using python},
-  author={Ankan, Ankur and Panda, Abinash},
-  booktitle={Proceedings of the 14th Python in Science Conference (SCIPY 2015)},
-  year={2015},
-  organization={Citeseer}
-}
-```
 
 License
 =======
 pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
-

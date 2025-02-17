@@ -1,5 +1,6 @@
-import logging
 from math import isclose
+
+from pgmpy.global_vars import logger
 
 
 try:  # pragma: no cover
@@ -105,12 +106,12 @@ def optimize(
         opt.step(closure=closure)
 
         if isclose(init_loss, closure().item(), abs_tol=exit_delta):
-            logging.info(f"Converged after {t} iterations.")
+            logger.info(f"Converged after {t} iterations.")
             return params
         else:
             init_loss = closure().item()
 
-    logging.info(
+    logger.info(
         f"Couldn't converge after {max_iter} iterations. Try increasing max_iter or change optimizer parameters"
     )
     return params

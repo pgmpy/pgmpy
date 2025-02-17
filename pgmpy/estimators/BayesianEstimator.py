@@ -2,30 +2,37 @@
 
 import numbers
 from itertools import chain
-from warnings import warn
 
 import numpy as np
 from joblib import Parallel, delayed
 
+from pgmpy.base import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 
 
 class BayesianEstimator(ParameterEstimator):
+    """
+    Class used to compute parameters for a model using Bayesian Parameter Estimation.
+    See `MaximumLikelihoodEstimator` for constructor parameters.
+    """
+
     def __init__(self, model, data, **kwargs):
-        """
-        Class used to compute parameters for a model using Bayesian Parameter Estimation.
-        See `MaximumLikelihoodEstimator` for constructor parameters.
-        """
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, (DAG, BayesianNetwork)):
             raise NotImplementedError(
-                "Bayesian Parameter Estimation is only implemented for BayesianNetwork"
+                "Bayesian Parameter Estimation is only implemented for DAG or BayesianNetwork"
             )
-        elif len(model.latents) != 0:
-            raise ValueError(
-                f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
-            )
+
+        if isinstance(model, (DAG, BayesianNetwork)):
+            if len(model.latents) != 0:
+                raise ValueError(
+                    f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+                )
+
+            if isinstance(model, DAG):
+                model = BayesianNetwork(model.edges())
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
@@ -34,7 +41,7 @@ class BayesianEstimator(ParameterEstimator):
         prior_type="BDeu",
         equivalent_sample_size=5,
         pseudo_counts=None,
-        n_jobs=-1,
+        n_jobs=1,
         weighted=False,
     ):
         """
@@ -57,6 +64,16 @@ class BayesianEstimator(ParameterEstimator):
                 the size for each variable separately.
             - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to 1,
                 regardless of the cardinality of the variable.
+
+        equivalent_sample_size: int
+            Refer `prior_type` for more details.
+
+        pseudo_counts: int (default: None)
+            Refer `prior_type` for more details.
+
+        n_jobs: int (default: 1)
+            Number of jobs to run in parallel. Default: 1.
+            Using n_jobs > 1 for small models might be slower.
 
         weighted: bool
             If weighted=True, the data must contain a `_weight` column specifying the
@@ -105,9 +122,11 @@ class BayesianEstimator(ParameterEstimator):
             )
             return cpd
 
-        parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
+        parameters = Parallel(n_jobs=n_jobs)(
             delayed(_get_node_param)(node) for node in self.model.nodes()
         )
+        # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
+        parameters = [p.copy() for p in parameters]
 
         return parameters
 
@@ -190,7 +209,7 @@ class BayesianEstimator(ParameterEstimator):
             and np.array(pseudo_counts).size > 0
             and (prior_type != "dirichlet")
         ):
-            warn(
+            logger.warning(
                 f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
             )
 

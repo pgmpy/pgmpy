@@ -1,23 +1,24 @@
 import unittest
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from pgmpy.estimators import ExhaustiveSearch, BDeuScore, BicScore
+from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch
 
 
 class TestBaseEstimator(unittest.TestCase):
     def setUp(self):
+        np.random.seed(42)
         self.rand_data = pd.DataFrame(
             np.random.randint(0, 5, size=(5000, 2)), columns=list("AB")
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = ExhaustiveSearch(self.rand_data)
         self.est_rand_bdeu = ExhaustiveSearch(
-            self.rand_data, scoring_method=BDeuScore(self.rand_data)
+            self.rand_data, scoring_method=BDeu(self.rand_data)
         )
         self.est_rand_bic = ExhaustiveSearch(
-            self.rand_data, scoring_method=BicScore(self.rand_data)
+            self.rand_data, scoring_method=BIC(self.rand_data)
         )
 
         # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
@@ -68,21 +69,13 @@ class TestBaseEstimator(unittest.TestCase):
     def test_estimate_rand(self):
         est = self.est_rand.estimate()
         self.assertSetEqual(set(est.nodes()), set(["A", "B", "C"]))
-        self.assertTrue(
-            list(est.edges()) == [("B", "C")] or list(est.edges()) == [("C", "B")]
-        )
+        self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
         est_bdeu = self.est_rand.estimate()
-        self.assertTrue(
-            list(est_bdeu.edges()) == [("B", "C")]
-            or list(est_bdeu.edges()) == [("C", "B")]
-        )
+        self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
         est_bic = self.est_rand.estimate()
-        self.assertTrue(
-            list(est_bic.edges()) == [("B", "C")]
-            or list(est_bic.edges()) == [("C", "B")]
-        )
+        self.assertEqual(set(est_bic.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
     def test_estimate_titanic(self):
         e1 = self.est_titanic.estimate()

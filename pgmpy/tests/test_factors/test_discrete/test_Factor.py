@@ -300,6 +300,18 @@ class TestFactorMethods(unittest.TestCase):
             )
             self.assertEqual(phi, phi_copy)
 
+    def test_to_dataframe(self):
+        model = get_example_model("sachs")
+        cpd = model.get_cpds("Mek")
+        df = cpd.to_dataframe()
+        self.assertEqual(df.shape, (27, 3))
+        self.assertEqual(df.index.shape, (27,))
+        self.assertEqual(
+            df.query('PKA=="AVG" and Raf =="HIGH" and PKC=="LOW"')["LOW"].values,
+            0.8652899,
+        )
+        np_test.assert_array_almost_equal(df.sum(axis=1).values, np.ones(27))
+
     def test_set_value(self):
         model = get_example_model("asia")
         cpd = model.get_cpds("either")
@@ -368,6 +380,13 @@ class TestFactorMethods(unittest.TestCase):
 
         self.phi5.marginalize([self.tup3])
         np_test.assert_array_equal(self.phi5.values, np.array([276]))
+
+        # Issue 1687. Marginalization when factor on single variable.
+        joint = DiscreteFactor(["x"], [2], np.array([0.3, 0.7]))
+        marginal = joint.marginalize(["x"], inplace=False)
+        self.assertEqual(marginal.values, 1.0)
+        self.assertEqual(marginal.variables, [])
+        self.assertEqual(list(marginal.cardinality), [])
 
     def test_marginalize_scopeerror(self):
         self.assertRaises(ValueError, self.phi.marginalize, ["x4"])
@@ -502,7 +521,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_reduce_scopeerror(self):
         self.assertRaises(ValueError, self.phi1.reduce, [("x4", 1)])
-        self.assertRaises(ValueError, self.phi5.reduce, [((("x1", 0.1), 0))])
+        self.assertRaises(ValueError, self.phi5.reduce, [(("x1", 0.1), 0)])
 
     def test_reduce_sizeerror(self):
         self.assertRaises(IndexError, self.phi1.reduce, [("x3", 5)])

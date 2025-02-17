@@ -1,0 +1,447 @@
+{
+  "nodes": ["YR.GLASS", "HT", "YR.FIELD", "MIL", "FT", "G418", "G311", "G1217", "G800", "G866", "G795", "G2570", "G260", "G2920", "G832", "G1896", "G2953", "G266", "G847", "G942", "G200", "G257", "G2208", "G1373", "G599", "G261", "G383", "G1853", "G1033", "G1945", "G1338", "G1276", "G1263", "G1789", "G2318", "G1294", "G1800", "YLD", "FUS", "G1750", "G524", "G775", "G2835", "G43"],
+  "arcs": [
+    ["YR.GLASS", "YR.FIELD"],
+    ["YR.GLASS", "YLD"],
+    ["HT", "YLD"],
+    ["HT", "FUS"],
+    ["MIL", "YR.GLASS"],
+    ["FT", "YR.FIELD"],
+    ["FT", "YLD"],
+    ["G418", "YR.GLASS"],
+    ["G418", "YR.FIELD"],
+    ["G418", "G1294"],
+    ["G418", "G2835"],
+    ["G311", "YR.GLASS"],
+    ["G311", "G43"],
+    ["G1217", "YR.GLASS"],
+    ["G1217", "MIL"],
+    ["G1217", "G257"],
+    ["G1217", "G1800"],
+    ["G800", "YR.GLASS"],
+    ["G800", "G383"],
+    ["G866", "YR.GLASS"],
+    ["G795", "YR.GLASS"],
+    ["G2570", "YLD"],
+    ["G260", "YLD"],
+    ["G2920", "YLD"],
+    ["G832", "HT"],
+    ["G832", "YLD"],
+    ["G832", "FUS"],
+    ["G1896", "HT"],
+    ["G1896", "FUS"],
+    ["G2953", "HT"],
+    ["G2953", "G1896"],
+    ["G2953", "G1800"],
+    ["G266", "HT"],
+    ["G266", "FT"],
+    ["G266", "G1789"],
+    ["G847", "HT"],
+    ["G942", "HT"],
+    ["G200", "YR.FIELD"],
+    ["G257", "YR.FIELD"],
+    ["G257", "G2208"],
+    ["G257", "G1800"],
+    ["G2208", "YR.FIELD"],
+    ["G2208", "MIL"],
+    ["G1373", "YR.FIELD"],
+    ["G599", "YR.FIELD"],
+    ["G599", "G1276"],
+    ["G261", "YR.FIELD"],
+    ["G383", "FUS"],
+    ["G1853", "G311"],
+    ["G1853", "FUS"],
+    ["G1033", "FUS"],
+    ["G1945", "MIL"],
+    ["G1338", "MIL"],
+    ["G1338", "G266"],
+    ["G1276", "FT"],
+    ["G1276", "G266"],
+    ["G1263", "FT"],
+    ["G2318", "FT"],
+    ["G1294", "FT"],
+    ["G1800", "FT"],
+    ["G1750", "YR.GLASS"],
+    ["G1750", "G1373"],
+    ["G524", "MIL"],
+    ["G775", "FT"],
+    ["G2835", "HT"],
+    ["G2835", "G1800"]
+  ],
+  "cpds": {
+    "YR.GLASS": {
+      "coefficients": {
+        "(Intercept)": [1.5484],
+        "MIL": [0.0718],
+        "G418": [0.27],
+        "G311": [0.1042],
+        "G1217": [0.0792],
+        "G800": [0.0575],
+        "G866": [0.0461],
+        "G795": [0.0474],
+        "G1750": [-0.0748]
+      },
+      "variance": [0.1108],
+      "parents": ["MIL", "G418", "G311", "G1217", "G800", "G866", "G795", "G1750"]
+    },
+    "HT": {
+      "coefficients": {
+        "(Intercept)": [76.6512],
+        "G832": [-0.5071],
+        "G1896": [1.7493],
+        "G2953": [-1.3488],
+        "G266": [-0.7827],
+        "G847": [0.5767],
+        "G942": [-0.6651],
+        "G2835": [-1.397]
+      },
+      "variance": [10.9772],
+      "parents": ["G832", "G1896", "G2953", "G266", "G847", "G942", "G2835"]
+    },
+    "YR.FIELD": {
+      "coefficients": {
+        "(Intercept)": [2.323],
+        "YR.GLASS": [0.2713],
+        "FT": [-0.0243],
+        "G418": [0.089],
+        "G200": [-0.1655],
+        "G257": [-0.0699],
+        "G2208": [0.21],
+        "G1373": [-0.0629],
+        "G599": [0.0836],
+        "G261": [0.0804]
+      },
+      "variance": [0.1618],
+      "parents": ["YR.GLASS", "FT", "G418", "G200", "G257", "G2208", "G1373", "G599", "G261"]
+    },
+    "MIL": {
+      "coefficients": {
+        "(Intercept)": [2.0463],
+        "G1217": [0.135],
+        "G2208": [0.4238],
+        "G1945": [-0.1105],
+        "G1338": [0.1078],
+        "G524": [0.1127]
+      },
+      "variance": [0.4731],
+      "parents": ["G1217", "G2208", "G1945", "G1338", "G524"]
+    },
+    "FT": {
+      "coefficients": {
+        "(Intercept)": [32.0405],
+        "G266": [-1.1313],
+        "G1276": [-0.4554],
+        "G1263": [0.8155],
+        "G2318": [-0.4323],
+        "G1294": [-0.4365],
+        "G1800": [1.6106],
+        "G775": [-0.8137]
+      },
+      "variance": [7.9686],
+      "parents": ["G266", "G1276", "G1263", "G2318", "G1294", "G1800", "G775"]
+    },
+    "G418": {
+      "coefficients": {
+        "(Intercept)": [1.4633]
+      },
+      "variance": [0.7499],
+      "parents": []
+    },
+    "G311": {
+      "coefficients": {
+        "(Intercept)": [1.2533],
+        "G1853": [0.1543]
+      },
+      "variance": [0.6913],
+      "parents": ["G1853"]
+    },
+    "G1217": {
+      "coefficients": {
+        "(Intercept)": [1.43]
+      },
+      "variance": [0.7931],
+      "parents": []
+    },
+    "G800": {
+      "coefficients": {
+        "(Intercept)": [0.745]
+      },
+      "variance": [0.8981],
+      "parents": []
+    },
+    "G866": {
+      "coefficients": {
+        "(Intercept)": [1.245]
+      },
+      "variance": [0.9065],
+      "parents": []
+    },
+    "G795": {
+      "coefficients": {
+        "(Intercept)": [0.7467]
+      },
+      "variance": [0.884],
+      "parents": []
+    },
+    "G2570": {
+      "coefficients": {
+        "(Intercept)": [1.7967]
+      },
+      "variance": [0.3526],
+      "parents": []
+    },
+    "G260": {
+      "coefficients": {
+        "(Intercept)": [0.24]
+      },
+      "variance": [0.4231],
+      "parents": []
+    },
+    "G2920": {
+      "coefficients": {
+        "(Intercept)": [1.5333]
+      },
+      "variance": [0.7001],
+      "parents": []
+    },
+    "G832": {
+      "coefficients": {
+        "(Intercept)": [1.4383]
+      },
+      "variance": [0.7775],
+      "parents": []
+    },
+    "G1896": {
+      "coefficients": {
+        "(Intercept)": [0.6614],
+        "G2953": [0.1844]
+      },
+      "variance": [0.8708],
+      "parents": ["G2953"]
+    },
+    "G2953": {
+      "coefficients": {
+        "(Intercept)": [0.345]
+      },
+      "variance": [0.5335],
+      "parents": []
+    },
+    "G266": {
+      "coefficients": {
+        "(Intercept)": [0.0209],
+        "G1338": [0.0821],
+        "G1276": [0.1527]
+      },
+      "variance": [0.4397],
+      "parents": ["G1338", "G1276"]
+    },
+    "G847": {
+      "coefficients": {
+        "(Intercept)": [1.345]
+      },
+      "variance": [0.8607],
+      "parents": []
+    },
+    "G942": {
+      "coefficients": {
+        "(Intercept)": [0.2767]
+      },
+      "variance": [0.4609],
+      "parents": []
+    },
+    "G200": {
+      "coefficients": {
+        "(Intercept)": [0.2217]
+      },
+      "variance": [0.3765],
+      "parents": []
+    },
+    "G257": {
+      "coefficients": {
+        "(Intercept)": [1.7469],
+        "G1217": [-0.4594]
+      },
+      "variance": [0.7808],
+      "parents": ["G1217"]
+    },
+    "G2208": {
+      "coefficients": {
+        "(Intercept)": [0.0827],
+        "G257": [-0.0407]
+      },
+      "variance": [0.0655],
+      "parents": ["G257"]
+    },
+    "G1373": {
+      "coefficients": {
+        "(Intercept)": [1.3144],
+        "G1750": [0.197]
+      },
+      "variance": [0.7135],
+      "parents": ["G1750"]
+    },
+    "G599": {
+      "coefficients": {
+        "(Intercept)": [1.7283]
+      },
+      "variance": [0.4453],
+      "parents": []
+    },
+    "G261": {
+      "coefficients": {
+        "(Intercept)": [1.56]
+      },
+      "variance": [0.6642],
+      "parents": []
+    },
+    "G383": {
+      "coefficients": {
+        "(Intercept)": [1.908],
+        "G800": [-0.1629]
+      },
+      "variance": [0.3452],
+      "parents": ["G800"]
+    },
+    "G1853": {
+      "coefficients": {
+        "(Intercept)": [1.75]
+      },
+      "variance": [0.4382],
+      "parents": []
+    },
+    "G1033": {
+      "coefficients": {
+        "(Intercept)": [0.3017]
+      },
+      "variance": [0.4982],
+      "parents": []
+    },
+    "G1945": {
+      "coefficients": {
+        "(Intercept)": [0.9467]
+      },
+      "variance": [0.9754],
+      "parents": []
+    },
+    "G1338": {
+      "coefficients": {
+        "(Intercept)": [0.8033]
+      },
+      "variance": [0.9496],
+      "parents": []
+    },
+    "G1276": {
+      "coefficients": {
+        "(Intercept)": [0.6352],
+        "G599": [0.3644]
+      },
+      "variance": [0.8419],
+      "parents": ["G599"]
+    },
+    "G1263": {
+      "coefficients": {
+        "(Intercept)": [1.655]
+      },
+      "variance": [0.5569],
+      "parents": []
+    },
+    "G1789": {
+      "coefficients": {
+        "(Intercept)": [0.2127],
+        "G266": [0.2524]
+      },
+      "variance": [0.4516],
+      "parents": ["G266"]
+    },
+    "G2318": {
+      "coefficients": {
+        "(Intercept)": [1.3083]
+      },
+      "variance": [0.8881],
+      "parents": []
+    },
+    "G1294": {
+      "coefficients": {
+        "(Intercept)": [0.3189],
+        "G418": [0.3322]
+      },
+      "variance": [0.8405],
+      "parents": ["G418"]
+    },
+    "G1800": {
+      "coefficients": {
+        "(Intercept)": [-0.1557],
+        "G1217": [0.076],
+        "G2953": [0.0437],
+        "G257": [0.074],
+        "G2835": [0.1243]
+      },
+      "variance": [0.0509],
+      "parents": ["G1217", "G2953", "G257", "G2835"]
+    },
+    "YLD": {
+      "coefficients": {
+        "(Intercept)": [6.5342],
+        "YR.GLASS": [0.1408],
+        "HT": [0.0212],
+        "FT": [-0.0488],
+        "G2570": [0.1198],
+        "G260": [0.1086],
+        "G2920": [0.0671],
+        "G832": [0.0828]
+      },
+      "variance": [0.193],
+      "parents": ["YR.GLASS", "HT", "FT", "G2570", "G260", "G2920", "G832"]
+    },
+    "FUS": {
+      "coefficients": {
+        "(Intercept)": [8.2062],
+        "HT": [-0.0537],
+        "G832": [-0.1272],
+        "G1896": [-0.148],
+        "G383": [0.2566],
+        "G1853": [-0.1626],
+        "G1033": [0.1666]
+      },
+      "variance": [0.6016],
+      "parents": ["HT", "G832", "G1896", "G383", "G1853", "G1033"]
+    },
+    "G1750": {
+      "coefficients": {
+        "(Intercept)": [0.24]
+      },
+      "variance": [0.4231],
+      "parents": []
+    },
+    "G524": {
+      "coefficients": {
+        "(Intercept)": [0.4667]
+      },
+      "variance": [0.69],
+      "parents": []
+    },
+    "G775": {
+      "coefficients": {
+        "(Intercept)": [0.22]
+      },
+      "variance": [0.3722],
+      "parents": []
+    },
+    "G2835": {
+      "coefficients": {
+        "(Intercept)": [0.0125],
+        "G418": [0.0438]
+      },
+      "variance": [0.0729],
+      "parents": ["G418"]
+    },
+    "G43": {
+      "coefficients": {
+        "(Intercept)": [0.5352],
+        "G311": [-0.2551]
+      },
+      "variance": [0.2103],
+      "parents": ["G311"]
+    }
+  }
+}

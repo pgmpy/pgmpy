@@ -1,39 +1,45 @@
 from itertools import combinations
 
 import numpy as np
-from pyparsing import Combine, Literal, Optional, Word, alphas, nums
+
+try:
+    from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
+except ImportError as e:
+    raise ImportError(
+        e.msg
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class UAIReader(object):
     """
-    Class for reading UAI file format from files or strings.
+    Initialize an instance of UAI reader class
+
+    Parameters
+    ----------
+    path : file or str
+        Path of the file containing UAI information.
+
+    string : str
+        String containing UAI information.
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import UAIReader
+    >>> reader = UAIReader('TestUai.uai')
+    >>> model = reader.get_model()
+
+    Reference
+    ---------
+    [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
+    [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initialize an instance of UAI reader class
-
-        Parameters
-        ----------
-        path : file or str
-            Path of the file containing UAI information.
-
-        string : str
-            String containing UAI information.
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUai.uai')
-        >>> model = reader.get_model()
-
-        Reference
-        ---------
-        http://graphmod.ics.uci.edu/uai08/FileFormat
-        """
         if path:
             with open(path, "r") as f:
                 self.network = f.read()
@@ -41,6 +47,12 @@ class UAIReader(object):
             self.network = string
         else:
             raise ValueError("Must specify either path or string.")
+
+        if "#" in self.network:
+            self.network = (
+                Regex("#.*").suppress().transformString(self.network)
+            )  # removing comments from the file
+
         self.grammar = self.get_grammar()
         self.network_type = self.get_network_type()
         self.variables = self.get_variables()
@@ -292,26 +304,26 @@ class UAIReader(object):
 
 class UAIWriter(object):
     """
-    Class for writing models in UAI.
+    Initialize an instance of UAI writer class
+
+    Parameters
+    ----------
+    model: A Bayesian or Markov model
+        The model to write
+
+    round_values: int (default: None)
+        The number to decimals to which to round the probability values. If None, keeps all decimals points.
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import UAIWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model('asia')
+    >>> writer = UAIWriter(asia)
+    >>> writer.write_uai('asia.uai')
     """
 
-    def __init__(self, model):
-        """
-        Initialize an instance of UAI writer class
-
-        Parameters
-        ----------
-        model: A Bayesian or Markov model
-            The model to write
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import UAIWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
-        >>> writer = UAIWriter(asia)
-        >>> writer.write_uai('asia.uai')
-        """
+    def __init__(self, model, round_values=None):
         if isinstance(model, BayesianNetwork):
             self.network = "BAYES\n"
         elif isinstance(model, MarkovNetwork):
@@ -320,6 +332,7 @@ class UAIWriter(object):
             raise TypeError("Model must be an instance of Bayesian or Markov model.")
 
         self.model = model
+        self.round_values = round_values
         self.no_nodes = self.get_nodes()
         self.domain = self.get_domain()
         self.functions = self.get_functions()
@@ -439,14 +452,28 @@ class UAIWriter(object):
             cpds.sort(key=lambda x: x.variable)
             tables = []
             for cpd in cpds:
-                values = list(map(str, cpd.values.ravel()))
+                values = list(
+                    map(
+                        str,
+                        compat_fns.to_numpy(
+                            cpd.values.ravel(), decimals=self.round_values
+                        ),
+                    )
+                )
                 tables.append(values)
             return tables
         elif isinstance(self.model, MarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:
-                values = list(map(str, factor.values.ravel()))
+                values = list(
+                    map(
+                        str,
+                        compat_fns.to_numpy(
+                            factor.values.ravel(), decimals=self.round_values
+                        ),
+                    )
+                )
                 tables.append(values)
             return tables
         else:

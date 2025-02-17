@@ -2,13 +2,16 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import torch
 
+from pgmpy import config
 from pgmpy.estimators import IVEstimator, SEMEstimator
 from pgmpy.models import SEM, SEMGraph
 
 
 class TestSEMEstimator(unittest.TestCase):
     def setUp(self):
+        config.set_backend("torch")
         self.custom = SEMGraph(
             ebunch=[("a", "b"), ("b", "c")], latents=[], err_corr=[], err_var={}
         )
@@ -95,19 +98,12 @@ class TestSEMEstimator(unittest.TestCase):
             self.assertEqual(B_init.shape, (m, m))
             self.assertEqual(zeta_init.shape, (m, m))
 
-    @unittest.skip
-    def test_demo_estimator_random_init(self):
-        estimator = SEMEstimator(self.demo)
-        summary = estimator.fit(self.demo_data, method="ml")
-
-    @unittest.skip
     def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(
             self.union_data, method="ml", opt="adam", max_iter=10**6, exit_delta=1e-1
         )
 
-    @unittest.skip
     def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(
@@ -124,7 +120,6 @@ class TestSEMEstimator(unittest.TestCase):
             W=np.ones((3, 3)),
         )
 
-    @unittest.skip
     def test_union_estimator_std_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(
@@ -136,7 +131,6 @@ class TestSEMEstimator(unittest.TestCase):
             exit_delta=1e-1,
         )
 
-    @unittest.skip
     def test_custom_estimator_std_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(
@@ -146,6 +140,9 @@ class TestSEMEstimator(unittest.TestCase):
             max_iter=10**6,
             opt="adam",
         )
+
+    def tearDown(self):
+        config.set_backend("numpy")
 
 
 class TestIVEstimator(unittest.TestCase):

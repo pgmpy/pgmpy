@@ -5,58 +5,68 @@ from itertools import product
 from string import Template
 
 import numpy as np
+import pyparsing as pp
 from joblib import Parallel, delayed
-from pyparsing import (
-    CharsNotIn,
-    Group,
-    OneOrMore,
-    Optional,
-    Suppress,
-    Word,
-    ZeroOrMore,
-    alphanums,
-    cppStyleComment,
-    nums,
-    printables,
-)
+
+try:
+    from pyparsing import (
+        CharsNotIn,
+        Group,
+        OneOrMore,
+        Optional,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        alphanums,
+        cppStyleComment,
+        nums,
+        printables,
+    )
+except ImportError as e:
+    raise ImportError(
+        e.msg
+        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    )
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.utils import compat_fns
 
 
 class BIFReader(object):
-
     """
-    Base class for reading network file in bif format
+    Initializes a BIFReader object.
+
+    Parameters
+    ----------
+    path : file or str
+        File of bif data
+
+    string : str
+        String of bif data
+
+    include_properties: boolean
+        If True, gets the properties tag from the file and stores in graph properties.
+
+    n_jobs: int (default: 1)
+        Number of jobs to run in parallel. `-1` means use all processors.
+
+    Examples
+    --------
+    >>> # dog-problem.bif file is present at
+    >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
+    >>> from pgmpy.readwrite import BIFReader
+    >>> reader = BIFReader("bif_test.bif")
+    <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
+    >>> model = reader.get_model()
+
+    Reference
+    ---------
+    [1] Geoff Hulten and Pedro Domingos. The interchange format for bayesian networks.
+        http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
     """
 
-    def __init__(self, path=None, string=None, include_properties=False, n_jobs=-1):
-        """
-        Initializes a BIFReader object.
-
-        Parameters
-        ----------
-        path : file or str
-            File of bif data
-
-        string : str
-            String of bif data
-
-        include_properties: boolean
-            If True, gets the properties tag from the file and stores in graph properties.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        Examples
-        --------
-        # dog-problem.bif file is present at
-        # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
-        >>> model = reader.get_model()
-        """
+    def __init__(self, path=None, string=None, include_properties=False, n_jobs=1):
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
@@ -101,7 +111,7 @@ class BIFReader(object):
         A method that returns variable grammar
         """
         # Defining an expression for valid word
-        word_expr = Word(alphanums + "_" + "-")
+        word_expr = Word(pp.unicode.alphanums + "_" + "-" + ".")
         word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
         name_expr = Suppress("variable") + word_expr + Suppress("{")
         state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
@@ -132,7 +142,7 @@ class BIFReader(object):
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
         word_expr = (
-            Word(alphanums + "-" + "_")
+            Word(pp.unicode.alphanums + "-" + "_")
             + Suppress(Optional("|"))
             + Suppress(Optional(","))
         )
@@ -149,7 +159,7 @@ class BIFReader(object):
             + Suppress(")")
         )
         optional_expr = Suppress("(") + OneOrMore(word_expr2) + Suppress(")")
-        probab_attributes = optional_expr | Suppress("table")
+        probab_attributes = optional_expr | Suppress("table") | Suppress("default")
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 
         return probability_expr, cpd_expr
@@ -180,7 +190,9 @@ class BIFReader(object):
         start = self.network.find("network")
         end = self.network.find("}\n", start)
         # Creating a network attribute
-        network_attribute = Suppress("network") + Word(alphanums + "_" + "-") + "{"
+        network_attribute = (
+            Suppress("network") + Word(pp.unicode.alphanums + "_" + "-") + "{"
+        )
         network_name = network_attribute.searchString(self.network[start:end])[0][0]
 
         return network_name
@@ -274,7 +286,7 @@ class BIFReader(object):
         cpds = self.cpd_expr.searchString(block)
 
         # Check if the block is a table.
-        if bool(re.search(".*\\n[ ]*table .*\n.*", block)):
+        if bool(re.search(".*\n[ ]*(table|default) .*\n.*", block)):
             arr = np.array([float(j) for i in cpds for j in i])
             arr = arr.reshape(
                 (
@@ -410,32 +422,32 @@ class BIFReader(object):
 
 
 class BIFWriter(object):
-
     """
-    Base class for writing BIF network file format
+    Initialise a BIFWriter Object
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+
+    round_values: int (default: None)
+        Round the probability values to `round_values` decimals. If None, keeps all decimal points.
+
+    Examples
+    ---------
+    >>> from pgmpy.readwrite import BIFWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> asia = get_example_model('asia')
+    >>> writer = BIFWriter(asia)
+    >>> writer
+    <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+    >>> writer.write_bif('asia.bif')
     """
 
-    def __init__(self, model):
-        """
-        Initialise a BIFWriter Object
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-
-        Examples
-        ---------
-        >>> from pgmpy.readwrite import BIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> asia = get_example_model('asia')
-        >>> writer = BIFWriter(asia)
-        >>> writer
-        <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
-        >>> writer.write_bif('asia.bif')
-        """
+    def __init__(self, model, round_values=None):
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must be an instance of BayesianNetwork")
         self.model = model
+        self.round_values = round_values
         if not self.model.name:
             self.network_name = "unknown"
         else:
@@ -535,7 +547,15 @@ $values
                 for index, state in enumerate(parent_states):
                     all_cpd += conditional_probability_template.substitute(
                         state=", ".join(map(str, state)),
-                        values=", ".join(map(str, cpd_values_transpose[index, :])),
+                        values=", ".join(
+                            map(
+                                str,
+                                compat_fns.to_numpy(
+                                    cpd_values_transpose[index, :],
+                                    decimals=self.round_values,
+                                ),
+                            )
+                        ),
                     )
                 network += conditional_probability_template_total.substitute(
                     variable_=var,
@@ -672,7 +692,9 @@ $values
         cpds = self.model.get_cpds()
         tables = {}
         for cpd in cpds:
-            tables[cpd.variable] = cpd.values.ravel()
+            tables[cpd.variable] = compat_fns.to_numpy(
+                cpd.values.ravel(), decimals=self.round_values
+            )
         return tables
 
     def write_bif(self, filename):

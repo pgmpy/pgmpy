@@ -3,18 +3,18 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import HillClimbSearch, K2Score
+from pgmpy.estimators import K2, ExpertKnowledge, HillClimbSearch
 from pgmpy.models import BayesianNetwork
 
 
-class TestHillClimbEstimator(unittest.TestCase):
+class TestHillClimbEstimatorDiscrete(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(
             np.random.randint(0, 5, size=(int(1e4), 2)), columns=list("AB")
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = HillClimbSearch(self.rand_data)
-        k2score = K2Score(self.rand_data)
+        k2score = K2(self.rand_data)
         self.score_rand = k2score.local_score
         self.score_structure_prior = k2score.structure_prior_ratio
 
@@ -38,11 +38,11 @@ class TestHillClimbEstimator(unittest.TestCase):
             ["Survived", "Sex", "Pclass", "Age", "Embarked"]
         ]
         self.est_titanic1 = HillClimbSearch(self.titanic_data1)
-        self.score_titanic1 = K2Score(self.titanic_data1).local_score
+        self.score_titanic1 = K2(self.titanic_data1).local_score
 
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
         self.est_titanic2 = HillClimbSearch(self.titanic_data2)
-        self.score_titanic2 = K2Score(self.titanic_data2).local_score
+        self.score_titanic2 = K2(self.titanic_data2).local_score
 
     def test_legal_operations(self):
         model2_legal_ops = list(
@@ -52,9 +52,8 @@ class TestHillClimbEstimator(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set(),
-                white_list=self.model2_possible_edges,
-                fixed_edges=set(),
+                required_edges=set(),
+                forbidden_edges=set(),
             )
         )
         model2_legal_ops_ref = [
@@ -70,7 +69,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             set([op for op, score in model2_legal_ops_ref]),
         )
 
-    def test_legal_operations_blacklist_whitelist(self):
+    def test_legal_operations_forbidden_required(self):
         model2_legal_ops_bl = list(
             self.est_rand._legal_operations(
                 model=self.model2,
@@ -78,9 +77,8 @@ class TestHillClimbEstimator(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set([("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]),
-                white_list=self.model2_possible_edges,
-                fixed_edges=set(),
+                forbidden_edges=set([("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]),
+                required_edges=set(),
             )
         )
         model2_legal_ops_bl_ref = [
@@ -99,9 +97,8 @@ class TestHillClimbEstimator(unittest.TestCase):
                 structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
-                black_list=set(),
-                white_list=set([("A", "B"), ("A", "C"), ("C", "A"), ("A", "B")]),
-                fixed_edges=set(),
+                forbidden_edges=set([("B", "C"), ("C", "B"), ("B", "A")]),
+                required_edges=set(),
             )
         )
         model2_legal_ops_wl_ref = [
@@ -126,9 +123,8 @@ class TestHillClimbEstimator(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=float("inf"),
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops)), 20)
 
@@ -143,9 +139,8 @@ class TestHillClimbEstimator(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=float("inf"),
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops_tabu)), 18)
 
@@ -155,9 +150,8 @@ class TestHillClimbEstimator(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=1,
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
         self.assertEqual(len(list(legal_ops_indegree)), 11)
 
@@ -167,9 +161,8 @@ class TestHillClimbEstimator(unittest.TestCase):
             structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=1,
-            black_list=set(),
-            white_list=all_possible_edges,
-            fixed_edges=set(),
+            forbidden_edges=set(),
+            required_edges=set(),
         )
 
         legal_ops_both_ref = {
@@ -190,33 +183,57 @@ class TestHillClimbEstimator(unittest.TestCase):
             self.assertAlmostEqual(score, legal_ops_both_ref[op])
 
     def test_estimate_rand(self):
-        est1 = self.est_rand.estimate(show_progress=False)
+        est1 = self.est_rand.estimate(scoring_method="k2", show_progress=False)
         self.assertSetEqual(set(est1.nodes()), set(["A", "B", "C"]))
         self.assertTrue(
             list(est1.edges()) == [("B", "C")] or list(est1.edges()) == [("C", "B")]
         )
 
         est2 = self.est_rand.estimate(
-            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]), show_progress=False
+            scoring_method="k2",
+            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]),
+            show_progress=False,
         )
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
 
-        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")], show_progress=False)
+        expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
+        est3 = self.est_rand.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
+        )
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
         self.assertSetEqual(
-            set(self.est_titanic2.estimate(show_progress=False).edges()),
+            set(
+                self.est_titanic2.estimate(
+                    scoring_method="k2", show_progress=False
+                ).edges()
+            ),
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
+        expert_knowledge = ExpertKnowledge(required_edges=[("Pclass", "Survived")])
         self.assertTrue(
             ("Pclass", "Survived")
             in self.est_titanic2.estimate(
-                fixed_edges=[("Pclass", "Survived")], show_progress=False
+                scoring_method="k2",
+                expert_knowledge=expert_knowledge,
+                show_progress=False,
             ).edges()
+        )
+
+        temporal_knowledge = ExpertKnowledge(
+            temporal_order=[["Pclass", "Sex"], ["Survived"]]
+        )
+        self.assertSetEqual(
+            set([("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")]),
+            set(
+                self.est_titanic2.estimate(
+                    expert_knowledge=temporal_knowledge, show_progress=False
+                ).edges()
+            ),
         )
 
     def test_no_legal_operation(self):
@@ -231,17 +248,16 @@ class TestHillClimbEstimator(unittest.TestCase):
             columns=list("ABCDEFGHI"),
         )
         est = HillClimbSearch(data)
-        best_model = est.estimate(
-            fixed_edges=[("A", "B"), ("B", "C")],
-            white_list=[("F", "C")],
-            show_progress=False,
+        expert_knowledge = ExpertKnowledge(
+            required_edges=[("A", "B"), ("B", "C")],
+            forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
         )
-        self.assertEqual(
-            set(best_model.edges()), set([("A", "B"), ("B", "C"), ("F", "C")])
+        best_model = est.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge
         )
 
     def test_estimate(self):
-        for score in ["k2score", "bdeuscore", "bdsscore", "bicscore", "AICScore"]:
+        for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
             dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
 
@@ -254,3 +270,30 @@ class TestHillClimbEstimator(unittest.TestCase):
         del self.titanic_data2
         del self.est_titanic1
         del self.est_titanic2
+
+
+class TestHillClimbEstimatorGaussian(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0
+        )
+
+    def test_estimate(self):
+        est = HillClimbSearch(self.data)
+        for score in ["aic-g", "bic-g"]:
+            dag = est.estimate(scoring_method=score, show_progress=False)
+
+
+class TestHillClimbEstimatorMixed(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
+        self.data["A_cat"] = self.data.A_cat.astype("category")
+        self.data["B_cat"] = self.data.B_cat.astype("category")
+        self.data["C_cat"] = self.data.C_cat.astype("category")
+        self.data["B_int"] = self.data.B_int.astype("category")
+
+    def test_estimate(self):
+        est = HillClimbSearch(self.data)
+        dag = est.estimate(scoring_method="ll-cg")

@@ -4,11 +4,12 @@ from collections import namedtuple
 import networkx as nx
 import numpy as np
 import pandas as pd
+import torch
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.factors import factor_product
-from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.sampling import BayesianModelInference, _return_samples
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
@@ -39,7 +40,7 @@ class BayesianModelSampling(BayesianModelInference):
         n_jobs=-1,
     ):
         """
-        Generates sample(s) from joint distribution of the bayesian network.
+        Generates sample(s) from joint distribution of the Bayesian Network.
 
         Parameters
         ----------
@@ -86,7 +87,7 @@ class BayesianModelSampling(BayesianModelInference):
         """
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
         else:
             pbar = self.topological_order
@@ -95,7 +96,7 @@ class BayesianModelSampling(BayesianModelInference):
             np.random.seed(seed)
 
         for node in pbar:
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
             # If values specified in partial_samples, use them. Else generate the values.
             if (partial_samples is not None) and (node in partial_samples.columns):
@@ -103,20 +104,24 @@ class BayesianModelSampling(BayesianModelInference):
             else:
                 cpd = self.model.get_cpds(node)
                 states = range(self.cardinality[node])
-                evidence = cpd.variables[:0:-1]
+                evidence = cpd.variables[1:]
                 if evidence:
                     evidence_values = np.vstack([sampled[i] for i in evidence])
-
                     unique, inverse = np.unique(
                         evidence_values.T, axis=0, return_inverse=True
                     )
                     unique = [tuple(u) for u in unique]
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                        variable=node, state_combinations=unique, n_jobs=n_jobs
+                        variable=node, evidence=evidence, state_combinations=unique
                     )
-                    weight_index = np.array([state_to_index[u] for u in unique])[
-                        inverse
-                    ]
+                    if config.get_backend() == "numpy":
+                        weight_index = np.array([state_to_index[u] for u in unique])[
+                            inverse
+                        ]
+                    else:
+                        weight_index = torch.Tensor(
+                            [state_to_index[u] for u in unique]
+                        )[inverse]
                     sampled[node] = sample_discrete_maps(
                         states, weight_index, index_to_weight, size
                     )
@@ -124,8 +129,14 @@ class BayesianModelSampling(BayesianModelInference):
                     weights = cpd.values
                     sampled[node] = sample_discrete(states, weights, size)
 
-        samples_df = _return_samples(sampled, self.state_names_map)
-        if not include_latents:
+        samples_df = _return_samples(
+            sampled,
+            self.state_names_map,
+            partial_samples.columns.tolist() if partial_samples is not None else [],
+        )
+        if not include_latents and any(
+            latent in samples_df.columns for latent in self.model.latents
+        ):
             samples_df.drop(self.model.latents, axis=1, inplace=True)
         return samples_df
 
@@ -139,7 +150,7 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples=None,
     ):
         """
-        Generates sample(s) from joint distribution of the bayesian network,
+        Generates sample(s) from joint distribution of the Bayesian Network,
         given the evidence.
 
         Parameters
@@ -204,7 +215,7 @@ class BayesianModelSampling(BayesianModelInference):
         # Do the sampling by generating samples from forward sampling and rejecting the
         # samples which do not match our evidence. Keep doing until we have enough
         # samples.
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=size)
 
         while i < size:
@@ -231,12 +242,12 @@ class BayesianModelSampling(BayesianModelInference):
             ]
             i += _sampled.shape[0]
 
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 # Update at maximum to `size`
                 comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
                 pbar.update(comp)
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar.close()
 
         sampled = sampled.reset_index(drop=True)
@@ -254,8 +265,8 @@ class BayesianModelSampling(BayesianModelInference):
         n_jobs=-1,
     ):
         """
-        Generates weighted sample(s) from joint distribution of the bayesian
-        network, that comply with the given evidence.
+        Generates weighted sample(s) from joint distribution of the Bayesian
+        Network, that comply with the given evidence.
         'Probabilistic Graphical Model Principles and Techniques', Koller and
         Friedman, Algorithm 12.2 pp 493.
 
@@ -317,14 +328,14 @@ class BayesianModelSampling(BayesianModelInference):
         sampled["_weight"] = np.ones(size)
         evidence_dict = dict(evidence)
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
         else:
             pbar = self.topological_order
 
         # Do the sampling
         for node in pbar:
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
 
             cpd = self.model.get_cpds(node)
@@ -339,7 +350,7 @@ class BayesianModelSampling(BayesianModelInference):
                 )
                 unique = [tuple(u) for u in unique]
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node, state_combinations=unique, n_jobs=n_jobs
+                    variable=node, evidence=evidence, state_combinations=unique
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse

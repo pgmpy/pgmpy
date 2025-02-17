@@ -1,7 +1,7 @@
 import unittest
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from pgmpy.estimators import BaseEstimator
 
@@ -13,10 +13,10 @@ class TestBaseEstimator(unittest.TestCase):
         )
         self.d2 = pd.DataFrame(
             data={
-                "A": [0, np.NaN, 1],
+                "A": [0, np.nan, 1],
                 "B": [0, 1, 0],
-                "C": [1, 1, np.NaN],
-                "D": [np.NaN, "Y", np.NaN],
+                "C": [1, 1, np.nan],
+                "D": [np.nan, "Y", np.nan],
             }
         )
 
@@ -33,19 +33,8 @@ class TestBaseEstimator(unittest.TestCase):
         )
 
     def test_missing_data(self):
-        e = BaseEstimator(
-            self.d2, state_names={"C": [0, 1]}, complete_samples_only=False
-        )
-        self.assertEqual(
-            e.state_counts("A", complete_samples_only=True).values.tolist(), [[0], [0]]
-        )
+        e = BaseEstimator(self.d2, state_names={"C": [0, 1]})
         self.assertEqual(e.state_counts("A").values.tolist(), [[1], [1]])
-        self.assertEqual(
-            e.state_counts(
-                "C", parents=["A", "B"], complete_samples_only=True
-            ).values.tolist(),
-            [[0, 0, 0, 0], [0, 0, 0, 0]],
-        )
         self.assertEqual(
             e.state_counts("C", parents=["A", "B"]).values.tolist(),
             [[0, 0, 0, 0], [1, 0, 0, 0]],
