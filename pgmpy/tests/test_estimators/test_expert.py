@@ -10,7 +10,8 @@ from pgmpy.estimators import ExpertInLoop
 class TestExpertInLoop(unittest.TestCase):
     def setUp(self):
         df = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/adult_proc.csv", index_col=0
+            "/home/jihyeseo/codes/pgmpy/pgmpy/tests/test_estimators/testdata/adult_proc.csv",
+            index_col=0,
         )
         df.Age = pd.Categorical(
             df.Age,
@@ -92,6 +93,28 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
+        self.assertEqual(self.estimator_small.orientations_llm, set([]))
+
+    def test_estimate_with_custom_function(self):
+        def lexico_order(n1, n2):
+            if n1 < n2:
+                return True
+            else:
+                return False
+
+        orientations_lexico = {
+            ("Education", "Income"),
+            ("Education", "Race"),
+            ("Age", "Education"),
+        }
+        dag = self.estimator_small.estimate(
+            variable_descriptions=self.descriptions,
+            use_llm=False,
+            custom_function=lexico_order,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+        self.assertEqual(orientations_lexico, set(dag.edges()))
         self.assertEqual(self.estimator_small.orientations_llm, set([]))
 
     def test_estimate_with_cache_no_llm_calls(self):

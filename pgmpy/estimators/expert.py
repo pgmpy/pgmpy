@@ -63,6 +63,7 @@ class ExpertInLoop(StructureEstimator):
         show_progress=True,
         orientations=set([]),
         use_cache=True,
+        custom_function=None,
         **kwargs,
     ):
         """
@@ -109,6 +110,9 @@ class ExpertInLoop(StructureEstimator):
 
         use_cache: bool
             If False, ask LLM (the same question multiple times)
+
+        custom_function: function
+            The function takes the two variable names and returns the orientation for them
 
         kwargs: kwargs
             Any additional parameters to pass to litellm.completion method.
@@ -187,8 +191,26 @@ class ExpertInLoop(StructureEstimator):
                 break
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
+
             edge_direction = None
-            if use_llm:
+            if custom_function:
+                orientation_from_function = custom_function(
+                    selected_edge.u, selected_edge.v
+                )
+                if orientation_from_function:
+                    edge_direction = (selected_edge.u, selected_edge.v)
+                elif orientation_from_function is False:
+                    edge_direction = (selected_edge.v, selected_edge.u)
+                # if orientation_from_function is None, edge_direction is not set. Try methods below.
+
+            if edge_direction is None and orientations:
+                if (selected_edge.u, selected_edge.v) in orientations:
+                    edge_direction = (selected_edge.u, selected_edge.v)
+                elif (selected_edge.v, selected_edge.u) in orientations:
+                    edge_direction = (selected_edge.v, selected_edge.u)
+
+            # try llm the last, since most expensive and slow
+            if edge_direction is None and use_llm:
                 if use_cache:
                     if (selected_edge.u, selected_edge.v) in self.orientations_llm:
                         edge_direction = (selected_edge.u, selected_edge.v)
@@ -209,11 +231,7 @@ class ExpertInLoop(StructureEstimator):
                         f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
                     )
                     sys.stdout.flush()
-            elif orientations:
-                if (selected_edge.u, selected_edge.v) in orientations:
-                    edge_direction = (selected_edge.u, selected_edge.v)
-                elif (selected_edge.v, selected_edge.u) in orientations:
-                    edge_direction = (selected_edge.v, selected_edge.u)
+
             if edge_direction is None:
                 edge_direction = manual_pairwise_orient(
                     selected_edge.u, selected_edge.v
