@@ -95,7 +95,11 @@ class StateNameMixin:
         """
         Deletes the state names for variables in var_list
         """
+        from pgmpy.models import DynamicNode
+
         for var in var_list:
+            if isinstance(var, DynamicNode):
+                var = var.to_tuple()
             del self.state_names[var]
             del self.name_to_no[var]
             del self.no_to_name[var]

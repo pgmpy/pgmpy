@@ -110,7 +110,7 @@ class TabularCPD(DiscreteFactor):
         variable_card,
         values,
         evidence=None,
-        evidence_card=None,
+        evidence_card=[],
         state_names={},
     ):
         self.variable = variable
@@ -123,10 +123,10 @@ class TabularCPD(DiscreteFactor):
         self.variable_card = variable_card
 
         cardinality = [variable_card]
-        if evidence_card is not None:
-            if isinstance(evidence_card, numbers.Real):
-                raise TypeError("Evidence card must be a list of numbers")
-            cardinality.extend(evidence_card)
+
+        if isinstance(evidence_card, numbers.Real):
+            raise TypeError("Evidence card must be a list of numbers")
+        cardinality.extend(evidence_card)
 
         if evidence is not None:
             if isinstance(evidence, str):

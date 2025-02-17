@@ -1,6 +1,6 @@
 from .BayesianNetwork import BayesianNetwork
 from .ClusterGraph import ClusterGraph
-from .DynamicBayesianNetwork import DynamicBayesianNetwork
+from .DynamicBayesianNetwork import DynamicBayesianNetwork, DynamicNode
 from .FactorGraph import FactorGraph
 from .FunctionalBayesianNetwork import FunctionalBayesianNetwork
 from .JunctionTree import JunctionTree
@@ -17,6 +17,7 @@ __all__ = [
     "JunctionTree",
     "ClusterGraph",
     "DynamicBayesianNetwork",
+    "DynamicNode",
     "MarkovChain",
     "NaiveBayes",
     "LinearGaussianBayesianNetwork",
