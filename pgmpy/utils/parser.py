@@ -80,7 +80,7 @@ def parse_dagitty(lines):
         ) > 3:
             l = len(edge_stat)
             start_i = 0
-            while start_i <= l - 1:
+            while start_i < l - 1:
                 # Parse {a -> b -> c}
                 if edge_stat[start_i + 1] in ["->", "<-", "<->"]:
                     end_i = start_i + 2
