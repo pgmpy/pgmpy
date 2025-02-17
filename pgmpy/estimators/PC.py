@@ -535,7 +535,15 @@ class PC(StructureEstimator):
                 undirected_edges.append((u, v))
             else:
                 directed_edges.append((u, v))
-        return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        pdag_oriented = PDAG(
+            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
+        )
+        isolated_nodes = [
+            node for node in pdag.nodes() if node not in pdag_oriented.nodes()
+        ]
+        pdag_oriented.add_nodes_from(isolated_nodes)
+        return pdag_oriented
 
     @staticmethod
     def apply_orientation_rules(pdag, apply_r4=False):
