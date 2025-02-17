@@ -10,7 +10,7 @@ from pgmpy.estimators import ExpertInLoop
 class TestExpertInLoop(unittest.TestCase):
     def setUp(self):
         df = pd.read_csv(
-            "/home/jihyeseo/codes/pgmpy/pgmpy/tests/test_estimators/testdata/adult_proc.csv",
+            "pgmpy/tests/test_estimators/testdata/adult_proc.csv",
             index_col=0,
         )
         df.Age = pd.Categorical(
