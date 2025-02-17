@@ -337,8 +337,8 @@ class TabularCPD(DiscreteFactor):
                [[ 0.3,  0.4],
                 [ 0.4,  0.8]]])
         """
-        evidence = self.variables[1:] if len(self.variables) > 1 else None
-        evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
+        evidence = self.variables[1:] if len(self.variables) > 1 else []
+        evidence_card = self.cardinality[1:] if len(self.variables) > 1 else []
         return TabularCPD(
             self.variable,
             self.variable_card,
