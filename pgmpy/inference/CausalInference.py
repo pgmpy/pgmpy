@@ -52,6 +52,11 @@ class CausalInference(object):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
             )
+        bad_variable = model._variable_name_contains_non_string()
+        if bad_variable != False:
+            raise NotImplementedError(
+                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
+            )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
         self.observed_variables = frozenset(self.model.nodes()).difference(

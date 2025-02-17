@@ -60,6 +60,16 @@ class TestDAGCreation(unittest.TestCase):
         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})  # None
 
+    def test_variable_name_contains_non_string_adj_matrix(self):
+        df = pd.DataFrame([[0, 3], [0, 0]])
+        self.graph = DAG(df)
+        self.assertEqual(self.graph._variable_name_contains_non_string(), (0, int))
+
+    def test_variable_name_contains_non_string_mixed_types(self):
+        self.graph = DAG([("a", "b"), ("b", "c"), ("a", 3.2)])
+        self.graph.nodes()
+        self.assertEqual(self.graph._variable_name_contains_non_string(), (3.2, float))
+
     def test_add_node_string(self):
         self.graph = DAG()
         self.graph.add_node("a")

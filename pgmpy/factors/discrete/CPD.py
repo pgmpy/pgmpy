@@ -6,6 +6,7 @@ from itertools import chain, product
 from shutil import get_terminal_size
 from warnings import warn
 
+import pandas as pd
 import numpy as np
 import torch
 
@@ -313,6 +314,45 @@ class TabularCPD(DiscreteFactor):
         with open(filename, "w") as f:
             writer = csv.writer(f)
             writer.writerows(self._make_table_str(tablefmt="grid", return_list=True))
+
+    def to_dataframe(self):
+        """
+        Exports the CPD as a pandas dataframe.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("insurance")
+        >>> cpd = model.get_cpds("ThisCarCost")
+        >>> df = cpd.to_dataframe()
+        >>> df.query("CarValue=='FiftyThou' and Theft == 'True'")
+        ThisCarCost                 HundredThou  Million   TenThou  Thousand
+        ThisCarDam CarValue  Theft
+        Mild       FiftyThou True      0.950000      0.0  0.020000  0.030000
+        Moderate   FiftyThou True      0.998000      0.0  0.001000  0.001000
+        None       FiftyThou True      0.950000      0.0  0.010000  0.040000
+        Severe     FiftyThou True      0.999998      0.0  0.000001  0.000001
+        >>> # Probability sums up to zero, for every combination of evidence variables
+        >>> df.sum(axis=1)
+        ThisCarDam  CarValue    Theft
+        Mild        FiftyThou   False    1.0
+                                True     1.0
+                    FiveThou    False    1.0
+                                True     1.0
+                    Million     False    1.0
+                                True     1.0
+        """
+        state_combinations_with_all_variables = pd.MultiIndex.from_product(
+            [self.state_names[var] for var in self.variables], names=self.variables
+        )
+        df_with_1_column = pd.DataFrame(
+            {"probability": self.values.flatten()},
+            index=state_combinations_with_all_variables,
+        )
+        df_with_prob_rowsum_to_1 = df_with_1_column["probability"].unstack(
+            self.variable
+        )
+        return df_with_prob_rowsum_to_1
 
     def copy(self):
         """

@@ -175,10 +175,10 @@ class HillClimbSearch(StructureEstimator):
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
 
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
             Expert knowledge to be used with the algorithm. Expert knowledge
-            includes whitelisted/blacklisted edges in the search space and
-            fixed edges in the final network.
+            allows specification of required and forbidden edges, as well as temporal
+            order of nodes.
 
         epsilon: float (default: 1e-4)
             Defines the exit condition. If the improvement in score is less
@@ -237,9 +237,7 @@ class HillClimbSearch(StructureEstimator):
             raise ValueError(
                 "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
             )
-        expert_knowledge._orient_temporal_forbidden_edges(
-            start_dag, graph_all_edges=False
-        )
+        expert_knowledge._orient_temporal_forbidden_edges(start_dag, only_edges=False)
         start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
