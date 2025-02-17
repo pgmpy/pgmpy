@@ -85,12 +85,21 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
 class TestDynamicBayesianNetworkMethods(unittest.TestCase):
     def setUp(self):
         self.network = DBN()
+        self.state_names = {
+            ("G", 0): ["A", "B", "C"],
+            ("D", 0): ["Easy", "Difficult"],
+            ("I", 0): ["Intelligent", "Dumb"],
+            ("G", 1): ["A", "B", "C"],
+            ("D", 1): ["Easy", "Difficult"],
+            ("I", 1): ["Intelligent", "Dumb"],
+        }
         self.grade_cpd = TabularCPD(
             ("G", 0),
             3,
             values=[[0.3, 0.05, 0.8, 0.5], [0.4, 0.25, 0.1, 0.3], [0.3, 0.7, 0.1, 0.2]],
             evidence=[("D", 0), ("I", 0)],
             evidence_card=[2, 2],
+            state_names=self.state_names,
         )
         self.d_i_cpd = TabularCPD(
             ("D", 1),
@@ -98,15 +107,21 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             values=[[0.6, 0.3], [0.4, 0.7]],
             evidence=[("D", 0)],
             evidence_card=[2],
+            state_names=self.state_names,
         )
-        self.diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6], [0.4]])
-        self.intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7], [0.3]])
+        self.diff_cpd = TabularCPD(
+            ("D", 0), 2, values=[[0.6], [0.4]], state_names=self.state_names
+        )
+        self.intel_cpd = TabularCPD(
+            ("I", 0), 2, values=[[0.7], [0.3]], state_names=self.state_names
+        )
         self.i_i_cpd = TabularCPD(
             ("I", 1),
             2,
             values=[[0.5, 0.4], [0.5, 0.6]],
             evidence=[("I", 0)],
             evidence_card=[2],
+            state_names=self.state_names,
         )
         self.grade_1_cpd = TabularCPD(
             ("G", 1),
@@ -114,6 +129,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             values=[[0.3, 0.05, 0.8, 0.5], [0.4, 0.25, 0.1, 0.3], [0.3, 0.7, 0.1, 0.2]],
             evidence=[("D", 1), ("I", 1)],
             evidence_card=[2, 2],
+            state_names=self.state_names,
         )
 
     def test_get_constant_bn(self):
@@ -136,6 +152,8 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             self.grade_1_cpd,
         )
 
+        self.assertEqual(self.network.states, self.state_names)
+
         bn = self.network.get_constant_bn(t_slice=0)
         self.assertEqual(set(bn.nodes()), {"D_0", "I_0", "G_0", "D_1", "I_1", "G_1"})
         self.assertEqual(
@@ -150,7 +168,17 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             },
         )
         self.assertTrue(bn.check_model())
-
+        self.assertEqual(
+            bn.states,
+            {
+                "G_0": ["A", "B", "C"],
+                "D_0": ["Easy", "Difficult"],
+                "I_0": ["Intelligent", "Dumb"],
+                "D_1": ["Easy", "Difficult"],
+                "I_1": ["Intelligent", "Dumb"],
+                "G_1": ["A", "B", "C"],
+            },
+        )
         bn = self.network.get_constant_bn(t_slice=1)
         self.assertEqual(set(bn.nodes()), {"D_1", "I_1", "G_1", "D_2", "I_2", "G_2"})
         self.assertEqual(
@@ -180,6 +208,17 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             },
         )
         self.assertTrue(bn.check_model())
+        self.assertEqual(
+            bn.states,
+            {
+                "G_2": ["A", "B", "C"],
+                "D_2": ["Easy", "Difficult"],
+                "I_2": ["Intelligent", "Dumb"],
+                "D_3": ["Easy", "Difficult"],
+                "I_3": ["Intelligent", "Dumb"],
+                "G_3": ["A", "B", "C"],
+            },
+        )
 
     def test_get_intra_and_inter_edges(self):
         self.network.add_edges_from(
