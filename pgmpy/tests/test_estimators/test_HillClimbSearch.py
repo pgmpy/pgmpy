@@ -183,14 +183,16 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             self.assertAlmostEqual(score, legal_ops_both_ref[op])
 
     def test_estimate_rand(self):
-        est1 = self.est_rand.estimate(show_progress=False)
+        est1 = self.est_rand.estimate(scoring_method="k2", show_progress=False)
         self.assertSetEqual(set(est1.nodes()), set(["A", "B", "C"]))
         self.assertTrue(
             list(est1.edges()) == [("B", "C")] or list(est1.edges()) == [("C", "B")]
         )
 
         est2 = self.est_rand.estimate(
-            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]), show_progress=False
+            scoring_method="k2",
+            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]),
+            show_progress=False,
         )
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
@@ -198,13 +200,17 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
 
         expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
         est3 = self.est_rand.estimate(
-            expert_knowledge=expert_knowledge, show_progress=False
+            scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
         )
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
         self.assertSetEqual(
-            set(self.est_titanic2.estimate(show_progress=False).edges()),
+            set(
+                self.est_titanic2.estimate(
+                    scoring_method="k2", show_progress=False
+                ).edges()
+            ),
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
@@ -212,7 +218,9 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.assertTrue(
             ("Pclass", "Survived")
             in self.est_titanic2.estimate(
-                expert_knowledge=expert_knowledge, show_progress=False
+                scoring_method="k2",
+                expert_knowledge=expert_knowledge,
+                show_progress=False,
             ).edges()
         )
 
@@ -232,7 +240,9 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             required_edges=[("A", "B"), ("B", "C")],
             forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
         )
-        best_model = est.estimate(expert_knowledge=expert_knowledge)
+        best_model = est.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge
+        )
 
     def test_estimate(self):
         for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
