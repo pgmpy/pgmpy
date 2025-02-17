@@ -152,7 +152,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             self.grade_1_cpd,
         )
 
-        self.assertEqual(self.network.states, self.state_names)
+        self.assertEqual(self.network.states(), self.state_names)
 
         bn = self.network.get_constant_bn(t_slice=0)
         self.assertEqual(set(bn.nodes()), {"D_0", "I_0", "G_0", "D_1", "I_1", "G_1"})
