@@ -539,10 +539,8 @@ class PC(StructureEstimator):
         pdag_oriented = PDAG(
             directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
         )
-        isolated_nodes = [
-            node for node in pdag.nodes() if node not in pdag_oriented.nodes()
-        ]
-        pdag_oriented.add_nodes_from(isolated_nodes)
+        pdag_oriented.add_nodes_from(pdag.nodes())
+
         return pdag_oriented
 
     @staticmethod
