@@ -460,9 +460,12 @@ class TestDAGParser(unittest.TestCase):
 
     def test_from_daggitty_single_line_with_group_of_vars(self):
         dag = DAG.from_dagitty(
-            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z->A}'
+            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}'
         )
-        self.assertEqual(set(dag.edges()), set([("X", "Z"), ("X", "Y"), ("Z", "A")]))
+        self.assertEqual(
+            set(dag.edges()),
+            set([("X", "Z"), ("X", "Y"), ("Z", "A"), ("A", "B"), ("C", "B")]),
+        )
         self.assertEqual(set(dag.latents), set(["X"]))
 
     def test_from_dagitty_multiline_with_display_info(self):
