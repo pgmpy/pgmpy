@@ -594,6 +594,7 @@ class DynamicBayesianNetwork(DAG):
                     raise ValueError(
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
+                print(node)
                 if not config.get_compute_backend().allclose(
                     cpd.to_factor().marginalize([node], inplace=False).values.flatten(),
                     compat_fns.ones(np.prod(evidence_card)),
@@ -640,6 +641,8 @@ class DynamicBayesianNetwork(DAG):
         for cpd in self.cpds:
             temp_var = DynamicNode(cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
+            state_names = self.states().copy()
+            state_names[temp_var] = state_names[cpd.variable]
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
@@ -652,6 +655,7 @@ class DynamicBayesianNetwork(DAG):
                             ),
                             parents,
                             evidence_card,
+                            state_names.copy(),
                         )
                     else:
                         if cpd.get_evidence():
@@ -659,16 +663,20 @@ class DynamicBayesianNetwork(DAG):
                                 cpd.get_evidence(), inplace=False
                             )
                             new_cpd = TabularCPD(
-                                temp_var,
-                                cpd.variable_card,
-                                np.reshape(initial_cpd.values, (2, -1)),
+                                variable=temp_var,
+                                variable_card=cpd.variable_card,
+                                values=np.reshape(initial_cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
                         else:
                             new_cpd = TabularCPD(
-                                temp_var,
-                                cpd.variable_card,
-                                np.reshape(cpd.values, (2, -1)),
+                                variable=temp_var,
+                                variable_card=cpd.variable_card,
+                                values=np.reshape(cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
+                    print(new_cpd)
+                    print(new_cpd.state_names)
                     self.add_cpds(new_cpd)
             self.check_model()
 
@@ -1090,6 +1098,7 @@ class DynamicBayesianNetwork(DAG):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=n_time_slices * len(self._nodes()))
 
+        state_names = self.states().copy()
         # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do
         evidence = {} if evidence is None else evidence
@@ -1115,6 +1124,7 @@ class DynamicBayesianNetwork(DAG):
                 values=cpd.get_values(),
                 evidence=new_vars[1:],
                 evidence_card=cpd.cardinality[1:],
+                state_names=state_names.copy(),
             )
             virtual_inter_dict[cpd.variables[0][1]].append(new_cpd)
         for cpd in virtual_evidence:
@@ -1125,6 +1135,7 @@ class DynamicBayesianNetwork(DAG):
                 values=cpd.get_values(),
                 evidence=new_vars[1:],
                 evidence_card=cpd.cardinality[1:],
+                state_names=state_names.copy(),
             )
             virtual_evi_dict[cpd.variables[0][1]].append(new_cpd)
 
@@ -1174,3 +1185,18 @@ class DynamicBayesianNetwork(DAG):
             )
             sampled = pd.concat((remaining_df, new_samples), axis=1)
         return self._postprocess(sampled)
+
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [cpd.state_names for cpd in self.cpds]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict

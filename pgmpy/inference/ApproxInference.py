@@ -91,7 +91,6 @@ class ApproxInference(object):
         evidence=None,
         virtual_evidence=None,
         joint=True,
-        state_names=None,
         show_progress=True,
         seed=None,
     ):
@@ -119,10 +118,6 @@ class ApproxInference(object):
         virtual_evidence: list (default: None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
-
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
 
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
@@ -184,17 +179,14 @@ class ApproxInference(object):
                     seed=seed,
                 )
 
-        # Step 2: If state_names is None, infer it from samples.
-        if state_names is None:
-            if isinstance(self.model, BayesianNetwork):
-                state_names = {
-                    var: list(samples.loc[:, var].unique()) for var in variables
-                }
-            elif isinstance(self.model, DynamicBayesianNetwork):
-                state_names = {
-                    var: list(samples.loc[:, [var]].iloc[:, 0].unique())
-                    for var in variables
-                }
+        # Step 2: Infer state_names from samples.
+        if isinstance(self.model, BayesianNetwork):
+            state_names = {var: list(samples.loc[:, var].unique()) for var in variables}
+        elif isinstance(self.model, DynamicBayesianNetwork):
+            state_names = {
+                var: list(samples.loc[:, [var]].iloc[:, 0].unique())
+                for var in variables
+            }
 
         # Step 3: Compute the distributions and return it.
         return self.get_distribution(
@@ -208,7 +200,6 @@ class ApproxInference(object):
         samples=None,
         evidence=None,
         virtual_evidence=None,
-        state_names=None,
         show_progress=True,
         seed=None,
     ):
@@ -236,10 +227,6 @@ class ApproxInference(object):
         virtual_evidence: list (default: None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
-
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
 
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
@@ -274,7 +261,6 @@ class ApproxInference(object):
             evidence=evidence,
             virtual_evidence=virtual_evidence,
             joint=True,
-            state_names=state_names,
             show_progress=show_progress,
             seed=seed,
         )
