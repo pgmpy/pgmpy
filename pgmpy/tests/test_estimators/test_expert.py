@@ -4,7 +4,7 @@ import unittest
 import pandas as pd
 import pytest
 
-from pgmpy.estimators import ExpertInLoop, get_custom_function
+from pgmpy.estimators import ExpertInLoop, get_comparator
 
 
 class TestExpertInLoop(unittest.TestCase):
@@ -80,7 +80,7 @@ class TestExpertInLoop(unittest.TestCase):
     )
     def test_estimate(self):
         orientation_cache = set([])
-        custom_function = get_custom_function(
+        custom_function = get_comparator(
             variable_descriptions=self.descriptions,
             use_llm=True,
             orientation_cache=orientation_cache,
@@ -91,12 +91,11 @@ class TestExpertInLoop(unittest.TestCase):
 
     def test_estimate_with_cache_no_llm_calls(self):
         orientation_cache = self.orientations_small
-        custom_function = get_custom_function(
+        custom_function = get_comparator(
             variable_descriptions=self.descriptions,
             orientation_cache=orientation_cache,
             use_llm=True,
         )
-
         dag = self.estimator_small.estimate(
             pval_threshold=0.1,
             effect_size_threshold=0.1,
@@ -109,12 +108,11 @@ class TestExpertInLoop(unittest.TestCase):
     )
     def test_estimate_with_cache_llm_calls(self):
         orientation_cache = set([])
-        custom_function = get_custom_function(
+        custom_function = get_comparator(
             variable_descriptions=self.descriptions,
             use_llm=True,
             orientation_cache=orientation_cache,
         )
-
         dag = self.estimator_small.estimate(
             pval_threshold=0.1,
             effect_size_threshold=0.1,

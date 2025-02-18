@@ -11,7 +11,7 @@ from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
 
-def get_custom_function(
+def get_comparator(
     orientation_cache=set([]),
     use_llm=False,
     variable_descriptions=None,
@@ -20,7 +20,10 @@ def get_custom_function(
     **kwargs,
 ):
     """
+    Handles multiple ways of getting edge orientations. Read from cached orientation edges. Further edges from manual input from users and LLM query are saved into the cache.
 
+    Parameters
+    ----------
     use_llm: bool
         Whether to use a Large Language Model for edge orientation. If
         False, prompts the user to specify the direction between the edges.
@@ -42,6 +45,9 @@ def get_custom_function(
     use_cache: bool
         If False, ask LLM (the same question multiple times)
 
+    Returns
+    -------
+    function: function comparing two nodes to give edge direction.
     """
 
     def comparator(
@@ -129,7 +135,7 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold=0.05,
         effect_size_threshold=0.05,
-        custom_function=get_custom_function,
+        custom_function=get_comparator(),
         **kwargs,
     ):
         """
