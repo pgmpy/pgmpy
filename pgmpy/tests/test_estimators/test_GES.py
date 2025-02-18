@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import GES
+from pgmpy.estimators import GES, ExpertKnowledge
 from pgmpy.models import BayesianNetwork
 
 
@@ -42,7 +42,18 @@ class TestGESDiscrete(unittest.TestCase):
     def test_estimate(self):
         dag = self.est_rand.estimate()
         dag = self.est_titanic1.estimate()
-        dag = self.est_titanic2.estimate()
+
+        temporal_knowledge = ExpertKnowledge(
+            temporal_order=[["Pclass", "Sex"], ["Survived"]]
+        )
+        dag2 = self.est_titanic2.estimate(
+            expert_knowledge=temporal_knowledge, scoring_method="k2"
+        )
+
+        self.assertSetEqual(
+            set([("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")]),
+            set(dag2.edges()),
+        )
 
 
 class TestGESGauss(unittest.TestCase):
