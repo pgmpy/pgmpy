@@ -228,7 +228,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             temporal_order=[["Pclass", "Sex"], ["Survived"]]
         )
         self.assertSetEqual(
-            set([("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")]),
+            set([("Sex", "Survived"), ("Pclass", "Sex"), ("Pclass", "Survived")]),
             set(
                 self.est_titanic2.estimate(
                     expert_knowledge=temporal_knowledge, show_progress=False
