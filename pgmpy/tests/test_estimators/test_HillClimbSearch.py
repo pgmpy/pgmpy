@@ -9,6 +9,7 @@ from pgmpy.models import BayesianNetwork
 
 class TestHillClimbEstimatorDiscrete(unittest.TestCase):
     def setUp(self):
+        np.random.seed(40)
         self.rand_data = pd.DataFrame(
             np.random.randint(0, 5, size=(int(1e4), 2)), columns=list("AB")
         )
