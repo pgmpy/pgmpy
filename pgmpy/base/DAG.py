@@ -1244,6 +1244,15 @@ class DAG(nx.DiGraph):
         bn.add_cpds(*cpds_list)
         return bn
 
+    def _variable_name_contains_non_string(self):
+        """
+        Checks if the variable names contain any non-string values. Used only for CausalInference class.
+        """
+        for node in list(self.nodes()):
+            if not isinstance(node, str):
+                return (node, type(node))
+        return False
+
 
 class PDAG(nx.DiGraph):
     """

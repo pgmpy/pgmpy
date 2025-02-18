@@ -65,6 +65,14 @@ class TestExpertInLoop(unittest.TestCase):
             "NativeCountry": "The native country of the person",
             "Income": "The income i.e. amount of money the person makes",
         }
+        self.estimator_small = ExpertInLoop(
+            data=df[["Age", "Education", "Race", "Sex", "Income"]]
+        )
+        self.orientations_small = {
+            ("Education", "Income"),
+            ("Race", "Education"),
+            ("Age", "Education"),
+        }
 
     @pytest.mark.skipif(
         "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
@@ -73,3 +81,45 @@ class TestExpertInLoop(unittest.TestCase):
         dag = self.estimator.estimate(variable_descriptions=self.descriptions)
         # expected_edges = {('MaritalStatus', 'Relationship'), ('Age', 'Occupation'), ('NativeCountry', 'MaritalStatus'), ('Sex', 'Occupation'), ('Occupation', 'Income'), ('HoursPerWeek', 'Income'), ('NativeCountry', 'Education'), ('Age', 'HoursPerWeek'), ('Workclass', 'Occupation'), ('Education', 'Income'), ('Age', 'Workclass'), ('MaritalStatus', 'Income'), ('Workclass', 'HoursPerWeek'), ('NativeCountry', 'HoursPerWeek'), ('Education', 'Occupation'), ('Occupation', 'HoursPerWeek'), ('Age', 'Relationship'), ('Race', 'NativeCountry'), ('Sex', 'Relationship'), ('Education', 'HoursPerWeek'), ('Race', 'Education'), ('Workclass', 'Relationship'), ('MaritalStatus', 'HoursPerWeek'), ('Age', 'MaritalStatus'), ('Sex', 'MaritalStatus'), ('Relationship', 'HoursPerWeek'), ('Age', 'Education'), ('Workclass', 'MaritalStatus')}
         # self.assertEqual(expected_edges, set(dag.edges()))
+
+    def test_estimate_with_orientations(self):
+        orientations = self.orientations_small
+        dag = self.estimator_small.estimate(
+            variable_descriptions=self.descriptions,
+            use_llm=False,
+            orientations=orientations,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+        self.assertEqual(orientations, set(dag.edges()))
+        self.assertEqual(self.estimator_small.orientations_llm, set([]))
+
+    def test_estimate_with_cache_no_llm_calls(self):
+        orientations = self.orientations_small
+        self.estimator_small.orientations_llm = orientations
+        dag = self.estimator_small.estimate(
+            variable_descriptions=self.descriptions,
+            use_cache=True,
+            use_llm=True,
+            orientations=orientations,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+        self.assertEqual(orientations, set(dag.edges()))
+        self.assertEqual(self.estimator_small.orientations_llm, orientations)
+
+    @pytest.mark.skipif(
+        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
+    )
+    def test_estimate_with_cache_and_llm_calls(self):
+        orientations = self.orientations_small
+        dag = self.estimator_small.estimate(
+            variable_descriptions=self.descriptions,
+            use_cache=True,
+            use_llm=True,
+            orientations=orientations,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+        self.assertEqual(orientations, set(dag.edges()))
+        self.assertEqual(self.estimator_small.orientations_llm, orientations)

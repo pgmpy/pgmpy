@@ -48,6 +48,13 @@ class TestCausalGraphMethods(unittest.TestCase):
         )
 
 
+class TestCausalInferenceInit(unittest.TestCase):
+    def test_integer_variable_name(self):
+        df = pd.DataFrame([[0, 1], [0, 0]])
+        self.model = BayesianNetwork(df)
+        self.assertRaises(NotImplementedError, CausalInference, self.model)
+
+
 class TestAdjustmentSet(unittest.TestCase):
     def setUp(self):
         # Model example taken from Constructing Separators and Adjustment Sets
