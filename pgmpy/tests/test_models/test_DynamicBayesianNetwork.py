@@ -1514,6 +1514,37 @@ class TestDBNWithStateName(unittest.TestCase):
             state_names=self.state_names,
         )
 
+    def test_get_cpds(self):
+        self.network.add_edges_from(
+            [
+                (("D", 0), ("G", 0)),
+                (("I", 0), ("G", 0)),
+                (("D", 0), ("D", 1)),
+                (("I", 0), ("I", 1)),
+            ]
+        )
+        self.network.add_cpds(
+            self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd
+        )
+        self.network.initialize_initial_state()
+        self.assertEqual(
+            {cpd.variable for cpd in self.network.get_cpds()},
+            {("I", 1), ("D", 0), ("G", 1), ("I", 0), ("G", 0), ("D", 1)},
+        )
+        self.assertEqual(
+            {cpd.variable for cpd in self.network.get_cpds(time_slice=[0, 1])},
+            {("I", 1), ("D", 0), ("G", 1), ("I", 0), ("G", 0), ("D", 1)},
+        )
+        self.assertEqual(
+            set(self.network.get_cpds(time_slice=0)),
+            set([self.diff_cpd, self.intel_cpd, self.grade_cpd]),
+        )
+        self.assertEqual(
+            {cpd.variable for cpd in self.network.get_cpds(time_slice=1)},
+            {("D", 1), ("I", 1), ("G", 1)},
+        )
+        self.assertEqual(self.network.states, self.state_names)
+
     def test_get_constant_bn(self):
         self.network.add_edges_from(
             [
@@ -1535,6 +1566,7 @@ class TestDBNWithStateName(unittest.TestCase):
         )
 
         self.assertEqual(self.network.states, self.state_names)
+        self.network.initialize_initial_state()
 
         bn = self.network.get_constant_bn(t_slice=0)
         self.assertEqual(set(bn.nodes()), {"D_0", "I_0", "G_0", "D_1", "I_1", "G_1"})
