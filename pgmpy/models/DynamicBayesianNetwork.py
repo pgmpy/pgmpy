@@ -640,6 +640,8 @@ class DynamicBayesianNetwork(DAG):
         for cpd in self.cpds:
             temp_var = DynamicNode(cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
+            state_names = self.states.copy()
+            state_names[temp_var] = state_names[cpd.variable]
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
@@ -652,6 +654,7 @@ class DynamicBayesianNetwork(DAG):
                             ),
                             parents,
                             evidence_card,
+                            state_names.copy(),
                         )
                     else:
                         if cpd.get_evidence():
@@ -662,12 +665,14 @@ class DynamicBayesianNetwork(DAG):
                                 temp_var,
                                 cpd.variable_card,
                                 np.reshape(initial_cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
                         else:
                             new_cpd = TabularCPD(
                                 temp_var,
                                 cpd.variable_card,
                                 np.reshape(cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
                     self.add_cpds(new_cpd)
             self.check_model()
@@ -1174,3 +1179,19 @@ class DynamicBayesianNetwork(DAG):
             )
             sampled = pd.concat((remaining_df, new_samples), axis=1)
         return self._postprocess(sampled)
+
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [cpd.state_names for cpd in self.cpds]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict
