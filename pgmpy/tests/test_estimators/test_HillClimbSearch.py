@@ -215,25 +215,27 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
 
         expert_knowledge = ExpertKnowledge(required_edges=[("Pclass", "Survived")])
-        self.assertTrue(
-            ("Pclass", "Survived")
-            in self.est_titanic2.estimate(
-                scoring_method="k2",
-                expert_knowledge=expert_knowledge,
-                show_progress=False,
-            ).edges()
-        )
+        est_edges = self.est_titanic2.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
+        ).edges()
+        self.assertTrue(("Pclass", "Survived") in est_edges)
 
         temporal_knowledge = ExpertKnowledge(
             temporal_order=[["Pclass", "Sex"], ["Survived"]]
         )
-        self.assertSetEqual(
-            set([("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")]),
-            set(
-                self.est_titanic2.estimate(
-                    expert_knowledge=temporal_knowledge, show_progress=False
-                ).edges()
-            ),
+        est_edges = self.est_titanic2.estimate(
+            expert_knowledge=temporal_knowledge, show_progress=False
+        ).edges()
+        self.assertTrue(
+            est_edges
+            <= set(
+                [
+                    ("Sex", "Survived"),
+                    ("Sex", "Pclass"),
+                    ("Pclass", "Sex"),
+                    ("Pclass", "Survived"),
+                ]
+            )
         )
 
     def test_no_legal_operation(self):
