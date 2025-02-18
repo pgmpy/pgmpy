@@ -11,10 +11,82 @@ from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
 
+def get_custom_function(
+    orientation_cache=set([]),
+    use_llm=False,
+    variable_descriptions=None,
+    show_progress=True,
+    llm_model="gemini/gemini-1.5-flash",
+    **kwargs,
+):
+    """
+
+    use_llm: bool
+        Whether to use a Large Language Model for edge orientation. If
+        False, prompts the user to specify the direction between the edges.
+
+    llm_model: str (default: gemini/gemini-1.5-flash)
+        The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
+        for available model options. Default is gemini-1.5-flash
+
+    variable_descriptions: dict
+        A dict of the form {var: description} giving a text description of
+        each variable in the model.
+
+    show_progress: bool (default: True)
+        If True, prints info of the running status.
+
+    orientation_cache: set
+        preferred orientation for edges. The result of LLM query and ExpertInLoop will be added here.
+
+    use_cache: bool
+        If False, ask LLM (the same question multiple times)
+
+    """
+
+    def comparator(
+        u,
+        v,
+        orientation_cache=orientation_cache,
+        use_llm=use_llm,
+        variable_descriptions=variable_descriptions,
+        show_progress=show_progress,
+        llm_model=llm_model,
+        **kwargs,
+    ):
+        if (u, v) in orientation_cache:
+            return (u, v)
+        elif (v, u) in orientation_cache:
+            return (v, u)
+
+        if use_llm:
+            edge_direction = llm_pairwise_orient(
+                u,
+                v,
+                variable_descriptions,
+                llm_model=llm_model,
+                **kwargs,
+            )
+
+            if config.SHOW_PROGRESS and show_progress:
+                sys.stdout.write(
+                    f"\rQueried for edge orientation between {u} and {v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
+                )
+                sys.stdout.flush()
+
+            orientation_cache.add(edge_direction)
+            return edge_direction
+
+        edge_direction = manual_pairwise_orient(u, v)
+        orientation_cache.add(edge_direction)
+        return edge_direction
+
+    return comparator
+
+
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data=None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
-        self.orientations_llm = set([])
 
     def test_all(self, dag):
         """
@@ -57,12 +129,7 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold=0.05,
         effect_size_threshold=0.05,
-        use_llm=True,
-        llm_model="gemini/gemini-1.5-flash",
-        variable_descriptions=None,
-        show_progress=True,
-        orientations=set([]),
-        use_cache=True,
+        custom_function=get_custom_function,
         **kwargs,
     ):
         """
@@ -89,26 +156,8 @@ class ExpertInLoop(StructureEstimator):
             And if the effect size for an edge is less than the threshold,
             would suggest to remove the edge.
 
-        use_llm: bool
-            Whether to use a Large Language Model for edge orientation. If
-            False, prompts the user to specify the direction between the edges.
-
-        llm_model: str (default: gemini/gemini-1.5-flash)
-            The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
-            for available model options. Default is gemini-1.5-flash
-
-        variable_descriptions: dict
-            A dict of the form {var: description} giving a text description of
-            each variable in the model.
-
-        show_progress: bool (default: True)
-            If True, prints info of the running status.
-
-        orientations: set
-            preferred orientation for edges
-
-        use_cache: bool
-            If False, ask LLM (the same question multiple times)
+        custom_function: function
+            The function takes the two variable names and returns the orientation for them
 
         kwargs: kwargs
             Any additional parameters to pass to litellm.completion method.
@@ -187,38 +236,8 @@ class ExpertInLoop(StructureEstimator):
                 break
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-            edge_direction = None
-            if use_llm:
-                if use_cache:
-                    if (selected_edge.u, selected_edge.v) in self.orientations_llm:
-                        edge_direction = (selected_edge.u, selected_edge.v)
-                    elif (selected_edge.v, selected_edge.u) in self.orientations_llm:
-                        edge_direction = (selected_edge.v, selected_edge.u)
-                if edge_direction is None:
-                    edge_direction = llm_pairwise_orient(
-                        selected_edge.u,
-                        selected_edge.v,
-                        variable_descriptions,
-                        llm_model=llm_model,
-                        **kwargs,
-                    )
-                    self.orientations_llm.add(edge_direction)
 
-                if config.SHOW_PROGRESS and show_progress:
-                    sys.stdout.write(
-                        f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
-                    )
-                    sys.stdout.flush()
-            elif orientations:
-                if (selected_edge.u, selected_edge.v) in orientations:
-                    edge_direction = (selected_edge.u, selected_edge.v)
-                elif (selected_edge.v, selected_edge.u) in orientations:
-                    edge_direction = (selected_edge.v, selected_edge.u)
-            if edge_direction is None:
-                edge_direction = manual_pairwise_orient(
-                    selected_edge.u, selected_edge.v
-                )
-                orientations.add(edge_direction)
+            edge_direction = custom_function(selected_edge.u, selected_edge.v, **kwargs)
 
             # Step 3.3: If the edge creates a cycle add the reverse edge. If no cycle, add the original edge.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):

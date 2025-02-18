@@ -4,13 +4,14 @@ import unittest
 import pandas as pd
 import pytest
 
-from pgmpy.estimators import ExpertInLoop
+from pgmpy.estimators import ExpertInLoop, get_custom_function
 
 
 class TestExpertInLoop(unittest.TestCase):
     def setUp(self):
         df = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/adult_proc.csv", index_col=0
+            "pgmpy/tests/test_estimators/testdata/adult_proc.csv",
+            index_col=0,
         )
         df.Age = pd.Categorical(
             df.Age,
@@ -78,48 +79,65 @@ class TestExpertInLoop(unittest.TestCase):
         "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
     )
     def test_estimate(self):
-        dag = self.estimator.estimate(variable_descriptions=self.descriptions)
+        orientation_cache = set([])
+        custom_function = get_custom_function(
+            variable_descriptions=self.descriptions,
+            use_llm=True,
+            orientation_cache=orientation_cache,
+        )
+        dag = self.estimator.estimate(custom_function=custom_function)
         # expected_edges = {('MaritalStatus', 'Relationship'), ('Age', 'Occupation'), ('NativeCountry', 'MaritalStatus'), ('Sex', 'Occupation'), ('Occupation', 'Income'), ('HoursPerWeek', 'Income'), ('NativeCountry', 'Education'), ('Age', 'HoursPerWeek'), ('Workclass', 'Occupation'), ('Education', 'Income'), ('Age', 'Workclass'), ('MaritalStatus', 'Income'), ('Workclass', 'HoursPerWeek'), ('NativeCountry', 'HoursPerWeek'), ('Education', 'Occupation'), ('Occupation', 'HoursPerWeek'), ('Age', 'Relationship'), ('Race', 'NativeCountry'), ('Sex', 'Relationship'), ('Education', 'HoursPerWeek'), ('Race', 'Education'), ('Workclass', 'Relationship'), ('MaritalStatus', 'HoursPerWeek'), ('Age', 'MaritalStatus'), ('Sex', 'MaritalStatus'), ('Relationship', 'HoursPerWeek'), ('Age', 'Education'), ('Workclass', 'MaritalStatus')}
         # self.assertEqual(expected_edges, set(dag.edges()))
 
-    def test_estimate_with_orientations(self):
-        orientations = self.orientations_small
-        dag = self.estimator_small.estimate(
-            variable_descriptions=self.descriptions,
-            use_llm=False,
-            orientations=orientations,
-            pval_threshold=0.1,
-            effect_size_threshold=0.1,
-        )
-        self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, set([]))
-
     def test_estimate_with_cache_no_llm_calls(self):
-        orientations = self.orientations_small
-        self.estimator_small.orientations_llm = orientations
-        dag = self.estimator_small.estimate(
+        orientation_cache = self.orientations_small
+        custom_function = get_custom_function(
             variable_descriptions=self.descriptions,
-            use_cache=True,
+            orientation_cache=orientation_cache,
             use_llm=True,
-            orientations=orientations,
+        )
+
+        dag = self.estimator_small.estimate(
             pval_threshold=0.1,
             effect_size_threshold=0.1,
+            custom_function=custom_function,
         )
-        self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, orientations)
+        self.assertEqual(orientation_cache, set(dag.edges()))
 
     @pytest.mark.skipif(
         "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
     )
-    def test_estimate_with_cache_and_llm_calls(self):
-        orientations = self.orientations_small
-        dag = self.estimator_small.estimate(
+    def test_estimate_with_cache_llm_calls(self):
+        orientation_cache = set([])
+        custom_function = get_custom_function(
             variable_descriptions=self.descriptions,
-            use_cache=True,
             use_llm=True,
-            orientations=orientations,
+            orientation_cache=orientation_cache,
+        )
+
+        dag = self.estimator_small.estimate(
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+            custom_function=custom_function,
+        )
+        self.assertEqual(self.orientations_small, set(dag.edges()))
+        self.assertEqual(orientation_cache, self.orientations_small)
+
+    def test_estimate_with_custom_function(self):
+        def lexico_order(n1, n2):
+            if n1 < n2:
+                return (n1, n2)
+            else:
+                return (n2, n1)
+
+        orientations_lexico = {
+            ("Education", "Income"),
+            ("Education", "Race"),
+            ("Age", "Education"),
+        }
+        dag = self.estimator_small.estimate(
+            custom_function=lexico_order,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
         )
-        self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, orientations)
+        self.assertEqual(orientations_lexico, set(dag.edges()))
