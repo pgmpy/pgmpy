@@ -1174,3 +1174,19 @@ class DynamicBayesianNetwork(DAG):
             )
             sampled = pd.concat((remaining_df, new_samples), axis=1)
         return self._postprocess(sampled)
+
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [cpd.state_names for cpd in self.cpds]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict
