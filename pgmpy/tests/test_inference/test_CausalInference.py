@@ -48,6 +48,13 @@ class TestCausalGraphMethods(unittest.TestCase):
         )
 
 
+class TestCausalInferenceInit(unittest.TestCase):
+    def test_integer_variable_name(self):
+        df = pd.DataFrame([[0, 1], [0, 0]])
+        self.model = BayesianNetwork(df)
+        self.assertRaises(NotImplementedError, CausalInference, self.model)
+
+
 class TestAdjustmentSet(unittest.TestCase):
     def setUp(self):
         # Model example taken from Constructing Separators and Adjustment Sets
@@ -80,10 +87,25 @@ class TestAdjustmentSet(unittest.TestCase):
             set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
         )
 
+    def test_proper_backdoor_graph_not_list(self):
+        bd_graph = self.infer.get_proper_backdoor_graph(X="x1", Y="y1")
+        self.assertTrue(("x1", "y1") not in bd_graph.edges())
+        self.assertEqual(len(bd_graph.edges()), 4)
+        self.assertTrue(
+            set(bd_graph.edges()),
+            set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
+        )
+
     def test_is_valid_adjustment_set(self):
         self.assertTrue(
             self.infer.is_valid_adjustment_set(
                 X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
+            )
+        )
+
+        self.assertTrue(
+            self.infer.is_valid_adjustment_set(
+                X="x1", Y="y1", adjustment_set=["z1", "z2"]
             )
         )
 

@@ -803,6 +803,9 @@ class DynamicBayesianNetwork(DAG):
             new_vars = [
                 str(var) + "_" + str(time + t_slice) for var, time in cpd.variables
             ]
+            new_state_names = dict(
+                zip(new_vars, [cpd.state_names[var] for var in cpd.variables])
+            )
             new_cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -810,6 +813,7 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=new_state_names,
                 )
             )
 
@@ -906,6 +910,9 @@ class DynamicBayesianNetwork(DAG):
         for cpd in const_bn.cpds:
             var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
             new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
+            new_state_names = dict(
+                zip(new_vars, [cpd.state_names[var] for var in cpd.variables])
+            )
             cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -913,6 +920,7 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=new_state_names,
                 )
             )
 

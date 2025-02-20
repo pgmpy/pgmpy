@@ -52,6 +52,11 @@ class CausalInference(object):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
             )
+        bad_variable = model._variable_name_contains_non_string()
+        if bad_variable != False:
+            raise NotImplementedError(
+                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
+            )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
         self.observed_variables = frozenset(self.model.nodes()).difference(
@@ -397,6 +402,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         for var in chain(X, Y):
             if var not in self.model.nodes():
                 raise ValueError(f"{var} not found in the model.")
@@ -447,6 +457,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
         for x, y in zip(X, Y):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):

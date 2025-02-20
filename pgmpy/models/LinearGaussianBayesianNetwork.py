@@ -165,17 +165,19 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: int
             The seed for the random number generator.
         """
-        rng = np.random.default_rng(seed=seed)
+        # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
+        seed = seed if seed else 42
 
         cpds = []
-        for var in self.nodes():
+        for i, var in enumerate(self.nodes()):
             parents = self.get_parents(var)
             cpds.append(
-                LinearGaussianCPD(
+                LinearGaussianCPD.get_random(
                     variable=var,
-                    beta=rng.normal(loc=loc, scale=scale, size=(len(parents) + 1)),
-                    std=abs(rng.normal(loc=loc, scale=scale)),
                     evidence=parents,
+                    loc=loc,
+                    scale=scale,
+                    seed=(seed + i),
                 )
             )
         if inplace:

@@ -15,6 +15,7 @@ from pgmpy.estimators import (
     BDs,
     BICCondGauss,
     BICGauss,
+    ExpertKnowledge,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
     StructureEstimator,
@@ -55,20 +56,34 @@ class GES(StructureEstimator):
 
         super(GES, self).__init__(data=data, **kwargs)
 
-    def _legal_edge_additions(self, current_model):
+    def _legal_edge_additions(self, current_model, expert_knowledge):
         """
         Returns a list of all edges that can be added to the graph such that it remains a DAG.
         """
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
             if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u):
+                if not nx.has_path(current_model, v, u) and (
+                    (u, v) not in expert_knowledge.forbidden_edges
+                ):
                     edges.append((u, v))
-                if not nx.has_path(current_model, u, v):
+                if not nx.has_path(current_model, u, v) and (
+                    (v, u) not in expert_knowledge.forbidden_edges
+                ):
                     edges.append((v, u))
         return edges
 
-    def _legal_edge_flips(self, current_model):
+    def _legal_edge_removals(self, current_model, expert_knowledge):
+        """
+        Returns a list of all edges that can be removed from the graph such that it remains a DAG.
+        """
+        edges = []
+        for u, v in current_model.edges():
+            if (u, v) not in expert_knowledge.required_edges:
+                edges.append((u, v))
+        return edges
+
+    def _legal_edge_flips(self, current_model, expert_knowledge):
         """
         Returns a list of all the edges in the `current_model` that can be flipped such that the model
         remains a DAG.
@@ -76,15 +91,24 @@ class GES(StructureEstimator):
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
-            current_model.remove_edge(u, v)
-            if not nx.has_path(current_model, u, v):
-                potential_flips.append((v, u))
+            if ((u, v) not in expert_knowledge.required_edges) and (
+                (v, u) not in expert_knowledge.forbidden_edges
+            ):
+                current_model.remove_edge(u, v)
+                if not nx.has_path(current_model, u, v):
+                    potential_flips.append((v, u))
 
-            # Restore the edge to get to the original model
-            current_model.add_edge(u, v)
+                # Restore the edge to get to the original model
+                current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic-d", min_improvement=1e-6, debug=False):
+    def estimate(
+        self,
+        scoring_method="bic-d",
+        expert_knowledge=None,
+        min_improvement=1e-6,
+        debug=False,
+    ):
         """
         Estimates the DAG from the data.
 
@@ -95,6 +119,11 @@ class GES(StructureEstimator):
             structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
             ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
             be an instance of `StructureScore`.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            allows specification of required and forbidden edges, as well as temporal
+            order of nodes.
 
         min_improvement: float
             The operation (edge addition, removal, or flipping) would only be performed if the
@@ -129,10 +158,17 @@ class GES(StructureEstimator):
         # Step 1: Initialize an empty model.
         current_model = DAG()
         current_model.add_nodes_from(list(self.data.columns))
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        expert_knowledge._orient_temporal_forbidden_edges(
+            current_model, only_edges=False
+        )
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
-            potential_edges = self._legal_edge_additions(current_model)
+            potential_edges = self._legal_edge_additions(
+                current_model, expert_knowledge
+            )
             score_deltas = np.zeros(len(potential_edges))
             for index, (u, v) in enumerate(potential_edges):
                 current_parents = current_model.get_parents(v)
@@ -153,7 +189,9 @@ class GES(StructureEstimator):
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
-            potential_removals = list(current_model.edges())
+            potential_removals = self._legal_edge_removals(
+                current_model, expert_knowledge
+            )
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
@@ -174,7 +212,7 @@ class GES(StructureEstimator):
 
         # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
         while True:
-            potential_flips = self._legal_edge_flips(current_model)
+            potential_flips = self._legal_edge_flips(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_flips))
             for index, (u, v) in enumerate(potential_flips):
                 v_parents = current_model.get_parents(v)

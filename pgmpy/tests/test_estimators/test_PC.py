@@ -638,8 +638,10 @@ class TestPCRealModels(unittest.TestCase):
         )
 
     def test_temporal_pc_cancer(self):
-        asia_model = get_example_model("cancer")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
+        cancer_model = get_example_model("cancer")
+        data = BayesianModelSampling(cancer_model).forward_sample(
+            size=int(5e4), seed=42
+        )
         est = PC(data)
         background = ExpertKnowledge(  # e.g. we only know "Pollution", "Smoker", "Cancer" can be the causes of others
             temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
