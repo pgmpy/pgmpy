@@ -9,6 +9,8 @@ from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 
+from pgmpy import config
+
 
 class FunctionalBayesianNetwork(BayesianNetwork):
     """
@@ -205,13 +207,15 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         """
         Fit the Bayesian network to data using Pyro's stochastic variational inference.
 
-        Parameters:
+        Parameters
+        ----------
             data (pd.DataFrame) : DataFrame with observations of variables.
             method (str) : Approximation methods for posterior distribution.
             learning_rate (float) : Learning rate for optimization
             num_steps (int) : Number of optimization steps for each variable.
 
-        Returns:
+        Returns
+        -------
             dict: Samples for each register parameter.
 
         Examples
@@ -272,76 +276,61 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         sort_nodes = list(nx.topological_sort(self))
 
-        if method == "SVI":
+        tensor_data = {}
+        for node in sort_nodes:
+            if node not in data.columns:
+                raise ValueError(f"Observation not found for variable {node}")
+            else:
+                tensor_data[node] = (
+                    torch.tensor(data[node].values).float().to(config.get_device())
+                )
 
-            def model():
-                with pyro.plate(f"data", data.shape[0]):
-                    for node in self.nodes:
-                        if node in data.columns:
-                            cpd = self.get_cpds(node)
-                            parents = cpd.parents
+        nuts_kwargs = nuts_kwargs or {}
+        mcmc_kwargs = mcmc_kwargs or {}
 
-                            parent_data = (
-                                {
-                                    p: torch.tensor(data[p].values).float()
-                                    for p in parents
-                                }
-                                if parents
-                                else None
-                            )
+        def guide():
+            # No latent variables to approximate
+            pass
 
-                            pyro.sample(
-                                f"{node}",
-                                cpd.fn(parent_data),
-                                obs=torch.tensor(data[node].values),
-                            )
+        optimizer = pyro.optim.Adam({"lr": learning_rate})
 
-            def guide():
-                # No latent variables to approximate
-                pass
+        if method == "MCMC":
+            params = {}
 
-            optimizer = pyro.optim.Adam({"lr": learning_rate})
-            svi = pyro.infer.SVI(
-                model=model,
-                guide=guide,
-                optim=optimizer,
-                loss=pyro.infer.Trace_ELBO(),
-            )
-
-            for step in range(num_steps):
-                loss = svi.step()
-                if step % 50 == 0:
-                    print(f"Step {step} | Loss: {loss:.4f}")
-
-            params = pyro.get_param_store()
-            return {name: params[name].detach().numpy() for name in params.keys()}
-        else:
-            nuts_kwargs = nuts_kwargs or {}
-            mcmc_kwargs = mcmc_kwargs or {}
+        for node in sort_nodes:
 
             def combined_model():
-                for node in sort_nodes:
-                    if node in data.columns:
-                        cpd = self.get_cpds(node)
-                        parents = cpd.parents
+                cpd = self.get_cpds(node)
+                parents = cpd.parents
 
-                        if len(parents) > 0:
-                            parent_sample = {
-                                parent: torch.tensor(data[parent].values).float()
-                                for parent in parents
-                            }
-                        else:
-                            parent_sample = None
+                parent_data = {p: tensor_data[p] for p in parents} if parents else None
 
-                        dist_fn = cpd.fn(parent_sample)
-                        obs_data = torch.tensor(data[node].values).float()
+                with pyro.plate(f"{node}_data", data.shape[0]):
+                    pyro.sample(f"{node}", cpd.fn(parent_data), obs=tensor_data[node])
 
-                        with pyro.plate(f"plate_{node}", len(data)):
-                            pyro.sample(node, dist_fn, obs=obs_data)
+            if method == "SVI":
+                svi = pyro.infer.SVI(
+                    model=combined_model,
+                    guide=guide,
+                    optim=optimizer,
+                    loss=pyro.infer.Trace_ELBO(),
+                )
 
-            nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
-            mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
-            mcmc.run()
+                for step in range(num_steps):
+                    loss = svi.step()
+                    if step % 50 == 0:
+                        print(f"Step {step} | Loss: {loss:.4f}")
+            else:
+                nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
+                mcmc = pyro.infer.MCMC(
+                    nuts_kernel, num_samples=num_steps, **mcmc_kwargs
+                )
+                mcmc.run()
+                samples = mcmc.get_samples()
+                params.update(samples)
 
-            samples = mcmc.get_samples()
-            return samples
+        if method == "SVI":
+            params = pyro.get_param_store()
+            return {name: params[name] for name in params.keys()}
+        else:
+            return params
