@@ -7,13 +7,12 @@ import pyro
 import pyro.distributions as dist
 import torch
 
+from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
 from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwork
-
 from pgmpy.utils import get_example_model
-from pgmpy import config
 
 
 class TestFBNMethods(unittest.TestCase):
@@ -175,85 +174,89 @@ class TestFBNMethods(unittest.TestCase):
         self.assertTrue(np.all(samples["gamma"] > 0))
 
     def test_svi_fit_normal(self):
-        alpha = 0.23
-        beta = 0.76
-        x1 = np.random.normal(1, 2, size=1000)
-        x2 = np.random.normal((x1 * alpha) + 5, 1)
-        x3 = np.random.normal((x2 * beta) + 3, 1)
+        alpha = 0.5
+        beta = 0.8
+        x1 = np.random.normal(0.2, 0.9, size=1000)
+        x2 = np.random.normal((x1 * alpha) + 0.5, 0.6)
+        x3 = np.random.normal((x2 * beta) + 0.3, 0.7)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        def x1_prior():
-            mu = pyro.param("x1_mu", torch.tensor(0.5))
+        def x1_fn():
+            mu = pyro.param("x1_mu", torch.tensor(1.0))
             sigma = pyro.param(
                 "x1_sigma",
-                torch.tensor(3.0),
+                torch.tensor(1.0),
                 constraint=torch.distributions.constraints.positive,
             )
             return dist.Normal(mu, sigma)
 
-        def x2_prior(parent):
-            mu = pyro.param("x2_mu", torch.tensor(3.0))
+        def x2_fn(parent):
+            intercept = pyro.param("x2_inter", torch.tensor(1.0))
             sigma = pyro.param(
                 "x2_sigma",
-                torch.tensor(2.0),
+                torch.tensor(1.0),
                 constraint=torch.distributions.constraints.positive,
             )
             alpha = pyro.param("x2_alpha", torch.tensor(1.0))
-            return dist.Normal(mu + (parent["x1"] * alpha), sigma)
+            return dist.Normal(intercept + (parent["x1"] * alpha), sigma)
 
-        def x3_prior(parent):
-            mu = pyro.param("x3_mu", torch.tensor(3.0))
+        def x3_fn(parent):
+            intercept = pyro.param("x3_inter", torch.tensor(1.0))
             sigma = pyro.param(
                 "x3_sigma",
-                torch.tensor(2.0),
+                torch.tensor(1.0),
                 constraint=torch.distributions.constraints.positive,
             )
             alpha = pyro.param("x3_beta", torch.tensor(1.0))
-            return dist.Normal(mu + (parent["x2"] * alpha), sigma)
+            return dist.Normal(intercept + (parent["x2"] * alpha), sigma)
 
-        cpd1 = FunctionalCPD("x1", fn=lambda _: x1_prior())
-        cpd2 = FunctionalCPD("x2", fn=lambda parent: x2_prior(parent), parents=["x1"])
-        cpd3 = FunctionalCPD("x3", fn=lambda parent: x3_prior(parent), parents=["x2"])
+        cpd1 = FunctionalCPD("x1", fn=lambda _: x1_fn)
+        cpd2 = FunctionalCPD("x2", fn=lambda parent: x2_fn, parents=["x1"])
+        cpd3 = FunctionalCPD("x3", fn=lambda parent: x3_fn, parents=["x2"])
 
-        self.model.add_cpds(cpd1, cpd2, cpd3)
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = self.model.fit(data, method="SVI", learning_rate=0.08, num_steps=100)
+        params = self.model.fit(data, method="svi", learning_rate=1e-2, num_steps=1000)
+        import ipdb
+
+        ipdb.set_trace()
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
-        self.assertIn("x2_mu", params)
+        self.assertIn("x2_inter", params)
         self.assertIn("x2_sigma", params)
         self.assertIn("x2_alpha", params)
-        self.assertIn("x3_mu", params)
+        self.assertIn("x3_inter", params)
         self.assertIn("x3_sigma", params)
         self.assertIn("x3_beta", params)
 
-        self.assertAlmostEqual(params["x1_mu"], 1, delta=0.1)
-        self.assertAlmostEqual(params["x1_sigma"], 2, delta=0.1)
-        self.assertAlmostEqual(params["x2_mu"], 5, delta=0.1)
-        self.assertAlmostEqual(params["x2_sigma"], 1, delta=0.1)
-        self.assertAlmostEqual(params["x2_alpha"], 0.23, delta=0.1)
-        self.assertAlmostEqual(params["x3_mu"], 3, delta=0.1)
-        self.assertAlmostEqual(params["x3_sigma"], 1, delta=0.1)
-        self.assertAlmostEqual(params["x3_beta"], 0.76, delta=0.1)
+        self.assertAlmostEqual(params["x1_mu"], 0.2, delta=0.1)
+        self.assertAlmostEqual(params["x1_sigma"], 0.9, delta=0.1)
+        self.assertAlmostEqual(params["x2_inter"], 0.5, delta=0.1)
+        self.assertAlmostEqual(params["x2_sigma"], 0.6, delta=0.1)
+        self.assertAlmostEqual(params["x2_alpha"], 0.5, delta=0.1)
+        self.assertAlmostEqual(params["x3_inter"], 0.3, delta=0.1)
+        self.assertAlmostEqual(params["x3_sigma"], 0.7, delta=0.1)
+        self.assertAlmostEqual(params["x3_beta"], 0.8, delta=0.1)
 
     def test_svi_fit_different_distributions(self):
-        x1 = np.random.beta(1, 5, size=1000)
-        x2 = np.random.poisson(x1 + 5)
-        x3 = np.random.poisson(x2 + 2)
+        x1 = np.random.beta(1.5, 5, size=1000)
+        x2 = np.random.poisson(x1 + 0.3)
+        x3 = np.random.poisson(x2 + 0.5)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         def x1_prior():
-            concen1 = pyro.param("x1_concen1", torch.tensor(2.0))
-            concen0 = pyro.param("x1_concen0", torch.tensor(3.0))
+            concen1 = pyro.param("x1_concen1", torch.tensor(1.0))
+            concen0 = pyro.param("x1_concen0", torch.tensor(4.5))
             return dist.Beta(concen1, concen0)
 
         def x2_prior(parent):
-            rate = pyro.param("x2_rate", dist.Gamma(2, 1))
+            rate = pyro.param("x2_rate", torch.tensor(1.0))
             return dist.Poisson(rate + parent)
 
         def x3_prior(parent):
-            rate = pyro.param("x3_rate", dist.Gamma(2, 1))
+            rate = pyro.param("x3_rate", torch.tensor(1.0))
             return dist.Poisson(rate + parent)
 
         cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
@@ -266,58 +269,82 @@ class TestFBNMethods(unittest.TestCase):
 
         self.model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = self.model.fit(data, method="SVI", learning_rate=0.08, num_steps=100)
+        params = self.model.fit(data, method="SVI", learning_rate=1e-2, num_steps=1000)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
         self.assertIn("x2_rate", params)
         self.assertIn("x3_rate", params)
 
-        self.assertAlmostEqual(params["x1_concen1"], 1, delta=0.1)
+        self.assertAlmostEqual(params["x1_concen1"], 1.5, delta=0.1)
         self.assertAlmostEqual(params["x1_concen0"], 5, delta=0.1)
-        self.assertAlmostEqual(params["x2_rate"], 5, delta=0.1)
-        self.assertAlmostEqual(params["x3_rate"], 3, delta=0.1)
+        self.assertAlmostEqual(params["x2_rate"], 0.3, delta=0.1)
+        self.assertAlmostEqual(params["x3_rate"], 0.5, delta=0.1)
 
     def test_mcmc_fit_normal(self):
-        alpha = 0.23
-        beta = 0.81
-        x1 = np.random.normal(1, 2, size=700)
-        x2 = np.random.normal((x1 * alpha) + 5, 1)
-        x3 = np.random.normal((x2 * beta) + 3, 1)
+        alpha = 0.2
+        beta = 0.8
+        x1 = np.random.normal(0.6, 1, size=1000)
+        x2 = np.random.normal((x1 * alpha) + 0.4, 0.6)
+        x3 = np.random.normal((x2 * beta) + 0.5, 0.8)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        def x1_prior():
-            mu = pyro.sample("x1_mu", dist.Normal(0, 10))
-            sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
-            return dist.Normal(mu, sigma)
+        mu_x1 = pyro.sample("x1_mu", dist.Uniform(0, 1))
+        sigma_x1 = pyro.sample("x1_sigma", dist.Uniform(0, 1))
 
-        def x2_prior(parent):
-            mu = pyro.sample("x2_mu", dist.Normal(5, 1))
-            sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
-            alpha = pyro.sample("x2_alpha", dist.Normal(1, 3))
+        intercept_x2 = pyro.sample("x2_inter", dist.Uniform(0, 1))
+        sigma_x2 = pyro.sample("x2_sigma", dist.Uniform(0, 1))
+        alpha_x2 = pyro.sample("x2_alpha", dist.Uniform(0, 1))
 
-            return dist.Normal(mu + (alpha * parent["x1"]), sigma)
+        intercept_x3 = pyro.sample("x3_inter", dist.Uniform(0, 1))
+        sigma_x3 = pyro.sample("x3_sigma", dist.Uniform(0, 1))
+        beta_x3 = pyro.sample("x3_beta", dist.Uniform(0, 1))
 
-        def x3_prior(parent):
-            mu = pyro.sample("x3_mu", dist.Normal(4, 1))
-            sigma = pyro.sample("x3_sigma", dist.HalfNormal(2))
-            beta = pyro.sample("x3_beta", dist.Normal(1, 3))
+        priors = {
+            "mu_x1": mu_x1,
+            "sigma_x1": sigma_x1,
+            "intercept_x2": intercept_x2,
+            "sigma_x2": sigma_x2,
+            "alpha_x2": alpha_x2,
+            "intercept_x3": intercept_x3,
+            "sigma_x3": sigma_x3,
+            "beta_x3": beta_x3,
+        }
 
-            return dist.Normal(mu + (beta * parent["x2"]), sigma)
+        def x1_prior(priors):
+            return dist.Normal(priors["mu_x1"], priors["sigma_x1"])
 
-        cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        cpd2 = FunctionalCPD("x2", lambda parent: x2_prior(parent), parents=["x1"])
-        cpd3 = FunctionalCPD("x3", lambda parent: x3_prior(parent), parents=["x2"])
+        def x2_prior(priors, parent):
+            return dist.Normal(
+                priors["intercept_x2"] + (priors["alpha_x2"] * parent["x1"]),
+                priors["sigma_x2"],
+            )
+
+        def x3_prior(priors, parent):
+            return dist.Normal(
+                priors["intercept_x3"] + (priors["beta_x3"] * parent["x2"]),
+                priors["sigma_x3"],
+            )
+
+        cpd1 = FunctionalCPD("x1", lambda _: x1_prior(priors))
+        cpd2 = FunctionalCPD(
+            "x2", lambda parent: x2_prior(priors, parent), parents=["x1"]
+        )
+        cpd3 = FunctionalCPD(
+            "x3", lambda parent: x3_prior(priors, parent), parents=["x2"]
+        )
 
         self.model.add_cpds(cpd1, cpd2, cpd3)
-        params = self.model.fit(data, method="MCMC", num_steps=100)
+        params = self.model.fit(
+            data, method="MCMC", num_steps=100, mcmc_kwargs={"num_chains": 4}
+        )
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
-        self.assertIn("x2_mu", params)
+        self.assertIn("x2_inter", params)
         self.assertIn("x2_sigma", params)
         self.assertIn("x2_alpha", params)
-        self.assertIn("x3_mu", params)
+        self.assertIn("x3_inter", params)
         self.assertIn("x3_sigma", params)
         self.assertIn("x3_beta", params)
 
@@ -369,26 +396,7 @@ class TestFBNMethods(unittest.TestCase):
 
     def test_fit_complex_svi(self):
         sim_model = get_example_model("ecoli70")
-
-        b1191 = np.random.normal(1, 2, size=700)
-        eutG = np.random.normal(2, 1, size=700)
-        fixC = np.random.normal(2 + 3 * b1191, 1)
-        ygbD = np.random.normal(3 + 4 * fixC, 1)
-        yjbO = np.random.normal(4 + 5 * fixC, 1)
-        yceP = np.random.normal(5 + 6 * eutG + 6 * fixC, 1)
-        ibpB = np.random.normal(6 + 7 * eutG + 7 * yceP, 1)
-
-        data = pd.DataFrame(
-            {
-                "b1191": b1191,
-                "fixC": fixC,
-                "eutG": eutG,
-                "ygbD": ygbD,
-                "yjbO": yjbO,
-                "yceP": yceP,
-                "ibpB": ibpB,
-            }
-        )
+        df = sim_model.simulate(int(1e3))
 
         model = FunctionalBayesianNetwork(
             [
@@ -401,18 +409,24 @@ class TestFBNMethods(unittest.TestCase):
                 ("eutG", "ibpB"),
             ]
         )
-
-        def positive_param(name, init_value):
-            return torch.exp(pyro.param(name, torch.tensor(init_value)))
+        df = df.loc[:, list(model.nodes())]
 
         def fn_b1191_param():
             mu = pyro.param("b1191_mu", torch.tensor(1.0))
-            sigma = positive_param("b1191_sigma", 1.0)
+            sigma = pyro.param(
+                "b1191_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
             return dist.Normal(mu, sigma)
 
         def fn_eutG_param():
             mu = pyro.param("eutG_mu", torch.tensor(1.0))
-            sigma = positive_param("eutG_sigma", 1.0)
+            sigma = pyro.param(
+                "eutG_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
             return dist.Normal(mu, sigma)
 
         def fn_fixC_param(parents):
@@ -420,7 +434,11 @@ class TestFBNMethods(unittest.TestCase):
                 pyro.param("fixC_inter", torch.tensor(1.0))
                 + pyro.param("fixC_alpha", torch.tensor(1.0)) * parents["b1191"]
             )
-            sigma = positive_param("fixC_sigma", 1.0)
+            sigma = pyro.param(
+                "fixC_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
             return dist.Normal(mu, sigma)
 
         def fn_ygbD_param(parents):
@@ -428,7 +446,12 @@ class TestFBNMethods(unittest.TestCase):
                 pyro.param("ygbD_inter", torch.tensor(1.0))
                 + pyro.param("ygbD_alpha", torch.tensor(1.0)) * parents["fixC"]
             )
-            sigma = positive_param("ygbD_sigma", 1.0)
+            sigma = pyro.param(
+                "ygbD_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
+
             return dist.Normal(mu, sigma)
 
         def fn_yjbO_param(parents):
@@ -436,7 +459,12 @@ class TestFBNMethods(unittest.TestCase):
                 pyro.param("ygbO_inter", torch.tensor(1.0))
                 + pyro.param("ygbO_alpha", torch.tensor(1.0)) * parents["fixC"]
             )
-            sigma = positive_param("ygbO_sigma", 1.0)
+            sigma = pyro.param(
+                "ygbO_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
+
             return dist.Normal(mu, sigma)
 
         def fn_yceP_param(parents):
@@ -445,7 +473,12 @@ class TestFBNMethods(unittest.TestCase):
                 + pyro.param("yceP_alpha0", torch.tensor(1.0)) * parents["eutG"]
                 + pyro.param("yceP_alpha1", torch.tensor(1.0)) * parents["fixC"]
             )
-            sigma = positive_param("yceP_sigma", 1.0)
+            sigma = pyro.param(
+                "yceP_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
+
             return dist.Normal(mu, sigma)
 
         def fn_ibpB_param(parents):
@@ -454,7 +487,12 @@ class TestFBNMethods(unittest.TestCase):
                 + pyro.param("ibpB_alpha0", torch.tensor(1.0)) * parents["eutG"]
                 + pyro.param("ibpB_alpha1", torch.tensor(1.0)) * parents["yceP"]
             )
-            sigma = positive_param("ibpB_sigma", 1.0)
+            sigma = pyro.param(
+                "ibpB_sigma",
+                torch.tensor(1.0),
+                constraint=torch.distributions.constraints.positive,
+            )
+
             return dist.Normal(mu, sigma)
 
         b1191_cpd = FunctionalCPD("b1191", lambda _: fn_b1191_param())
@@ -479,9 +517,10 @@ class TestFBNMethods(unittest.TestCase):
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
         )
 
-        params = model.fit(data, method="SVI", learning_rate=0.08, num_steps=100)
+        params = model.fit(df, method="SVI", learning_rate=0.05, num_steps=1000)
 
         self.assertIn("b1191_mu", params)
+        self.assertIn("b1191_sigma", params)
         self.assertIn("eutG_mu", params)
         self.assertIn("fixC_inter", params)
         self.assertIn("fixC_alpha", params)
@@ -496,43 +535,37 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("ibpB_alpha0", params)
         self.assertIn("ibpB_alpha1", params)
 
-        self.assertAlmostEqual(params["b1191_mu"], 1, delta=0.1)
-        self.assertAlmostEqual(params["eutG_mu"], 2, delta=0.1)
-        self.assertAlmostEqual(params["fixC_inter"], 2, delta=0.1)
-        self.assertAlmostEqual(params["fixC_alpha"], 3, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_inter"], 3, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_alpha"], 4, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_inter"], 4, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_alpha"], 5, delta=0.1)
-        self.assertAlmostEqual(params["yceP_inter"], 5, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha0"], 6, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha1"], 6, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_inter"], 7, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha0"], 7, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha1"], 8, delta=0.1)
+        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.1)
+        self.assertAlmostEqual(params["b1191_sigma"], 0.609, delta=0.2)
+
+        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.1)
+        self.assertAlmostEqual(params["eutG_sigma"], 0.691, delta=0.2)
+
+        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.1)
+        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.1)
+        self.assertAlmostEqual(params["fixC_sigma"], 1.131, delta=0.2)
+
+        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.1)
+        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.1)
+        self.assertAlmostEqual(params["ygbD_sigma"], 0.74, delta=0.2)
+
+        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.1)
+        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.1)
+        self.assertAlmostEqual(params["ygbO_sigma"], 1.851, delta=0.6)
+
+        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.1)
+        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.1)
+        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.1)
+        self.assertAlmostEqual(params["yceP_sigma"], 0.167, delta=0.3)
+
+        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
 
     def test_fit_complex_mcmc(self):
         sim_model = get_example_model("ecoli70")
-
-        b1191 = np.random.normal(1, 2, size=700)
-        eutG = np.random.normal(2, 1, size=700)
-        fixC = np.random.normal(2 + 3 * b1191, 1)
-        ygbD = np.random.normal(3 + 4 * fixC, 1)
-        yjbO = np.random.normal(4 + 5 * fixC, 1)
-        yceP = np.random.normal(5 + 6 * eutG + 6 * fixC, 1)
-        ibpB = np.random.normal(6 + 7 * eutG + 7 * yceP, 1)
-
-        data = pd.DataFrame(
-            {
-                "b1191": b1191,
-                "fixC": fixC,
-                "eutG": eutG,
-                "ygbD": ygbD,
-                "yjbO": yjbO,
-                "yceP": yceP,
-                "ibpB": ibpB,
-            }
-        )
+        df = sim_model.simulate(int(1e3))
 
         model = FunctionalBayesianNetwork(
             [
@@ -545,87 +578,86 @@ class TestFBNMethods(unittest.TestCase):
                 ("eutG", "ibpB"),
             ]
         )
+        df = df.loc[:, list(model.nodes())]
 
-        def positive_param(name, init_value):
-            return torch.exp(pyro.param(name, torch.tensor(init_value)))
-
-        def fn_b1191_param():
-            mu = pyro.sample("b1191_mu", dist.Normal(2, 2))
-            sigma = positive_param("b1191_sigma", 1.0)
+        def fn_b1191_prior():
+            mu = pyro.sample("b1191_mu", dist.Uniform(0, 3))
+            sigma = pyro.sample("b1191_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_eutG_param():
-            mu = pyro.sample("eutG_mu", dist.Normal(1.5, 2))
-            sigma = positive_param("eutG_sigma", 1.0)
+        def fn_eutG_prior():
+            mu = pyro.sample("eutG_mu", dist.Normal(0, 3))
+            sigma = pyro.sample("eutG_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_fixC_param(parents):
+        def fn_fixC_prior(parents):
             mu = (
-                pyro.sample("fixC_inter", dist.Normal(3, 2))
-                + pyro.sample("fixC_alpha", dist.Normal(3, 2)) * parents["b1191"]
+                pyro.sample("fixC_inter", dist.Uniform(0, 3))
+                + pyro.sample("fixC_alpha", dist.Uniform(0, 3)) * parents["b1191"]
             )
-            sigma = positive_param("fixC_sigma", 1.0)
+            sigma = pyro.sample("fixC_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_ygbD_param(parents):
+        def fn_ygbD_prior(parents):
             mu = (
-                pyro.sample("ygbD_inter", dist.Normal(2, 3))
-                + pyro.sample("ygbD_alpha", dist.Normal(4, 2)) * parents["fixC"]
+                pyro.sample("ygbD_inter", dist.Uniform(0, 3))
+                + pyro.sample("ygbD_alpha", dist.Uniform(0, 3)) * parents["fixC"]
             )
-            sigma = positive_param("ygbD_sigma", 1.0)
+            sigma = pyro.sample("ygbD_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_yjbO_param(parents):
+        def fn_yjbO_prior(parents):
             mu = (
-                pyro.sample("ygbO_inter", dist.Normal(3, 2))
-                + pyro.sample("ygbO_alpha", dist.Normal(5, 2)) * parents["fixC"]
+                pyro.sample("ygbO_inter", dist.Uniform(0, 3))
+                + pyro.sample("ygbO_alpha", dist.Uniform(0, 3)) * parents["fixC"]
             )
-            sigma = positive_param("ygbO_sigma", 1.0)
+            sigma = pyro.sample("ygbO_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_yceP_param(parents):
+        def fn_yceP_prior(parents):
             mu = (
-                pyro.sample("yceP_inter", dist.Normal(6, 2))
-                + pyro.sample("yceP_alpha0", dist.Normal(4, 2)) * parents["eutG"]
-                + pyro.sample("yceP_alpha1", dist.Normal(6, 3)) * parents["fixC"]
+                pyro.sample("yceP_inter", dist.Uniform(0, 3))
+                + pyro.sample("yceP_alpha0", dist.Uniform(0, 3)) * parents["eutG"]
+                + pyro.sample("yceP_alpha1", dist.Uniform(0, 3)) * parents["fixC"]
             )
-            sigma = positive_param("yceP_sigma", 1.0)
+            sigma = pyro.sample("yceP_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        def fn_ibpB_param(parents):
+        def fn_ibpB_prior(parents):
             mu = (
-                pyro.sample("ibpB_inter", dist.Normal(6, 3))
-                + pyro.sample("ibpB_alpha0", dist.Normal(8, 2)) * parents["eutG"]
-                + pyro.sample("ibpB_alpha1", dist.Normal(9, 2)) * parents["yceP"]
+                pyro.sample("ibpB_inter", dist.Uniform(0, 3))
+                + pyro.sample("ibpB_alpha0", dist.Uniform(0, 3)) * parents["eutG"]
+                + pyro.sample("ibpB_alpha1", dist.Uniform(0, 3)) * parents["yceP"]
             )
-            sigma = positive_param("ibpB_sigma", 1.0)
+            sigma = pyro.sample("ibpB_sigma", dist.Uniform(0, 3))
             return dist.Normal(mu, sigma)
 
-        b1191_cpd = FunctionalCPD("b1191", lambda _: fn_b1191_param())
-        eutG_cpd = FunctionalCPD("eutG", lambda _: fn_eutG_param())
+        b1191_cpd = FunctionalCPD("b1191", lambda _: fn_b1191_prior())
+        eutG_cpd = FunctionalCPD("eutG", lambda _: fn_eutG_prior())
         fixC_cpd = FunctionalCPD(
-            "fixC", lambda parent: fn_fixC_param(parent), parents=["b1191"]
+            "fixC", lambda parent: fn_fixC_prior(parent), parents=["b1191"]
         )
         ygbD_cpd = FunctionalCPD(
-            "ygbD", lambda parent: fn_ygbD_param(parent), parents=["fixC"]
+            "ygbD", lambda parent: fn_ygbD_prior(parent), parents=["fixC"]
         )
         yjbO_cpd = FunctionalCPD(
-            "yjbO", lambda parent: fn_yjbO_param(parent), parents=["fixC"]
+            "yjbO", lambda parent: fn_yjbO_prior(parent), parents=["fixC"]
         )
         yceP_cpd = FunctionalCPD(
-            "yceP", lambda parent: fn_yceP_param(parent), parents=["eutG", "fixC"]
+            "yceP", lambda parent: fn_yceP_prior(parent), parents=["eutG", "fixC"]
         )
         ibpB_cpd = FunctionalCPD(
-            "ibpB", lambda parent: fn_ibpB_param(parent), parents=["eutG", "yceP"]
+            "ibpB", lambda parent: fn_ibpB_prior(parent), parents=["eutG", "yceP"]
         )
 
         model.add_cpds(
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
         )
 
-        params = model.fit(data, method="MCMC", num_steps=100)
+        params = model.fit(df, method="MCMC", num_steps=100)
 
         self.assertIn("b1191_mu", params)
+        self.assertIn("b1191_sigma", params)
         self.assertIn("eutG_mu", params)
         self.assertIn("fixC_inter", params)
         self.assertIn("fixC_alpha", params)
@@ -640,20 +672,43 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("ibpB_alpha0", params)
         self.assertIn("ibpB_alpha1", params)
 
-        self.assertAlmostEqual(params["b1191_mu"].mean(), 1, delta=0.1)
-        self.assertAlmostEqual(params["eutG_mu"].mean(), 2, delta=0.1)
-        self.assertAlmostEqual(params["fixC_inter"].mean(), 2, delta=0.1)
-        self.assertAlmostEqual(params["fixC_alpha"].mean(), 3, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_inter"].mean(), 3, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_alpha"].mean(), 4, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_inter"].mean(), 4, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_alpha"].mean(), 5, delta=0.1)
-        self.assertAlmostEqual(params["yceP_inter"].mean(), 5, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha0"].mean(), 6, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha1"].mean(), 6, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_inter"].mean(), 7, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha0"].mean(), 7, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha1"].mean(), 8, delta=0.1)
+        import ipdb
+
+        ipdb.set_trace()
+
+        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.1)
+        self.assertAlmostEqual(params["b1191_sigma"], 0.609, delta=0.2)
+
+        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.1)
+        self.assertAlmostEqual(params["eutG_sigma"], 0.691, delta=0.2)
+
+        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.1)
+        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.1)
+        self.assertAlmostEqual(params["fixC_sigma"], 1.131, delta=0.2)
+
+        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.1)
+        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.1)
+        self.assertAlmostEqual(params["ygbD_sigma"], 0.74, delta=0.2)
+
+        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.1)
+        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.1)
+        self.assertAlmostEqual(params["ygbO_sigma"], 1.851, delta=0.6)
+
+        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.1)
+        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.1)
+        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.1)
+        self.assertAlmostEqual(params["yceP_sigma"], 0.167, delta=0.3)
+
+        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
+
+    def tearDown(self):
+        del self.model
+        del self.cpd1
+        del self.cpd2
+        del self.cpd3
 
 
 class TestFBNCreation(unittest.TestCase):

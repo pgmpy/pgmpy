@@ -5,32 +5,50 @@ import pyro
 import torch
 import torch.distributions.constraints as constraints
 
+from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import BayesianNetwork
 
-from pgmpy import config
-
 
 class FunctionalBayesianNetwork(BayesianNetwork):
     """
-    A Functional Gaussian Bayesian Network is a Bayesian Network,
-    whose variables can be discrete or continuous, and where all of the CPDs
-    are defined by FunctionalCPD.
+    Class for representing Functional Bayesian Network.
 
-    An important result is that the Functional Bayesian Networks
-    provide flexible representation for the class of multiples uni/multi-variate
-    distributions.
+    Functional Bayesian Networks allow for representation of any probability
+    distribution using CPDs in functional form (Functional CPD). Functional
+    CPDs return a pyro.distribution object allowing for flexible representation
+    of any distribution.
     """
 
-    def add_cpds(self, *cpds):
+    def __init__(self, ebunch=None):
         """
-        Add Functional CPD (Conditional Probability Distribution)
-        to the Bayesian Network.
+        Initializes a FunctionalBayesianNetwork.
 
         Parameters
         ----------
-        cpds  :  instances of FunctionalCPD
+        ebunch: list
+            List of edges to build the Bayesian Network. Each edge should be a tuple (u, v)
+            where u, v are nodes representing the edge u -> v.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FunctionalBayesianNetwork
+        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        """
+        if config.get_backend() == "numpy":
+            logger.info("Functional BN requires pytorch backend. Switching.")
+            config.set_backend("torch")
+
+        super(FunctionalBayesianNetwork, self).__init__(ebunch)
+
+    def add_cpds(self, *cpds):
+        """
+        Adds FunctionalCPDs to the Bayesian Network.
+
+        Parameters
+        ----------
+        cpds: instances of FunctionalCPD
             List of FunctionalCPDs which will be associated with the model
 
         Examples
@@ -95,14 +113,12 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
     def remove_cpds(self, *cpds):
         """
-        Removes the cpds that are provided in the argument.
+        Removes the given `cpds` from the model.
 
         Parameters
         ----------
-
-        *cpds: FunctionalCPD object
-            A FunctionalCPD object on any subset of the variables
-            of the model which is to be associated with the model.
+        *cpds: FunctionalCPD objects
+            A list of FunctionalCPD objects that need to be removed from the model.
 
         Examples
         --------
@@ -151,15 +167,15 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
     def simulate(self, n_samples=1000, seed=None):
         """
-        Simulate samples from a FunctionalBayesianNetwork.
+        Simulate samples from the model.
 
         Parameters
         ----------
-        n_samples : int, optional (default=1000)
+        n_samples : int, optional (default: 1000)
             Number of samples to generate
 
         seed : int, optional
-            Random seed for reproducibility
+            The seed value for the random number generator.
 
         Returns
         -------
@@ -199,8 +215,8 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         self,
         data,
         method="SVI",
-        learning_rate=1e-4,
-        num_steps=100,
+        learning_rate=1e-2,
+        num_steps=1000,
         nuts_kwargs=None,
         mcmc_kwargs=None,
     ):
@@ -209,14 +225,24 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
         Parameters
         ----------
-            data (pd.DataFrame) : DataFrame with observations of variables.
-            method (str) : Approximation methods for posterior distribution.
-            learning_rate (float) : Learning rate for optimization
-            num_steps (int) : Number of optimization steps for each variable.
+        data: pandas.DataFrame
+            DataFrame with observations of variables.
+
+        method: str (default: "SVI")
+            Fitting method to use. Currently supports "SVI" and "MCMC".
+
+        learning_rate: float (default: 1e-2)
+            Learning rate to use for the fitting.
+
+        num_steps: int (default: 100)
+            Number of optimization steps. For SVI it is the `num_steps`
+            argument for pyro.infer.SVI. For MCMC, it is the `num_samples`
+            argument for pyro.infer.MCMC.
 
         Returns
         -------
-            dict: Samples for each register parameter.
+        dict: If method is "SVI", returns a dictionary of parameter values.
+              If method is "MCMC", returns a dictionary of posterior samples for each parameter.
 
         Examples
         --------
@@ -260,20 +286,24 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> params = model.fit(data, method="MCMC", num_steps=100, mcmc_kwargs={"mp_context": "fork"})
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
-
+        # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
             raise ValueError("Specify data as a pandas Dataframe.")
+
         if not isinstance(learning_rate, float):
             raise ValueError(
                 f"Learning rate should be float type, not {type(learning_rate)}"
             )
+
         if not isinstance(num_steps, int):
             raise ValueError(
                 f"Number of steps should be int type, not {type(num_steps)}"
             )
-        if method not in ["SVI", "MCMC"]:
+
+        if method.lower() not in ["svi", "mcmc"]:
             raise ValueError("Current implementation only support SVI or MCMC.")
 
+        # Step 1: Preprocess the data and initialize data structures.
         sort_nodes = list(nx.topological_sort(self))
 
         tensor_data = {}
@@ -281,55 +311,65 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             if node not in data.columns:
                 raise ValueError(f"Observation not found for variable {node}")
             else:
-                tensor_data[node] = (
-                    torch.tensor(data[node].values).float().to(config.get_device())
-                )
+                tensor_data[node] = torch.tensor(
+                    data[node].values, dtype=config.get_dtype()
+                ).to(config.get_device())
 
         nuts_kwargs = nuts_kwargs or {}
         mcmc_kwargs = mcmc_kwargs or {}
 
-        def guide():
-            # No latent variables to approximate
+        # No latent variables to approximate
+        def guide(tensor_data):
             pass
 
         optimizer = pyro.optim.Adam({"lr": learning_rate})
 
-        if method == "MCMC":
+        if method.lower() == "mcmc":
             params = {}
 
-        for node in sort_nodes:
+        # Step 2: Define a full pyro model using the CPDs.
+        cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
-            def combined_model():
-                cpd = self.get_cpds(node)
-                parents = cpd.parents
+        def combined_model(tensor_data):
+            with pyro.plate("data", data.shape[0]):
+                for node in sort_nodes:
+                    import ipdb
 
-                parent_data = {p: tensor_data[p] for p in parents} if parents else None
+                    ipdb.set_trace()
+                    pyro.sample(
+                        f"{node}",
+                        cpds_dict[node].fn(
+                            {p: tensor_data[p] for p in cpds_dict[node].parents}
+                        ),
+                        obs=tensor_data[node],
+                    )
 
-                with pyro.plate(f"{node}_data", data.shape[0]):
-                    pyro.sample(f"{node}", cpd.fn(parent_data), obs=tensor_data[node])
+        import ipdb
 
-            if method == "SVI":
-                svi = pyro.infer.SVI(
-                    model=combined_model,
-                    guide=guide,
-                    optim=optimizer,
-                    loss=pyro.infer.Trace_ELBO(),
-                )
+        ipdb.set_trace()
+        # Step 3: Fit the model using the specified method.
+        if method.lower() == "svi":
+            svi = pyro.infer.SVI(
+                model=combined_model,
+                guide=guide,
+                optim=optimizer,
+                loss=pyro.infer.Trace_ELBO(),
+            )
 
-                for step in range(num_steps):
-                    loss = svi.step()
-                    if step % 50 == 0:
-                        print(f"Step {step} | Loss: {loss:.4f}")
-            else:
-                nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
-                mcmc = pyro.infer.MCMC(
-                    nuts_kernel, num_samples=num_steps, **mcmc_kwargs
-                )
-                mcmc.run()
-                samples = mcmc.get_samples()
-                params.update(samples)
+            for step in range(num_steps):
+                loss = svi.step(tensor_data)
+                if step % 50 == 0:
+                    logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        if method == "SVI":
+        else:
+            nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
+            mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
+            mcmc.run()
+            samples = mcmc.get_samples()
+            params.update(samples)
+
+        # Step 4: Return the fitted parameter values.
+        if method.lower() == "svi":
             params = pyro.get_param_store()
             return {name: params[name] for name in params.keys()}
         else:
