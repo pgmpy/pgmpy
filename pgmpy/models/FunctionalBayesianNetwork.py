@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import pyro
 import torch
-import torch.distributions.constraints as constraints
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -21,7 +20,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
     of any distribution.
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
         """
         Initializes a FunctionalBayesianNetwork.
 
@@ -40,7 +39,12 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             logger.info("Functional BN requires pytorch backend. Switching.")
             config.set_backend("torch")
 
-        super(FunctionalBayesianNetwork, self).__init__(ebunch)
+        super(FunctionalBayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
 
     def add_cpds(self, *cpds):
         """
@@ -319,6 +323,9 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             raise ValueError("Current implementation only support SVI or MCMC.")
 
         # Step 1: Preprocess the data and initialize data structures.
+        if seed is not None:
+            pyro.set_rng_seed(seed)
+
         sort_nodes = list(nx.topological_sort(self))
 
         tensor_data = {}
@@ -333,19 +340,15 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         nuts_kwargs = nuts_kwargs or {}
         mcmc_kwargs = mcmc_kwargs or {}
 
-        # No latent variables to approximate
-        def guide(tensor_data):
-            pass
-
-        if method.lower() == "mcmc":
-            params = {}
-
-        # Step 2: Define a full pyro model using the CPDs.
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
-        # Step 3: Fit the model using the specified method.
+        # Step 2: Fit the model using the specified method.
         if method.lower() == "svi":
 
+            def guide(tensor_data):
+                pass
+
+            # Step 2.1: Define the combined model for SVI.
             def combined_model_svi(tensor_data):
                 with pyro.plate("data", data.shape[0]):
                     for node in sort_nodes:
@@ -357,6 +360,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                             obs=tensor_data[node],
                         )
 
+            # Step 2.2: Fit the model using SVI.
             svi = pyro.infer.SVI(
                 model=combined_model_svi,
                 guide=guide,
@@ -369,8 +373,9 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
+        # Step 3: Fit the model using specified method
         elif method.lower() == "mcmc":
-
+            # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
                 priors = prior_fn()
                 with pyro.plate("data", data.shape[0]):
@@ -384,15 +389,13 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                             obs=tensor_data[node],
                         )
 
+            # Step 3.2: Fit the model using MCMC.
             nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
             mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
             mcmc.run(tensor_data)
-            samples = mcmc.get_samples()
-            params.update(samples)
 
         # Step 4: Return the fitted parameter values.
         if method.lower() == "svi":
-            params = pyro.get_param_store()
-            return {name: params[name] for name in params.keys()}
+            return dict(pyro.get_param_store().items())
         else:
-            return params
+            return mcmc.get_samples()
