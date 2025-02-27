@@ -215,6 +215,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         self,
         data,
         method="SVI",
+        prior_fn=None,
         learning_rate=1e-2,
         num_steps=1000,
         nuts_kwargs=None,
@@ -330,21 +331,22 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         # Step 2: Define a full pyro model using the CPDs.
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
-        def combined_model(tensor_data):
-            with pyro.plate("data", data.shape[0]):
-                for node in sort_nodes:
-                    pyro.sample(
-                        f"{node}",
-                        cpds_dict[node].fn(
-                            {p: tensor_data[p] for p in cpds_dict[node].parents}
-                        ),
-                        obs=tensor_data[node],
-                    )
-
         # Step 3: Fit the model using the specified method.
         if method.lower() == "svi":
+
+            def combined_model_svi(tensor_data):
+                with pyro.plate("data", data.shape[0]):
+                    for node in sort_nodes:
+                        pyro.sample(
+                            f"{node}",
+                            cpds_dict[node].fn(
+                                {p: tensor_data[p] for p in cpds_dict[node].parents}
+                            ),
+                            obs=tensor_data[node],
+                        )
+
             svi = pyro.infer.SVI(
-                model=combined_model,
+                model=combined_model_svi,
                 guide=guide,
                 optim=optimizer,
                 loss=pyro.infer.Trace_ELBO(),
@@ -355,8 +357,22 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        else:
-            nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
+        elif method.lower() == "mcmc":
+
+            def combined_model_mcmc(tensor_data):
+                priors = prior_fn()
+                with pyro.plate("data", data.shape[0]):
+                    for node in sort_nodes:
+                        pyro.sample(
+                            f"{node}",
+                            cpds_dict[node].fn(
+                                priors,
+                                {p: tensor_data[p] for p in cpds_dict[node].parents},
+                            ),
+                            obs=tensor_data[node],
+                        )
+
+            nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
             mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
             mcmc.run(tensor_data)
             samples = mcmc.get_samples()

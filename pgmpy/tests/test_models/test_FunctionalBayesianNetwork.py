@@ -276,62 +276,47 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x3_rate"], 0.5, delta=0.1)
 
     def test_mcmc_fit_normal(self):
-        alpha = 0.2
+        alpha = 0.5
         beta = 0.8
-        x1 = np.random.normal(0.6, 1, size=1000)
-        x2 = np.random.normal((x1 * alpha) + 0.4, 0.6)
-        x3 = np.random.normal((x2 * beta) + 0.5, 0.8)
+        x1 = np.random.normal(0.2, 0.9, size=1000)
+        x2 = np.random.normal((x1 * alpha) + 0.5, 0.6)
+        x3 = np.random.normal((x2 * beta) + 0.3, 0.7)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        mu_x1 = pyro.sample("x1_mu", dist.Uniform(0, 1))
-        sigma_x1 = pyro.sample("x1_sigma", dist.Uniform(0, 1))
+        def prior_fn():
+            return {
+                "x1_mu": pyro.sample("x1_mu", dist.Uniform(0, 1)),
+                "x1_sigma": pyro.sample("x1_sigma", dist.Uniform(0, 1)),
+                "x2_inter": pyro.sample("x2_inter", dist.Uniform(0, 1)),
+                "x2_sigma": pyro.sample("x2_sigma", dist.Uniform(0, 1)),
+                "x2_alpha": pyro.sample("x2_alpha", dist.Uniform(0, 1)),
+                "x3_inter": pyro.sample("x3_inter", dist.Uniform(0, 1)),
+                "x3_sigma": pyro.sample("x3_sigma", dist.Uniform(0, 1)),
+                "x3_alpha": pyro.sample("x3_beta", dist.Uniform(0, 1)),
+            }
 
-        intercept_x2 = pyro.sample("x2_inter", dist.Uniform(0, 1))
-        sigma_x2 = pyro.sample("x2_sigma", dist.Uniform(0, 1))
-        alpha_x2 = pyro.sample("x2_alpha", dist.Uniform(0, 1))
+        def x1_fn(priors, parents):
+            return dist.Normal(priors["x1_mu"], priors["x1_sigma"])
 
-        intercept_x3 = pyro.sample("x3_inter", dist.Uniform(0, 1))
-        sigma_x3 = pyro.sample("x3_sigma", dist.Uniform(0, 1))
-        beta_x3 = pyro.sample("x3_beta", dist.Uniform(0, 1))
-
-        priors = {
-            "mu_x1": mu_x1,
-            "sigma_x1": sigma_x1,
-            "intercept_x2": intercept_x2,
-            "sigma_x2": sigma_x2,
-            "alpha_x2": alpha_x2,
-            "intercept_x3": intercept_x3,
-            "sigma_x3": sigma_x3,
-            "beta_x3": beta_x3,
-        }
-
-        def x1_prior(priors):
-            return dist.Normal(priors["mu_x1"], priors["sigma_x1"])
-
-        def x2_prior(priors, parent):
+        def x2_fn(priors, parents):
             return dist.Normal(
-                priors["intercept_x2"] + (priors["alpha_x2"] * parent["x1"]),
-                priors["sigma_x2"],
+                priors["x2_inter"] + (priors["x2_alpha"] * parents["x1"]),
+                priors["x2_sigma"],
             )
 
-        def x3_prior(priors, parent):
+        def x3_fn(priors, parents):
             return dist.Normal(
-                priors["intercept_x3"] + (priors["beta_x3"] * parent["x2"]),
-                priors["sigma_x3"],
+                priors["x3_inter"] + (priors["x3_alpha"] * parents["x2"]),
+                priors["x3_sigma"],
             )
 
-        cpd1 = FunctionalCPD("x1", lambda _: x1_prior(priors))
-        cpd2 = FunctionalCPD(
-            "x2", lambda parent: x2_prior(priors, parent), parents=["x1"]
-        )
-        cpd3 = FunctionalCPD(
-            "x3", lambda parent: x3_prior(priors, parent), parents=["x2"]
-        )
+        cpd1 = FunctionalCPD("x1", fn=x1_fn)
+        cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
+        cpd3 = FunctionalCPD("x3", fn=x3_fn, parents=["x2"])
 
-        self.model.add_cpds(cpd1, cpd2, cpd3)
-        params = self.model.fit(
-            data, method="MCMC", num_steps=100, mcmc_kwargs={"num_chains": 4}
-        )
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(cpd1, cpd2, cpd3)
+        params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=200)
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
@@ -342,14 +327,14 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("x3_sigma", params)
         self.assertIn("x3_beta", params)
 
-        self.assertAlmostEqual(params["x1_mu"].mean(), 1, delta=0.1)
-        self.assertAlmostEqual(params["x1_sigma"].mean(), 2, delta=0.1)
-        self.assertAlmostEqual(params["x2_mu"].mean(), 5, delta=0.1)
-        self.assertAlmostEqual(params["x2_sigma"].mean(), 1, delta=0.1)
-        self.assertAlmostEqual(params["x2_alpha"].mean(), 0.23, delta=0.1)
-        self.assertAlmostEqual(params["x3_mu"].mean(), 3, delta=0.1)
-        self.assertAlmostEqual(params["x3_sigma"].mean(), 1, delta=0.1)
-        self.assertAlmostEqual(params["x3_beta"].mean(), 0.81, delta=0.1)
+        self.assertAlmostEqual(params["x1_mu"].mean(), 0.2, delta=0.1)
+        self.assertAlmostEqual(params["x1_sigma"].mean(), 0.9, delta=0.1)
+        self.assertAlmostEqual(params["x2_inter"].mean(), 0.5, delta=0.1)
+        self.assertAlmostEqual(params["x2_sigma"].mean(), 0.6, delta=0.1)
+        self.assertAlmostEqual(params["x2_alpha"].mean(), 0.5, delta=0.1)
+        self.assertAlmostEqual(params["x3_inter"].mean(), 0.3, delta=0.1)
+        self.assertAlmostEqual(params["x3_sigma"].mean(), 0.7, delta=0.1)
+        self.assertAlmostEqual(params["x3_beta"].mean(), 0.8, delta=0.1)
 
     def test_mcmc_fit_different_distributions(self):
         x1 = np.random.beta(1, 5, size=700)
@@ -357,26 +342,31 @@ class TestFBNMethods(unittest.TestCase):
         x3 = np.random.poisson(x2 + 3)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        def x1_prior():
-            concen1 = pyro.sample("x1_concen1", dist.HalfNormal(3))
-            concen0 = pyro.sample("x1_concen0", dist.HalfNormal(4))
-            return dist.Beta(concen1, concen0)
+        def prior_fn():
+            return {
+                "concen1": pyro.sample("x1_concen1", dist.HalfNormal(3)),
+                "concen0": pyro.sample("x1_concen0", dist.HalfNormal(4)),
+                "rate_x1": pyro.sample("x2_rate", dist.Gamma(2, 1)),
+                "rate_x2": pyro.sample("x3_rate", dist.Gamma(2, 1)),
+            }
 
-        def x2_prior(parent):
-            rate = pyro.sample("x2_rate", dist.Gamma(2, 1))
-            return dist.Poisson(rate + parent["x1"])
+        def x1_prior(priors, parents):
+            return dist.Beta(priors["concen1"], priors["concen0"])
 
-        def x3_prior(parent):
-            rate = pyro.sample("x3_rate", dist.Gamma(2, 1))
-            return dist.Poisson(rate + parent["x2"])
+        def x2_prior(priors, parents):
+            return dist.Poisson(priors["rate_x1"] + parents["x1"])
 
-        cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        cpd2 = FunctionalCPD("x2", lambda parent: x2_prior(parent), parents=["x1"])
-        cpd3 = FunctionalCPD("x3", lambda parent: x3_prior(parent), parents=["x2"])
+        def x3_prior(priors, parents):
+            return dist.Poisson(priors["rate_x2"] + parents["x2"])
 
-        self.model.add_cpds(cpd1, cpd2, cpd3)
+        cpd1 = FunctionalCPD("x1", x1_prior)
+        cpd2 = FunctionalCPD("x2", x2_prior, parents=["x1"])
+        cpd3 = FunctionalCPD("x3", x3_prior, parents=["x2"])
 
-        params = self.model.fit(data, method="MCMC", num_steps=100)
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(cpd1, cpd2, cpd3)
+
+        params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
