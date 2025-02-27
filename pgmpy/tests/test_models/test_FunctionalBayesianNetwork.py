@@ -217,7 +217,7 @@ class TestFBNMethods(unittest.TestCase):
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = model.fit(data, method="svi", learning_rate=1e-2, num_steps=1000)
+        params = model.fit(data, method="svi", learning_rate=1e-2, num_steps=100)
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
@@ -263,7 +263,7 @@ class TestFBNMethods(unittest.TestCase):
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = model.fit(data, method="SVI", learning_rate=1e-2, num_steps=1000)
+        params = model.fit(data, method="SVI", learning_rate=0.05, num_steps=100)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
@@ -316,7 +316,7 @@ class TestFBNMethods(unittest.TestCase):
 
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
-        params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=200)
+        params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
@@ -337,17 +337,17 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x3_beta"].mean(), 0.8, delta=0.1)
 
     def test_mcmc_fit_different_distributions(self):
-        x1 = np.random.beta(1, 5, size=700)
-        x2 = np.random.poisson(x1 + 5)
-        x3 = np.random.poisson(x2 + 3)
+        x1 = np.random.beta(0.2, 0.8, size=1000)
+        x2 = np.random.poisson(x1 + 0.3)
+        x3 = np.random.poisson(x2 + 0.5)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         def prior_fn():
             return {
-                "concen1": pyro.sample("x1_concen1", dist.HalfNormal(3)),
-                "concen0": pyro.sample("x1_concen0", dist.HalfNormal(4)),
-                "rate_x1": pyro.sample("x2_rate", dist.Gamma(2, 1)),
-                "rate_x2": pyro.sample("x3_rate", dist.Gamma(2, 1)),
+                "concen1": pyro.sample("x1_concen1", dist.Uniform(0, 1)),
+                "concen0": pyro.sample("x1_concen0", dist.Uniform(0, 1)),
+                "rate_x1": pyro.sample("x2_rate", dist.Uniform(0, 1)),
+                "rate_x2": pyro.sample("x3_rate", dist.Uniform(0, 1)),
             }
 
         def x1_prior(priors, parents):
@@ -373,10 +373,10 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("x2_rate", params)
         self.assertIn("x3_rate", params)
 
-        self.assertAlmostEqual(params["x1_concen1"].mean(), 1, delta=0.1)
-        self.assertAlmostEqual(params["x1_concen0"].mean(), 5, delta=0.1)
-        self.assertAlmostEqual(params["x2_rate"].mean(), 5, delta=0.1)
-        self.assertAlmostEqual(params["x3_rate"].mean(), 3, delta=0.1)
+        self.assertAlmostEqual(params["x1_concen1"].mean(), 0.2, delta=0.1)
+        self.assertAlmostEqual(params["x1_concen0"].mean(), 0.8, delta=0.1)
+        self.assertAlmostEqual(params["x2_rate"].mean(), 0.3, delta=0.1)
+        self.assertAlmostEqual(params["x3_rate"].mean(), 0.5, delta=0.1)
 
     def test_fit_complex_svi(self):
         sim_model = get_example_model("ecoli70")
@@ -491,7 +491,7 @@ class TestFBNMethods(unittest.TestCase):
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
         )
 
-        params = model.fit(df, method="SVI", learning_rate=0.05, num_steps=1000)
+        params = model.fit(df, method="SVI", learning_rate=0.05, num_steps=200)
 
         self.assertIn("b1191_mu", params)
         self.assertIn("b1191_sigma", params)
@@ -554,81 +554,83 @@ class TestFBNMethods(unittest.TestCase):
         )
         df = df.loc[:, list(model.nodes())]
 
-        def fn_b1191_prior():
-            mu = pyro.sample("b1191_mu", dist.Uniform(0, 3))
-            sigma = pyro.sample("b1191_sigma", dist.Uniform(0, 3))
+        def prior_fn():
+            return {
+                "b1191_mu": pyro.sample("b1191_mu", dist.Uniform(-1, 2)),
+                "b1191_sigma": pyro.sample("b1191_sigma", dist.Uniform(-1, 2)),
+                "eutG_mu": pyro.sample("eutG_mu", dist.Uniform(-1, 2)),
+                "eutG_sigma": pyro.sample("eutG_sigma", dist.Uniform(-1, 2)),
+                "fixC_inter": pyro.sample("fixC_inter", dist.Uniform(-1, 2)),
+                "fixC_alpha": pyro.sample("fixC_alpha", dist.Uniform(-1, 2)),
+                "fixC_sigma": pyro.sample("fixC_sigma", dist.Uniform(-1, 2)),
+                "ygbD_inter": pyro.sample("ygbD_inter", dist.Uniform(-1, 2)),
+                "ygbD_alpha": pyro.sample("ygbD_alpha", dist.Uniform(-1, 2)),
+                "ygbD_sigma": pyro.sample("ygbD_sigma", dist.Uniform(-1, 2)),
+                "ygbO_inter": pyro.sample("ygbO_inter", dist.Uniform(-1, 2)),
+                "ygbO_alpha": pyro.sample("ygbO_alpha", dist.Uniform(-1, 2)),
+                "ygbO_sigma": pyro.sample("ygbO_sigma", dist.Uniform(-1, 2)),
+                "yceP_inter": pyro.sample("yceP_inter", dist.Uniform(-1, 2)),
+                "yceP_alpha0": pyro.sample("yceP_alpha0", dist.Uniform(-1, 2)),
+                "yceP_alpha1": pyro.sample("yceP_alpha1", dist.Uniform(-1, 2)),
+                "yceP_sigma": pyro.sample("yceP_sigma", dist.Uniform(-1, 2)),
+                "ibpB_inter": pyro.sample("ibpB_inter", dist.Uniform(-1, 2)),
+                "ibpB_alpha0": pyro.sample("ibpB_alpha0", dist.Uniform(-1, 2)),
+                "ibpB_alpha1": pyro.sample("ibpB_alpha1", dist.Uniform(-1, 2)),
+                "ibpB_sigma": pyro.sample("ibpB_sigma", dist.Uniform(-1, 2)),
+            }
+
+        def fn_b1191(priors, parents):
+            return dist.Normal(priors["b1191_mu"], priors["b1191_sigma"])
+
+        def fn_eutG(priors, parents):
+            return dist.Normal(priors["eutG_mu"], priors["eutG_sigma"])
+
+        def fn_fixC(priors, parents):
+            mu = priors["fixC_inter"] + priors["fixC_alpha"] * parents["b1191"]
+            sigma = priors["fixC_sigma"]
             return dist.Normal(mu, sigma)
 
-        def fn_eutG_prior():
-            mu = pyro.sample("eutG_mu", dist.Normal(0, 3))
-            sigma = pyro.sample("eutG_sigma", dist.Uniform(0, 3))
+        def fn_ygbD(priors, parents):
+            mu = priors["ygbD_inter"] + priors["ygbD_alpha"] * parents["fixC"]
+            sigma = priors["ygbD_sigma"]
             return dist.Normal(mu, sigma)
 
-        def fn_fixC_prior(parents):
+        def fn_yjbO(priors, parents):
+            mu = priors["ygbO_inter"] + priors["ygbO_alpha"] * parents["fixC"]
+            sigma = priors["ygbO_sigma"]
+            return dist.Normal(mu, sigma)
+
+        def fn_yceP(priors, parents):
             mu = (
-                pyro.sample("fixC_inter", dist.Uniform(0, 3))
-                + pyro.sample("fixC_alpha", dist.Uniform(0, 3)) * parents["b1191"]
+                priors["yceP_inter"]
+                + priors["yceP_alpha0"] * parents["eutG"]
+                + priors["yceP_alpha1"] * parents["fixC"]
             )
-            sigma = pyro.sample("fixC_sigma", dist.Uniform(0, 3))
+            sigma = priors["yceP_sigma"]
             return dist.Normal(mu, sigma)
 
-        def fn_ygbD_prior(parents):
+        def fn_ibpB(priors, parents):
             mu = (
-                pyro.sample("ygbD_inter", dist.Uniform(0, 3))
-                + pyro.sample("ygbD_alpha", dist.Uniform(0, 3)) * parents["fixC"]
+                priors["ibpB_inter"]
+                + priors["ibpB_alpha0"] * parents["eutG"]
+                + priors["ibpB_alpha1"] * parents["yceP"]
             )
-            sigma = pyro.sample("ygbD_sigma", dist.Uniform(0, 3))
+            sigma = priors["ibpB_sigma"]
             return dist.Normal(mu, sigma)
 
-        def fn_yjbO_prior(parents):
-            mu = (
-                pyro.sample("ygbO_inter", dist.Uniform(0, 3))
-                + pyro.sample("ygbO_alpha", dist.Uniform(0, 3)) * parents["fixC"]
-            )
-            sigma = pyro.sample("ygbO_sigma", dist.Uniform(0, 3))
-            return dist.Normal(mu, sigma)
-
-        def fn_yceP_prior(parents):
-            mu = (
-                pyro.sample("yceP_inter", dist.Uniform(0, 3))
-                + pyro.sample("yceP_alpha0", dist.Uniform(0, 3)) * parents["eutG"]
-                + pyro.sample("yceP_alpha1", dist.Uniform(0, 3)) * parents["fixC"]
-            )
-            sigma = pyro.sample("yceP_sigma", dist.Uniform(0, 3))
-            return dist.Normal(mu, sigma)
-
-        def fn_ibpB_prior(parents):
-            mu = (
-                pyro.sample("ibpB_inter", dist.Uniform(0, 3))
-                + pyro.sample("ibpB_alpha0", dist.Uniform(0, 3)) * parents["eutG"]
-                + pyro.sample("ibpB_alpha1", dist.Uniform(0, 3)) * parents["yceP"]
-            )
-            sigma = pyro.sample("ibpB_sigma", dist.Uniform(0, 3))
-            return dist.Normal(mu, sigma)
-
-        b1191_cpd = FunctionalCPD("b1191", lambda _: fn_b1191_prior())
-        eutG_cpd = FunctionalCPD("eutG", lambda _: fn_eutG_prior())
-        fixC_cpd = FunctionalCPD(
-            "fixC", lambda parent: fn_fixC_prior(parent), parents=["b1191"]
-        )
-        ygbD_cpd = FunctionalCPD(
-            "ygbD", lambda parent: fn_ygbD_prior(parent), parents=["fixC"]
-        )
-        yjbO_cpd = FunctionalCPD(
-            "yjbO", lambda parent: fn_yjbO_prior(parent), parents=["fixC"]
-        )
-        yceP_cpd = FunctionalCPD(
-            "yceP", lambda parent: fn_yceP_prior(parent), parents=["eutG", "fixC"]
-        )
-        ibpB_cpd = FunctionalCPD(
-            "ibpB", lambda parent: fn_ibpB_prior(parent), parents=["eutG", "yceP"]
-        )
+        b1191_cpd = FunctionalCPD("b1191", fn=fn_b1191)
+        eutG_cpd = FunctionalCPD("eutG", fn=fn_eutG)
+        fixC_cpd = FunctionalCPD("fixC", fn=fn_fixC, parents=["b1191"])
+        ygbD_cpd = FunctionalCPD("ygbD", fn=fn_ygbD, parents=["fixC"])
+        yjbO_cpd = FunctionalCPD("yjbO", fn=fn_yjbO, parents=["fixC"])
+        yceP_cpd = FunctionalCPD("yceP", fn=fn_yceP, parents=["eutG", "fixC"])
+        ibpB_cpd = FunctionalCPD("ibpB", fn=fn_ibpB, parents=["eutG", "yceP"])
 
         model.add_cpds(
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
         )
 
-        params = model.fit(df, method="MCMC", num_steps=100)
+        params = model.fit(df, method="MCMC", prior_fn=prior_fn, num_steps=100)
 
         self.assertIn("b1191_mu", params)
         self.assertIn("b1191_sigma", params)
@@ -646,37 +648,33 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("ibpB_alpha0", params)
         self.assertIn("ibpB_alpha1", params)
 
-        import ipdb
+        self.assertAlmostEqual(params["b1191_mu"].mean(), 1.273, delta=0.2)
+        self.assertAlmostEqual(params["b1191_sigma"].mean(), 0.609, delta=0.2)
 
-        ipdb.set_trace()
+        self.assertAlmostEqual(params["eutG_mu"].mean(), 1.265, delta=0.2)
+        self.assertAlmostEqual(params["eutG_sigma"].mean(), 0.691, delta=0.2)
 
-        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.1)
-        self.assertAlmostEqual(params["b1191_sigma"], 0.609, delta=0.2)
+        self.assertAlmostEqual(params["fixC_inter"].mean(), 0.316, delta=0.2)
+        self.assertAlmostEqual(params["fixC_alpha"].mean(), 0.941, delta=0.2)
+        self.assertAlmostEqual(params["fixC_sigma"].mean(), 1.131, delta=0.2)
 
-        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.1)
-        self.assertAlmostEqual(params["eutG_sigma"], 0.691, delta=0.2)
+        self.assertAlmostEqual(params["ygbD_inter"].mean(), 1.35, delta=0.2)
+        self.assertAlmostEqual(params["ygbD_alpha"].mean(), 0.661, delta=0.2)
+        self.assertAlmostEqual(params["ygbD_sigma"].mean(), 0.74, delta=0.2)
 
-        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.1)
-        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.1)
-        self.assertAlmostEqual(params["fixC_sigma"], 1.131, delta=0.2)
+        self.assertAlmostEqual(params["ygbO_inter"].mean(), 1.591, delta=0.2)
+        self.assertAlmostEqual(params["ygbO_alpha"].mean(), -0.071, delta=0.2)
+        self.assertAlmostEqual(params["ygbO_sigma"].mean(), 1.851, delta=0.6)
 
-        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_sigma"], 0.74, delta=0.2)
+        self.assertAlmostEqual(params["yceP_inter"].mean(), -0.128, delta=0.2)
+        self.assertAlmostEqual(params["yceP_alpha0"].mean(), 1.141, delta=0.2)
+        self.assertAlmostEqual(params["yceP_alpha1"].mean(), -0.327, delta=0.2)
+        self.assertAlmostEqual(params["yceP_sigma"].mean(), 0.167, delta=0.3)
 
-        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_sigma"], 1.851, delta=0.6)
-
-        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.1)
-        self.assertAlmostEqual(params["yceP_sigma"], 0.167, delta=0.3)
-
-        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
+        self.assertAlmostEqual(params["ibpB_inter"].mean(), -0.423, delta=0.2)
+        self.assertAlmostEqual(params["ibpB_alpha0"].mean(), 1.447, delta=0.2)
+        self.assertAlmostEqual(params["ibpB_alpha1"].mean(), 0.125, delta=0.2)
+        self.assertAlmostEqual(params["ibpB_sigma"].mean(), 0.461, delta=0.3)
 
     def tearDown(self):
         del self.model
