@@ -217,7 +217,9 @@ class TestFBNMethods(unittest.TestCase):
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = model.fit(data, method="svi", learning_rate=1e-2, num_steps=100)
+        params = model.fit(
+            data, method="svi", optimizer=pyro.optim.Adam({"lr": 0.05}), num_steps=100
+        )
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
@@ -263,7 +265,9 @@ class TestFBNMethods(unittest.TestCase):
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = model.fit(data, method="SVI", learning_rate=0.05, num_steps=100)
+        params = model.fit(
+            data, method="SVI", optimizer=pyro.optim.Adam({"lr": 0.05}), num_steps=100
+        )
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
@@ -491,7 +495,9 @@ class TestFBNMethods(unittest.TestCase):
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
         )
 
-        params = model.fit(df, method="SVI", learning_rate=0.05, num_steps=200)
+        params = model.fit(
+            df, method="SVI", optimizer=pyro.optim.Adam({"lr": 0.05}), num_steps=200
+        )
 
         self.assertIn("b1191_mu", params)
         self.assertIn("b1191_sigma", params)

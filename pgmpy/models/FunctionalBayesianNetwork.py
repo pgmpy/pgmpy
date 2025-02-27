@@ -215,9 +215,10 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         self,
         data,
         method="SVI",
+        optimizer=pyro.optim.Adam({"lr": 1e-2}),
         prior_fn=None,
-        learning_rate=1e-2,
         num_steps=1000,
+        seed=None,
         nuts_kwargs=None,
         mcmc_kwargs=None,
     ):
@@ -232,13 +233,28 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         method: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
-        learning_rate: float (default: 1e-2)
-            Learning rate to use for the fitting.
+        optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
+            Only used if method is "SVI". The optimizer to use for optimization.
+
+        prior_fn: function
+            Only used if method is "MCMC". A function that returns a dictionary of
+            pyro distributions for each parameter in the model.
 
         num_steps: int (default: 100)
             Number of optimization steps. For SVI it is the `num_steps`
             argument for pyro.infer.SVI. For MCMC, it is the `num_samples`
             argument for pyro.infer.MCMC.
+
+        seed: int (default: None)
+            Seed value for random number generator.
+
+        nuts_kwargs: dict (default: None)
+            Only used if method is "MCMC". Additional arguments to pass to
+            pyro.infer.NUTS.
+
+        mcmc_kwargs: dict (default: None)
+            Only used if method is "MCMC". Additional arguments to pass to
+            pyro.infer.MCMC.
 
         Returns
         -------
@@ -253,48 +269,46 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         >>> import pyro.distributions as dist
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2")])
-        >>> x1 = np.random.normal(1, 2, size=10000)
-        >>> x2 = np.random.normal(5 + x1, 1)
+        >>> x1 = np.random.normal(0.2, 0.8, size=10000)
+        >>> x2 = np.random.normal(0.6 + x1, 1)
         >>> data = pd.DataFrame({"x1": x1, "x2": x2})
-        >>> def x1_prior():
-        ...    mu = pyro.sample("x1_mu", dist.Normal(0, 10))
-        ...    sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
-        ...    return dist.Normal(mu, sigma)
-        >>> def x2_prior(parent):
-        ...    mu = pyro.param("x2_mu", torch.tensor(1.0)) + parent["x1"]
-        ...    sigma = positive_param("x2_sigma", 1.0)
+
+        >>> def x1_fn(parents):
+        ...    mu = pyro.param("x1_mu", torch.tensor(1.0))
+        ...    sigma = pyro.param("x1_sigma", torch.tensor(1.0), constraint=constraints.positive)
         ...    return dist.Normal(mu, sigma)
 
-        >>> cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        >>> cpd2 = FunctionalCPD('x2', fn=lambda parent: x2_prior(parent), parents=['x1'])
+        >>> def x2_fn(parents):
+        ...    intercept = pyro.param("x2_inter", torch.tensor(1.0))
+        ...    sigma = pyro.param("x2_sigma", torch.tensor(1.0), constraint=constraints.positive)
+        ...    return dist.Normal(intercept + parents['x1'], sigma)
+
+        >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
+        >>> cpd2 = FunctionalCPD('x2', fn=x2_prior, parents=['x1'])
         >>> model.add_cpds(cpd1, cpd2)
-        >>> params = model.fit(data, method="SVI", learning_rate=0.05, num_steps=100)
+        >>> params = model.fit(data, method="SVI", num_steps=100)
         >>> print(params)
 
-        >>> def x1_prior():
-        ...    mu = pyro.sample("x1_mu", dist.Normal(0, 10))
-        ...    sigma = pyro.sample("x1_sigma", dist.HalfNormal(5))
-        ...    return dist.Normal(mu, sigma)
+        >>> def prior_fn():
+        ...    return {"x1_mu": dist.Uniform(0, 1), "x1_sigma": dist.HalfNormal(5),
+        ...            "x2_inter": dist.Normal(1.0), "x2_sigma": dist.HalfNormal(1)}
 
-        >>> def x2_prior(parent):
-        ...    mu = pyro.sample("x2_mu", dist.Normal(5, 1))
-        ...    sigma = pyro.sample("x2_sigma", dist.HalfNormal(2))
-        ...    return dist.Normal(mu + parent['x1'], sigma)
+        >>> def x1_fn(priors, parents):
+        ...    return dist.Normal(priors["x1_mu"], priors["x1_sigma"])
 
-        >>> cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        >>> cpd2 = FunctionalCPD('x2', fn=lambda parent: x2_prior(parent), parents=['x1'])
+        >>> def x2_fn(priors, parents):
+        ...    return dist.Normal(priors["x2_inter"] + parent['x1'], priors["x2_sigma"])
 
-        >>> params = model.fit(data, method="MCMC", num_steps=100, mcmc_kwargs={"mp_context": "fork"})
+        >>> cpd1 = FunctionalCPD("x1", fn=x1_fn)
+        >>> cpd2 = FunctionalCPD('x2', fn=x2_fn, parents=['x1'])
+        >>> model.add_cpds(cpd1, cpd2)
+
+        >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
         # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
             raise ValueError("Specify data as a pandas Dataframe.")
-
-        if not isinstance(learning_rate, float):
-            raise ValueError(
-                f"Learning rate should be float type, not {type(learning_rate)}"
-            )
 
         if not isinstance(num_steps, int):
             raise ValueError(
@@ -322,8 +336,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         # No latent variables to approximate
         def guide(tensor_data):
             pass
-
-        optimizer = pyro.optim.Adam({"lr": learning_rate})
 
         if method.lower() == "mcmc":
             params = {}
