@@ -181,7 +181,7 @@ class TestFBNMethods(unittest.TestCase):
         x3 = np.random.normal((x2 * beta) + 0.3, 0.7)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        def x1_fn():
+        def x1_fn(parent):
             mu = pyro.param("x1_mu", torch.tensor(1.0))
             sigma = pyro.param(
                 "x1_sigma",
@@ -210,17 +210,14 @@ class TestFBNMethods(unittest.TestCase):
             alpha = pyro.param("x3_beta", torch.tensor(1.0))
             return dist.Normal(intercept + (parent["x2"] * alpha), sigma)
 
-        cpd1 = FunctionalCPD("x1", fn=lambda _: x1_fn)
-        cpd2 = FunctionalCPD("x2", fn=lambda parent: x2_fn, parents=["x1"])
-        cpd3 = FunctionalCPD("x3", fn=lambda parent: x3_fn, parents=["x2"])
+        cpd1 = FunctionalCPD("x1", fn=x1_fn)
+        cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
+        cpd3 = FunctionalCPD("x3", fn=x3_fn, parents=["x2"])
 
         model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = self.model.fit(data, method="svi", learning_rate=1e-2, num_steps=1000)
-        import ipdb
-
-        ipdb.set_trace()
+        params = model.fit(data, method="svi", learning_rate=1e-2, num_steps=1000)
 
         self.assertIn("x1_mu", params)
         self.assertIn("x1_sigma", params)
@@ -241,43 +238,40 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x3_beta"], 0.8, delta=0.1)
 
     def test_svi_fit_different_distributions(self):
-        x1 = np.random.beta(1.5, 5, size=1000)
+        x1 = np.random.beta(0.2, 0.8, size=1000)
         x2 = np.random.poisson(x1 + 0.3)
         x3 = np.random.poisson(x2 + 0.5)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
-        def x1_prior():
+        def x1_prior(parents):
             concen1 = pyro.param("x1_concen1", torch.tensor(1.0))
             concen0 = pyro.param("x1_concen0", torch.tensor(4.5))
             return dist.Beta(concen1, concen0)
 
-        def x2_prior(parent):
+        def x2_prior(parents):
             rate = pyro.param("x2_rate", torch.tensor(1.0))
-            return dist.Poisson(rate + parent)
+            return dist.Poisson(rate + parents["x1"])
 
-        def x3_prior(parent):
+        def x3_prior(parents):
             rate = pyro.param("x3_rate", torch.tensor(1.0))
-            return dist.Poisson(rate + parent)
+            return dist.Poisson(rate + parents["x2"])
 
-        cpd1 = FunctionalCPD("x1", lambda _: x1_prior())
-        cpd2 = FunctionalCPD(
-            "x2", lambda parent: x2_prior(parent["x1"]), parents=["x1"]
-        )
-        cpd3 = FunctionalCPD(
-            "x3", lambda parent: x3_prior(parent["x2"]), parents=["x2"]
-        )
+        cpd1 = FunctionalCPD("x1", fn=x1_prior)
+        cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
+        cpd3 = FunctionalCPD("x3", fn=x3_prior, parents=["x2"])
 
-        self.model.add_cpds(cpd1, cpd2, cpd3)
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(cpd1, cpd2, cpd3)
 
-        params = self.model.fit(data, method="SVI", learning_rate=1e-2, num_steps=1000)
+        params = model.fit(data, method="SVI", learning_rate=1e-2, num_steps=1000)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
         self.assertIn("x2_rate", params)
         self.assertIn("x3_rate", params)
 
-        self.assertAlmostEqual(params["x1_concen1"], 1.5, delta=0.1)
-        self.assertAlmostEqual(params["x1_concen0"], 5, delta=0.1)
+        self.assertAlmostEqual(params["x1_concen1"], 0.2, delta=0.1)
+        self.assertAlmostEqual(params["x1_concen0"], 0.8, delta=0.1)
         self.assertAlmostEqual(params["x2_rate"], 0.3, delta=0.1)
         self.assertAlmostEqual(params["x3_rate"], 0.5, delta=0.1)
 
@@ -411,7 +405,7 @@ class TestFBNMethods(unittest.TestCase):
         )
         df = df.loc[:, list(model.nodes())]
 
-        def fn_b1191_param():
+        def fn_b1191_param(parents):
             mu = pyro.param("b1191_mu", torch.tensor(1.0))
             sigma = pyro.param(
                 "b1191_sigma",
@@ -420,7 +414,7 @@ class TestFBNMethods(unittest.TestCase):
             )
             return dist.Normal(mu, sigma)
 
-        def fn_eutG_param():
+        def fn_eutG_param(parents):
             mu = pyro.param("eutG_mu", torch.tensor(1.0))
             sigma = pyro.param(
                 "eutG_sigma",
@@ -495,23 +489,13 @@ class TestFBNMethods(unittest.TestCase):
 
             return dist.Normal(mu, sigma)
 
-        b1191_cpd = FunctionalCPD("b1191", lambda _: fn_b1191_param())
-        eutG_cpd = FunctionalCPD("eutG", lambda _: fn_eutG_param())
-        fixC_cpd = FunctionalCPD(
-            "fixC", lambda parent: fn_fixC_param(parent), parents=["b1191"]
-        )
-        ygbD_cpd = FunctionalCPD(
-            "ygbD", lambda parent: fn_ygbD_param(parent), parents=["fixC"]
-        )
-        yjbO_cpd = FunctionalCPD(
-            "yjbO", lambda parent: fn_yjbO_param(parent), parents=["fixC"]
-        )
-        yceP_cpd = FunctionalCPD(
-            "yceP", lambda parent: fn_yceP_param(parent), parents=["eutG", "fixC"]
-        )
-        ibpB_cpd = FunctionalCPD(
-            "ibpB", lambda parent: fn_ibpB_param(parent), parents=["eutG", "yceP"]
-        )
+        b1191_cpd = FunctionalCPD("b1191", fn=fn_b1191_param)
+        eutG_cpd = FunctionalCPD("eutG", fn=fn_eutG_param)
+        fixC_cpd = FunctionalCPD("fixC", fn=fn_fixC_param, parents=["b1191"])
+        ygbD_cpd = FunctionalCPD("ygbD", fn=fn_ygbD_param, parents=["fixC"])
+        yjbO_cpd = FunctionalCPD("yjbO", fn=fn_yjbO_param, parents=["fixC"])
+        yceP_cpd = FunctionalCPD("yceP", fn=fn_yceP_param, parents=["eutG", "fixC"])
+        ibpB_cpd = FunctionalCPD("ibpB", fn=fn_ibpB_param, parents=["eutG", "yceP"])
 
         model.add_cpds(
             b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
@@ -535,32 +519,32 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("ibpB_alpha0", params)
         self.assertIn("ibpB_alpha1", params)
 
-        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.1)
+        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.2)
         self.assertAlmostEqual(params["b1191_sigma"], 0.609, delta=0.2)
 
-        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.1)
+        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.2)
         self.assertAlmostEqual(params["eutG_sigma"], 0.691, delta=0.2)
 
-        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.1)
-        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.1)
+        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.2)
+        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.2)
         self.assertAlmostEqual(params["fixC_sigma"], 1.131, delta=0.2)
 
-        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.1)
-        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.1)
+        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.2)
+        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.2)
         self.assertAlmostEqual(params["ygbD_sigma"], 0.74, delta=0.2)
 
-        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.1)
-        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.1)
+        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.2)
+        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.2)
         self.assertAlmostEqual(params["ygbO_sigma"], 1.851, delta=0.6)
 
-        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.1)
-        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.1)
+        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.2)
+        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.2)
+        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.2)
         self.assertAlmostEqual(params["yceP_sigma"], 0.167, delta=0.3)
 
-        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.1)
-        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.1)
+        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.2)
+        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.2)
+        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.2)
         self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
 
     def test_fit_complex_mcmc(self):

@@ -333,9 +333,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         def combined_model(tensor_data):
             with pyro.plate("data", data.shape[0]):
                 for node in sort_nodes:
-                    import ipdb
-
-                    ipdb.set_trace()
                     pyro.sample(
                         f"{node}",
                         cpds_dict[node].fn(
@@ -344,9 +341,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                         obs=tensor_data[node],
                     )
 
-        import ipdb
-
-        ipdb.set_trace()
         # Step 3: Fit the model using the specified method.
         if method.lower() == "svi":
             svi = pyro.infer.SVI(
@@ -364,7 +358,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         else:
             nuts_kernel = pyro.infer.NUTS(combined_model, **nuts_kwargs)
             mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
-            mcmc.run()
+            mcmc.run(tensor_data)
             samples = mcmc.get_samples()
             params.update(samples)
 
