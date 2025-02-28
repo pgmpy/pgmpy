@@ -382,7 +382,7 @@ def preprocess_data(df):
     dtypes = {}
     for col in df.columns:
         if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("float")
+            df[col] = df[col].astype("int")
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
