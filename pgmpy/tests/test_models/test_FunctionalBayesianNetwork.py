@@ -32,6 +32,11 @@ class TestFBNMethods(unittest.TestCase):
 
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
+    def test_backend_switch(self):
+        config.set_backend("numpy")
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        self.assertEqual(config.get_backend(), "torch")
+
     def test_cpds_simple(self):
         self.assertEqual("x1", self.cpd1.variable)
         cpd = self.model.get_cpds("x1")
@@ -65,6 +70,9 @@ class TestFBNMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
         self.assertRaises(ValueError, self.model.add_cpds, 1)
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
+
+        cpd4 = self.model.get_cpds("x3")
+        self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
 
         # Test that duplicate CPDs get replaced.
         self.assertEqual(len(self.model.cpds), 3)

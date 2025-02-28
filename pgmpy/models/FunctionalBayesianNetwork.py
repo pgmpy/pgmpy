@@ -71,10 +71,12 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         """
         for cpd in cpds:
             if not isinstance(cpd, FunctionalCPD):
-                raise ValueError("Only FunctionalCPD can be added.")
+                raise ValueError(
+                    "Only FunctionalCPD can be added to Functional Bayesian Network."
+                )
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(self.nodes())):
-                raise ValueError("CPD defined on variable not in the model", cpd)
+                raise ValueError(f"CPD defined on variable not in the model: {cpd}")
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
@@ -164,8 +166,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             if isinstance(cpd, FunctionalCPD):
                 if set(cpd.parents) != set(self.get_parents(node)):
                     raise ValueError(
-                        "CPD associated with %s doesn't have "
-                        "proper parents associated with it." % node
+                        f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
         return True
 
@@ -312,15 +313,17 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         """
         # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
-            raise ValueError("Specify data as a pandas Dataframe.")
-
-        if not isinstance(num_steps, int):
             raise ValueError(
-                f"Number of steps should be int type, not {type(num_steps)}"
+                f"data should be a pandas.DataFrame object. Got: {type(data)}."
             )
 
+        if not isinstance(num_steps, int):
+            raise ValueError(f"num_steps should be an integer. Got: {type(num_steps)}.")
+
         if method.lower() not in ["svi", "mcmc"]:
-            raise ValueError("Current implementation only support SVI or MCMC.")
+            raise ValueError(
+                "Currently only SVI and MCMC methods are supported. method argument needs to be either 'SVI' or 'MCMC'."
+            )
 
         # Step 1: Preprocess the data and initialize data structures.
         if seed is not None:
@@ -331,7 +334,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         tensor_data = {}
         for node in sort_nodes:
             if node not in data.columns:
-                raise ValueError(f"Observation not found for variable {node}")
+                raise ValueError(f"data doesn't contain column for the node: {node}.")
             else:
                 tensor_data[node] = torch.tensor(
                     data[node].values, dtype=config.get_dtype()
