@@ -435,7 +435,9 @@ class TestBayesianNetworkMethods(unittest.TestCase):
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
         model = BayesianNetwork.get_random(
-            n_nodes=5, edge_prob=0.6, n_states={0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
+            n_nodes=5,
+            edge_prob=0.6,
+            n_states={"X_0": 2, "X_1": 3, "X_2": 4, "X_3": 5, "X_4": 6},
         )
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
@@ -467,7 +469,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
 
     def test_get_random_cpds(self):
         model = BayesianNetwork(DAG.get_random(n_nodes=5, edge_prob=0.5).edges())
-        model.add_nodes_from(list(range(5)))
+        model.add_nodes_from(["X_0", "X_1", "X_2", "X_3", "X_4"])
 
         cpds = model.get_random_cpds()
         self.assertEqual(len(cpds), 5)
@@ -484,14 +486,16 @@ class TestBayesianNetworkMethods(unittest.TestCase):
             all([card == 4 for var, card in model.get_cardinality().items()])
         )
 
-        n_states_dict = {0: 3, 1: 5, 2: 4, 3: 9, 4: 3}
+        n_states_dict = {"X_0": 3, "X_1": 5, "X_2": 4, "X_3": 9, "X_4": 3}
         cpds = model.get_random_cpds(n_states=n_states_dict, seed=42)
         self.assertEqual(len(cpds), 5)
 
         model.add_cpds(*cpds)
         self.assertTrue(model.check_model())
         for var in range(5):
-            self.assertEqual(model.get_cardinality(var), n_states_dict[var])
+            self.assertEqual(
+                model.get_cardinality("X_" + str(var)), n_states_dict["X_" + str(var)]
+            )
 
         model.get_random_cpds(inplace=True, seed=42)
         self.assertEqual(len(model.cpds), 5)

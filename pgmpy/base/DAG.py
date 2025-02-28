@@ -1142,7 +1142,7 @@ class DAG(nx.DiGraph):
 
         # Step 2: Use the upper triangular part of the matrix as adjacency.
         if node_names is None:
-            node_names = list(range(n_nodes))
+            node_names = list([f"X_{i}" for i in range(n_nodes)])
 
         adj_pd = pd.DataFrame(
             np.triu(adj_mat, k=1), columns=node_names, index=node_names

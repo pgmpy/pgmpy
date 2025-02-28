@@ -1071,7 +1071,7 @@ class BayesianNetwork(DAG):
          <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
         """
         if node_names is None:
-            node_names = list(range(n_nodes))
+            node_names = list([f"X_{i}" for i in range(n_nodes)])
 
         if n_states is None:
             gen = np.random.default_rng(seed=seed)

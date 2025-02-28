@@ -517,10 +517,6 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
         <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
         """
-
-        if node_names is None:
-            node_names = list(range(n_nodes))
-
         dag = DAG.get_random(
             n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
         )
