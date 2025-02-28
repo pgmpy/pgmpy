@@ -10,6 +10,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
+from pgmpy.utils import compat_fns
 
 
 class MarkovNetwork(UndirectedGraph):
@@ -754,7 +755,7 @@ class MarkovNetwork(UndirectedGraph):
         if set(factor.scope()) != set(self.nodes()):
             raise ValueError("DiscreteFactor for all the random variables not defined.")
 
-        return np.sum(factor.values)
+        return compat_fns.sum(factor.values)
 
     def copy(self):
         """

@@ -4,6 +4,8 @@ from copy import deepcopy
 import numpy as np
 import torch
 
+from pgmpy import config
+
 
 def size(arr):
     if isinstance(arr, np.ndarray):
@@ -13,15 +15,13 @@ def size(arr):
 
 
 def copy(arr):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if config.get_backend() == "numpy":
         if isinstance(arr, np.ndarray):
             return np.array(arr)
         elif isinstance(arr, (int, float)):
             return deepcopy(arr)
     else:
-        return torch.clone(arr)
+        return torch.tensor(arr, dtype=config.get_dtype(), device=config.get_device())
 
 
 def tobytes(arr):
@@ -42,9 +42,7 @@ def max(arr, axis=None):
 
 
 def einsum(*args):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if config.get_backend() == "numpy":
         return np.einsum(*args)
     else:
         return torch.einsum(*args)
@@ -58,9 +56,7 @@ def argmax(arr):
 
 
 def stack(arr_iter):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if config.get_backend() == "numpy":
         return np.stack(tuple(arr_iter))
     else:
         return torch.stack(tuple(arr_iter))
@@ -87,19 +83,15 @@ def ravel_f(arr):
 
 
 def ones(n):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
-        return np.ones(n, dtype=config.DTYPE)
+    if config.get_backend() == "numpy":
+        return np.ones(n, dtype=config.get_dtype())
 
     else:
-        return torch.ones(n, dtype=config.DTYPE, device=config.DEVICE)
+        return torch.ones(n, dtype=config.get_dtype(), device=config.get_device())
 
 
 def get_compute_backend():
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if config.get_backend() == "numpy":
         return np
     else:
         return torch
@@ -142,3 +134,10 @@ def sum(arr):
         return np.sum(arr)
     else:
         return torch.sum(arr)
+
+
+def allclose(arr1, arr2, atol):
+    if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
+        return np.allclose(arr1, arr2, atol=atol)
+    else:
+        return torch.allclose(torch.tensor(arr1), torch.tensor(arr2), atol=atol)
