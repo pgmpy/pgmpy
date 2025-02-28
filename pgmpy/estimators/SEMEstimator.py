@@ -5,7 +5,7 @@ import torch
 
 from pgmpy import config
 from pgmpy.models import SEM, SEMAlg, SEMGraph
-from pgmpy.utils import optimize, pinverse
+from pgmpy.utils import compat_fns, optimize, pinverse
 
 
 class SEMEstimator(object):
@@ -264,6 +264,8 @@ class SEMEstimator(object):
             )
 
         # Initialize the values of parameters as tensors.
+        backend = compat_fns.get_compute_backend()
+
         if isinstance(init_values, dict):
             B_init, zeta_init = init_values["B"], init_values["zeta"]
         else:
@@ -327,22 +329,24 @@ class SEMEstimator(object):
 
         # Compute goodness of fit statistics.
         N = data.shape[0]
-        sample_cov = S.detach().numpy()
-        sigma_hat = self._get_implied_cov(B, zeta).detach().numpy()
+        sample_cov = S
+        sigma_hat = self._get_implied_cov(B, zeta)
         residual = sample_cov - sigma_hat
 
         norm_residual = np.zeros(residual.shape)
         for i in range(norm_residual.shape[0]):
             for j in range(norm_residual.shape[1]):
-                norm_residual[i, j] = (sample_cov[i, j] - sigma_hat[i, j]) / np.sqrt(
+                norm_residual[i, j] = (
+                    sample_cov[i, j] - sigma_hat[i, j]
+                ) / backend.sqrt(
                     ((sigma_hat[i, i] * sigma_hat[j, j]) + (sigma_hat[i, j] ** 2)) / N
                 )
 
         # Compute chi-square value.
         likelihood_ratio = -(N - 1) * (
-            np.log(np.linalg.det(sigma_hat))
-            + (np.linalg.inv(sigma_hat) @ sample_cov).trace()
-            - np.log(np.linalg.det(S))
+            backend.log(backend.linalg.det(sigma_hat))
+            + (backend.linalg.inv(sigma_hat) @ sample_cov).trace()
+            - backend.log(backend.linalg.det(S))
             - S.shape[0]
         )
         if method.lower() == "ml":
@@ -351,7 +355,7 @@ class SEMEstimator(object):
             error = self.uls_loss(params, loss_args={"S": S})
         elif method.lower() == "gls":
             error = self.gls_loss(params, loss_args={"S": S, "W": W})
-        chi_square = likelihood_ratio / error.detach().numpy()
+        chi_square = likelihood_ratio / error
 
         free_params = self.B_mask.sum()
         dof = ((S.shape[0] * (S.shape[0] + 1)) / 2) - free_params
@@ -368,7 +372,7 @@ class SEMEstimator(object):
 
         # Update the model with the learned params
         self.model.set_params(
-            B=params["B"].detach().numpy(), zeta=params["zeta"].detach().numpy()
+            B=compat_fns.to_numpy(params["B"]), zeta=compat_fns.to_numpy(params["zeta"])
         )
         return summary
 

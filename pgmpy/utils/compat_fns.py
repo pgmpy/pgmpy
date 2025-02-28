@@ -140,4 +140,8 @@ def allclose(arr1, arr2, atol):
     if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
         return np.allclose(arr1, arr2, atol=atol)
     else:
-        return torch.allclose(torch.tensor(arr1), torch.tensor(arr2), atol=atol)
+        return torch.allclose(
+            torch.tensor(arr1, dtype=config.get_dtype(), device=config.get_device()),
+            torch.tensor(arr2, dtype=config.get_dtype(), device=config.get_device()),
+            atol=atol,
+        )

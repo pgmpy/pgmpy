@@ -190,32 +190,38 @@ class TestFBNMethods(unittest.TestCase):
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         def x1_fn(parent):
-            mu = pyro.param("x1_mu", torch.tensor(1.0))
+            mu = pyro.param("x1_mu", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
                 "x1_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
             return dist.Normal(mu, sigma)
 
         def x2_fn(parent):
-            intercept = pyro.param("x2_inter", torch.tensor(1.0))
+            intercept = pyro.param(
+                "x2_inter", torch.tensor(1.0, device=config.get_device())
+            )
             sigma = pyro.param(
                 "x2_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
-            alpha = pyro.param("x2_alpha", torch.tensor(1.0))
+            alpha = pyro.param(
+                "x2_alpha", torch.tensor(1.0, device=config.get_device())
+            )
             return dist.Normal(intercept + (parent["x1"] * alpha), sigma)
 
         def x3_fn(parent):
-            intercept = pyro.param("x3_inter", torch.tensor(1.0))
+            intercept = pyro.param(
+                "x3_inter", torch.tensor(1.0, device=config.get_device())
+            )
             sigma = pyro.param(
                 "x3_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
-            alpha = pyro.param("x3_beta", torch.tensor(1.0))
+            alpha = pyro.param("x3_beta", torch.tensor(1.0, device=config.get_device()))
             return dist.Normal(intercept + (parent["x2"] * alpha), sigma)
 
         cpd1 = FunctionalCPD("x1", fn=x1_fn)
@@ -258,16 +264,20 @@ class TestFBNMethods(unittest.TestCase):
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         def x1_prior(parents):
-            concen1 = pyro.param("x1_concen1", torch.tensor(1.0))
-            concen0 = pyro.param("x1_concen0", torch.tensor(4.5))
+            concen1 = pyro.param(
+                "x1_concen1", torch.tensor(1.0, device=config.get_device())
+            )
+            concen0 = pyro.param(
+                "x1_concen0", torch.tensor(1.0, device=config.get_device())
+            )
             return dist.Beta(concen1, concen0)
 
         def x2_prior(parents):
-            rate = pyro.param("x2_rate", torch.tensor(1.0))
+            rate = pyro.param("x2_rate", torch.tensor(1.0, device=config.get_device()))
             return dist.Poisson(rate + parents["x1"])
 
         def x3_prior(parents):
-            rate = pyro.param("x3_rate", torch.tensor(1.0))
+            rate = pyro.param("x3_rate", torch.tensor(1.0, device=config.get_device()))
             return dist.Poisson(rate + parents["x2"])
 
         cpd1 = FunctionalCPD("x1", fn=x1_prior)
@@ -305,14 +315,62 @@ class TestFBNMethods(unittest.TestCase):
 
         def prior_fn():
             return {
-                "x1_mu": pyro.sample("x1_mu", dist.Uniform(0, 1)),
-                "x1_sigma": pyro.sample("x1_sigma", dist.Uniform(0, 1)),
-                "x2_inter": pyro.sample("x2_inter", dist.Uniform(0, 1)),
-                "x2_sigma": pyro.sample("x2_sigma", dist.Uniform(0, 1)),
-                "x2_alpha": pyro.sample("x2_alpha", dist.Uniform(0, 1)),
-                "x3_inter": pyro.sample("x3_inter", dist.Uniform(0, 1)),
-                "x3_sigma": pyro.sample("x3_sigma", dist.Uniform(0, 1)),
-                "x3_alpha": pyro.sample("x3_beta", dist.Uniform(0, 1)),
+                "x1_mu": pyro.sample(
+                    "x1_mu",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x1_sigma": pyro.sample(
+                    "x1_sigma",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x2_inter": pyro.sample(
+                    "x2_inter",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x2_sigma": pyro.sample(
+                    "x2_sigma",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x2_alpha": pyro.sample(
+                    "x2_alpha",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x3_inter": pyro.sample(
+                    "x3_inter",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x3_sigma": pyro.sample(
+                    "x3_sigma",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "x3_alpha": pyro.sample(
+                    "x3_beta",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
             }
 
         def x1_fn(priors, parents):
@@ -366,10 +424,34 @@ class TestFBNMethods(unittest.TestCase):
 
         def prior_fn():
             return {
-                "concen1": pyro.sample("x1_concen1", dist.Uniform(0, 1)),
-                "concen0": pyro.sample("x1_concen0", dist.Uniform(0, 1)),
-                "rate_x1": pyro.sample("x2_rate", dist.Uniform(0, 1)),
-                "rate_x2": pyro.sample("x3_rate", dist.Uniform(0, 1)),
+                "concen1": pyro.sample(
+                    "x1_concen1",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "concen0": pyro.sample(
+                    "x1_concen0",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "rate_x1": pyro.sample(
+                    "x2_rate",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
+                "rate_x2": pyro.sample(
+                    "x3_rate",
+                    dist.Uniform(
+                        torch.tensor(0.0, device=config.get_device()),
+                        torch.tensor(1.0, device=config.get_device()),
+                    ),
+                ),
             }
 
         def x1_prior(priors, parents):
@@ -420,43 +502,49 @@ class TestFBNMethods(unittest.TestCase):
         df = df.loc[:, list(model.nodes())]
 
         def fn_b1191_param(parents):
-            mu = pyro.param("b1191_mu", torch.tensor(1.0))
+            mu = pyro.param("b1191_mu", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
                 "b1191_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
             return dist.Normal(mu, sigma)
 
         def fn_eutG_param(parents):
-            mu = pyro.param("eutG_mu", torch.tensor(1.0))
+            mu = pyro.param("eutG_mu", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
                 "eutG_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
             return dist.Normal(mu, sigma)
 
         def fn_fixC_param(parents):
             mu = (
-                pyro.param("fixC_inter", torch.tensor(1.0))
-                + pyro.param("fixC_alpha", torch.tensor(1.0)) * parents["b1191"]
+                pyro.param("fixC_inter", torch.tensor(1.0, device=config.get_device()))
+                + pyro.param(
+                    "fixC_alpha", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["b1191"]
             )
             sigma = pyro.param(
                 "fixC_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
             return dist.Normal(mu, sigma)
 
         def fn_ygbD_param(parents):
             mu = (
-                pyro.param("ygbD_inter", torch.tensor(1.0))
-                + pyro.param("ygbD_alpha", torch.tensor(1.0)) * parents["fixC"]
+                pyro.param("ygbD_inter", torch.tensor(1.0, device=config.get_device()))
+                + pyro.param(
+                    "ygbD_alpha", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["fixC"]
             )
             sigma = pyro.param(
                 "ygbD_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
 
@@ -464,12 +552,15 @@ class TestFBNMethods(unittest.TestCase):
 
         def fn_yjbO_param(parents):
             mu = (
-                pyro.param("ygbO_inter", torch.tensor(1.0))
-                + pyro.param("ygbO_alpha", torch.tensor(1.0)) * parents["fixC"]
+                pyro.param("ygbO_inter", torch.tensor(1.0, device=config.get_device()))
+                + pyro.param(
+                    "ygbO_alpha", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["fixC"]
             )
             sigma = pyro.param(
                 "ygbO_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
 
@@ -477,13 +568,19 @@ class TestFBNMethods(unittest.TestCase):
 
         def fn_yceP_param(parents):
             mu = (
-                pyro.param("yceP_inter", torch.tensor(1.0))
-                + pyro.param("yceP_alpha0", torch.tensor(1.0)) * parents["eutG"]
-                + pyro.param("yceP_alpha1", torch.tensor(1.0)) * parents["fixC"]
+                pyro.param("yceP_inter", torch.tensor(1.0, device=config.get_device()))
+                + pyro.param(
+                    "yceP_alpha0", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["eutG"]
+                + pyro.param(
+                    "yceP_alpha1", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["fixC"]
             )
             sigma = pyro.param(
                 "yceP_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
 
@@ -491,13 +588,19 @@ class TestFBNMethods(unittest.TestCase):
 
         def fn_ibpB_param(parents):
             mu = (
-                pyro.param("ibpB_inter", torch.tensor(1.0))
-                + pyro.param("ibpB_alpha0", torch.tensor(1.0)) * parents["eutG"]
-                + pyro.param("ibpB_alpha1", torch.tensor(1.0)) * parents["yceP"]
+                pyro.param("ibpB_inter", torch.tensor(1.0, device=config.get_device()))
+                + pyro.param(
+                    "ibpB_alpha0", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["eutG"]
+                + pyro.param(
+                    "ibpB_alpha1", torch.tensor(1.0, device=config.get_device())
+                )
+                * parents["yceP"]
             )
             sigma = pyro.param(
                 "ibpB_sigma",
-                torch.tensor(1.0),
+                torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
 
@@ -586,27 +689,153 @@ class TestFBNMethods(unittest.TestCase):
 
         def prior_fn():
             return {
-                "b1191_mu": pyro.sample("b1191_mu", dist.Uniform(-1, 2)),
-                "b1191_sigma": pyro.sample("b1191_sigma", dist.Uniform(-1, 2)),
-                "eutG_mu": pyro.sample("eutG_mu", dist.Uniform(-1, 2)),
-                "eutG_sigma": pyro.sample("eutG_sigma", dist.Uniform(-1, 2)),
-                "fixC_inter": pyro.sample("fixC_inter", dist.Uniform(-1, 2)),
-                "fixC_alpha": pyro.sample("fixC_alpha", dist.Uniform(-1, 2)),
-                "fixC_sigma": pyro.sample("fixC_sigma", dist.Uniform(-1, 2)),
-                "ygbD_inter": pyro.sample("ygbD_inter", dist.Uniform(-1, 2)),
-                "ygbD_alpha": pyro.sample("ygbD_alpha", dist.Uniform(-1, 2)),
-                "ygbD_sigma": pyro.sample("ygbD_sigma", dist.Uniform(-1, 2)),
-                "ygbO_inter": pyro.sample("ygbO_inter", dist.Uniform(-1, 2)),
-                "ygbO_alpha": pyro.sample("ygbO_alpha", dist.Uniform(-1, 2)),
-                "ygbO_sigma": pyro.sample("ygbO_sigma", dist.Uniform(-1, 2)),
-                "yceP_inter": pyro.sample("yceP_inter", dist.Uniform(-1, 2)),
-                "yceP_alpha0": pyro.sample("yceP_alpha0", dist.Uniform(-1, 2)),
-                "yceP_alpha1": pyro.sample("yceP_alpha1", dist.Uniform(-1, 2)),
-                "yceP_sigma": pyro.sample("yceP_sigma", dist.Uniform(-1, 2)),
-                "ibpB_inter": pyro.sample("ibpB_inter", dist.Uniform(-1, 2)),
-                "ibpB_alpha0": pyro.sample("ibpB_alpha0", dist.Uniform(-1, 2)),
-                "ibpB_alpha1": pyro.sample("ibpB_alpha1", dist.Uniform(-1, 2)),
-                "ibpB_sigma": pyro.sample("ibpB_sigma", dist.Uniform(-1, 2)),
+                "b1191_mu": pyro.sample(
+                    "b1191_mu",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "b1191_sigma": pyro.sample(
+                    "b1191_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "eutG_mu": pyro.sample(
+                    "eutG_mu",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "eutG_sigma": pyro.sample(
+                    "eutG_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "fixC_inter": pyro.sample(
+                    "fixC_inter",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "fixC_alpha": pyro.sample(
+                    "fixC_alpha",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "fixC_sigma": pyro.sample(
+                    "fixC_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbD_inter": pyro.sample(
+                    "ygbD_inter",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbD_alpha": pyro.sample(
+                    "ygbD_alpha",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbD_sigma": pyro.sample(
+                    "ygbD_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbO_inter": pyro.sample(
+                    "ygbO_inter",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbO_alpha": pyro.sample(
+                    "ygbO_alpha",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ygbO_sigma": pyro.sample(
+                    "ygbO_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "yceP_inter": pyro.sample(
+                    "yceP_inter",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "yceP_alpha0": pyro.sample(
+                    "yceP_alpha0",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "yceP_alpha1": pyro.sample(
+                    "yceP_alpha1",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "yceP_sigma": pyro.sample(
+                    "yceP_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ibpB_inter": pyro.sample(
+                    "ibpB_inter",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ibpB_alpha0": pyro.sample(
+                    "ibpB_alpha0",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ibpB_alpha1": pyro.sample(
+                    "ibpB_alpha1",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
+                "ibpB_sigma": pyro.sample(
+                    "ibpB_sigma",
+                    dist.Uniform(
+                        torch.tensor(-1.0, device=config.get_device()),
+                        torch.tensor(2.0, device=config.get_device()),
+                    ),
+                ),
             }
 
         def fn_b1191(priors, parents):

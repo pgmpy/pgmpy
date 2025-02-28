@@ -337,8 +337,10 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 raise ValueError(f"data doesn't contain column for the node: {node}.")
             else:
                 tensor_data[node] = torch.tensor(
-                    data[node].values, dtype=config.get_dtype()
-                ).to(config.get_device())
+                    data[node].values,
+                    dtype=config.get_dtype(),
+                    device=config.get_device(),
+                )
 
         nuts_kwargs = nuts_kwargs or {}
         mcmc_kwargs = mcmc_kwargs or {}
