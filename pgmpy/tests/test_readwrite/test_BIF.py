@@ -409,7 +409,7 @@ class TestBIFWriter(unittest.TestCase):
                 prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
                 self.model.nodes[node][prop_name] = prop_value
 
-        self.writer = BIFWriter(model=self.model)
+        self.writer = BIFWriter(model=self.model, round_values=2)
 
     def test_str(self):
         self.expected_string = """network unknown {
