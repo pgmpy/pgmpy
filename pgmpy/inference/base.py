@@ -104,8 +104,7 @@ class Inference(object):
                     self.factors[var].append(factor)
 
         elif isinstance(self.model, DynamicBayesianNetwork):
-            self.start_bayesian_model = BayesianNetwork(self.model.get_intra_edges(0))
-            self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
+            self.start_bayesian_model = self.model.get_constant_bn()
             cpd_inter = [
                 self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
             ]
