@@ -404,3 +404,44 @@ class FunctionalBayesianNetwork(BayesianNetwork):
             return dict(pyro.get_param_store().items())
         else:
             return mcmc.get_samples()
+
+    def predict(self, df):
+        """
+        Fill all the NA values in the DataFrame using predictions from the model.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            DataFrame with missing values or columns that need to be predicted using the model.
+
+        Returns
+        -------
+        df: pandas.DataFrame
+            DataFrame on all variables in the model with missing values filled using predictions
+            from the model.
+        """
+        missing_columns = self.nodes() - set(df.columns)
+        cpds_dict = {node: self.get_cpds(node) for node in self.nodes()}
+        nodes = list(nx.topological_sort(self))
+        for row in df:
+
+            def inference_model(row):
+                missing_vars = set(row[row.isna()].index)
+                pred_values = {}
+                for node in nodes:
+                    if (node in missing_vars) or (node in missing_columns):
+                        pred_values[node] = pyro.sample(
+                            f"{node}_infer", cpds_dict[node].fn(pred_values)
+                        )
+                    else:
+                        pred_values[node] = pyro.sample(
+                            f"{node}_infer",
+                            cpds_dict[node].fn(pred_values),
+                            obs=row[node],
+                        )
+
+            nuts_kernel = NUTS(inference_model)
+            for i, sample in df.iterrows():
+                mcmc.run(sample)
+                results = mcmc.get_samples()
+                print(results)
