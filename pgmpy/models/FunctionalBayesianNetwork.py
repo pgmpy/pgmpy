@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pyro
 import torch
+import torch.distributions as dist
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -405,7 +406,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         else:
             return mcmc.get_samples()
 
-    def predict(self, df):
+    def predict(self, df, method="MCMC", num_samples=100, **mcmc_kwargs):
         """
         Fill all the NA values in the DataFrame using predictions from the model.
 
@@ -423,25 +424,60 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         missing_columns = self.nodes() - set(df.columns)
         cpds_dict = {node: self.get_cpds(node) for node in self.nodes()}
         nodes = list(nx.topological_sort(self))
-        for row in df:
 
-            def inference_model(row):
-                missing_vars = set(row[row.isna()].index)
+        results = {}
+
+        for index, row in df.iterrows():
+            missing_vars = set(row[row.isna()].index)
+
+            def inference_model(row_tensor):
                 pred_values = {}
                 for node in nodes:
                     if (node in missing_vars) or (node in missing_columns):
                         pred_values[node] = pyro.sample(
-                            f"{node}_infer", cpds_dict[node].fn(pred_values)
+                            f"{node}", cpds_dict[node].fn(pred_values)
                         )
                     else:
                         pred_values[node] = pyro.sample(
-                            f"{node}_infer",
+                            f"{node}",
                             cpds_dict[node].fn(pred_values),
-                            obs=row[node],
+                            obs=row_tensor[node],
                         )
 
-            nuts_kernel = NUTS(inference_model)
-            for i, sample in df.iterrows():
-                mcmc.run(sample)
-                results = mcmc.get_samples()
-                print(results)
+            row_tensor = {node: torch.tensor(row[node]) for node in row.index}
+
+            if method.lower() == "mcmc":
+                nuts_kernel = pyro.infer.NUTS(inference_model)
+                mcmc = pyro.infer.MCMC(
+                    nuts_kernel, num_samples=num_samples, **mcmc_kwargs
+                )
+                mcmc.run(row_tensor)
+                result = mcmc.get_samples()
+                results[index] = result
+
+            elif method.lower() == "svi":
+
+                def guide(sample):
+                    for var in missing_vars:
+                        mean = pyro.param("f{var}_mean", torch.tensor(0.0))
+                        std = pyro.param(
+                            "f{var}_std",
+                            torch.tensor(1.0),
+                            constraint=torch.distributions.constraints.positive,
+                        )
+                        pyro.sample(f"{var}_svi", dist.Normal(mean, std))
+
+                svi = pyro.infer.SVI(
+                    inference_model,
+                    guide,
+                    pyro.optim.Adam({"lr": 0.01}),
+                    loss=pyro.infer.Trace_ELBO(),
+                )
+
+                num_epochs = 500  # or more
+                for epoch in range(num_epochs):
+                    epoch_loss = svi.step(row_tensor)
+                    if epoch % 50 == 0:
+                        print(f"Epoch {epoch}, loss = {epoch_loss}")
+
+        return results
