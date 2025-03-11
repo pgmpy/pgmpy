@@ -408,7 +408,10 @@ class FunctionalBayesianNetwork(BayesianNetwork):
 
     def predict(self, df, method="MCMC", num_samples=100, **mcmc_kwargs):
         """
-        Fill all the NA values in the DataFrame using predictions from the model.
+        Generate predictions for each missing value in `df`.
+
+        If using `method="MCMC"`, generates `num_samples` from the posterior of
+        each missing value.
 
         Parameters
         ----------
@@ -425,9 +428,10 @@ class FunctionalBayesianNetwork(BayesianNetwork):
         cpds_dict = {node: self.get_cpds(node) for node in self.nodes()}
         nodes = list(nx.topological_sort(self))
 
-        results = {}
+        results = []
 
         for index, row in df.iterrows():
+            results_dict = {}
             missing_vars = set(row[row.isna()].index)
 
             def inference_model(row_tensor):
@@ -452,8 +456,7 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                     nuts_kernel, num_samples=num_samples, **mcmc_kwargs
                 )
                 mcmc.run(row_tensor)
-                result = mcmc.get_samples()
-                results[index] = result
+                results.append(mcmc.get_samples())
 
             elif method.lower() == "svi":
 
@@ -478,6 +481,6 @@ class FunctionalBayesianNetwork(BayesianNetwork):
                 for epoch in range(num_epochs):
                     epoch_loss = svi.step(row_tensor)
                     if epoch % 50 == 0:
-                        print(f"Epoch {epoch}, loss = {epoch_loss}")
+                        prnt(f"Epoch {epoch}, loss = {epoch_loss}")
 
         return results

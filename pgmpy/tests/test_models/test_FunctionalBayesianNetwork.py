@@ -264,7 +264,7 @@ class TestFBNMethods(unittest.TestCase):
         missing_mask = np.random.choice([0, 1], size=(10, 3))
         data_small[missing_mask == 0] = np.nan
 
-        results = model.predict(df=data_small, method="SVI", num_samples=1000)
+        results = model.predict(df=data_small, method="MCMC", num_samples=1000)
         for index, result in results.items():
             for var, arr in result.items():
                 try:
