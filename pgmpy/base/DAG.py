@@ -1030,9 +1030,8 @@ class DAG(nx.DiGraph):
             from daft import PGM
         except ImportError as e:
             raise ImportError(
-                e.msg
-                + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
-            )
+                "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+            ) from e
 
         if isinstance(node_pos, str):
             supported_layouts = {

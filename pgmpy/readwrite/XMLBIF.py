@@ -10,9 +10,8 @@ try:
     import pyparsing as pp
 except ImportError as e:
     raise ImportError(
-        e.msg
-        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    )
+        "pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    ) from e
 
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import BayesianNetwork

@@ -308,9 +308,8 @@ def llm_pairwise_orient(
         from litellm import completion
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
-        )
+            "litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
+        ) from e
 
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
