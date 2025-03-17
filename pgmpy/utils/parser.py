@@ -4,8 +4,8 @@ def parse_lavaan(lines):
         from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
     except ImportError as e:
         raise ImportError(
-            "pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
-        ) from e
+            e.msg + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
+        ) from None
 
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)

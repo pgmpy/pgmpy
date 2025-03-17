@@ -24,8 +24,8 @@ try:
     )
 except ImportError as e:
     raise ImportError(
-       "pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    ) from e
+       e.msg + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+    ) from None
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
