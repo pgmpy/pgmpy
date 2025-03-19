@@ -1032,7 +1032,7 @@ class DAG(nx.DiGraph):
             raise ImportError(
                 e.msg
                 + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
-            )
+            ) from None
 
         if isinstance(node_pos, str):
             supported_layouts = {
