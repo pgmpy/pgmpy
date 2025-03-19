@@ -479,7 +479,6 @@ class TestResidualMethod(unittest.TestCase):
             ).all()
         )
 
-    @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
     def test_gcm(self):
         # Non-conditional tests
         coef, p_value = gcm(
