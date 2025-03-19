@@ -478,3 +478,38 @@ class TestResidualMethod(unittest.TestCase):
                 np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
             ).all()
         )
+
+    @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
+    def test_gcm(self):
+        # Non-conditional tests
+        coef, p_value = gcm(
+            X="X",
+            Y="Y",
+            Z=[],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+        self.assertAlmostEqual(round(coef, 3), 14.853)
+        self.assertAlmostEqual(p_value, 0.0)
+
+        # Conditional tests
+        coef, p_value = gcm(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+
+        self.assertAlmostEqual(round(coef, 3), -1.912)
+        self.assertGreaterEqual(p_value, 0.05)
+
+        # Conditional tests
+        coef, p_value = gcm(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
+
+        self.assertAlmostEqual(round(coef, 3), 12.94)
+        self.assertAlmostEqual(p_value, 0.0)
