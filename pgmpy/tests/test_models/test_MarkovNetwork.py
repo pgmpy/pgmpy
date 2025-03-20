@@ -640,5 +640,56 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.assertEqual(len(self.graph.get_factors()), 1)
         self.assertEqual(len(copy.get_factors()), 0)
 
+    def test_junction_tree_with_state_names(self):
+        """
+        Test that junction tree correctly maintains state names from the original factors.
+        """
+        self.graph.add_edges_from([("A", "B"), ("B", "C"), ("C", "A")])
+
+        # Create factors with string-based state names
+        state_names = {"A": ["a0", "a1"], "B": ["b0", "b1", "b2"], "C": ["c0", "c1"]}
+
+        phi1 = DiscreteFactor(
+            ["A", "B"],
+            [2, 3],
+            np.random.rand(6),
+            state_names={"A": state_names["A"], "B": state_names["B"]},
+        )
+
+        phi2 = DiscreteFactor(
+            ["B", "C"],
+            [3, 2],
+            np.random.rand(6),
+            state_names={"B": state_names["B"], "C": state_names["C"]},
+        )
+
+        phi3 = DiscreteFactor(
+            ["C", "A"],
+            [2, 2],
+            np.random.rand(4),
+            state_names={"C": state_names["C"], "A": state_names["A"]},
+        )
+
+        self.graph.add_factors(phi1, phi2, phi3)
+
+        # Convert to junction tree
+        junction_tree = self.graph.to_junction_tree()
+
+        # Check that the factors in the junction tree have the correct state names
+        for factor in junction_tree.factors:
+            for var in factor.variables:
+                self.assertEqual(factor.state_names[var], state_names[var])
+
+        # Verify state names were correctly passed to clique potentials
+        for clique_potential in junction_tree.factors:
+            for var in clique_potential.variables:
+                self.assertIn(var, state_names)
+                self.assertEqual(clique_potential.state_names[var], state_names[var])
+
+                # Verify the name_to_no and no_to_name mappings are correct
+                for i, state in enumerate(state_names[var]):
+                    self.assertEqual(clique_potential.name_to_no[var][state], i)
+                    self.assertEqual(clique_potential.no_to_name[var][i], state)
+
     def tearDown(self):
         del self.graph
