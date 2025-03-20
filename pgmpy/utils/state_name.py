@@ -94,11 +94,15 @@ class StateNameMixin:
                 # Check for conflicts between existing state names
                 if self.state_names[var] != phi1.state_names[var]:
                     # One has strings and the other has numeric values - prioritize strings
-                    self_has_strings = any(isinstance(s, str) and not s.isdigit() 
-                                        for s in self.state_names[var])
-                    phi1_has_strings = any(isinstance(s, str) and not s.isdigit() 
-                                    for s in phi1.state_names[var])
-                    
+                    self_has_strings = any(
+                        isinstance(s, str) and not s.isdigit()
+                        for s in self.state_names[var]
+                    )
+                    phi1_has_strings = any(
+                        isinstance(s, str) and not s.isdigit()
+                        for s in phi1.state_names[var]
+                    )
+
                     # Keep string-based state names over numeric ones
                     if self_has_strings and not phi1_has_strings:
                         continue  # Keep current string-based state names
