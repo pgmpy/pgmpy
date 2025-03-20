@@ -489,7 +489,7 @@ class TestResidualMethod(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 14.853)
+        self.assertAlmostEqual(round(coef, 3), 11.934)
         self.assertAlmostEqual(p_value, 0.0)
 
         # Conditional tests
@@ -502,13 +502,13 @@ class TestResidualMethod(unittest.TestCase):
             seed=42,
         )
 
-        self.assertAlmostEqual(round(coef, 3), -1.912)
-        self.assertGreaterEqual(p_value, 0.05)
+        self.assertAlmostEqual(round(coef, 3), -1.908)
+        self.assertEqual(round(p_value, 4), 0.0564)
 
         # Conditional tests
         coef, p_value = gcm(
             X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
 
-        self.assertAlmostEqual(round(coef, 3), 12.94)
+        self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)

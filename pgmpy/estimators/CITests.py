@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-from statsmodels.multivariate.manova import MANOVA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
@@ -690,10 +689,11 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
 def gcm(X, Y, Z, data, boolean=True, **kwargs):
     """
-    A statistical hypothesis test for conditional independence. It performs nonlinear regressions
-    on the conditioning variable and then tests for a vanishing covariance between the resulting residuals.
-    It can be applied to both univariate random variables and multivariate random vectors.
-    Details of the method can be found in [1]
+    The Generalized Covariance Measure(GCM) test for CI.
+
+    It performs linear regressions on the conditioning variable and then tests
+    for a vanishing covariance between the resulting residuals. Details of the
+    method can be found in [1].
 
     Parameters
     ----------
@@ -738,10 +738,10 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
-    # Step 1.1: If no conditional variables are specified, use a constant value.
-    if len(Z) == 0:
-        Z = ["cont_Z"]
-        data = data.assign(cont_Z=np.ones(data.shape[0]))
+    # Step 1.1: Add another column with constant values to handle intercepts. When Z=[],
+    #           this can act as the constant vector.
+    Z += ["intercept"]
+    data = data.assign(intercept=np.ones(data.shape[0]))
 
     # Step 2: Compute the linear regression and the residuals
     X_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, X], rcond=None)[0]
@@ -751,10 +751,9 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
     # Step 3: Compute the Generalised Covariance Measure.
     n = res_x.shape[0]
-
     t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
-    # Step 4: Compute p-value using f-approximation [3].
+    # Step 4: Compute p-value using standard normal distribution.
     p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
 
     # Step 6: Return
