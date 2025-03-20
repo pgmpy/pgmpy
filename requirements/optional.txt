@@ -1,4 +1,4 @@
 daft-pgm>=0.1.4
 xgboost>=2.0.3
-litellm==1.53.1.dev1
+litellm==1.61.15
 pyparsing>=3.0
