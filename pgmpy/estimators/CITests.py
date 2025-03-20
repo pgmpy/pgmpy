@@ -750,17 +750,11 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     res_y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
 
     # Step 3: Compute the Generalised Covariance Measure.
-    res_x_y = np.multiply(res_x, res_y)
-    res_sqrd = res_x_y**2
     n = res_x.shape[0]
-    mean_res = np.mean(res_x_y)
 
-    t_stat_num = np.sqrt(n) * mean_res
-    t_stat_den = np.sqrt(np.mean(res_sqrd)) - (mean_res**2)
+    t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
     # Step 4: Compute p-value using f-approximation [3].
-    t_stat = t_stat_num / t_stat_den
-
     p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
 
     # Step 6: Return
