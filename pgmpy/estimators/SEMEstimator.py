@@ -9,6 +9,7 @@ from pgmpy.utils import compat_fns, optimize, pinverse
 
 from pgmpy.inference import CausalInference
 
+
 class SEMEstimator(object):
     """
     Base class of SEM estimators. All the estimators inherit this class.
