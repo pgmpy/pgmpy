@@ -164,6 +164,34 @@ class SEMGraph(DAG):
 
         return full_graph
 
+    def get_scaling_indicators(self):
+        """
+        Returns a scaling indicator for each of the latent variables in the model.
+        The scaling indicator is chosen randomly among the observed measurement
+        variables of the latent variable.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
+        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
+        ...                  latents=['xi1', 'eta1'])
+        >>> model.get_scaling_indicators()
+        {'xi1': 'x1', 'eta1': 'y1'}
+
+        Returns
+        -------
+        dict: Returns a dict with latent variables as the key and their value being the
+                scaling indicator.
+        """
+        scaling_indicators = {}
+        for node in self.latents:
+            for neighbor in self.graph.neighbors(node):
+                if neighbor in self.observed:
+                    scaling_indicators[node] = neighbor
+                    break
+        return scaling_indicators
+
     def active_trail_nodes(self, variables, observed=[], avoid_nodes=[], struct="full"):
         """
         Finds all the observed variables which are d-connected to `variables` in the `graph_struct`
