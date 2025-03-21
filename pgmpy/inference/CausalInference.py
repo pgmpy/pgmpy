@@ -1,14 +1,15 @@
 from collections.abc import Iterable
-from itertools import chain, product
+from itertools import chain, product, combinations
 
 import networkx as nx
+from networkx.algorithms.dag import descendants
 import numpy as np
 from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import BayesianNetwork, SEMGraph
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -19,7 +20,7 @@ class CausalInference(object):
 
     Parameters
     ----------
-    model: pgmpy.base.DAG | pgmpy.models.BayesianNetwork
+    model: pgmpy.base.DAG | pgmpy.models.BayesianNetwork | pgmpy.models.SEMGraph
         The model that we'll perform inference over.
 
     set_nodes: list[node:str] or None
@@ -48,7 +49,7 @@ class CausalInference(object):
     """
 
     def __init__(self, model, set_nodes=None):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, (BayesianNetwork, SEMGraph)):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
             )
@@ -59,9 +60,16 @@ class CausalInference(object):
             )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        self.observed_variables = frozenset(self.model.nodes()).difference(
-            model.latents
-        )
+        if isinstance(self.model, BayesianNetwork):
+            self.observed_variables = frozenset(self.model.nodes()).difference(
+                model.latents
+            )
+            self.graph = self.model.to_directed()
+        else:
+            self.observed_variables = frozenset(self.model.observed)
+            self.graph = self.model.graph
+
+        self.latents = model.latents
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
@@ -257,6 +265,503 @@ class CausalInference(object):
         )
 
         return valid_adjustment_sets
+
+    def get_scaling_indicators(self):
+        """
+        Returns a scaling indicator for each of the latent variables in the model.
+        The scaling indicator is chosen randomly among the observed measurement
+        variables of the latent variable.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
+        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
+        ...                  latents=['xi1', 'eta1'])
+        >>> model.get_scaling_indicators()
+        {'xi1': 'x1', 'eta1': 'y1'}
+
+        Returns
+        -------
+        dict: Returns a dict with latent variables as the key and their value being the
+                scaling indicator.
+        """
+        scaling_indicators = {}
+        for node in self.latents:
+            for neighbor in self.graph.neighbors(node):
+                if neighbor in self.observed_variables:
+                    scaling_indicators[node] = neighbor
+                    break
+        return scaling_indicators
+
+    def active_trail_nodes(self, variables, observed=[], avoid_nodes=[], struct="full"):
+        """
+        Finds all the observed variables which are d-connected to `variables` in the `graph_struct`
+        when `observed` variables are observed.
+
+        Parameters
+        ----------
+        variables: str or array like
+            Observed variables whose d-connected variables are to be found.
+
+        observed : list/array-like
+            If given the active trails would be computed assuming these nodes to be observed.
+
+        avoid_nodes: list/array-like
+            If specificed, the algorithm doesn't account for paths that have influence flowing
+            through the avoid node.
+
+        struct: str or nx.DiGraph instance
+            If "full", considers correlation between error terms for computing d-connection.
+            If "non_error", doesn't condised error correlations for computing d-connection.
+            If instance of nx.DiGraph, finds d-connected variables on the given graph.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEM
+        >>> model = SEMGraph(ebunch=[('yrsmill', 'unionsen'), ('age', 'laboract'),
+        ...                          ('age', 'deferenc'), ('deferenc', 'laboract'),
+        ...                          ('deferenc', 'unionsen'), ('laboract', 'unionsen')],
+        ...                  latents=[],
+        ...                  err_corr=[('yrsmill', 'age')])
+        >>> model.active_trail_nodes('age')
+
+        Returns
+        -------
+        dict: {str: list}
+            Returns a dict with `variables` as the key and a list of d-connected variables as the
+            value.
+
+        References
+        ----------
+        Details of the algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
+        """
+        if struct == "full":
+            graph_struct = self.full_graph_struct
+        elif struct == "non_error":
+            graph_struct = self.graph
+        elif isinstance(struct, nx.DiGraph):
+            graph_struct = struct
+        else:
+            raise ValueError(
+                f"Expected struct to be str or nx.DiGraph. Got {type(struct)}"
+            )
+
+        ancestors_list = set()
+        for node in observed:
+            ancestors_list = ancestors_list.union(
+                nx.algorithms.dag.ancestors(graph_struct, node)
+            )
+
+        # Direction of flow of information
+        # up ->  from parent to child
+        # down -> from child to parent
+
+        active_trails = {}
+        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
+            visit_list = set()
+            visit_list.add((start, "up"))
+            traversed_list = set()
+            active_nodes = set()
+            while visit_list:
+                node, direction = visit_list.pop()
+                if node in avoid_nodes:
+                    continue
+                if (node, direction) not in traversed_list:
+                    if (
+                        (node not in observed)
+                        and (not node.startswith("."))
+                        and (node not in self.latents)
+                    ):
+                        active_nodes.add(node)
+                    traversed_list.add((node, direction))
+                    if direction == "up" and node not in observed:
+                        for parent in graph_struct.predecessors(node):
+                            visit_list.add((parent, "up"))
+                        for child in graph_struct.successors(node):
+                            visit_list.add((child, "down"))
+                    elif direction == "down":
+                        if node not in observed:
+                            for child in graph_struct.successors(node):
+                                visit_list.add((child, "down"))
+                        if node in ancestors_list:
+                            for parent in graph_struct.predecessors(node):
+                                visit_list.add((parent, "up"))
+            active_trails[start] = active_nodes
+        return active_trails
+
+    def _iv_transformations(self, X, Y, scaling_indicators={}):
+        """
+        Transforms the graph structure of SEM so that the d-separation criterion is
+        applicable for finding IVs. The method transforms the graph for finding MIIV
+        for the estimation of X \rightarrow Y given the scaling indicator for all the
+        parent latent variables.
+
+        Parameters
+        ----------
+        X: node
+            The explantory variable.
+
+        Y: node
+            The dependent variable.
+
+        scaling_indicators: dict
+            Scaling indicator for each latent variable in the model.
+
+        Returns
+        -------
+        nx.DiGraph: The transformed full graph structure.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
+        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
+        ...                  latents=['xi1', 'eta1'])
+        >>> model._iv_transformations('xi1', 'eta1',
+        ...                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
+        """
+        if isinstance(self.model, SEMGraph):
+            full_graph = self.model.full_graph_struct.copy()
+        else:
+            full_graph = self.graph.copy()
+
+        if not (X, Y) in full_graph.edges():
+            raise ValueError(f"The edge from {X} -> {Y} doesn't exist in the graph")
+
+        if (X in self.observed_variables) and (Y in self.observed_variables):
+            full_graph.remove_edge(X, Y)
+            return full_graph, Y
+
+        elif Y in self.latents:
+            full_graph.add_edge("." + Y, scaling_indicators[Y])
+            dependent_var = scaling_indicators[Y]
+        else:
+            dependent_var = Y
+
+        for parent_y in self.graph.predecessors(Y):
+            # Remove edge even when the parent is observed ????
+            full_graph.remove_edge(parent_y, Y)
+            if parent_y in self.latents:
+                full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
+
+        return full_graph, dependent_var
+
+    def get_ivs(self, X, Y, scaling_indicators={}):
+        """
+        Returns the Instrumental variables(IVs) for the relation X -> Y
+
+        Parameters
+        ----------
+        X: node
+            The variable name (observed or latent)
+
+        Y: node
+            The variable name (observed or latent)
+
+        scaling_indicators: dict (optional)
+            A dict representing which observed variable to use as scaling indicator for
+            the latent variables.
+            If not given the method automatically selects one of the measurement variables
+            at random as the scaling indicator.
+
+        Returns
+        -------
+        set: {str}
+            The set of Instrumental Variables for X -> Y.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y')],
+        ...                  latents=[],
+        ...                  err_corr=[('X', 'Y')])
+        >>> model.get_ivs('X', 'Y')
+        {'I'}
+        """
+        if not scaling_indicators:
+            scaling_indicators = self.get_scaling_indicators()
+
+        if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
+            logger.warning(
+                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
+            )
+
+        transformed_graph, dependent_var = self._iv_transformations(
+            X, Y, scaling_indicators=scaling_indicators
+        )
+        if X in self.latents:
+            explanatory_var = scaling_indicators[X]
+        else:
+            explanatory_var = X
+
+        d_connected_x = self.active_trail_nodes(
+            [explanatory_var], struct=transformed_graph
+        )[explanatory_var]
+
+        # Condition on X to block any paths going through X.
+        d_connected_y = self.active_trail_nodes(
+            [dependent_var], avoid_nodes=[explanatory_var], struct=transformed_graph
+        )[dependent_var]
+
+        # Remove {X, Y} because they can't be IV for X -> Y
+        return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
+
+    def get_conditional_ivs(self, X, Y, scaling_indicators={}):
+        """
+        Returns the conditional IVs for the relation X -> Y
+
+        Parameters
+        ----------
+        X: node
+            The observed variable's name
+
+        Y: node
+            The oberved variable's name
+
+        scaling_indicators: dict (optional)
+            A dict representing which observed variable to use as scaling indicator for
+            the latent variables.
+            If not provided, automatically finds scaling indicators by randomly selecting
+            one of the measurement variables of each latent variable.
+
+        Returns
+        -------
+        set: Set of 2-tuples representing tuple[0] is an IV for X -> Y given tuple[1].
+
+        References
+        ----------
+        .. [1] Van Der Zander, B., Textor, J., & Liskiewicz, M. (2015, June). Efficiently finding
+               conditional instruments for causal inference. In Twenty-Fourth International Joint
+               Conference on Artificial Intelligence.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y'), ('W', 'I')],
+        ...                  latents=[],
+        ...                  err_corr=[('W', 'Y')])
+        >>> model.get_ivs('X', 'Y')
+        [('I', {'W'})]
+        """
+        if not scaling_indicators:
+            scaling_indicators = self.get_scaling_indicators()
+
+        if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
+            logger.warning(
+                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
+            )
+
+        transformed_graph, dependent_var = self._iv_transformations(
+            X, Y, scaling_indicators=scaling_indicators
+        )
+        if (X, Y) in transformed_graph.edges:
+            G_c = transformed_graph.remove_edge(X, Y)
+        else:
+            G_c = transformed_graph
+
+        instruments = []
+        for Z in self.observed_variables - {X, Y}:
+            W = self._nearest_separator(G_c, Y, Z)
+            # Condition to check if W d-separates Y from Z
+            if (not W) or (W.intersection(descendants(G_c, Y))) or (X in W):
+                continue
+
+            # Condition to check if X d-connected to I after conditioning on W.
+            elif X in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
+                instruments.append((Z, W))
+            else:
+                continue
+        return instruments
+
+    def get_total_conditional_ivs(self, X, Y, scaling_indicators={}):
+        all_paths = list(nx.all_simple_paths(self.graph, X, Y))
+        nodes_on_paths = set([node for path in all_paths for node in path])
+        nodes_on_paths = nodes_on_paths - {X, Y}
+
+        transformed_graph, dependent_var = self._iv_transformations(
+            X, Y, scaling_indicators=scaling_indicators
+        )
+
+        if (X, Y) in transformed_graph.edges():
+            transformed_graph.remove_edge(X, Y)
+
+        instruments = []
+        for Z in self.observed_variables - {X, Y}:
+            W = self._nearest_separator(transformed_graph, Y, Z)
+
+            # Check if W contains any nodes on paths from X to Y
+            if W and W.intersection(nodes_on_paths):
+                # Skip this instrument if it requires conditioning on nodes in paths
+                continue
+
+            # Regular conditions from get_conditional_ivs
+            if (
+                (not W)
+                or (W.intersection(descendants(transformed_graph, Y)))
+                or (X in W)
+            ):
+                continue
+            elif (
+                X
+                in self.active_trail_nodes([Z], observed=W, struct=transformed_graph)[Z]
+            ):
+                instruments.append((Z, W))
+            else:
+                continue
+
+        return instruments
+
+    def identification_method(self, X, Y):
+        """
+        Automatically identifies a valid method for estimating the causal effect from X to Y.
+
+        Parameters
+        ----------
+        X: str
+            The treatment/exposure variable
+        Y: str
+            The outcome variable
+
+        Returns
+        -------
+        dict
+            A dictionary containing keys as method and value as the corresponding result.
+        """
+        result = {}
+
+        try:
+            backdoor_sets = self.get_all_backdoor_adjustment_sets(X, Y)
+            if len(backdoor_sets) > 0:
+                result["backdoor set"] = backdoor_sets
+        except:
+            pass
+
+        try:
+            frontdoor_sets = self.get_all_frontdoor_adjustment_sets(X, Y)
+            if len(frontdoor_sets) > 0:
+                result["frontdoor set"] = frontdoor_sets
+        except:
+            pass
+
+        try:
+            instruments = self.get_ivs(X, Y)
+            if len(instruments) > 0:
+                result["instrumental variables"] = instruments
+        except:
+            pass
+
+        try:
+            conditional_ivs = self.get_conditional_ivs(X, Y)
+            if len(conditional_ivs) > 0:
+                result["conditional instrumental variables"] = conditional_ivs
+        except:
+            pass
+
+        try:
+            total_conditional_ivs = self.get_total_conditional_ivs(X, Y)
+            if len(total_conditional_ivs) > 0:
+                result["total conditional instrumental variables"] = (
+                    total_conditional_ivs
+                )
+        except:
+            pass
+
+        return result
+
+    def moralize(self, graph="full"):
+        """
+        TODO: This needs to go to a parent class.
+        Removes all the immoralities in the DirectedGraph and creates a moral
+        graph (UndirectedGraph).
+
+        A v-structure X->Z<-Y is an immorality if there is no directed edge
+        between X and Y.
+
+        Parameters
+        ----------
+        graph:
+
+        Examples
+        --------
+        """
+        if graph == "full":
+            graph = self.full_graph_struct
+        elif isinstance(graph, nx.DiGraph):
+            graph = graph
+        else:
+            graph = self.graph
+
+        moral_graph = graph.to_undirected()
+
+        for node in graph.nodes():
+            moral_graph.add_edges_from(combinations(graph.predecessors(node), 2))
+
+        return moral_graph
+
+    def _nearest_separator(self, G, Y, Z):
+        """
+        Finds the set of the nearest separators for `Y` and `Z` in `G`.
+
+        Parameters
+        ----------
+        G: nx.DiGraph instance
+            The graph in which to the find the nearest separation for `Y` and `Z`.
+
+        Y: str
+            The variable name for which the separators are needed.
+
+        Z: str
+            The other variable for which the separators are needed.
+
+        Returns
+        -------
+        set or None: If there is a nearest separator returns the set of separators else returns None.
+        """
+        W = set()
+        ancestral_G = G.subgraph(
+            nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})
+        ).copy()
+
+        if isinstance(self.model, SEMGraph):
+            # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+            # extra paths resulting in a much higher runtime.
+            err_nodes_to_remove = set(self.model.err_graph.nodes()) - set(
+                [node for edge in self.model.err_graph.edges() for node in edge]
+            )
+            ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
+
+        M = self.moralize(graph=ancestral_G)
+        visited = set([Y])
+        to_visit = list(M.neighbors(Y))
+
+        # Another optimization over the original algo. Rather than going through all the paths does
+        # a DFS search to find a markov blanket of observed variables. This doesn't ensure minimal observed
+        # set.
+        while to_visit:
+            node = to_visit.pop()
+            if node == Z:
+                return None
+            visited.add(node)
+            if node in self.observed_variables:
+                W.add(node)
+            else:
+                to_visit.extend(
+                    [node for node in M.neighbors(node) if node not in visited]
+                )
+        # for path in nx.all_simple_paths(M, Y, Z):
+        #     path_set = set(path)
+        #     if (len(path) >= 3) and not (W & path_set):
+        #         for index in range(1, len(path)-1):
+        #             if path[index] in self.observed:
+        #                 W.add(path[index])
+        #                 break
+        if Y not in self.active_trail_nodes([Z], observed=W, struct=ancestral_G)[Z]:
+            return W
+        else:
+            return None
 
     def _simple_decision(self, adjustment_sets=[]):
         """
