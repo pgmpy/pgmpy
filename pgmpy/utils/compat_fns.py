@@ -21,7 +21,7 @@ def copy(arr):
         elif isinstance(arr, (int, float)):
             return deepcopy(arr)
     else:
-        return torch.tensor(arr, dtype=config.get_dtype(), device=config.get_device())
+        return arr.clone().detach()
 
 
 def tobytes(arr):
