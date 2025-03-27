@@ -13,9 +13,9 @@ from pgmpy.models import BayesianNetwork
 class XDSLReader(object):
     def __init__(self, path=None, string=None):
         if path:
-            self.network = etree.ElementTree(file=path).getroot()  # .find("smile")
+            self.network = etree.ElementTree(file=path).getroot()
         elif string:
-            self.network = etree.fromstring(string.decode("utf-8"))  # # .find("smile")
+            self.network = etree.fromstring(string)
         else:
             raise ValueError("Must specify either path or string")
         self.network_name = self.network.attrib["id"]
@@ -24,13 +24,11 @@ class XDSLReader(object):
         self.edge_list = self.get_edges()
         self.variable_states = self.get_states()
         self.variable_CPD = self.get_values()
-        # self.variable_property = self.get_property()
-        # self.state_names = self.get_states()
 
     def get_parents(self):
         variable_parents = {}
-        for node in self.network.find("nodes").findall("cpt"):
-
+        nodes = self.network.find("nodes").findall("cpt")
+        for node in nodes:
             parents = node.find("parents")
             if parents is not None:
                 variable_parents[node.attrib["id"]] = parents.text.split(" ")
@@ -42,6 +40,9 @@ class XDSLReader(object):
     def get_variables(self):
         nodes = self.network.find("nodes")
         variables = [variable.attrib["id"] for variable in nodes.findall("cpt")]
+        # variables.extend(
+        #    [variable.attrib["id"] for variable in nodes.findall("deterministic")]
+        # )
         return variables
 
     def get_edges(self):
@@ -90,7 +91,6 @@ class XDSLReader(object):
                 len(self.variable_states[evidence_var])
                 for evidence_var in self.variable_parents[var]
             ]
-
             cpd = TabularCPD(
                 var,
                 len(self.variable_states[var]),
@@ -105,12 +105,6 @@ class XDSLReader(object):
             tabular_cpds.append(cpd)
 
         model.add_cpds(*tabular_cpds)
-
-        """for node, properties in self.variable_property.items():
-            for prop in properties:
-                if prop is not None:
-                    prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
-                    model.nodes[node][prop_name] = prop_value"""
 
         return model
 
@@ -151,17 +145,21 @@ class XDSLWriter(object):
         variable_tag = {}
         nodes_elem = etree.SubElement(self.root, "nodes")
 
-        for var in list(nx.topological_sort(self.model)):
+        for var in self.model.nodes:
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
             # etree.SubElement(variable_tag[var], "NAME").text = var
 
         return variable_tag
 
     def get_states(self):
+        nodes_elem = etree.SubElement(self.root, "nodes")
         outcome_tag = {}
         cpds = self.model.get_cpds()
-        for cpd in cpds:
-            var = cpd.variable
+        cpd_vars = [cpd.variable for cpd in cpds]
+        for var in self.model.nodes:
+            idx = cpd_vars.index(var)
+            cpd = cpds[idx]
+
             cpt_elem = self.variables[var]
             # Determine state names: if available in cpd.state_names, use them; otherwise, default to string indices.
             if (
@@ -178,9 +176,9 @@ class XDSLWriter(object):
                 etree.SubElement(cpt_elem, "state", {"id": st})
 
             # Use the network structure to determine the parents in the correct order.
-            evidence = cpd.get_evidence()
-            if evidence:
-                parents_str = " ".join(evidence)
+            evidence = cpd.variables
+            if len(evidence) > 1:
+                parents_str = " ".join(evidence[1:])
                 parents_elem = etree.SubElement(cpt_elem, "parents")
                 parents_elem.text = parents_str
 
@@ -249,4 +247,4 @@ class XDSLWriter(object):
             with open(filename, "wb") as f:
                 f.write(pretty_xml_str)
 
-        return pretty_xml_str
+        # return pretty_xml_str
