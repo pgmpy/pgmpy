@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-from statsmodels.multivariate.manova import MANOVA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
@@ -20,6 +19,7 @@ def get_ci_test(test, full=False, data=None, independencies=None):
         "modified_log_likelihood": modified_log_likelihood,
         "pearsonr": pearsonr,
         "pillai": pillai_trace,
+        "gcm": gcm,
     }
     if full:
         supported_tests["power_divergence"] = power_divergence
@@ -685,3 +685,82 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
             return False
     else:
         return coef, p_value
+
+
+def gcm(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    The Generalized Covariance Measure(GCM) test for CI.
+
+    It performs linear regressions on the conditioning variable and then tests
+    for a vanishing covariance between the resulting residuals. Details of the
+    method can be found in [1].
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X \u27c2 Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X \u27c2 Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the indepenedence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+
+        If boolean=False, returns the pearson correlation coefficient and p_value
+            of the test.
+
+    Returns
+    -------
+    CI Test results: tuple or bool
+        If boolean=True, returns True if p-value >= significance_level, else False. If
+        boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
+
+    References
+    ----------
+    [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised Covariance Measure".
+    """
+    # Step 1: Test if the inputs are correct
+    if not hasattr(Z, "__iter__"):
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
+    else:
+        Z = list(Z)
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
+        )
+
+    # Step 1.1: Add another column with constant values to handle intercepts. When Z=[],
+    #           this can act as the constant vector.
+    Z += ["intercept"]
+    data = data.assign(intercept=np.ones(data.shape[0]))
+
+    # Step 2: Compute the linear regression and the residuals
+    X_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, X], rcond=None)[0]
+    Y_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, Y], rcond=None)[0]
+    res_x = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
+    res_y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
+
+    # Step 3: Compute the Generalised Covariance Measure.
+    n = res_x.shape[0]
+    t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
+
+    # Step 4: Compute p-value using standard normal distribution.
+    p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
+
+    # Step 6: Return
+    if boolean:
+        if p_value >= kwargs["significance_level"]:
+            return True
+        else:
+            return False
+    else:
+        return t_stat, p_value
