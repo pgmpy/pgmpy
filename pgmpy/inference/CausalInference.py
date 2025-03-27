@@ -1,12 +1,13 @@
 from collections.abc import Iterable
-from itertools import chain, product, combinations
+from itertools import chain, combinations, product
 
 import networkx as nx
-from networkx.algorithms.dag import descendants
 import numpy as np
+from networkx.algorithms.dag import descendants
 from tqdm.auto import tqdm
 
 from pgmpy import config
+from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import BayesianNetwork, SEMGraph
@@ -22,10 +23,6 @@ class CausalInference(object):
     ----------
     model: pgmpy.base.DAG | pgmpy.models.BayesianNetwork | pgmpy.models.SEMGraph
         The model that we'll perform inference over.
-
-    set_nodes: list[node:str] or None
-        A list (or set/tuple) of nodes in the Bayesian Network which have been
-        set to a specific value per the do-operator.
 
     Examples
     --------
@@ -48,8 +45,8 @@ class CausalInference(object):
     'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
     """
 
-    def __init__(self, model, set_nodes=None):
-        if not isinstance(model, (BayesianNetwork, SEMGraph)):
+    def __init__(self, model):
+        if not isinstance(model, (BayesianNetwork, DAG, SEMGraph)):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
             )
@@ -59,7 +56,7 @@ class CausalInference(object):
                 f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
             )
         self.model = model
-        self.set_nodes = _variable_or_iterable_to_set(set_nodes)
+
         if isinstance(self.model, BayesianNetwork):
             self.observed_variables = frozenset(self.model.nodes()).difference(
                 model.latents
@@ -69,7 +66,7 @@ class CausalInference(object):
             self.observed_variables = frozenset(self.model.observed)
             self.graph = self.model.graph
 
-        self.latents = model.latents
+        self.latent_variables = model.latents
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
@@ -287,7 +284,7 @@ class CausalInference(object):
                 scaling indicator.
         """
         scaling_indicators = {}
-        for node in self.latents:
+        for node in self.latent_variables:
             for neighbor in self.graph.neighbors(node):
                 if neighbor in self.observed_variables:
                     scaling_indicators[node] = neighbor
@@ -373,7 +370,7 @@ class CausalInference(object):
                     if (
                         (node not in observed)
                         and (not node.startswith("."))
-                        and (node not in self.latents)
+                        and (node not in self.latent_variables)
                     ):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
@@ -435,7 +432,7 @@ class CausalInference(object):
             full_graph.remove_edge(X, Y)
             return full_graph, Y
 
-        elif Y in self.latents:
+        elif Y in self.latent_variables:
             full_graph.add_edge("." + Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
         else:
@@ -444,7 +441,7 @@ class CausalInference(object):
         for parent_y in self.graph.predecessors(Y):
             # Remove edge even when the parent is observed ????
             full_graph.remove_edge(parent_y, Y)
-            if parent_y in self.latents:
+            if parent_y in self.latent_variables:
                 full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
 
         return full_graph, dependent_var
@@ -492,7 +489,7 @@ class CausalInference(object):
         transformed_graph, dependent_var = self._iv_transformations(
             X, Y, scaling_indicators=scaling_indicators
         )
-        if X in self.latents:
+        if X in self.latent_variables:
             explanatory_var = scaling_indicators[X]
         else:
             explanatory_var = X
