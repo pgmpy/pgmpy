@@ -305,3 +305,50 @@ class StateNameDecorator(unittest.TestCase):
 
         self.assertEqual(inf_op1, req_op1)
         self.assertEqual(inf_op2, req_op2)
+
+    def test_add_state_names(self):
+        # Test string state names taking precedence over numeric ones
+        numeric_states = DiscreteFactor(
+            ["speed"], [3], np.ones(3), state_names={"speed": [0, 1, 2]}
+        )
+        string_states = DiscreteFactor(
+            ["speed"], [3], np.ones(3), state_names={"speed": ["low", "medium", "high"]}
+        )
+
+        # Make a copy to test in both directions
+        numeric_states_copy = DiscreteFactor(
+            ["speed"], [3], np.ones(3), state_names={"speed": [0, 1, 2]}
+        )
+
+        # String states should take precedence
+        numeric_states.add_state_names(string_states)
+        self.assertEqual(numeric_states.state_names["speed"], ["low", "medium", "high"])
+
+        # Test the opposite direction - string states should still take precedence
+        string_states.add_state_names(numeric_states_copy)
+        self.assertEqual(string_states.state_names["speed"], ["low", "medium", "high"])
+
+        # Test conflicting string state names
+        states1 = DiscreteFactor(
+            ["switch"], [2], np.ones(2), state_names={"switch": ["on", "off"]}
+        )
+        states2 = DiscreteFactor(
+            ["switch"], [2], np.ones(2), state_names={"switch": ["high", "low"]}
+        )
+
+        # Should raise a ValueError due to conflict
+        with self.assertRaises(ValueError):
+            states1.add_state_names(states2)
+
+        # Test merging non-conflicting state names for different variables
+        factor1 = DiscreteFactor(
+            ["speed"], [3], np.ones(3), state_names={"speed": ["low", "medium", "high"]}
+        )
+        factor2 = DiscreteFactor(
+            ["switch"], [2], np.ones(2), state_names={"switch": ["on", "off"]}
+        )
+
+        # Should merge without conflict
+        factor1.add_state_names(factor2)
+        self.assertEqual(factor1.state_names["speed"], ["low", "medium", "high"])
+        self.assertEqual(factor1.state_names["switch"], ["on", "off"])

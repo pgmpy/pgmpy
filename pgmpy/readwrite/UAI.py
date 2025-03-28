@@ -8,7 +8,7 @@ except ImportError as e:
     raise ImportError(
         e.msg
         + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    )
+    ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork

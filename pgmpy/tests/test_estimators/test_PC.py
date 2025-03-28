@@ -516,7 +516,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 # Fake dataset no: 1
                 np.random.seed(42)
@@ -586,7 +586,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 np.random.seed(42)
                 data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))

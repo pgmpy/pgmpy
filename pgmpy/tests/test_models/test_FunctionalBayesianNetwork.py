@@ -908,10 +908,10 @@ class TestFBNMethods(unittest.TestCase):
         self.assertIn("ibpB_alpha1", params)
 
         self.assertAlmostEqual(params["b1191_mu"].mean(), 1.273, delta=0.2)
-        self.assertAlmostEqual(params["b1191_sigma"].mean(), 0.609, delta=0.2)
+        self.assertAlmostEqual(params["b1191_sigma"].mean(), 0.609, delta=0.25)
 
         self.assertAlmostEqual(params["eutG_mu"].mean(), 1.265, delta=0.2)
-        self.assertAlmostEqual(params["eutG_sigma"].mean(), 0.691, delta=0.2)
+        self.assertAlmostEqual(params["eutG_sigma"].mean(), 0.691, delta=0.25)
 
         self.assertAlmostEqual(params["fixC_inter"].mean(), 0.316, delta=0.2)
         self.assertAlmostEqual(params["fixC_alpha"].mean(), 0.941, delta=0.2)

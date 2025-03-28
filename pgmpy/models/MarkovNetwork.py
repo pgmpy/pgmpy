@@ -519,6 +519,11 @@ class MarkovNetwork(UndirectedGraph):
         """
         from pgmpy.models import JunctionTree
 
+        # Get all the state names of the random variables
+        all_state_names = {}
+        for factor in self.factors:
+            all_state_names.update(factor.state_names)
+
         # Check whether the model is valid or not
         self.check_model()
 
@@ -572,7 +577,15 @@ class MarkovNetwork(UndirectedGraph):
             # To compute clique potential, initially set it as unity factor
             var_card = [self.get_cardinality()[x] for x in node]
             clique_potential = DiscreteFactor(
-                node, var_card, np.ones(np.prod(var_card))
+                node,
+                var_card,
+                np.ones(np.prod(var_card)),
+                state_names={
+                    var: all_state_names.get(
+                        var, list(range(self.get_cardinality()[var]))
+                    )
+                    for var in node
+                },
             )
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
