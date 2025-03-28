@@ -8,7 +8,7 @@ import numpy.testing as np_test
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
-from pgmpy.readwrite.XDSL import XDSLReader, XDSLWriter
+from pgmpy.readwrite import XDSLReader, XDSLWriter
 from pgmpy.utils import get_example_model
 
 TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -112,17 +112,101 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
         for variable in states_expected:
             self.assertListEqual(states_expected[variable], states[variable])
 
+    def test_get_edges(self):
+        edges_expected = [
+            ["asia", "tub"],
+            ["smoke", "lung"],
+            ["tub", "either"],
+            ["lung", "either"],
+            ["either", "xray"],
+            ["smoke", "bronc"],
+            ["either", "dysp"],
+            ["bronc", "dysp"],
+        ]
+        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+
+    def test_get_values(self):
+        cpd_expected = {
+            "asia": np.array([[0.99], [0.01]]),
+            "tub": np.array([[0.99, 0.95], [0.01, 0.05]]),
+            "smoke": np.array([[0.5], [0.5]]),
+            "lung": np.array([[0.99, 0.9], [0.01, 0.1]]),
+            "either": np.array([[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            "xray": np.array([[0.95, 0.02], [0.05, 0.98]]),
+            "bronc": np.array([[0.7, 0.4], [0.3, 0.6]]),
+            "dysp": np.array([[0.9, 0.2, 0.3, 0.1], [0.1, 0.8, 0.7, 0.9]]),
+        }
+        cpd = self.reader.variable_CPD
+        for variable in cpd_expected:
+            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
+
+    def test_model(self):
+        self.reader.get_model().check_model()
+
+    def tearDown(self):
+        del self.reader
+
+
+DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
+<smile version="1.0" id="dummy" numsamples="10000" discsamples="10000">
+	<nodes>
+		<cpt id="A" >
+			<state id="yes" />
+			<state id="no" />
+			<probabilities>0.92 0.08</probabilities>
+		</cpt>
+		<cpt id="B" >
+			<state id="high" />
+			<state id="low" />
+			<probabilities>0.99 0.01</probabilities>
+		</cpt>
+		<cpt id="C" >
+			<state id="true" />
+			<state id="false" />
+            <parents>A B</parents>
+			<probabilities>0.8 0.2 0.75 0.25 0.33 0.67 0.99 0.01</probabilities>
+		</cpt>
+		<cpt id="D" >
+			<state id="big" />
+            <state id="medium" />
+			<state id="small" />
+			<parents>C</parents>
+			<probabilities>0.6 0.3 0.1 0.4 0.4 0.2</probabilities>
+		</cpt>
+	</nodes>
+</smile>"""
+
 
 class TestXDSLWriterMethodsString(unittest.TestCase):
     def setUp(self):
         self.alarm_model_xdsl = r"pgmpy\tests\test_readwrite\testdata\Alarm.xdsl"
         self.alarm_model_bn = get_example_model(model="alarm")
-        self.asia_model_xdsl = TEST_FILE
 
-    def test_writer_cpds(self):
-        # asia_model = XDSLWriter(self.asia_model_bn)
-        # asia_cpd = TabularCPD()
-        pass
+        self.dummy_model = BayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
+        self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])
+        self.cpd_b = TabularCPD(variable="B", variable_card=2, values=[[0.99], [0.01]])
+
+        self.cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[
+                [0.8, 0.75, 0.33, 0.99],
+                [0.2, 0.25, 0.67, 0.01],
+            ],
+            evidence=["A", "B"],
+            evidence_card=[2, 2],
+        )
+
+        self.cpd_d = TabularCPD(
+            variable="D",
+            variable_card=3,
+            values=[[0.6, 0.4], [0.3, 0.4], [0.1, 0.2]],
+            evidence=["C"],
+            evidence_card=[2],
+        )
+
+        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)
+        self.writer_dummy = XDSLWriter(self.dummy_model)
 
     def assert_models_equivalent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
@@ -134,7 +218,16 @@ class TestXDSLWriterMethodsString(unittest.TestCase):
             cpds_got = got.get_cpds(node=node)
             self.assertEqual(cpds_expected, cpds_got)
 
-    def test_write_xdsl(self):
+    def test_writer_cpds(self):
+        self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
+        with open("dummy_model.xdsl", "r") as f:
+            reader = XDSLReader(f)
+        model = reader.get_model(state_name_type=int)
+        self.assert_models_equivalent(self.dummy_model, model)
+        os.remove("dummy_model.xdsl")
+        pass
+
+    def test_alarm_model(self):
         alarm_xdsl = XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
         with open("alarm_model.xdsl", "r") as f:
             file_text = f.read()

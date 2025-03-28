@@ -40,9 +40,6 @@ class XDSLReader(object):
     def get_variables(self):
         nodes = self.network.find("nodes")
         variables = [variable.attrib["id"] for variable in nodes.findall("cpt")]
-        # variables.extend(
-        #    [variable.attrib["id"] for variable in nodes.findall("deterministic")]
-        # )
         return variables
 
     def get_edges(self):
@@ -74,8 +71,9 @@ class XDSLReader(object):
 
             for j in range(num_states):
                 for i in range(j, len(prob_values), num_states):
-                    cpd_arr[j].append(prob_values[i])
+                    cpd_arr[j].append(float(prob_values[i]))
 
+            # cpd_arr = list(map(float, cpd_arr))
             variable_CPD[cpt.attrib["id"]] = cpd_arr
         return variable_CPD
 
@@ -135,7 +133,7 @@ class XDSLWriter(object):
         )
 
         self.variables = self.get_variables()
-        self.states = self.get_states()
+        self.states = self.get_states_and_cpds()
         self._create_extensions()
 
     def get_variables(self):
@@ -147,11 +145,10 @@ class XDSLWriter(object):
 
         for var in self.model.nodes:
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
-            # etree.SubElement(variable_tag[var], "NAME").text = var
 
         return variable_tag
 
-    def get_states(self):
+    def get_states_and_cpds(self):
         nodes_elem = etree.SubElement(self.root, "nodes")
         outcome_tag = {}
         cpds = self.model.get_cpds()
@@ -171,9 +168,10 @@ class XDSLWriter(object):
             else:
                 states = [str(i) for i in range(cpd.variable_card)]
 
-            # Add a <state> element for each state.
             for st in states:
-                etree.SubElement(cpt_elem, "state", {"id": st})
+                etree.SubElement(
+                    cpt_elem, "state", {"id": str(st)}
+                )  # can't parse int/float
 
             # Use the network structure to determine the parents in the correct order.
             evidence = cpd.variables
@@ -187,7 +185,7 @@ class XDSLWriter(object):
             values = np.array(cpd.get_values())
             # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
             flat_values = values.flatten(order="F")
-            probs_elem.text = " ".join("{:.17f}".format(x) for x in flat_values)
+            probs_elem.text = " ".join("{:.17f}".format(float(x)) for x in flat_values)
 
         return outcome_tag
 
