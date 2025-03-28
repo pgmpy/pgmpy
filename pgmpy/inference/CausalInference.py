@@ -295,7 +295,6 @@ class CausalInference(object):
                     break
         return scaling_indicators
 
-
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
         Transforms the graph structure of SEM so that the d-separation criterion is
@@ -405,7 +404,7 @@ class CausalInference(object):
         dag_x = DAG(graph_for_x.edges())
         dag_x.latents = self.latents
         d_connected_x = dag_x.active_trail_nodes(
-            [explanatory_var], 
+            [explanatory_var],
         )[explanatory_var]
 
         graph_for_y = transformed_graph.copy()
@@ -413,7 +412,7 @@ class CausalInference(object):
         dag_y = DAG(graph_for_y.edges())
         dag_y.latents = self.latents
         d_connected_y = dag_y.active_trail_nodes(
-            [dependent_var], 
+            [dependent_var],
         )[dependent_var]
 
         # Remove {X, Y} because they can't be IV for X -> Y
@@ -480,7 +479,9 @@ class CausalInference(object):
                 continue
 
             # Condition to check if X d-connected to I after conditioning on W.
-            elif X in self.model.active_trail_nodes([Z], observed=W)[Z]:#, struct=G_c)[Z]:
+            elif (
+                X in self.model.active_trail_nodes([Z], observed=W)[Z]
+            ):  # , struct=G_c)[Z]:
                 instruments.append((Z, W))
             else:
                 continue
@@ -516,7 +517,9 @@ class CausalInference(object):
                 continue
             elif (
                 X
-                in self.model.active_trail_nodes([Z], observed=W)[Z]#, struct=transformed_graph)[Z]
+                in self.model.active_trail_nodes([Z], observed=W)[
+                    Z
+                ]  # , struct=transformed_graph)[Z]
             ):
                 instruments.append((Z, W))
             else:
@@ -581,7 +584,6 @@ class CausalInference(object):
 
         return result
 
-
     def _nearest_separator(self, G, Y, Z):
         """
         Finds the set of the nearest separators for `Y` and `Z` in `G`.
@@ -639,7 +641,9 @@ class CausalInference(object):
         #             if path[index] in self.observed:
         #                 W.add(path[index])
         #                 break
-        if Y not in self.model.active_trail_nodes([Z], observed=W)[Z]:#, struct=ancestral_G)[Z]:
+        if (
+            Y not in self.model.active_trail_nodes([Z], observed=W)[Z]
+        ):  # , struct=ancestral_G)[Z]:
             return W
         else:
             return None
