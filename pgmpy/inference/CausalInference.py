@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import BayesianNetwork, SEMGraph
+from pgmpy.base import DAG
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -67,7 +68,7 @@ class CausalInference(object):
             self.graph = self.model.to_directed()
         else:
             self.observed_variables = frozenset(self.model.observed)
-            self.graph = self.model.graph
+            self.graph = self.model.full_graph_struct
 
         self.latents = model.latents
 
@@ -294,103 +295,6 @@ class CausalInference(object):
                     break
         return scaling_indicators
 
-    def active_trail_nodes(self, variables, observed=[], avoid_nodes=[], struct="full"):
-        """
-        Finds all the observed variables which are d-connected to `variables` in the `graph_struct`
-        when `observed` variables are observed.
-
-        Parameters
-        ----------
-        variables: str or array like
-            Observed variables whose d-connected variables are to be found.
-
-        observed : list/array-like
-            If given the active trails would be computed assuming these nodes to be observed.
-
-        avoid_nodes: list/array-like
-            If specificed, the algorithm doesn't account for paths that have influence flowing
-            through the avoid node.
-
-        struct: str or nx.DiGraph instance
-            If "full", considers correlation between error terms for computing d-connection.
-            If "non_error", doesn't condised error correlations for computing d-connection.
-            If instance of nx.DiGraph, finds d-connected variables on the given graph.
-
-        Examples
-        --------
-        >>> from pgmpy.models import SEM
-        >>> model = SEMGraph(ebunch=[('yrsmill', 'unionsen'), ('age', 'laboract'),
-        ...                          ('age', 'deferenc'), ('deferenc', 'laboract'),
-        ...                          ('deferenc', 'unionsen'), ('laboract', 'unionsen')],
-        ...                  latents=[],
-        ...                  err_corr=[('yrsmill', 'age')])
-        >>> model.active_trail_nodes('age')
-
-        Returns
-        -------
-        dict: {str: list}
-            Returns a dict with `variables` as the key and a list of d-connected variables as the
-            value.
-
-        References
-        ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
-        """
-        if struct == "full":
-            graph_struct = self.full_graph_struct
-        elif struct == "non_error":
-            graph_struct = self.graph
-        elif isinstance(struct, nx.DiGraph):
-            graph_struct = struct
-        else:
-            raise ValueError(
-                f"Expected struct to be str or nx.DiGraph. Got {type(struct)}"
-            )
-
-        ancestors_list = set()
-        for node in observed:
-            ancestors_list = ancestors_list.union(
-                nx.algorithms.dag.ancestors(graph_struct, node)
-            )
-
-        # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
-
-        active_trails = {}
-        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
-            visit_list = set()
-            visit_list.add((start, "up"))
-            traversed_list = set()
-            active_nodes = set()
-            while visit_list:
-                node, direction = visit_list.pop()
-                if node in avoid_nodes:
-                    continue
-                if (node, direction) not in traversed_list:
-                    if (
-                        (node not in observed)
-                        and (not node.startswith("."))
-                        and (node not in self.latents)
-                    ):
-                        active_nodes.add(node)
-                    traversed_list.add((node, direction))
-                    if direction == "up" and node not in observed:
-                        for parent in graph_struct.predecessors(node):
-                            visit_list.add((parent, "up"))
-                        for child in graph_struct.successors(node):
-                            visit_list.add((child, "down"))
-                    elif direction == "down":
-                        if node not in observed:
-                            for child in graph_struct.successors(node):
-                                visit_list.add((child, "down"))
-                        if node in ancestors_list:
-                            for parent in graph_struct.predecessors(node):
-                                visit_list.add((parent, "up"))
-            active_trails[start] = active_nodes
-        return active_trails
 
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
@@ -497,13 +401,19 @@ class CausalInference(object):
         else:
             explanatory_var = X
 
-        d_connected_x = self.active_trail_nodes(
-            [explanatory_var], struct=transformed_graph
+        graph_for_x = transformed_graph.copy()
+        dag_x = DAG(graph_for_x.edges())
+        dag_x.latents = self.latents
+        d_connected_x = dag_x.active_trail_nodes(
+            [explanatory_var], 
         )[explanatory_var]
 
-        # Condition on X to block any paths going through X.
-        d_connected_y = self.active_trail_nodes(
-            [dependent_var], avoid_nodes=[explanatory_var], struct=transformed_graph
+        graph_for_y = transformed_graph.copy()
+        graph_for_y.remove_edges_from(list(graph_for_y.out_edges(explanatory_var)))
+        dag_y = DAG(graph_for_y.edges())
+        dag_y.latents = self.latents
+        d_connected_y = dag_y.active_trail_nodes(
+            [dependent_var], 
         )[dependent_var]
 
         # Remove {X, Y} because they can't be IV for X -> Y
@@ -570,7 +480,7 @@ class CausalInference(object):
                 continue
 
             # Condition to check if X d-connected to I after conditioning on W.
-            elif X in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
+            elif X in self.model.active_trail_nodes([Z], observed=W)[Z]:#, struct=G_c)[Z]:
                 instruments.append((Z, W))
             else:
                 continue
@@ -606,7 +516,7 @@ class CausalInference(object):
                 continue
             elif (
                 X
-                in self.active_trail_nodes([Z], observed=W, struct=transformed_graph)[Z]
+                in self.model.active_trail_nodes([Z], observed=W)[Z]#, struct=transformed_graph)[Z]
             ):
                 instruments.append((Z, W))
             else:
@@ -671,35 +581,6 @@ class CausalInference(object):
 
         return result
 
-    def moralize(self, graph="full"):
-        """
-        TODO: This needs to go to a parent class.
-        Removes all the immoralities in the DirectedGraph and creates a moral
-        graph (UndirectedGraph).
-
-        A v-structure X->Z<-Y is an immorality if there is no directed edge
-        between X and Y.
-
-        Parameters
-        ----------
-        graph:
-
-        Examples
-        --------
-        """
-        if graph == "full":
-            graph = self.full_graph_struct
-        elif isinstance(graph, nx.DiGraph):
-            graph = graph
-        else:
-            graph = self.graph
-
-        moral_graph = graph.to_undirected()
-
-        for node in graph.nodes():
-            moral_graph.add_edges_from(combinations(graph.predecessors(node), 2))
-
-        return moral_graph
 
     def _nearest_separator(self, G, Y, Z):
         """
@@ -733,7 +614,7 @@ class CausalInference(object):
             )
             ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
 
-        M = self.moralize(graph=ancestral_G)
+        M = self.model.moralize()
         visited = set([Y])
         to_visit = list(M.neighbors(Y))
 
@@ -758,7 +639,7 @@ class CausalInference(object):
         #             if path[index] in self.observed:
         #                 W.add(path[index])
         #                 break
-        if Y not in self.active_trail_nodes([Z], observed=W, struct=ancestral_G)[Z]:
+        if Y not in self.model.active_trail_nodes([Z], observed=W)[Z]:#, struct=ancestral_G)[Z]:
             return W
         else:
             return None
