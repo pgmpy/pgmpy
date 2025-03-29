@@ -225,7 +225,6 @@ class TestXDSLWriterMethodsString(unittest.TestCase):
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivalent(self.dummy_model, model)
         os.remove("dummy_model.xdsl")
-        pass
 
     def test_alarm_model(self):
         alarm_xdsl = XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")

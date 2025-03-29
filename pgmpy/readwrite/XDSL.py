@@ -1,3 +1,4 @@
+import random
 import xml.dom.minidom as md
 import xml.etree.ElementTree as etree
 from io import BytesIO
@@ -11,6 +12,24 @@ from pgmpy.models import BayesianNetwork
 
 
 class XDSLReader(object):
+    """
+    Initializes the reader object for XDSL file formats created through GeNIe (https://www.bayesfusion.com/genie/).
+
+    Parameters
+    ----------
+    path : file or str
+        Path to the XDSL file.
+
+    string : str
+        A string containing the XDSL file content.
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import XDSLReader
+    >>> reader = XDSLReader(path="pgmpy/tests/test_readwrite/testdata/Alarm.xdsl")
+    >>> bn_model = reader.get_model()
+    """
+
     def __init__(self, path=None, string=None):
         if path:
             self.network = etree.ElementTree(file=path).getroot()
@@ -73,7 +92,6 @@ class XDSLReader(object):
                 for i in range(j, len(prob_values), num_states):
                     cpd_arr[j].append(float(prob_values[i]))
 
-            # cpd_arr = list(map(float, cpd_arr))
             variable_CPD[cpt.attrib["id"]] = cpd_arr
         return variable_CPD
 
@@ -108,13 +126,29 @@ class XDSLReader(object):
 
 
 class XDSLWriter(object):
+    """
+    Initialise a XDSL writer object to export pgmpy models to XDSL file format used by GeNIe (https://www.bayesfusion.com/genie/).
+
+    Parameters
+    ----------
+    model: pgmpy.models.BayesianNetwork instance.
+        The model to write to the file.
+
+    Examples
+    ---------
+    >>> from pgmpy.readwrite import XDSLWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> asia = get_example_model('asia')
+    >>> writer = XDSLWriter(asia)
+    >>> writer.write_xdsl('asia.xdsl')
+    """
 
     def __init__(
         self,
         model,
         network_id="MyNetwork",
-        num_samples="10000",
-        disc_samples="10000",
+        num_samples="0",
+        disc_samples="0",
         encoding="utf-8",
         prettyprint=True,
     ):
@@ -158,20 +192,10 @@ class XDSLWriter(object):
             cpd = cpds[idx]
 
             cpt_elem = self.variables[var]
-            # Determine state names: if available in cpd.state_names, use them; otherwise, default to string indices.
-            if (
-                hasattr(cpd, "state_names")
-                and cpd.state_names is not None
-                and cpd.variable in cpd.state_names
-            ):
-                states = cpd.state_names[cpd.variable]
-            else:
-                states = [str(i) for i in range(cpd.variable_card)]
+            states = cpd.state_names[cpd.variable]
 
             for st in states:
-                etree.SubElement(
-                    cpt_elem, "state", {"id": str(st)}
-                )  # can't parse int/float
+                etree.SubElement(cpt_elem, "state", {"id": str(st)})
 
             # Use the network structure to determine the parents in the correct order.
             evidence = cpd.variables
@@ -183,6 +207,7 @@ class XDSLWriter(object):
             # Add the <probabilities> element.
             probs_elem = etree.SubElement(cpt_elem, "probabilities")
             values = np.array(cpd.get_values())
+
             # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
             flat_values = values.flatten(order="F")
             probs_elem.text = " ".join("{:.17f}".format(float(x)) for x in flat_values)
@@ -203,8 +228,6 @@ class XDSLWriter(object):
             },
         )
 
-        # Provide default layout for each node.
-        pos_x, pos_y = 100, 100
         for node in list(nx.topological_sort(self.model)):
             node_elem = etree.SubElement(genie_elem, "node", {"id": node})
 
@@ -220,6 +243,8 @@ class XDSLWriter(object):
             )
 
             # Set node position (x1, y1, x2, y2).
+            # Provide random position to each node.
+            pos_x, pos_y = random.randint(0, 100), random.randint(0, 100)
             pos_elem = etree.SubElement(node_elem, "position")
             pos_elem.text = f"{pos_x} {pos_y} {pos_x+72} {pos_y+48}"
 
@@ -229,10 +254,6 @@ class XDSLWriter(object):
                 "barchart",
                 {"active": "true", "width": "128", "height": "128"},
             )
-
-            # Increment positions for a simple layout.
-            pos_x += 100
-            pos_y += 50
 
     def write_xdsl(self, filename=None):
         # Convert the ElementTree to a pretty-printed XML string.
@@ -244,5 +265,3 @@ class XDSLWriter(object):
         if filename is not None:
             with open(filename, "wb") as f:
                 f.write(pretty_xml_str)
-
-        # return pretty_xml_str
