@@ -205,7 +205,9 @@ class TestXDSLWriterMethodsString(unittest.TestCase):
             evidence_card=[2],
         )
 
-        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)
+        self.dummy_model.add_cpds(
+            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
+        )  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
     def assert_models_equivalent(self, expected, got):
