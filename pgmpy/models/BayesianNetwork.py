@@ -1481,7 +1481,7 @@ class BayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif.
+            the following: bif, uai, xmlbif, xdsl.
 
         Examples
         --------
@@ -1489,7 +1489,7 @@ class BayesianNetwork(DAG):
         >>> alarm = get_example_model('alarm')
         >>> alarm.save('alarm.bif', filetype='bif')
         """
-        supported_formats = {"bif", "uai", "xmlbif"}
+        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
         if filename.split(".")[-1].lower() in supported_formats:
             filetype = filename.split(".")[-1].lower()
 
@@ -1511,6 +1511,12 @@ class BayesianNetwork(DAG):
             writer = XMLBIFWriter(self)
             writer.write_xmlbif(filename=filename)
 
+        elif filetype == "xdsl":
+            from pgmpy.readwrite import XDSLWriter
+
+            writer = XDSLWriter(self)
+            writer.write_xdsl(filename=filename)
+
     @staticmethod
     def load(filename, filetype="bif", **kwargs):
         """
@@ -1523,7 +1529,7 @@ class BayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format of the model file. Can be one of
-            the following: bif, uai, xmlbif.
+            the following: bif, uai, xmlbif, xdsl.
 
         kwargs: kwargs
             Any additional arguments for the reader class or get_model method.
@@ -1536,7 +1542,7 @@ class BayesianNetwork(DAG):
         >>> alarm.save('alarm.bif', filetype='bif')
         >>> alarm_model = BayesianNetwork.load('alarm.bif', filetype='bif')
         """
-        supported_formats = {"bif", "uai", "xmlbif"}
+        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
         if filename.split(".")[-1].lower() in supported_formats:
             filetype = filename.split(".")[-1].lower()
 
@@ -1566,4 +1572,10 @@ class BayesianNetwork(DAG):
             from pgmpy.readwrite import XMLBIFReader
 
             reader = XMLBIFReader(path=filename)
+            return reader.get_model()
+
+        elif filetype == "xdsl":
+            from pgmpy.readwrite import XDSLReader
+
+            reader = XDSLReader(path=filename)
             return reader.get_model()

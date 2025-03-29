@@ -581,7 +581,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")
         for model in {test_model_small, test_model_large}:
-            for filetype in {"bif", "xmlbif"}:
+            for filetype in {"bif", "xmlbif", "xdsl"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)
 
