@@ -77,6 +77,7 @@ class CausalInference(object):
 
         if isinstance(model, SEMGraph):
             self.observed_variables = frozenset(model.observed)
+            self.latent_variables = model.latents
             self.dag = DAG(
                 model.full_graph_struct,
                 latents=model.latents.union(
@@ -92,6 +93,7 @@ class CausalInference(object):
 
         elif isinstance(model, (DiscreteBayesianNetwork, DAG)):
             self.observed_variables = frozenset(model.nodes()).difference(model.latents)
+            self.latent_variables = model.latents
             self.dag = DAG(model.to_directed(), latents=model.latents)
 
     def __repr__(self):
@@ -307,8 +309,8 @@ class CausalInference(object):
                 scaling indicator.
         """
         scaling_indicators = {}
-        for node in self.dag.latents:
-            for neighbor in self.graph.neighbors(node):
+        for node in self.latent_variables:
+            for neighbor in self.dag.neighbors(node):
                 if neighbor in self.observed_variables:
                     scaling_indicators[node] = neighbor
                     break
@@ -345,10 +347,7 @@ class CausalInference(object):
         >>> model._iv_transformations('xi1', 'eta1',
         ...                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
         """
-        if isinstance(self.model, SEMGraph):
-            full_graph = self.model.full_graph_struct.copy()
-        else:
-            full_graph = self.graph.copy()
+        full_graph = self.dag.copy()
 
         if not (X, Y) in full_graph.edges():
             raise ValueError(f"The edge from {X} -> {Y} doesn't exist in the graph")
@@ -357,16 +356,16 @@ class CausalInference(object):
             full_graph.remove_edge(X, Y)
             return full_graph, Y
 
-        elif Y in self.dag.latents:
+        elif Y in self.latent_variables:
             full_graph.add_edge("." + Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
         else:
             dependent_var = Y
 
-        for parent_y in self.graph.predecessors(Y):
+        for parent_y in self.dag.predecessors(Y):
             # Remove edge even when the parent is observed ????
             full_graph.remove_edge(parent_y, Y)
-            if parent_y in self.dag.latents:
+            if parent_y in self.latent_variables:
                 full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
 
         return full_graph, dependent_var
@@ -414,26 +413,43 @@ class CausalInference(object):
         transformed_graph, dependent_var = self._iv_transformations(
             X, Y, scaling_indicators=scaling_indicators
         )
-        if X in self.dag.latents:
+
+        if X in self.latent_variables:
             explanatory_var = scaling_indicators[X]
         else:
             explanatory_var = X
 
-        graph_for_x = transformed_graph.copy()
-        dag_x = DAG(graph_for_x.edges())
-        dag_x.latents = self.dag.latents
-        d_connected_x = dag_x.active_trail_nodes(
-            [explanatory_var],
-        )[explanatory_var]
+        d_connected_x = transformed_graph.active_trail_nodes([explanatory_var])[
+            explanatory_var
+        ]
 
-        graph_for_y = transformed_graph.copy()
-        graph_for_y.remove_edges_from(list(graph_for_y.out_edges(explanatory_var)))
-        dag_y = DAG(graph_for_y.edges())
-        dag_y.latents = self.dag.latents
-        d_connected_y = dag_y.active_trail_nodes(
-            [dependent_var],
-        )[dependent_var]
+        # graph_for_x = transformed_graph.copy()
+        # dag_x = DAG(graph_for_x.edges())
+        # dag_x.latents = self.dag.latents
+        # d_connected_x = dag_x.active_trail_nodes(
+        #     [explanatory_var],
+        # )[explanatory_var]
 
+        # Compute the d-connected nodes to Y except any variable connected through X.
+        transformed_graph_copy = transformed_graph.copy()
+        transformed_graph_copy.remove_edges_from(
+            list(transformed_graph_copy.out_edges(explanatory_var))
+        )
+        d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[
+            dependent_var
+        ]
+
+        # graph_for_y = transformed_graph.copy()
+        # graph_for_y.remove_edges_from(list(graph_for_y.out_edges(explanatory_var)))
+        # dag_y = DAG(graph_for_y.edges())
+        # dag_y.latents = self.dag.latents
+        # d_connected_y = dag_y.active_trail_nodes(
+        #     [dependent_var],
+        # )[dependent_var]
+
+        import ipdb
+
+        ipdb.set_trace()
         # Remove {X, Y} because they can't be IV for X -> Y
         return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
 

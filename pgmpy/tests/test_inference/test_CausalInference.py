@@ -671,7 +671,7 @@ class TestSEMIdentification(unittest.TestCase):
 
     def test_iv_transformations_union(self):
         scale = {}
-        for u, v in self.union.graph.edges():
+        for u, v in self.union.dag.edges():
             full_graph, dependent_var = self.union._iv_transformations(
                 u, v, scaling_indicators=scale
             )
