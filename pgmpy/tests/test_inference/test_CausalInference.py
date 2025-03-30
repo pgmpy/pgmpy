@@ -4,6 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
+from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
@@ -59,36 +60,96 @@ class TestAdjustmentSet(unittest.TestCase):
     def setUp(self):
         # Model example taken from Constructing Separators and Adjustment Sets
         # in Ancestral Graphs UAI 2014.
-        self.model = DiscreteBayesianNetwork(
+        self.model_dag = DAG(
             [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
         )
-        self.infer = CausalInference(self.model)
+        self.infer_dag = CausalInference(self.model_dag)
+
+        self.model_sem = SEMGraph(
+            [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        )
+        self.infer_sem = CausalInference(self.model_sem)
 
     def test_proper_backdoor_graph_error(self):
+        # DAG
         self.assertRaises(
-            ValueError, self.infer.get_proper_backdoor_graph, X=["x3"], Y=["y1", "y2"]
-        )
-        self.assertRaises(
-            ValueError, self.infer.get_proper_backdoor_graph, X=["x2"], Y=["y1", "y3"]
+            ValueError,
+            self.infer_dag.get_proper_backdoor_graph,
+            X=["x3"],
+            Y=["y1", "y2"],
         )
         self.assertRaises(
             ValueError,
-            self.infer.get_proper_backdoor_graph,
+            self.infer_dag.get_proper_backdoor_graph,
+            X=["x2"],
+            Y=["y1", "y3"],
+        )
+        self.assertRaises(
+            ValueError,
+            self.infer_dag.get_proper_backdoor_graph,
+            X=["x3", "x2"],
+            Y=["y1", "y3"],
+        )
+
+        # SEMGraph
+        self.assertRaises(
+            ValueError,
+            self.infer_sem.get_proper_backdoor_graph,
+            X=["x3"],
+            Y=["y1", "y2"],
+        )
+        self.assertRaises(
+            ValueError,
+            self.infer_sem.get_proper_backdoor_graph,
+            X=["x2"],
+            Y=["y1", "y3"],
+        )
+        self.assertRaises(
+            ValueError,
+            self.infer_sem.get_proper_backdoor_graph,
             X=["x3", "x2"],
             Y=["y1", "y3"],
         )
 
     def test_proper_backdoor_graph(self):
-        bd_graph = self.infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
+        # DAG
+        bd_graph = self.infer_dag.get_proper_backdoor_graph(
+            X=["x1", "x2"], Y=["y1", "y2"]
+        )
         self.assertTrue(("x1", "y1") not in bd_graph.edges())
         self.assertEqual(len(bd_graph.edges()), 4)
         self.assertTrue(
             set(bd_graph.edges()),
             set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
+        )
+
+        # SEMGraph
+        bd_graph = self.infer_sem.get_proper_backdoor_graph(
+            X=["x1", "x2"], Y=["y1", "y2"]
+        )
+        self.assertTrue(("x1", "y1") not in bd_graph.edges())
+        self.assertEqual(len(bd_graph.edges()), 10)
+        self.assertTrue(
+            set(bd_graph.edges()),
+            set(
+                [
+                    ("x1", "z1"),
+                    ("z1", "z2"),
+                    ("z2", "x2"),
+                    ("y2", "z2"),
+                    (".x1", "x1"),
+                    (".y1", "y1"),
+                    (".z1", "z1"),
+                    (".z2", "z2"),
+                    (".x2", "x2"),
+                    (".y2", "y2"),
+                ]
+            ),
         )
 
     def test_proper_backdoor_graph_not_list(self):
-        bd_graph = self.infer.get_proper_backdoor_graph(X="x1", Y="y1")
+        # DAG
+        bd_graph = self.infer_dag.get_proper_backdoor_graph(X="x1", Y="y1")
         self.assertTrue(("x1", "y1") not in bd_graph.edges())
         self.assertEqual(len(bd_graph.edges()), 4)
         self.assertTrue(
@@ -96,34 +157,82 @@ class TestAdjustmentSet(unittest.TestCase):
             set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
         )
 
-    def test_is_valid_adjustment_set(self):
+        # SEMGraph
+        bd_graph = self.infer_sem.get_proper_backdoor_graph(X="x1", Y="y1")
+        self.assertTrue(("x1", "y1") not in bd_graph.edges())
+        self.assertEqual(len(bd_graph.edges()), 10)
         self.assertTrue(
-            self.infer.is_valid_adjustment_set(
+            set(bd_graph.edges()),
+            set(
+                [
+                    ("x1", "z1"),
+                    ("z1", "z2"),
+                    ("z2", "x2"),
+                    ("y2", "z2"),
+                    (".x1", "x1"),
+                    (".y1", "y1"),
+                    (".z1", "z1"),
+                    (".z2", "z2"),
+                    (".x2", "x2"),
+                    (".y2", "y2"),
+                ]
+            ),
+        )
+
+    def test_is_valid_adjustment_set(self):
+        # DAG
+        self.assertTrue(
+            self.infer_dag.is_valid_adjustment_set(
                 X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
             )
         )
 
         self.assertTrue(
-            self.infer.is_valid_adjustment_set(
+            self.infer_dag.is_valid_adjustment_set(
                 X="x1", Y="y1", adjustment_set=["z1", "z2"]
             )
         )
 
         self.assertFalse(
-            self.infer.is_valid_adjustment_set(
+            self.infer_dag.is_valid_adjustment_set(
                 X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
             )
         )
 
         self.assertTrue(
-            self.infer.is_valid_adjustment_set(
+            self.infer_dag.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
+            )
+        )
+
+        # SEMGraph
+        self.assertTrue(
+            self.infer_sem.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
+            )
+        )
+
+        self.assertTrue(
+            self.infer_sem.is_valid_adjustment_set(
+                X="x1", Y="y1", adjustment_set=["z1", "z2"]
+            )
+        )
+
+        self.assertFalse(
+            self.infer_sem.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
+            )
+        )
+
+        self.assertTrue(
+            self.infer_sem.is_valid_adjustment_set(
                 X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
             )
         )
 
     def test_get_minimal_adjustment_set(self):
         # Without latent variables
-        dag1 = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+        dag1 = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")])
         infer = CausalInference(dag1)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertEqual(adj_set, {"Z"})
@@ -131,7 +240,45 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="W", Y="Y")
 
         # M graph
-        dag2 = DiscreteBayesianNetwork(
+        dag2 = DAG([("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")])
+        infer = CausalInference(dag2)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertEqual(adj_set, set())
+
+        # With latents
+        dag_lat1 = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"})
+        infer = CausalInference(dag_lat1)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertIsNone(adj_set)
+
+        # Pearl's Simpson machine
+        dag_lat2 = DAG(
+            [
+                ("X", "Y"),
+                ("Z1", "U"),
+                ("U", "X"),
+                ("Z1", "Z3"),
+                ("Z3", "Y"),
+                ("U", "Z2"),
+                ("Z3", "Z2"),
+            ],
+            latents={"U"},
+        )
+        infer = CausalInference(dag_lat2)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
+
+    def test_get_minimal_adjustment_set_sem(self):
+        # Without latent variables
+        dag1 = SEMGraph([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+        infer = CausalInference(dag1)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertEqual(adj_set, {"Z"})
+
+        self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="W", Y="Y")
+
+        # M graph
+        dag2 = SEMGraph(
             [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")]
         )
         infer = CausalInference(dag2)
@@ -139,15 +286,13 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertEqual(adj_set, set())
 
         # With latents
-        dag_lat1 = DiscreteBayesianNetwork(
-            [("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"}
-        )
+        dag_lat1 = SEMGraph([("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"})
         infer = CausalInference(dag_lat1)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertIsNone(adj_set)
 
         # Pearl's Simpson machine
-        dag_lat2 = DiscreteBayesianNetwork(
+        dag_lat2 = SEMGraph(
             [
                 ("X", "Y"),
                 ("Z1", "U"),
@@ -164,8 +309,17 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
 
     def test_issue_1710(self):
-        dag = DiscreteBayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        # DAG
+        dag = DAG([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
         infer = CausalInference(dag)
+        adj_set = infer.get_minimal_adjustment_set("X_1", "X_2")
+
+        self.assertEqual(adj_set, {"Z"})
+        self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="X_3", Y="Y")
+
+        # SEM
+        sem = SEMGraph([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        infer = CausalInference(sem)
         adj_set = infer.get_minimal_adjustment_set("X_1", "X_2")
 
         self.assertEqual(adj_set, {"Z"})

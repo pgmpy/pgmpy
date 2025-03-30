@@ -10,7 +10,12 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
+from pgmpy.models import (
+    DiscreteBayesianNetwork,
+    FunctionalBayesianNetwork,
+    LinearGaussianBayesianNetwork,
+    SEMGraph,
+)
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -46,7 +51,16 @@ class CausalInference(object):
     """
 
     def __init__(self, model):
-        if not isinstance(model, (DiscreteBayesianNetwork, SEMGraph, DAG)):
+        if not isinstance(
+            model,
+            (
+                DiscreteBayesianNetwork,
+                LinearGaussianBayesianNetwork,
+                FunctionalBayesianNetwork,
+                SEMGraph,
+                DAG,
+            ),
+        ):
             raise NotImplementedError(
                 "Causal Inference is only implemented for DAGs, BayesianNetworks, and SEMGraphs."
             )
@@ -65,11 +79,15 @@ class CausalInference(object):
             self.observed_variables = frozenset(model.observed)
             self.dag = DAG(
                 model.full_graph_struct,
-                latents=[
-                    var
-                    for var in model.full_graph_struct.nodes()
-                    if var.startswith(".")
-                ],
+                latents=model.latents.union(
+                    set(
+                        [
+                            var
+                            for var in model.full_graph_struct.nodes()
+                            if var.startswith(".")
+                        ]
+                    )
+                ),
             )
 
         elif isinstance(model, (DiscreteBayesianNetwork, DAG)):
@@ -799,10 +817,10 @@ class CausalInference(object):
             Y = [Y]
 
         for var in chain(X, Y):
-            if var not in self.model.nodes():
+            if var not in self.dag.nodes():
                 raise ValueError(f"{var} not found in the model.")
 
-        model = self.model if inplace else self.model.copy()
+        model = self.dag if inplace else self.dag.copy()
         edges_to_remove = []
         for source in X:
             paths = nx.all_simple_edge_paths(model, source, Y)
