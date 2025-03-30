@@ -6,7 +6,7 @@ import pandas as pd
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
-from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
 
 np.random.seed(42)
 
@@ -260,6 +260,505 @@ class TestBackdoorPaths(unittest.TestCase):
                 }
             ),
         )
+
+
+class TestSEMIdentification(unittest.TestCase):
+    def setUp(self):
+        demo = SEMGraph(
+            ebunch=[
+                ("xi1", "x1"),
+                ("xi1", "x2"),
+                ("xi1", "x3"),
+                ("xi1", "eta1"),
+                ("eta1", "y1"),
+                ("eta1", "y2"),
+                ("eta1", "y3"),
+                ("eta1", "y4"),
+                ("eta1", "eta2"),
+                ("xi1", "eta2"),
+                ("eta2", "y5"),
+                ("eta2", "y6"),
+                ("eta2", "y7"),
+                ("eta2", "y8"),
+            ],
+            latents=["xi1", "eta1", "eta2"],
+            err_corr=[
+                ("y1", "y5"),
+                ("y2", "y6"),
+                ("y2", "y4"),
+                ("y3", "y7"),
+                ("y4", "y8"),
+                ("y6", "y8"),
+            ],
+        )
+
+        union = SEMGraph(
+            ebunch=[
+                ("yrsmill", "unionsen"),
+                ("age", "laboract"),
+                ("age", "deferenc"),
+                ("deferenc", "laboract"),
+                ("deferenc", "unionsen"),
+                ("laboract", "unionsen"),
+            ],
+            latents=[],
+            err_corr=[("yrsmill", "age")],
+        )
+
+        demo_params = SEMGraph(
+            ebunch=[
+                ("xi1", "x1", 0.4),
+                ("xi1", "x2", 0.5),
+                ("xi1", "x3", 0.6),
+                ("xi1", "eta1", 0.3),
+                ("eta1", "y1", 1.1),
+                ("eta1", "y2", 1.2),
+                ("eta1", "y3", 1.3),
+                ("eta1", "y4", 1.4),
+                ("eta1", "eta2", 0.1),
+                ("xi1", "eta2", 0.2),
+                ("eta2", "y5", 0.7),
+                ("eta2", "y6", 0.8),
+                ("eta2", "y7", 0.9),
+                ("eta2", "y8", 1.0),
+            ],
+            latents=["xi1", "eta1", "eta2"],
+            err_corr=[
+                ("y1", "y5", 1.5),
+                ("y2", "y6", 1.6),
+                ("y2", "y4", 1.9),
+                ("y3", "y7", 1.7),
+                ("y4", "y8", 1.8),
+                ("y6", "y8", 2.0),
+            ],
+            err_var={
+                "y1": 2.1,
+                "y2": 2.2,
+                "y3": 2.3,
+                "y4": 2.4,
+                "y5": 2.5,
+                "y6": 2.6,
+                "y7": 2.7,
+                "y8": 2.8,
+                "x1": 3.1,
+                "x2": 3.2,
+                "x3": 3.3,
+                "eta1": 2.9,
+                "eta2": 3.0,
+                "xi1": 3.4,
+            },
+        )
+
+        custom = SEMGraph(
+            ebunch=[
+                ("xi1", "eta1"),
+                ("xi1", "y1"),
+                ("xi1", "y4"),
+                ("xi1", "x1"),
+                ("xi1", "x2"),
+                ("y4", "y1"),
+                ("y1", "eta2"),
+                ("eta2", "y5"),
+                ("y1", "eta1"),
+                ("eta1", "y2"),
+                ("eta1", "y3"),
+            ],
+            latents=["xi1", "eta1", "eta2"],
+            err_corr=[("y1", "y2"), ("y2", "y3")],
+            err_var={},
+        )
+
+        self.demo = CausalInference(demo)
+        self.union = CausalInference(union)
+        self.demo_params = CausalInference(demo_params)
+        self.custom = CausalInference(custom)
+
+    def test_get_scaling_indicators(self):
+        demo_scaling_indicators = self.demo.get_scaling_indicators()
+        self.assertTrue(demo_scaling_indicators["eta1"] in ["y1", "y2", "y3", "y4"])
+        self.assertTrue(demo_scaling_indicators["eta2"] in ["y5", "y6", "y7", "y8"])
+        self.assertTrue(demo_scaling_indicators["xi1"] in ["x1", "x2", "x3"])
+
+        union_scaling_indicators = self.union.get_scaling_indicators()
+        self.assertDictEqual(union_scaling_indicators, dict())
+
+        custom_scaling_indicators = self.custom.get_scaling_indicators()
+        self.assertTrue(custom_scaling_indicators["xi1"] in ["x1", "x2", "y1", "y4"])
+        self.assertTrue(custom_scaling_indicators["eta1"] in ["y2", "y3"])
+        self.assertTrue(custom_scaling_indicators["eta2"] in ["y5"])
+
+    def test_iv_transformations_demo(self):
+        scale = {"eta1": "y1", "eta2": "y5", "xi1": "x1"}
+
+        self.assertRaises(ValueError, self.demo._iv_transformations, "x1", "y1", scale)
+
+        for y in ["y2", "y3", "y4"]:
+            full_graph, dependent_var = self.demo._iv_transformations(
+                X="eta1", Y=y, scaling_indicators=scale
+            )
+            self.assertEqual(dependent_var, y)
+            self.assertTrue((".y1", y) in full_graph.edges)
+            self.assertFalse(("eta1", y) in full_graph.edges)
+
+        for y in ["y6", "y7", "y8"]:
+            full_graph, dependent_var = self.demo._iv_transformations(
+                X="eta2", Y=y, scaling_indicators=scale
+            )
+            self.assertEqual(dependent_var, y)
+            self.assertTrue((".y5", y) in full_graph.edges)
+            self.assertFalse(("eta2", y) in full_graph.edges)
+
+        full_graph, dependent_var = self.demo._iv_transformations(
+            X="xi1", Y="eta1", scaling_indicators=scale
+        )
+        self.assertEqual(dependent_var, "y1")
+        self.assertTrue((".eta1", "y1") in full_graph.edges())
+        self.assertTrue((".x1", "y1") in full_graph.edges())
+        self.assertFalse(("xi1", "eta1") in full_graph.edges())
+
+        full_graph, dependent_var = self.demo._iv_transformations(
+            X="xi1", Y="eta2", scaling_indicators=scale
+        )
+        self.assertEqual(dependent_var, "y5")
+        self.assertTrue((".y1", "y5") in full_graph.edges())
+        self.assertTrue((".eta2", "y5") in full_graph.edges())
+        self.assertTrue((".x1", "y5") in full_graph.edges())
+        self.assertFalse(("eta1", "eta2") in full_graph.edges())
+        self.assertFalse(("xi1", "eta2") in full_graph.edges())
+
+        full_graph, dependent_var = self.demo._iv_transformations(
+            X="eta1", Y="eta2", scaling_indicators=scale
+        )
+        self.assertEqual(dependent_var, "y5")
+        self.assertTrue((".y1", "y5") in full_graph.edges())
+        self.assertTrue((".eta2", "y5") in full_graph.edges())
+        self.assertTrue((".x1", "y5") in full_graph.edges())
+        self.assertFalse(("eta1", "eta2") in full_graph.edges())
+        self.assertFalse(("xi1", "eta2") in full_graph.edges())
+
+    def test_iv_transformations_union(self):
+        scale = {}
+        for u, v in self.union.graph.edges():
+            full_graph, dependent_var = self.union._iv_transformations(
+                u, v, scaling_indicators=scale
+            )
+            self.assertFalse((u, v) in full_graph.edges())
+            self.assertEqual(dependent_var, v)
+
+    def test_get_ivs_demo(self):
+        scale = {"eta1": "y1", "eta2": "y5", "xi1": "x1"}
+
+        self.assertSetEqual(
+            self.demo.get_ivs("eta1", "y2", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y3", "y7", "y8"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("eta1", "y3", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y2", "y4", "y6", "y8"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("eta1", "y4", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y3", "y6", "y7"},
+        )
+
+        self.assertSetEqual(
+            self.demo.get_ivs("eta2", "y6", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y3", "y4", "y7"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("eta2", "y7", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y2", "y4", "y6", "y8"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("eta2", "y8", scaling_indicators=scale),
+            {"x1", "x2", "x3", "y2", "y3", "y7"},
+        )
+
+        self.assertSetEqual(
+            self.demo.get_ivs("xi1", "x2", scaling_indicators=scale),
+            {"x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("xi1", "x3", scaling_indicators=scale),
+            {"x2", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"},
+        )
+
+        self.assertSetEqual(
+            self.demo.get_ivs("xi1", "eta1", scaling_indicators=scale), {"x2", "x3"}
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("xi1", "eta2", scaling_indicators=scale),
+            {"x2", "x3", "y2", "y3", "y4"},
+        )
+        self.assertSetEqual(
+            self.demo.get_ivs("eta1", "eta2", scaling_indicators=scale),
+            {"x2", "x3", "y2", "y3", "y4"},
+        )
+
+    def test_get_conditional_ivs_demo(self):
+        scale = {"eta1": "y1", "eta2": "y5", "xi1": "x1"}
+
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta1", "y2", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta1", "y3", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta1", "y4", scaling_indicators=scale), []
+        )
+
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta2", "y6", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta2", "y7", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta2", "y8", scaling_indicators=scale), []
+        )
+
+        self.assertEqual(
+            self.demo.get_conditional_ivs("xi1", "x2", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("xi1", "x3", scaling_indicators=scale), []
+        )
+
+        self.assertEqual(
+            self.demo.get_conditional_ivs("xi1", "eta1", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("xi1", "eta2", scaling_indicators=scale), []
+        )
+        self.assertEqual(
+            self.demo.get_conditional_ivs("eta1", "eta2", scaling_indicators=scale), []
+        )
+
+    def test_get_ivs_union(self):
+        scale = {}
+        self.assertSetEqual(
+            self.union.get_ivs("yrsmill", "unionsen", scaling_indicators=scale), set()
+        )
+        self.assertSetEqual(
+            self.union.get_ivs("deferenc", "unionsen", scaling_indicators=scale), set()
+        )
+        self.assertSetEqual(
+            self.union.get_ivs("laboract", "unionsen", scaling_indicators=scale), set()
+        )
+        self.assertSetEqual(
+            self.union.get_ivs("deferenc", "laboract", scaling_indicators=scale), set()
+        )
+        self.assertSetEqual(
+            self.union.get_ivs("age", "laboract", scaling_indicators=scale), {"yrsmill"}
+        )
+        self.assertSetEqual(
+            self.union.get_ivs("age", "deferenc", scaling_indicators=scale), {"yrsmill"}
+        )
+
+    def test_get_conditional_ivs_union(self):
+        self.assertEqual(
+            self.union.get_conditional_ivs("yrsmill", "unionsen"),
+            [("age", {"laboract", "deferenc"})],
+        )
+        # This case wouldn't have conditonal IV if the Total effect between `deferenc` and
+        # `unionsen` needs to be computed because one of the conditional variable lies on the
+        # effect path.
+        self.assertEqual(
+            self.union.get_conditional_ivs("deferenc", "unionsen"),
+            [("age", {"yrsmill", "laboract"})],
+        )
+        self.assertEqual(
+            self.union.get_conditional_ivs("laboract", "unionsen"),
+            [("age", {"yrsmill", "deferenc"})],
+        )
+        self.assertEqual(self.union.get_conditional_ivs("deferenc", "laboract"), [])
+
+        self.assertEqual(
+            self.union.get_conditional_ivs("age", "laboract"),
+            [("yrsmill", {"deferenc"})],
+        )
+        self.assertEqual(self.union.get_conditional_ivs("age", "deferenc"), [])
+
+    def test_total_conditional_ivs_union(self):
+        self.assertEqual(
+            self.union.get_total_conditional_ivs("deferenc", "unionsen"),
+            [],
+        )
+
+    def test_iv_transformations_custom(self):
+        scale_custom = {"eta1": "y2", "eta2": "y5", "xi1": "x1"}
+
+        full_graph, var = self.custom._iv_transformations(
+            "xi1", "x2", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "x2")
+        self.assertTrue((".x1", "x2") in full_graph.edges())
+        self.assertFalse(("xi1", "x2") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "xi1", "y4", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y4")
+        self.assertTrue((".x1", "y4") in full_graph.edges())
+        self.assertFalse(("xi1", "y4") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "xi1", "y1", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y1")
+        self.assertTrue((".x1", "y1") in full_graph.edges())
+        self.assertFalse(("xi1", "y1") in full_graph.edges())
+        self.assertFalse(("y4", "y1") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "xi1", "eta1", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y2")
+        self.assertTrue((".eta1", "y2") in full_graph.edges())
+        self.assertTrue((".x1", "y2") in full_graph.edges())
+        self.assertFalse(("y1", "eta1") in full_graph.edges())
+        self.assertFalse(("xi1", "eta1") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "y1", "eta1", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y2")
+        self.assertTrue((".eta1", "y2") in full_graph.edges())
+        self.assertTrue((".x1", "y2") in full_graph.edges())
+        self.assertFalse(("y1", "eta1") in full_graph.edges())
+        self.assertFalse(("xi1", "eta1") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "y1", "eta2", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y5")
+        self.assertTrue((".eta2", "y5") in full_graph.edges())
+        self.assertFalse(("y1", "eta2") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "y4", "y1", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y1")
+        self.assertFalse(("y4", "y1") in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations(
+            "eta1", "y3", scaling_indicators=scale_custom
+        )
+        self.assertEqual(var, "y3")
+        self.assertTrue((".y2", "y3") in full_graph.edges())
+        self.assertFalse(("eta1", "y3") in full_graph.edges())
+
+    def test_get_ivs_custom(self):
+        scale_custom = {"eta1": "y2", "eta2": "y5", "xi1": "x1"}
+
+        self.assertSetEqual(
+            self.custom.get_ivs("xi1", "x2", scaling_indicators=scale_custom),
+            {"y1", "y2", "y3", "y4", "y5"},
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("xi1", "y4", scaling_indicators=scale_custom), {"x2"}
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("xi1", "y1", scaling_indicators=scale_custom),
+            {"x2", "y4"},
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("xi1", "eta1", scaling_indicators=scale_custom),
+            {"x2", "y4"},
+        )
+        # TODO: Test this and fix.
+        self.assertSetEqual(
+            self.custom.get_ivs("y1", "eta1", scaling_indicators=scale_custom),
+            {"x2", "y4", "y5"},
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("y1", "eta2", scaling_indicators=scale_custom),
+            {"x1", "x2", "y2", "y3", "y4"},
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("y4", "y1", scaling_indicators=scale_custom), set()
+        )
+        self.assertSetEqual(
+            self.custom.get_ivs("eta1", "y3", scaling_indicators=scale_custom),
+            {"x1", "x2", "y4"},
+        )
+
+    def test_small_model_ivs(self):
+        model1 = SEMGraph(
+            ebunch=[("X", "Y"), ("I", "X"), ("W", "I")],
+            latents=[],
+            err_corr=[("W", "Y")],
+            err_var={},
+        )
+        inference1 = CausalInference(model1)
+        self.assertEqual(inference1.get_conditional_ivs("X", "Y"), [("I", {"W"})])
+
+        model2 = SEMGraph(
+            ebunch=[
+                ("x", "y"),
+                ("z", "x"),
+                ("w", "z"),
+                ("w", "u"),
+                ("u", "x"),
+                ("u", "y"),
+            ],
+            latents=["u"],
+        )
+        inference2 = CausalInference(model2)
+        self.assertEqual(inference2.get_conditional_ivs("x", "y"), [("z", {"w"})])
+
+        model3 = SEMGraph(
+            ebunch=[("x", "y"), ("u", "x"), ("u", "y"), ("z", "x")], latents=["u"]
+        )
+        inference3 = CausalInference(model3)
+        self.assertEqual(inference3.get_ivs("x", "y"), {"z"})
+
+        model4 = SEMGraph(ebunch=[("x", "y"), ("z", "x"), ("u", "x"), ("u", "y")])
+        inference4 = CausalInference(model4)
+        self.assertEqual(inference4.get_conditional_ivs("x", "y"), [("z", {"u"})])
+
+
+class TestBayesianIV(unittest.TestCase):
+    def setUp(self):
+        self.model = BayesianNetwork(
+            ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
+        )
+
+        self.causal_inf = CausalInference(self.model)
+
+    def test_get_ivs(self):
+        ivs = self.causal_inf.get_ivs("X", "Y")
+        self.assertIn("Z", ivs)
+
+    def test_get_conditional_ivs(self):
+        self.model.add_edge("I", "X")
+        self.model.add_edge("W", "I")
+        self.model.add_edge("W", "Y")
+        self.causal_inf = CausalInference(self.model)
+        cond_ivs = self.causal_inf.get_conditional_ivs("X", "Y")
+        self.assertIn(("I", {"W"}), cond_ivs)
+
+    def test_identification_method(self):
+        backdoor_model = BayesianNetwork(ebunch=[("X", "Y"), ("M", "Y"), ("M", "X")])
+        causal_inf = CausalInference(backdoor_model)
+        methods = causal_inf.identification_method("X", "Y")
+        expected_backdoor = {"backdoor set": {frozenset({"M"})}}
+        self.assertEqual(methods, expected_backdoor)
+
+        frontdoor_model = BayesianNetwork(ebunch=[("X", "M"), ("M", "Y")])
+        causal_inf = CausalInference(frontdoor_model)
+        methods = causal_inf.identification_method("X", "Y")
+        expected_frontdoor = {"frontdoor set": {frozenset({"M"})}}
+        self.assertEqual(methods, expected_frontdoor)
+
+        iv_model = BayesianNetwork(
+            ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
+        )
+        causal_inf = CausalInference(iv_model)
+        methods = causal_inf.identification_method("X", "Y")
+        expected_iv = {"instrumental variables": {"Z"}}
+        self.assertEqual(methods, expected_iv)
 
 
 class TestDoQuery(unittest.TestCase):
