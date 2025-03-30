@@ -362,8 +362,12 @@ class CausalInference(object):
         else:
             dependent_var = Y
 
-        for parent_y in self.dag.predecessors(Y):
-            # Remove edge even when the parent is observed ????
+        # This check is to not remove edges from error terms to the variable. Specifically for SEMs.
+        variable_parents = [
+            var for var in self.dag.predecessors(Y) if not var.startswith(".")
+        ]
+
+        for parent_y in variable_parents:
             full_graph.remove_edge(parent_y, Y)
             if parent_y in self.latent_variables:
                 full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
@@ -423,33 +427,15 @@ class CausalInference(object):
             explanatory_var
         ]
 
-        # graph_for_x = transformed_graph.copy()
-        # dag_x = DAG(graph_for_x.edges())
-        # dag_x.latents = self.dag.latents
-        # d_connected_x = dag_x.active_trail_nodes(
-        #     [explanatory_var],
-        # )[explanatory_var]
-
         # Compute the d-connected nodes to Y except any variable connected through X.
         transformed_graph_copy = transformed_graph.copy()
         transformed_graph_copy.remove_edges_from(
-            list(transformed_graph_copy.out_edges(explanatory_var))
+            list(transformed_graph_copy.in_edges(explanatory_var))
         )
         d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[
             dependent_var
         ]
 
-        # graph_for_y = transformed_graph.copy()
-        # graph_for_y.remove_edges_from(list(graph_for_y.out_edges(explanatory_var)))
-        # dag_y = DAG(graph_for_y.edges())
-        # dag_y.latents = self.dag.latents
-        # d_connected_y = dag_y.active_trail_nodes(
-        #     [dependent_var],
-        # )[dependent_var]
-
-        import ipdb
-
-        ipdb.set_trace()
         # Remove {X, Y} because they can't be IV for X -> Y
         return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
 

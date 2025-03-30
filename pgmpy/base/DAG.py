@@ -861,12 +861,10 @@ class DAG(nx.DiGraph):
                 raise ValueError(f"Node {node} not in graph")
 
         ancestors_list = set()
-        nodes_list = set(nodes)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
+        for node in nodes:
+            ancestors_list.update(nx.ancestors(self, node))
+
+        ancestors_list.update(nodes)
         return ancestors_list
 
     # TODO: Commented out till the method is implemented.
