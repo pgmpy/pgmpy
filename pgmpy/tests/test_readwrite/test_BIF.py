@@ -7,7 +7,7 @@ import numpy.testing as np_test
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import BIFReader, BIFWriter
 
 
@@ -385,7 +385,7 @@ class TestBIFWriter(unittest.TestCase):
             "light-on": ["position = (218, 195)"],
         }
 
-        self.model = BayesianNetwork()
+        self.model = DiscreteBayesianNetwork()
         self.model.add_nodes_from(variables)
         self.model.add_edges_from(edges)
 
@@ -864,7 +864,7 @@ class TestBIFWriterTorch(unittest.TestCase):
             "light-on": ["position = (218, 195)"],
         }
 
-        self.model = BayesianNetwork()
+        self.model = DiscreteBayesianNetwork()
         self.model.add_nodes_from(variables)
         self.model.add_edges_from(edges)
 

@@ -15,7 +15,7 @@ from pgmpy.metrics import (
     log_likelihood_score,
     structure_score,
 )
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -185,18 +185,18 @@ class TestImpliedCI(unittest.TestCase):
 
 class TestStructuralHammingDistance(unittest.TestCase):
     def setUp(self):
-        self.dag_1 = BayesianNetwork([(1, 2)])
-        self.dag_2 = BayesianNetwork([(2, 1)])
+        self.dag_1 = DiscreteBayesianNetwork([(1, 2)])
+        self.dag_2 = DiscreteBayesianNetwork([(2, 1)])
 
-        self.dag_3 = BayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
-        self.dag_4 = BayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+        self.dag_3 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
+        self.dag_4 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
 
-        self.dag_5 = BayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
+        self.dag_5 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
 
-        self.large_dag_1 = BayesianNetwork(
+        self.large_dag_1 = DiscreteBayesianNetwork(
             [(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)]
         )
-        self.large_dag_2 = BayesianNetwork(
+        self.large_dag_2 = DiscreteBayesianNetwork(
             [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
         )
 

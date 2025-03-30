@@ -22,11 +22,11 @@ class BayesianModelInference(Inference):
     """
 
     def __init__(self, model):
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, DiscreteBayesianNetwork):
             raise TypeError(
-                f"Model expected type: BayesianNetwork, got type: {type(model)}"
+                f"Model expected type: DiscreteBayesianNetwork, got type: {type(model)}"
             )
         super(BayesianModelInference, self).__init__(model)
         self._initialize_structures()

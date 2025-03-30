@@ -7,10 +7,10 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
+from pgmpy.base import DAG
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
-from pgmpy.base import DAG
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -25,7 +25,7 @@ class ExpectationMaximization(ParameterEstimator):
 
     Parameters
     ----------
-    model: A pgmpy.models.BayesianNetwork instance
+    model: A pgmpy.models.DiscreteBayesianNetwork instance
 
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names
@@ -42,22 +42,22 @@ class ExpectationMaximization(ParameterEstimator):
     --------
     >>> import numpy as np
     >>> import pandas as pd
-    >>> from pgmpy.models import BayesianNetwork
+    >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.estimators import ExpectationMaximization
     >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
     ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
     >>> estimator = ExpectationMaximization(model, data)
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, (DAG, BayesianNetwork)):
+        if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
-                "Expectation Maximization is only implemented for DAG or BayesianNetwork"
+                "Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork"
             )
 
         if isinstance(model, DAG):
-            model_bn = BayesianNetwork(model.edges())
+            model_bn = DiscreteBayesianNetwork(model.edges())
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = model.latents
             model = model_bn
@@ -199,11 +199,11 @@ class ExpectationMaximization(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
         >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
         ...                       columns=['A', 'C', 'D'])
-        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
         >>> estimator = EM(model, data)
         >>> estimator.get_parameters(latent_card={'B': 3})
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,

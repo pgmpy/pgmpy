@@ -1,7 +1,7 @@
 Models
 ======
 
-- :doc:`bayesiannetwork`
+- :doc:`discretebayesiannetwork`
 - :doc:`gaussianbn`
 - :doc:`dbn`
 - :doc:`sem`
@@ -16,7 +16,7 @@ Models
    :maxdepth: 1
    :hidden:
 
-   bayesiannetwork.rst
+   discretebayesiannetwork.rst
    gaussianbn.rst
    dbn.rst
    sem.rst

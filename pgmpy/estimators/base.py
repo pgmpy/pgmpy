@@ -187,7 +187,7 @@ class ParameterEstimator(BaseEstimator):
 
     Parameters
     ----------
-    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork model
+    model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.MarkovNetwork model
         for which parameter estimation is to be done.
 
     data: pandas DataFrame object
@@ -207,7 +207,7 @@ class ParameterEstimator(BaseEstimator):
 
         Parameters
         ----------
-        model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork model
+        model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.MarkovNetwork model
             for which parameter estimation is to be done.
 
         data: pandas DataFrame object
@@ -249,9 +249,9 @@ class ParameterEstimator(BaseEstimator):
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ParameterEstimator
-        >>> model = BayesianNetwork([('A', 'C'), ('B', 'C')])
+        >>> model = DiscreteBayesianNetwork([('A', 'C'), ('B', 'C')])
         >>> data = pd.DataFrame(data={'A': ['a1', 'a1', 'a2'],
                                       'B': ['b1', 'b2', 'b1'],
                                       'C': ['c1', 'c1', 'c2']})

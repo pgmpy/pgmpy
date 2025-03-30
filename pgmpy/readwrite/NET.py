@@ -26,7 +26,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete.CPD import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -36,7 +36,7 @@ class NETWriter(object):
 
     Parameters
     ----------
-    model: BayesianNetwork Instance
+    model: DiscreteBayesianNetwork Instance
 
     Examples
     ----------
@@ -54,8 +54,8 @@ class NETWriter(object):
     """
 
     def __init__(self, model):
-        if not isinstance(model, BayesianNetwork):
-            raise TypeError("model must be an instance of BayesianNetwork")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
 
         self.model = model
 
@@ -692,10 +692,10 @@ class NETReader:
         >>> from pgmpy.readwrite import NETReader
         >>> reader = NETReader("asia.net")
         >>> reader.get_model()
-        <pgmpy.models.BayesianNetwork.BayesianNetwork at 0x7febc059b430>
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7febc059b430>
         """
         try:
-            model = BayesianNetwork()
+            model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variable_names)
             model.add_edges_from(self.edges)
             model.name = self.network_name

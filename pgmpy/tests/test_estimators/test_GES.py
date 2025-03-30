@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import GES, ExpertKnowledge
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestGESDiscrete(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestGESDiscrete(unittest.TestCase):
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = GES(self.rand_data, use_cache=False)
 
-        self.model1 = BayesianNetwork()
+        self.model1 = DiscreteBayesianNetwork()
         self.model1.add_nodes_from(["A", "B", "C"])
         self.model1_possible_edges = set(
             [(u, v) for u in self.model1.nodes() for v in self.model1.nodes()]

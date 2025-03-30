@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors.discrete import NoisyORCPD, TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestNoisyORInit(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestNoisyORInit(unittest.TestCase):
         )
 
     def test_inference(self):
-        model = BayesianNetwork([("A", "B"), ("C", "B"), ("B", "D")])
+        model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("B", "D")])
 
         cpd_a = TabularCPD("A", 2, [[0.2], [0.8]], state_names={"A": ["True", "False"]})
         cpd_c = TabularCPD("C", 2, [[0.1], [0.9]], state_names={"C": ["True", "False"]})
