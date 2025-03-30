@@ -61,7 +61,7 @@ class CausalInference(object):
             )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             self.observed_variables = frozenset(self.model.nodes()).difference(
                 model.latents
             )

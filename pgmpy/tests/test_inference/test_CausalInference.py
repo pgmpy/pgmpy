@@ -721,7 +721,7 @@ class TestSEMIdentification(unittest.TestCase):
 
 class TestBayesianIV(unittest.TestCase):
     def setUp(self):
-        self.model = BayesianNetwork(
+        self.model = DiscreteBayesianNetwork(
             ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
         )
 
@@ -740,19 +740,21 @@ class TestBayesianIV(unittest.TestCase):
         self.assertIn(("I", {"W"}), cond_ivs)
 
     def test_identification_method(self):
-        backdoor_model = BayesianNetwork(ebunch=[("X", "Y"), ("M", "Y"), ("M", "X")])
+        backdoor_model = DiscreteBayesianNetwork(
+            ebunch=[("X", "Y"), ("M", "Y"), ("M", "X")]
+        )
         causal_inf = CausalInference(backdoor_model)
         methods = causal_inf.identification_method("X", "Y")
         expected_backdoor = {"backdoor set": {frozenset({"M"})}}
         self.assertEqual(methods, expected_backdoor)
 
-        frontdoor_model = BayesianNetwork(ebunch=[("X", "M"), ("M", "Y")])
+        frontdoor_model = DiscreteBayesianNetwork(ebunch=[("X", "M"), ("M", "Y")])
         causal_inf = CausalInference(frontdoor_model)
         methods = causal_inf.identification_method("X", "Y")
         expected_frontdoor = {"frontdoor set": {frozenset({"M"})}}
         self.assertEqual(methods, expected_frontdoor)
 
-        iv_model = BayesianNetwork(
+        iv_model = DiscreteBayesianNetwork(
             ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
         )
         causal_inf = CausalInference(iv_model)
