@@ -178,14 +178,21 @@ class TestBackdoorPaths(unittest.TestCase):
     Causal Games in the examples folder for further explanation about each of these.
     """
 
-    def test_game1(self):
+    def test_game1_bn(self):
         game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         inference = CausalInference(game1)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
-    def test_game2(self):
+    def test_game1_sem(self):
+        game1 = SEMGraph(ebunch=[("X", "A"), ("A", "Y"), ("A", "B")])
+        inference = CausalInference(game1)
+        self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(deconfounders, frozenset())
+
+    def test_game2_bn(self):
         game2 = DiscreteBayesianNetwork(
             [
                 ("X", "E"),
@@ -202,7 +209,24 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
-    def test_game3(self):
+    def test_game2_sem(self):
+        game2 = SEMGraph(
+            [
+                ("X", "E"),
+                ("E", "Y"),
+                ("A", "B"),
+                ("A", "X"),
+                ("B", "C"),
+                ("D", "B"),
+                ("D", "E"),
+            ]
+        )
+        inference = CausalInference(game2)
+        self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(deconfounders, frozenset())
+
+    def test_game3_bn(self):
         game3 = DiscreteBayesianNetwork(
             [("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")]
         )
@@ -211,7 +235,14 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset({frozenset({"B"})}))
 
-    def test_game4(self):
+    def test_game3_sem(self):
+        game3 = SEMGraph([("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")])
+        inference = CausalInference(game3)
+        self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(deconfounders, frozenset({frozenset({"B"})}))
+
+    def test_game4_bn(self):
         game4 = DiscreteBayesianNetwork(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")]
         )
@@ -220,7 +251,14 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
-    def test_game5(self):
+    def test_game4_sem(self):
+        game4 = SEMGraph([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")])
+        inference = CausalInference(game4)
+        self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(deconfounders, frozenset())
+
+    def test_game5_bn(self):
         game5 = DiscreteBayesianNetwork(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
         )
@@ -231,8 +269,49 @@ class TestBackdoorPaths(unittest.TestCase):
             deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})})
         )
 
-    def test_game6(self):
+    def test_game5_sem(self):
+        game5 = SEMGraph(
+            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
+        )
+        inference = CausalInference(game5)
+        self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(
+            deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})})
+        )
+
+    def test_game6_bn(self):
         game6 = DiscreteBayesianNetwork(
+            [
+                ("X", "F"),
+                ("C", "X"),
+                ("A", "C"),
+                ("A", "D"),
+                ("B", "D"),
+                ("B", "E"),
+                ("D", "X"),
+                ("D", "Y"),
+                ("E", "Y"),
+                ("F", "Y"),
+            ]
+        )
+        inference = CausalInference(game6)
+        self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
+        self.assertEqual(
+            deconfounders,
+            frozenset(
+                {
+                    frozenset({"C", "D"}),
+                    frozenset({"A", "D"}),
+                    frozenset({"D", "E"}),
+                    frozenset({"B", "D"}),
+                }
+            ),
+        )
+
+    def test_game6_sem(self):
+        game6 = SEMGraph(
             [
                 ("X", "F"),
                 ("C", "X"),

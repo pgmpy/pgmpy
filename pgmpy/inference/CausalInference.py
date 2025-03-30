@@ -24,18 +24,14 @@ class CausalInference(object):
     model: pgmpy.base.DAG | pgmpy.models.DiscreteBayesianNetwork | pgmpy.models.SEMGraph
         The model that we'll perform inference over.
 
-    set_nodes: list[node:str] or None
-        A list (or set/tuple) of nodes in the Bayesian Network which have been
-        set to a specific value per the do-operator.
-
     Examples
     --------
     Create a small Bayesian Network.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> game = DiscreteBayesianNetwork([('X', 'A'),
-    ...                         ('A', 'Y'),
-    ...                         ('A', 'B')])
+    ...                                 ('A', 'Y'),
+    ...                                 ('A', 'B')])
 
     Load the graph into the CausalInference object to make causal queries.
 
@@ -49,28 +45,36 @@ class CausalInference(object):
     'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
     """
 
-    def __init__(self, model, set_nodes=None):
-        if not isinstance(model, (DiscreteBayesianNetwork, SEMGraph)):
+    def __init__(self, model):
+        if not isinstance(model, (DiscreteBayesianNetwork, SEMGraph, DAG)):
             raise NotImplementedError(
-                "Causal Inference is only implemented for BayesianNetworks at this time."
+                "Causal Inference is only implemented for DAGs, BayesianNetworks, and SEMGraphs."
             )
+
+        # Check if the variable names are strings. If not, raise an error.
         bad_variable = model._variable_name_contains_non_string()
         if bad_variable != False:
             raise NotImplementedError(
                 f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
             )
-        self.model = model
-        self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        if isinstance(self.model, DiscreteBayesianNetwork):
-            self.observed_variables = frozenset(self.model.nodes()).difference(
-                model.latents
-            )
-            self.graph = self.model.to_directed()
-        else:
-            self.observed_variables = frozenset(self.model.observed)
-            self.graph = self.model.full_graph_struct
 
-        self.latents = model.latents
+        # Initialize data structures.
+        self.model = model
+
+        if isinstance(model, SEMGraph):
+            self.observed_variables = frozenset(model.observed)
+            self.dag = DAG(
+                model.full_graph_struct,
+                latents=[
+                    var
+                    for var in model.full_graph_struct.nodes()
+                    if var.startswith(".")
+                ],
+            )
+
+        elif isinstance(model, (DiscreteBayesianNetwork, DAG)):
+            self.observed_variables = frozenset(model.nodes()).difference(model.latents)
+            self.dag = DAG(model.to_directed(), latents=model.latents)
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
@@ -110,8 +114,8 @@ class CausalInference(object):
 
         observed = [X] + list(Z_)
         parents_d_sep = []
-        for p in self.model.predecessors(X):
-            parents_d_sep.append(not self.model.is_dconnected(p, Y, observed=observed))
+        for p in self.dag.predecessors(X):
+            parents_d_sep.append(not self.dag.is_dconnected(p, Y, observed=observed))
         return all(parents_d_sep)
 
     def get_all_backdoor_adjustment_sets(self, X, Y):
@@ -156,10 +160,7 @@ class CausalInference(object):
             return frozenset()
 
         possible_adjustment_variables = (
-            set(self.observed_variables)
-            - {X}
-            - {Y}
-            - set(nx.descendants(self.model, X))
+            set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
         )
 
         valid_adjustment_sets = []
@@ -201,7 +202,7 @@ class CausalInference(object):
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
-        directed_paths = list(nx.all_simple_paths(self.model, X, Y))
+        directed_paths = list(nx.all_simple_paths(self.dag, X, Y))
 
         if directed_paths == []:
             return False
@@ -288,7 +289,7 @@ class CausalInference(object):
                 scaling indicator.
         """
         scaling_indicators = {}
-        for node in self.latents:
+        for node in self.dag.latents:
             for neighbor in self.graph.neighbors(node):
                 if neighbor in self.observed_variables:
                     scaling_indicators[node] = neighbor
@@ -338,7 +339,7 @@ class CausalInference(object):
             full_graph.remove_edge(X, Y)
             return full_graph, Y
 
-        elif Y in self.latents:
+        elif Y in self.dag.latents:
             full_graph.add_edge("." + Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
         else:
@@ -347,7 +348,7 @@ class CausalInference(object):
         for parent_y in self.graph.predecessors(Y):
             # Remove edge even when the parent is observed ????
             full_graph.remove_edge(parent_y, Y)
-            if parent_y in self.latents:
+            if parent_y in self.dag.latents:
                 full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
 
         return full_graph, dependent_var
@@ -395,14 +396,14 @@ class CausalInference(object):
         transformed_graph, dependent_var = self._iv_transformations(
             X, Y, scaling_indicators=scaling_indicators
         )
-        if X in self.latents:
+        if X in self.dag.latents:
             explanatory_var = scaling_indicators[X]
         else:
             explanatory_var = X
 
         graph_for_x = transformed_graph.copy()
         dag_x = DAG(graph_for_x.edges())
-        dag_x.latents = self.latents
+        dag_x.latents = self.dag.latents
         d_connected_x = dag_x.active_trail_nodes(
             [explanatory_var],
         )[explanatory_var]
@@ -410,7 +411,7 @@ class CausalInference(object):
         graph_for_y = transformed_graph.copy()
         graph_for_y.remove_edges_from(list(graph_for_y.out_edges(explanatory_var)))
         dag_y = DAG(graph_for_y.edges())
-        dag_y.latents = self.latents
+        dag_y.latents = self.dag.latents
         d_connected_y = dag_y.active_trail_nodes(
             [dependent_var],
         )[dependent_var]
