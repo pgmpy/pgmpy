@@ -1253,6 +1253,11 @@ class DAG(nx.DiGraph):
                 return (node, type(node))
         return False
 
+    def copy(self):
+        dag = DAG(ebunch=self.edges(), latents=self.latents)
+        dag.add_nodes_from(self.nodes())
+        return dag
+
 
 class PDAG(nx.DiGraph):
     """
@@ -1316,11 +1321,13 @@ class PDAG(nx.DiGraph):
         Copy of PDAG: pgmpy.dag.PDAG
             Returns a copy of self.
         """
-        return PDAG(
+        pdag = PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def to_dag(self):
         """
