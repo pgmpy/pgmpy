@@ -5,7 +5,6 @@ Parameterization
 - :doc:`noisyor`
 - :doc:`lineargauss`
 - :doc:`functional`
-- :doc:`discretize`
 
 .. toctree::
    :maxdepth: 1
@@ -15,4 +14,3 @@ Parameterization
    noisyor.rst
    lineargauss.rst
    functional.rst
-   discretize.rst

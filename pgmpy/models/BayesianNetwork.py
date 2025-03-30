@@ -619,48 +619,43 @@ class BayesianNetwork(DAG):
 
         **kwargs
             Optional keyword arguments specific to the selected algorithm.
-
             - Variable Elimination:
-
-              - elimination_order: str or list (default='greedy')
+            - elimination_order: str or list (default='greedy')
                 Order in which to eliminate the variables in the algorithm. If list is provided,
                 should contain all variables in the model except the ones in `variables`. str options
                 are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
                 refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
                 for details.
 
-              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+            - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
                 If True, returns a Joint Distribution over `variables`.
                 If False, returns a dict of distributions over each of the `variables`.
 
             - Belief Propagation:
-
-              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
                 If True, returns a Joint Distribution over `variables`.
                 If False, returns a dict of distributions over each of the `variables`.
-
 
             - Approx Inference:
+                - n_samples: int
+                    The number of samples to generate for computing the distributions. Higher `n_samples`
+                    results in more accurate results at the cost of more computation time.
 
-              - n_samples: int
-                The number of samples to generate for computing the distributions. Higher `n_samples`
-                results in more accurate results at the cost of more computation time.
+                - samples: pd.DataFrame (default: None)
+                    If provided, uses these samples to compute the distribution instead
+                    of generating samples. `samples` **must** conform with the
+                    `evidence` and `virtual_evidence`.
 
-              - samples: pd.DataFrame (default: None)
-                If provided, uses these samples to compute the distribution instead
-                of generating samples. `samples` **must** conform with the
-                `evidence` and `virtual_evidence`.
+                - state_names: dict (default: None)
+                    A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+                    If None, inferred from the data but is possible that the final distribution misses some states.
 
-              - state_names: dict (default: None)
-                A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-                If None, inferred from the data but is possible that the final distribution misses some states.
+                - seed: int (default: None)
+                    Sets the seed for the random generators.
 
-              - seed: int (default: None)
-                Sets the seed for the random generators.
-
-              - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
+                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
+                    If True, returns a Joint Distribution over `variables`.
+                    If False, returns a dict of distributions over each of the `variables`.
 
         Returns
         -------

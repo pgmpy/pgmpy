@@ -259,43 +259,43 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
 
 def implied_cis(model, data, ci_test, show_progress=True):
     """
-        Tests the implied Conditional Independences (CI) of the DAG in the given data.
+    Tests the implied Conditional Independences (CI) of the DAG in the given data.
 
-        Each missing edge in a model structure implies a CI statement. If the
-        distribution of the data is faithful to the constraints of the model
-        structure, these CI statements should hold in the data as well. This
-        function runs statistical tests for each implied CI on the given data.
+    Each missing edge in a model structure implies a CI statement. If the
+    distribution of the data is faithful to the constraints of the model
+    structure, these CI statements should hold in the data as well. This
+    function runs statistical tests for each implied CI on the given data.
 
-        Parameters
-        ==========
-        model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
-            The model whose structure need to be tested against the given data.
+    Parameters
+    ----------
+    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
+        The model whose structure need to be tested against the given data.
 
-        data: pd.DataFrame
-            Dataset to use for testing.
+    data: pd.DataFrame
+        Dataset to use for testing.
 
-        ci_test: function
-            The function for statistical test. Can be either any of the tests in
-            pgmpy.estimators.CITests or any custom function of the same form.
+    ci_test: function
+        The function for statistical test. Can be either any of the tests in
+        pgmpy.estimators.CITests or any custom function of the same form.
 
-        show_progress: bool (default: True)
-            Whether to show the progress of testing.
+    show_progress: bool (default: True)
+        Whether to show the progress of testing.
 
-        Returns
-        =======
-        pd.DataFrame: Returns a dataframe with each implied CI of the model and a p-value
-            corresponding to it from the statistical test. A low p-value (e.g. <0.05)
-            represents that the CI does not hold in the data.
+    Returns
+    -------
+    pd.DataFrame: Returns a dataframe with each implied CI of the model and a p-value
+        corresponding to it from the statistical test. A low p-value (e.g. <0.05)
+        represents that the CI does not hold in the data.
 
-        Examples
-        ========
-        >>> from pgmpy.utils import get_example_model
-        >>> from pgmpy.metrics import implied_cis
-        >>> from pgmpy.estimators.CITests import chi_square
-        >>> model = get_example_model('cancer')
-        >>> df = model.simulate(int(1e3))
-        >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
-               u         v cond_vars   p-value
+    Examples
+    --------
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import implied_cis
+    >>> from pgmpy.estimators.CITests import chi_square
+    >>> model = get_example_model('cancer')
+    >>> df = model.simulate(int(1e3))
+    >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
+           u         v cond_vars   p-value
     0  Pollution    Smoker        []  0.189851
     1  Pollution      Xray  [Cancer]  0.404149
     2  Pollution  Dyspnoea  [Cancer]  0.613370
@@ -337,7 +337,7 @@ def fisher_c(model, data, ci_test, show_progress=True):
     them using the Fisher's method.
 
     Parameters
-    ==========
+    ----------
     model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
         The model whose structure need to be tested against the given data.
 
@@ -352,13 +352,13 @@ def fisher_c(model, data, ci_test, show_progress=True):
         Whether to show the progress of testing.
 
     Returns
-    =======
+    -------
     float: The p-value for the fit of the model structure to the data. A low
         p-value (e.g. <0.05) represents that the model structure doesn't fit the
         data well.
 
     Examples
-    ========
+    --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square

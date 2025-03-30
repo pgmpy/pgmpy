@@ -3,6 +3,7 @@ Models
 
 - :doc:`bayesiannetwork`
 - :doc:`gaussianbn`
+- :doc:`functionalbn`
 - :doc:`dbn`
 - :doc:`sem`
 - :doc:`markovnetwork`
@@ -18,6 +19,7 @@ Models
 
    bayesiannetwork.rst
    gaussianbn.rst
+   functionalbn.rst
    dbn.rst
    sem.rst
    naive.rst
