@@ -5,7 +5,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.independencies import IndependenceAssertion, Independencies
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.mathext import powerset
 
 
@@ -37,7 +37,7 @@ class MmhcEstimator(StructureEstimator):
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
-        Estimates a BayesianNetwork for the data set, using MMHC. First estimates a
+        Estimates a DiscreteBayesianNetwork for the data set, using MMHC. First estimates a
         graph skeleton using MMPC and then orients the edges using score-based local
         search (hill climbing).
 

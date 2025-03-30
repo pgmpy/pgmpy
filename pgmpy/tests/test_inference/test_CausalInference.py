@@ -6,22 +6,22 @@ import pandas as pd
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 np.random.seed(42)
 
 
 class TestCausalGraphMethods(unittest.TestCase):
     def setUp(self):
-        self.game = BayesianNetwork(
+        self.game = DiscreteBayesianNetwork(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
         )
         self.inference = CausalInference(self.game)
 
-        self.dag_bd1 = BayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Y")])
+        self.dag_bd1 = DiscreteBayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Y")])
         self.inference_bd = CausalInference(self.dag_bd1)
 
-        self.dag_bd2 = BayesianNetwork(
+        self.dag_bd2 = DiscreteBayesianNetwork(
             [("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")]
         )
         self.inference_bd2 = CausalInference(self.dag_bd2)
@@ -51,7 +51,7 @@ class TestCausalGraphMethods(unittest.TestCase):
 class TestCausalInferenceInit(unittest.TestCase):
     def test_integer_variable_name(self):
         df = pd.DataFrame([[0, 1], [0, 0]])
-        self.model = BayesianNetwork(df)
+        self.model = DiscreteBayesianNetwork(df)
         self.assertRaises(NotImplementedError, CausalInference, self.model)
 
 
@@ -59,7 +59,7 @@ class TestAdjustmentSet(unittest.TestCase):
     def setUp(self):
         # Model example taken from Constructing Separators and Adjustment Sets
         # in Ancestral Graphs UAI 2014.
-        self.model = BayesianNetwork(
+        self.model = DiscreteBayesianNetwork(
             [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
         )
         self.infer = CausalInference(self.model)
@@ -123,7 +123,7 @@ class TestAdjustmentSet(unittest.TestCase):
 
     def test_get_minimal_adjustment_set(self):
         # Without latent variables
-        dag1 = BayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+        dag1 = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "Y")])
         infer = CausalInference(dag1)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertEqual(adj_set, {"Z"})
@@ -131,7 +131,7 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="W", Y="Y")
 
         # M graph
-        dag2 = BayesianNetwork(
+        dag2 = DiscreteBayesianNetwork(
             [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")]
         )
         infer = CausalInference(dag2)
@@ -139,13 +139,15 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertEqual(adj_set, set())
 
         # With latents
-        dag_lat1 = BayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"})
+        dag_lat1 = DiscreteBayesianNetwork(
+            [("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"}
+        )
         infer = CausalInference(dag_lat1)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertIsNone(adj_set)
 
         # Pearl's Simpson machine
-        dag_lat2 = BayesianNetwork(
+        dag_lat2 = DiscreteBayesianNetwork(
             [
                 ("X", "Y"),
                 ("Z1", "U"),
@@ -162,7 +164,7 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
 
     def test_issue_1710(self):
-        dag = BayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        dag = DiscreteBayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
         infer = CausalInference(dag)
         adj_set = infer.get_minimal_adjustment_set("X_1", "X_2")
 
@@ -177,14 +179,14 @@ class TestBackdoorPaths(unittest.TestCase):
     """
 
     def test_game1(self):
-        game1 = BayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
+        game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         inference = CausalInference(game1)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game2(self):
-        game2 = BayesianNetwork(
+        game2 = DiscreteBayesianNetwork(
             [
                 ("X", "E"),
                 ("E", "Y"),
@@ -201,7 +203,7 @@ class TestBackdoorPaths(unittest.TestCase):
         self.assertEqual(deconfounders, frozenset())
 
     def test_game3(self):
-        game3 = BayesianNetwork(
+        game3 = DiscreteBayesianNetwork(
             [("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")]
         )
         inference = CausalInference(game3)
@@ -210,14 +212,16 @@ class TestBackdoorPaths(unittest.TestCase):
         self.assertEqual(deconfounders, frozenset({frozenset({"B"})}))
 
     def test_game4(self):
-        game4 = BayesianNetwork([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")])
+        game4 = DiscreteBayesianNetwork(
+            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")]
+        )
         inference = CausalInference(game4)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game5(self):
-        game5 = BayesianNetwork(
+        game5 = DiscreteBayesianNetwork(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
         )
         inference = CausalInference(game5)
@@ -228,7 +232,7 @@ class TestBackdoorPaths(unittest.TestCase):
         )
 
     def test_game6(self):
-        game6 = BayesianNetwork(
+        game6 = DiscreteBayesianNetwork(
             [
                 ("X", "F"),
                 ("C", "X"),
@@ -270,7 +274,7 @@ class TestDoQuery(unittest.TestCase):
         self.iv_infer = CausalInference(self.iv_model)
 
     def get_simpson_model(self):
-        simpson_model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
+        simpson_model = DiscreteBayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
             variable="S",
             variable_card=2,
@@ -299,7 +303,7 @@ class TestDoQuery(unittest.TestCase):
 
     def get_example_model(self):
         # Model structure: Z -> X -> Y; Z -> W -> Y
-        example_model = BayesianNetwork(
+        example_model = DiscreteBayesianNetwork(
             [("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")]
         )
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
@@ -334,7 +338,7 @@ class TestDoQuery(unittest.TestCase):
 
     def get_iv_model(self):
         # Model structure: Z -> X -> Y; X <- U -> Y
-        example_model = BayesianNetwork(
+        example_model = DiscreteBayesianNetwork(
             [("Z", "X"), ("X", "Y"), ("U", "X"), ("U", "Y")]
         )
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
@@ -426,7 +430,7 @@ class TestDoQuery(unittest.TestCase):
             np_test.assert_array_almost_equal(query5.values, np.array([0.62, 0.38]))
 
     def test_issue_1459(self):
-        bn = BayesianNetwork([("X", "Y"), ("W", "X"), ("W", "Y")])
+        bn = DiscreteBayesianNetwork([("X", "Y"), ("W", "X"), ("W", "Y")])
         cpd_w = TabularCPD(variable="W", variable_card=2, values=[[0.7], [0.3]])
         cpd_x = TabularCPD(
             variable="X",
@@ -450,7 +454,7 @@ class TestDoQuery(unittest.TestCase):
 
         # A slight modified version of the above model where only some of the adjustment
         # set variables are in evidence.
-        bn = BayesianNetwork(
+        bn = DiscreteBayesianNetwork(
             [("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")]
         )
         cpd_w1 = TabularCPD(variable="W1", variable_card=2, values=[[0.7], [0.3]])
@@ -501,7 +505,7 @@ class TestDoQuery(unittest.TestCase):
 
 class TestEstimator(unittest.TestCase):
     def test_create_estimator(self):
-        game1 = BayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
+        game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         data = pd.DataFrame(
             np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"]
         )
@@ -510,7 +514,7 @@ class TestEstimator(unittest.TestCase):
         self.assertAlmostEqual(ate, 0, places=1)
 
     def test_estimate_frontdoor(self):
-        model = BayesianNetwork(
+        model = DiscreteBayesianNetwork(
             [("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"]
         )
         U = np.random.randn(10000)
@@ -524,7 +528,9 @@ class TestEstimator(unittest.TestCase):
         self.assertAlmostEqual(ate, 0.8 * 0.9, places=1)
 
     def test_estimate_fail_no_adjustment(self):
-        model = BayesianNetwork([("X", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
+        model = DiscreteBayesianNetwork(
+            [("X", "Y"), ("U", "X"), ("U", "Y")], latents=["U"]
+        )
 
         U = np.random.randn(10000)
         X = 0.3 * U + np.random.randn(10000)
@@ -536,7 +542,7 @@ class TestEstimator(unittest.TestCase):
         self.assertRaises(ValueError, infer.estimate_ate, "X", "Y", data)
 
     def test_estimate_multiple_paths(self):
-        model = BayesianNetwork(
+        model = DiscreteBayesianNetwork(
             [("X", "Z"), ("U", "X"), ("U", "Y"), ("Z", "Y"), ("X", "P1"), ("P1", "Y")],
             latents=["U"],
         )

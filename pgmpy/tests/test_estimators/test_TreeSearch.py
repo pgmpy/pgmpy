@@ -7,7 +7,7 @@ from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.estimators import TreeSearch
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
@@ -24,7 +24,7 @@ class TestTreeSearch(unittest.TestCase):
         )
 
         # test data for chow-liu
-        model = BayesianNetwork(
+        model = DiscreteBayesianNetwork(
             [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")]
         )
         cpd_a = TabularCPD("A", 2, [[0.4], [0.6]])
@@ -65,7 +65,7 @@ class TestTreeSearch(unittest.TestCase):
         self.data13 = inference.forward_sample(size=10000)
 
         # test data for TAN
-        model = BayesianNetwork(
+        model = DiscreteBayesianNetwork(
             [
                 ("A", "R"),
                 ("A", "B"),

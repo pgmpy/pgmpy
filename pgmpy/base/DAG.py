@@ -1203,15 +1203,15 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        Fitted Model: BayesianNetwork
-            Returns a BayesianNetwork object with learned CPDs.
+        Fitted Model: DiscreteBayesianNetwork
+            Returns a DiscreteBayesianNetwork object with learned CPDs.
             The DAG structure is preserved, and parameters (CPDs) are added.
             This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
 
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.base import DAG
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = DAG([('A', 'C'), ('B', 'C')])
@@ -1222,12 +1222,12 @@ class DAG(nx.DiGraph):
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
         """
         from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
-        if isinstance(self, BayesianNetwork):
+        if isinstance(self, DiscreteBayesianNetwork):
             bn = self
         else:
-            bn = BayesianNetwork(self.edges())
+            bn = DiscreteBayesianNetwork(self.edges())
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator

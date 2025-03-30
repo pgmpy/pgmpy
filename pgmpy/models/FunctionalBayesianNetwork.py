@@ -7,10 +7,10 @@ import torch
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
-class FunctionalBayesianNetwork(BayesianNetwork):
+class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     """
     Class for representing Functional Bayesian Network.
 

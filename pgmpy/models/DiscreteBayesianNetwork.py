@@ -22,7 +22,7 @@ from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.utils import compat_fns
 
 
-class BayesianNetwork(DAG):
+class DiscreteBayesianNetwork(DAG):
     """
     Initializes a Bayesian Network.
     A models stores nodes and edges with conditional probability
@@ -49,8 +49,8 @@ class BayesianNetwork(DAG):
     --------
     Create an empty Bayesian Network with no nodes and no edges.
 
-    >>> from pgmpy.models import BayesianNetwork
-    >>> G = BayesianNetwork()
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> G = DiscreteBayesianNetwork()
 
     G can be grown in several ways.
 
@@ -92,7 +92,7 @@ class BayesianNetwork(DAG):
     """
 
     def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
-        super(BayesianNetwork, self).__init__(
+        super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
             lavaan_str=lavaan_str,
@@ -115,8 +115,8 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> G = BayesianNetwork()
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> G = DiscreteBayesianNetwork()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
         """
@@ -129,9 +129,9 @@ class BayesianNetwork(DAG):
             )
         else:
             if w:
-                super(BayesianNetwork, self).add_edge(u, v, w, **kwargs)
+                super(DiscreteBayesianNetwork, self).add_edge(u, v, w, **kwargs)
             else:
-                super(BayesianNetwork, self).add_edge(u, v, **kwargs)
+                super(DiscreteBayesianNetwork, self).add_edge(u, v, **kwargs)
 
     def remove_node(self, node):
         """
@@ -153,8 +153,8 @@ class BayesianNetwork(DAG):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.models import BayesianNetwork
-        >>> model = BayesianNetwork([('A', 'B'), ('B', 'C'),
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C'),
         ...                        ('A', 'D'), ('D', 'C')])
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
@@ -182,7 +182,7 @@ class BayesianNetwork(DAG):
 
         self.latents = self.latents - set([node])
 
-        super(BayesianNetwork, self).remove_node(node)
+        super(DiscreteBayesianNetwork, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
         """
@@ -204,8 +204,8 @@ class BayesianNetwork(DAG):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.models import BayesianNetwork
-        >>> model = BayesianNetwork([('A', 'B'), ('B', 'C'),
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C'),
         ...                        ('A', 'D'), ('D', 'C')])
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
@@ -234,9 +234,9 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grades'), ('aptitude', 'grades')])
+        >>> student = DiscreteBayesianNetwork([('diff', 'grades'), ('aptitude', 'grades')])
         >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.8,0.8,0.8,0.8,0.8,0.8]],
@@ -335,9 +335,9 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
+        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
         ...                               [0.9, 0.1, 0.8, 0.3]],
         ...                  ['intel', 'diff'], [2, 2])
@@ -369,9 +369,9 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
+        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_diff = TabularCPD('diff', 2, [[0.6], [0.4]]);
         >>> cpd_intel = TabularCPD('intel', 2, [[0.7], [0.3]]);
         >>> cpd_grade = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
@@ -475,8 +475,8 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> G = BayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> mm = G.to_markov_model()
         >>> mm.nodes()
@@ -505,9 +505,9 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
+        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
@@ -533,7 +533,7 @@ class BayesianNetwork(DAG):
 
     def fit_update(self, data, n_prev_samples=None, n_jobs=1):
         """
-        Method to update the parameters of the BayesianNetwork with more data.
+        Method to update the parameters of the DiscreteBayesianNetwork with more data.
         Internally, uses BayesianEstimator with dirichlet prior, and uses
         the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
 
@@ -667,13 +667,13 @@ class BayesianNetwork(DAG):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import ApproxInference
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> train_data = values[:800]
         >>> predict_data = values[800:]
-        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('E', axis=1, inplace=True)
@@ -775,12 +775,12 @@ class BayesianNetwork(DAG):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(100, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> train_data = values[:80]
         >>> predict_data = values[80:]
-        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('B', axis=1, inplace=True)
@@ -906,10 +906,10 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
-        >>> G = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
+        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
         >>> grade_cpd = TabularCPD('grade', 3,
@@ -941,14 +941,14 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        Model's copy: pgmpy.models.BayesianNetwork
+        Model's copy: pgmpy.models.DiscreteBayesianNetwork
             Copy of the model on which the method was called.
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> model = BayesianNetwork([('A', 'B'), ('B', 'C')])
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C')])
         >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
         >>> cpd_b = TabularCPD('B', 2, [[0.3, 0.7], [0.7, 0.3]],
         ...                    evidence=['A'],
@@ -965,7 +965,7 @@ class BayesianNetwork(DAG):
         >>> len(copy_model.get_cpds())
         3
         """
-        model_copy = BayesianNetwork()
+        model_copy = DiscreteBayesianNetwork()
         model_copy.add_nodes_from(self.nodes())
         model_copy.add_edges_from(self.edges())
         if self.cpds:
@@ -991,9 +991,9 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianNetwork([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
+        >>> G = DiscreteBayesianNetwork([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
         ...                    ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
         >>> G.get_markov_blanket('y')
         ['s', 'u', 'w', 'v', 'z', 'x']
@@ -1052,8 +1052,8 @@ class BayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
-        >>> model = BayesianNetwork.get_random(n_nodes=5)
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> model = DiscreteBayesianNetwork.get_random(n_nodes=5)
         >>> model.nodes()
         NodeView((0, 1, 3, 4, 2))
         >>> model.edges()
@@ -1087,7 +1087,7 @@ class BayesianNetwork(DAG):
             latents=latents,
             seed=seed,
         )
-        bn_model = BayesianNetwork(dag.edges(), latents=dag.latents)
+        bn_model = DiscreteBayesianNetwork(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
 
         cpds = []
@@ -1165,9 +1165,9 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        Modified network: pgmpy.models.BayesianNetwork or None
+        Modified network: pgmpy.models.DiscreteBayesianNetwork or None
             If inplace=True, modifies the object itself else returns an instance of
-            BayesianNetwork modified by the do operation.
+            DiscreteBayesianNetwork modified by the do operation.
 
         Examples
         --------
@@ -1257,8 +1257,8 @@ class BayesianNetwork(DAG):
         missing_prob: TabularCPD, list  (default: None)
             The probability of missing value for the variable of TabularCPD.
             In case of missing value for more than one variable, provide list of TabularCPD.
-            The variable name of each TabularCPD should end with the name of node in BayesianNetwork with * at the end of the name.
-            The state names of each TabularCPD should be the same as the state names of the corresponding node in BayesianNetwork.
+            The variable name of each TabularCPD should end with the name of node in DiscreteBayesianNetwork with * at the end of the name.
+            The state names of each TabularCPD should be the same as the state names of the corresponding node in DiscreteBayesianNetwork.
 
         return_full: bool (default: False)
             If True, return both full samples and samples with missing values (if performed).
@@ -1535,7 +1535,7 @@ class BayesianNetwork(DAG):
         >>> from pgmpy.utils import get_example_model
         >>> alarm = get_example_model('alarm')
         >>> alarm.save('alarm.bif', filetype='bif')
-        >>> alarm_model = BayesianNetwork.load('alarm.bif', filetype='bif')
+        >>> alarm_model = DiscreteBayesianNetwork.load('alarm.bif', filetype='bif')
         """
         supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
         if filename.split(".")[-1].lower() in supported_formats:

@@ -8,7 +8,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.factors.discrete import State, TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class XDSLReader(object):
@@ -191,7 +191,7 @@ class XDSLReader(object):
 
         Returns
         -------
-        BayesianNetwork instance: The read model.
+        DiscreteBayesianNetwork instance: The read model.
 
         Examples
         --------
@@ -199,7 +199,7 @@ class XDSLReader(object):
         >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
         >>> model = reader.get_model()
         """
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
         model.name = self.network_name
@@ -234,7 +234,7 @@ class XDSLWriter(object):
 
     Parameters
     ----------
-    model: pgmpy.models.BayesianNetwork instance.
+    model: pgmpy.models.DiscreteBayesianNetwork instance.
         The model to write to the file.
 
     network_id: str (default: "MyNetwork")
@@ -271,8 +271,8 @@ class XDSLWriter(object):
         disc_samples="0",
         encoding="utf-8",
     ):
-        if not isinstance(model, BayesianNetwork):
-            raise TypeError("model must an instance of BayesianNetwork")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise TypeError("model must an instance of DiscreteBayesianNetwork")
         self.model = model
         self.encoding = encoding
         self.network_id = network_id

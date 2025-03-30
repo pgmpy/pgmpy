@@ -10,12 +10,12 @@ from pgmpy.inference.EliminationOrder import (
     MinWeight,
     WeightedMinFill,
 )
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class BaseEliminationTest(TestCase):
     def setUp(self):
-        self.model = BayesianNetwork(
+        self.model = DiscreteBayesianNetwork(
             [("diff", "grade"), ("intel", "grade"), ("intel", "sat"), ("grade", "reco")]
         )
         raw_data = np.random.randint(low=0, high=2, size=(1000, 5))

@@ -4,9 +4,8 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork
-from pgmpy.inference import Inference
-from pgmpy.inference import VariableElimination
+from pgmpy.inference import Inference, VariableElimination
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestStateNameInit(unittest.TestCase):
@@ -54,7 +53,7 @@ class TestStateNameInit(unittest.TestCase):
             state_names=self.sn2,
         )
 
-        student = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
         diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 2, [[0.3], [0.7]])
         grade_cpd = TabularCPD(
@@ -119,8 +118,10 @@ class StateNameDecorator(unittest.TestCase):
             state_names=self.sn2,
         )
 
-        student = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
-        student_state_names = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        student_state_names = DiscreteBayesianNetwork(
+            [("diff", "grade"), ("intel", "grade")]
+        )
 
         diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 2, [[0.3], [0.7]])

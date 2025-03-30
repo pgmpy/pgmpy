@@ -687,12 +687,12 @@ class MarkovNetwork(UndirectedGraph):
         >>> mm.add_factors(*phi)
         >>> bm = mm.to_bayesian_model()
         """
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
         # If the graph is not connected, treat them as separate models and join them together in the end.
         bms = []
         for node_set in connected_components(self):
-            bm = BayesianNetwork()
+            bm = DiscreteBayesianNetwork()
             var_clique_dict = defaultdict(tuple)
             var_order = []
 
@@ -729,7 +729,7 @@ class MarkovNetwork(UndirectedGraph):
             bms.append(bm)
 
         # Join the bms in a single model.
-        final_bm = BayesianNetwork()
+        final_bm = DiscreteBayesianNetwork()
         for bm in bms:
             final_bm.add_edges_from(bm.edges())
             final_bm.add_nodes_from(bm.nodes())

@@ -7,7 +7,7 @@ import numpy.testing as np_test
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XDSLReader, XDSLWriter
 from pgmpy.utils import get_example_model
 
@@ -182,7 +182,7 @@ class TestXDSLWriterMethodsString(unittest.TestCase):
         self.alarm_model_xdsl = r"pgmpy\tests\test_readwrite\testdata\Alarm.xdsl"
         self.alarm_model_bn = get_example_model(model="alarm")
 
-        self.dummy_model = BayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
+        self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
         self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])
         self.cpd_b = TabularCPD(variable="B", variable_card=2, values=[[0.99], [0.01]])
 

@@ -11,7 +11,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -259,7 +259,7 @@ class UAIReader(object):
         >>> reader.get_model()
         """
         if self.network_type == "BAYES":
-            model = BayesianNetwork()
+            model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variables)
             model.add_edges_from(self.edges)
 
@@ -324,7 +324,7 @@ class UAIWriter(object):
     """
 
     def __init__(self, model, round_values=None):
-        if isinstance(model, BayesianNetwork):
+        if isinstance(model, DiscreteBayesianNetwork):
             self.network = "BAYES\n"
         elif isinstance(model, MarkovNetwork):
             self.network = "MARKOV\n"
@@ -378,7 +378,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_domain()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             domain = {}
@@ -407,7 +407,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_functions()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -447,7 +447,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_tables()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             tables = []
