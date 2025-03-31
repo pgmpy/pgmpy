@@ -1,3 +1,4 @@
+from .BayesianNetwork import BayesianNetwork
 from .ClusterGraph import ClusterGraph
 from .DiscreteBayesianNetwork import DiscreteBayesianNetwork
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
@@ -12,6 +13,7 @@ from .SEM import SEM, SEMAlg, SEMGraph
 
 __all__ = [
     "DiscreteBayesianNetwork",
+    "BayesianNetwork",
     "MarkovNetwork",
     "FactorGraph",
     "JunctionTree",
