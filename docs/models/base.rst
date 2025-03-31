@@ -1,8 +1,9 @@
 Models
 ======
 
-- :doc:`bayesiannetwork`
+- :doc:`discretebayesiannetwork`
 - :doc:`gaussianbn`
+- :doc:`functionalbn`
 - :doc:`dbn`
 - :doc:`sem`
 - :doc:`markovnetwork`
@@ -16,8 +17,9 @@ Models
    :maxdepth: 1
    :hidden:
 
-   bayesiannetwork.rst
+   discretebayesiannetwork.rst
    gaussianbn.rst
+   functionalbn.rst
    dbn.rst
    sem.rst
    naive.rst

@@ -15,7 +15,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import State, TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -209,7 +209,7 @@ class XMLBIFReader(object):
 
         Returns
         -------
-        BayesianNetwork instance: The read model.
+        DiscreteBayesianNetwork instance: The read model.
 
         Examples
         --------
@@ -217,7 +217,7 @@ class XMLBIFReader(object):
         >>> reader = XMLBIFReader("xmlbif_test.xml")
         >>> model = reader.get_model()
         """
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
         model.name = self.network_name
@@ -258,7 +258,7 @@ class XMLBIFWriter(object):
 
     Parameters
     ----------
-    model: BayesianNetwork Instance
+    model: DiscreteBayesianNetwork Instance
         Model to write
 
     encoding: str (optional)
@@ -281,8 +281,8 @@ class XMLBIFWriter(object):
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        if not isinstance(model, BayesianNetwork):
-            raise TypeError("model must an instance of BayesianNetwork")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise TypeError("model must an instance of DiscreteBayesianNetwork")
         self.model = model
 
         self.encoding = encoding

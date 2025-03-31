@@ -54,7 +54,7 @@ class FunctionalCPD(BaseFactor):
         """
         Simulates a value for the variable based on its CPD.
 
-        Parameters:
+        Parameters
         ----------
 
         n_samples: int, (default: 100)
@@ -63,7 +63,7 @@ class FunctionalCPD(BaseFactor):
         parent_sample: pandas.DataFrame, optional
             A DataFrame where each column represents a parent variable and rows are samples.
 
-        Returns:
+        Returns
         -------
         sampled_values: numpy.ndarray
             Array of sampled values for the variable.

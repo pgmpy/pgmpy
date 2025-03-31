@@ -5,7 +5,7 @@ import numpy as np
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
@@ -173,7 +173,7 @@ class TestUAIWriter(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 
@@ -439,7 +439,7 @@ class TestUAIWriterTorch(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 

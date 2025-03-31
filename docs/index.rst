@@ -44,7 +44,6 @@
    models/base.rst
    factors/base.rst
    exact_infer/base.rst
-   exact_infer/model_testing.rst
    approx_infer/base.rst
    param_estimator/base.rst
    structure_estimator/base.rst

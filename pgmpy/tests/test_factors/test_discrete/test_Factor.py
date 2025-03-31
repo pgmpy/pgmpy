@@ -12,7 +12,7 @@ from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -3252,7 +3252,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         )
 
     def test_is_imap(self):
-        G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        G1 = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
         diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
         grade_cpd = TabularCPD(

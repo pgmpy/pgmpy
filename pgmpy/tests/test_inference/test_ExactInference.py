@@ -7,12 +7,17 @@ import numpy.testing as np_test
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
-from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
+from pgmpy.models import (
+    DiscreteBayesianNetwork,
+    FactorGraph,
+    JunctionTree,
+    MarkovNetwork,
+)
 
 
 class TestVariableElimination(unittest.TestCase):
     def setUp(self):
-        self.bayesian_model = BayesianNetwork(
+        self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
@@ -366,7 +371,7 @@ class TestVariableElimination(unittest.TestCase):
 
 class TestSnowNetwork(unittest.TestCase):
     def setUp(self):
-        self.model = BayesianNetwork(
+        self.model = DiscreteBayesianNetwork(
             [
                 ("Snow", "Risk"),
                 ("Snow", "Traffic"),
@@ -837,7 +842,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(2, result_width)
 
     def test_issue_1421(self):
-        model = BayesianNetwork([("X", "Y"), ("Z", "X"), ("W", "Y")])
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("W", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
 
         cpd_x = TabularCPD(
@@ -880,7 +885,7 @@ class TestBeliefPropagation(unittest.TestCase):
         phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
         self.junction_tree.add_factors(phi1, phi2, phi3)
 
-        self.bayesian_model = BayesianNetwork(
+        self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
@@ -1092,7 +1097,7 @@ class TestBeliefPropagation(unittest.TestCase):
         )
 
     def test_issue_1048(self):
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
 
         # Nodes
         parents = ["parent"]

@@ -8,7 +8,7 @@ from joblib.externals.loky import get_reusable_executor
 from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
@@ -119,7 +119,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
             # Generate independencies from a model.
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             skel, sep_sets = estimator.estimate(
                 variant=variant,
@@ -381,7 +383,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
             self.assertEqual(model.edges(), expected_edges)
 
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             estimated_model = estimator.estimate(
                 variant="orig",

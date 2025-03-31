@@ -1,5 +1,5 @@
-Structure Learning
-==================
+Causal Discovery / Structure Learning
+=====================================
 
 - :doc:`pc`
 - :doc:`hill`

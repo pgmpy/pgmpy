@@ -4,12 +4,12 @@ from numpy import nan
 from pandas import DataFrame
 
 from pgmpy.estimators import ParameterEstimator
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestParameterEstimator(unittest.TestCase):
     def setUp(self):
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
         self.d1 = DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )

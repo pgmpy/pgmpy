@@ -81,15 +81,54 @@ class StateNameMixin:
     def add_state_names(self, phi1):
         """
         Updates the attributes of this class with another factor `phi1`.
+        Ensures state name consistency.
 
         Parameters
         ----------
         phi1: Instance of pgmpy.factors.DiscreteFactor
             The factor whose states and variables need to be added.
         """
-        self.state_names.update(phi1.state_names)
-        self.name_to_no.update(phi1.name_to_no)
-        self.no_to_name.update(phi1.no_to_name)
+        # Process all state names in a single loop
+        for var in phi1.state_names:
+            if var in self.state_names:
+                # Check for conflicts between existing state names
+                if self.state_names[var] != phi1.state_names[var]:
+                    # One has strings and the other has numeric values - prioritize strings
+                    self_has_strings = any(
+                        isinstance(s, str) and not s.isdigit()
+                        for s in self.state_names[var]
+                    )
+                    phi1_has_strings = any(
+                        isinstance(s, str) and not s.isdigit()
+                        for s in phi1.state_names[var]
+                    )
+
+                    # Keep string-based state names over numeric ones
+                    if self_has_strings and not phi1_has_strings:
+                        continue  # Keep current string-based state names
+                    elif not self_has_strings and phi1_has_strings:
+                        self.state_names[var] = phi1.state_names[var]
+                        if var in phi1.name_to_no:
+                            self.name_to_no[var] = phi1.name_to_no[var]
+                        if var in phi1.no_to_name:
+                            self.no_to_name[var] = phi1.no_to_name[var]
+                    else:
+                        # Both have similar types but different values - raise error
+                        raise ValueError(
+                            f"State name conflict detected for variable '{var}'.\n"
+                            f"First factor has states: {self.state_names[var]}\n"
+                            f"Second factor has states: {phi1.state_names[var]}\n"
+                            f"When the same variable appears in multiple factors, "
+                            f"the state names must be identical. Please ensure consistent "
+                            f"state naming across your model."
+                        )
+            else:
+                # No conflict - add the new state names
+                self.state_names[var] = phi1.state_names[var]
+                if var in phi1.name_to_no:
+                    self.name_to_no[var] = phi1.name_to_no[var]
+                if var in phi1.no_to_name:
+                    self.no_to_name[var] = phi1.no_to_name[var]
 
     def del_state_names(self, var_list):
         """
