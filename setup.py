@@ -126,7 +126,7 @@ if __name__ == "__main__":
         description="A library for Probabilistic Graphical Models",
         packages=find_packages(exclude=["tests"]),
         include_package_data=True,
-        package_data={"": ["utils/example_models/*.bif.gz"]},
+        package_data={"": ["utils/example_models/*"]},
         author="Ankur Ankan",
         author_email="ankurankan@gmail.com",
         url="https://github.com/pgmpy/pgmpy",
@@ -150,6 +150,7 @@ if __name__ == "__main__":
         install_requires=parse_requirements("requirements/runtime.txt"),
         extras_require={
             "all": parse_requirements("requirements.txt"),
+            "optional": parse_requirements("requirements/optional.txt"),
             "tests": parse_requirements("requirements/tests.txt"),
         },
     )
