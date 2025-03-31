@@ -721,7 +721,7 @@ class DiscreteBayesianNetwork(DAG):
             lambda t: t.index.tolist()
         )
         data_unique = data_unique_indexes.index.to_frame()
-        pred_values = Parallel(n_jobs=n_jobs)(
+        pred_values = Parallel(n_jobs=-1, require='sharedmem')(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(
                     set(data_point.index[data_point.isna()])
