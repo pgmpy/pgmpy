@@ -7,7 +7,7 @@ import numpy.testing as np_test
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, JunctionTree
 from pgmpy.utils import compat_fns
 
 
@@ -631,7 +631,7 @@ class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.markov_model = MarkovNetwork([("A", "B"), ("A", "C")])
+        self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
         f1 = DiscreteFactor(
             variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2
         )
@@ -658,7 +658,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
         # are under consideration for inference so this should be fine.
-        self.markov_model = MarkovNetwork(
+        self.markov_model = DiscreteMarkovNetwork(
             [
                 ("A", "J"),
                 ("R", "J"),

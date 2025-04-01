@@ -13,13 +13,13 @@ from pgmpy.independencies import Independencies
 from pgmpy.utils import compat_fns
 
 
-class MarkovNetwork(UndirectedGraph):
+class DiscreteMarkovNetwork(UndirectedGraph):
     """
     Base class for Markov Model.
 
-    A MarkovNetwork stores nodes and edges with potentials
+    A DiscreteMarkovNetwork stores nodes and edges with potentials
 
-    MarkovNetwork holds undirected edges.
+    DiscreteMarkovNetwork holds undirected edges.
 
     Parameters
     ----------
@@ -32,8 +32,8 @@ class MarkovNetwork(UndirectedGraph):
     --------
     Create an empty Markov Model with no nodes and no edges.
 
-    >>> from pgmpy.models import MarkovNetwork
-    >>> G = MarkovNetwork()
+    >>> from pgmpy.models import DiscreteMarkovNetwork
+    >>> G = DiscreteMarkovNetwork()
 
     G can be grown in several ways.
 
@@ -75,7 +75,7 @@ class MarkovNetwork(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None, latents=[]):
-        super(MarkovNetwork, self).__init__()
+        super(DiscreteMarkovNetwork, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -95,14 +95,14 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
-        >>> G = MarkovNetwork()
+        >>> from pgmpy.models import DiscreteMarkovNetwork
+        >>> G = DiscreteMarkovNetwork()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
         """
         # check that there is no self loop.
         if u != v:
-            super(MarkovNetwork, self).add_edge(u, v, **kwargs)
+            super(DiscreteMarkovNetwork, self).add_edge(u, v, **kwargs)
         else:
             raise ValueError("Self loops are not allowed")
 
@@ -123,9 +123,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
+        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
         ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
         ...                 values=np.random.rand(6))
@@ -151,9 +151,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor1 = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                          values=np.random.rand(4))
         >>> factor2 = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 3],
@@ -182,9 +182,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
@@ -208,9 +208,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
@@ -286,9 +286,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor1 = DiscreteFactor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
         >>> factor2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         >>> student.add_factors(factor1, factor2)
@@ -351,9 +351,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> G = MarkovNetwork()
+        >>> G = DiscreteMarkovNetwork()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -490,7 +490,7 @@ class MarkovNetwork(UndirectedGraph):
             return self
 
         else:
-            graph_copy = MarkovNetwork(self.edges())
+            graph_copy = DiscreteMarkovNetwork(self.edges())
             for edge in edge_set:
                 graph_copy.add_edge(edge[0], edge[1])
             return graph_copy
@@ -506,9 +506,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> mm = MarkovNetwork()
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -611,8 +611,8 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
-        >>> mm = MarkovNetwork()
+        >>> from pgmpy.models import DiscreteMarkovNetwork
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -637,8 +637,8 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
-        >>> mm = MarkovNetwork()
+        >>> from pgmpy.models import DiscreteMarkovNetwork
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -676,9 +676,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> mm = MarkovNetwork()
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -701,7 +701,7 @@ class MarkovNetwork(UndirectedGraph):
             # Create a Junction Tree from the Markov Model.
             # Creation of Clique Tree involves triangulation, finding maximal cliques
             # and creating a tree from these cliques
-            junction_tree = MarkovNetwork(subgraph.edges()).to_junction_tree()
+            junction_tree = DiscreteMarkovNetwork(subgraph.edges()).to_junction_tree()
 
             # create an ordering of the nodes based on the ordering of the clique
             # in which it appeared first
@@ -748,9 +748,9 @@ class MarkovNetwork(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> G = MarkovNetwork()
+        >>> G = DiscreteMarkovNetwork()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -776,13 +776,13 @@ class MarkovNetwork(UndirectedGraph):
 
         Returns
         -------
-        MarkovNetwork: Copy of this Markov model.
+        DiscreteMarkovNetwork: Copy of this Markov model.
 
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> from pgmpy.models import MarkovNetwork
-        >>> G = MarkovNetwork()
+        >>> from pgmpy.models import DiscreteMarkovNetwork
+        >>> G = DiscreteMarkovNetwork()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> G.add_edge(('a', 'b'), ('b', 'c'))
         >>> G_copy = G.copy()
@@ -798,7 +798,7 @@ class MarkovNetwork(UndirectedGraph):
         >>> G_copy.get_factors()
         []
         """
-        clone_graph = MarkovNetwork(self.edges())
+        clone_graph = DiscreteMarkovNetwork(self.edges())
         clone_graph.add_nodes_from(self.nodes())
 
         if self.factors:

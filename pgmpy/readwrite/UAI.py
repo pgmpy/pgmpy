@@ -11,7 +11,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -286,7 +286,7 @@ class UAIReader(object):
             return model
 
         elif self.network_type == "MARKOV":
-            model = MarkovNetwork(self.edges)
+            model = DiscreteMarkovNetwork(self.edges)
 
             factors = []
             for table in self.tables:
@@ -326,7 +326,7 @@ class UAIWriter(object):
     def __init__(self, model, round_values=None):
         if isinstance(model, DiscreteBayesianNetwork):
             self.network = "BAYES\n"
-        elif isinstance(model, MarkovNetwork):
+        elif isinstance(model, DiscreteMarkovNetwork):
             self.network = "MARKOV\n"
         else:
             raise TypeError("Model must be an instance of Bayesian or Markov model.")
@@ -385,7 +385,7 @@ class UAIWriter(object):
             for cpd in cpds:
                 domain[cpd.variable] = str(cpd.variable_card)
             return domain
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             domain = {}
             for factor in factors:
@@ -423,7 +423,7 @@ class UAIWriter(object):
                 )
                 functions.append(function)
             return functions
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             functions = []
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -462,7 +462,7 @@ class UAIWriter(object):
                 )
                 tables.append(values)
             return tables
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:
