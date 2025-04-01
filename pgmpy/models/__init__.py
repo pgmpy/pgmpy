@@ -8,6 +8,7 @@ from .FunctionalBayesianNetwork import FunctionalBayesianNetwork
 from .JunctionTree import JunctionTree
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .MarkovChain import MarkovChain
+from .MarkovNetwork import MarkovNetwork
 from .NaiveBayes import NaiveBayes
 from .SEM import SEM, SEMAlg, SEMGraph
 
@@ -15,6 +16,7 @@ __all__ = [
     "DiscreteBayesianNetwork",
     "BayesianNetwork",
     "DiscreteMarkovNetwork",
+    "MarkovNetwork",
     "FactorGraph",
     "JunctionTree",
     "ClusterGraph",
