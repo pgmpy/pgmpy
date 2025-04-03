@@ -300,7 +300,7 @@ class XDSLWriter(object):
 
         Examples
         --------
-        >>> writer = XMLBIFWriter(model)
+        >>> writer = XDSLWriter(model)
         >>> writer.get_variables()
         {'asia': <Element 'cpt' at 0x000001DC6BFA1350>,
         'tub': <Element 'cpt' at 0x000001DC6BFA35B0>,
@@ -329,7 +329,7 @@ class XDSLWriter(object):
 
         Examples
         -------
-        >>> writer = XMLBIFWriter(model)
+        >>> writer = XDSLWriter(model)
         >>> writer.get_values()
         {'asia': <TabularCPD representing P(asia:2) at 0x1885817c830>,
         'tub': <TabularCPD representing P(tub:2 | asia:2) at 0x1885a7e57c0>,
