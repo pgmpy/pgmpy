@@ -21,7 +21,12 @@ def copy(arr):
         elif isinstance(arr, (int, float)):
             return deepcopy(arr)
     else:
-        return torch.tensor(arr, dtype=config.get_dtype(), device=config.get_device())
+        if isinstance(arr, torch.Tensor):
+            return arr.detach().clone()
+        else:
+            return torch.tensor(
+                arr, dtype=config.get_dtype(), device=config.get_device()
+            )
 
 
 def tobytes(arr):
@@ -141,7 +146,7 @@ def allclose(arr1, arr2, atol):
         return np.allclose(arr1, arr2, atol=atol)
     else:
         return torch.allclose(
-            torch.tensor(arr1, dtype=config.get_dtype(), device=config.get_device()),
-            torch.tensor(arr2, dtype=config.get_dtype(), device=config.get_device()),
+            arr1.detach().clone(),
+            arr2.detach().clone(),
             atol=atol,
         )
