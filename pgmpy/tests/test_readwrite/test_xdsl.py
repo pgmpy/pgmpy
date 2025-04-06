@@ -177,9 +177,8 @@ DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 </smile>"""
 
 
-class TestXDSLWriterMethodsString(unittest.TestCase):
+class TestXDSLWriterMethods(unittest.TestCase):
     def setUp(self):
-        self.alarm_model_xdsl = r"pgmpy\tests\test_readwrite\testdata\Alarm.xdsl"
         self.alarm_model_bn = get_example_model(model="alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
@@ -235,3 +234,160 @@ class TestXDSLWriterMethodsString(unittest.TestCase):
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
         os.remove("alarm_model.xdsl")
+
+    def tearDown(self):
+        del self.alarm_model_bn
+        del self.dummy_model
+        del self.writer_dummy
+
+
+class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+        self.reader = XDSLReader(string=TEST_FILE)
+
+    def test_get_variables(self):
+        var_expected = [
+            "asia",
+            "tub",
+            "smoke",
+            "lung",
+            "either",
+            "xray",
+            "bronc",
+            "dysp",
+        ]
+        self.assertListEqual(self.reader.variables, var_expected)
+
+    def test_get_parents(self):
+        parents_expected = {
+            "asia": [],
+            "tub": ["asia"],
+            "smoke": [],
+            "lung": ["smoke"],
+            "either": ["tub", "lung"],
+            "xray": ["either"],
+            "bronc": ["smoke"],
+            "dysp": ["either", "bronc"],
+        }
+        parents = self.reader.variable_parents
+        for variable in parents_expected:
+            self.assertListEqual(parents_expected[variable], parents[variable])
+
+    def test_get_states(self):
+        states_expected = {
+            "asia": ["no", "yes"],
+            "tub": ["no", "yes"],
+            "smoke": ["no", "yes"],
+            "lung": ["no", "yes"],
+            "either": ["Nothing", "CancerORTuberculosis"],
+            "xray": ["Normal", "Abnormal"],
+            "bronc": ["Absent", "Present"],
+            "dysp": ["Absent", "Present"],
+        }
+        states = self.reader.variable_states
+        for variable in states_expected:
+            self.assertListEqual(states_expected[variable], states[variable])
+
+    def test_get_edges(self):
+        edges_expected = [
+            ["asia", "tub"],
+            ["smoke", "lung"],
+            ["tub", "either"],
+            ["lung", "either"],
+            ["either", "xray"],
+            ["smoke", "bronc"],
+            ["either", "dysp"],
+            ["bronc", "dysp"],
+        ]
+        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+
+    def test_get_values(self):
+        cpd_expected = {
+            "asia": np.array([[0.99], [0.01]]),
+            "tub": np.array([[0.99, 0.95], [0.01, 0.05]]),
+            "smoke": np.array([[0.5], [0.5]]),
+            "lung": np.array([[0.99, 0.9], [0.01, 0.1]]),
+            "either": np.array([[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            "xray": np.array([[0.95, 0.02], [0.05, 0.98]]),
+            "bronc": np.array([[0.7, 0.4], [0.3, 0.6]]),
+            "dysp": np.array([[0.9, 0.2, 0.3, 0.1], [0.1, 0.8, 0.7, 0.9]]),
+        }
+        cpd = self.reader.variable_CPD
+        for variable in cpd_expected:
+            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
+
+    def test_model(self):
+        self.reader.get_model().check_model()
+
+    def tearDown(self):
+        del self.reader
+        config.set_backend("numpy")
+
+
+class TestXDSLWriterMethodsTorch(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
+        self.alarm_model_bn = get_example_model(model="alarm")
+
+        self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
+        self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])
+        self.cpd_b = TabularCPD(variable="B", variable_card=2, values=[[0.99], [0.01]])
+
+        self.cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[
+                [0.8, 0.75, 0.33, 0.99],
+                [0.2, 0.25, 0.67, 0.01],
+            ],
+            evidence=["A", "B"],
+            evidence_card=[2, 2],
+        )
+
+        self.cpd_d = TabularCPD(
+            variable="D",
+            variable_card=3,
+            values=[[0.6, 0.4], [0.3, 0.4], [0.1, 0.2]],
+            evidence=["C"],
+            evidence_card=[2],
+        )
+
+        self.dummy_model.add_cpds(
+            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
+        )  # testing without state names
+        self.writer_dummy = XDSLWriter(self.dummy_model)
+
+    def assert_models_equivalent(self, expected, got):
+        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        for node in expected.nodes():
+            self.assertListEqual(
+                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
+            )
+            cpds_expected = expected.get_cpds(node=node)
+            cpds_got = got.get_cpds(node=node)
+            self.assertEqual(cpds_expected, cpds_got)
+
+    def test_writer_cpds(self):
+        self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
+        with open("dummy_model.xdsl", "r") as f:
+            reader = XDSLReader(f)
+        model = reader.get_model(state_name_type=int)
+        self.assert_models_equivalent(self.dummy_model, model)
+        os.remove("dummy_model.xdsl")
+
+    def test_alarm_model(self):
+        alarm_xdsl = XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+        with open("alarm_model.xdsl", "r") as f:
+            file_text = f.read()
+        alarm_model_bn_test = XDSLReader(string=file_text).get_model()
+        self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
+        os.remove("alarm_model.xdsl")
+
+    def tearDown(self):
+        del self.alarm_model_bn
+        del self.dummy_model
+        del self.writer_dummy
+
+        config.set_backend("numpy")
