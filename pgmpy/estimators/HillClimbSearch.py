@@ -269,7 +269,6 @@ class HillClimbSearch(StructureEstimator):
                     max_indegree,
                     expert_knowledge.forbidden_edges,
                     expert_knowledge.required_edges,
-                    expert_knowledge.search_space,
                 ),
                 key=lambda t: t[1],
                 default=(None, None),
