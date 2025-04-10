@@ -207,7 +207,7 @@ class ExpertKnowledge:
 
         self.search_space = (
             self._validate_edges(search_space)
-            if required_edges is not None
+            if search_space is not None
             else set()
         )
 
