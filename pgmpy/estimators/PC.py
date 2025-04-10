@@ -281,6 +281,9 @@ class PC(StructureEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(self.data.columns)
+
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
