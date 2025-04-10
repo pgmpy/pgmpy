@@ -264,9 +264,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
 
     def test_search_space(self):
-        adult_data = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/adult.csv"
-        )
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
 
         search_space = [
             ("Age", "Education"),
@@ -276,8 +274,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             ("Age", "Income"),
         ]
 
-        expert_knowledge = ExpertKnowledge(
-            search_space=search_space)
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
 
         est = HillClimbSearch(adult_data)
 

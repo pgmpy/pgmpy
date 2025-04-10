@@ -206,9 +206,7 @@ class ExpertKnowledge:
         )
 
         self.search_space = (
-            self._validate_edges(search_space)
-            if search_space is not None
-            else set()
+            self._validate_edges(search_space) if search_space is not None else set()
         )
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
@@ -281,7 +279,9 @@ class ExpertKnowledge:
             Set of edges that are not allowed in the structure.
         """
         # Generate all possible edges
-        all_possible_edges = set((u, v) for u in data_coulumn_labels for v in data_coulumn_labels if u != v)
+        all_possible_edges = set(
+            (u, v) for u in data_coulumn_labels for v in data_coulumn_labels if u != v
+        )
 
         # Calculate forbidden edges by subtracting the search space from all possible edges
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
