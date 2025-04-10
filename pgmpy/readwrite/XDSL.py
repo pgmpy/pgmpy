@@ -360,10 +360,10 @@ class XDSLWriter(object):
 
             # Add the <probabilities> element.
             probs_elem = etree.SubElement(cpt_elem, "probabilities")
-            values = compat_fns.to_numpy(cpd.get_values())
+            values = cpd.get_values()
 
             # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
-            flat_values = values.flatten(order="F")
+            flat_values = compat_fns.ravel_f(values)
             probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
 
             outcome_tag[var] = cpd
