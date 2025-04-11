@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, permutations
 
 from pgmpy.global_vars import logger
 
@@ -280,7 +280,7 @@ class ExpertKnowledge:
         """
         # Generate all possible edges
         all_possible_edges = set(
-            (u, v) for u in data_coulumn_labels for v in data_coulumn_labels if u != v
+            permutations(data_coulumn_labels, 2)
         )
 
         # Calculate forbidden edges by subtracting the search space from all possible edges
