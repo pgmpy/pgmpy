@@ -279,9 +279,7 @@ class ExpertKnowledge:
             Set of edges that are not allowed in the structure.
         """
         # Generate all possible edges
-        all_possible_edges = set(
-            permutations(data_coulumn_labels, 2)
-        )
+        all_possible_edges = set(permutations(data_coulumn_labels, 2))
 
         # Calculate forbidden edges by subtracting the search space from all possible edges
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
