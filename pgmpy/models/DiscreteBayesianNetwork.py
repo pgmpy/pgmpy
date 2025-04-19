@@ -24,16 +24,12 @@ from pgmpy.utils import compat_fns
 
 class DiscreteBayesianNetwork(DAG):
     """
-    Initializes a Bayesian Network.
-    A models stores nodes and edges with conditional probability
-    distribution (cpd) and other attributes.
+    Initializes a Discrete Bayesian Network.
 
-    Models hold directed edges.  Self loops are not allowed neither
-    multiple (parallel) edges.
-
-    Nodes can be any hashable python object.
-
-    Edges are represented as links between nodes.
+    A Bayesian Network is defined using a model structure and a conditional
+    probability distribution (CPDs) associated with each node (i.e., variable)
+    in the network. For a discrete Bayesian Network, pgmpy offers two ways to
+    define these CPDs: TabularCPD and NoisyORCPD
 
     Parameters
     ----------
