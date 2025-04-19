@@ -1,5 +1,5 @@
-Bayesian Network
-================
+Discrete Bayesian Network
+=========================
 
 .. automodule:: pgmpy.models.DiscreteBayesianNetwork
    :members:

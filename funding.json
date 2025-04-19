@@ -21,7 +21,7 @@
          "url": "https://github.com/pgmpy/pgmpy"
      },
      "licenses": ["spdx:MIT"],
-     "tags": ["machine-learning", "causal-inference", "bayesian-networks", "statistics", "python"]
+     "tags": ["data-science", "machine-learning", "statistics", "bayesian-networks", "python"]
     }],
 
     "funding": {

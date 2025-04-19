@@ -8,6 +8,7 @@ Example Notebooks
    examples/Creating a Discrete Bayesian Network.ipynb
    examples/Creating a Linear Gaussian Bayesian Network.ipynb
    examples/Dynamic Bayesian Networks (DBN).ipynb
+   examples/How to define CPDs.ipynb
    examples/Basic Operations on Bayesian Network.ipynb
    examples/Structure Learning in Bayesian Networks.ipynb
    examples/Structure Learning with Chow-Liu.ipynb
