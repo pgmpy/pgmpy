@@ -160,6 +160,10 @@ class GES(StructureEstimator):
         current_model.add_nodes_from(list(self.data.columns))
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(self.data.columns)
+
         expert_knowledge._orient_temporal_forbidden_edges(
             current_model, only_edges=False
         )

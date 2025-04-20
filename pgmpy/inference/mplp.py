@@ -6,7 +6,7 @@ import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference import Inference
-from pgmpy.models import MarkovNetwork
+from pgmpy.models import DiscreteMarkovNetwork
 
 
 class Mplp(Inference):
@@ -18,15 +18,15 @@ class Mplp(Inference):
 
     Parameters
     ----------
-    model: MarkovNetwork for which inference is to be performed.
+    model: DiscreteMarkovNetwork for which inference is to be performed.
 
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.models import MarkovNetwork
+    >>> from pgmpy.models import DiscreteMarkovNetwork
     >>> from pgmpy.inference import Mplp
     >>> from pgmpy.factors.discrete import DiscreteFactor
-    >>> student = MarkovNetwork()
+    >>> student = DiscreteMarkovNetwork()
     >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
     >>> factor_a = DiscreteFactor(['A'], cardinality=[2], values=np.array([0.54577, 1.8323]))
     >>> factor_b = DiscreteFactor(['B'], cardinality=[2], values=np.array([0.93894, 1.065]))
@@ -48,8 +48,8 @@ class Mplp(Inference):
     """
 
     def __init__(self, model):
-        if not isinstance(model, MarkovNetwork):
-            raise TypeError("Only MarkovNetwork is supported")
+        if not isinstance(model, DiscreteMarkovNetwork):
+            raise TypeError("Only DiscreteMarkovNetwork is supported")
 
         super(Mplp, self).__init__(model)
         self._initialize_structures()
@@ -313,10 +313,10 @@ class Mplp(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
-        >>> mm = MarkovNetwork()
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -473,10 +473,10 @@ class Mplp(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
-        >>> mm = MarkovNetwork()
+        >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
@@ -544,11 +544,11 @@ class Mplp(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import MarkovNetwork
+        >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
         >>> import numpy as np
-        >>> student = MarkovNetwork()
+        >>> student = DiscreteMarkovNetwork()
         >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
         >>> factor_a = DiscreteFactor(['A'], cardinality=[2], values=np.array([0.54577, 1.8323]))
         >>> factor_b = DiscreteFactor(['B'], cardinality=[2], values=np.array([0.93894, 1.065]))

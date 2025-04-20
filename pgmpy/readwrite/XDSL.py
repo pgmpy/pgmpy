@@ -1,14 +1,13 @@
 import random
 import xml.dom.minidom as md
 import xml.etree.ElementTree as etree
-from io import BytesIO
 from itertools import chain
 
 import networkx as nx
-import numpy as np
 
-from pgmpy.factors.discrete import State, TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils import compat_fns
 
 
 class XDSLReader(object):
@@ -300,7 +299,7 @@ class XDSLWriter(object):
 
         Examples
         --------
-        >>> writer = XMLBIFWriter(model)
+        >>> writer = XDSLWriter(model)
         >>> writer.get_variables()
         {'asia': <Element 'cpt' at 0x000001DC6BFA1350>,
         'tub': <Element 'cpt' at 0x000001DC6BFA35B0>,
@@ -329,7 +328,7 @@ class XDSLWriter(object):
 
         Examples
         -------
-        >>> writer = XMLBIFWriter(model)
+        >>> writer = XDSLWriter(model)
         >>> writer.get_values()
         {'asia': <TabularCPD representing P(asia:2) at 0x1885817c830>,
         'tub': <TabularCPD representing P(tub:2 | asia:2) at 0x1885a7e57c0>,
@@ -361,10 +360,10 @@ class XDSLWriter(object):
 
             # Add the <probabilities> element.
             probs_elem = etree.SubElement(cpt_elem, "probabilities")
-            values = np.array(cpd.get_values())
+            values = cpd.get_values()
 
             # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
-            flat_values = values.flatten(order="F")
+            flat_values = compat_fns.ravel_f(values)
             probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
 
             outcome_tag[var] = cpd

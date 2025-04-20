@@ -695,7 +695,7 @@ class BeliefPropagation(Inference):
 
     Parameters
     ----------
-    model: DiscreteBayesianNetwork, MarkovNetwork, FactorGraph, JunctionTree
+    model: DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorGraph, JunctionTree
         model for which inference is to performed
     """
 

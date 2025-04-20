@@ -5,7 +5,7 @@ from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 from pgmpy.sampling.base import BayesianModelInference
 
@@ -139,7 +139,7 @@ class TestBayesianModelSampling(unittest.TestCase):
             self.bayesian_model_names_lat
         )
 
-        self.markov_model = MarkovNetwork()
+        self.markov_model = DiscreteMarkovNetwork()
 
     def test_init(self):
         with self.assertRaises(TypeError):
@@ -516,7 +516,7 @@ class TestGibbsSampling(unittest.TestCase):
         )
 
         # A test Markov model
-        self.markov_model = MarkovNetwork([("A", "B"), ("C", "B"), ("B", "D")])
+        self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("C", "B"), ("B", "D")])
         factor_ab = DiscreteFactor(["A", "B"], [2, 3], [1, 2, 3, 4, 5, 6])
         factor_cb = DiscreteFactor(
             ["C", "B"], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6]
@@ -533,7 +533,7 @@ class TestGibbsSampling(unittest.TestCase):
 
     @patch("pgmpy.sampling.GibbsSampling._get_kernel_from_markov_model", autospec=True)
     def test_init_markov_model(self, get_kernel):
-        model = MagicMock(spec_set=MarkovNetwork)
+        model = MagicMock(spec_set=DiscreteMarkovNetwork)
         gibbs = GibbsSampling(model)
         get_kernel.assert_called_once_with(gibbs, model)
 

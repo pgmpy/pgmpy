@@ -18,7 +18,7 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.global_vars import logger
-from pgmpy.models.MarkovNetwork import MarkovNetwork
+from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -481,7 +481,7 @@ class DiscreteBayesianNetwork(DAG):
         EdgeView([('diff', 'grade'), ('diff', 'intel'), ('grade', 'letter'), ('grade', 'intel'), ('intel', 'SAT')])
         """
         moral_graph = self.moralize()
-        mm = MarkovNetwork(moral_graph.edges())
+        mm = DiscreteMarkovNetwork(moral_graph.edges())
         mm.add_nodes_from(moral_graph.nodes())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 

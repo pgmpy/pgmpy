@@ -8,10 +8,10 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
     DiscreteBayesianNetwork,
+    DiscreteMarkovNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
     JunctionTree,
-    MarkovNetwork,
 )
 from pgmpy.utils import compat_fns
 
@@ -20,7 +20,7 @@ class Inference(object):
     """
     Base class for all inference algorithms.
 
-    Converts DiscreteBayesianNetwork and MarkovNetwork to a uniform representation so that inference
+    Converts DiscreteBayesianNetwork and DiscreteMarkovNetwork to a uniform representation so that inference
     algorithms can be applied. Also, it checks if all the associated CPDs / Factors are
     consistent with the model.
 
@@ -28,7 +28,7 @@ class Inference(object):
 
     Parameters
     ----------
-    model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.MarkovNetwork
+    model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DiscreteMarkovNetwork
         model for which to initialize the inference object.
 
     Examples
@@ -46,10 +46,10 @@ class Inference(object):
     >>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
     >>> model = Inference(student)
 
-    >>> from pgmpy.models import MarkovNetwork
+    >>> from pgmpy.models import DiscreteMarkovNetwork
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> import numpy as np
-    >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
+    >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
     ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
     >>> factor_a_b = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
     ...                             values=np.random.rand(4))
@@ -96,7 +96,7 @@ class Inference(object):
                     self.factors[var].append(cpd)
                 self.state_names_map.update(cpd.no_to_name)
 
-        elif isinstance(self.model, (MarkovNetwork, FactorGraph, JunctionTree)):
+        elif isinstance(self.model, (DiscreteMarkovNetwork, FactorGraph, JunctionTree)):
             self.cardinality = self.model.get_cardinality()
 
             for factor in self.model.get_factors():

@@ -24,7 +24,12 @@ def copy(arr):
             f"Invalid backend ({config.get_backend()}) for data type {type(arr)}"
         )
     else:
-        return arr.clone().detach()
+        if isinstance(arr, torch.Tensor):
+            return arr.detach().clone()
+        else:
+            return torch.tensor(
+                arr, dtype=config.get_dtype(), device=config.get_device()
+            )
 
 
 def tobytes(arr):
@@ -143,8 +148,20 @@ def allclose(arr1, arr2, atol):
     if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
         return np.allclose(arr1, arr2, atol=atol)
     else:
+        if isinstance(arr1, np.ndarray):
+            arr1 = torch.tensor(
+                arr1, dtype=config.get_dtype(), device=config.get_device()
+            )
+        else:
+            arr1 = arr1.detach().clone()
+        if isinstance(arr2, np.ndarray):
+            arr2 = torch.tensor(
+                arr2, dtype=config.get_dtype(), device=config.get_device()
+            )
+        else:
+            arr2 = arr2.detach().clone()
         return torch.allclose(
-            torch.tensor(arr1, dtype=config.get_dtype(), device=config.get_device()),
-            torch.tensor(arr2, dtype=config.get_dtype(), device=config.get_device()),
+            arr1,
+            arr2,
             atol=atol,
         )

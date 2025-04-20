@@ -6,26 +6,26 @@ import numpy as np
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
-from pgmpy.models import DiscreteBayesianNetwork, FactorGraph, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorGraph
 from pgmpy.tests import help_functions as hf
 
 
 class TestMarkovNetworkCreation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_class_init_without_data(self):
-        self.assertIsInstance(self.graph, MarkovNetwork)
+        self.assertIsInstance(self.graph, DiscreteMarkovNetwork)
 
     def test_class_init_with_data_string(self):
-        self.g = MarkovNetwork([("a", "b"), ("b", "c")])
+        self.g = DiscreteMarkovNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
         self.assertListEqual(
             hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]]
         )
 
     def test_class_init_with_data_nonstring(self):
-        self.g = MarkovNetwork([(1, 2), (2, 3)])
+        self.g = DiscreteMarkovNetwork([(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.graph.add_node("a")
@@ -87,7 +87,7 @@ class TestMarkovNetworkCreation(unittest.TestCase):
 
 class TestMarkovNetworkMethods(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_get_cardinality(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -303,7 +303,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
 class TestUndirectedGraphFactorOperations(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_add_factor_raises_error(self):
         self.graph.add_edges_from(
@@ -376,7 +376,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
 
 class TestUndirectedGraphTriangulation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_check_clique(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])

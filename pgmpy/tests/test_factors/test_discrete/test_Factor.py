@@ -12,7 +12,7 @@ from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -3289,7 +3289,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         ]
         jpd = JPD(["diff", "intel", "grade"], [2, 3, 3], val)
         self.assertTrue(jpd.is_imap(G1))
-        self.assertRaises(TypeError, jpd.is_imap, MarkovNetwork())
+        self.assertRaises(TypeError, jpd.is_imap, DiscreteMarkovNetwork())
 
     def tearDown(self):
         del self.jpd

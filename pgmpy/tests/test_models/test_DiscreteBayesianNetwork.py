@@ -20,7 +20,7 @@ from pgmpy.factors.discrete import (
 )
 from pgmpy.independencies import Independencies
 from pgmpy.inference import ApproxInference, BeliefPropagation
-from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
@@ -360,7 +360,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
 
     def test_is_iequivalent(self):
         G = DiscreteBayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
-        self.assertRaises(TypeError, G.is_iequivalent, MarkovNetwork())
+        self.assertRaises(TypeError, G.is_iequivalent, DiscreteMarkovNetwork())
         G1 = DiscreteBayesianNetwork([("V", "W"), ("W", "X"), ("X", "Y"), ("Z", "Y")])
         G2 = DiscreteBayesianNetwork([("W", "V"), ("X", "W"), ("X", "Y"), ("Z", "Y")])
         self.assertTrue(G1.is_iequivalent(G2))

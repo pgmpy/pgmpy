@@ -180,6 +180,9 @@ class PC(StructureEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(self.data.columns)
+
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
@@ -277,6 +280,9 @@ class PC(StructureEstimator):
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(self.data.columns)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
