@@ -33,7 +33,6 @@ sys.path.insert(0, os.path.abspath("../../pgmpy_notebooks/notebooks"))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinx.ext.imgmath",
@@ -318,9 +317,6 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 # texinfo_no_detailmenu = False
 
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/": None}
 
 # To suppress autosupress warnings while building docs. Remove this line to see the warning
 numpydoc_show_class_members = False
