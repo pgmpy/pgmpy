@@ -144,7 +144,7 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
-# html_title = 'pgmpy v0.1.2'
+html_title = f"{release} | pgmpy docs"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
