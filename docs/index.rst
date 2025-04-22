@@ -145,10 +145,3 @@ Bibtex:
      pages   = {1--8},
      url     = {http://jmlr.org/papers/v25/23-0487.html}
    }
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
