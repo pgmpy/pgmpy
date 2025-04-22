@@ -47,6 +47,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinxext.opengraph",
+    "sphinx_sitemap",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -319,3 +320,6 @@ texinfo_documents = [
 
 # To suppress autosupress warnings while building docs. Remove this line to see the warning
 numpydoc_show_class_members = False
+
+# For sphinx sitemap
+html_baseurl = "https://pgmpy.org"
