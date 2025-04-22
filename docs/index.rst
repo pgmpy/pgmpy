@@ -40,6 +40,7 @@
    :hidden:
 
    started/base.rst
+   examples.rst
    base/base.rst
    models/base.rst
    factors/base.rst
@@ -50,7 +51,6 @@
    metrics/metrics.rst
    readwrite/base.rst
    plotting.rst
-   examples.rst
    tutorial.rst
 
 pgmpy is a Python package for causal inference and probabilistic inference
