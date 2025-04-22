@@ -41,11 +41,10 @@
 
    started/base.rst
    examples.rst
-   base/base.rst
    models/base.rst
    factors/base.rst
-   exact_infer/base.rst
-   approx_infer/base.rst
+   infer/base.rst
+   causal_infer/base.rst
    param_estimator/base.rst
    structure_estimator/base.rst
    metrics/metrics.rst

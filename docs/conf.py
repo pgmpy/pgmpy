@@ -180,12 +180,11 @@ html_static_path = ["logo.png"]
 html_sidebars = {
     "**": [
         "about.html",
+        "searchbox.html",
         "navigation.html",
         "relations.html",
-        "donate.html",
         "ethicalads.html",
         "ga.html",
-        "searchbox.html",
     ]
 }
 
