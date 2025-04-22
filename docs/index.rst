@@ -117,9 +117,9 @@ Algorithms
 Examples
 ========
 
-**Example notebooks:** https://pgmpy.org/examples.html
+**Example notebooks:** :doc:`examples`
 
-**Tutorial notebooks:** https://pgmpy.org/tutorial.html
+**Tutorial notebooks:** :doc:`tutorial`
 
 |
 
