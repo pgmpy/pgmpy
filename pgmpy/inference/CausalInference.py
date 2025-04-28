@@ -500,16 +500,14 @@ class CausalInference(object):
                 continue
 
             # Condition to check if X d-connected to I after conditioning on W.
-            elif (
-                X in self.model.active_trail_nodes([Z], observed=W)[Z]
-            ):  # , struct=G_c)[Z]:
+            elif X in self.model.active_trail_nodes([Z], observed=W)[Z]:
                 instruments.append((Z, W))
             else:
                 continue
         return instruments
 
     def get_total_conditional_ivs(self, X, Y, scaling_indicators={}):
-        all_paths = list(nx.all_simple_paths(self.graph, X, Y))
+        all_paths = list(nx.all_simple_paths(self.dag, X, Y))
         nodes_on_paths = set([node for path in all_paths for node in path])
         nodes_on_paths = nodes_on_paths - {X, Y}
 
@@ -536,12 +534,7 @@ class CausalInference(object):
                 or (X in W)
             ):
                 continue
-            elif (
-                X
-                in self.model.active_trail_nodes([Z], observed=W)[
-                    Z
-                ]  # , struct=transformed_graph)[Z]
-            ):
+            elif X in self.model.active_trail_nodes([Z], observed=W)[Z]:
                 instruments.append((Z, W))
             else:
                 continue
@@ -637,7 +630,7 @@ class CausalInference(object):
             )
             ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
 
-        M = self.model.moralize()
+        M = ancestral_G.moralize()
         visited = set([Y])
         to_visit = list(M.neighbors(Y))
 
@@ -662,9 +655,7 @@ class CausalInference(object):
         #             if path[index] in self.observed:
         #                 W.add(path[index])
         #                 break
-        if (
-            Y not in self.model.active_trail_nodes([Z], observed=W)[Z]
-        ):  # , struct=ancestral_G)[Z]:
+        if Y not in G.active_trail_nodes([Z], observed=W)[Z]:
             return W
         else:
             return None
