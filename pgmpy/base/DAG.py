@@ -861,12 +861,10 @@ class DAG(nx.DiGraph):
                 raise ValueError(f"Node {node} not in graph")
 
         ancestors_list = set()
-        nodes_list = set(nodes)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
+        for node in nodes:
+            ancestors_list.update(nx.ancestors(self, node))
+
+        ancestors_list.update(nodes)
         return ancestors_list
 
     # TODO: Commented out till the method is implemented.
@@ -1032,7 +1030,7 @@ class DAG(nx.DiGraph):
             raise ImportError(
                 e.msg
                 + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
-            )
+            ) from None
 
         if isinstance(node_pos, str):
             supported_layouts = {
@@ -1203,15 +1201,15 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        Fitted Model: BayesianNetwork
-            Returns a BayesianNetwork object with learned CPDs.
+        Fitted Model: DiscreteBayesianNetwork
+            Returns a DiscreteBayesianNetwork object with learned CPDs.
             The DAG structure is preserved, and parameters (CPDs) are added.
             This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
 
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.base import DAG
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = DAG([('A', 'C'), ('B', 'C')])
@@ -1222,12 +1220,12 @@ class DAG(nx.DiGraph):
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
         """
         from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
-        if isinstance(self, BayesianNetwork):
+        if isinstance(self, DiscreteBayesianNetwork):
             bn = self
         else:
-            bn = BayesianNetwork(self.edges())
+            bn = DiscreteBayesianNetwork(self.edges())
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator
@@ -1252,6 +1250,11 @@ class DAG(nx.DiGraph):
             if not isinstance(node, str):
                 return (node, type(node))
         return False
+
+    def copy(self):
+        dag = DAG(ebunch=self.edges(), latents=self.latents)
+        dag.add_nodes_from(self.nodes())
+        return dag
 
 
 class PDAG(nx.DiGraph):
@@ -1316,11 +1319,13 @@ class PDAG(nx.DiGraph):
         Copy of PDAG: pgmpy.dag.PDAG
             Returns a copy of self.
         """
-        return PDAG(
+        pdag = PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def to_dag(self):
         """

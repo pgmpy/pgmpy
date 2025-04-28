@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, permutations
 
 from pgmpy.global_vars import logger
 
@@ -24,6 +24,12 @@ class ExpertKnowledge:
             graph structure. Refer to the algorithm documentation for details
             on how the argument is handled.
 
+    search_space: iterable (default: None)
+            The set of directed edges that form the search space for the
+            structure learning algorithm (a white list of all possible edges).
+            Refer to the algorithm documentation for details on how the
+            argument is handled.
+
     temporal order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list/structure in the (2 dimensional) iterator contains
@@ -45,7 +51,10 @@ class ExpertKnowledge:
 
     >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
     >>> req_edges = [("smoke","bronc")]
-    >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges)
+    >>> expert_knowledge = ExpertKnowledge(
+    ...        required_edges=req_edges,
+    ...        forbidden_edges=forb_edges
+    ...        )
 
     **Use during structure learning**
 
@@ -182,6 +191,7 @@ class ExpertKnowledge:
         forbidden_edges=None,
         required_edges=None,
         temporal_order=None,
+        search_space=None,
         **kwargs,
     ):
         self.forbidden_edges = (
@@ -193,6 +203,10 @@ class ExpertKnowledge:
             self._validate_edges(required_edges)
             if required_edges is not None
             else set()
+        )
+
+        self.search_space = (
+            self._validate_edges(search_space) if search_space is not None else set()
         )
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
@@ -247,3 +261,27 @@ class ExpertKnowledge:
                 )
 
         return pdag
+
+    def limit_search_space(self, data_coulumn_labels):
+        """
+        Forms an additive set of forbidden edges by subtracting the
+        search space from the set of all possible edges.
+
+        Parameters
+        ----------
+        data_coulumn_labels: set | list | pd.DataFrame.columns
+            Set of edges to be used for structure learning.
+            If None, all possible edges are used.
+
+        Returns
+        -------
+        forbidden_edges_additive: set
+            Set of edges that are not allowed in the structure.
+        """
+        # Generate all possible edges
+        all_possible_edges = set(permutations(data_coulumn_labels, 2))
+
+        # Calculate forbidden edges by subtracting the search space from all possible edges
+        forbidden_edges_additive = set(all_possible_edges) - self.search_space
+
+        self.forbidden_edges = self.forbidden_edges.union(forbidden_edges_additive)

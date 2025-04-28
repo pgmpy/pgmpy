@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import K2, ExpertKnowledge, HillClimbSearch
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestHillClimbEstimatorDiscrete(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.score_rand = k2score.local_score
         self.score_structure_prior = k2score.structure_prior_ratio
 
-        self.model1 = BayesianNetwork()
+        self.model1 = DiscreteBayesianNetwork()
         self.model1.add_nodes_from(["A", "B", "C"])
         self.model1_possible_edges = set(
             [(u, v) for u in self.model1.nodes() for v in self.model1.nodes()]
@@ -111,7 +111,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
 
     def test_legal_operations_titanic(self):
-        start_model = BayesianNetwork(
+        start_model = DiscreteBayesianNetwork(
             [("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")]
         )
         all_possible_edges = set(
@@ -191,7 +191,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
 
         est2 = self.est_rand.estimate(
             scoring_method="k2",
-            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]),
+            start_dag=DiscreteBayesianNetwork([("A", "B"), ("A", "C")]),
             show_progress=False,
         )
         self.assertTrue(
@@ -262,6 +262,30 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
             dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
+
+    def test_search_space(self):
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+        search_space = [
+            ("Age", "Education"),
+            ("Education", "HoursPerWeek"),
+            ("Education", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("Age", "Income"),
+        ]
+
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+        est = HillClimbSearch(adult_data)
+
+        dag = est.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+            show_progress=False,
+        )
+        # assert if dag is a subset of search_space
+        for edge in dag.edges():
+            self.assertIn(edge, search_space)
 
     def tearDown(self):
         del self.rand_data

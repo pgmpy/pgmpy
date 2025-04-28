@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
+from pgmpy.models import DiscreteMarkovNetwork, FactorGraph, JunctionTree
 from pgmpy.tests import help_functions as hf
 
 
@@ -200,7 +200,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
         mm = self.graph.to_markov_model()
-        self.assertIsInstance(mm, MarkovNetwork)
+        self.assertIsInstance(mm, DiscreteMarkovNetwork)
         self.assertListEqual(sorted(mm.nodes()), ["a", "b", "c"])
         self.assertListEqual(hf.recursive_sorted(mm.edges()), [["a", "b"], ["b", "c"]])
         self.assertListEqual(

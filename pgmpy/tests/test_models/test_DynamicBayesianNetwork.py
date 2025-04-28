@@ -7,7 +7,7 @@ import pandas as pd
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import CausalInference, DBNInference, VariableElimination
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
 
 
@@ -897,7 +897,7 @@ class TestDBNSampling(unittest.TestCase):
         self.dbn_infer = DBNInference(self.dbn)
 
         # Construct an equivalent simple BN to match values to
-        self.equivalent_bn = BayesianNetwork(
+        self.equivalent_bn = DiscreteBayesianNetwork(
             [
                 ("D0", "G0"),
                 ("I0", "G0"),

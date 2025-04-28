@@ -794,7 +794,7 @@ class DynamicBayesianNetwork(DAG):
 
         The node names are changed to strings in the form `{var}_{time}`.
         """
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
         edges = [
             (
@@ -822,7 +822,7 @@ class DynamicBayesianNetwork(DAG):
                 )
             )
 
-        bn = BayesianNetwork(edges)
+        bn = DiscreteBayesianNetwork(edges)
         bn.add_cpds(*new_cpds)
         return bn
 

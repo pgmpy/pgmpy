@@ -75,8 +75,8 @@ class HillClimbSearch(StructureEstimator):
         see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
         If a number `max_indegree` is provided, only modifications that keep the number
         of parents for each node below `max_indegree` are considered. A list of
-        edges can optionally be passed as `black_list` or `white_list` to exclude those
-        edges or to limit the search.
+        edges can optionally be passed as `forbidden_edges` or `required_edges` to exclude those
+        edges or to force them to be present in the model, respectively.
         """
 
         tabu_list = set(tabu_list)
@@ -230,6 +230,10 @@ class HillClimbSearch(StructureEstimator):
         # Step 1.3: Check if expert knowledge was specified
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+
+        # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(self.data.columns)
 
         # Step 1.4: Check if required edges cause a cycle
         start_dag.add_edges_from(expert_knowledge.required_edges)

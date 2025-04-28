@@ -8,10 +8,10 @@ except ImportError as e:
     raise ImportError(
         e.msg
         + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    )
+    ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -259,7 +259,7 @@ class UAIReader(object):
         >>> reader.get_model()
         """
         if self.network_type == "BAYES":
-            model = BayesianNetwork()
+            model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variables)
             model.add_edges_from(self.edges)
 
@@ -286,7 +286,7 @@ class UAIReader(object):
             return model
 
         elif self.network_type == "MARKOV":
-            model = MarkovNetwork(self.edges)
+            model = DiscreteMarkovNetwork(self.edges)
 
             factors = []
             for table in self.tables:
@@ -324,9 +324,9 @@ class UAIWriter(object):
     """
 
     def __init__(self, model, round_values=None):
-        if isinstance(model, BayesianNetwork):
+        if isinstance(model, DiscreteBayesianNetwork):
             self.network = "BAYES\n"
-        elif isinstance(model, MarkovNetwork):
+        elif isinstance(model, DiscreteMarkovNetwork):
             self.network = "MARKOV\n"
         else:
             raise TypeError("Model must be an instance of Bayesian or Markov model.")
@@ -378,14 +378,14 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_domain()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             domain = {}
             for cpd in cpds:
                 domain[cpd.variable] = str(cpd.variable_card)
             return domain
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             domain = {}
             for factor in factors:
@@ -407,7 +407,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_functions()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -423,7 +423,7 @@ class UAIWriter(object):
                 )
                 functions.append(function)
             return functions
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             functions = []
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -447,7 +447,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_tables()
         """
-        if isinstance(self.model, BayesianNetwork):
+        if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             tables = []
@@ -462,7 +462,7 @@ class UAIWriter(object):
                 )
                 tables.append(values)
             return tables
-        elif isinstance(self.model, MarkovNetwork):
+        elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:

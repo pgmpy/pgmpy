@@ -15,7 +15,7 @@ from pgmpy.estimators import (
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
 )
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 # Score values in the tests are compared to R package bnlearn
 
@@ -25,8 +25,8 @@ class TestBDeu(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = DiscreteBayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -37,13 +37,13 @@ class TestBDeu(unittest.TestCase):
     def test_score(self):
         self.assertAlmostEqual(BDeu(self.d1).score(self.m1), -9.907103407446435)
         self.assertAlmostEqual(BDeu(self.d1).score(self.m2), -9.839964104608821)
-        self.assertEqual(BDeu(self.d1).score(BayesianNetwork()), 0)
+        self.assertEqual(BDeu(self.d1).score(DiscreteBayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = BDeu(self.titanic_data2, equivalent_sample_size=25)
-        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = DiscreteBayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1892.7383393910427)
-        titanic2 = BayesianNetwork([("Pclass", "Sex")])
+        titanic2 = DiscreteBayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -66,9 +66,9 @@ class TestBDs(unittest.TestCase):
                 "W": [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1],
             }
         )
-        self.m1 = BayesianNetwork([("W", "X"), ("Z", "X")])
+        self.m1 = DiscreteBayesianNetwork([("W", "X"), ("Z", "X")])
         self.m1.add_node("Y")
-        self.m2 = BayesianNetwork([("W", "X"), ("Z", "X"), ("Y", "X")])
+        self.m2 = DiscreteBayesianNetwork([("W", "X"), ("Z", "X"), ("Y", "X")])
 
     def test_score(self):
         self.assertAlmostEqual(
@@ -91,8 +91,8 @@ class TestBIC(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = DiscreteBayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -103,13 +103,13 @@ class TestBIC(unittest.TestCase):
     def test_score(self):
         self.assertAlmostEqual(BIC(self.d1).score(self.m1), -10.698440814229318)
         self.assertAlmostEqual(BIC(self.d1).score(self.m2), -9.625886526130714)
-        self.assertEqual(BIC(self.d1).score(BayesianNetwork()), 0)
+        self.assertEqual(BIC(self.d1).score(DiscreteBayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = BIC(self.titanic_data2)
-        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = DiscreteBayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1896.7250012840179)
-        titanic2 = BayesianNetwork([("Pclass", "Sex")])
+        titanic2 = DiscreteBayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -126,8 +126,8 @@ class TestK2(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = DiscreteBayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -138,13 +138,13 @@ class TestK2(unittest.TestCase):
     def test_score(self):
         self.assertAlmostEqual(K2(self.d1).score(self.m1), -10.73813429536977)
         self.assertAlmostEqual(K2(self.d1).score(self.m2), -10.345091707260167)
-        self.assertEqual(K2(self.d1).score(BayesianNetwork()), 0)
+        self.assertEqual(K2(self.d1).score(DiscreteBayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = K2(self.titanic_data2)
-        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = DiscreteBayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1891.0630673606006)
-        titanic2 = BayesianNetwork([("Pclass", "Sex")])
+        titanic2 = DiscreteBayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -161,8 +161,8 @@ class TestAIC(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = DiscreteBayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -173,13 +173,13 @@ class TestAIC(unittest.TestCase):
     def test_score(self):
         self.assertAlmostEqual(AIC(self.d1).score(self.m1), -15.205379370888767)
         self.assertAlmostEqual(AIC(self.d1).score(self.m2), -13.68213122712422)
-        self.assertEqual(AIC(self.d1).score(BayesianNetwork()), 0)
+        self.assertEqual(AIC(self.d1).score(DiscreteBayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = AIC(self.titanic_data2)
-        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = DiscreteBayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1875.1594513603993)
-        titanic2 = BayesianNetwork([("Pclass", "Sex")])
+        titanic2 = DiscreteBayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -196,8 +196,8 @@ class TestLogLikeGauss(unittest.TestCase):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
         self.score_fn = LogLikelihoodGauss(data)
 
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.m2 = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
 
     def test_score(self):
         # score(model2network("[A]"), df[c('A')], type='loglik-g') -> -119.7228
@@ -238,8 +238,8 @@ class TestAICGauss(unittest.TestCase):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
         self.score_fn = AICGauss(data)
 
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.m2 = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
 
     def test_score(self):
         # score(model2network("[A]"), df_cont[c('A')], type='aic-g') -> -121.7228
@@ -280,8 +280,8 @@ class TestBICGauss(unittest.TestCase):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
         self.score_fn = BICGauss(data)
 
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.m2 = BayesianNetwork([("A", "B"), ("B", "C")])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.m2 = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
 
     def test_score(self):
         self.assertAlmostEqual(

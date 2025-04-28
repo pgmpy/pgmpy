@@ -6,26 +6,26 @@ import numpy as np
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork, FactorGraph, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorGraph
 from pgmpy.tests import help_functions as hf
 
 
 class TestMarkovNetworkCreation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_class_init_without_data(self):
-        self.assertIsInstance(self.graph, MarkovNetwork)
+        self.assertIsInstance(self.graph, DiscreteMarkovNetwork)
 
     def test_class_init_with_data_string(self):
-        self.g = MarkovNetwork([("a", "b"), ("b", "c")])
+        self.g = DiscreteMarkovNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
         self.assertListEqual(
             hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]]
         )
 
     def test_class_init_with_data_nonstring(self):
-        self.g = MarkovNetwork([(1, 2), (2, 3)])
+        self.g = DiscreteMarkovNetwork([(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.graph.add_node("a")
@@ -87,7 +87,7 @@ class TestMarkovNetworkCreation(unittest.TestCase):
 
 class TestMarkovNetworkMethods(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_get_cardinality(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -293,7 +293,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
         bm = self.graph.to_bayesian_model()
-        self.assertIsInstance(bm, BayesianNetwork)
+        self.assertIsInstance(bm, DiscreteBayesianNetwork)
         self.assertListEqual(sorted(bm.nodes()), ["a", "b", "c", "d"])
         self.assertTrue(nx.is_chordal(bm.to_undirected()))
 
@@ -303,7 +303,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
 class TestUndirectedGraphFactorOperations(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_add_factor_raises_error(self):
         self.graph.add_edges_from(
@@ -376,7 +376,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
 
 class TestUndirectedGraphTriangulation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovNetwork()
+        self.graph = DiscreteMarkovNetwork()
 
     def test_check_clique(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])
@@ -639,6 +639,57 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         copy.remove_factors(phi1)
         self.assertEqual(len(self.graph.get_factors()), 1)
         self.assertEqual(len(copy.get_factors()), 0)
+
+    def test_junction_tree_with_state_names(self):
+        """
+        Test that junction tree correctly maintains state names from the original factors.
+        """
+        self.graph.add_edges_from([("A", "B"), ("B", "C"), ("C", "A")])
+
+        # Create factors with string-based state names
+        state_names = {"A": ["a0", "a1"], "B": ["b0", "b1", "b2"], "C": ["c0", "c1"]}
+
+        phi1 = DiscreteFactor(
+            ["A", "B"],
+            [2, 3],
+            np.random.rand(6),
+            state_names={"A": state_names["A"], "B": state_names["B"]},
+        )
+
+        phi2 = DiscreteFactor(
+            ["B", "C"],
+            [3, 2],
+            np.random.rand(6),
+            state_names={"B": state_names["B"], "C": state_names["C"]},
+        )
+
+        phi3 = DiscreteFactor(
+            ["C", "A"],
+            [2, 2],
+            np.random.rand(4),
+            state_names={"C": state_names["C"], "A": state_names["A"]},
+        )
+
+        self.graph.add_factors(phi1, phi2, phi3)
+
+        # Convert to junction tree
+        junction_tree = self.graph.to_junction_tree()
+
+        # Check that the factors in the junction tree have the correct state names
+        for factor in junction_tree.factors:
+            for var in factor.variables:
+                self.assertEqual(factor.state_names[var], state_names[var])
+
+        # Verify state names were correctly passed to clique potentials
+        for clique_potential in junction_tree.factors:
+            for var in clique_potential.variables:
+                self.assertIn(var, state_names)
+                self.assertEqual(clique_potential.state_names[var], state_names[var])
+
+                # Verify the name_to_no and no_to_name mappings are correct
+                for i, state in enumerate(state_names[var]):
+                    self.assertEqual(clique_potential.name_to_no[var][state], i)
+                    self.assertEqual(clique_potential.no_to_name[var][i], state)
 
     def tearDown(self):
         del self.graph

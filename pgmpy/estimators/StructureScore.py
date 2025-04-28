@@ -90,14 +90,14 @@ class StructureScore(BaseEstimator):
 
     def score(self, model):
         """
-        Computes a score to measure how well the given `BayesianNetwork` fits
+        Computes a score to measure how well the given `DiscreteBayesianNetwork` fits
         to the data set.  (This method relies on the `local_score`-method that
         is implemented in each subclass.)
 
         Parameters
         ----------
-        model: BayesianNetwork instance
-            The Bayesian network that is to be scored. Nodes of the BayesianNetwork need to coincide
+        model: DiscreteBayesianNetwork instance
+            The Bayesian network that is to be scored. Nodes of the DiscreteBayesianNetwork need to coincide
             with column names of data set.
 
         Returns
@@ -109,14 +109,14 @@ class StructureScore(BaseEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import K2
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         >>> data['C'] = data['B']
-        >>> K2(data).score(BayesianNetwork([['A','B'], ['A','C']]))
+        >>> K2(data).score(DiscreteBayesianNetwork([['A','B'], ['A','C']]))
         -24242.367348745247
-        >>> K2(data).score(BayesianNetwork([['A','B'], ['B','C']]))
+        >>> K2(data).score(DiscreteBayesianNetwork([['A','B'], ['B','C']]))
         -16273.793897051042
         """
 

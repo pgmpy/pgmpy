@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -400,9 +400,17 @@ class LinearGaussianBayesianNetwork(DAG):
 
         cov: np.array
             The covariance of the conditional joint distribution over the missing variables.
+
         Examples
         --------
-        >>>
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n=5)
+        >>> # Drop a column that we want to predict.
+        >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
+        >>> model.predict(df)
+        (['folK'], array([[0.38194262], [3.06014724], [1.36829103], [0.89197438], [2.98887488]]),
+                   array([[0.13440001]]))
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))

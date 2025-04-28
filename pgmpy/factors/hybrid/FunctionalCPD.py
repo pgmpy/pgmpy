@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
+import pyro
 
 from pgmpy.factors.base import BaseFactor
-
-import pyro
 
 
 class FunctionalCPD(BaseFactor):
@@ -13,41 +12,37 @@ class FunctionalCPD(BaseFactor):
     Functional CPD can represent any arbitrary conditional probability
     distribution where the distribution to represented is defined by function
     (input as parameter) which calls pyro.sample function.
+
+    Parameters
+    ----------
+    variable: str
+        Name of the variable for which this CPD is defined.
+
+    fn: callable
+        A lambda function that takes a dictionary of parent variable values
+        and returns a sampled value for the variable by calling pyro.sample.
+
+    parents: list[str], optional
+        List of parent variable names (default is None for no parents).
+
+    Examples
+    --------
+    # For P(X3| X1, X2) = N(0.2x1 + 0.3x2 + 1.0; 1), we can write
+
+    >>> from pgmpy.factors.hybrid import FunctionalCPD
+    >>> import pyro.distributions as dist
+    >>> cpd = FunctionalCPD(
+    ...    variable="x3",
+    ...    fn=lambda parent_sample: dist.Normal(
+    ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
+    ...    parents=["x1", "x2"])
+    >>> cpd.variable
+    'x3'
+    >>> cpd.parents
+    ['x1', 'x2']
     """
 
     def __init__(self, variable, fn, parents=[]):
-        """
-
-        Parameters:
-        ----------
-        variable: str
-            Name of the variable for which this CPD is defined.
-
-        fn: callable
-            A lambda function that takes a dictionary of parent variable values
-            and returns a sampled value for the variable by calling pyro.sample.
-
-        parents: list[str], optional
-            List of parent variable names (default is None for no parents).
-
-        Examples
-        --------
-        # For P(X3| X1, X2) = N(0.2x1 + 0.3x2 + 1.0; 1), we can write
-
-        >>> from pgmpy.factors.hybrid import FunctionalCPD
-        >>> import pyro.distributions as dist
-        >>> cpd = FunctionalCPD(
-        ...    variable="x3",
-        ...    fn=lambda parent_sample: dist.Normal(
-        ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
-        ...    parents=["x1", "x2"])
-
-        >>> cpd.variable
-        'x3'
-
-        >>> cpd.parents
-        ['x1', 'x2']
-        """
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")
@@ -59,7 +54,7 @@ class FunctionalCPD(BaseFactor):
         """
         Simulates a value for the variable based on its CPD.
 
-        Parameters:
+        Parameters
         ----------
 
         n_samples: int, (default: 100)
@@ -68,7 +63,7 @@ class FunctionalCPD(BaseFactor):
         parent_sample: pandas.DataFrame, optional
             A DataFrame where each column represents a parent variable and rows are samples.
 
-        Returns:
+        Returns
         -------
         sampled_values: numpy.ndarray
             Array of sampled values for the variable.

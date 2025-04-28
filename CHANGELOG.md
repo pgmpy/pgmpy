@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2024-03-31
+### Added
+1. Option to specify the node names in random model generation methods.
+2. ExpertInLoop.estimate method now accepts any LLM model supported by litellm.
+3. AIC and BIC structure scoring methods for Gaussian variables and Conditional Gaussian variables.
+4. Greedy Equivalence Search algorithm for causal discovery.
+5. Causal Discovery algorithms can automatically figure out the data types of the variables.
+6. Support for continuous and mixed data types for all causal discovery / structure learning algorithms.
+7. Adds LinearGaussianBayesianNetwork and FunctionalBayesianNetwork classes to represent Gaussian and hybrid Bayesian Networks.
+8. Add `pgmpy.metrics.SHD` to compute the Structural Hamming Distance between two DAGs.
+9. Adds `NoisyORCPD` class to represent NoisyOr models.
+10. BayesianNetwork.simulate method can not simulate different types of missing data.
+11. BayesianNetwork.predict now predicts any missing value in the dataframe instead of missing columns.
+12. Adds continuous example models from bnlearn repository.
+13. Adds `ExpertKnowledge` class to specify expert knowledge for structure learning algorithms.
+14. Option to initialize DAG and DiscreteBayesianNetwork with adjacency matrix, a dagitty model, or a lavaan model string.
+15. Adds method for reading and writing XDSL file format (used by GeNIe).
+16. Adds Generalized Covariance Measure (GCM) conditional independence test.
+
+### Fixed
+1. Fixes bug in `pgmpy.estimators.SEMEstimator`.
+
+### Changed
+1. Renames `pgmpy.estimators.CITests.ci_pillai` to `pgmpy.estimators.CITests.pillai_trace`.
+2. `BayesianNetwork.fit` method moved to `DAG.fit` so that fitting can be done on either model types.
+3. All structure scoring methods have been renamed to simplify.
+
+### Removed
+1. Removes some of the CI test variants of chi-squared test.
+2. Removes `pgmpy.factors.continuous.ContinuousFactor` class.
+2. Removes discretization methods for ContinuousFactor.
+3. `BayesianModel` and `MarkovModel` classes have been removed.
+4. `BayesianNetwork` class have been removed. Use `DiscreteBayesianNetwork` instead.
+
 ## [0.1.26] - 2024-08-09
 ### Added
 1. Support for returning Belief Propagation messages in Factor Graph BP.

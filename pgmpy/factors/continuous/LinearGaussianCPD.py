@@ -10,7 +10,7 @@ class LinearGaussianCPD(BaseFactor):
     r"""
     Defines a Linear Gaussian CPD.
 
-    The Linear Gaussian CPD makes the following assumptions:
+    The Linear Gaussian CPD makes the following assumptions [1]:
         1) The variable is Gaussian/Normally distributed.
         2) The mean of the variable depends on the values of the parents and the
             intercept term.

@@ -2,13 +2,15 @@ Parameterization
 ================
 
 - :doc:`discrete`
+- :doc:`noisyor`
 - :doc:`lineargauss`
-- :doc:`discretize`
+- :doc:`functional`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
    discrete.rst
+   noisyor.rst
    lineargauss.rst
-   discretize.rst
+   functional.rst

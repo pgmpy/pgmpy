@@ -8,7 +8,7 @@ from joblib.externals.loky import get_reusable_executor
 from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
@@ -119,7 +119,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
             # Generate independencies from a model.
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             skel, sep_sets = estimator.estimate(
                 variant=variant,
@@ -381,7 +383,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
             self.assertEqual(model.edges(), expected_edges)
 
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             estimated_model = estimator.estimate(
                 variant="orig",
@@ -510,13 +514,38 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
 
+    def test_search_space(self):
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+        search_space = [
+            ("Age", "Education"),
+            ("Education", "HoursPerWeek"),
+            ("Education", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("Age", "Income"),
+        ]
+
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+        est = PC(adult_data)
+
+        dag = est.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+            enforce_expert_knowledge=True,
+            show_progress=False,
+        )
+        # assert if dag is a subset of search_space
+        for edge in dag.edges():
+            self.assertIn(edge, search_space)
+
     def tearDown(self):
         get_reusable_executor().shutdown(wait=True)
 
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 # Fake dataset no: 1
                 np.random.seed(42)
@@ -586,7 +615,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 np.random.seed(42)
                 data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))

@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class XBNReader(object):
@@ -201,7 +201,7 @@ class XBNReader(object):
         """
         Returns an instance of Bayesian Model.
         """
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edges)
         model.name = self.model_name
@@ -230,7 +230,7 @@ class XBNWriter(object):
 
     Parameters
     ----------
-    model: BayesianNetwork Instance
+    model: DiscreteBayesianNetwork Instance
         Model to write
     encoding: str(optional)
         Encoding for test data
@@ -247,7 +247,7 @@ class XBNWriter(object):
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, DiscreteBayesianNetwork):
             raise TypeError("Model must be an instance of Bayesian Model.")
         self.model = model
 

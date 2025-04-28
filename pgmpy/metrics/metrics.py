@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 def correlation_score(
@@ -41,7 +41,7 @@ def correlation_score(
 
     Parameters
     ----------
-    model: Instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork
+    model: Instance of pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork
         The model which needs to be tested.
 
     data: pandas.DataFrame instance
@@ -83,9 +83,9 @@ def correlation_score(
     from pgmpy.estimators.CITests import get_ci_test
 
     # Step 1: Checks for input arguments.
-    if not isinstance(model, (DAG, BayesianNetwork)):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(
-            f"model must be an instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork. Got {type(model)}"
+            f"model must be an instance of pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork. Got {type(model)}"
         )
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
@@ -139,7 +139,7 @@ def log_likelihood_score(model, data):
 
     Parameters
     ----------
-    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork instance
+    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork instance
         The model whose score needs to be computed.
 
     data: pd.DataFrame instance
@@ -155,7 +155,7 @@ def log_likelihood_score(model, data):
     -103818.57516969478
     """
     # Step 1: Check the inputs
-    if not isinstance(model, BayesianNetwork):
+    if not isinstance(model, DiscreteBayesianNetwork):
         raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
@@ -182,7 +182,7 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
 
     Parameters
     ----------
-    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork instance
+    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork instance
         The model whose score needs to be computed.
 
     data: pd.DataFrame instance
@@ -238,9 +238,9 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
     }
 
     # Step 1: Test the inputs
-    if not isinstance(model, (DAG, BayesianNetwork)):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(
-            f"model must be an instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork. Got {type(model)}"
+            f"model must be an instance of pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork. Got {type(model)}"
         )
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
@@ -259,43 +259,43 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
 
 def implied_cis(model, data, ci_test, show_progress=True):
     """
-        Tests the implied Conditional Independences (CI) of the DAG in the given data.
+    Tests the implied Conditional Independences (CI) of the DAG in the given data.
 
-        Each missing edge in a model structure implies a CI statement. If the
-        distribution of the data is faithful to the constraints of the model
-        structure, these CI statements should hold in the data as well. This
-        function runs statistical tests for each implied CI on the given data.
+    Each missing edge in a model structure implies a CI statement. If the
+    distribution of the data is faithful to the constraints of the model
+    structure, these CI statements should hold in the data as well. This
+    function runs statistical tests for each implied CI on the given data.
 
-        Parameters
-        ==========
-        model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
-            The model whose structure need to be tested against the given data.
+    Parameters
+    ----------
+    model: pgmpy.base.DAG or any Bayesian Network
+        The model whose structure need to be tested against the given data.
 
-        data: pd.DataFrame
-            Dataset to use for testing.
+    data: pd.DataFrame
+        Dataset to use for testing.
 
-        ci_test: function
-            The function for statistical test. Can be either any of the tests in
-            pgmpy.estimators.CITests or any custom function of the same form.
+    ci_test: function
+        The function for statistical test. Can be either any of the tests in
+        pgmpy.estimators.CITests or any custom function of the same form.
 
-        show_progress: bool (default: True)
-            Whether to show the progress of testing.
+    show_progress: bool (default: True)
+        Whether to show the progress of testing.
 
-        Returns
-        =======
-        pd.DataFrame: Returns a dataframe with each implied CI of the model and a p-value
-            corresponding to it from the statistical test. A low p-value (e.g. <0.05)
-            represents that the CI does not hold in the data.
+    Returns
+    -------
+    pd.DataFrame: Returns a dataframe with each implied CI of the model and a p-value
+        corresponding to it from the statistical test. A low p-value (e.g. <0.05)
+        represents that the CI does not hold in the data.
 
-        Examples
-        ========
-        >>> from pgmpy.utils import get_example_model
-        >>> from pgmpy.metrics import implied_cis
-        >>> from pgmpy.estimators.CITests import chi_square
-        >>> model = get_example_model('cancer')
-        >>> df = model.simulate(int(1e3))
-        >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
-               u         v cond_vars   p-value
+    Examples
+    --------
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import implied_cis
+    >>> from pgmpy.estimators.CITests import chi_square
+    >>> model = get_example_model('cancer')
+    >>> df = model.simulate(int(1e3))
+    >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
+           u         v cond_vars   p-value
     0  Pollution    Smoker        []  0.189851
     1  Pollution      Xray  [Cancer]  0.404149
     2  Pollution  Dyspnoea  [Cancer]  0.613370
@@ -303,9 +303,9 @@ def implied_cis(model, data, ci_test, show_progress=True):
     4     Smoker  Dyspnoea  [Cancer]  1.000000
     5       Xray  Dyspnoea  [Cancer]  0.888619
     """
-    if not isinstance(model, (DAG, BayesianNetwork)):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(
-            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+            f"model must be an instance of DAG or DiscreteBayesianNetwork. Got {type(model)}"
         )
 
     cis = []
@@ -337,8 +337,8 @@ def fisher_c(model, data, ci_test, show_progress=True):
     them using the Fisher's method.
 
     Parameters
-    ==========
-    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork
+    ----------
+    model: pgmpy.base.DAG or any Bayesian Network
         The model whose structure need to be tested against the given data.
 
     data: pd.DataFrame
@@ -352,13 +352,13 @@ def fisher_c(model, data, ci_test, show_progress=True):
         Whether to show the progress of testing.
 
     Returns
-    =======
+    -------
     float: The p-value for the fit of the model structure to the data. A low
         p-value (e.g. <0.05) represents that the model structure doesn't fit the
         data well.
 
     Examples
-    ========
+    --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
@@ -367,9 +367,9 @@ def fisher_c(model, data, ci_test, show_progress=True):
     >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
     0.7504
     """
-    if not isinstance(model, (DAG, BayesianNetwork)):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(
-            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+            f"model must be an instance of DAG or DiscreteBayesianNetwork. Got {type(model)}"
         )
 
     if len(model.latents) > 0:
@@ -413,9 +413,9 @@ def SHD(true_model, est_model):
 
     Parameters
     ----------
-    true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+    true_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.DiscreteBayesianNetwork
         The first model to compare.
-    est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.BayesianNetwork
+    est_model: pgmpy.base.DAG or pgmpy.base.CPDAG or pgmpy.models.DiscreteBayesianNetwork
         The second model to compare.
 
     Returns
@@ -427,9 +427,9 @@ def SHD(true_model, est_model):
     Examples
     --------
     >>> from pgmpy.metrics import SHD
-    >>> from pgmpy.models import BayesianNetwork
-    >>> dag1 = BayesianNetwork([(1, 2), (2, 3)])
-    >>> dag2 = BayesianNetwork([(2, 1), (2, 3)])
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> dag1 = DiscreteBayesianNetwork([(1, 2), (2, 3)])
+    >>> dag2 = DiscreteBayesianNetwork([(2, 1), (2, 3)])
     >>> SHD(dag1, dag2)
     1
     """
