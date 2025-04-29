@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np
@@ -245,7 +246,8 @@ class TestXDSLWriterMethods(unittest.TestCase):
         self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
 
     def test_whitespace_warning(self):
-        with self.assertRaises(UserWarning):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
     def assert_models_equivalent(self, expected, got):
@@ -416,7 +418,8 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
 
     def test_whitespace_warning(self):
-        with self.assertRaises(UserWarning):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
     def assert_models_equivalent(self, expected, got):

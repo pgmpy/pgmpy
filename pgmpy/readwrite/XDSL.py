@@ -6,6 +6,7 @@ from itertools import chain
 import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -320,8 +321,8 @@ class XDSLWriter(object):
 
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
-                raise UserWarning(
-                    f"Node '{var}' contains whitespaces. This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
+                logger.warning(
+                    f" Node '{var}' contains whitespaces. This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
                 )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
