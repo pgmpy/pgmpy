@@ -1297,6 +1297,36 @@ class PDAG(nx.DiGraph):
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
+    def directed_children(self, node):
+        """
+        Returns a set of children of node such that there is a directed edge from `node` to child.
+        """
+        return {x for x in self.successors(node) if (node, x) in self.directed_edges}
+
+    def directed_parents(self, node):
+        """
+        Returns a set of parents of node such that there is a directed edge from the parent to `node`.
+        """
+        return {x for x in self.predecessors(node) if (x, node) in self.directed_edges}
+
+    def has_directed_edge(self, u, v):
+        """
+        Returns True if there is a directed edge u -> v in the PDAG.
+        """
+        if (u, v) in self.directed_edges:
+            return True
+        else:
+            return False
+
+    def has_undirected_edge(self, u, v):
+        """
+        Returns True if there is an undirected edge u - v in the PDAG.
+        """
+        if (u, v) in self.undirected_edges or (v, u) in self.undirected_edges:
+            return True
+        else:
+            return False
+
     def undirected_neighbors(self, node):
         """
         Returns a set of neighboring nodes such that all of them have an undirected edge with `node`.
@@ -1318,6 +1348,15 @@ class PDAG(nx.DiGraph):
         {'B'}
         """
         return {var for var in self.successors(node) if self.has_edge(var, node)}
+
+    def is_adjacent(self, u, v):
+        """
+        Returns True if there is an edge between u and v. This can be either of u - v, u -> v, or u <- v.
+        """
+        if (u, v) in self.edges or (v, u) in self.edges:
+            return True
+        else:
+            return False
 
     def copy(self):
         """
@@ -1394,13 +1433,8 @@ class PDAG(nx.DiGraph):
         True, if no new V-structures are formed.
         False, if the orientation u -> v would lead to creation of a new V-structure.
         """
-        incoming_dir_edges = [
-            node for node in self.predecessors(v) if (node, v) in self.directed_edges
-        ]
-        for node in incoming_dir_edges:
-            if (u, node) in self.edges or (node, u) in self.edges:
-                pass
-            else:
+        for node in self.directed_parents(v):
+            if not self.is_adjacent(u, node):
                 return False
         return True
 
@@ -1420,11 +1454,10 @@ class PDAG(nx.DiGraph):
             #            (adding Y -> Z doesn't create an unshielded collider) ⇒  Y → Z
             for y in pdag.nodes():
                 # Select x's such that there are directed edges x -> y.
-                for x in pdag._directed_graph().predecessors(y):
+                for x in pdag.directed_parents(y):
                     for z in pdag.undirected_neighbors(y):
                         if (
-                            (not pdag.has_edge(x, z))
-                            and (not pdag.has_edge(z, x))
+                            not pdag.is_adjacent(x, z)
                             and pdag._check_new_unshieled_collider(y, z)
                             and (not nx.has_path(pdag._directed_graph(), z, y))
                         ):
@@ -1434,22 +1467,15 @@ class PDAG(nx.DiGraph):
                                 logger.info(
                                     f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
                                 )
-                        else:
-                            logger.info(
-                                f"Not applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}. Creates a new V-structure."
-                            )
 
             # Rule2: If X → Z → Y  and X - Y ⇒  X → Y
             for z in pdag.nodes():
-                directed_graph = pdag._directed_graph()
-                xs = list(directed_graph.predecessors(z))
-                ys = list(directed_graph.successors(z))
+                xs = pdag.directed_parents(z)
+                ys = pdag.directed_children(z)
 
                 for x in xs:
                     for y in ys:
-                        if ((x, y) in pdag.undirected_edges) or (
-                            (y, x) in pdag.undirected_edges
-                        ):
+                        if pdag.has_undirected_edge(x, y):
                             pdag.orient_undirected_edge(x, y, inplace=True)
                             changed = True
                             if debug:
@@ -1469,8 +1495,8 @@ class PDAG(nx.DiGraph):
                 ):
                     if (
                         len(set([y, z, w])) == 3  # No repeated variables
-                        and (y, w) in pdag.directed_edges
-                        and (z, w) in pdag.directed_edges
+                        and pdag.has_directed_edge(y, w)
+                        and pdag.has_directed_edge(z, w)
                     ):
                         pdag.orient_undirected_edge(x, w, inplace=True)
                         changed = True
@@ -1484,9 +1510,9 @@ class PDAG(nx.DiGraph):
             if apply_r4:
                 for c in pdag.nodes():
                     directed_graph = pdag._directed_graph()
-                    for b in directed_graph.successors(c):
-                        for d in directed_graph.predecessors(c):
-                            if b == d or pdag.has_edge(b, d) or pdag.has_edge(d, b):
+                    for b in pdag.directed_children(c):
+                        for d in pdag.directed_parents(c):
+                            if b == d or pdag.is_adjacent(b, d):
                                 continue  # b adjacent d ⇒ rule not applicable
 
                             # find nodes a that are undirected neighbor to b, c, d
