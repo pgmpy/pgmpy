@@ -781,3 +781,140 @@ class TestPDAG(unittest.TestCase):
         expected_edges = {("B", "C"), ("C", "D"), ("A", "C")}
         self.assertEqual(expected_edges, set(dag.edges()))
         self.assertEqual(dag.latents, set(["A"]))
+
+    def test_pdag_to_cpdag(self):
+        pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C"), ("D", "B")],
+            undirected_ebunch=[("B", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("D", "B"), ("B", "C")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "C")],
+            undirected_ebunch=[("A", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C"), ("D", "C")}
+        )
+
+        # Examples taken from Perkovi\`c 2017.
+        pdag = PDAG(
+            directed_ebunch=[("V1", "X")],
+            undirected_ebunch=[("X", "V2"), ("V2", "Y"), ("X", "Y")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {("V1", "X"), ("X", "V2"), ("X", "Y"), ("V2", "Y"), ("Y", "V2")},
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("Y", "X")],
+            undirected_ebunch=[("V1", "X"), ("X", "V2"), ("V2", "Y")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {
+                ("X", "V1"),
+                ("Y", "X"),
+                ("X", "V2"),
+                ("V2", "X"),
+                ("V2", "Y"),
+                ("Y", "V2"),
+            },
+        )
+
+        # Examples from Bang 2024
+        pdag = PDAG(
+            directed_ebunch=[("B", "D"), ("C", "D")],
+            undirected_ebunch=[("A", "D"), ("A", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True, debug=True)
+        self.assertEqual(
+            set(cpdag.edges()), {("B", "D"), ("D", "A"), ("C", "A"), ("C", "D")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("C", "B")],
+            undirected_ebunch=[("D", "B"), ("D", "A"), ("D", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()),
+            {
+                ("A", "B"),
+                ("C", "B"),
+                ("D", "B"),
+                ("D", "A"),
+                ("A", "D"),
+                ("D", "C"),
+                ("C", "D"),
+            },
+        )
+
+        undirected_edges = [("A", "C"), ("B", "C"), ("D", "C")]
+        directed_edges = [("B", "D"), ("D", "A")]
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        mpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(mpdag.edges()),
+            set(
+                [
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        pdag = pdag.apply_meeks_rules()
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )

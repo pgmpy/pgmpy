@@ -1371,8 +1371,8 @@ class PDAG(nx.DiGraph):
         # Remove the edge for undirected_edges.
         if (u, v) in pdag.undirected_edges:
             pdag.undirected_edges.discard((u, v))
-        elif (u, v) in self.undirected_edges:
-            pdag.undirected_edges.discard((u, v))
+        elif (v, u) in pdag.undirected_edges:
+            pdag.undirected_edges.discard((v, u))
         else:
             raise ValueError(f"Undirected Edge {u} - {v} not present in the PDAG.")
 
@@ -1385,8 +1385,26 @@ class PDAG(nx.DiGraph):
         if not inplace:
             return pdag
 
-    def apply_meeks_rules(self, apply_r4=False, inplace=False):
+    def _check_new_unshieled_collider(self, u, v):
+        """
+        Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
 
+        Returns
+        -------
+        True, if no new V-structures are formed.
+        False, if the orientation u -> v would lead to creation of a new V-structure.
+        """
+        incoming_dir_edges = [
+            node for node in self.predecessors(v) if (node, v) in self.directed_edges
+        ]
+        for node in incoming_dir_edges:
+            if (u, node) in self.edges or (node, u) in self.edges:
+                pass
+            else:
+                return False
+        return True
+
+    def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
         if inplace:
             pdag = self
         else:
@@ -1395,101 +1413,105 @@ class PDAG(nx.DiGraph):
         changed = True
         while changed:
             changed = False
-            dir_g = self._directed_graph(pdag)
 
             # --------------------------------------------------------------
             # R1: X → Y,  Y – Z,  X not adj Z  ⇒  Y → Z
             # --------------------------------------------------------------
-            for y in self.nodes():
-                for x in dir_g.predecessors(y):
+            for y in pdag.nodes():
+                # Select x's such that there are directed edges x -> y.
+                for x in pdag._directed_graph().predecessors(y):
                     for z in pdag.undirected_neighbors(y):
                         if not pdag.has_edge(x, z) and not pdag.has_edge(z, x):
-                            _orient_undirected(pdag, y, z, debug=debug)
-                            changed = True
-                            break
-                    if changed:
-                        break
-                if changed:
-                    break
-            if changed:
-                continue
+                            if pdag._check_new_unshieled_collider(
+                                y, z
+                            ) and not nx.has_path(pdag._directed_graph(), z, y):
+                                pdag.orient_undirected_edge(y, z, inplace=True)
+                                changed = True
+                                if debug:
+                                    logger.info(
+                                        f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
+                                    )
+                            else:
+                                logger.info(
+                                    f"Not applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}. Creates a new V-structure."
+                                )
 
             # --------------------------------------------------------------
             # R2: X – Y,  X → Z → Y  ⇒  X → Y
             # --------------------------------------------------------------
-            for x, y in list(pdag.undirected_edges):
-                # pick canonical orientation
-                a, b = x, y
-                if not (pdag.has_edge(a, b) and pdag.has_edge(b, a)):
-                    continue
-                for z in pdag.successors(a):
-                    if (a, z) in pdag.directed_edges and (z, b) in pdag.directed_edges:
-                        _orient_undirected(pdag, a, b, debug=debug)
-                        changed = True
-                        break
-                if changed:
-                    break
-            if changed:
-                continue
+            for z in pdag.nodes():
+                directed_graph = pdag._directed_graph()
+                xs = list(directed_graph.predecessors(z))
+                ys = list(directed_graph.successors(z))
+
+                for x in xs:
+                    for y in ys:
+                        if ((x, y) in pdag.undirected_edges) or (
+                            (y, x) in pdag.undirected_edges
+                        ):
+                            pdag.orient_undirected_edge(x, y, inplace=True)
+                            changed = True
+                            if debug:
+                                logger.info(
+                                    f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
+                                )
 
             # --------------------------------------------------------------
             # R3: X – Y, X – Z, Y → Z  ⇒  X → Y, X → Z
             # --------------------------------------------------------------
             for x in pdag.nodes():
-                und_nb = undirected_neighbors(pdag, x)
-                # need at least two undirected neighbors
-                if len(und_nb) < 2:
+                undirected_nbs = pdag.undirected_neighbors(x)
+
+                if len(undirected_nbs) < 3:
                     continue
-                for y, z in combinations(und_nb, 2):
-                    if (y, z) in pdag.directed_edges:
-                        # orient X – y and X – z
-                        _orient_undirected(pdag, x, y, debug=debug)
-                        _orient_undirected(pdag, x, z, debug=debug)
+
+                for y, z, w in itertools.product(
+                    undirected_nbs, undirected_nbs, undirected_nbs
+                ):
+                    if (
+                        len(set([y, z, w])) == 3
+                        and (y, w) in pdag.directed_edges
+                        and (z, w) in pdag.directed_edges
+                    ):
+                        pdag.orient_undirected_edge(x, w, inplace=True)
+                        if debug:
+                            logger.info(
+                                f"Applying Rule 3: {x} - {y}, {z}, {w}; {y}, {z} -> {w} => {x} -> {w}"
+                            )
                         changed = True
                         break
-                    if (z, y) in pdag.directed_edges:
-                        _orient_undirected(pdag, x, z, debug=debug)
-                        _orient_undirected(pdag, x, y, debug=debug)
-                        changed = True
-                        break
-                if changed:
-                    break
-            if changed:
-                continue
 
             # --------------------------------------------------------------
             # R4: d → c → b  &  a – b, a – c, a – d,  and b not adj d  ⇒  a → b
             # --------------------------------------------------------------
-            for c in pdag.nodes():
-                for b in dir_g.successors(c):  # c → b
-                    for d in dir_g.predecessors(c):  # d → c
-                        if b == d or pdag.has_edge(b, d) or pdag.has_edge(d, b):
-                            continue  # b adjacent d ⇒ rule not applicable
-                        # find nodes a that are undirected neighbor to b, c, d
-                        cand = set(undirected_neighbors(pdag, b)).intersection(
-                            undirected_neighbors(pdag, c), undirected_neighbors(pdag, d)
-                        )
-                        for a in cand:
-                            # ensure the edges a – b, a – c, a – d are undirected
-                            if not (
-                                pdag.has_edge(a, b)
-                                and pdag.has_edge(b, a)
-                                and pdag.has_edge(a, c)
-                                and pdag.has_edge(c, a)
-                                and pdag.has_edge(a, d)
-                                and pdag.has_edge(d, a)
-                            ):
-                                continue
-                            _orient_undirected(pdag, a, b, debug=debug)
-                            changed = True
-                            break
-                        if changed:
-                            break
-                    if changed:
-                        break
-                if changed:
-                    break
-        return pdag
+            if apply_r4:
+                for c in pdag.nodes():
+                    directed_graph = pdag._directed_graph()
+                    for b in directed_graph.successors(c):
+                        for d in directed_graph.predecessors(c):
+                            if b == d or pdag.has_edge(b, d) or pdag.has_edge(d, b):
+                                continue  # b adjacent d ⇒ rule not applicable
+                            # find nodes a that are undirected neighbor to b, c, d
+                            cand = set(pdag.undirected_neighbors(b)).intersection(
+                                pdag.undirected_neighbors(c),
+                                pdag.undirected_neighbors(d),
+                            )
+                            for a in cand:
+                                # ensure the edges a – b, a – c, a – d are undirected
+                                if not (
+                                    pdag.has_edge(a, b)
+                                    and pdag.has_edge(b, a)
+                                    and pdag.has_edge(a, c)
+                                    and pdag.has_edge(c, a)
+                                    and pdag.has_edge(a, d)
+                                    and pdag.has_edge(d, a)
+                                ):
+                                    continue
+                                pdag.orient_undirected_edge(a, b, inplace=True)
+                                changed = True
+                                break
+        if not inplace:
+            return pdag
 
     def to_dag(self):
         """
