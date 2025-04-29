@@ -1414,31 +1414,32 @@ class PDAG(nx.DiGraph):
         while changed:
             changed = False
 
-            # --------------------------------------------------------------
-            # R1: X → Y,  Y – Z,  X not adj Z  ⇒  Y → Z
-            # --------------------------------------------------------------
+            # Rule 1: If X → Y – Z and
+            #            (X not adj Z) and
+            #            (adding Y -> Z doesn't create cycle) and
+            #            (adding Y -> Z doesn't create an unshielded collider) ⇒  Y → Z
             for y in pdag.nodes():
                 # Select x's such that there are directed edges x -> y.
                 for x in pdag._directed_graph().predecessors(y):
                     for z in pdag.undirected_neighbors(y):
-                        if not pdag.has_edge(x, z) and not pdag.has_edge(z, x):
-                            if pdag._check_new_unshieled_collider(
-                                y, z
-                            ) and not nx.has_path(pdag._directed_graph(), z, y):
-                                pdag.orient_undirected_edge(y, z, inplace=True)
-                                changed = True
-                                if debug:
-                                    logger.info(
-                                        f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
-                                    )
-                            else:
+                        if (
+                            (not pdag.has_edge(x, z))
+                            and (not pdag.has_edge(z, x))
+                            and pdag._check_new_unshieled_collider(y, z)
+                            and (not nx.has_path(pdag._directed_graph(), z, y))
+                        ):
+                            pdag.orient_undirected_edge(y, z, inplace=True)
+                            changed = True
+                            if debug:
                                 logger.info(
-                                    f"Not applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}. Creates a new V-structure."
+                                    f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
                                 )
+                        else:
+                            logger.info(
+                                f"Not applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}. Creates a new V-structure."
+                            )
 
-            # --------------------------------------------------------------
-            # R2: X – Y,  X → Z → Y  ⇒  X → Y
-            # --------------------------------------------------------------
+            # Rule2: If X → Z → Y  and X - Y ⇒  X → Y
             for z in pdag.nodes():
                 directed_graph = pdag._directed_graph()
                 xs = list(directed_graph.predecessors(z))
@@ -1456,9 +1457,7 @@ class PDAG(nx.DiGraph):
                                     f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
                                 )
 
-            # --------------------------------------------------------------
-            # R3: X – Y, X – Z, Y → Z  ⇒  X → Y, X → Z
-            # --------------------------------------------------------------
+            # Rule 3: If X - {Y, Z, W} and {Z, Y} -> W => X -> W
             for x in pdag.nodes():
                 undirected_nbs = pdag.undirected_neighbors(x)
 
@@ -1469,21 +1468,19 @@ class PDAG(nx.DiGraph):
                     undirected_nbs, undirected_nbs, undirected_nbs
                 ):
                     if (
-                        len(set([y, z, w])) == 3
+                        len(set([y, z, w])) == 3  # No repeated variables
                         and (y, w) in pdag.directed_edges
                         and (z, w) in pdag.directed_edges
                     ):
                         pdag.orient_undirected_edge(x, w, inplace=True)
+                        changed = True
                         if debug:
                             logger.info(
                                 f"Applying Rule 3: {x} - {y}, {z}, {w}; {y}, {z} -> {w} => {x} -> {w}"
                             )
-                        changed = True
                         break
 
-            # --------------------------------------------------------------
-            # R4: d → c → b  &  a – b, a – c, a – d,  and b not adj d  ⇒  a → b
-            # --------------------------------------------------------------
+            # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
             if apply_r4:
                 for c in pdag.nodes():
                     directed_graph = pdag._directed_graph()
@@ -1491,22 +1488,13 @@ class PDAG(nx.DiGraph):
                         for d in directed_graph.predecessors(c):
                             if b == d or pdag.has_edge(b, d) or pdag.has_edge(d, b):
                                 continue  # b adjacent d ⇒ rule not applicable
+
                             # find nodes a that are undirected neighbor to b, c, d
                             cand = set(pdag.undirected_neighbors(b)).intersection(
                                 pdag.undirected_neighbors(c),
                                 pdag.undirected_neighbors(d),
                             )
                             for a in cand:
-                                # ensure the edges a – b, a – c, a – d are undirected
-                                if not (
-                                    pdag.has_edge(a, b)
-                                    and pdag.has_edge(b, a)
-                                    and pdag.has_edge(a, c)
-                                    and pdag.has_edge(c, a)
-                                    and pdag.has_edge(a, d)
-                                    and pdag.has_edge(d, a)
-                                ):
-                                    continue
                                 pdag.orient_undirected_edge(a, b, inplace=True)
                                 changed = True
                                 break
