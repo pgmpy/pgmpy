@@ -1490,14 +1490,8 @@ class PDAG(nx.DiGraph):
                 if len(undirected_nbs) < 3:
                     continue
 
-                for y, z, w in itertools.product(
-                    undirected_nbs, undirected_nbs, undirected_nbs
-                ):
-                    if (
-                        len(set([y, z, w])) == 3  # No repeated variables
-                        and pdag.has_directed_edge(y, w)
-                        and pdag.has_directed_edge(z, w)
-                    ):
+                for y, z, w in itertools.permutations(undirected_nbs, 3):
+                    if pdag.has_directed_edge(y, w) and pdag.has_directed_edge(z, w):
                         pdag.orient_undirected_edge(x, w, inplace=True)
                         changed = True
                         if debug:
