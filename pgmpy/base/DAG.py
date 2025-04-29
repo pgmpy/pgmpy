@@ -1296,19 +1296,28 @@ class PDAG(nx.DiGraph):
         self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
-        # TODO: Fix the cycle issue
-        # import pdb; pdb.set_trace()
-        # try:
-        #     # Filter out undirected edges as they also form a cycle in
-        #     # themself when represented using directed edges.
-        #     cycles = filter(lambda t: len(t) > 2, nx.simple_cycles(self))
-        #     if cycles:
-        #         out_str = "Cycles are not allowed in a PDAG. "
-        #         out_str += "The following path forms a loop: "
-        #         out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
-        #         raise ValueError(out_str)
-        # except nx.NetworkXNoCycle:
-        #     pass
+
+    def undirected_neighbors(self, node):
+        """
+        Returns a set of neighboring nodes such that all of them have an undirected edge with `node`.
+
+        Parameters
+        ----------
+        node: any hashable python object
+            The node for which to get the undirected neighboring nodes.
+
+        Returns
+        -------
+        set: A set of neighboring nodes.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[('A', 'C'), ('D', 'C')], undirected_ebunch=[('B', 'A'), ('B', 'D')])
+        >>> pdag.undirected_neighbors('A')
+        {'B'}
+        """
+        return {var for var in self.successors(node) if self.has_edge(var, node)}
 
     def copy(self):
         """
