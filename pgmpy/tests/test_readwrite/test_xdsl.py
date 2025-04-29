@@ -64,10 +64,32 @@ TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 	</nodes>
 </smile>"""
 
+TEST_WHITESPACE_MODEL = """<?xml version="1.0" encoding="UTF-8"?>
+<!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
+<smile version="1.0" id="Asia" numsamples="10000" discsamples="10000">
+	<nodes>
+		<cpt id="node 1" diagtype="observation" ranked="true">
+			<state id="no" />
+			<state id="yes" />
+			<probabilities>0.5 0.5</probabilities>
+		</cpt>
+		<cpt id="node 2" diagtype="target">
+			<state id="no" label="F5" />
+			<state id="yes" label="F6" fault="true" />
+			<parents>node 1</parents>
+			<probabilities>0.5 0.5 0.5 0.5</probabilities>
+		</cpt>
+	</nodes>
+</smile>"""
+
 
 class TestXDSLReaderMethodsString(unittest.TestCase):
     def setUp(self):
         self.reader = XDSLReader(string=TEST_FILE)
+
+    def test_whitespace_error(self):
+        with self.assertRaises(ValueError):
+            self.model_with_whitespace = XDSLReader(string=TEST_WHITESPACE_MODEL)
 
     def test_get_variables(self):
         var_expected = [
@@ -209,6 +231,23 @@ class TestXDSLWriterMethods(unittest.TestCase):
         )  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
+        self.model_with_whitespaces = DiscreteBayesianNetwork()
+        self.model_with_whitespaces.add_nodes_from(["first node", "second node"])
+        self.model_with_whitespaces.add_edges_from([("first node", "second node")])
+        cpd_a = TabularCPD("first node", 2, [[0.5], [0.5]])
+        cpd_b = TabularCPD(
+            "second node",
+            2,
+            [[0.5, 0.5], [0.5, 0.5]],
+            evidence=["first node"],
+            evidence_card=[2],
+        )
+        self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
+
+    def test_whitespace_warning(self):
+        with self.assertRaises(UserWarning):
+            self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
+
     def assert_models_equivalent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
@@ -245,6 +284,10 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
         self.reader = XDSLReader(string=TEST_FILE)
+
+    def test_whitespace_error(self):
+        with self.assertRaises(ValueError):
+            self.model_with_whitespace = XDSLReader(string=TEST_WHITESPACE_MODEL)
 
     def test_get_variables(self):
         var_expected = [
@@ -358,6 +401,23 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
             self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
         )  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
+
+        self.model_with_whitespaces = DiscreteBayesianNetwork()
+        self.model_with_whitespaces.add_nodes_from(["first node", "second node"])
+        self.model_with_whitespaces.add_edges_from([("first node", "second node")])
+        cpd_a = TabularCPD("first node", 2, [[0.5], [0.5]])
+        cpd_b = TabularCPD(
+            "second node",
+            2,
+            [[0.5, 0.5], [0.5, 0.5]],
+            evidence=["first node"],
+            evidence_card=[2],
+        )
+        self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
+
+    def test_whitespace_warning(self):
+        with self.assertRaises(UserWarning):
+            self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
     def assert_models_equivalent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))

@@ -13,6 +13,8 @@ from pgmpy.utils import compat_fns
 class XDSLReader(object):
     """
     Initializes the reader object for XDSL file formats[1] created through GeNIe[2].
+    Note that XDSLReader only supports cpt blocks from the XDSL file format; elements like
+    'deterministic' need to be aapropriately converted into 'cpt' elements before usage.
 
     Parameters
     ----------
@@ -45,6 +47,7 @@ class XDSLReader(object):
         else:
             raise ValueError("Must specify either path or string")
         self.network_name = self.network.attrib["id"]
+        self.cpt_elements = self.network.find("nodes").findall("cpt")
         self.variables = self.get_variables()
         self.variable_parents = self.get_parents()
         self.edge_list = self.get_edges()
@@ -61,8 +64,13 @@ class XDSLReader(object):
         >>> reader.get_variables()
         ['asia', 'tub', 'smoke', 'lung', 'either', 'xray', 'bronc', 'dysp']
         """
-        nodes = self.network.find("nodes")
-        variables = [variable.attrib["id"] for variable in nodes.findall("cpt")]
+        variables = [variable.attrib["id"] for variable in self.cpt_elements]
+        for var in variables:
+            if isinstance(var, str) and (" " in var):
+                raise ValueError(
+                    f"XDSLReader does not support models with node names that contain whitespaces. Failed to process node: {var}"
+                )
+
         return variables
 
     def get_parents(self):
@@ -84,8 +92,7 @@ class XDSLReader(object):
         }
         """
         variable_parents = {}
-        nodes = self.network.find("nodes").findall("cpt")
-        for node in nodes:
+        for node in self.cpt_elements:
             parents = node.find("parents")
             if parents is not None:
                 variable_parents[node.attrib["id"]] = parents.text.split(" ")
@@ -137,9 +144,8 @@ class XDSLReader(object):
         dysp': ['Absent', 'Present']
         }
         """
-        nodes = self.network.find("nodes").findall("cpt")
         variable_states = {}
-        for cpt in nodes:
+        for cpt in self.cpt_elements:
             variable_states[cpt.attrib["id"]] = [
                 state.attrib["id"] for state in cpt.findall("state")
             ]
@@ -164,8 +170,7 @@ class XDSLReader(object):
         }
         """
         variable_CPD = {}
-        nodes = self.network.find("nodes").findall("cpt")
-        for cpt in nodes:
+        for cpt in self.cpt_elements:
 
             combined_prob = cpt.find("probabilities")
             num_states = len([state for state in cpt.findall("state")])
@@ -314,6 +319,10 @@ class XDSLWriter(object):
         nodes_elem = etree.SubElement(self.root, "nodes")
 
         for var in self.model.nodes:
+            if isinstance(var, str) and " " in var:
+                raise UserWarning(
+                    f"Node '{var}' contains whitespaces. This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
+                )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
         return variable_tag
