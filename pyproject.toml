@@ -83,9 +83,6 @@ Repository = "https://github.com/pgmpy/pgmpy"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-include-package-data = true
-
 [tool.setuptools.packages.find]
 exclude = ["tests"]
 
