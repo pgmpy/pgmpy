@@ -657,6 +657,31 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_neighbors(node="C"), set())
         self.assertEqual(pdag.undirected_neighbors(node="D"), {"B"})
 
+    def test_orient_undirected_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        mod_pdag = pdag.orient_undirected_edge("B", "A", inplace=False)
+        self.assertEqual(
+            set(mod_pdag.edges()),
+            {("A", "C"), ("D", "C"), ("B", "A"), ("B", "D"), ("D", "B")},
+        )
+        self.assertEqual(mod_pdag.undirected_edges, {("B", "D")})
+        self.assertEqual(mod_pdag.directed_edges, {("A", "C"), ("D", "C"), ("B", "A")})
+
+        pdag.orient_undirected_edge("B", "A", inplace=True)
+        self.assertEqual(
+            set(pdag.edges()),
+            {("A", "C"), ("D", "C"), ("B", "A"), ("B", "D"), ("D", "B")},
+        )
+        self.assertEqual(pdag.undirected_edges, {("B", "D")})
+        self.assertEqual(pdag.directed_edges, {("A", "C"), ("D", "C"), ("B", "A")})
+
+        self.assertRaises(
+            ValueError, pdag.orient_undirected_edge, "B", "A", inplace=True
+        )
+
     def test_copy(self):
         pdag_copy = self.pdag_mix.copy()
         expected_edges = {
