@@ -3107,6 +3107,78 @@ class TestTabularCPDMethods(unittest.TestCase):
             cardinality={"A": 2, "B": 3},
         )
 
+    def test_get_uniform(self):
+        cpd = TabularCPD.get_uniform(variable="A", evidence=None, cardinality={"A": 3})
+        self.assertEqual(cpd.variables, ["A"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
+        self.assertEqual(cpd.values.shape, (3,))
+        self.assertTrue((cpd.values == (1 / 3)).all())
+
+        cpd_sn = TabularCPD.get_uniform(
+            variable="A",
+            evidence=None,
+            cardinality={"A": 3},
+            state_names={"A": ["a1", "a2", "a3"]},
+        )
+        self.assertEqual(cpd_sn.variables, ["A"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([3]))
+        self.assertEqual(cpd_sn.values.shape, (3,))
+        self.assertTrue((cpd_sn.values == (1 / 3)).all())
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2", "a3"])
+
+        cpd = TabularCPD.get_uniform(
+            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd.values.shape, (2, 3, 4))
+        self.assertTrue((cpd.values == 0.5).all())
+
+        cpd_sn = TabularCPD.get_uniform(
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3, "C": 4},
+            state_names={
+                "A": ["a1", "a2"],
+                "B": ["b1", "b2", "b3"],
+                "C": ["c1", "c2", "c3", "c4"],
+            },
+        )
+        self.assertEqual(cpd_sn.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd_sn.values.shape, (2, 3, 4))
+        self.assertTrue((cpd_sn.values == 0.5).all())
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd_sn.state_names["B"], ["b1", "b2", "b3"])
+        self.assertEqual(cpd_sn.state_names["C"], ["c1", "c2", "c3", "c4"])
+
+        cpd = TabularCPD.get_uniform(variable="A", evidence=["B", "C"])
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+        self.assertTrue((cpd.values == 0.5).all())
+
+        cpd = TabularCPD.get_uniform(
+            variable="A",
+            evidence=["B", "C"],
+            state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+        self.assertTrue((cpd.values == 0.5).all())
+        self.assertEqual(cpd.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd.state_names["B"], ["b1", "b2"])
+        self.assertEqual(cpd.state_names["C"], ["c1", "c2"])
+
+        self.assertRaises(
+            ValueError,
+            TabularCPD.get_uniform,
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3},
+        )
+
     def tearDown(self):
         del self.cpd
 

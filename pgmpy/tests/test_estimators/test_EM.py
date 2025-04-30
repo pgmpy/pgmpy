@@ -115,6 +115,24 @@ class TestEM(unittest.TestCase):
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
+    def test_get_parameters_random_init_cpds(self):
+        est = EM(self.model1, self.data1)
+        cpds = est.get_parameters(
+            init_cpds="random", seed=42, n_jobs=1, show_progress=False
+        )
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
+    def test_get_parameters_uniform_init_cpds(self):
+        est = EM(self.model1, self.data1)
+        cpds = est.get_parameters(init_cpds="uniform", n_jobs=1, show_progress=False)
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
     def tearDown(self):
         del self.model1
         del self.model2
