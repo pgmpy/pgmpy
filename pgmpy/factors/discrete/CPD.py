@@ -684,14 +684,14 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> TabularCPD(variable='A', evidence=['C', 'D'],
-        ...            cardinality={'A': 3, 'B': 2, 'C': 4})
+        >>> TabularCPD.get_random(variable='A', evidence=['C', 'D'],
+        ...                       cardinality={'A': 3, 'B': 2, 'C': 4})
         <TabularCPD representing P(A:3 | C:4, B:2) at 0x7f95e22b8040>
-        >>> TabularCPD(variable='A', evidence=['C', 'D'],
-        ...            cardinality={'A': 2, 'B': 2, 'C': 2},
-        ...            state_names={'A': ['a1', 'a2'],
-        ...                         'B': ['b1', 'b2'],
-        ...                         'C': ['c1', 'c2']})
+        >>> TabularCPD.get_random(variable='A', evidence=['C', 'D'],
+        ...                       cardinality={'A': 2, 'B': 2, 'C': 2},
+        ...                       state_names={'A': ['a1', 'a2'],
+        ...                                    'B': ['b1', 'b2'],
+        ...                                    'C': ['c1', 'c2']})
         """
         generator = np.random.default_rng(seed=seed)
 
@@ -765,14 +765,14 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> TabularCPD(variable='A', evidence=['C', 'D'],
-        ...            cardinality={'A': 3, 'B': 2, 'C': 4})
+        >>> TabularCPD.get_uniform(variable='A', evidence=['C', 'D'],
+        ...                        cardinality={'A': 3, 'B': 2, 'C': 4})
         <TabularCPD representing P(A:3 | C:4, B:2) at 0x7f95e22b8040>
-        >>> TabularCPD(variable='A', evidence=['C', 'D'],
-        ...            cardinality={'A': 2, 'B': 2, 'C': 2},
-        ...            state_names={'A': ['a1', 'a2'],
-        ...                         'B': ['b1', 'b2'],
-        ...                         'C': ['c1', 'c2']})
+        >>> TabularCPD.get_uniform(variable='A', evidence=['C', 'D'],
+        ...                        cardinality={'A': 2, 'B': 2, 'C': 2},
+        ...                        state_names={'A': ['a1', 'a2'],
+        ...                                     'B': ['b1', 'b2'],
+        ...                                     'C': ['c1', 'c2']})
         """
         generator = np.random.default_rng(seed=seed)
 
