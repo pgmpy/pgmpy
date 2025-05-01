@@ -12,8 +12,7 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
 [![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy)
 [![Version](https://img.shields.io/pypi/v/pgmpy?color=blue)](https://pypi.org/project/pgmpy/)
-[![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy)
-[![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
+[![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
 [![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
@@ -46,8 +45,56 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 - **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy
 - **Community chat:** [discord](https://discord.gg/DRkdKaumBs)
 
-Contributing
-============
+## Quickstart
+
+### Installation
+pgmpy is available on both PyPI and anaconda and can be installed using pip:
+
+```bash
+pip install pgmpy
+```
+or conda:
+
+```bash
+conda install conda-forge::pgmpy
+```
+
+### Discrete Data
+```python
+from pgmpy.utils import get_example_model
+
+# Load a Discrete Bayesian Network and simulate data.
+discrete_bn = get_example_model('alarm')
+alarm_df = discrete_bn.simulate(n_samples=100)
+
+# Learn a network from simulated data.
+from pgmpy.estimators import PC
+dag = PC(data=alarm_df).estimate(ci_test='chi_square', return_type='dag')
+
+# Learn the parameters from the data.
+dag_fitted = dag.fit(alarm_df)
+dag_fitted.get_cpds()
+```
+
+### Linear Gaussian Data
+```python
+# Load an example Gaussian Bayesian Network and simulate data
+gaussian_bn = get_example_model('ecoli70')
+ecoli_df = gaussian_bn.simulate(n_samples=100)
+
+# Learn the network from simulated data.
+from pgmpy.estimators import PC
+dag = PC(data=ecoli_df).estimate(ci_test='pearsonr', return_type='dag')
+
+# Learn the parameters from the data.
+gaussian_bn = LinearGausianBayesianNetwork(dag.edges())
+dag_fitted = gaussian_bn.fit(ecoli_df)
+dag_fitted.get_cpds()
+```
+
+
+## Contributing
+
 We welcome all contributions --not just code-- to pgmpy. Please refer out
 [contributing guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
 for more details. We also offer mentorship for new contributors and maintain a
