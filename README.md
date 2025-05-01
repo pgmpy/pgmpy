@@ -39,11 +39,13 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 | [**Causal Inference**](https://pgmpy.org/examples/Causal%20Inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
 | [**Simulations**](https://github.com/pgmpy/pgmpy/blob/dev/examples/Simulating_Data.ipynb) | Generate synthetic data under specified evidence or interventions. |
 
-### Quick Links
-- **Documentation:** https://pgmpy.org/
-- **Installation:** https://pgmpy.org/started/install.html
-- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy
-- **Community chat:** [discord](https://discord.gg/DRkdKaumBs)
+### Resources and Links
+- **Example Notebooks:** [Examples](https://github.com/pgmpy/pgmpy/tree/dev/examples)
+- **Tutorial Notebooks:** [Tutorial](https://github.com/pgmpy/pgmpy_notebook)
+- **Blog Posts:** [Medium](https://medium.com/@ankurankan_23083)
+- **Documentation:** [Website](https://pgmpy.org/)
+- **Bug Reports and Feature Requests:** [Github Issues](https://github.com/pgmpy/pgmpy/issues)
+- **Questions:** [discord](https://discord.gg/DRkdKaumBs) · [Stack Overflow](https://stackoverflow.com/questions/tagged/pgmpy)
 
 ## Quickstart
 
