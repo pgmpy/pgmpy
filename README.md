@@ -14,9 +14,9 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 [![Version](https://img.shields.io/pypi/v/pgmpy?color=blue)](https://pypi.org/project/pgmpy/)
 [![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
 [![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
-
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
+
 </div>
 
 <div align="center">
@@ -41,10 +41,10 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 
 ### Resources and Links
 - **Example Notebooks:** [Examples](https://github.com/pgmpy/pgmpy/tree/dev/examples)
-- **Tutorial Notebooks:** [Tutorial](https://github.com/pgmpy/pgmpy_notebook)
+- **Tutorial Notebooks:** [Tutorials](https://github.com/pgmpy/pgmpy_notebook)
 - **Blog Posts:** [Medium](https://medium.com/@ankurankan_23083)
 - **Documentation:** [Website](https://pgmpy.org/)
-- **Bug Reports and Feature Requests:** [Github Issues](https://github.com/pgmpy/pgmpy/issues)
+- **Bug Reports and Feature Requests:** [GitHub Issues](https://github.com/pgmpy/pgmpy/issues)
 - **Questions:** [discord](https://discord.gg/DRkdKaumBs) · [Stack Overflow](https://stackoverflow.com/questions/tagged/pgmpy)
 
 ## Quickstart
