@@ -3,6 +3,31 @@
 Hi! Thanks for your interest in contributing to [pgmpy](https://pgmpy.org). This
 document summarizes everything that you need to know to get started.
 
+## Development
+
+### Code
+The latest codebase is available in the `dev` branch of the repository.
+
+### Building from Source
+To install pgmpy from the source code:
+```
+$ git clone https://github.com/pgmpy/pgmpy
+$ cd pgmpy/
+$ pip install -r requirements.txt
+$ python setup.py install
+```
+
+To run the tests, you can use pytest:
+```
+$ pytest -v pgmpy
+```
+
+If you face any problems during installation let us know, via issues, mail or at our discord channel.
+
+### Building Documentation
+We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
+
+
 ## Code and Issues
 
 We use [Github](https://github.com/pgmpy/pgmpy) to host all our code. We also use github
@@ -81,26 +106,18 @@ Summary of our git branching model:
 
 ### Tests
 
-We use [Travis CI](https://travis-ci.org/) for continuous integration for linux systems
-and [AppVeyor](https://www.appveyor.com/) for Windows systems.  We use python [unittest
-module](https://docs.python.org/2/library/unittest.html) for writing tests.  You should
-write tests for every feature you add or bug you solve in the code.  Having automated
-tests for every line of our code let us make big changes without worries: there will
-always be tests to verify if the changes introduced bugs or lack of features. If we
-don't have tests we will be blind and every change will come with some fear of possibly
-breaking something.
-
-For a better design of your code, we recommend using a technique called [test-driven
-development](https://en.wikipedia.org/wiki/Test-driven_development), where you write
-your tests **before** writing the actual code that implements the desired feature.
+We use GitHub actions for continuous integration for all platforms. We use
+[pytest](https://docs.pytest.org/en/stable/) for writing tests.  You should
+write tests for every feature you add or bug you solve in the code. For a
+better design of your code, we recommend using a technique called [test-driven
+development](https://en.wikipedia.org/wiki/Test-driven_development), where you
+write your tests **before** writing the actual code that implements the desired
+feature.
 
 
 ## Discussion
 
-Please feel free to contact us through the mailing list if you have any questions or
-suggestions. Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy).  All
-contributions are very welcome!
-
-*Mailing list* : pgmpy@googlegroups.com
+Please feel free to contact us through our discord channel or mailing list if
+you have any questions or suggestions. All contributions are very welcome!
 
 Happy hacking! ;)
