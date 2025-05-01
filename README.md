@@ -24,16 +24,17 @@
 
 </div>
 
-pgmpy is a Python library for causal and probabilistic analysis using Bayesian Networks. It provides an uniform API for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from causal inference and probabilistic inference literature to allow users to seamlessly work between them.
+pgmpy is a Python library for causal and probabilistic modeling using Bayesian Networks and related models. It provides a uniform API for building, learning, and analyzing models such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models(SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and interventional analyses.
 
 Features:
-- **Causal Discovery / Structure Learning**: Learn the structure of a Bayesian Network from data with integrating **Expert Knowledge**.
-- **Causal Validation**: Validate the causal structure against the data.
-- **Parameter Learning**: Learn the parameters of the Bayesian Network from data.
-- **Probabilistic Inference**: Query posterior distributions under specified conditions.
-- **Causal Inference**: Query interventional and counterfactual distributions under specified conditions.
-- **Simulations**: Simulate data under specified evidence or interventions.
+- **Causal Discovery / Structure Learning**: Learn the structure of model from data, with optional integration of **Expert Knowledge**.
+- **Causal Validation**: Assess how compatible the causal structure is with the data.
+- **Parameter Learning**: Estimate model parameters (e.g., conditional probability distributions) from observed data.
+- **Probabilistic Inference**: Compute posterior distributions conditioned on observed evidence.
+- **Causal Inference**: Compute interventional and counterfactual distributions using do-calculus.
+- **Simulations**: Generate synthetic data under specified evidence or interventions.
 
+Links:
 - **Documentation:** https://pgmpy.org/
 - **Installation:** https://pgmpy.org/started/install.html
 - **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
