@@ -1,8 +1,7 @@
-<div align="center">
+<div align="left">
   <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="318" height="300"/>
 </div>
-<br/>
-<div align="center">
+<div align="right">
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
@@ -26,7 +25,8 @@
 
 pgmpy is a Python library for causal and probabilistic modeling using Bayesian Networks and related models. It provides a uniform API for building, learning, and analyzing models such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models(SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and interventional analyses.
 
-Features:
+Key Features
+~~~~~~~~~~~~
 - **Causal Discovery / Structure Learning**: Learn the structure of model from data, with optional integration of **Expert Knowledge**.
 - **Causal Validation**: Assess how compatible the causal structure is with the data.
 - **Parameter Learning**: Estimate model parameters (e.g., conditional probability distributions) from observed data.
@@ -34,15 +34,9 @@ Features:
 - **Causal Inference**: Compute interventional and counterfactual distributions using do-calculus.
 - **Simulations**: Generate synthetic data under specified evidence or interventions.
 
-Links:
-- **Documentation:** https://pgmpy.org/
-- **Installation:** https://pgmpy.org/started/install.html
-- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
-- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
 
-
-Examples
---------
+Example Notebooks
+~~~~~~~~~~~~~~~~~
 - Creating a Bayesian Network: [view](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 - Structure Learning/Causal Discovery: [view](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 - Parameter Learning: [view](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
@@ -55,27 +49,22 @@ Examples
 - Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
 - Tutorials: https://github.com/pgmpy/pgmpy_notebook/
 
-Citing
-======
-If you use `pgmpy` in your scientific work, please consider citing us:
+Links:
+- **Documentation:** https://pgmpy.org/
+- **Installation:** https://pgmpy.org/started/install.html
+- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
+- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
 
-```
-Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
-```
-
-Bibtex:
-```
-@article{Ankan2024,
-  author  = {Ankur Ankan and Johannes Textor},
-  title   = {pgmpy: A Python Toolkit for Bayesian Networks},
-  journal = {Journal of Machine Learning Research},
-  year    = {2024},
-  volume  = {25},
-  number  = {265},
-  pages   = {1--8},
-  url     = {http://jmlr.org/papers/v25/23-0487.html}
-}
-```
+Contributing
+============
+We welcome all contributions --not just code-- to pgmpy. Please refer out
+[contributing guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
+for more details. We also offer mentorship for new contributors and maintain a
+list of potential [mentored
+projects](https://github.com/pgmpy/pgmpy/wiki/Mentored-Projects). If you are
+interested in contributing to pgmpy, please join our
+[discord](https://discord.gg/DRkdKaumBs) server and introduce yourself. We will
+be happy to help you get started.
 
 Development
 ============
@@ -115,9 +104,3 @@ If you are looking for some ideas for projects, we a list of **mentored projects
 Building Documentation
 ----------------------
 We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
-
-
-
-License
-=======
-pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
