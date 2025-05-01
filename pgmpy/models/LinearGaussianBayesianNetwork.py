@@ -244,13 +244,13 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def simulate(self, n=1000, seed=None):
+    def simulate(self, n_samples=1000, seed=None):
         """
         Simulates data from the given model.
 
         Parameters
         ----------
-        n: int
+        n_samples: int
             The number of samples to draw from the model.
 
         seed: int (default: None)
@@ -270,7 +270,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.simulate(n=500, seed=42)
+        >>> model.simulate(n_samples=500, seed=42)
         """
         if len(self.cpds) != len(self.nodes()):
             raise ValueError(
@@ -281,7 +281,8 @@ class LinearGaussianBayesianNetwork(DAG):
         variables = list(nx.topological_sort(self))
         rng = np.random.default_rng(seed=seed)
         return pd.DataFrame(
-            rng.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
+            rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+            columns=variables,
         )
 
     def check_model(self):
@@ -381,6 +382,8 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
 
+        return self
+
     def predict(self, data, distribution="joint"):
         """
         Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
@@ -405,7 +408,7 @@ class LinearGaussianBayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
-        >>> df = model.simulate(n=5)
+        >>> df = model.simulate(n_samples=5)
         >>> # Drop a column that we want to predict.
         >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
         >>> model.predict(df)

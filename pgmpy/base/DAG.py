@@ -1226,6 +1226,7 @@ class DAG(nx.DiGraph):
             bn = self
         else:
             bn = DiscreteBayesianNetwork(self.edges())
+            bn.add_nodes_from(self.nodes())
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator
