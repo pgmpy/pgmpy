@@ -5,6 +5,7 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 </div>
 
 <br/>
+<br/>
 
 <div align="center">
 
@@ -26,37 +27,22 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 
 </div>
 
-
-
 ### Key Features
 
-- **Causal Discovery / Structure Learning**: Learn the structure of model from data, with optional integration of **Expert Knowledge**.
-- **Causal Validation**: Assess how compatible the causal structure is with the data.
-- **Parameter Learning**: Estimate model parameters (e.g., conditional probability distributions) from observed data.
-- **Probabilistic Inference**: Compute posterior distributions conditioned on observed evidence.
-- **Causal Inference**: Compute interventional and counterfactual distributions using do-calculus.
-- **Simulations**: Generate synthetic data under specified evidence or interventions.
+| Feature | Description |
+|--------|-------------|
+| [**Causal Discovery / Structure Learning**](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
+| [**Causal Validation**](https://pgmpy.org/metrics/metrics.html) | Assess how compatible the causal structure is with the data. |
+| [**Parameter Learning**](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
+| [**Probabilistic Inference**](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | Compute posterior distributions conditioned on observed evidence. |
+| [**Causal Inference**](https://pgmpy.org/examples/Causal%20Inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
+| [**Simulations**](https://github.com/pgmpy/pgmpy/blob/dev/examples/Simulating_Data.ipynb) | Generate synthetic data under specified evidence or interventions. |
 
-
-### Example Notebooks
-
-- Creating a Bayesian Network: [view](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Structure Learning/Causal Discovery: [view](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Parameter Learning: [view](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Probabilistic Inference: [view](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Causal Inference: [view](https://pgmpy.org/examples/Causal%20Inference.html) | <a target="_blank" href="https://colab.research.google.com/github/https://pgmpy.org/examples/Causal%20Inference.html"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Extending pgmpy: [view](https://pgmpy.org/examples/Extending%20pgmpy.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Extending%20pgmpy.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-
-<br/>
-
-- Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
-- Tutorials: https://github.com/pgmpy/pgmpy_notebook/
-
-### Links
+### Quick Links
 - **Documentation:** https://pgmpy.org/
 - **Installation:** https://pgmpy.org/started/install.html
-- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
-- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
+- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy
+- **Community chat:** [discord](https://discord.gg/DRkdKaumBs)
 
 Contributing
 ============
