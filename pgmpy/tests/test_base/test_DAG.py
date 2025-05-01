@@ -16,6 +16,7 @@ from pgmpy.estimators import (
     MaximumLikelihoodEstimator,
 )
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -322,41 +323,39 @@ class TestDAGCreation(unittest.TestCase):
         dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
 
     def test_dag_fit(self):
-        self.model = DAG([("A", "C"), ("B", "C")])
-        self.data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        self.pseudo_counts = {
-            "A": [[9], [3]],
-            "B": [[9], [3]],
-            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-        }
+        edge_list = [("A", "C"), ("B", "C")]
+        for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
+            data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+            pseudo_counts = {
+                "A": [[9], [3]],
+                "B": [[9], [3]],
+                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+            }
 
-        self.fitted_model_bayesian = self.model.fit(
-            self.data,
-            estimator=BayesianEstimator,
-            prior_type="dirichlet",
-            pseudo_counts=self.pseudo_counts,
-        )
+            fitted_model_bayesian = model.fit(
+                data,
+                estimator=BayesianEstimator,
+                prior_type="dirichlet",
+                pseudo_counts=pseudo_counts,
+            )
+            self.assertEqual(
+                fitted_model_bayesian.get_cpds("B"),
+                TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+            )
 
-        self.fitted_model_mle = self.model.fit(
-            self.data, estimator=MaximumLikelihoodEstimator
-        )
+            fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
 
-        self.fitted_model_em = self.model.fit(
-            self.data, estimator=ExpectationMaximization
-        )
+            self.assertEqual(
+                fitted_model_mle.get_cpds("B"),
+                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+            )
 
-        self.assertEqual(
-            self.fitted_model_bayesian.get_cpds("B"),
-            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
-        )
-        self.assertEqual(
-            self.fitted_model_mle.get_cpds("B"),
-            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-        )
-        self.assertEqual(
-            self.fitted_model_em.get_cpds("B"),
-            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-        )
+            fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
+
+            self.assertEqual(
+                fitted_model_em.get_cpds("B"),
+                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+            )
 
     def tearDown(self):
         del self.graph
