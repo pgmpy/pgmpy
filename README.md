@@ -48,12 +48,12 @@ pgmpy is a Python library for causal and probabilistic modeling using Bayesian N
 ## Quickstart
 
 ### Installation
-pgmpy is available on both PyPI and anaconda and can be installed using pip:
+pgmpy is available on both [PyPI](https://pypi.org/project/pgmpy/) and [anaconda](https://anaconda.org/conda-forge/pgmpy). To install from PyPI, use:
 
 ```bash
 pip install pgmpy
 ```
-or conda:
+To install from conda-forge, use:
 
 ```bash
 conda install conda-forge::pgmpy
@@ -74,6 +74,10 @@ dag = PC(data=alarm_df).estimate(ci_test='chi_square', return_type='dag')
 # Learn the parameters from the data.
 dag_fitted = dag.fit(alarm_df)
 dag_fitted.get_cpds()
+
+# Drop a column and predict using the learned model.
+evidence_df = alarm_df.drop(columns=['FIO2'], axis=1)
+pred_FIO2 = dag_fitted.predict(evidence_df)
 ```
 
 ### Linear Gaussian Data
@@ -87,11 +91,15 @@ from pgmpy.estimators import PC
 dag = PC(data=ecoli_df).estimate(ci_test='pearsonr', return_type='dag')
 
 # Learn the parameters from the data.
+from pgmpy.models import LinearGausianBayesianNetwork
 gaussian_bn = LinearGausianBayesianNetwork(dag.edges())
 dag_fitted = gaussian_bn.fit(ecoli_df)
 dag_fitted.get_cpds()
-```
 
+# Drop a column and predict using the learned model.
+evidence_df = ecoli_df.drop(columns=['ftsJ'], axis=1)
+pred_ftsJ = dag_fitted.predict(evidence_df)
+```
 
 ## Contributing
 
