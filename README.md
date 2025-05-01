@@ -1,7 +1,5 @@
-<div align="left">
-  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="318" height="300"/>
-</div>
-<div align="right">
+<a href="https://www.pgmpy.org"><img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="175" align="left" /></a>
+pgmpy is a Python library for causal and probabilistic modeling using Bayesian Networks and related models. It provides a uniform API for building, learning, and analyzing models such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models(SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and interventional analyses.
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
 [![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
@@ -10,9 +8,6 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
 [![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
-
-
-</div>
 
 <div align="center">
 
@@ -23,10 +18,10 @@
 
 </div>
 
-pgmpy is a Python library for causal and probabilistic modeling using Bayesian Networks and related models. It provides a uniform API for building, learning, and analyzing models such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models(SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and interventional analyses.
 
-Key Features
-~~~~~~~~~~~~
+
+### Key Features
+
 - **Causal Discovery / Structure Learning**: Learn the structure of model from data, with optional integration of **Expert Knowledge**.
 - **Causal Validation**: Assess how compatible the causal structure is with the data.
 - **Parameter Learning**: Estimate model parameters (e.g., conditional probability distributions) from observed data.
@@ -35,8 +30,8 @@ Key Features
 - **Simulations**: Generate synthetic data under specified evidence or interventions.
 
 
-Example Notebooks
-~~~~~~~~~~~~~~~~~
+### Example Notebooks
+
 - Creating a Bayesian Network: [view](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 - Structure Learning/Causal Discovery: [view](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 - Parameter Learning: [view](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
@@ -49,7 +44,7 @@ Example Notebooks
 - Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
 - Tutorials: https://github.com/pgmpy/pgmpy_notebook/
 
-Links:
+### Links
 - **Documentation:** https://pgmpy.org/
 - **Installation:** https://pgmpy.org/started/install.html
 - **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
