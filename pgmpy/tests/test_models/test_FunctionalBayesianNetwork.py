@@ -115,7 +115,7 @@ class TestFBNMethods(unittest.TestCase):
 
         n_samples = 5000
         seed = 42
-        lg_samples = lg_model.simulate(n=n_samples, seed=seed)
+        lg_samples = lg_model.simulate(n_samples=n_samples, seed=seed)
         fn_samples = fn_model.simulate(n_samples=n_samples, seed=seed)
 
         for var in ["x1", "x2", "x3"]:
@@ -486,7 +486,7 @@ class TestFBNMethods(unittest.TestCase):
 
     def test_fit_complex_svi(self):
         sim_model = get_example_model("ecoli70")
-        df = sim_model.simulate(int(1e3))
+        df = sim_model.simulate(n_samples=int(1e3), seed=42)
 
         model = FunctionalBayesianNetwork(
             [
@@ -672,7 +672,7 @@ class TestFBNMethods(unittest.TestCase):
 
     def test_fit_complex_mcmc(self):
         sim_model = get_example_model("ecoli70")
-        df = sim_model.simulate(int(1e3))
+        df = sim_model.simulate(n_samples=int(1e3), seed=42)
 
         model = FunctionalBayesianNetwork(
             [
