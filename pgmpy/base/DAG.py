@@ -1433,13 +1433,13 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        True, if no new V-structures are formed.
-        False, if the orientation u -> v would lead to creation of a new V-structure.
+        True, if the orientation u -> v would lead to creation of a new V-structure.
+        False, if no new V-structures are formed.
         """
         for node in self.directed_parents(v):
             if (node != u) and (not self.is_adjacent(u, node)):
-                return False
-        return True
+                return True
+        return False
 
     def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
         if inplace:
@@ -1460,8 +1460,8 @@ class PDAG(nx.DiGraph):
                 for x in pdag.directed_parents(y):
                     for z in pdag.undirected_neighbors(y):
                         if (
-                            not pdag.is_adjacent(x, z)
-                            and pdag._check_new_unshielded_collider(y, z)
+                            (not pdag.is_adjacent(x, z))
+                            and (not pdag._check_new_unshielded_collider(y, z))
                             and (not nx.has_path(pdag._directed_graph(), z, y))
                         ):
                             pdag.orient_undirected_edge(y, z, inplace=True)
