@@ -182,6 +182,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         )
 
         # C - A - B ==> C - A - B
+        skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ("A",)}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
         pdag = pdag.apply_meeks_rules(apply_r4=False)

@@ -514,13 +514,13 @@ class PC(StructureEstimator):
                             pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
-        undirected_edges = []
-        directed_edges = []
+        undirected_edges = set()
+        directed_edges = set()
         for u, v in edges:
-            if (v, u) in edges and (v, u) not in undirected_edges:
-                undirected_edges.append((u, v))
+            if (v, u) in edges:
+                undirected_edges.add(tuple(sorted((u, v))))
             else:
-                directed_edges.append((u, v))
+                directed_edges.add((u, v))
 
         pdag_oriented = PDAG(
             directed_ebunch=directed_edges, undirected_ebunch=undirected_edges

@@ -1288,14 +1288,15 @@ class PDAG(nx.DiGraph):
         Examples
         --------
         """
-        super(PDAG, self).__init__(
-            directed_ebunch
-            + undirected_ebunch
-            + [(Y, X) for (X, Y) in undirected_ebunch]
-        )
         self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
+
+        super(PDAG, self).__init__(
+            self.directed_edges.union(self.undirected_edges).union(
+                set([(Y, X) for (X, Y) in self.undirected_edges])
+            )
+        )
 
     def directed_children(self, node):
         """
@@ -1424,9 +1425,11 @@ class PDAG(nx.DiGraph):
         if not inplace:
             return pdag
 
-    def _check_new_unshieled_collider(self, u, v):
+    def _check_new_unshielded_collider(self, u, v):
         """
         Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
+
+        Checks whether v has any directed parents other than u that are not adjacent to u.
 
         Returns
         -------
@@ -1434,7 +1437,7 @@ class PDAG(nx.DiGraph):
         False, if the orientation u -> v would lead to creation of a new V-structure.
         """
         for node in self.directed_parents(v):
-            if not self.is_adjacent(u, node):
+            if (node != u) and (not self.is_adjacent(u, node)):
                 return False
         return True
 
@@ -1458,7 +1461,7 @@ class PDAG(nx.DiGraph):
                     for z in pdag.undirected_neighbors(y):
                         if (
                             not pdag.is_adjacent(x, z)
-                            and pdag._check_new_unshieled_collider(y, z)
+                            and pdag._check_new_unshielded_collider(y, z)
                             and (not nx.has_path(pdag._directed_graph(), z, y))
                         ):
                             pdag.orient_undirected_edge(y, z, inplace=True)
