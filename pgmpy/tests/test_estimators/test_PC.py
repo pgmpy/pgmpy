@@ -606,6 +606,7 @@ class TestPCRealModels(unittest.TestCase):
 
         model = get_example_model("sachs")
         df = model.simulate(int(1e3))
+
         expert = ExpertKnowledge(temporal_order=temporal_order)
         pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
         self.assertTrue(temporal_forbidden_edges.isdisjoint(set(pdag.edges())))
