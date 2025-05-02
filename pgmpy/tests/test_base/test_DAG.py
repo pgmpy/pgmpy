@@ -647,7 +647,45 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set())
         self.assertEqual(pdag.latents, set(["D"]))
 
-    def test_get_undirected_neighbors(self):
+    def test_directed_children(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.directed_children(node="A"), {"C"})
+        self.assertEqual(pdag.directed_children(node="B"), set())
+        self.assertEqual(pdag.directed_children(node="C"), set())
+
+    def test_directed_parents(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.directed_parents(node="A"), set())
+        self.assertEqual(pdag.directed_parents(node="B"), set())
+        self.assertEqual(pdag.directed_parents(node="C"), {"A", "D"})
+
+    def test_has_directed_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertTrue(pdag.has_directed_edge("A", "C"))
+        self.assertTrue(pdag.has_directed_edge("D", "C"))
+        self.assertFalse(pdag.has_directed_edge("A", "B"))
+        self.assertFalse(pdag.has_directed_edge("B", "A"))
+
+    def test_has_undirected_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertFalse(pdag.has_undirected_edge("A", "C"))
+        self.assertFalse(pdag.has_undirected_edge("D", "C"))
+        self.assertTrue(pdag.has_undirected_edge("A", "B"))
+        self.assertTrue(pdag.has_undirected_edge("B", "A"))
+
+    def test_undirected_neighbors(self):
         directed_edges = [("A", "C"), ("D", "C")]
         undirected_edges = [("B", "A"), ("B", "D")]
         pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
