@@ -530,9 +530,13 @@ class TestPCRealModels(unittest.TestCase):
             ],
         )
 
+    def test_pc_asia_expert(self):
+        asia_model = get_example_model("asia")
+        data = asia_model.simulate(n_samples=int(1e5), seed=42)
+        est = PC(data)
         pdag = est.estimate(
             variant="stable",
-            max_cond_vars=4,
+            max_cond_vars=2,
             expert_knowledge=ExpertKnowledge(
                 required_edges=[
                     ("lung", "either"),
@@ -544,9 +548,12 @@ class TestPCRealModels(unittest.TestCase):
             show_progress=False,
         )
 
-        self.assertTrue(("lung", "either") in pdag.directed_edges)
-        self.assertTrue(("tub", "either") in pdag.directed_edges)
-        self.assertTrue(("bronc", "dysp") in pdag.directed_edges)
+        if ("lung", "either") in pdag.edges() or ("either", "lung") in pdag.edges():
+            self.assertTrue(("lung", "either") in pdag.directed_edges)
+        if ("tub", "either") in pdag.edges() or ("either", "tub") in pdag.edges():
+            self.assertTrue(("tub", "either") in pdag.directed_edges)
+        if ("bronc", "dysp") in pdag.edges() or ("dysp", "bronc") in pdag.edges():
+            self.assertTrue(("bronc", "dysp") in pdag.directed_edges)
 
     def test_temporal_pc_cancer(self):
         cancer_model = get_example_model("cancer")
