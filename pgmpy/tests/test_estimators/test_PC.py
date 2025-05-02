@@ -511,7 +511,7 @@ class TestPCRealModels(unittest.TestCase):
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e5), seed=42)
+        data = asia_model.simulate(n_samples=int(1e5), seed=42)
         est = PC(data)
         req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges)
@@ -530,11 +530,27 @@ class TestPCRealModels(unittest.TestCase):
             ],
         )
 
+        pdag = est.estimate(
+            variant="stable",
+            max_cond_vars=4,
+            expert_knowledge=ExpertKnowledge(
+                required_edges=[
+                    ("lung", "either"),
+                    ("tub", "either"),
+                    ("bronc", "dysp"),
+                ]
+            ),
+            n_jobs=2,
+            show_progress=False,
+        )
+
+        self.assertTrue(("lung", "either") in pdag.directed_edges)
+        self.assertTrue(("tub", "either") in pdag.directed_edges)
+        self.assertTrue(("bronc", "dysp") in pdag.directed_edges)
+
     def test_temporal_pc_cancer(self):
         cancer_model = get_example_model("cancer")
-        data = BayesianModelSampling(cancer_model).forward_sample(
-            size=int(5e4), seed=42
-        )
+        data = cancer_model.simulate(n_samples=int(5e4), seed=42)
         est = PC(data)
         background = ExpertKnowledge(  # e.g. we only know "Pollution", "Smoker", "Cancer" can be the causes of others
             temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],

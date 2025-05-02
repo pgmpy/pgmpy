@@ -956,3 +956,23 @@ class TestPDAG(unittest.TestCase):
                 ]
             ),
         )
+
+        pdag_inp = PDAG(
+            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
+        )
+        pdag_inp.apply_meeks_rules(inplace=True)
+        self.assertSetEqual(
+            set(pdag_inp.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
