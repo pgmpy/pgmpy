@@ -1442,6 +1442,35 @@ class PDAG(nx.DiGraph):
         return False
 
     def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
+        """
+        Applies the Meek's rules to orient the undirected edges of a PDAG to return a CPDAG.
+
+        Parameters
+        ----------
+        apply_r4: boolean (default=False)
+            If True, applies Rules 1 - 4 of Meek's rules.
+            If False, applies only Rules 1 - 3.
+
+        inplace: boolean (default=False)
+            If True, the PDAG object is modified inplace, otherwise a new modified copy is returned.
+
+        debug: boolean (default=False)
+            If True, prints the rules being applied to the PDAG.
+
+        Returns
+        -------
+        None or pgmpy.base.PDAG: The modified PDAG object.
+            If inplace=True, returns None and the object itself is modified.
+            If inplace=False, returns a PDAG object.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[('A', 'B')], undirected_ebunch=[('B', 'C'), ('C', 'B')])
+        >>> pdag.apply_meeks_rules()
+        >>> pdag.directed_edges
+        {('A', 'B'), ('B', 'C')}
+        """
         if inplace:
             pdag = self
         else:
