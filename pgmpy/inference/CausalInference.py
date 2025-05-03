@@ -985,6 +985,15 @@ class CausalInference(object):
             raise ValueError(
                 "`evidence` must be a dict of the form: {variable_name: variable_state}"
             )
+        
+        if do:
+            for var in variables:
+                for do_var in do.keys():
+                    if do_var in nx.descendants(self.dag, var):
+                        raise ValueError(
+                            f"Invalid causal query: Variable '{var}' is an ancestor of intervention variable '{do_var}'. "
+                            f"In causal inference, you can only query the effect on descendants of the intervention."
+                        )
 
         from pgmpy.inference import Inference
 
