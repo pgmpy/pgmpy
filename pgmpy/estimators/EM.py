@@ -1,5 +1,6 @@
 from itertools import chain, product
 from math import log
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -61,6 +62,16 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = model.latents
             model = model_bn
+
+        partial_missing_mask = data.isnull().any(axis=0) & ~data.isnull().all(axis=0)
+        partial_missing_cols = partial_missing_mask[partial_missing_mask].index.tolist()
+
+        # Drop rows that have missing values in those partially missing columns
+        if partial_missing_cols:
+            data = data.dropna(subset=partial_missing_cols)
+            warn(
+                "Rows with missing values in partially missing columns were dropped from the dataset."
+            )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
