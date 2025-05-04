@@ -1,0 +1,97 @@
+[project]
+name = "pgmpy"
+version = "1.0.0"
+description = "Python Library for Causal and Probabilistic Modeling using Bayesian Networks"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Ankur Ankan", email = "ankurankan@gmail.com" }
+]
+requires-python = ">=3.10,<3.14"
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Unix",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+# core dependencies of pgmpy
+# this set should be kept minimal!
+dependencies = [
+  "networkx>=3.0",
+  "numpy>=2.0",
+  "scipy>=1.10",
+  "scikit-learn>=1.2",
+  "pandas>=1.5",
+  "torch>=2.5",
+  "statsmodels>=0.13",
+  "tqdm>=4.64",
+  "joblib>=1.2",
+  "opt_einsum>=3.3",
+  "pyro-ppl>=1.9.1"
+]
+
+[project.optional-dependencies]
+tests = [
+  "xdoctest>=0.11.0",
+  "pytest>=3.3.1",
+  "pytest-cov",
+  "pytest-xdist",
+  "coverage>=4.3.4",
+  "mock",
+  "black",
+  "pre-commit"
+]
+optional = [
+  "daft-pgm>=0.1.4",
+  "xgboost>=2.0.3",
+  "litellm==1.61.15",
+  "pyparsing>=3.0"
+]
+all = [
+  "networkx>=3.0",
+  "numpy>=2.0",
+  "scipy>=1.10",
+  "scikit-learn>=1.2",
+  "pandas>=1.5",
+  "torch>=2.5",
+  "statsmodels>=0.13",
+  "tqdm>=4.64",
+  "joblib>=1.2",
+  "opt_einsum>=3.3",
+  "pyro-ppl>=1.9.1",
+  "daft-pgm>=0.1.4",
+  "xgboost>=2.0.3",
+  "litellm==1.61.15",
+  "pyparsing>=3.0"
+]
+
+[project.urls]
+Documentation = "https://www.pgmpy.org"
+Download = "https://pypi.org/project/pgmpy/#files"
+Homepage = "https://www.pgmpy.org"
+Repository = "https://github.com/pgmpy/pgmpy"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[tool.setuptools.package-data]
+pgmpy = [
+  "utils/example_models/*.bif.gz",
+  "utils/example_models/*.json",
+  "utils/example_models/*.txt"
+]
+[tool.setuptools]
+include-package-data = true
+
