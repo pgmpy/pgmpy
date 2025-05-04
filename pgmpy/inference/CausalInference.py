@@ -989,12 +989,12 @@ class CausalInference(object):
         if do:
             for var in variables:
                 for do_var in do.keys():
-                    if do_var in nx.descendants(self.dag, var):
+                    if nx.has_path(self.dag, source=var, target=do_var):
                         raise ValueError(
-                            f"Invalid causal query: Variable '{var}' is an ancestor of intervention variable '{do_var}'. "
-                            f"In causal inference, you can only query the effect on descendants of the intervention."
+                            f"Invalid causal query: There is a directed path from the query variable '{var}' to the intervention variable '{do_var}'. "
+                            f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
                         )
-
+                    
         from pgmpy.inference import Inference
 
         if inference_algo == "ve":
