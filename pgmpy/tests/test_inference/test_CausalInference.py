@@ -1242,42 +1242,85 @@ class TestDoQuery(unittest.TestCase):
             do={"T": 1},
             inference_algo="random",
         )
-    
+
     def test_invalid_causal_query_direct_descendant_intervention(self):
         # Model: R -> S -> W & R -> W. We intervene on S and query R.
-        model = DiscreteBayesianNetwork([('R', 'W'), ('S', 'W'), ('R', 'S')])
-        cpd_rain = TabularCPD(variable='R', variable_card=2, values=[[0.6], [0.4]], state_names={'R': ['True', 'False']})
-        cpd_sprinkler = TabularCPD(variable='S', variable_card=2, values=[[0.1, 0.5], [0.9, 0.5]], evidence=['R'], evidence_card=[2], state_names={'S': ['True', 'False'], 'R': ['True', 'False']})
-        cpd_wet_grass = TabularCPD(variable='W', variable_card=2, values=[[0.99, 0.9, 0.9, 0.01], [0.01, 0.1, 0.1, 0.99]], evidence=['R', 'S'], evidence_card=[2, 2], state_names={'W': ['True', 'False'], 'R': ['True', 'False'], 'S': ['True', 'False']})
+        model = DiscreteBayesianNetwork([("R", "W"), ("S", "W"), ("R", "S")])
+        cpd_rain = TabularCPD(
+            variable="R",
+            variable_card=2,
+            values=[[0.6], [0.4]],
+            state_names={"R": ["True", "False"]},
+        )
+        cpd_sprinkler = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.1, 0.5], [0.9, 0.5]],
+            evidence=["R"],
+            evidence_card=[2],
+            state_names={"S": ["True", "False"], "R": ["True", "False"]},
+        )
+        cpd_wet_grass = TabularCPD(
+            variable="W",
+            variable_card=2,
+            values=[[0.99, 0.9, 0.9, 0.01], [0.01, 0.1, 0.1, 0.99]],
+            evidence=["R", "S"],
+            evidence_card=[2, 2],
+            state_names={
+                "W": ["True", "False"],
+                "R": ["True", "False"],
+                "S": ["True", "False"],
+            },
+        )
         model.add_cpds(cpd_rain, cpd_sprinkler, cpd_wet_grass)
         causal_inference = CausalInference(model)
 
-        evidence = {'W': 'True'}
-        counterfactual_intervention = {'S': 'False'}
+        evidence = {"W": "True"}
+        counterfactual_intervention = {"S": "False"}
         with self.assertRaises(ValueError) as cm:
             causal_inference.query(
-                variables=['R'],
-                evidence=evidence,
-                do=counterfactual_intervention
+                variables=["R"], evidence=evidence, do=counterfactual_intervention
             )
-        self.assertIn("directed path from the query variable 'R' to the intervention variable 'S'", str(cm.exception))
+        self.assertIn(
+            "directed path from the query variable 'R' to the intervention variable 'S'",
+            str(cm.exception),
+        )
 
     def test_invalid_causal_query_nested_descendant(self):
         # Model: A -> B -> C. We intervene on C and query A.
-        model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C')])
-        cpd_a = TabularCPD(variable='A', variable_card=2, values=[[0.6], [0.4]], state_names={'A': ['True', 'False']})
-        cpd_b = TabularCPD(variable='B', variable_card=2, values=[[0.7, 0.3], [0.3, 0.7]], evidence=['A'], evidence_card=[2], state_names={'B': ['True', 'False'], 'A': ['True', 'False']})
-        cpd_c = TabularCPD(variable='C', variable_card=2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=['B'], evidence_card=[2], state_names={'C': ['True', 'False'], 'B': ['True', 'False']})
+        model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.6], [0.4]],
+            state_names={"A": ["True", "False"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.7, 0.3], [0.3, 0.7]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["True", "False"], "A": ["True", "False"]},
+        )
+        cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[[0.9, 0.2], [0.1, 0.8]],
+            evidence=["B"],
+            evidence_card=[2],
+            state_names={"C": ["True", "False"], "B": ["True", "False"]},
+        )
         model.add_cpds(cpd_a, cpd_b, cpd_c)
         causal_inference = CausalInference(model)
 
-        counterfactual_intervention = {'C': 'True'}
+        counterfactual_intervention = {"C": "True"}
         with self.assertRaises(ValueError) as cm:
-            causal_inference.query(
-                variables=['A'],
-                do=counterfactual_intervention
-            )
-        self.assertIn("directed path from the query variable 'A' to the intervention variable 'C'", str(cm.exception))
+            causal_inference.query(variables=["A"], do=counterfactual_intervention)
+        self.assertIn(
+            "directed path from the query variable 'A' to the intervention variable 'C'",
+            str(cm.exception),
+        )
 
 
 class TestEstimator(unittest.TestCase):

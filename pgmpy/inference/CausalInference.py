@@ -994,7 +994,7 @@ class CausalInference(object):
                             f"Invalid causal query: There is a directed path from the query variable '{var}' to the intervention variable '{do_var}'. "
                             f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
                         )
-                    
+
         from pgmpy.inference import Inference
 
         if inference_algo == "ve":
