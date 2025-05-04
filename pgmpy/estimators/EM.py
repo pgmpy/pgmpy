@@ -1,6 +1,5 @@
 from itertools import chain, product
 from math import log
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -11,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -68,9 +68,12 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Drop rows that have missing values in those partially missing columns
         if partial_missing_cols:
+            original_rows = data.shape[0]
             data = data.dropna(subset=partial_missing_cols)
-            warn(
-                "Rows with missing values in partially missing columns were dropped from the dataset."
+            remaining_rows = data.shape[0]
+            rows_dropped = original_rows - remaining_rows
+            logger.warning(
+                f"{rows_dropped} Rows with missing values in partially missing columns were dropped from the dataset."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
