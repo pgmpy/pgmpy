@@ -41,4 +41,78 @@ $$
 
 where $U_n \sim \text{Uniform}(\{0,1\}^n)$ and $\varepsilon$ is negligible.
 
-> Python’s `random` module fails this test. Why? Because it is **stateful** and easily reverse-engineered.
+> Python’s `random` module fails this test. Why? Because it is **stateful** and easily reverse-engineered
+## III. Attack Demonstration: Predicting Python's `random`
+
+```python
+import random
+
+random.seed(42)
+for _ in range(5):
+    print(random.random())
+```
+Given a few output values, one can easily brute-force the seed.
+This shows the PRNG is not forward secure.
+## IV. Measure-Theoretic Analysis
+
+Let \( f : \Omega \to \mathbb{R} \) be a random number generator. In true randomness, \( f \) must be:
+
+- a **measurable function**
+- pushing forward the uniform measure
+- **indistinguishable** from \( U(0,1) \)
+
+But with Python's `random.random()`, the pushforward measure \( f_*(\mu) \)  
+becomes **concentrated** on a low-dimensional subspace due to finite state space.
+## V. Visualization: Histogram Divergence from Uniform
+
+```python
+import matplotlib.pyplot as plt
+import random
+import secrets
+
+# Generate samples
+random.seed(42)
+rand_samples = [random.random() for _ in range(10000)]
+secure_samples = [secrets.randbelow(10000)/10000 for _ in range(10000)]
+
+# Plot histograms
+plt.hist(rand_samples, bins=50, alpha=0.5, label='random.random')
+plt.hist(secure_samples, bins=50, alpha=0.5, label='secrets.randbelow')
+plt.title("Distribution of PRNG outputs")
+plt.legend()
+plt.show()
+```
+
+## VI. Statistical Tests (Basic Entropy Check)
+
+```python
+import math
+from collections import Counter
+
+def shannon_entropy(bits):
+    freq = Counter(bits)
+    total = len(bits)
+    return -sum((count / total) * math.log2(count / total) for count in freq.values())
+
+bits = ''.join(f'{int(x*10000):014b}' for x in rand_sample)
+entropy = shannon_entropy(bits)
+print(f"Entropy per bit: {entropy / len(bits):.5f}")
+```
+## VII. Secure Alternatives
+
+```python
+import secrets
+print(secrets.token_hex(16))  # Cryptographically secure
+```
+## VIII. Summary and Takeaway
+
+> **Measure theory doesn’t lie.** `random.random()` is not measurable from a security perspective.
+
+- Not cryptographically secure  
+- Predictable from outputs  
+- Fails indistinguishability  
+- Unsafe for keys, tokens, salts, sessions  
+
+**Application:**
+- `secrets` for all security-related randomness  
+- `random` only for simulations and games
