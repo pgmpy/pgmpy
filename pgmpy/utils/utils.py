@@ -14,6 +14,7 @@ from pgmpy.global_vars import logger
 
 _logged_keys = set()
 
+
 def get_example_model(model):
     """
     Fetches the specified model from bnlearn repository and returns a
@@ -392,21 +393,23 @@ def preprocess_data(df):
             else:
                 dtypes[col] = "C"
         else:
-            raise ValueError(f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column.")
-    
-    # Compute key based on columns and their dtypes
+            raise ValueError(
+                f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column."
+            )
+
     key = tuple(sorted((col, str(df[col].dtype)) for col in df.columns))
-    
+
     # Log only if this structure hasn't been logged before
     if key not in _logged_keys:
-        logger.info(f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}")
+        logger.info(
+            f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
+        )
         _logged_keys.add(key)
-    
-    # Apply transformations
+
     for col in df.columns:
         if pd.api.types.is_integer_dtype(df[col]):
             df[col] = df[col].astype("int")
         elif pd.api.types.is_object_dtype(df[col]):
             df[col] = df[col].astype("category")
-    
+
     return (df, dtypes)
