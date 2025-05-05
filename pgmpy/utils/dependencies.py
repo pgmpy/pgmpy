@@ -10,7 +10,6 @@ Modifications may have been made from the original source.
 See the LICENSE file in the root of this repository for the full BSD-3-Clause license text.
 """
 
-
 import sys
 import warnings
 from functools import lru_cache
