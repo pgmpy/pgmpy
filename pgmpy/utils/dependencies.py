@@ -1,4 +1,15 @@
-"""Utility to check soft dependency imports, and raise warnings or errors."""
+"""Utility to check soft dependency imports, and raise warnings or errors.
+
+This file includes code adapted from the sktime project
+(https://github.com/sktime/sktime), originally licensed under the BSD 3-Clause License.
+
+Original authors: Franz Kiraly (fkiraly), Markus Löning (mloning)
+Copyright (c) 2019 - present, The sktime developers. All rights reserved.
+
+Modifications may have been made from the original source.
+See the LICENSE file in the root of this repository for the full BSD-3-Clause license text.
+"""
+
 
 import sys
 import warnings
