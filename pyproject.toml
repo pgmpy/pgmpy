@@ -87,4 +87,11 @@ build-backend = "setuptools.build_meta"
 exclude = ["tests"]
 
 [tool.setuptools.package-data]
-pgmpy = ["utils/example_models/*"]
+pgmpy = [
+  "utils/example_models/*.bif.gz",
+  "utils/example_models/*.json",
+  "utils/example_models/*.txt"
+]
+[tool.setuptools]
+include-package-data = true
+
