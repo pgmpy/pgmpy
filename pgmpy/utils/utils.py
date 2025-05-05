@@ -12,6 +12,7 @@ except:
 
 from pgmpy.global_vars import logger
 
+_logged_keys = set()
 
 def get_example_model(model):
     """
@@ -381,25 +382,31 @@ def preprocess_data(df):
     df = df.copy()
     dtypes = {}
     for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
-            dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
+        if pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
         elif pd.api.types.is_object_dtype(df[col]):
             dtypes[col] = "C"
-            df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
             if df[col].dtype.ordered:
                 dtypes[col] = "O"
             else:
                 dtypes[col] = "C"
         else:
-            raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column."
-            )
-
-    logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
-    )
+            raise ValueError(f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column.")
+    
+    # Compute key based on columns and their dtypes
+    key = tuple(sorted((col, str(df[col].dtype)) for col in df.columns))
+    
+    # Log only if this structure hasn't been logged before
+    if key not in _logged_keys:
+        logger.info(f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}")
+        _logged_keys.add(key)
+    
+    # Apply transformations
+    for col in df.columns:
+        if pd.api.types.is_integer_dtype(df[col]):
+            df[col] = df[col].astype("int")
+        elif pd.api.types.is_object_dtype(df[col]):
+            df[col] = df[col].astype("category")
+    
     return (df, dtypes)
