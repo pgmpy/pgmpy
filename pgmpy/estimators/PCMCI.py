@@ -288,7 +288,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         
         return graph, separating_sets
 
-    def pc_orig(self, graph, variables, data, ci_test, seperating_sets,
+    def _run_pc_orig(self, graph, variables, data, ci_test, seperating_sets,
                 lim_neighbors, significance_level, expert_knowledge, **kwargs):
         """
         Run the original PC algorithm for time series data.
@@ -296,7 +296,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         # Implement the original PC algorithm
         pass
 
-    def pc_stable(self, graph, variables, data, ci_test, seperating_sets,
+    def _run_pc_stable(self, graph, variables, data, ci_test, seperating_sets,
                 lim_neighbors, significance_level, expert_knowledge, **kwargs):
         """
         Run the stable PC algorithm for time series data.
@@ -304,7 +304,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         # Implement the stable PC algorithm
         pass 
 
-    def pc_parallel(self, graph, variables, data, ci_test, seperating_sets,
+    def _run_pc_parallel(self, graph, variables, data, ci_test, seperating_sets,
                 lim_neighbors, significance_level, expert_knowledge, n_jobs, **kwargs):
         """
         Run the parallel PC algorithm for time series data.
@@ -349,7 +349,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         separating_set_v.discard(u)
 
         if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[u])
+            max_order = min(temporal_ordering[u], temporal_ordering[v])
             for neigh in list(separating_set_u):
                 if temporal_ordering[neigh] > max_order:
                     separating_set_u.discard(neigh)

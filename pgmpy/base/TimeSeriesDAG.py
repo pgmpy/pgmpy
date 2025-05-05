@@ -51,9 +51,9 @@ class TimeSeriesDAG(DAG):
         """
 
         # check if u anv are valid nodes
-        if not isinstance(u, tuple) and len(u) == 2 and isinstance(u[1], int):
+        if not (isinstance(u, tuple) and len(u) == 2 and isinstance(u[1], int)):
             raise ValueError("Node u should be a tuple (variable, lag).")
-        if not isinstance(v, tuple) and len(v) == 2 and isinstance(v[1], int):
+        if not (isinstance(v, tuple) and len(v) == 2 and isinstance(v[1], int)):
             raise ValueError("Node v should be a tuple (variable, lag).")
         
         # validate the temporal relationship
