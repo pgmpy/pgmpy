@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
+from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
@@ -12,6 +13,7 @@ from pgmpy.models import (
     DiscreteMarkovNetwork,
     FactorGraph,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 
 
@@ -1299,3 +1301,20 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
         assert np.allclose(
             messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
         )
+
+
+class TestVariableEliminationLinearGaussian(unittest.TestCase):
+    def setUp(self):
+        self.lgbm = LinearGaussianBayesianNetwork([("X", "Y")])
+        cpd_x = LinearGaussianCPD("X", [1], 0.5)
+        cpd_y = LinearGaussianCPD("Y", [0.1, 2], 1, ["X"])
+        self.lgbm.add_cpds(cpd_x, cpd_y)
+        self.inference = VariableElimination(self.lgbm)
+
+    def test_query_linear_gaussian(self):
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for LinearGaussianBayesianNetwork\\. "
+            "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead\\.",
+        ):
+            self.inference.query(["Y"])

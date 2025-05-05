@@ -25,6 +25,7 @@ from pgmpy.models import (
     JunctionTree,
 )
 from pgmpy.utils import compat_fns
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 class VariableElimination(Inference):
@@ -290,6 +291,12 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
+
+        if isinstance(self.model, LinearGaussianBayesianNetwork):
+            raise NotImplementedError(
+                "Variable Elimination is not supported for LinearGaussianBayesianNetwork. "
+                "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead."
+            )
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
