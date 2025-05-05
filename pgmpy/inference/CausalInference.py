@@ -988,9 +988,9 @@ class CausalInference(object):
 
         if do:
             for var, do_var in product(variables, do):
-                if not nx.has_path(self.dag, source=do_var, target=var):
+                if do_var in nx.descendants(self.dag, var):
                     raise ValueError(
-                        f"Invalid causal query: There is a directed path from the query variable '{var}' to the intervention variable '{do_var}'. "
+                        f"Invalid causal query: There is a direct edge from the query variable '{var}' to the intervention variable '{do_var}'. "
                         f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
                     )
 
