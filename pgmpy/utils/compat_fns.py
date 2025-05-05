@@ -139,7 +139,7 @@ def exp(arr):
 
 def sum(arr):
     if isinstance(arr, np.ndarray):
-        return np.sum(arr)
+        return arr.sum()
     else:
         return torch.sum(arr)
 
