@@ -13,8 +13,7 @@ To install pgmpy from the source code:
 ```
 $ git clone https://github.com/pgmpy/pgmpy
 $ cd pgmpy/
-$ pip install -r requirements.txt
-$ python setup.py install
+$ pip install -e .[tests]
 ```
 
 To run the tests, you can use pytest:
@@ -22,7 +21,13 @@ To run the tests, you can use pytest:
 $ pytest -v pgmpy
 ```
 
-If you face any problems during installation let us know, via issues, mail or at our discord channel.
+We also have a pre-commit [hook](https://github.com/pgmpy/pgmpy/blob/dev/.pre-commit-config.yaml) to test for code formatting before each commit. You can install it by running the following from pgmpy base directory:
+```
+$ pip install pre-commit
+$ pre-commit install
+```
+
+If you face any problems during installation, let us know via issues or at our discord channel.
 
 ### Building Documentation
 We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
