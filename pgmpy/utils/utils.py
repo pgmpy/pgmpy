@@ -3,6 +3,7 @@ import json
 import os
 
 import pandas as pd
+_logged_keys = set()
 
 try:
     from importlib.resources import files
@@ -11,8 +12,6 @@ except:
     from importlib_resources import files
 
 from pgmpy.global_vars import logger
-
-_logged_keys = set()
 
 
 def get_example_model(model):
@@ -383,10 +382,14 @@ def preprocess_data(df):
     df = df.copy()
     dtypes = {}
     for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
+        if pd.api.types.is_integer_dtype(df[col]):
+            df[col] = df[col].astype("int")
+            dtypes[col] = "N"
+        elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
         elif pd.api.types.is_object_dtype(df[col]):
             dtypes[col] = "C"
+            df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
             if df[col].dtype.ordered:
                 dtypes[col] = "O"
