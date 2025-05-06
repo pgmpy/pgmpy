@@ -42,6 +42,28 @@ issue template while creating new issues as it gives us enough information to re
 the problem. You can also refer to github's
 [guide](https://guides.github.com/features/issues/) on how to efficiently use github
 issues.
+## Contributing New Features or Algorithms
+
+If you are contributing a new feature, model, or algorithm, please **follow these essential steps**:
+
+### 1. Open an Issue *Before* You Code
+
+Before starting development:
+- Open a GitHub [issue](https://github.com/pgmpy/pgmpy/issues) clearly describing:
+  - What feature or algorithm you want to add.
+  - Why it is useful and relevant to pgmpy.
+  - A brief overview of how you plan to implement it (API sketch or module idea).
+- Wait for maintainers to review and approve your proposal.
+- This avoids duplicated work and aligns your contribution with the project goals.
+
+> PRs for new features without a prior issue may be closed or delayed.
+
+### 2. Include Relevant Unit Tests
+
+All new features **must be tested**. Your PR will not be accepted without:
+- At least one **unit test** for each new method or functionality.
+- Preferably, **edge case tests** to ensure correctness under various inputs.
+- If the feature affects multiple modules, consider adding **integration tests**.
 
 ### Git and our Branching model
 
