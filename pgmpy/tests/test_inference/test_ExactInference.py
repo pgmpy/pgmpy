@@ -47,6 +47,18 @@ class TestVariableElimination(unittest.TestCase):
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
+    def test_query_raises_for_empty_variables(self):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[0.5], [0.5]])
+        cpd_b = TabularCPD("B", 2, [[0.6, 0.4], [0.4, 0.6]], evidence=["A"], evidence_card=[2])
+        model.add_cpds(cpd_a, cpd_b)
+        infer = VariableElimination(model)
+
+        with self.assertRaises(ValueError) as context:
+            infer.query(variables=[], evidence={"A": 1})
+        
+        self.assertIn("must contain at least one variable", str(context.exception))
+
     def test_query_single_variable(self):
         for order in [
             "greedy",
