@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import DAG, PDAG, TimeSeriesDAG
+from pgmpy.base import TimeSeriesDAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
@@ -39,13 +39,11 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
     def estimate(
         self,
-        variant="parallel",
         ci_test="pearsonr",
         return_type="pdag",
         significance_level=0.05,
         show_progress=True,
         n_jobs=-1,
-        expert_knowledge=None,
         max_cond_vars=5,
         max_time_lag=3,
         **kwargs,
@@ -79,9 +77,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             If 1, no parallel computing is used.
             If -1, all processors are used.
 
-        expert_knowledge : pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm.
-
         return_type : str (one of "ts_dag", "summary_graph", "pdag", "skeleton")
             The type of structure to return.
 
@@ -107,8 +102,8 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         [(('X', 1), ('Y', 0)), (('Y', 1), ('Y', 0))]
         """
 
-        if expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge()
+        # if expert_knowledge is None:
+        #     expert_knowledge = ExpertKnowledge()
 
         # get the approproate CI test
         ci_test_function = get_ci_test(
@@ -125,7 +120,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             significance_level=significance_level,
             show_progress=show_progress,
             n_jobs=n_jobs,
-            expert_knowledge=expert_knowledge,
             max_cond_vars=max_cond_vars,
             **kwargs,
         )
@@ -139,7 +133,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             skeleton,
             separating_sets,
             max_time_lag=max_time_lag,
-            expert_knowledge=expert_knowledge,
         )
 
         # Run the MCI tests to further refine the causal links
@@ -149,7 +142,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             significance_level=significance_level,
             show_progress=show_progress,
             n_jobs=n_jobs,
-            expert_knowledge=expert_knowledge,
             max_cond_vars=max_cond_vars,
             **kwargs,
         )
@@ -170,9 +162,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         significance_level=0.05,
         show_progress=True,
         n_jobs=-1,
-        expert_knowledge=None,
         max_cond_vars=5,
-        variant="parallel",
         **kwargs,
     ):
         """
@@ -254,48 +244,17 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
                 for var in time_lagged_variables
             ]
         ):
-            # Implement the PC algorithm with temporal constraints
-            if variant == "orig":
-                self._run_pc_orig(
-                    graph,
-                    time_lagged_variables,
-                    lagged_data,
-                    ci_test,
-                    separating_sets,
-                    lim_neighbors,
-                    significance_level,
-                    expert_knowledge,
-                    **kwargs,
-                )
-            elif variant == "stable":
-                self._run_pc_stable(
-                    graph,
-                    time_lagged_variables,
-                    lagged_data,
-                    ci_test,
-                    separating_sets,
-                    lim_neighbors,
-                    significance_level,
-                    expert_knowledge,
-                    **kwargs,
-                )
-            elif variant == "parallel":
-                self._run_pc_parallel(
-                    graph,
-                    time_lagged_variables,
-                    lagged_data,
-                    ci_test,
-                    separating_sets,
-                    lim_neighbors,
-                    significance_level,
-                    expert_knowledge,
-                    n_jobs,
-                    **kwargs,
-                )
-            else:
-                raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
-                )
+            self._run_pc(
+                graph,
+                time_lagged_variables,
+                lagged_data,
+                ci_test,
+                separating_sets,
+                lim_neighbors,
+                significance_level,
+                # expert_knowledge=expert_knowledge,
+                **kwargs,
+            )
 
             # Increase the conditional set size
             if lim_neighbors >= max_cond_vars:
@@ -315,7 +274,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
         return graph, separating_sets
 
-    def _run_pc_orig(
+    def _run_pc(
         self,
         graph,
         variables,
@@ -324,101 +283,106 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         seperating_sets,
         lim_neighbors,
         significance_level,
-        expert_knowledge,
         **kwargs,
     ):
         """
         Run the original PC algorithm for time series data.
         """
-        # Implement the original PC algorithm
-        pass
+        # Respec the temporal constraints
+        for u, v in list(graph.edges()):
+            u_var, u_lag = u
+            v_var, v_lag = v
 
-    def _run_pc_stable(
-        self,
-        graph,
-        variables,
-        data,
-        ci_test,
-        seperating_sets,
-        lim_neighbors,
-        significance_level,
-        expert_knowledge,
-        **kwargs,
-    ):
-        """
-        Run the stable PC algorithm for time series data.
-        """
-        # Implement the stable PC algorithm
-        pass
-
-    def _run_pc_parallel(
-        self,
-        graph,
-        variables,
-        data,
-        ci_test,
-        seperating_sets,
-        lim_neighbors,
-        significance_level,
-        expert_knowledge,
-        n_jobs,
-        **kwargs,
-    ):
-        """
-        Run the parallel PC algorithm for time series data.
-        """
-        # Implement the parallel PC algorithm
-        pass
+            # find the potential separating sets respecting temporal ordering
+            for sep_set in self._get_potential_sepsets(u, v, graph, lim_neighbors):
+                if ci_test(
+                    u_var,
+                    v_var,
+                    [s[0] for s in sep_set],
+                    data=data,
+                    time_lag_u=u_lag,
+                    time_lag_v=v_lag,
+                    time_lag_sep=[s[1] for s in sep_set],
+                    significance_level=significance_level,
+                    **kwargs,
+                ):
+                    sep_set[frozenset((u, v))] = sep_set
+                    graph.remove_edge(u, v)
+                    break
 
     @staticmethod
-    def _get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
+    def _get_potential_sepsets(self, u, v, graph, lim_neighbors):
         """
-        Return the temporally consistent superset of separating set of u, v.
-
-        The temporal order (if specified) of the superset can only be smaller
-        ("earlier") than the particular node. The neighbors of 'u' satisfying
-        this condition are returned.
-
-        Parameters
-        ----------
-        u: variable
-            The node whose neighbors are being considered for separating set.
-
-        v: variable
-            The node along with u whose separating set is being calculated.
-
-        temporal_ordering: dict
-            The temporal ordering of variables according to prior knowledgee.
-
-        graph: UndirectedGraph
-            The graph where separating sets are being calculated for the edges.
-
-        lim_neighbors: int
-            The maximum number of neighbours (conditioning variables) for u, v.
-
-        Returns
-        --------
-        separating_set: set
-            Set containing the superset of separating set of u, v.
+        Get potential separating sets for nodes u and v, respecting temporal constraints.
         """
-        separating_set_u = set(graph.neighbors(u))
-        separating_set_v = set(graph.neighbors(v))
-        separating_set_u.discard(v)
-        separating_set_v.discard(u)
+        u_var, u_lag = u
+        v_var, v_lag = v
 
-        if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[v])
-            for neigh in list(separating_set_u):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_u.discard(neigh)
+        # Get neighbors of u and v
+        neighbors_u = set(graph.neighbors(u))
+        neighbors_v = set(graph.neighbors(v))
 
-            for neigh in list(separating_set_v):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_v.discard(neigh)
+        # Remove v from neighbors of u and vice versa
+        neighbors_u.discard(v)
+        neighbors_v.discard(u)
 
+        # Apply temporal constraints
+        # - For contemporaneous edges (same time lag), consider neighbors at that time or later
+        # - For time-lagged edges, consider only neighbors that respect causality
+        min_lag = min(u_lag, v_lag)
+
+        valid_neighbors_u = set()
+        for neigh in neighbors_u:
+            neigh_var, neigh_lag = neigh
+            if neigh_lag >= min_lag:  # Only consider nodes at the same time or later
+                valid_neighbors_u.add(neigh)
+
+        valid_neighbors_v = set()
+        for neigh in neighbors_v:
+            neigh_var, neigh_lag = neigh
+            if neigh_lag >= min_lag:  # Only consider nodes at the same time or later
+                valid_neighbors_v.add(neigh)
+
+        # Generate combinations of valid neighbors
         return chain(
-            combinations(separating_set_u, lim_neighbors),
-            combinations(separating_set_v, lim_neighbors),
+            combinations(valid_neighbors_u, lim_neighbors),
+            combinations(valid_neighbors_v, lim_neighbors),
+        )
+
+    def _get_potential_sepsets_from_neighbors(self, u, v, neighbors, lim_neighbors):
+        """
+        Get potential separating sets from precomputed neighbors, respecting temporal constraints.
+        """
+        u_var, u_lag = u
+        v_var, v_lag = v
+
+        # Get neighbors of u and v
+        neighbors_u = set(neighbors[u])
+        neighbors_v = set(neighbors[v])
+
+        # Remove v from neighbors of u and vice versa
+        neighbors_u.discard(v)
+        neighbors_v.discard(u)
+
+        # Apply temporal constraints - same as in _get_potential_sepsets
+        min_lag = min(u_lag, v_lag)
+
+        valid_neighbors_u = set()
+        for neigh in neighbors_u:
+            neigh_var, neigh_lag = neigh
+            if neigh_lag >= min_lag:
+                valid_neighbors_u.add(neigh)
+
+        valid_neighbors_v = set()
+        for neigh in neighbors_v:
+            neigh_var, neigh_lag = neigh
+            if neigh_lag >= min_lag:
+                valid_neighbors_v.add(neigh)
+
+        # Generate combinations of valid neighbors
+        return chain(
+            combinations(valid_neighbors_u, lim_neighbors),
+            combinations(valid_neighbors_v, lim_neighbors),
         )
 
     def _orient_time_series_edges(
@@ -437,9 +401,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
         max_time_lag : int
             Maximum time lag considered.
-
-        expert_knowledge : pgmpy.estimators.ExpertKnowledge, optional
-            Expert knowledge to be used for edge orientation.
 
         Returns
         -------
@@ -491,12 +452,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
                             if not ts_dag.has_edge(Z, X) and not ts_dag.has_edge(Z, Y):
                                 ts_dag.add_edge(X, Z)
                                 ts_dag.add_edge(Y, Z)
-
-        # Apply expert knowledge if provided
-        if expert_knowledge:
-            # Convert expert knowledge edges to time-lagged format if needed
-            # This would require extending ExpertKnowledge to handle time series data
-            pass
 
         # Apply orientation rules (Meek rules) to orient remaining edges
         # This needs careful consideration for time series data
