@@ -213,7 +213,13 @@ class HillClimbSearch(StructureEstimator):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
 
-        score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
+        score, score_c = get_scoring_method(
+            scoring_method,
+            self.data,
+            self.use_cache,
+            _processed_data=self.data,
+            _processed_dtypes=self.dtypes,
+        )
         score_fn = score_c.local_score
 
         # Step 1.2: Check the start_dag

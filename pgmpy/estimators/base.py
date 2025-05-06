@@ -29,12 +29,17 @@ class BaseEstimator(object):
         are taken to be the only possible states.
     """
 
-    def __init__(self, data=None, state_names=None):
-        if data is None:
+    def __init__(
+        self, data=None, state_names=None, _processed_data=None, _processed_dtypes=None
+    ):
+        if _processed_data is not None and _processed_dtypes is not None:
+            self.data = _processed_data
+            self.dtypes = _processed_dtypes
+        elif data is not None:
+            self.data, self.dtypes = preprocess_data(data)
+        else:
             self.data = None
             self.dtypes = None
-        else:
-            self.data, self.dtypes = preprocess_data(data)
 
         # data can be None in the case when learning structure from
         # independence conditions. Look into PC.py.

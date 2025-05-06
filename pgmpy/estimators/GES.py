@@ -152,7 +152,13 @@ class GES(StructureEstimator):
         """
 
         # Step 0: Initial checks and setup for arguments
-        _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
+        _, score_c = get_scoring_method(
+            scoring_method,
+            self.data,
+            self.use_cache,
+            _processed_data=self.data,
+            _processed_dtypes=self.dtypes,
+        )
         score_fn = score_c.local_score
 
         # Step 1: Initialize an empty model.

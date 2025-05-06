@@ -40,7 +40,11 @@ class ExhaustiveSearch(StructureEstimator):
     def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
         _, self.scoring_method = get_scoring_method(
-            scoring_method, self.data, use_cache
+            scoring_method,
+            self.data,
+            use_cache,
+            _processed_data=self.data,
+            _processed_dtypes=self.dtypes,
         )
 
     def all_dags(self, nodes=None):

@@ -10,7 +10,7 @@ from scipy.stats import multivariate_normal
 from pgmpy.estimators import BaseEstimator
 
 
-def get_scoring_method(scoring_method, data, use_cache):
+def get_scoring_method(scoring_method, data, use_cache, **kwargs):
     supported_methods = {
         "k2": K2,
         "bdeu": BDeu,
@@ -46,14 +46,14 @@ def get_scoring_method(scoring_method, data, use_cache):
         )
 
     if isinstance(scoring_method, str):
-        score = supported_methods[scoring_method.lower()](data=data)
+        score = supported_methods[scoring_method.lower()](data=data, **kwargs)
     else:
         score = scoring_method
 
     if use_cache:
         from pgmpy.estimators.ScoreCache import ScoreCache
 
-        score_c = ScoreCache(score, data)
+        score_c = ScoreCache(score, data, **kwargs)
     else:
         score_c = score
 
