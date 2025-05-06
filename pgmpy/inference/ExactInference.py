@@ -299,6 +299,10 @@ class VariableElimination(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+        if not variables:
+            raise ValueError(
+                "The `variables` argument to query() must contain at least one variable."
+            )
 
         # Step 2: If virtual_evidence is provided, modify the network.
         if isinstance(self.model, DiscreteBayesianNetwork) and (
