@@ -44,6 +44,7 @@ class TestClusterGraphCreation(unittest.TestCase):
 class TestClusterGraphFactorOperations(unittest.TestCase):
     def setUp(self):
         self.graph = ClusterGraph()
+
     def test_add_single_factor(self):
         self.graph.add_node(("a", "b"))
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
@@ -54,6 +55,7 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
         self.graph.add_node(("a", "b"))
         phi1 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         self.assertRaises(ValueError, self.graph.add_factors, phi1)
+
     def test_add_factor_with_subset_scope(self):
         """
         Test that a factor whose scope is a strict subset of a cluster node is accepted.

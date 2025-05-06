@@ -154,12 +154,14 @@ class ClusterGraph(UndirectedGraph):
         """
         for factor in factors:
             factor_scope = set(factor.scope())
-            #nodes = [set(node) for node in self.nodes()]
-            found_cluster = any(factor_scope.issubset(set(node)) for node in self.nodes())
-            #if factor_scope not in nodes:
-                #raise ValueError(
-                    #"Factors defined on clusters of variable not" "present in model"
-                #)
+            # nodes = [set(node) for node in self.nodes()]
+            found_cluster = any(
+                factor_scope.issubset(set(node)) for node in self.nodes()
+            )
+            # if factor_scope not in nodes:
+            # raise ValueError(
+            # "Factors defined on clusters of variable not" "present in model"
+            # )
             if not found_cluster:
                 raise ValueError(
                     f"Factor scope {factor.scope()} is not a subset of any cluster in the model."
