@@ -22,6 +22,7 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
 )
 from pgmpy.utils import compat_fns
@@ -292,10 +293,12 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
 
-        if isinstance(self.model, LinearGaussianBayesianNetwork):
+        if isinstance(
+            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
+        ):
             raise NotImplementedError(
-                "Variable Elimination is not supported for LinearGaussianBayesianNetwork. "
-                "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead."
+                f"Variable Elimination is not supported for {self.model.__class__.__name__}."
+                f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
             )
 
         # Step 1: Parameter Checks

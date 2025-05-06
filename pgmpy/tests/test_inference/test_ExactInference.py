@@ -12,6 +12,7 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DiscreteMarkovNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
     LinearGaussianBayesianNetwork,
 )
@@ -1303,18 +1304,27 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
         )
 
 
-class TestVariableEliminationLinearGaussian(unittest.TestCase):
+class TestVariableEliminationLinearGaussianAndFunctionalBayesian(unittest.TestCase):
     def setUp(self):
-        self.lgbm = LinearGaussianBayesianNetwork([("X", "Y")])
-        cpd_x = LinearGaussianCPD("X", [1], 0.5)
-        cpd_y = LinearGaussianCPD("Y", [0.1, 2], 1, ["X"])
-        self.lgbm.add_cpds(cpd_x, cpd_y)
-        self.inference = VariableElimination(self.lgbm)
+        from pgmpy.utils import get_example_model
+
+        self.lgbm = get_example_model("ecoli70")
+        self.fbn = FunctionalBayesianNetwork([("X", "Y")])
 
     def test_query_linear_gaussian(self):
+        inference = VariableElimination(self.lgbm)
         with self.assertRaisesRegex(
             NotImplementedError,
-            "Variable Elimination is not supported for LinearGaussianBayesianNetwork\\. "
-            "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead\\.",
+            "Variable Elimination is not supported for LinearGaussianBayesianNetwork."
+            "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead.",
         ):
-            self.inference.query(["Y"])
+            inference.query(["Y"])
+
+    def test_query_functional_bayesian(self):
+        inference = VariableElimination(self.fbn)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for FunctionalBayesianNetwork."
+            "Please use the 'predict' method of the FunctionalBayesianNetwork class instead.",
+        ):
+            inference.query(["Y"])
