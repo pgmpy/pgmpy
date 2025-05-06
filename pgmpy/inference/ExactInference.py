@@ -304,7 +304,7 @@ class VariableElimination(Inference):
             raise ValueError(
                 "The `variables` argument to query() must contain at least one variable."
             )
-        
+
         # Step 2: If virtual_evidence is provided, modify the network.
         if isinstance(self.model, DiscreteBayesianNetwork) and (
             virtual_evidence is not None
