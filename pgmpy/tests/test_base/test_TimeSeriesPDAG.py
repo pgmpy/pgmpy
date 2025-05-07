@@ -3,6 +3,7 @@ import unittest
 from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 from pgmpy.base.TimeSeriesPDAG import TimeSeriesPDAG
 
+
 class TestTimeSeriesPDAG(unittest.TestCase):
     def setUp(self):
         self.ts_pdag_mix = TimeSeriesPDAG(
