@@ -63,17 +63,27 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.latents = model.latents
             model = model_bn
 
-        partial_missing_mask = data.isnull().any(axis=0) & ~data.isnull().all(axis=0)
-        partial_missing_cols = partial_missing_mask[partial_missing_mask].index.tolist()
+        # Handle fully missing columns
+        full_missing_cols = [col for col in data.columns if data[col].isnull().all()]
+        for col in full_missing_cols:
+            if col not in model.latents:
+                logger.warning(
+                    f"Column '{col}' has all missing values and is not marked as latent. "
+                    "Treating it as a latent variable."
+                )
+                model.latents.add(col)
+
+        data = data.drop(
+            columns=full_missing_cols
+        )  # Drop fully missing columns from the data (now considered latent)
 
         # Drop rows that have missing values in those partially missing columns
-        if partial_missing_cols:
+        if data.isnull().any().any():
             original_rows = data.shape[0]
-            data = data.dropna(subset=partial_missing_cols)
-            remaining_rows = data.shape[0]
-            rows_dropped = original_rows - remaining_rows
+            data = data.dropna()
+            dropped = original_rows - data.shape[0]
             logger.warning(
-                f"{rows_dropped} Rows with missing values in partially missing columns were dropped from the dataset."
+                f"{dropped} Rows with missing values in partially missing columns were dropped from the dataset."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
