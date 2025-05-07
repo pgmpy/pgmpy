@@ -17,7 +17,7 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     Parameters
     ----------
-    model: MarkovNetwork | FactorGraph | JunctionTree
+    model: DiscreteMarkovNetwork | FactorGraph | JunctionTree
         A model to optimize, using Belief Propagation and an estimation method.
 
     data: pandas DataFrame object

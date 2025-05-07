@@ -1007,9 +1007,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
             if phi.values.shape != self.values.shape:
                 return False
-            elif not config.get_compute_backend().allclose(
-                phi.values, self.values, atol=atol
-            ):
+            elif not compat_fns.allclose(phi.values, self.values, atol=atol):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False

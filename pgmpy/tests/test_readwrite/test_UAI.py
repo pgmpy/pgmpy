@@ -5,7 +5,7 @@ import numpy as np
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
@@ -173,7 +173,7 @@ class TestUAIWriter(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 
@@ -193,7 +193,7 @@ class TestUAIWriter(unittest.TestCase):
         self.bayeswriter = UAIWriter(self.bayesmodel)
 
         edges = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.markovmodel = MarkovNetwork(edges)
+        self.markovmodel = DiscreteMarkovNetwork(edges)
         tables = [
             (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
             (
@@ -439,7 +439,7 @@ class TestUAIWriterTorch(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 
@@ -459,7 +459,7 @@ class TestUAIWriterTorch(unittest.TestCase):
         self.bayeswriter = UAIWriter(self.bayesmodel, round_values=4)
 
         edges = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.markovmodel = MarkovNetwork(edges)
+        self.markovmodel = DiscreteMarkovNetwork(edges)
         tables = [
             (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
             (

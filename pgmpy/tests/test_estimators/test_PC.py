@@ -8,7 +8,7 @@ from joblib.externals.loky import get_reusable_executor
 from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
@@ -119,7 +119,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
             # Generate independencies from a model.
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             skel, sep_sets = estimator.estimate(
                 variant=variant,
@@ -164,7 +166,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             frozenset({"D", "B"}): ("A",),
         }
         pdag = PC.orient_colliders(skel, sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
@@ -173,16 +175,17 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),
             set([("B", "A"), ("C", "A")]),
         )
 
         # C - A - B ==> C - A - B
+        skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ("A",)}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
@@ -196,7 +199,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             frozenset({"B", "D"}): ("C",),
         }
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
         )
@@ -205,7 +208,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
         )
@@ -213,7 +216,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
         sep_sets = {frozenset({"A", "C"}): ("B",)}
         pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
-        pdag = PC.apply_orientation_rules(pdag)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),
             set(
@@ -224,143 +227,6 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
                     ("C", "B"),
                     ("A", "D"),
                     ("B", "D"),
-                    ("C", "D"),
-                ]
-            ),
-        )
-
-    def test_pdag_to_cpdag(self):
-        pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C")})
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(
-            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
-        )
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B"), ("D", "C"), ("D", "B")],
-            undirected_ebunch=[("B", "C")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(
-            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("D", "B"), ("B", "C")}
-        )
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C")})
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "C")],
-            undirected_ebunch=[("A", "C")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(
-            set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C"), ("D", "C")}
-        )
-
-        # Examples taken from Perkovi\`c 2017.
-        pdag = PDAG(
-            directed_ebunch=[("V1", "X")],
-            undirected_ebunch=[("X", "V2"), ("V2", "Y"), ("X", "Y")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertEqual(
-            set(cpdag.edges()),
-            {("V1", "X"), ("X", "V2"), ("X", "Y"), ("V2", "Y"), ("Y", "V2")},
-        )
-
-        pdag = PDAG(
-            directed_ebunch=[("Y", "X")],
-            undirected_ebunch=[("V1", "X"), ("X", "V2"), ("V2", "Y")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertEqual(
-            set(cpdag.edges()),
-            {
-                ("X", "V1"),
-                ("Y", "X"),
-                ("X", "V2"),
-                ("V2", "X"),
-                ("V2", "Y"),
-                ("Y", "V2"),
-            },
-        )
-
-        # Exmaples from Bang 2024
-        pdag = PDAG(
-            directed_ebunch=[("B", "D"), ("C", "D")],
-            undirected_ebunch=[("A", "D"), ("A", "C")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertEqual(
-            set(cpdag.edges()), {("B", "D"), ("D", "A"), ("C", "A"), ("C", "D")}
-        )
-
-        pdag = PDAG(
-            directed_ebunch=[("A", "B"), ("C", "B")],
-            undirected_ebunch=[("D", "B"), ("D", "A"), ("D", "C")],
-        )
-        cpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(
-            set(cpdag.edges()),
-            {
-                ("A", "B"),
-                ("C", "B"),
-                ("D", "B"),
-                ("D", "A"),
-                ("A", "D"),
-                ("D", "C"),
-                ("C", "D"),
-            },
-        )
-
-        undirected_edges = [("A", "C"), ("B", "C"), ("D", "C")]
-        directed_edges = [("B", "D"), ("D", "A")]
-
-        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
-        mpdag = PC.apply_orientation_rules(pdag, apply_r4=True)
-        self.assertSetEqual(
-            set(mpdag.edges()),
-            set(
-                [
-                    ("C", "A"),
-                    ("C", "B"),
-                    ("B", "C"),
-                    ("B", "D"),
-                    ("D", "A"),
-                    ("D", "C"),
-                    ("C", "D"),
-                ]
-            ),
-        )
-
-        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
-        pdag = PC.apply_orientation_rules(pdag)
-        self.assertSetEqual(
-            set(pdag.edges()),
-            set(
-                [
-                    ("A", "C"),
-                    ("C", "A"),
-                    ("C", "B"),
-                    ("B", "C"),
-                    ("B", "D"),
-                    ("D", "A"),
-                    ("D", "C"),
                     ("C", "D"),
                 ]
             ),
@@ -381,7 +247,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
             self.assertEqual(model.edges(), expected_edges)
 
-            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
             estimator = PC(independencies=model.get_independencies())
             estimated_model = estimator.estimate(
                 variant="orig",
@@ -510,13 +378,38 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
 
+    def test_search_space(self):
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+        search_space = [
+            ("Age", "Education"),
+            ("Education", "HoursPerWeek"),
+            ("Education", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("Age", "Income"),
+        ]
+
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+        est = PC(adult_data)
+
+        dag = est.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+            enforce_expert_knowledge=True,
+            show_progress=False,
+        )
+        # assert if dag is a subset of search_space
+        for edge in dag.edges():
+            self.assertIn(edge, search_space)
+
     def tearDown(self):
         get_reusable_executor().shutdown(wait=True)
 
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 # Fake dataset no: 1
                 np.random.seed(42)
@@ -586,7 +479,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for ci_test in ["pearsonr", "pillai"]:
+        for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
                 np.random.seed(42)
                 data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
@@ -618,7 +511,7 @@ class TestPCRealModels(unittest.TestCase):
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e5), seed=42)
+        data = asia_model.simulate(n_samples=int(1e5), seed=42)
         est = PC(data)
         req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges)
@@ -637,9 +530,34 @@ class TestPCRealModels(unittest.TestCase):
             ],
         )
 
+    def test_pc_asia_expert(self):
+        asia_model = get_example_model("asia")
+        data = asia_model.simulate(n_samples=int(1e5), seed=42)
+        est = PC(data)
+        pdag = est.estimate(
+            variant="stable",
+            max_cond_vars=2,
+            expert_knowledge=ExpertKnowledge(
+                required_edges=[
+                    ("lung", "either"),
+                    ("tub", "either"),
+                    ("bronc", "dysp"),
+                ]
+            ),
+            n_jobs=2,
+            show_progress=False,
+        )
+
+        if ("lung", "either") in pdag.edges() or ("either", "lung") in pdag.edges():
+            self.assertTrue(("lung", "either") in pdag.directed_edges)
+        if ("tub", "either") in pdag.edges() or ("either", "tub") in pdag.edges():
+            self.assertTrue(("tub", "either") in pdag.directed_edges)
+        if ("bronc", "dysp") in pdag.edges() or ("dysp", "bronc") in pdag.edges():
+            self.assertTrue(("bronc", "dysp") in pdag.directed_edges)
+
     def test_temporal_pc_cancer(self):
-        asia_model = get_example_model("cancer")
-        data = BayesianModelSampling(asia_model).forward_sample(size=int(5e4), seed=42)
+        cancer_model = get_example_model("cancer")
+        data = cancer_model.simulate(n_samples=int(5e4), seed=42)
         est = PC(data)
         background = ExpertKnowledge(  # e.g. we only know "Pollution", "Smoker", "Cancer" can be the causes of others
             temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
@@ -711,6 +629,7 @@ class TestPCRealModels(unittest.TestCase):
 
         model = get_example_model("sachs")
         df = model.simulate(int(1e3))
+
         expert = ExpertKnowledge(temporal_order=temporal_order)
         pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
         self.assertTrue(temporal_forbidden_edges.isdisjoint(set(pdag.edges())))

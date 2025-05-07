@@ -8,13 +8,15 @@ from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork, JunctionTree
+from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
 
 
 class TestMLE(unittest.TestCase):
     def setUp(self):
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latents = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.model_latents = DiscreteBayesianNetwork(
+            [("A", "C"), ("B", "C")], latents=["C"]
+        )
         self.data_latents = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0]})
         self.m2 = JunctionTree()
         self.m2.add_nodes_from([("A", "B")])
@@ -83,7 +85,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
 
     def test_state_names1(self):
-        m = BayesianNetwork([("A", "B")])
+        m = DiscreteBayesianNetwork([("A", "B")])
         d = pd.DataFrame(data={"A": [2, 3, 8, 8, 8], "B": ["X", "O", "X", "O", "X"]})
         cpd_b = TabularCPD(
             "B",
@@ -97,7 +99,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(mle2.estimate_cpd("B"), cpd_b)
 
     def test_state_names2(self):
-        m = BayesianNetwork([("Light?", "Color"), ("Fruit", "Color")])
+        m = DiscreteBayesianNetwork([("Light?", "Color"), ("Fruit", "Color")])
         d = pd.DataFrame(
             data={
                 "Fruit": ["Apple", "Apple", "Apple", "Banana", "Banana"],

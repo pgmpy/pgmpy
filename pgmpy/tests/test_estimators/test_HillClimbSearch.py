@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import K2, ExpertKnowledge, HillClimbSearch
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestHillClimbEstimatorDiscrete(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.score_rand = k2score.local_score
         self.score_structure_prior = k2score.structure_prior_ratio
 
-        self.model1 = BayesianNetwork()
+        self.model1 = DiscreteBayesianNetwork()
         self.model1.add_nodes_from(["A", "B", "C"])
         self.model1_possible_edges = set(
             [(u, v) for u in self.model1.nodes() for v in self.model1.nodes()]
@@ -111,7 +111,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
 
     def test_legal_operations_titanic(self):
-        start_model = BayesianNetwork(
+        start_model = DiscreteBayesianNetwork(
             [("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")]
         )
         all_possible_edges = set(
@@ -183,14 +183,16 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             self.assertAlmostEqual(score, legal_ops_both_ref[op])
 
     def test_estimate_rand(self):
-        est1 = self.est_rand.estimate(show_progress=False)
+        est1 = self.est_rand.estimate(scoring_method="k2", show_progress=False)
         self.assertSetEqual(set(est1.nodes()), set(["A", "B", "C"]))
         self.assertTrue(
             list(est1.edges()) == [("B", "C")] or list(est1.edges()) == [("C", "B")]
         )
 
         est2 = self.est_rand.estimate(
-            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]), show_progress=False
+            scoring_method="k2",
+            start_dag=DiscreteBayesianNetwork([("A", "B"), ("A", "C")]),
+            show_progress=False,
         )
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
@@ -198,22 +200,42 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
 
         expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
         est3 = self.est_rand.estimate(
-            expert_knowledge=expert_knowledge, show_progress=False
+            scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
         )
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
         self.assertSetEqual(
-            set(self.est_titanic2.estimate(show_progress=False).edges()),
+            set(
+                self.est_titanic2.estimate(
+                    scoring_method="k2", show_progress=False
+                ).edges()
+            ),
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
         expert_knowledge = ExpertKnowledge(required_edges=[("Pclass", "Survived")])
+        est_edges = self.est_titanic2.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
+        ).edges()
+        self.assertTrue(("Pclass", "Survived") in est_edges)
+
+        temporal_knowledge = ExpertKnowledge(
+            temporal_order=[["Pclass", "Sex"], ["Survived"]]
+        )
+        est_edges = self.est_titanic2.estimate(
+            expert_knowledge=temporal_knowledge, show_progress=False
+        ).edges()
         self.assertTrue(
-            ("Pclass", "Survived")
-            in self.est_titanic2.estimate(
-                expert_knowledge=expert_knowledge, show_progress=False
-            ).edges()
+            est_edges
+            <= set(
+                [
+                    ("Sex", "Survived"),
+                    ("Sex", "Pclass"),
+                    ("Pclass", "Sex"),
+                    ("Pclass", "Survived"),
+                ]
+            )
         )
 
     def test_no_legal_operation(self):
@@ -232,12 +254,38 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             required_edges=[("A", "B"), ("B", "C")],
             forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
         )
-        best_model = est.estimate(expert_knowledge=expert_knowledge)
+        best_model = est.estimate(
+            scoring_method="k2", expert_knowledge=expert_knowledge
+        )
 
     def test_estimate(self):
         for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
             dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
+
+    def test_search_space(self):
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+        search_space = [
+            ("Age", "Education"),
+            ("Education", "HoursPerWeek"),
+            ("Education", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("Age", "Income"),
+        ]
+
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+        est = HillClimbSearch(adult_data)
+
+        dag = est.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+            show_progress=False,
+        )
+        # assert if dag is a subset of search_space
+        for edge in dag.edges():
+            self.assertIn(edge, search_space)
 
     def tearDown(self):
         del self.rand_data

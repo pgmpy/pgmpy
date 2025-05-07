@@ -7,7 +7,7 @@ import numpy.testing as np_test
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, JunctionTree
 from pgmpy.utils import compat_fns
 
 
@@ -15,7 +15,7 @@ class TestVariableEliminationTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.bayesian_model = BayesianNetwork(
+        self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
@@ -361,7 +361,7 @@ class TestSnowNetworkTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.model = BayesianNetwork(
+        self.model = DiscreteBayesianNetwork(
             [
                 ("Snow", "Risk"),
                 ("Snow", "Traffic"),
@@ -631,7 +631,7 @@ class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.markov_model = MarkovNetwork([("A", "B"), ("A", "C")])
+        self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
         f1 = DiscreteFactor(
             variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2
         )
@@ -658,7 +658,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
         # are under consideration for inference so this should be fine.
-        self.markov_model = MarkovNetwork(
+        self.markov_model = DiscreteMarkovNetwork(
             [
                 ("A", "J"),
                 ("R", "J"),
@@ -855,7 +855,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(2, result_width)
 
     def test_issue_1421(self):
-        model = BayesianNetwork([("X", "Y"), ("Z", "X"), ("W", "Y")])
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("W", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
 
         cpd_x = TabularCPD(
@@ -904,7 +904,7 @@ class TestBeliefPropagation(unittest.TestCase):
         phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
         self.junction_tree.add_factors(phi1, phi2, phi3)
 
-        self.bayesian_model = BayesianNetwork(
+        self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
@@ -1116,7 +1116,7 @@ class TestBeliefPropagation(unittest.TestCase):
         )
 
     def test_issue_1048(self):
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
 
         # Nodes
         parents = ["parent"]

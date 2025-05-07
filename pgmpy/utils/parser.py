@@ -6,7 +6,7 @@ def parse_lavaan(lines):
         raise ImportError(
             e.msg
             + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
-        )
+        ) from None
 
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)
@@ -80,7 +80,7 @@ def parse_dagitty(lines):
         ) > 3:
             l = len(edge_stat)
             start_i = 0
-            while start_i <= l - 1:
+            while start_i < l - 1:
                 # Parse {a -> b -> c}
                 if edge_stat[start_i + 1] in ["->", "<-", "<->"]:
                     end_i = start_i + 2
@@ -149,7 +149,7 @@ def parse_dagitty(lines):
         raise ImportError(
             e.msg
             + ". pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
-        )
+        ) from None
 
     # Step 1: DAGitty Grammar in pyparsing
     # Reference: https://www.dagitty.net/manual-3.x.pdf#page=3.58

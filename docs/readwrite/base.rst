@@ -4,6 +4,7 @@ Reading/Writing to File
 - :doc:`bif`
 - :doc:`uai`
 - :doc:`xmlbif`
+- :doc:`xdsl`
 - :doc:`pomdpx`
 - :doc:`xmlbelief`
 
@@ -14,5 +15,6 @@ Reading/Writing to File
    bif.rst
    uai.rst
    xmlbif.rst
+   xdsl.rst
    pomdpx.rst
    xmlbelief.rst

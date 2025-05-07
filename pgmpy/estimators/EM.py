@@ -7,10 +7,10 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
+from pgmpy.base import DAG
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
-from pgmpy.base import DAG
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -25,7 +25,7 @@ class ExpectationMaximization(ParameterEstimator):
 
     Parameters
     ----------
-    model: A pgmpy.models.BayesianNetwork instance
+    model: A pgmpy.models.DiscreteBayesianNetwork instance
 
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names
@@ -42,22 +42,22 @@ class ExpectationMaximization(ParameterEstimator):
     --------
     >>> import numpy as np
     >>> import pandas as pd
-    >>> from pgmpy.models import BayesianNetwork
+    >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.estimators import ExpectationMaximization
     >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
     ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
     >>> estimator = ExpectationMaximization(model, data)
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, (DAG, BayesianNetwork)):
+        if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
-                "Expectation Maximization is only implemented for DAG or BayesianNetwork"
+                "Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork"
             )
 
         if isinstance(model, DAG):
-            model_bn = BayesianNetwork(model.edges())
+            model_bn = DiscreteBayesianNetwork(model.edges())
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = model.latents
             model = model_bn
@@ -180,12 +180,15 @@ class ExpectationMaximization(ParameterEstimator):
         seed: int
             The random seed to use for generating the intial values.
 
-        init_cpds: dict
-            A dictionary of the form {variable: instance of TabularCPD}
+        init_cpds: dict or str
+            dict: A dictionary of the form {variable: instance of TabularCPD}
             specifying the initial CPD values for the EM optimizer to start
             with. If not specified, CPDs involving latent variables are
             initialized randomly, and CPDs involving only observed variables are
             initialized with their MLE estimates.
+
+            str: `uniform`, all CPDs will be initialized to have a uniform distribution.
+                 `random`, all CPDs will be initialized randomly.
 
         show_progress: boolean (default: True)
             Whether to show a progress bar for iterations.
@@ -199,11 +202,11 @@ class ExpectationMaximization(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
         >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
         ...                       columns=['A', 'C', 'D'])
-        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
+        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
         >>> estimator = EM(model, data)
         >>> estimator.get_parameters(latent_card={'B': 3})
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
@@ -222,6 +225,46 @@ class ExpectationMaximization(ParameterEstimator):
             self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize CPDs.
+        # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
+        if isinstance(init_cpds, str):
+            parents_dict = {
+                var: self.model.get_parents(var) for var in self.model.nodes()
+            }
+            if init_cpds == "random":
+                init_cpds = {
+                    var: TabularCPD.get_random(
+                        variable=var,
+                        evidence=parents_dict[var],
+                        cardinality={
+                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
+                        },
+                        state_names={
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                        },
+                        seed=seed,
+                    )
+                    for var in self.model.nodes()
+                }
+            elif init_cpds == "uniform":
+                init_cpds = {
+                    var: TabularCPD.get_uniform(
+                        variable=var,
+                        evidence=parents_dict[var],
+                        cardinality={
+                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
+                        },
+                        state_names={
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                        },
+                        seed=seed,
+                    )
+                    for var in self.model.nodes()
+                }
+            else:
+                raise ValueError(
+                    f"If `init_cpds` is a string, it must be either 'random' or 'uniform'. Got: {init_cpds}"
+                )
+
         # Step 3.1: Learn the CPDs of variables which don't involve
         #           latent variables using MLE if their init_cpd is
         #           not specified.

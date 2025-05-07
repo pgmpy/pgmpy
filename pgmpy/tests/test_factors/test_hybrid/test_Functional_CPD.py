@@ -17,11 +17,8 @@ class TestFCPD(unittest.TestCase):
         """
         cpd = FunctionalCPD(
             variable="x3",
-            fn=lambda parent_sample: pyro.sample(
-                "x3",
-                dist.Normal(
-                    1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
-                ),
+            fn=lambda parent_sample: dist.Normal(
+                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
             ),
             parents=["x1", "x2"],
         )
@@ -55,11 +52,8 @@ class TestFCPD(unittest.TestCase):
 
         functional_cpd = FunctionalCPD(
             variable="x3",
-            fn=lambda parent_sample: pyro.sample(
-                "x3",
-                dist.Normal(
-                    1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
-                ),
+            fn=lambda parent_sample: dist.Normal(
+                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
             ),
             parents=["x1", "x2"],
         )
@@ -89,9 +83,7 @@ class TestFCPD(unittest.TestCase):
         )
 
     def test_different_distributions(self):
-        exp_cpd = FunctionalCPD(
-            "exponential", lambda _: pyro.sample("x", dist.Exponential(rate=2.0))
-        )
+        exp_cpd = FunctionalCPD("exponential", lambda _: dist.Exponential(rate=2.0))
 
         exp_samples = exp_cpd.sample(n_samples=5000)
         self.assertTrue(np.all(exp_samples >= 0))
@@ -99,9 +91,8 @@ class TestFCPD(unittest.TestCase):
 
         uni_cpd = FunctionalCPD(
             "uniform",
-            lambda parent: pyro.sample(
-                "x",
-                dist.Uniform(low=parent["exponential"], high=parent["exponential"] + 5),
+            lambda parent: dist.Uniform(
+                low=parent["exponential"], high=parent["exponential"] + 5
             ),
             parents=["exponential"],
         )

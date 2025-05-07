@@ -273,7 +273,7 @@ class TestResidualMethod(unittest.TestCase):
         self.model_indep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
         )
-        self.df_indep = self.model_indep.simulate(n=1000, seed=42)
+        self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
         self.df_indep_cont_cont.Z2 = pd.cut(
@@ -325,7 +325,7 @@ class TestResidualMethod(unittest.TestCase):
         self.model_dep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
         )
-        self.df_dep = self.model_dep.simulate(n=1000, seed=42)
+        self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()
         self.df_dep_cont_cont.Z2 = pd.cut(
@@ -478,3 +478,37 @@ class TestResidualMethod(unittest.TestCase):
                 np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
             ).all()
         )
+
+    def test_gcm(self):
+        # Non-conditional tests
+        coef, p_value = gcm(
+            X="X",
+            Y="Y",
+            Z=[],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+        self.assertAlmostEqual(round(coef, 3), 11.934)
+        self.assertAlmostEqual(p_value, 0.0)
+
+        # Conditional tests
+        coef, p_value = gcm(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+
+        self.assertAlmostEqual(round(coef, 3), -1.908)
+        self.assertEqual(round(p_value, 4), 0.0564)
+
+        # Conditional tests
+        coef, p_value = gcm(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
+
+        self.assertAlmostEqual(round(coef, 3), 11.69)
+        self.assertAlmostEqual(p_value, 0.0)

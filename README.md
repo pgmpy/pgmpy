@@ -1,17 +1,21 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="318" height="300"/>
+<div>
+
+<a href="https://www.pgmpy.org"><img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="175" align="left" /></a>
+pgmpy is a Python library for causal and probabilistic modeling using Bayesian Networks and related models. It provides a uniform API for building, learning, and analyzing models such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models(SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and interventional analyses.
 </div>
+
 <br/>
+<br/>
+
 <div align="center">
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
-[![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
 [![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy)
 [![Version](https://img.shields.io/pypi/v/pgmpy?color=blue)](https://pypi.org/project/pgmpy/)
-[![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
+[![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![Python Version](https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue)](https://pypi.org/project/pgmpy/)
 [![License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/pgmpy.svg)](https://pypistats.org/packages/pgmpy)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
-
 
 </div>
 
@@ -24,91 +28,88 @@
 
 </div>
 
-pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from causal inference and probabilistic inference literature to allow users to seamlessly work between them. It implements algorithms for structure learning, causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
+### Key Features
 
-- **Documentation:** https://pgmpy.org/
-- **Installation:** https://pgmpy.org/started/install.html
-- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
-- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
+| Feature | Description |
+|--------|-------------|
+| [**Causal Discovery / Structure Learning**](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
+| [**Causal Validation**](https://pgmpy.org/metrics/metrics.html) | Assess how compatible the causal structure is with the data. |
+| [**Parameter Learning**](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
+| [**Probabilistic Inference**](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | Compute posterior distributions conditioned on observed evidence. |
+| [**Causal Inference**](https://pgmpy.org/examples/Causal%20Inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
+| [**Simulations**](https://github.com/pgmpy/pgmpy/blob/dev/examples/Simulating_Data.ipynb) | Generate synthetic data under specified evidence or interventions. |
 
+### Resources and Links
+- **Example Notebooks:** [Examples](https://github.com/pgmpy/pgmpy/tree/dev/examples)
+- **Tutorial Notebooks:** [Tutorials](https://github.com/pgmpy/pgmpy_notebook)
+- **Blog Posts:** [Medium](https://medium.com/@ankurankan_23083)
+- **Documentation:** [Website](https://pgmpy.org/)
+- **Bug Reports and Feature Requests:** [GitHub Issues](https://github.com/pgmpy/pgmpy/issues)
+- **Questions:** [discord](https://discord.gg/DRkdKaumBs) · [Stack Overflow](https://stackoverflow.com/questions/tagged/pgmpy)
 
-Examples
---------
-- Creating a Bayesian Network: [view](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Structure Learning/Causal Discovery: [view](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Parameter Learning: [view](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Probabilistic Inference: [view](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Causal Inference: [view](https://pgmpy.org/examples/Causal%20Inference.html) | <a target="_blank" href="https://colab.research.google.com/github/https://pgmpy.org/examples/Causal%20Inference.html"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
-- Extending pgmpy: [view](https://pgmpy.org/examples/Extending%20pgmpy.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Extending%20pgmpy.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+## Quickstart
 
-<br/>
+### Installation
+pgmpy is available on both [PyPI](https://pypi.org/project/pgmpy/) and [anaconda](https://anaconda.org/conda-forge/pgmpy). To install from PyPI, use:
 
-- Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
-- Tutorials: https://github.com/pgmpy/pgmpy_notebook/
-
-Citing
-======
-If you use `pgmpy` in your scientific work, please consider citing us:
-
+```bash
+pip install pgmpy
 ```
-Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
-```
+To install from conda-forge, use:
 
-Bibtex:
-```
-@article{Ankan2024,
-  author  = {Ankur Ankan and Johannes Textor},
-  title   = {pgmpy: A Python Toolkit for Bayesian Networks},
-  journal = {Journal of Machine Learning Research},
-  year    = {2024},
-  volume  = {25},
-  number  = {265},
-  pages   = {1--8},
-  url     = {http://jmlr.org/papers/v25/23-0487.html}
-}
+```bash
+conda install conda-forge::pgmpy
 ```
 
-Development
-============
+### Discrete Data
+```python
+from pgmpy.utils import get_example_model
 
-Code
-----
-The latest codebase is available in the `dev` branch of the repository.
+# Load a Discrete Bayesian Network and simulate data.
+discrete_bn = get_example_model('alarm')
+alarm_df = discrete_bn.simulate(n_samples=100)
 
-Building from Source
---------------------
-To install pgmpy from the source code:
+# Learn a network from simulated data.
+from pgmpy.estimators import PC
+dag = PC(data=alarm_df).estimate(ci_test='chi_square', return_type='dag')
+
+# Learn the parameters from the data.
+dag_fitted = dag.fit(alarm_df)
+dag_fitted.get_cpds()
+
+# Drop a column and predict using the learned model.
+evidence_df = alarm_df.drop(columns=['FIO2'], axis=1)
+pred_FIO2 = dag_fitted.predict(evidence_df)
 ```
-$ git clone https://github.com/pgmpy/pgmpy
-$ cd pgmpy/
-$ pip install -r requirements.txt
-$ python setup.py install
+
+### Linear Gaussian Data
+```python
+# Load an example Gaussian Bayesian Network and simulate data
+gaussian_bn = get_example_model('ecoli70')
+ecoli_df = gaussian_bn.simulate(n_samples=100)
+
+# Learn the network from simulated data.
+from pgmpy.estimators import PC
+dag = PC(data=ecoli_df).estimate(ci_test='pearsonr', return_type='dag')
+
+# Learn the parameters from the data.
+from pgmpy.models import LinearGausianBayesianNetwork
+gaussian_bn = LinearGausianBayesianNetwork(dag.edges())
+dag_fitted = gaussian_bn.fit(ecoli_df)
+dag_fitted.get_cpds()
+
+# Drop a column and predict using the learned model.
+evidence_df = ecoli_df.drop(columns=['ftsJ'], axis=1)
+pred_ftsJ = dag_fitted.predict(evidence_df)
 ```
 
-To run the tests, you can use pytest:
-```
-$ pytest -v pgmpy
-```
+## Contributing
 
-If you face any problems during installation let us know, via issues, mail or at our discord channel.
-
-Contributing
-------------
-Please feel free to report any issues on GitHub: https://github.com/pgmpy/pgmpy/issues.
-
-Before opening a pull request, please have a look at our [contributing guide](
-https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md) If you face any
-problems in pull request, feel free to ask them on the mailing list or gitter.
-
-If you would like to implement any new features, please have a discussion about it before starting to work on it.
-If you are looking for some ideas for projects, we a list of **mentored projects** available at: https://github.com/pgmpy/pgmpy/wiki/Mentored-Projects.
-
-Building Documentation
-----------------------
-We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
-
-
-
-License
-=======
-pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
+We welcome all contributions --not just code-- to pgmpy. Please refer out
+[contributing guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
+for more details. We also offer mentorship for new contributors and maintain a
+list of potential [mentored
+projects](https://github.com/pgmpy/pgmpy/wiki/Mentored-Projects). If you are
+interested in contributing to pgmpy, please join our
+[discord](https://discord.gg/DRkdKaumBs) server and introduce yourself. We will
+be happy to help you get started.

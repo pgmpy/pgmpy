@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -165,17 +165,19 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: int
             The seed for the random number generator.
         """
-        rng = np.random.default_rng(seed=seed)
+        # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
+        seed = seed if seed else 42
 
         cpds = []
-        for var in self.nodes():
+        for i, var in enumerate(self.nodes()):
             parents = self.get_parents(var)
             cpds.append(
-                LinearGaussianCPD(
+                LinearGaussianCPD.get_random(
                     variable=var,
-                    beta=rng.normal(loc=loc, scale=scale, size=(len(parents) + 1)),
-                    std=abs(rng.normal(loc=loc, scale=scale)),
                     evidence=parents,
+                    loc=loc,
+                    scale=scale,
+                    seed=(seed + i),
                 )
             )
         if inplace:
@@ -242,13 +244,13 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def simulate(self, n=1000, seed=None):
+    def simulate(self, n_samples=1000, seed=None):
         """
         Simulates data from the given model.
 
         Parameters
         ----------
-        n: int
+        n_samples: int
             The number of samples to draw from the model.
 
         seed: int (default: None)
@@ -268,7 +270,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.simulate(n=500, seed=42)
+        >>> model.simulate(n_samples=500, seed=42)
         """
         if len(self.cpds) != len(self.nodes()):
             raise ValueError(
@@ -279,7 +281,8 @@ class LinearGaussianBayesianNetwork(DAG):
         variables = list(nx.topological_sort(self))
         rng = np.random.default_rng(seed=seed)
         return pd.DataFrame(
-            rng.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
+            rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+            columns=variables,
         )
 
     def check_model(self):
@@ -379,6 +382,8 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
 
+        return self
+
     def predict(self, data, distribution="joint"):
         """
         Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
@@ -398,9 +403,17 @@ class LinearGaussianBayesianNetwork(DAG):
 
         cov: np.array
             The covariance of the conditional joint distribution over the missing variables.
+
         Examples
         --------
-        >>>
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n_samples=5)
+        >>> # Drop a column that we want to predict.
+        >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
+        >>> model.predict(df)
+        (['folK'], array([[0.38194262], [3.06014724], [1.36829103], [0.89197438], [2.98887488]]),
+                   array([[0.13440001]]))
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -515,10 +528,6 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
         <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
         """
-
-        if node_names is None:
-            node_names = list(range(n_nodes))
-
         dag = DAG.get_random(
             n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
         )

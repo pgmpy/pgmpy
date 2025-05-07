@@ -310,7 +310,7 @@ def llm_pairwise_orient(
         raise ImportError(
             e.msg
             + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
-        )
+        ) from None
 
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
@@ -382,7 +382,7 @@ def preprocess_data(df):
     dtypes = {}
     for col in df.columns:
         if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("float")
+            df[col] = df[col].astype("int")
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"

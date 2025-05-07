@@ -1,8 +1,11 @@
-Models
-======
+Supported Models
+================
 
+- :doc:`dag`
+- :doc:`pdag`
 - :doc:`bayesiannetwork`
 - :doc:`gaussianbn`
+- :doc:`functionalbn`
 - :doc:`dbn`
 - :doc:`sem`
 - :doc:`markovnetwork`
@@ -16,8 +19,11 @@ Models
    :maxdepth: 1
    :hidden:
 
+   dag.rst
+   pdag.rst
    bayesiannetwork.rst
    gaussianbn.rst
+   functionalbn.rst
    dbn.rst
    sem.rst
    naive.rst

@@ -7,8 +7,10 @@ import numpy.testing as np_test
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
+from unittest.mock import patch
+from pgmpy.global_vars import logger
 
 TEST_FILE = """<?xml version="1.0"?>
 
@@ -208,6 +210,26 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
     def tearDown(self):
         del self.reader
 
+    def test_make_valid_state_name(self):
+        model = DiscreteBayesianNetwork()
+        writer = XMLBIFWriter(model)
+
+        valid_state = "valid_state"
+        self.assertEqual(writer._make_valid_state_name(valid_state), valid_state)
+
+        with patch.object(logger, "warning") as mock_warning:
+            invalid_state = "invalid-state@123"
+            expected_fixed = "invalid_state_123"
+            result = writer._make_valid_state_name(invalid_state)
+
+            self.assertEqual(result, expected_fixed)
+            mock_warning.assert_called_once()
+            warning_msg = mock_warning.call_args[0][0]
+            self.assertIn(
+                f"State name '{invalid_state}' has been modified to '{expected_fixed}'",
+                warning_msg,
+            )
+
 
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     def setUp(self):
@@ -301,7 +323,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = BayesianNetwork(
+        self.model_stateless = DiscreteBayesianNetwork(
             [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
         )
         self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])
@@ -552,7 +574,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = BayesianNetwork(
+        self.model_stateless = DiscreteBayesianNetwork(
             [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
         )
         self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])

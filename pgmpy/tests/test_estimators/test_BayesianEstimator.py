@@ -5,16 +5,18 @@ import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
 from pgmpy import config
+from pgmpy.base import DAG
 from pgmpy.estimators import BayesianEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
-from pgmpy.base import DAG
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestBayesianEstimator(unittest.TestCase):
     def setUp(self):
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latent = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.model_latent = DiscreteBayesianNetwork(
+            [("A", "C"), ("B", "C")], latents=["C"]
+        )
         self.dag_with_latents = DAG([("A", "B")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
@@ -203,8 +205,10 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latent = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
+        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        self.model_latent = DiscreteBayesianNetwork(
+            [("A", "C"), ("B", "C")], latents=["C"]
+        )
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
