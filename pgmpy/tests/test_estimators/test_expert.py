@@ -123,3 +123,96 @@ class TestExpertInLoop(unittest.TestCase):
         )
         self.assertEqual(orientations, set(dag.edges()))
         self.assertEqual(self.estimator_small.orientations_llm, orientations)
+
+    def test_estimate_with_custom_orientation_function(self):
+        def custom_orient(var1, var2, **kwargs):
+            # Always orient edges from alphabetically first to second
+            if var1 < var2:
+                return (var1, var2)
+            else:
+                return (var2, var1)
+
+        dag = self.estimator_small.estimate(
+            orientation_fn=custom_orient,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+
+        # Check that all edges are oriented from alphabetically lower to higher
+        for edge in dag.edges():
+            self.assertTrue(edge[0] < edge[1])
+
+        # Check that orientations were cached
+        self.assertTrue(len(self.estimator_small.orientations_from_fn) > 0)
+        for edge in self.estimator_small.orientations_from_fn:
+            self.assertTrue(edge[0] < edge[1])
+
+    def test_estimate_with_custom_orientation_function_none_return(self):
+        def custom_orient_with_none(var1, var2, **kwargs):
+            # Return None for any edge involving "Sex"
+            if "Sex" in (var1, var2):
+                return None
+            # Otherwise orient from alphabetically first to second
+            elif var1 < var2:
+                return (var1, var2)
+            else:
+                return (var2, var1)
+
+        dag = self.estimator_small.estimate(
+            orientation_fn=custom_orient_with_none,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+
+        # Check that no edges involve "Sex"
+        for edge in dag.edges():
+            self.assertTrue("Sex" not in edge)
+
+    def test_estimate_with_invalid_orientation_function(self):
+        def invalid_orient(var1, var2, **kwargs):
+            # Return an invalid orientation (not a tuple of the right vars)
+            return ("InvalidVar", var2)
+
+        with self.assertRaises(ValueError):
+            self.estimator_small.estimate(
+                orientation_fn=invalid_orient,
+                pval_threshold=0.1,
+                effect_size_threshold=0.1,
+            )
+
+    def test_estimate_with_orientation_fn_kwargs(self):
+        def orient_with_kwargs(var1, var2, **kwargs):
+            # Use a keyword argument to determine orientation
+            if kwargs.get("reverse_alphabetical", False):
+                if var1 > var2:
+                    return (var1, var2)
+                else:
+                    return (var2, var1)
+            else:
+                if var1 < var2:
+                    return (var1, var2)
+                else:
+                    return (var2, var1)
+
+        # Test with reverse_alphabetical=True
+        dag_reverse = self.estimator_small.estimate(
+            orientation_fn=orient_with_kwargs,
+            reverse_alphabetical=True,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+
+        # Check that all edges are oriented from alphabetically higher to lower
+        for edge in dag_reverse.edges():
+            self.assertTrue(edge[0] > edge[1])
+
+        # Test with default (alphabetical)
+        dag_normal = self.estimator_small.estimate(
+            orientation_fn=orient_with_kwargs,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+        )
+
+        # Check that all edges are oriented from alphabetically lower to higher
+        for edge in dag_normal.edges():
+            self.assertTrue(edge[0] < edge[1])
