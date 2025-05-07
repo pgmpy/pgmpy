@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
-from pgmpy.estimators import PCMCI
+from pgmpy.estimators.PCMCI import PCMCI
 
 
 class TestPCMCIFakeCITest(unittest.TestCase):
