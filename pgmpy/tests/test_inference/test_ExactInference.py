@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from pgmpy.utils import get_example_model
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
@@ -46,6 +47,15 @@ class TestVariableElimination(unittest.TestCase):
 
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
+
+    def test_query_raises_for_empty_variables(self):
+        model = get_example_model("earthquake")
+        infer = VariableElimination(model)
+
+        with self.assertRaises(ValueError) as context:
+            infer.query(variables=[], evidence={"A": 1})
+
+        self.assertIn("must contain at least one variable", str(context.exception))
 
     def test_query_single_variable(self):
         for order in [
