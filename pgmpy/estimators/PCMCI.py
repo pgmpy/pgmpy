@@ -4,8 +4,8 @@ from itertools import chain, combinations, permutations
 
 import networkx as nx
 import pandas as pd
-from tqdm.auto import tqdm
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import TimeSeriesDAG
