@@ -15,7 +15,6 @@ class ExpertInLoop(StructureEstimator):
     def __init__(self, data=None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientations_from_fn = set([])
-        self.orientations_llm = set([])
 
     def test_all(self, dag):
         """
@@ -93,6 +92,7 @@ class ExpertInLoop(StructureEstimator):
             (the names of the two variables) and return a tuple (source, target) representing
             the directed edge from source to target. It can also return None to indicate no edge.
             If None provided, defaults to asking the deafult llm for the orientation.
+            Any additional keyword arguments passed to estimate() will be forwarded to this function.
 
             Built-in functions that can be used:
             - pgmpy.utils.manual_pairwise_orient: Prompts the user to specify the direction
@@ -225,6 +225,13 @@ class ExpertInLoop(StructureEstimator):
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             edge_direction = None
+
+            # Edge orientation logic flow (part of step 3.2):
+            # 1. If pre-defined orientations are provided, use those first
+            # 2. Otherwise, try to use cached orientations if use_cache=True
+            # 3. If no cached orientation, call the orientation_fn and validate result
+            #    - If orientation_fn returns None, blacklist the edge and continue
+            #    - Otherwise, cache the orientation and add the edge to the DAG
 
             if orientations:
                 if (selected_edge.u, selected_edge.v) in orientations:

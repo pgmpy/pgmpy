@@ -180,7 +180,7 @@ class TestExpertInLoop(unittest.TestCase):
                 effect_size_threshold=0.1,
             )
 
-    def test_estimate_with_orientation_fn_kwargs(self):
+    def test_estimate_with_orientation_fn_kwargs_1(self):
         def orient_with_kwargs(var1, var2, **kwargs):
             # Use a keyword argument to determine orientation
             if kwargs.get("reverse_alphabetical", False):
@@ -206,7 +206,20 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
 
-        # Test with default (alphabetical)
+    def test_estimate_with_orientation_fn_kwargs_2(self):
+        def orient_with_kwargs(var1, var2, **kwargs):
+            # Use a keyword argument to determine orientation
+            if kwargs.get("reverse_alphabetical", False):
+                if var1 > var2:
+                    return (var1, var2)
+                else:
+                    return (var2, var1)
+            else:
+                if var1 < var2:
+                    return (var1, var2)
+                else:
+                    return (var2, var1)
+
         dag_normal = self.estimator_small.estimate(
             orientation_fn=orient_with_kwargs,
             pval_threshold=0.1,
