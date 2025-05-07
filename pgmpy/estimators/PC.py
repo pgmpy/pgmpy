@@ -206,15 +206,15 @@ class PC(StructureEstimator):
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
-            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+            pdag = pdag.apply_meeks_rules(apply_r4=True)
 
         elif not enforce_expert_knowledge:
-            pdag = self.apply_orientation_rules(pdag)
+            pdag = pdag.apply_meeks_rules(apply_r4=False)
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
-            pdag = self.apply_orientation_rules(pdag, apply_r4=True)
+            pdag = pdag.apply_meeks_rules(apply_r4=True)
 
         else:
-            pdag = self.apply_orientation_rules(pdag)
+            pdag = pdag.apply_meeks_rules(apply_r4=False)
 
         if self.data is not None:
             pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
@@ -455,24 +455,6 @@ class PC(StructureEstimator):
         )
 
     @staticmethod
-    def _check_incoming_edges(pdag, u, v):
-        "Used for checking whether a new v-structure is getting formed"
-        for predecessor in pdag.predecessors(v):
-            if (
-                not pdag.has_edge(
-                    v, predecessor
-                )  # this ignores bidirected edges of 'v'
-                and not pdag.has_edge(
-                    predecessor, u
-                )  # prevent the case (by returning true) when a new unshielded
-                and not pdag.has_edge(
-                    u, predecessor
-                )  # collider may form at 'v'  i.e. predecessor--> v <--u
-            ):
-                return True
-        return False
-
-    @staticmethod
     def orient_colliders(skeleton, separating_sets, temporal_ordering=dict()):
         """
         Orients the edges that form v-structures in a graph skeleton
@@ -518,12 +500,10 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
         # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for pair in node_pairs:
-            X, Y = pair
+        for X, Y in permutations(sorted(pdag.nodes()), 2):
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
@@ -534,13 +514,13 @@ class PC(StructureEstimator):
                             pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
-        undirected_edges = []
-        directed_edges = []
+        undirected_edges = set()
+        directed_edges = set()
         for u, v in edges:
             if (v, u) in edges:
-                undirected_edges.append((u, v))
+                undirected_edges.add(tuple(sorted((u, v))))
             else:
-                directed_edges.append((u, v))
+                directed_edges.add((u, v))
 
         pdag_oriented = PDAG(
             directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
@@ -548,142 +528,3 @@ class PC(StructureEstimator):
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented
-
-    @staticmethod
-    def apply_orientation_rules(pdag, apply_r4=False):
-        """Orients the edges of a graph skeleton based on information from
-        `separating_sets` to form a DAG pattern (CPDAG/MPDAG).
-
-        Parameters
-        ----------
-        pdag: pgmpy.base.PDAG
-            A  partial DAG produced by orienting v-structures in
-            the skeleton.
-
-        apply_r4: boolean
-            If true, use Rule 4 of Meek's rules to integrate background knowledge into
-            the phase of orienting edges. Defaults to False.
-
-        Returns
-        -------
-        Model after edge orientation: pgmpy.base.DAG
-            An estimate for the DAG pattern of the BN underlying the data. The
-            graph might contain some nodes with both-way edges (X->Y and Y->X).
-            Any completion by (removing one of the both-way edges for each such
-            pair) results in a I-equivalent Bayesian network DAG.
-
-        References
-        ----------
-        Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 4)), columns=list('ABDE'))
-        >>> data['C'] = data['A'] - data['B']
-        >>> data['D'] += data['A']
-        >>> data['E'] += data['C']
-        >>> c = PC(data)
-        >>> pdag = c.orient_colliders(*c.build_skeleton())
-        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed), C--E (not directed)
-        OutEdgeView([('B', 'C'), ('C', 'E'), ('A', 'C'), ('A', 'D'), ('E', 'C'), ('D', 'A')])
-        >>> pdag = c.apply_orientation_rules(pdag)
-        >>> pdag.edges()
-        OutEdgeView([('C', 'E'), ('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
-        """
-
-        node_pairs = list(permutations(sorted(pdag.nodes()), 2))
-
-        progress = True
-        while progress:  # as long as edges can be oriented (removed)
-            num_edges = pdag.number_of_edges()
-
-            # 1) for each X->Z-Y, orient edges to Z->Y
-            # (Explanation in Koller & Friedman PGM, page 88)
-            for pair in node_pairs:
-                X, Y = pair
-                if not pdag.has_edge(X, Y) and not pdag.has_edge(Y, X):
-                    for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
-                        set(pdag.successors(Y)) & set(pdag.predecessors(Y))
-                    ):
-                        if not PC._check_incoming_edges(pdag, Z, Y):
-                            any_directed = False
-                            for path in nx.all_simple_paths(pdag, Y, Z):
-                                is_directed = True
-                                for src, dst in list(zip(path, path[1:])):
-                                    if pdag.has_edge(dst, src):
-                                        is_directed = False
-                                if is_directed:
-                                    any_directed = True
-                            if not any_directed:
-                                pdag.remove_edge(Y, Z)
-
-            # 2) for each X-Y with a directed path from X to Y, orient edges to X->Y
-            for pair in node_pairs:
-                X, Y = pair
-                if pdag.has_edge(Y, X) and pdag.has_edge(X, Y):
-                    for path in nx.all_simple_paths(pdag, X, Y):
-                        is_directed = True
-                        for src, dst in list(zip(path, path[1:])):
-                            if pdag.has_edge(dst, src):
-                                is_directed = False
-                        if is_directed:
-                            pdag.remove_edge(Y, X)
-                            break
-
-            # 3) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
-            for pair in node_pairs:
-                X, Y = pair
-                for Z in (
-                    set(pdag.successors(X))
-                    & set(pdag.predecessors(X))
-                    & set(pdag.successors(Y))
-                    & set(pdag.predecessors(Y))
-                ):
-                    for W in (
-                        (set(pdag.successors(X)) - set(pdag.predecessors(X)))
-                        & (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
-                        & (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))
-                    ):
-                        # if not PC.check_incoming_edges(pdag, W):
-                        pdag.remove_edge(W, Z)
-
-            # This rule (rule 4 in Meek's rules) is only used in the case of a
-            #   knowledge base of required and forbidden edges.
-            # For a comprehensive explanation, check out Meek's original paper
-            # - https://doi.org/10.48550/arXiv.1302.4972
-            if apply_r4 is not False:
-                # 4) for each X-Z-Y with Z-Y->W and Z...W->X, orient edges to Z->X
-                #    the dotted line above represents the possibility of either a
-                #    directed or an undirected edge
-                for pair in node_pairs:
-                    X, Y = pair
-                    for Z in (
-                        set(pdag.successors(X))
-                        & set(pdag.predecessors(X))
-                        & set(pdag.predecessors(Y))
-                        & set(pdag.successors(Y))
-                    ):
-                        for W in (
-                            (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
-                            & (set(pdag.predecessors(Z)) | set(pdag.successors(Z)))
-                            & set(pdag.predecessors(X))
-                        ):
-                            pdag.remove_edge(X, Z)
-
-            progress = num_edges > pdag.number_of_edges()
-
-        edges = set(pdag.edges())
-        undirected_edges = []
-        directed_edges = []
-        for u, v in edges:
-            if (v, u) in edges:
-                undirected_edges.append((u, v))
-            else:
-                directed_edges.append((u, v))
-
-        return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
