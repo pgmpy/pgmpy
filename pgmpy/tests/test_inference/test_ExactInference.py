@@ -5,6 +5,7 @@ import numpy as np
 import numpy.testing as np_test
 from pgmpy.utils import get_example_model
 
+from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
@@ -12,7 +13,9 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DiscreteMarkovNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 
 
@@ -1309,3 +1312,29 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
         assert np.allclose(
             messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
         )
+
+
+class TestVariableEliminationLinearGaussianAndFunctionalBayesian(unittest.TestCase):
+    def setUp(self):
+        from pgmpy.utils import get_example_model
+
+        self.lgbm = get_example_model("ecoli70")
+        self.fbn = FunctionalBayesianNetwork([("X", "Y")])
+
+    def test_query_linear_gaussian(self):
+        inference = VariableElimination(self.lgbm)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for LinearGaussianBayesianNetwork."
+            "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead.",
+        ):
+            inference.query(["Y"])
+
+    def test_query_functional_bayesian(self):
+        inference = VariableElimination(self.fbn)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for FunctionalBayesianNetwork."
+            "Please use the 'predict' method of the FunctionalBayesianNetwork class instead.",
+        ):
+            inference.query(["Y"])
