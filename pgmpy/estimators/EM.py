@@ -63,27 +63,27 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.latents = model.latents
             model = model_bn
 
-        # Handle fully missing columns
-        full_missing_cols = [col for col in data.columns if data[col].isnull().all()]
-        for col in full_missing_cols:
-            if col not in model.latents:
-                logger.warning(
-                    f"Column '{col}' has all missing values and is not marked as latent. "
-                    "Treating it as a latent variable."
-                )
-                model.latents.add(col)
+        # Drop fully missing columns and treat them as latent if not already
+        original_cols = set(data.columns)
+        data = data.dropna(axis=1, how="all")
+        dropped_cols = original_cols - set(data.columns)
+        new_latents = [col for col in dropped_cols if col not in model.latents]
 
-        data = data.drop(
-            columns=full_missing_cols
-        )  # Drop fully missing columns from the data (now considered latent)
-
-        # Drop rows that have missing values in those partially missing columns
-        if data.isnull().any().any():
-            original_rows = data.shape[0]
-            data = data.dropna()
-            dropped = original_rows - data.shape[0]
+        if new_latents:
             logger.warning(
-                f"{dropped} Rows with missing values in partially missing columns were dropped from the dataset."
+                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                "Treating them as latent variables."
+            )
+            model.latents.update(new_latents)
+
+        # Drop rows with any missing values in partially observed columns
+        original_rows_count = data.shape[0]
+        data = data.dropna()
+        dropped_rows_count = original_rows_count - data.shape[0]
+
+        if dropped_rows_count:
+            logger.warning(
+                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
