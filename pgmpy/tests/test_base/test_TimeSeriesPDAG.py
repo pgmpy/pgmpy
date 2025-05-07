@@ -1,7 +1,7 @@
 import unittest
 
-from pgmpy.base import TimeSeriesDAG, TimeSeriesPDAG
-
+from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
+from pgmpy.base.TimeSeriesPDAG import TimeSeriesPDAG
 
 class TestTimeSeriesPDAG(unittest.TestCase):
     def setUp(self):

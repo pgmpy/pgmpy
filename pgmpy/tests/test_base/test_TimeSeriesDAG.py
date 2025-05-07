@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import TimeSeriesDAG
+from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 
 
 class TestTimeSeriesDAGCreation(unittest.TestCase):

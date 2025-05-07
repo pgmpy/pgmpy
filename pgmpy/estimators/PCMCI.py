@@ -107,16 +107,13 @@ class PCMCI(StructureEstimator):
         #     expert_knowledge = ExpertKnowledge()
 
         # get the approproate CI test
-        ci_test_function = get_ci_test(
-            ci_test,
-            full=True,
-            data=self.data,
-            independencies=self.independencies,
+        ci_test = get_ci_test(
+            ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
         # Run the PC algorithm to find the skeleton with time-lagged variables
         skeleton, separating_sets = self._build_time_series_skeleton(
-            ci_test=ci_test_function,
+            ci_test=ci_test,
             max_time_lag=max_time_lag,
             significance_level=significance_level,
             show_progress=show_progress,
@@ -130,7 +127,7 @@ class PCMCI(StructureEstimator):
 
         # orient the edges based on the time order
         # Past cant predict the future
-        ts_dag = self._orient_edges(
+        ts_dag = self._orient_time_series_edges(
             skeleton,
             separating_sets,
             max_time_lag=max_time_lag,
@@ -139,7 +136,7 @@ class PCMCI(StructureEstimator):
         # Run the MCI tests to further refine the causal links
         ts_dag = self._run_mci_tests(
             ts_dag,
-            ci_test=ci_test_function,
+            ci_test=ci_test,
             significance_level=significance_level,
             show_progress=show_progress,
             n_jobs=n_jobs,
@@ -158,7 +155,7 @@ class PCMCI(StructureEstimator):
 
     def _build_time_series_skeleton(
         self,
-        ci_test,
+        ci_test="pearsonr",
         max_time_lag=3,
         significance_level=0.05,
         show_progress=True,
@@ -198,6 +195,7 @@ class PCMCI(StructureEstimator):
         # initialize the structures
         cond_set_size = 0
         separating_sets = {}
+        ci_test = get_ci_test(ci_test, full=True, data=None)
 
         # get the list of variables from the data columns
         vars = list(self.data.columns)
@@ -253,7 +251,6 @@ class PCMCI(StructureEstimator):
                 separating_sets,
                 cond_set_size,
                 significance_level,
-                # expert_knowledge=expert_knowledge,
                 **kwargs,
             )
 
@@ -503,8 +500,9 @@ class PCMCI(StructureEstimator):
         # Create lagged data for mci_tests
         max_time_lag = max(abs(lag) for _, lag in ts_dag.nodes())
         lagged_data = self._create_lagged_data(self.data, max_time_lag)
+        ci_test = get_ci_test(ci_test, full=True, data=None)
 
-        # get all teh edges to test
+        # get all the edges to test
         edges_to_test = list(ts_dag.edges())
 
         if show_progress and config.SHOW_PROGRESS:
@@ -590,6 +588,13 @@ class PCMCI(StructureEstimator):
         should_remove : bool
             True if the edge should be removed, False otherwise.
         """
+
+        ci_test = get_ci_test(
+            ci_test,
+            full=True,
+            data=data,
+            independencies=self.independencies,
+        )
 
         # Get the parents of u and v in the current ts_dag
         parents_u = set(ts_dag.predecessors(u))

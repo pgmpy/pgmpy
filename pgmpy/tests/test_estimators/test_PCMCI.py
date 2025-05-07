@@ -6,6 +6,7 @@ import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.estimators.PCMCI import PCMCI
+from pgmpy.estimators.PCMCI import get_ci_test
 
 
 class TestPCMCIFakeCITest(unittest.TestCase):
@@ -355,18 +356,17 @@ class TestPCMCIMCITest(unittest.TestCase):
         lagged_data = self.estimator._create_lagged_data(self.data, max_lag)
 
         # Check that the lagged data has the correct columns
-        expected_columns = []
+        expected_columns = set()
         for var in ["X", "Y", "Z", "C"]:
-            expected_columns.append(var)  # Original variable
             for lag in range(1, max_lag + 1):
-                expected_columns.append(f"{var}_lag{lag}")  # Lagged variables
+                expected_columns.add((var, lag))
 
-        self.assertEqual(set(lagged_data.columns), set(expected_columns))
+        self.assertEqual(set(lagged_data.columns), expected_columns)
 
         # Check that the lagged values are correct
-        for t in range(max_lag, len(self.data)):
+        for t in range(len(lagged_data)):
             for var in ["X", "Y", "Z", "C"]:
-                for lag in range(1, max_lag + 1):
-                    expected_value = self.data.loc[t - lag, var]
-                    actual_value = lagged_data.loc[t, f"{var}_lag{lag}"]
+                for lag in range(0, max_lag + 1):
+                    expected_value = self.data.loc[t + max_lag - lag, var]
+                    actual_value = lagged_data.loc[t, (var, lag)]
                     self.assertEqual(expected_value, actual_value)
