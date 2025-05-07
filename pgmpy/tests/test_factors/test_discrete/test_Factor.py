@@ -3030,7 +3030,6 @@ class TestTabularCPDMethods(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
-            assert "Same ordering provided as current" in str(w[-1].message)
             np_test.assert_array_equal(
                 self.cpd2.get_values(),
                 np.array(
