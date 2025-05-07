@@ -647,6 +647,16 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set())
         self.assertEqual(pdag.latents, set(["D"]))
 
+    def test_all_neighrors(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.all_neighbors(node="A"), {"B", "C"})
+        self.assertEqual(pdag.all_neighbors(node="B"), {"A", "D"})
+        self.assertEqual(pdag.all_neighbors(node="C"), {"A", "D"})
+        self.assertEqual(pdag.all_neighbors(node="D"), {"B", "C"})
+
     def test_directed_children(self):
         directed_edges = [("A", "C"), ("D", "C")]
         undirected_edges = [("B", "A"), ("B", "D")]

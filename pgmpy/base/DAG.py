@@ -1298,6 +1298,28 @@ class PDAG(nx.DiGraph):
             )
         )
 
+    def all_neighbors(self, node):
+        """
+        Returns a set of all neighbors of a node in the PDAG. This includes both directed and undirected edges.
+
+        Parameters
+        ----------
+        node: any hashable python object
+            The node for which to get the neighboring nodes.
+
+        Returns
+        -------
+        set: A set of neighboring nodes.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[('A', 'C'), ('D', 'C')], undirected_ebunch=[('B', 'A'), ('B', 'D')])
+        >>> pdag.all_neighbors('A')
+        {'B', 'C'}
+        """
+        return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
+
     def directed_children(self, node):
         """
         Returns a set of children of node such that there is a directed edge from `node` to child.
@@ -1480,10 +1502,10 @@ class PDAG(nx.DiGraph):
         while changed:
             changed = False
 
-            # Rule 1: If X → Y – Z and
+            # Rule 1: If X -> Y - Z and
             #            (X not adj Z) and
             #            (adding Y -> Z doesn't create cycle) and
-            #            (adding Y -> Z doesn't create an unshielded collider) ⇒  Y → Z
+            #            (adding Y -> Z doesn't create an unshielded collider) =>  Y → Z
             for y in pdag.nodes():
                 # Select x's such that there are directed edges x -> y.
                 for x in pdag.directed_parents(y):
@@ -1500,7 +1522,7 @@ class PDAG(nx.DiGraph):
                                     f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
                                 )
 
-            # Rule2: If X → Z → Y  and X - Y ⇒  X → Y
+            # Rule 2: If X -> Z -> Y  and X - Y =>  X → Y
             for z in pdag.nodes():
                 xs = pdag.directed_parents(z)
                 ys = pdag.directed_children(z)
@@ -1539,11 +1561,11 @@ class PDAG(nx.DiGraph):
                     for b in pdag.directed_children(c):
                         for d in pdag.directed_parents(c):
                             if b == d or pdag.is_adjacent(b, d):
-                                continue  # b adjacent d ⇒ rule not applicable
+                                continue  # b adjacent d => rule not applicable
 
-                            # find nodes a that are undirected neighbor to b, c, d
+                            # find nodes a that are undirected neighbor to b, d, and directed or undirected neighbor to c
                             cand = set(pdag.undirected_neighbors(b)).intersection(
-                                pdag.undirected_neighbors(c),
+                                pdag.all_neighbors(c),
                                 pdag.undirected_neighbors(d),
                             )
                             for a in cand:
