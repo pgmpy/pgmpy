@@ -3,6 +3,7 @@
 from itertools import chain, combinations, permutations
 
 import networkx as nx
+import pandas as pd
 from tqdm.auto import tqdm
 from joblib import Parallel, delayed
 
@@ -620,3 +621,34 @@ class PCMCI(StructureEstimator):
             significance_level=significance_level,
             **kwargs,
         )
+
+    def _create_lagged_data(self, data, max_lag):
+        """Create a lagged version of the input data upto the maximum lag.
+
+        Paramters
+        ---------
+        data : pd.DataFrame
+            Original Time Series data with columns as variable names and
+            rows as time steps.
+        max_lag : int
+            Maximum lag to include in the lagged data.
+
+        Returns
+        -------
+        lagged_data : pandas.DataFrame
+            A DataFrame where each column corresponds to a (variable, lag) pair and rows are aligned
+            such that time t in the new DataFrame corresponds to variables at time t in original data.
+            NaNs are dropped for the rows with insufficient lag history.
+        """
+        lagged_data = {}
+
+        for lag in range(0, max_lag + 1):
+            lagged_df = data.shift(lag).copy()
+            lagged_df.columns = [(col, lag) for col in data.columns]
+            lagged_data.update(lagged_df.to_dict(orient="series"))
+
+        lagged_df = pd.DataFrame(lagged_data)
+        lagged_df.dropna(inplace=True)
+        lagged_df.reset_index(drop=True, inplace=True)
+
+        return lagged_df
