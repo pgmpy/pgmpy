@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import TimeSeriesDAG
+from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
@@ -103,9 +103,6 @@ class PCMCI(StructureEstimator):
         [(('X', 1), ('Y', 0)), (('Y', 1), ('Y', 0))]
         """
 
-        # if expert_knowledge is None:
-        #     expert_knowledge = ExpertKnowledge()
-
         # get the approproate CI test
         ci_test = get_ci_test(
             ci_test, full=True, data=self.data, independencies=self.independencies
@@ -146,8 +143,6 @@ class PCMCI(StructureEstimator):
 
         if return_type == "ts_dag":
             return ts_dag
-        elif return_type == "summary_graph":
-            return ts_dag.to_summary_graph()
         else:
             raise ValueError(
                 "Invalid return_type. Must be one of 'ts_dag', 'summary_graph', or 'pdag'."
@@ -330,13 +325,13 @@ class PCMCI(StructureEstimator):
 
         valid_neighbors_u = set()
         for neigh in neighbors_u:
-            neigh_var, neigh_lag = neigh
+            _, neigh_lag = neigh
             if neigh_lag >= min_lag:  # Only consider nodes at the same time or later
                 valid_neighbors_u.add(neigh)
 
         valid_neighbors_v = set()
         for neigh in neighbors_v:
-            neigh_var, neigh_lag = neigh
+            _, neigh_lag = neigh
             if neigh_lag >= min_lag:  # Only consider nodes at the same time or later
                 valid_neighbors_v.add(neigh)
 
@@ -350,8 +345,8 @@ class PCMCI(StructureEstimator):
         """
         Get potential separating sets from precomputed neighbors, respecting temporal constraints.
         """
-        u_var, u_lag = u
-        v_var, v_lag = v
+        _, u_lag = u
+        _, v_lag = v
 
         # Get neighbors of u and v
         neighbors_u = set(neighbors[u])
@@ -366,13 +361,13 @@ class PCMCI(StructureEstimator):
 
         valid_neighbors_u = set()
         for neigh in neighbors_u:
-            neigh_var, neigh_lag = neigh
+            _, neigh_lag = neigh
             if neigh_lag >= min_lag:
                 valid_neighbors_u.add(neigh)
 
         valid_neighbors_v = set()
         for neigh in neighbors_v:
-            neigh_var, neigh_lag = neigh
+            _, neigh_lag = neigh
             if neigh_lag >= min_lag:
                 valid_neighbors_v.add(neigh)
 
@@ -500,7 +495,9 @@ class PCMCI(StructureEstimator):
         # Create lagged data for mci_tests
         max_time_lag = max(abs(lag) for _, lag in ts_dag.nodes())
         lagged_data = self._create_lagged_data(self.data, max_time_lag)
-        ci_test = get_ci_test(ci_test, full=True, data=None)
+        ci_test = get_ci_test(
+            ci_test, full=True, data=self.data, independencies=self.independencies
+        )
 
         # get all the edges to test
         edges_to_test = list(ts_dag.edges())
@@ -644,16 +641,21 @@ class PCMCI(StructureEstimator):
             A DataFrame where each column corresponds to a (variable, lag) pair and rows are aligned
             such that time t in the new DataFrame corresponds to variables at time t in original data.
             NaNs are dropped for the rows with insufficient lag history.
+        variable_names : list
+            List of (variable, lag) tuples representing the columns in the lagged data.
         """
         lagged_data = {}
+        variable_names = []  # List to store all variable names
 
         for lag in range(0, max_lag + 1):
             lagged_df = data.shift(lag).copy()
-            lagged_df.columns = [(col, lag) for col in data.columns]
+            var_lag_tuples = [(col, lag) for col in data.columns]
+            lagged_df.columns = var_lag_tuples
             lagged_data.update(lagged_df.to_dict(orient="series"))
+            variable_names.extend(var_lag_tuples)
 
         lagged_df = pd.DataFrame(lagged_data)
         lagged_df.dropna(inplace=True)
         lagged_df.reset_index(drop=True, inplace=True)
 
-        return lagged_df
+        return lagged_df, variable_names

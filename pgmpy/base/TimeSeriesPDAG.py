@@ -3,7 +3,9 @@
 import networkx as nx
 import itertools
 
-from pgmpy.base import DAG, PDAG, TimeSeriesDAG
+from pgmpy.base.DAG import DAG
+from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
+from pgmpy.base.DAG import PDAG
 
 
 class TimeSeriesPDAG(PDAG):
@@ -37,7 +39,15 @@ class TimeSeriesPDAG(PDAG):
     >>> tspdag = TimeSeriesPDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
     """
 
-    def __init__(self, directed_ebunch=None, undirected_ebunch=None, latents=None):
+    def __init__(
+        self,
+        directed_ebunch=None,
+        undirected_ebunch=None,
+        latents=None,
+        num_time_slices=None,
+    ):
+
+        self.num_time_slices = num_time_slices
         # Initialize with empty lists if None is provided
         directed_ebunch = [] if directed_ebunch is None else directed_ebunch
         undirected_ebunch = [] if undirected_ebunch is None else undirected_ebunch

@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from pgmpy.base import DAG
+from pgmpy.base.DAG import DAG
 
 
 class TimeSeriesDAG(DAG):
@@ -27,8 +27,24 @@ class TimeSeriesDAG(DAG):
     >>> dag = TimeSeriesDAG(edges)
     """
 
-    def __init__(self, edges=None):
-        super(TimeSeriesDAG, self).__init__(edges=edges)
+    def __init__(
+        self,
+        ebunch=None,
+        num_time_slices=1,
+        latents=None,
+        lavaan_str=None,
+        dagitty_str=None,
+    ):
+        self.num_time_slices = num_time_slices
+        if latents is None:
+            latents = set()
+        self.latents = set(latents)
+        super().__init__(
+            ebunch=ebunch,
+            latents=self.latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
 
     def add_edge(self, u, v, **kwargs):
         """
