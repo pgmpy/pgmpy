@@ -63,8 +63,8 @@ class TestTimeSeriesDAGCreation(unittest.TestCase):
     #     self.graph.add_temporal_edge("a", "b", time_slice=0)
     #     self.assertIn((("a", 0), ("b", 0)), self.graph.edges())
 
-        # self.graph.add_temporal_edge("a", "b", from_time_slice=0, to_time_slice=1)
-        # self.assertIn((("a", 0), ("b", 1)), self.graph.edges())
+    # self.graph.add_temporal_edge("a", "b", from_time_slice=0, to_time_slice=1)
+    # self.assertIn((("a", 0), ("b", 1)), self.graph.edges())
 
     # def test_add_temporal_edges_from(self):
     #     self.graph = TimeSeriesDAG(num_time_slices=2)
@@ -201,8 +201,8 @@ class TestTimeSeriesDAGCreation(unittest.TestCase):
     #         (("b", 1), ("b", 2)),
     #     }
 
-        # self.assertEqual(set(temporal_model.nodes()), expected_nodes)
-        # self.assertEqual(set(temporal_model.edges()), expected_edges)
+    # self.assertEqual(set(temporal_model.nodes()), expected_nodes)
+    # self.assertEqual(set(temporal_model.edges()), expected_edges)
 
     def tearDown(self):
         del self.graph
