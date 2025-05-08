@@ -6,16 +6,20 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy.base import DAG
+from pgmpy.estimators import PC
 from pgmpy.estimators.CITests import chi_square
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.metrics import (
     SHD,
     correlation_score,
     fisher_c,
     implied_cis,
     log_likelihood_score,
+    self_compatibility_score,
     structure_score,
 )
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
 
@@ -212,3 +216,83 @@ class TestStructuralHammingDistance(unittest.TestCase):
     def test_shd_unequal_graphs(self):
         with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
             SHD(self.dag_4, self.dag_5)
+
+
+class TestStructuralHammingDistance(unittest.TestCase):
+    def setUp(self):
+        self.dag_1 = DiscreteBayesianNetwork([(1, 2)])
+        self.dag_2 = DiscreteBayesianNetwork([(2, 1)])
+
+        self.dag_3 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
+        self.dag_4 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+
+        self.dag_5 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
+
+        self.large_dag_1 = DiscreteBayesianNetwork(
+            [(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)]
+        )
+        self.large_dag_2 = DiscreteBayesianNetwork(
+            [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
+        )
+
+    def test_shd(self):
+        self.assertEqual(SHD(self.dag_1, self.dag_2), 1)
+
+    def test_shd(self):
+        self.assertEqual(SHD(self.dag_3, self.dag_4), 2)
+
+    def test_shd(self):
+        self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
+
+    def test_shd_unequal_graphs(self):
+        with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
+            SHD(self.dag_4, self.dag_5)
+
+
+class TestSelfCompatibility(unittest.TestCase):
+    def setUp(cls):
+        # Build A → B → C with strong CPTs
+        model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD(
+                "B", 2, [[0.8, 0.3], [0.2, 0.7]], evidence=["A"], evidence_card=[2]
+            ),
+            TabularCPD(
+                "C", 2, [[0.9, 0.4], [0.1, 0.6]], evidence=["B"], evidence_card=[2]
+            ),
+        )
+        sampler = BayesianModelSampling(model)
+        # Large dataset for reliable recovery
+        cls.large_data = sampler.forward_sample(size=5000)  # random_state=0)
+        # Small dataset for unstable recovery
+        cls.small_data = cls.large_data.sample(n=100, random_state=1)
+
+    def test_perfect_chain_high_score(self):
+        """On large clean data, score should be ≈ 1.0."""
+        score = self_compatibility_score(
+            PC,
+            self.large_data,
+            num_resamples=10,
+            with_replacement=True,
+            random_state=42,
+        )
+        self.assertGreaterEqual(score, 0.9)
+        self.assertLessEqual(score, 1.0)
+
+    def test_small_sample_lower_score(self):
+        """On small data, score should drop below 1.0 but stay ≥ 0.0."""
+        score = self_compatibility_score(
+            PC, self.small_data, num_resamples=10, with_replacement=True, random_state=0
+        )
+        self.assertGreaterEqual(score, 0.0)
+        self.assertLess(score, 1.0)
+
+    def test_invalid_estimator_raises(self):
+        """Passing a learner without .estimate() must raise AttributeError."""
+
+        class DummyLearner:
+            pass
+
+        with self.assertRaises(AttributeError):
+            self_compatibility_score(DummyLearner, self.large_data)

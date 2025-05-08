@@ -465,3 +465,82 @@ def SHD(true_model, est_model):
     shd = shd + (np.sum((d + d.T) > 0) / 2)
 
     return int(shd)
+
+
+def self_compatibility_score(
+    estimator_class,
+    data: pd.DataFrame,
+    num_resamples: int = 20,
+    with_replacement: bool = True,
+    random_state: int = None,
+) -> float:
+    """
+    Computes the self-compatibility of a structure learner class.
+
+    Parameters
+    ----------
+    estimator_class : class
+        A pgmpy StructureEstimator class (e.g. PC, HillClimbSearch).
+    data : pd.DataFrame
+        Observed data.
+    num_resamples : int
+        Number of bootstrap/subsample runs.
+    with_replacement : bool
+        If True, bootstrap; else subsample.
+    random_state : int or None
+        RNG seed for reproducibility.
+
+    Returns
+    -------
+    float
+        Mean pairwise adjacency‐matrix agreement ∈ [0,1].
+
+    Raises
+    ------
+    AttributeError
+        If `estimator_class` cannot be instantiated on a DataFrame
+        or does not implement `.estimate()`.
+    """
+
+    def _resample_df(df, replace, seed):
+        return df.sample(frac=1.0, replace=replace, random_state=seed).reset_index(
+            drop=True
+        )
+
+    def _adj_agree(g1, g2) -> float:
+        nodes = list(g1.nodes())
+        A1 = np.array([[int(g1.has_edge(u, v)) for v in nodes] for u in nodes])
+        A2 = np.array([[int(g2.has_edge(u, v)) for v in nodes] for u in nodes])
+        return float((A1 == A2).mean())
+
+    if not isinstance(estimator_class, type):
+        raise AttributeError(f"{estimator_class!r} is not a class.")
+
+    learned_graphs = []
+    seed0 = random_state or 0
+
+    for i in range(num_resamples):
+        seed = seed0 + i
+        df_i = _resample_df(data, with_replacement, seed)
+
+        try:
+            learner = estimator_class(df_i)
+        except Exception as e:
+            raise AttributeError(
+                f"Cannot instantiate {estimator_class.__name__}: {e}"
+            ) from e
+
+        if not hasattr(learner, "estimate"):
+            raise AttributeError(f"{estimator_class.__name__}.estimate is not defined.")
+
+        G_i = learner.estimate()
+        learned_graphs.append(G_i)
+
+    # Compute all pairwise adjacency agreements
+    scores = []
+    n = len(learned_graphs)
+    for i in range(n):
+        for j in range(i + 1, n):
+            scores.append(_adj_agree(learned_graphs[i], learned_graphs[j]))
+
+    return float(np.mean(scores)) if scores else 0.0
