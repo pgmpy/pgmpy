@@ -658,4 +658,4 @@ class PCMCI(StructureEstimator):
         lagged_df.dropna(inplace=True)
         lagged_df.reset_index(drop=True, inplace=True)
 
-        return lagged_df, variable_names
+        return lagged_df

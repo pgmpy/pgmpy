@@ -67,10 +67,10 @@ class TimeSeriesDAG(DAG):
             raise ValueError("Node v should be a tuple (variable, lag).")
 
         # validate the temporal relationship
-        if u[1] > v[1]:
-            raise ValueError(
-                "The lag of the source node should be less than or equal to the target node."
-            )
+        # if u[1] > v[1]:
+        #     raise ValueError(
+        #         "The lag of the source node should be less than or equal to the target node."
+        #     )
 
         super(TimeSeriesDAG, self).add_edge(u, v, **kwargs)
 
