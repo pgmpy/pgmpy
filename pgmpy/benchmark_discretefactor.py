@@ -1,4 +1,5 @@
 import os
+
 os.environ["NUMEXPR_MAX_THREADS"] = "1"
 
 import time
@@ -13,6 +14,7 @@ def time_op(name, fn):
     end = time.perf_counter()
     print(f"{name}: {end - start:.6f} sec")
     return result
+
 
 # -----------------------------
 # 1. Microbenchmarks on core ops
