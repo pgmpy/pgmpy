@@ -4,7 +4,7 @@ os.environ["NUMEXPR_MAX_THREADS"] = "1"
 
 import time
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.inference.ExactInference import VariableElimination  # ✅ Correct import
+from pgmpy.inference.ExactInference import VariableElimination
 from pgmpy.utils import get_example_model
 
 
