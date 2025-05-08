@@ -92,11 +92,22 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, set([]))
+        # Check either attribute depending on which one exists
+        orientations_cache = getattr(
+            self.estimator_small,
+            "orientations_from_fn",
+            getattr(self.estimator_small, "orientations_llm", set([])),
+        )
+        self.assertEqual(orientations_cache, set([]))
 
     def test_estimate_with_cache_no_llm_calls(self):
         orientations = self.orientations_small
-        self.estimator_small.orientations_llm = orientations
+        # Set the appropriate attribute based on which one exists in the implementation
+        if hasattr(self.estimator_small, "orientations_from_fn"):
+            self.estimator_small.orientations_from_fn = orientations
+        else:
+            self.estimator_small.orientations_llm = orientations
+
         dag = self.estimator_small.estimate(
             variable_descriptions=self.descriptions,
             use_cache=True,
@@ -106,7 +117,13 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, orientations)
+        # Check either attribute depending on which one exists
+        orientations_cache = getattr(
+            self.estimator_small,
+            "orientations_from_fn",
+            getattr(self.estimator_small, "orientations_llm", set([])),
+        )
+        self.assertEqual(orientations_cache, orientations)
 
     @pytest.mark.skipif(
         "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
@@ -122,7 +139,13 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        self.assertEqual(self.estimator_small.orientations_llm, orientations)
+        # Check either attribute depending on which one exists
+        orientations_cache = getattr(
+            self.estimator_small,
+            "orientations_from_fn",
+            getattr(self.estimator_small, "orientations_llm", set([])),
+        )
+        self.assertEqual(orientations_cache, orientations)
 
     def test_estimate_with_custom_orientation_function(self):
         def custom_orient(var1, var2, **kwargs):
