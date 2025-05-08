@@ -1,11 +1,13 @@
 import os
-
-os.environ["NUMEXPR_MAX_THREADS"] = "1"
-
 import time
+
+import numpy as np
+
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference.ExactInference import VariableElimination
 from pgmpy.utils import get_example_model
+
+# os.environ["NUMEXPR_MAX_THREADS"] = "1"
 
 
 def time_op(name, fn):
@@ -21,22 +23,26 @@ def time_op(name, fn):
 # -----------------------------
 print("\n--- DiscreteFactor micro-benchmarks ---")
 
-f1 = DiscreteFactor(["X"], [2], [0.1, 0.9])
-f2 = DiscreteFactor(["Y"], [2], [0.3, 0.7])
-f3 = DiscreteFactor(["X", "Y"], [2, 2], [0.2, 0.8, 0.6, 0.4])
+f1 = DiscreteFactor([f"X_{i}" for i in range(10)], [2] * 10, np.arange(2**10) / (2**10))
 
-time_op("product", lambda: f1 * f3)
-time_op("reduce", lambda: f3.reduce([("Y", 1)], inplace=False))
-time_op("marginalize", lambda: f3.marginalize(["Y"], inplace=False))
-time_op("normalize", lambda: f3.normalize(inplace=False))
+time_op("product", lambda: f1 * f1)
+time_op("reduce", lambda: f1.reduce([("X_1", 1)], inplace=False))
+time_op("marginalize", lambda: f1.marginalize(["X_3", "X_4"], inplace=False))
 
 # -----------------------------
 # 2. Inference benchmark
 # -----------------------------
 print("\n--- Inference benchmark (Variable Elimination) ---")
 
-model = get_example_model("asia")  # 8-node Bayesian model
+model = get_example_model("munin1")
 infer = VariableElimination(model)
 
 print("Running inference.query...")
-time_op("inference.query", lambda: infer.query(variables=["either"]))
+time_op(
+    "inference.query",
+    lambda: infer.query(variables=["R_APB_QUAL_MUPDUR"], show_progress=False),
+)
+
+print("Simulation Benchmark")
+# Simulation
+time_op("Simulation", lambda: model.simulate(int(1e3), show_progress=False))
