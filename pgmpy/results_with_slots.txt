@@ -1,0 +1,10 @@
+
+--- DiscreteFactor micro-benchmarks ---
+product: 0.000177 sec
+reduce: 0.000013 sec
+marginalize: 0.000155 sec
+normalize: 0.000009 sec
+
+--- Inference benchmark (Variable Elimination) ---
+Running inference.query...
+inference.query: 0.000467 sec
