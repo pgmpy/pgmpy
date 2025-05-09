@@ -387,8 +387,9 @@ class TestVariableElimination(unittest.TestCase):
         """
         model = get_example_model("alarm")
         infer = VariableElimination(model)
-        with self.assertRaisesRegex(ValueError, "Node Z not in graph"):
-            infer.query(variables=["HR"], evidence={"Z": 1})
+        evidence_var = "Z"
+        with self.assertRaisesRegex(ValueError, f"Node {evidence_var} not in graph"):
+            infer.query(variables=["HR"], evidence={evidence_var: 1})
 
 
 class TestSnowNetwork(unittest.TestCase):
