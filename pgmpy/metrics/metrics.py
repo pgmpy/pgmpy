@@ -470,77 +470,121 @@ def SHD(true_model, est_model):
 def self_compatibility_score(
     estimator_class,
     data: pd.DataFrame,
-    num_resamples: int = 20,
-    with_replacement: bool = True,
+    num_subsets: int = 50,
+    subset_fraction: float = 0.8,
     random_state: int = None,
+    **estimator_kwargs,
 ) -> float:
     """
-    Computes the self-compatibility of a structure learner class.
+    Self-compatibility via variable subsampling (Faller et al., AISTATS 2024).
+
+    Estimate the self-compatibility score of a causal discovery algorithm
+    under variable subsampling.
+
+    This metric quantifies the stability of a causal structure learning algorithm
+    (e.g., PC or HillClimbSearch) by measuring how consistently it recovers
+    the same structural dependencies when applied to different random subsets
+    of the observed variables. Unlike traditional stability methods that
+    subsample rows (i.e., datapoints), this score evaluates how graph structures
+    vary when only a subset of the variables (columns) is retained for learning.
+
+    It is particularly useful in scenarios where no ground-truth causal graph is
+    available, offering a model-free way to evaluate the internal consistency of
+    an estimator. The score is computed as the average pairwise agreement
+    (based on overlapping variables) between the adjacency matrices of the
+    learned graphs across multiple such subsets.
+
+    Introduced in:
+    Faller et al. (2024), *Self-compatibility: Evaluating causal discovery without ground truth*, AISTATS.
+
 
     Parameters
     ----------
     estimator_class : class
-        A pgmpy StructureEstimator class (e.g. PC, HillClimbSearch).
-    data : pd.DataFrame
-        Observed data.
-    num_resamples : int
-        Number of bootstrap/subsample runs.
-    with_replacement : bool
-        If True, bootstrap; else subsample.
-    random_state : int or None
-        RNG seed for reproducibility.
+        A pgmpy StructureEstimator (e.g. PC, HillClimbSearch).
+    data : pd.DataFrame, shape (n_samples, n_vars)
+        Observed dataset.
+    num_subsets : int, default=50
+        Number of variable‐subset runs (B).
+    subset_fraction : float in (0,1], default=0.8
+        Fraction α of all variables to include in each subset.
+    random_state : int or None, default=None
+        Random seed for reproducibility.
+    **estimator_kwargs
+        Extra keyword arguments forwarded to `estimator_class(...).estimate()`.
 
     Returns
     -------
     float
-        Mean pairwise adjacency‐matrix agreement ∈ [0,1].
+        Average pairwise adjacency‐agreement over overlapping variable subsets,
+        in [0,1].
 
-    Raises
-    ------
-    AttributeError
-        If `estimator_class` cannot be instantiated on a DataFrame
-        or does not implement `.estimate()`.
+    Examples
+    --------
+    >>> from pgmpy.metrics import self_compatibility_score
+    >>> from pgmpy.estimators import PC
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.sampling import BayesianModelSampling
+    >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+    >>> cpd_a = TabularCPD("A", 2, [[0.5], [0.5]])
+    >>> cpd_b = TabularCPD("B", 2, [[0.5], [0.5]])
+    >>> cpd_c = TabularCPD("C", 2, [[0.9, 0.2, 0.3, 0.1],
+    ...                              [0.1, 0.8, 0.7, 0.9]],
+    ...                    evidence=["A", "B"], evidence_card=[2, 2])
+    >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+    >>> sampler = BayesianModelSampling(model)
+    >>> df = sampler.forward_sample(size=1000)
+    >>> score = self_compatibility_score(PC, df,
+    ...                                  num_subsets=5,
+    ...                                  subset_fraction=0.7,
+    ...                                  random_state=42,
+    ...                                  significance_level=0.05)
+    >>> isinstance(score, float)
+    True
+
+    References
+    ----------
+    [1] Faller, P. M., et al. (2024). *Self-compatibility: Evaluating causal
+        discovery without ground truth.* In AISTATS.
+        arXiv:2307.09552 :contentReference[oaicite:2]{index=2}
     """
+    rng = np.random.RandomState(random_state)
+    variables = list(data.columns)
+    p = len(variables)
+    k = max(2, int(np.floor(subset_fraction * p)))
 
-    def _resample_df(df, replace, seed):
-        return df.sample(frac=1.0, replace=replace, random_state=seed).reset_index(
-            drop=True
-        )
+    subsets = []
+    graphs = []
+    for _ in range(num_subsets):
+        # Sample random subset of variables
+        S = rng.choice(variables, size=k, replace=False).tolist()
+        D_sub = data[S]
 
-    def _adj_agree(g1, g2) -> float:
-        nodes = list(g1.nodes())
-        A1 = np.array([[int(g1.has_edge(u, v)) for v in nodes] for u in nodes])
-        A2 = np.array([[int(g2.has_edge(u, v)) for v in nodes] for u in nodes])
-        return float((A1 == A2).mean())
-
-    if not isinstance(estimator_class, type):
-        raise AttributeError(f"{estimator_class!r} is not a class.")
-
-    learned_graphs = []
-    seed0 = random_state or 0
-
-    for i in range(num_resamples):
-        seed = seed0 + i
-        df_i = _resample_df(data, with_replacement, seed)
-
+        # Instantiate and learn
         try:
-            learner = estimator_class(df_i)
+            learner = estimator_class(D_sub)
         except Exception as e:
             raise AttributeError(
                 f"Cannot instantiate {estimator_class.__name__}: {e}"
             ) from e
-
         if not hasattr(learner, "estimate"):
-            raise AttributeError(f"{estimator_class.__name__}.estimate is not defined.")
+            raise AttributeError(f"{estimator_class.__name__}.estimate not found.")
 
-        G_i = learner.estimate()
-        learned_graphs.append(G_i)
+        # Pass through estimator_kwargs to .estimate()
+        G = learner.estimate(**estimator_kwargs)
 
-    # Compute all pairwise adjacency agreements
-    scores = []
-    n = len(learned_graphs)
-    for i in range(n):
-        for j in range(i + 1, n):
-            scores.append(_adj_agree(learned_graphs[i], learned_graphs[j]))
+        subsets.append(S)
+        graphs.append(G)
 
-    return float(np.mean(scores)) if scores else 0.0
+    # Compute pairwise compatibility over overlaps
+    sims = []
+    for (i, Gi), (j, Gj) in combinations(enumerate(graphs), 2):
+        common = list(set(subsets[i]).intersection(subsets[j]))
+        if len(common) < 2:
+            continue
+        A_i = np.array([[int(Gi.has_edge(u, v)) for v in common] for u in common])
+        A_j = np.array([[int(Gj.has_edge(u, v)) for v in common] for u in common])
+        sims.append((A_i == A_j).mean())
+
+    return float(np.mean(sims)) if sims else 0.0

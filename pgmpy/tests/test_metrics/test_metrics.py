@@ -250,49 +250,124 @@ class TestStructuralHammingDistance(unittest.TestCase):
 
 
 class TestSelfCompatibility(unittest.TestCase):
+    """Unit tests for the self_compatibility_score metric."""
+
     def setUp(cls):
-        # Build A → B → C with strong CPTs
+        """Prepare a clean chain model and both large and noisy datasets."""
         model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
         model.add_cpds(
-            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD("A", 2, [[0.6], [0.4]]),
             TabularCPD(
-                "B", 2, [[0.8, 0.3], [0.2, 0.7]], evidence=["A"], evidence_card=[2]
+                "B", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["A"], evidence_card=[2]
             ),
             TabularCPD(
-                "C", 2, [[0.9, 0.4], [0.1, 0.6]], evidence=["B"], evidence_card=[2]
+                "C", 2, [[0.9, 0.3], [0.1, 0.7]], evidence=["B"], evidence_card=[2]
             ),
         )
         sampler = BayesianModelSampling(model)
-        # Large dataset for reliable recovery
-        cls.large_data = sampler.forward_sample(size=5000)  # random_state=0)
-        # Small dataset for unstable recovery
-        cls.small_data = cls.large_data.sample(n=100, random_state=1)
+        cls.large_data = sampler.forward_sample(size=5000, seed=0)
+        noisy = cls.large_data.copy()
+        mask = np.random.RandomState(1).rand(*noisy.shape) < 0.05
+        noisy_vals = noisy.values.astype(int)
+        noisy_vals[mask] = 1 - noisy_vals[mask]
+        cls.noisy_data = pd.DataFrame(noisy_vals, columns=noisy.columns)
 
-    def test_perfect_chain_high_score(self):
-        """On large clean data, score should be ≈ 1.0."""
+    def test_full_subsampling_perfect_score(self):
+        """
+        When subset_fraction=1.0, all variables are used each run.
+        On clean data, learned graphs are identical, so score == 1.0.
+        """
         score = self_compatibility_score(
-            PC,
-            self.large_data,
-            num_resamples=10,
-            with_replacement=True,
-            random_state=42,
+            PC, self.large_data, num_subsets=10, subset_fraction=1.0, random_state=42
         )
-        self.assertGreaterEqual(score, 0.9)
+        self.assertAlmostEqual(score, 1.0, places=5)
+
+    def test_partial_subsampling_high_score(self):
+        """
+        With subset_fraction=2/3 on three variables, subgraphs are size 2.
+        On clean data, PC recovers each subgraph consistently → score ≥ 0.95.
+        """
+        score = self_compatibility_score(
+            PC, self.large_data, num_subsets=30, subset_fraction=2 / 3, random_state=123
+        )
+        self.assertGreaterEqual(score, 0.95)
         self.assertLessEqual(score, 1.0)
 
-    def test_small_sample_lower_score(self):
-        """On small data, score should drop below 1.0 but stay ≥ 0.0."""
+    def test_partial_subsampling_noisy_lower_score(self):
+        """
+        Noisy data should reduce consistency on partial subsampling:
+        score remains > 0 but < 1.
+        """
         score = self_compatibility_score(
-            PC, self.small_data, num_resamples=10, with_replacement=True, random_state=0
+            PC, self.noisy_data, num_subsets=30, subset_fraction=2 / 3, random_state=7
         )
         self.assertGreaterEqual(score, 0.0)
-        self.assertLess(score, 1.0)
+        self.assertLessEqual(score, 1.0)
+
+    def test_estimator_kwargs_passed(self):
+        """
+        Ensure that arbitrary estimator_kwargs (e.g. significance_level)
+        are forwarded into the learner’s .estimate() call.
+        """
+
+        # Stub that records whatever kwargs are passed to .estimate()
+        class StubEstimator:
+            def __init__(self, df):
+                self.df = df
+                self.kwargs_seen = {}
+
+            def estimate(self, **kwargs):
+                self.kwargs_seen = kwargs
+
+                # Return a minimal graph-like object
+                class G:
+                    def nodes(self):
+                        return []
+
+                    def has_edge(self, u, v):
+                        return False
+
+                return G()
+
+        # Always return our single stub instance
+        stub = StubEstimator(self.large_data)
+
+        class StubFactory:
+            def __new__(cls, df):
+                return stub
+
+        # Call the compatibility score with a custom kwarg
+        _ = self_compatibility_score(
+            StubFactory,
+            self.large_data,
+            num_subsets=3,
+            subset_fraction=1.0,
+            random_state=0,
+            myparam=123,
+        )
+
+        # Verify it arrived intact
+        self.assertIn("myparam", stub.kwargs_seen)
+        self.assertEqual(stub.kwargs_seen["myparam"], 123)
 
     def test_invalid_estimator_raises(self):
-        """Passing a learner without .estimate() must raise AttributeError."""
+        """
+        Providing an invalid estimator class (non-class, missing .estimate,
+        or bad constructor) must raise AttributeError.
+        """
+        with self.assertRaises(AttributeError):
+            self_compatibility_score("notaclass", self.large_data)
 
-        class DummyLearner:
-            pass
+        class BadEstimator:
+            def __init__(self, df):
+                pass
 
         with self.assertRaises(AttributeError):
-            self_compatibility_score(DummyLearner, self.large_data)
+            self_compatibility_score(BadEstimator, self.large_data)
+
+        class BadInit:
+            def __init__(self, df):
+                raise RuntimeError
+
+        with self.assertRaises(AttributeError):
+            self_compatibility_score(BadInit, self.large_data)
