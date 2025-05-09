@@ -1,7 +1,7 @@
 import time
 import tracemalloc
 import sys
-import numpy as np 
+import numpy as np
 from functools import partial
 from timeit import repeat
 import logging
@@ -13,6 +13,8 @@ from pgmpy.utils import get_example_model
 logging.getLogger("pgmpy").setLevel(logging.ERROR)
 
 print("\n=== pgmpy Realistic Benchmark Suite ===\n")
+
+
 # Helper: Non-slotted version
 class BaseFactorNoSlots:
     def __init__(self):
@@ -21,10 +23,12 @@ class BaseFactorNoSlots:
         self.dtype = None
         self.state_names = None
 
+
 class StateNameMixinNoSlots:
     def __init__(self):
         self.name_to_no = None
         self.no_to_name = None
+
 
 class DiscreteFactorNoSlots(BaseFactorNoSlots, StateNameMixinNoSlots):
     def __init__(self, variables, cardinality, values, state_names=None):
@@ -52,19 +56,36 @@ class DiscreteFactorNoSlots(BaseFactorNoSlots, StateNameMixinNoSlots):
         reduced_values = self.values[tuple(slicer)]
         reduced_vars = [v for v, _ in var_vals]
         new_variables = [v for v in self.variables if v not in reduced_vars]
-        new_cardinality = [self.cardinality[i] for i, v in enumerate(self.variables) if v not in reduced_vars]
+        new_cardinality = [
+            self.cardinality[i]
+            for i, v in enumerate(self.variables)
+            if v not in reduced_vars
+        ]
         return DiscreteFactorNoSlots(new_variables, new_cardinality, reduced_values)
 
     def marginalize(self, vars_to_marginalize, inplace=False):
         axes = tuple(self.variables.index(var) for var in vars_to_marginalize)
         marginalized_values = self.values.sum(axis=axes)
         new_variables = [v for v in self.variables if v not in vars_to_marginalize]
-        new_cardinality = [self.cardinality[i] for i, v in enumerate(self.variables) if v not in vars_to_marginalize]
-        return DiscreteFactorNoSlots(new_variables, new_cardinality, marginalized_values)
+        new_cardinality = [
+            self.cardinality[i]
+            for i, v in enumerate(self.variables)
+            if v not in vars_to_marginalize
+        ]
+        return DiscreteFactorNoSlots(
+            new_variables, new_cardinality, marginalized_values
+        )
 
     def __mul__(self, other):
         all_vars = sorted(set(self.variables + other.variables))
-        all_card = [self.cardinality[self.variables.index(v)] if v in self.variables else other.cardinality[other.variables.index(v)] for v in all_vars]
+        all_card = [
+            (
+                self.cardinality[self.variables.index(v)]
+                if v in self.variables
+                else other.cardinality[other.variables.index(v)]
+            )
+            for v in all_vars
+        ]
 
         self_val = self.values
         other_val = other.values
@@ -87,6 +108,7 @@ def benchmark(label, DF):
 
     # 1. Attribute Benchmark
     print("\n--- Attribute Set/Get Benchmark ---")
+
     def get_set_delete(factor):
         factor.values = np.ones((2, 2))
         _ = factor.values
@@ -97,6 +119,7 @@ def benchmark(label, DF):
 
     # 2. Instance Creation + Memory
     print("\n--- DiscreteFactor Instance Creation Benchmark ---")
+
     def benchmark_creation(n=100_000):
         tracemalloc.start()
         start = time.perf_counter()
@@ -106,17 +129,20 @@ def benchmark(label, DF):
         tracemalloc.stop()
         print(f"Creation time: {end - start:.4f} sec")
         print(f"Peak memory: {peak / 1024:.2f} KB")
+
     benchmark_creation()
 
     # 3. Core Ops
     print("\n--- Inference & Factor Ops Benchmark ---")
-    f1 = DF([f"X_{i}" for i in range(10)], [2]*10, np.arange(2**10) / (2**10))
+    f1 = DF([f"X_{i}" for i in range(10)], [2] * 10, np.arange(2**10) / (2**10))
+
     def time_op(label, fn, repeat_count=1):
         start = time.perf_counter()
         for _ in range(repeat_count):
             fn()
         end = time.perf_counter()
         print(f"{label}: {end - start:.6f} sec")
+
     try:
         time_op("product", lambda: f1 * f1)
         time_op("reduce", lambda: f1.reduce([("X_1", 1)], inplace=False))
@@ -129,7 +155,10 @@ def benchmark(label, DF):
         print("\n--- Full Model Simulation ---")
         model = get_example_model("munin1")
         infer = VariableElimination(model)
-        time_op("inference.query", lambda: infer.query(variables=["R_APB_QUAL_MUPDUR"], show_progress=False))
+        time_op(
+            "inference.query",
+            lambda: infer.query(variables=["R_APB_QUAL_MUPDUR"], show_progress=False),
+        )
         time_op("simulate(1000)", lambda: model.simulate(1000, show_progress=False))
 
     # 5. Memory and Attribute Size
@@ -146,8 +175,8 @@ def benchmark(label, DF):
         print(f"Uses __dict__:(slotted)")
         slot_attrs = set()
         for cls in df.__class__.mro():
-            if '__slots__' in cls.__dict__:
-                slots = cls.__dict__['__slots__']
+            if "__slots__" in cls.__dict__:
+                slots = cls.__dict__["__slots__"]
                 if isinstance(slots, str):
                     slot_attrs.add(slots)
                 else:
