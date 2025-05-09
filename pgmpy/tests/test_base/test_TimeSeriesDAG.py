@@ -66,68 +66,6 @@ class TestTimeSeriesDAGCreation(unittest.TestCase):
     # self.graph.add_temporal_edge("a", "b", from_time_slice=0, to_time_slice=1)
     # self.assertIn((("a", 0), ("b", 1)), self.graph.edges())
 
-    # def test_add_temporal_edges_from(self):
-    #     self.graph = TimeSeriesDAG(num_time_slices=2)
-    #     self.graph.add_temporal_edges_from([("a", "b"), ("b", "c")], time_slice=0)
-    #     self.assertIn((("a", 0), ("b", 0)), self.graph.edges())
-    #     self.assertIn((("b", 0), ("c", 0)), self.graph.edges())
-
-    #     self.graph.add_temporal_edges_from(
-    #         [("a", "b"), ("b", "c")], from_time_slice=0, to_time_slice=1
-    #     )
-    #     self.assertIn((("a", 0), ("b", 1)), self.graph.edges())
-    #     self.assertIn((("b", 0), ("c", 1)), self.graph.edges())
-
-    # def test_get_intra_slice_edges(self):
-    #     self.graph = TimeSeriesDAG(
-    #         [
-    #             (("a", 0), ("b", 0)),
-    #             (("b", 0), ("c", 0)),
-    #             (("a", 0), ("a", 1)),
-    #             (("b", 0), ("b", 1)),
-    #         ],
-    #         num_time_slices=2,
-    #     )
-    #     expected = {(("a", 0), ("b", 0)), (("b", 0), ("c", 0))}
-    #     self.assertEqual(set(self.graph.get_intra_slice_edges()), expected)
-
-    # def test_get_inter_slice_edges(self):
-    #     self.graph = TimeSeriesDAG(
-    #         [
-    #             (("a", 0), ("b", 0)),
-    #             (("b", 0), ("c", 0)),
-    #             (("a", 0), ("a", 1)),
-    #             (("b", 0), ("b", 1)),
-    #         ],
-    #         num_time_slices=2,
-    #     )
-    #     expected = {(("a", 0), ("a", 1)), (("b", 0), ("b", 1))}
-    #     self.assertEqual(set(self.graph.get_inter_slice_edges()), expected)
-
-    # def test_get_slice(self):
-    #     self.graph = TimeSeriesDAG(
-    #         [
-    #             (("a", 0), ("b", 0)),
-    #             (("b", 0), ("c", 0)),
-    #             (("a", 1), ("b", 1)),
-    #             (("b", 1), ("c", 1)),
-    #             (("a", 0), ("a", 1)),
-    #             (("b", 0), ("b", 1)),
-    #         ],
-    #         num_time_slices=2,
-    #     )
-    #     slice_0 = self.graph.get_slice(0)
-    #     self.assertEqual(set(slice_0.nodes()), {("a", 0), ("b", 0), ("c", 0)})
-    #     self.assertEqual(
-    #         set(slice_0.edges()), {(("a", 0), ("b", 0)), (("b", 0), ("c", 0))}
-    #     )
-
-    #     slice_1 = self.graph.get_slice(1)
-    #     self.assertEqual(set(slice_1.nodes()), {("a", 1), ("b", 1), ("c", 1)})
-    #     self.assertEqual(
-    #         set(slice_1.edges()), {(("a", 1), ("b", 1)), (("b", 1), ("c", 1))}
-    #     )
-
     # def test_temporal_markov_blanket(self):
     #     self.graph = TimeSeriesDAG(
     #         [
@@ -146,63 +84,6 @@ class TestTimeSeriesDAGCreation(unittest.TestCase):
 
     #     mb_b1 = self.graph.get_temporal_markov_blanket(("b", 1))
     #     self.assertEqual(set(mb_b1), {("a", 1), ("c", 1), ("b", 0)})
-
-    # def test_temporal_induced_graph(self):
-    #     self.graph = TimeSeriesDAG(num_time_slices=3)
-
-    #     self.graph.add_temporal_edges_from([("a", "b"), ("b", "c")], time_slice=0)
-    #     self.graph.add_temporal_edges_from([("a", "b"), ("b", "c")], time_slice=1)
-    #     self.graph.add_temporal_edges_from([("a", "b"), ("b", "c")], time_slice=2)
-
-    #     self.graph.add_temporal_edges_from(
-    #         [("a", "a"), ("b", "b"), ("c", "c")], from_time_slice=0, to_time_slice=1
-    #     )
-    #     self.graph.add_temporal_edges_from(
-    #         [("a", "a"), ("b", "b"), ("c", "c")], from_time_slice=1, to_time_slice=2
-    #     )
-
-    #     two_tbn = self.graph.get_temporal_induced_graph(
-    #         from_time_slice=0, to_time_slice=1
-    #     )
-
-    #     expected_nodes = {("a", 0), ("b", 0), ("c", 0), ("a", 1), ("b", 1), ("c", 1)}
-    #     expected_edges = {
-    #         (("a", 0), ("b", 0)),
-    #         (("b", 0), ("c", 0)),
-    #         (("a", 1), ("b", 1)),
-    #         (("b", 1), ("c", 1)),
-    #         (("a", 0), ("a", 1)),
-    #         (("b", 0), ("b", 1)),
-    #         (("c", 0), ("c", 1)),
-    #     }
-
-    #     self.assertEqual(set(two_tbn.nodes()), expected_nodes)
-    #     self.assertEqual(set(two_tbn.edges()), expected_edges)
-
-    # def test_time_slice_template(self):
-    #     template = TimeSeriesDAG()
-    #     template.add_edges_from([("a", "b"), ("b", "c")])
-
-    #     temporal_model = template.to_time_series_dag(
-    #         num_time_slices=3, temporal_edges=[("a", "a"), ("b", "b")]
-    #     )
-
-    #     expected_nodes = {(var, t) for var in ["a", "b", "c"] for t in range(3)}
-    #     expected_edges = {
-    #         (("a", 0), ("b", 0)),
-    #         (("b", 0), ("c", 0)),
-    #         (("a", 1), ("b", 1)),
-    #         (("b", 1), ("c", 1)),
-    #         (("a", 2), ("b", 2)),
-    #         (("b", 2), ("c", 2)),
-    #         (("a", 0), ("a", 1)),
-    #         (("b", 0), ("b", 1)),
-    #         (("a", 1), ("a", 2)),
-    #         (("b", 1), ("b", 2)),
-    #     }
-
-    # self.assertEqual(set(temporal_model.nodes()), expected_nodes)
-    # self.assertEqual(set(temporal_model.edges()), expected_edges)
 
     def tearDown(self):
         del self.graph

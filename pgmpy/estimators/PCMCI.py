@@ -403,8 +403,8 @@ class PCMCI(StructureEstimator):
 
         # First, orient edges based on time ordering (temporal constraint)
         for u, v in skeleton.edges():
-            u_var, u_lag = u
-            v_var, v_lag = v
+            _, u_lag = u
+            _, v_lag = v
 
             # Same time lag (contemporaneous) - leave unoriented for now
             if u_lag == v_lag:
@@ -422,8 +422,8 @@ class PCMCI(StructureEstimator):
         for pair in node_pairs:
             X, Y = pair
             if not skeleton.has_edge(X, Y):  # X and Y are not adjacent
-                X_var, X_lag = X
-                Y_var, Y_lag = Y
+                _, X_lag = X
+                _, Y_lag = Y
 
                 # Find common neighbors (potential colliders)
                 common_neighbors = set(skeleton.neighbors(X)) & set(
@@ -431,7 +431,7 @@ class PCMCI(StructureEstimator):
                 )
 
                 for Z in common_neighbors:
-                    Z_var, Z_lag = Z
+                    _, Z_lag = Z
 
                     # Check if Z is not in the separating set of X and Y
                     if Z not in separating_sets.get(frozenset((X, Y)), []):
