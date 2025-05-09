@@ -1325,7 +1325,7 @@ class DAG(nx.DiGraph):
 
             # Run CI test and get effect size
             result = pillai_trace(
-                x=x, y=y, Z=list(conditioning_set), data=data, boolean=False
+                X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
             )
 
             # Store the edge strength
