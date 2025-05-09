@@ -361,37 +361,59 @@ class TestDAGCreation(unittest.TestCase):
         del self.graph
 
     def test_edge_strength_basic(self):
-        dag = DAG([("a", "b"), ("c", "b")])
-
-        data = pd.DataFrame(
-            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
-        )
+        """Test basic functionality and numerical values"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
         strengths = dag.edge_strength(data)
 
+        # Test return type and structure
         self.assertTrue(isinstance(strengths, dict))
-        self.assertEqual(set(strengths.keys()), {("a", "b"), ("c", "b")})
+        self.assertEqual(set(strengths.keys()), {("X", "Y"), ("Z", "Y")})
         self.assertTrue(all(isinstance(v, float) for v in strengths.values()))
 
+        # Test numerical values from docstring example
+        self.assertAlmostEqual(strengths[("X", "Y")], 1.2260921400386593e-07, places=15)
+        self.assertAlmostEqual(strengths[("Z", "Y")], 5.140313027451882e-07, places=15)
+
     def test_edge_strength_specific_edge(self):
-        dag = DAG([("a", "b"), ("c", "b")])
-        data = pd.DataFrame(
-            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
+        """Test computing strength for specific edge"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
+        strength_xy = dag.edge_strength(data, edges=("X", "Y"))
+
+        # Test structure
+        self.assertEqual(set(strength_xy.keys()), {("X", "Y")})
+
+        # Test numerical value from docstring
+        self.assertAlmostEqual(
+            strength_xy[("X", "Y")], 1.2260921400386593e-07, places=15
         )
-        strength_ab = dag.edge_strength(data, edges=[("a", "b")])
-        self.assertEqual(set(strength_ab.keys()), {("a", "b")})
 
     def test_edge_strength_with_latents(self):
-        dag_latent = DAG([("a", "b"), ("c", "b")], latents=["a"])
-        data = pd.DataFrame(
-            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
-        )
+        """Test error handling with latent variables"""
+        dag_latent = DAG([("X", "Y"), ("Z", "Y")], latents=["X"])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
         with self.assertRaises(ValueError):
             dag_latent.edge_strength(data)
 
     def test_edge_strength_empty_dag(self):
+        """Test edge case with empty DAG"""
         empty_dag = DAG()
-        data = pd.DataFrame({"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]})
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
         self.assertEqual(empty_dag.edge_strength(data), {})
+
+    def test_edge_strength_multiple_edges(self):
+        """Test computing strength for multiple specific edges"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
+        strengths = dag.edge_strength(data, edges=[("X", "Y"), ("Z", "Y")])
+
+        # Test structure
+        self.assertEqual(set(strengths.keys()), {("X", "Y"), ("Z", "Y")})
+
+        # Test numerical values from docstring
+        self.assertAlmostEqual(strengths[("X", "Y")], 1.2260921400386593e-07, places=15)
+        self.assertAlmostEqual(strengths[("Z", "Y")], 5.140313027451882e-07, places=15)
 
 
 class TestDAGParser(unittest.TestCase):
