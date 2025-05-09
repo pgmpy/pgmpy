@@ -361,46 +361,36 @@ class TestDAGCreation(unittest.TestCase):
         del self.graph
 
     def test_edge_strength_basic(self):
-        dag = DAG([('a', 'b'), ('c', 'b')])
+        dag = DAG([("a", "b"), ("c", "b")])
 
-        data = pd.DataFrame(data = {
-            'a': [0, 1, 0, 1], 
-            'b': [1, 3, 0, 2], 
-            'c': [1, 1, 0, 0]
-        })
+        data = pd.DataFrame(
+            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
+        )
         strengths = dag.edge_strength(data)
 
         self.assertTrue(isinstance(strengths, dict))
-        self.assertEqual(set(strengths.keys()), {('a', 'b'), ('c', 'b')})
+        self.assertEqual(set(strengths.keys()), {("a", "b"), ("c", "b")})
         self.assertTrue(all(isinstance(v, float) for v in strengths.values()))
 
     def test_edge_strength_specific_edge(self):
-        dag = DAG([('a', 'b'), ('c', 'b')])
-        data = pd.DataFrame(data = {
-            'a': [0, 1, 0, 1], 
-            'b': [1, 3, 0, 2], 
-            'c': [1, 1, 0, 0]
-        })
-        strength_ab = dag.edge_strength(data, edges=[('a', 'b')])
-        self.assertEqual(set(strength_ab.keys()), {('a', 'b')})
+        dag = DAG([("a", "b"), ("c", "b")])
+        data = pd.DataFrame(
+            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
+        )
+        strength_ab = dag.edge_strength(data, edges=[("a", "b")])
+        self.assertEqual(set(strength_ab.keys()), {("a", "b")})
 
     def test_edge_strength_with_latents(self):
-        dag_latent = DAG([('a', 'b'), ('c', 'b')], latents=['a'])
-        data = pd.DataFrame(data = {
-            'a': [0, 1, 0, 1], 
-            'b': [1, 3, 0, 2], 
-            'c': [1, 1, 0, 0]
-        })
+        dag_latent = DAG([("a", "b"), ("c", "b")], latents=["a"])
+        data = pd.DataFrame(
+            data={"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]}
+        )
         with self.assertRaises(ValueError):
             dag_latent.edge_strength(data)
 
     def test_edge_strength_empty_dag(self):
         empty_dag = DAG()
-        data = pd.DataFrame({
-            'a': [0, 1, 0, 1], 
-            'b': [1, 3, 0, 2], 
-            'c': [1, 1, 0, 0]
-        })
+        data = pd.DataFrame({"a": [0, 1, 0, 1], "b": [1, 3, 0, 2], "c": [1, 1, 0, 0]})
         self.assertEqual(empty_dag.edge_strength(data), {})
 
 

@@ -1260,23 +1260,23 @@ class DAG(nx.DiGraph):
     def edge_strength(self, data, edges=None):
         """
         Computes the strength of edges in the DAG using conditional independence tests.
-        
+
         Parameters
         ----------
         data: pandas.DataFrame
             The dataset on which to compute the edge strengths.
-            
+
         edges: tuple or list or None (default: None)
             If None, computes strength for all edges in the DAG.
             If tuple (X, Y), computes strength for the single edge X->Y.
             If list [(X1, Y1), (X2, Y2), ...], computes strength for specified edges.
-            
+
         Returns
         -------
         dict
             A dictionary mapping edges to their strength values. Each strength value
             is based on the effect size measure of the ci_pillai test.
-            
+
         Examples
         --------
         >>> import pandas as pd
@@ -1324,7 +1324,9 @@ class DAG(nx.DiGraph):
             conditioning_set = set(pa_X + pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            result = pillai_trace(x=x, y=y, Z=list(conditioning_set), data=data, boolean=False)
+            result = pillai_trace(
+                x=x, y=y, Z=list(conditioning_set), data=data, boolean=False
+            )
 
             # Store the edge strength
             strengths[edge] = result[1]
