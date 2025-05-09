@@ -53,6 +53,10 @@ class VariableElimination(Inference):
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
+                if evidence_var not in working_factors:
+                    raise ValueError(
+                        f"Evidence variable '{evidence_var}' is not present in the model."
+                    )
                 for factor, origin in working_factors[evidence_var]:
                     factor_reduced = factor.reduce(
                         [(evidence_var, evidence[evidence_var])], inplace=False
