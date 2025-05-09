@@ -1255,7 +1255,7 @@ class DAG(nx.DiGraph):
         dag = DAG(ebunch=self.edges(), latents=self.latents)
         dag.add_nodes_from(self.nodes())
         return dag
-    
+
     def edge_strength(self, data, edges=None):
         """
         Computes the strength of edges in the DAG using conditional independence tests.
@@ -1292,7 +1292,7 @@ class DAG(nx.DiGraph):
         {('X', 'Y'): 1.2260921400386593e-07}
         """
         from pgmpy.estimators.CITests import pillai_trace
-        
+
         # If edges is None, compute for all edges in the DAG
         if edges is None:
             edges_to_compute = list(self.edges())
@@ -1302,32 +1302,32 @@ class DAG(nx.DiGraph):
         # If edges is a list of edge tuples
         else:
             edges_to_compute = edges
-        
+
         strengths = {}
-        
+
         for edge in edges_to_compute:
-            X, Y = edge
-            
-            # Check if either X or Y is a latent node
-            if X in self.latents or Y in self.latents:
+            x, y = edge
+
+            # Check if either x or y is a latent node
+            if x in self.latents or y in self.latents:
                 raise ValueError(
                     f"Edge {edge} involves latent variables. Use CausalInference class for "
                     "advanced causal effect estimation."
                 )
-            
-            # Get parents of X and Y
-            pa_X = list(self.predecessors(X))
-            pa_Y = list(self.predecessors(Y))
-            
-            # Combine parents for conditioning set (excluding X and Y themselves)
-            conditioning_set = set(pa_X + pa_Y) - {X, Y}
-            
+
+            # Get parents of x and y
+            pa_X = list(self.predecessors(x))
+            pa_Y = list(self.predecessors(y))
+
+            # Combine parents for conditioning set (excluding x and y themselves)
+            conditioning_set = set(pa_X + pa_Y) - {x, y}
+
             # Run CI test and get effect size
-            result = pillai_trace(X=X, Y=Y, Z=list(conditioning_set), data=data, boolean=False)
-            
+            result = pillai_trace(x=x, y=y, Z=list(conditioning_set), data=data, boolean=False)
+
             # Store the edge strength
             strengths[edge] = result[1]
-        
+
         return strengths
 
 

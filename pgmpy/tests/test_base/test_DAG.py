@@ -370,7 +370,7 @@ class TestDAGCreation(unittest.TestCase):
             'c': [1, 1, 0, 0]
         })
         strengths = dag.edge_strength(data)
-        
+
         self.assertTrue(isinstance(strengths, dict))
         self.assertEqual(set(strengths.keys()), {('a', 'b'), ('c', 'b')})
         self.assertTrue(all(isinstance(v, float) for v in strengths.values()))
