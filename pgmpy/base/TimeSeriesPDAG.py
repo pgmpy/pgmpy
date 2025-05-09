@@ -147,7 +147,7 @@ class TimeSeriesPDAG(PDAG):
                     )
 
             # Add edge to appropriate collection
-            if u not in self.undirected_edges:
+            if (u, v) not in self.undirected_edges:
                 self.undirected_edges.add((u, v))
 
             # Add both directions to the graph

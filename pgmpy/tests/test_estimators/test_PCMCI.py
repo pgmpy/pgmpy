@@ -171,7 +171,82 @@ class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
         self.estimator = PCMCI(self.data)
 
     def test_estimate_ts_dag(self):
-        pass
+        """Test the full PCMCI estimation pipeline with actual time series data."""
+        # Use a lower significance level to be more permissive in edge detection
+        ts_dag = self.estimator.estimate(
+            ci_test="pearsonr",
+            significance_level=0.05,
+            max_time_lag=2,
+            max_cond_vars=3,
+            show_progress=False,
+        )
+
+        # True causal relationships in our data:
+        # 1. X(t-1) -> X(t) [autocorrelation]
+        # 2. Y(t-1) -> Y(t) [autocorrelation]
+        # 3. Z(t-1) -> Z(t) [autocorrelation]
+        # 4. X(t-1) -> Y(t) [causal]
+        # 5. Y(t-1) -> Z(t) [causal]
+
+        # Check that the known causal edges exist
+        self.assertTrue(
+            ts_dag.has_edge(("X", 1), ("X", 0)),
+            "Missing autocorrelation edge X(t-1) -> X(t)",
+        )
+        self.assertTrue(
+            ts_dag.has_edge(("Y", 1), ("Y", 0)),
+            "Missing autocorrelation edge Y(t-1) -> Y(t)",
+        )
+        self.assertTrue(
+            ts_dag.has_edge(("Z", 1), ("Z", 0)),
+            "Missing autocorrelation edge Z(t-1) -> Z(t)",
+        )
+        self.assertTrue(
+            ts_dag.has_edge(("X", 1), ("Y", 0)), "Missing causal edge X(t-1) -> Y(t)"
+        )
+        self.assertTrue(
+            ts_dag.has_edge(("Y", 1), ("Z", 0)), "Missing causal edge Y(t-1) -> Z(t)"
+        )
+
+        # Check that some implausible edges do NOT exist (X should not directly affect Z)
+        self.assertFalse(
+            ts_dag.has_edge(("X", 1), ("Z", 0)),
+            "Should not have direct edge X(t-1) -> Z(t)",
+        )
+
+        # Verify no edges from future to past exist (temporal constraint)
+        for node1 in ts_dag.nodes():
+            for node2 in ts_dag.nodes():
+                var1, lag1 = node1
+                var2, lag2 = node2
+                if lag1 < lag2 and ts_dag.has_edge(node1, node2):
+                    self.fail(
+                        f"Edge from {node1} to {node2} violates temporal constraints"
+                    )
+
+    def test_create_lagged_data(self):
+        """Test the creation of lagged data for time series analysis."""
+        max_lag = 2
+        lagged_data = self.estimator._create_lagged_data(self.data, max_lag)
+
+        # Check that the lagged data has the right columns
+        expected_columns = []
+        for var in ["X", "Y", "Z"]:
+            for lag in range(max_lag + 1):
+                expected_columns.append((var, lag))
+
+        self.assertEqual(set(lagged_data.columns), set(expected_columns))
+
+        # Check that the number of rows is correct (original rows - max_lag)
+        expected_rows = len(self.data) - max_lag
+        self.assertEqual(len(lagged_data), expected_rows)
+
+        # Check a specific value to ensure correct alignment
+        orig_value = self.data.loc[max_lag, "X"]  # Value at t=max_lag
+        lagged_value = lagged_data.loc[
+            0, ("X", 0)
+        ]  # First row in lagged data for X at lag 0
+        self.assertAlmostEqual(orig_value, lagged_value)
 
     def tearDown(self):
         # Clean up any resources
