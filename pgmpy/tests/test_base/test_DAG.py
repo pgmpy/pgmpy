@@ -372,8 +372,8 @@ class TestDAGCreation(unittest.TestCase):
         self.assertTrue(all(isinstance(v, float) for v in strengths.values()))
 
         # Test numerical values from docstring example
-        self.assertAlmostEqual(strengths[("X", "Y")], 1.2260921400386593e-07, places=15)
-        self.assertAlmostEqual(strengths[("Z", "Y")], 5.140313027451882e-07, places=15)
+        self.assertAlmostEqual(strengths[("X", "Y")], 0.999999754781587, places=15)
+        self.assertAlmostEqual(strengths[("Z", "Y")], 0.9999989719376587, places=15)
 
     def test_edge_strength_specific_edge(self):
         """Test computing strength for specific edge"""
@@ -385,16 +385,23 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(strength_xy.keys()), {("X", "Y")})
 
         # Test numerical value from docstring
-        self.assertAlmostEqual(
-            strength_xy[("X", "Y")], 1.2260921400386593e-07, places=15
-        )
+        self.assertAlmostEqual(strength_xy[("X", "Y")], 0.999999754781587, places=15)
 
     def test_edge_strength_with_latents(self):
         """Test error handling with latent variables"""
+        # Case 1: X or Y is latent
         dag_latent = DAG([("X", "Y"), ("Z", "Y")], latents=["X"])
         data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
         with self.assertRaises(ValueError):
             dag_latent.edge_strength(data)
+
+        # Case 2: Parent of X or Y is latent
+        dag_latent_parent = DAG([("L", "X"), ("X", "Y"), ("Z", "Y")], latents=["L"])
+        data = pd.DataFrame(
+            {"L": [0, 1, 0, 1], "X": [1, 3, 0, 2], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]}
+        )
+        with self.assertRaises(ValueError):
+            dag_latent_parent.edge_strength(data)
 
     def test_edge_strength_empty_dag(self):
         """Test edge case with empty DAG"""
@@ -412,8 +419,8 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(strengths.keys()), {("X", "Y"), ("Z", "Y")})
 
         # Test numerical values from docstring
-        self.assertAlmostEqual(strengths[("X", "Y")], 1.2260921400386593e-07, places=15)
-        self.assertAlmostEqual(strengths[("Z", "Y")], 5.140313027451882e-07, places=15)
+        self.assertAlmostEqual(strengths[("X", "Y")], 0.999999754781587, places=15)
+        self.assertAlmostEqual(strengths[("Z", "Y")], 0.9999989719376587, places=15)
 
 
 class TestDAGParser(unittest.TestCase):
