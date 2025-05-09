@@ -1255,6 +1255,80 @@ class DAG(nx.DiGraph):
         dag = DAG(ebunch=self.edges(), latents=self.latents)
         dag.add_nodes_from(self.nodes())
         return dag
+    
+    def edge_strength(self, data, edges=None):
+        """
+        Computes the strength of edges in the DAG using conditional independence tests.
+        
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The dataset on which to compute the edge strengths.
+            
+        edges: tuple or list or None (default: None)
+            If None, computes strength for all edges in the DAG.
+            If tuple (X, Y), computes strength for the single edge X->Y.
+            If list [(X1, Y1), (X2, Y2), ...], computes strength for specified edges.
+            
+        Returns
+        -------
+        dict
+            A dictionary mapping edges to their strength values. Each strength value
+            is based on the effect size measure of the ci_pillai test.
+            
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from pgmpy.base import DAG
+        >>> # Create a simple DAG
+        >>> dag = DAG([('X', 'Y'), ('Z', 'Y')])
+        >>> # Generate some data
+        >>> data = pd.DataFrame({'X': [0, 1, 0, 1], 'Y': [1, 3, 0, 2], 'Z': [1, 1, 0, 0]})
+        >>> # Compute edge strengths
+        >>> dag.edge_strength(data)
+        {('X', 'Y'): 1.2260921400386593e-07, ('Z', 'Y'): 5.140313027451882e-07}
+        >>> # Compute strength for a specific edge
+        >>> dag.edge_strength(data, edges=('X', 'Y'))
+        {('X', 'Y'): 1.2260921400386593e-07}
+        """
+        from pgmpy.estimators.CITests import pillai_trace
+        
+        # If edges is None, compute for all edges in the DAG
+        if edges is None:
+            edges_to_compute = list(self.edges())
+        # If edges is a single edge tuple
+        elif isinstance(edges, tuple) and len(edges) == 2:
+            edges_to_compute = [edges]
+        # If edges is a list of edge tuples
+        else:
+            edges_to_compute = edges
+        
+        strengths = {}
+        
+        for edge in edges_to_compute:
+            X, Y = edge
+            
+            # Check if either X or Y is a latent node
+            if X in self.latents or Y in self.latents:
+                raise ValueError(
+                    f"Edge {edge} involves latent variables. Use CausalInference class for "
+                    "advanced causal effect estimation."
+                )
+            
+            # Get parents of X and Y
+            pa_X = list(self.predecessors(X))
+            pa_Y = list(self.predecessors(Y))
+            
+            # Combine parents for conditioning set (excluding X and Y themselves)
+            conditioning_set = set(pa_X + pa_Y) - {X, Y}
+            
+            # Run CI test and get effect size
+            result = pillai_trace(X=X, Y=Y, Z=list(conditioning_set), data=data, boolean=False)
+            
+            # Store the edge strength
+            strengths[edge] = result[1]
+        
+        return strengths
 
 
 class PDAG(nx.DiGraph):
