@@ -17,6 +17,7 @@ except ImportError as e:
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.global_vars import logger
 
 
 class XMLBIFReader(object):
@@ -396,7 +397,6 @@ class XMLBIFWriter(object):
         XMLBIF states must start with a letter an only contain letters,
         numbers and underscores.
         """
-        # TODO: Throw a warning that the state names are going to be modified instead of silently modifying it.
         s = str(state_name)
         s_fixed = (
             pp.CharsNotIn(pp.alphanums + "_")
@@ -405,6 +405,12 @@ class XMLBIFWriter(object):
         )
         if not s_fixed[0].isalpha():
             s_fixed = s_fixed
+
+        if s != s_fixed:
+            logger.warning(
+                f"State name '{s}' has been modified to '{s_fixed}' to comply with XMLBIF format requirements. "
+                "XMLBIF states must start with a letter and only contain letters, numbers, and underscores."
+            )
         return s_fixed
 
     def get_properties(self):

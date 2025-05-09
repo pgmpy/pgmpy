@@ -94,7 +94,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_simulate(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df_cont = self.model.simulate(n=10000, seed=42)
+        df_cont = self.model.simulate(n_samples=10000, seed=42)
 
         # Same model in terms of equations
         rng = np.random.default_rng(seed=42)
@@ -109,7 +109,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_fit(self):
         # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(int(1e5), seed=42)
+        df = self.model.simulate(n_samples=int(1e5), seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         new_model.fit(df, method="mle")
 
@@ -133,7 +133,7 @@ class TestLGBNMethods(unittest.TestCase):
         model_lin = LinearGaussianBayesianNetwork(model.edges())
         cpds = model_lin.get_random_cpds()
         model_lin.add_cpds(*cpds)
-        df = model_lin.simulate(int(1e6), seed=42)
+        df = model_lin.simulate(n_samples=int(1e6), seed=42)
 
         new_model_lin = LinearGaussianBayesianNetwork(model.edges())
         new_model_lin.fit(df, method="mle")
@@ -154,7 +154,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(int(10), seed=42)
+        df = self.model.simulate(n_samples=int(10), seed=42)
         df = df.drop("x2", axis=1)
         variables, mu, cov = self.model.predict(df)
         self.assertEqual(variables, ["x2"])
@@ -172,7 +172,7 @@ class TestLGBNMethods(unittest.TestCase):
         model_lin = LinearGaussianBayesianNetwork(model.edges())
         cpds = model_lin.get_random_cpds(seed=42)
         model_lin.add_cpds(*cpds)
-        df = model_lin.simulate(int(5), seed=42)
+        df = model_lin.simulate(n_samples=int(5), seed=42)
 
         variables, mu, cov = model_lin.predict(df.drop(["HISTORY", "CO"], axis=1))
         self.assertEqual(mu.shape, (5, 2))

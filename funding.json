@@ -32,9 +32,10 @@
             "description": "Github Sponsor"
         },
 	{
-            "guid": "bank",
-            "type": "bank",
-            "description": "Please reach out for bank details"
+        "guid": "bank",
+        "type": "bank",
+        "address": "IBAN: DE 0863 0910 1006 0167 4006 (Address: Talstraße 14, 89584 Ehingen, Germany)",
+        "description": "BIC: GENODES1EHI. Please include \"pgmpy\" in the purpose."
         }
 	],
 
