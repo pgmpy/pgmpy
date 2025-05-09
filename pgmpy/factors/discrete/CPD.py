@@ -4,7 +4,6 @@ import csv
 import numbers
 from itertools import chain, product
 from shutil import get_terminal_size
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -13,6 +12,7 @@ import torch
 from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 
 
@@ -640,7 +640,7 @@ class TabularCPD(DiscreteFactor):
                         )
                     )
             else:
-                warn("Same ordering provided as current")
+                logger.warning("Same ordering provided as current")
                 return self.get_values()
 
     def get_evidence(self):
