@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -61,6 +62,29 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = model.latents
             model = model_bn
+
+        # Drop fully missing columns and treat them as latent if not already
+        original_cols = set(data.columns)
+        data = data.dropna(axis=1, how="all")
+        dropped_cols = original_cols - set(data.columns)
+        new_latents = [col for col in dropped_cols if col not in model.latents]
+
+        if new_latents:
+            logger.warning(
+                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                "Treating them as latent variables."
+            )
+            model.latents.update(new_latents)
+
+        # Drop rows with any missing values in partially observed columns
+        original_rows_count = data.shape[0]
+        data = data.dropna()
+        dropped_rows_count = original_rows_count - data.shape[0]
+
+        if dropped_rows_count:
+            logger.warning(
+                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
+            )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()

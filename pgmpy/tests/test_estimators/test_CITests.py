@@ -273,7 +273,7 @@ class TestResidualMethod(unittest.TestCase):
         self.model_indep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
         )
-        self.df_indep = self.model_indep.simulate(n=1000, seed=42)
+        self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
         self.df_indep_cont_cont.Z2 = pd.cut(
@@ -325,7 +325,7 @@ class TestResidualMethod(unittest.TestCase):
         self.model_dep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
         )
-        self.df_dep = self.model_dep.simulate(n=1000, seed=42)
+        self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()
         self.df_dep_cont_cont.Z2 = pd.cut(

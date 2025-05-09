@@ -15,32 +15,36 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           cache: 'pip'
-          cache-dependency-path: |
-            **/requirements/*.txt
 
       - name: Print python info
         run: |
           which python
           python --version
+
       - name: Install dependencies
         run: |
           pip install pip -U
           pip install black -U
           pip install pytest-split
-          pip install -r requirements.txt -U
+          pip install .[all,tests] --no-cache-dir
+
       - name: Check formatting
         run: |
           black --diff .
           black --check .
+
       - name: Print package versions
         run: |
           pip freeze
+
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 3 --group ${{ matrix.group }} --verbose --junitxml=test-results.xml
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload test results to Codecov
         uses: codecov/test-results-action@v1
         with:

@@ -25,14 +25,15 @@ class BayesianEstimator(ParameterEstimator):
                 "Bayesian Parameter Estimation is only implemented for DAG or DiscreteBayesianNetwork"
             )
 
-        if isinstance(model, (DAG, DiscreteBayesianNetwork)):
+        else:
             if len(model.latents) != 0:
                 raise ValueError(
                     f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
                 )
 
-            if isinstance(model, DAG):
+            elif isinstance(model, DAG):
                 model = DiscreteBayesianNetwork(model.edges())
+                model.add_nodes_from(model.nodes())
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
