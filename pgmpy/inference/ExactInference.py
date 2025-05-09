@@ -53,8 +53,6 @@ class VariableElimination(Inference):
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                if evidence_var not in working_factors:
-                    raise ValueError(f"Node {evidence_var} not in graph")
                 for factor, origin in working_factors[evidence_var]:
                     factor_reduced = factor.reduce(
                         [(evidence_var, evidence[evidence_var])], inplace=False
@@ -294,7 +292,9 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
-
+        for evidence_var in evidence:
+            if evidence_var not in self.model.nodes():
+                raise ValueError(f"Node {evidence_var} not in graph")
         if isinstance(
             self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
         ):
@@ -564,6 +564,9 @@ class VariableElimination(Inference):
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
+        for evidence_var in evidence:
+            if evidence_var not in self.model.nodes():
+                raise ValueError(f"Node {evidence_var} not in graph")
         common_vars = set(evidence if evidence is not None else []).intersection(
             variables
         )
