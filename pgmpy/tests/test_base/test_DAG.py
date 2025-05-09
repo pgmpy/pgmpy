@@ -234,6 +234,29 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
         self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
 
+    def test_to_pdag(self):
+        dag = DAG([("X", "Z"), ("Z", "W"), ("Y", "U")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("Y", "U"),
+            ("U", "Y"),  # Undirected edge between Y and U
+            ("Z", "W"),
+            ("W", "Z"),  # Undirected edge between Z and W
+            ("X", "Z"),
+            ("Z", "X"),  # Undirected edge between X and Z
+        }
+
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z", "W", "U"})
+
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
     def test_minimal_dseparator(self):
         # Without latent variables
 
