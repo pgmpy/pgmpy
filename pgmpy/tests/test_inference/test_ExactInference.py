@@ -380,7 +380,14 @@ class TestVariableElimination(unittest.TestCase):
     def tearDown(self):
         del self.bayesian_inference
         del self.bayesian_model
-
+    def test_query_invalid_evidence_variable_with_example_model(self):
+        """
+        Ensure query() raises ValueError when evidence contains a variable not in the example model.
+        """
+        model = get_example_model("alarm")
+        infer = VariableElimination(model)
+        with self.assertRaisesRegex(ValueError, "Evidence variable 'Z' is not present in the model."):
+            infer.query(variables=["HR"], evidence={"Z": 1})
 
 class TestSnowNetwork(unittest.TestCase):
     def setUp(self):
