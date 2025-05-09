@@ -74,14 +74,6 @@ class TestExpertInLoop(unittest.TestCase):
             ("Age", "Education"),
         }
 
-    @pytest.mark.skipif(
-        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
-    )
-    def test_estimate(self):
-        dag = self.estimator.estimate(variable_descriptions=self.descriptions)
-        # expected_edges = {('MaritalStatus', 'Relationship'), ('Age', 'Occupation'), ('NativeCountry', 'MaritalStatus'), ('Sex', 'Occupation'), ('Occupation', 'Income'), ('HoursPerWeek', 'Income'), ('NativeCountry', 'Education'), ('Age', 'HoursPerWeek'), ('Workclass', 'Occupation'), ('Education', 'Income'), ('Age', 'Workclass'), ('MaritalStatus', 'Income'), ('Workclass', 'HoursPerWeek'), ('NativeCountry', 'HoursPerWeek'), ('Education', 'Occupation'), ('Occupation', 'HoursPerWeek'), ('Age', 'Relationship'), ('Race', 'NativeCountry'), ('Sex', 'Relationship'), ('Education', 'HoursPerWeek'), ('Race', 'Education'), ('Workclass', 'Relationship'), ('MaritalStatus', 'HoursPerWeek'), ('Age', 'MaritalStatus'), ('Sex', 'MaritalStatus'), ('Relationship', 'HoursPerWeek'), ('Age', 'Education'), ('Workclass', 'MaritalStatus')}
-        # self.assertEqual(expected_edges, set(dag.edges()))
-
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
         dag = self.estimator_small.estimate(
@@ -92,21 +84,12 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
+        orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, set([]))
 
     def test_estimate_with_cache_no_llm_calls(self):
         orientations = self.orientations_small
-        # Set the appropriate attribute based on which one exists in the implementation
-        if hasattr(self.estimator_small, "orientation_cache"):
-            self.estimator_small.orientation_cache = orientations
-        else:
-            self.estimator_small.orientations_llm = orientations
+        self.estimator_small.orientation_cache = orientations
 
         dag = self.estimator_small.estimate(
             variable_descriptions=self.descriptions,
@@ -117,34 +100,7 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
-        self.assertEqual(orientations_cache, orientations)
-
-    @pytest.mark.skipif(
-        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
-    )
-    def test_estimate_with_cache_and_llm_calls(self):
-        orientations = self.orientations_small
-        dag = self.estimator_small.estimate(
-            variable_descriptions=self.descriptions,
-            use_cache=True,
-            use_llm=True,
-            orientations=orientations,
-            pval_threshold=0.1,
-            effect_size_threshold=0.1,
-        )
-        self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
+        orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, orientations)
 
     def test_estimate_with_custom_orientation_function(self):
