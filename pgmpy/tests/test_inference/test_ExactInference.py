@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 from pgmpy.utils import get_example_model
+import re
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -388,8 +389,22 @@ class TestVariableElimination(unittest.TestCase):
         model = get_example_model("alarm")
         infer = VariableElimination(model)
         evidence_var = "Z"
-        with self.assertRaisesRegex(ValueError, f"Node {evidence_var} not in graph"):
+        with self.assertRaisesRegex(
+            ValueError, re.escape(f"Node {evidence_var} not in graph")
+        ):
             infer.query(variables=["HR"], evidence={evidence_var: 1})
+
+    def test_map_query_invalid_evidence_variable_with_example_model(self):
+        """
+        Ensure map_query() raises ValueError when evidence contains a variable not in the example model.
+        """
+        model = get_example_model("alarm")
+        infer = VariableElimination(model)
+        evidence_var = "Z"
+        with self.assertRaisesRegex(
+            ValueError, re.escape(f"Node {evidence_var} not in graph")
+        ):
+            infer.map_query(variables=["HR"], evidence={evidence_var: 1})
 
 
 class TestSnowNetwork(unittest.TestCase):
