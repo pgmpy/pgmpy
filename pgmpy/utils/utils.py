@@ -306,9 +306,8 @@ def llm_pairwise_orient(
 
     Returns
     -------
-    tuple or None:
-        Returns either a tuple (source, target) representing the edge direction,
-        or None if no edge should be created.
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     try:
         from litellm import completion
@@ -325,12 +324,11 @@ def llm_pairwise_orient(
         <A>: {descriptions[x]}
         <B>: {descriptions[y]}
 
-        Which of the following options is the most likely causal relationship between them:
+        Which of the following two options is the most likely causal direction between them:
         1. <A> causes <B>
         2. <B> causes <A>
-        3. There is no causal relationship between <A> and <B>
 
-        Return a single number (1, 2, or 3) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
         """
 
     response = completion(
@@ -338,12 +336,10 @@ def llm_pairwise_orient(
     )
     response = response.choices[0].message.content
     response_txt = response.strip().lower().replace("*", "")
-    if response_txt in ("1", "a"):
+    if response_txt in ("a", "1"):
         return (x, y)
-    elif response_txt in ("2", "b"):
+    elif response_txt in ("b", "2"):
         return (y, x)
-    elif response_txt in ("3", "c"):
-        return None
     else:
         raise ValueError(
             "Results from the LLM are unclear. Try calling the function again."
@@ -364,22 +360,16 @@ def manual_pairwise_orient(x, y):
 
     Returns
     -------
-    tuple or None:
-        Returns either a tuple (source, target) representing the edge direction,
-        or None if no edge should be created.
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     user_input = input(
-        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n 3. No edge between {x} and {y} \n"
+        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"
     )
     if user_input == "1":
         return (x, y)
     elif user_input == "2":
         return (y, x)
-    elif user_input == "3":
-        return None
-    else:
-        print(f"Invalid input: {user_input}. Please try again.")
-        return manual_pairwise_orient(x, y)
 
 
 def preprocess_data(df):

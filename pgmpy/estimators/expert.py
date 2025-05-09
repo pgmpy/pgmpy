@@ -14,7 +14,7 @@ from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data=None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
-        self.orientations_from_fn = set([])
+        self.orientation_cache = set([])
 
     def test_all(self, dag):
         """
@@ -88,10 +88,9 @@ class ExpertInLoop(StructureEstimator):
             would suggest to remove the edge.
 
         orientation_fn: callable, (default: pgmpy.utils.llm_pairwise_orient)
-            A function to determine edge orientation. The function should atleast take two arguments
+            A function to determine edge orientation. The function should at least take two arguments
             (the names of the two variables) and return a tuple (source, target) representing
-            the directed edge from source to target. It can also return None to indicate no edge.
-            If None provided, defaults to asking the deafult llm for the orientation.
+            the directed edge from source to target.
             Any additional keyword arguments passed to estimate() will be forwarded to this function.
 
             Built-in functions that can be used:
@@ -162,17 +161,20 @@ class ExpertInLoop(StructureEstimator):
         ...         return ("Pollution", "Cancer")  # Pollution -> Cancer
         ...     elif "Smoker" in (var1, var2) and "Cancer" in (var1, var2):
         ...         return ("Smoker", "Cancer")  # Smoker -> Cancer
-        ...     elif var1 == "Xray" or var2 == "Xray":
-        ...         # Prevent any edge to Xray (return None for no edge)
-        ...         return None
-        ...     # Default: use domain knowledge
-        ...     return (var1, var2)
+        ...     # For edges involving Xray, always orient from other variable to Xray
+        ...     elif "Xray" in (var1, var2):
+        ...         if var1 == "Xray":
+        ...             return (var2, var1)
+        ...         else:
+        ...             return (var1, var2)
+        ...     # Default: use alphabetical ordering
+        ...     return (var1, var2) if var1 < var2 else (var2, var1)
         >>> dag = ExpertInLoop(df).estimate(
         ...     effect_size_threshold=0.0001,
         ...     orientation_fn=my_orientation_func
         ... )
         >>> dag.edges()
-        OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
+        OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
         """
         # Step 0: Create a new DAG on all the variables with no edge.
         nodes = list(self.data.columns)
@@ -230,8 +232,8 @@ class ExpertInLoop(StructureEstimator):
             # 1. If pre-defined orientations are provided, use those first
             # 2. Otherwise, try to use cached orientations if use_cache=True
             # 3. If no cached orientation, call the orientation_fn and validate result
-            #    - If orientation_fn returns None, blacklist the edge and continue
-            #    - Otherwise, cache the orientation and add the edge to the DAG
+            #    - Validate that it returns a valid edge direction tuple
+            #    - Cache the orientation and add the edge to the DAG
 
             if orientations:
                 if (selected_edge.u, selected_edge.v) in orientations:
@@ -240,12 +242,12 @@ class ExpertInLoop(StructureEstimator):
                     edge_direction = (selected_edge.v, selected_edge.u)
             else:
                 if use_cache:
-                    if (selected_edge.u, selected_edge.v) in self.orientations_from_fn:
+                    if (selected_edge.u, selected_edge.v) in self.orientation_cache:
                         edge_direction = (selected_edge.u, selected_edge.v)
                     elif (
                         selected_edge.v,
                         selected_edge.u,
-                    ) in self.orientations_from_fn:
+                    ) in self.orientation_cache:
                         edge_direction = (selected_edge.v, selected_edge.u)
                 if edge_direction is None:
                     edge_direction = orientation_fn(
@@ -254,8 +256,8 @@ class ExpertInLoop(StructureEstimator):
                         **kwargs,
                     )
 
-                    # Validate that the orientation function returned either None or a valid tuple
-                    if edge_direction is not None and (
+                    # Validate that the orientation function returned a valid tuple
+                    if (
                         not isinstance(edge_direction, tuple)
                         or len(edge_direction) != 2
                         or not isinstance(edge_direction[0], str)
@@ -265,20 +267,10 @@ class ExpertInLoop(StructureEstimator):
                     ):
                         raise ValueError(
                             f"Orientation function returned an invalid value: {edge_direction}. "
-                            f"Must return either None or a tuple containing exactly {selected_edge.u} and {selected_edge.v}."
+                            f"Must return a tuple containing exactly {selected_edge.u} and {selected_edge.v}."
                         )
-
-                    if edge_direction is None:
-                        blacklisted_edges.append((selected_edge.u, selected_edge.v))
-                        blacklisted_edges.append((selected_edge.v, selected_edge.u))
-                        if config.SHOW_PROGRESS and show_progress:
-                            sys.stdout.write(
-                                f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: No edge"
-                            )
-                            sys.stdout.flush()
-                        continue
                     else:
-                        self.orientations_from_fn.add(edge_direction)
+                        self.orientation_cache.add(edge_direction)
                         if config.SHOW_PROGRESS and show_progress:
                             sys.stdout.write(
                                 f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"

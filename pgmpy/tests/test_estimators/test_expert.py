@@ -95,7 +95,7 @@ class TestExpertInLoop(unittest.TestCase):
         # Check either attribute depending on which one exists
         orientations_cache = getattr(
             self.estimator_small,
-            "orientations_from_fn",
+            "orientation_cache",
             getattr(self.estimator_small, "orientations_llm", set([])),
         )
         self.assertEqual(orientations_cache, set([]))
@@ -103,8 +103,8 @@ class TestExpertInLoop(unittest.TestCase):
     def test_estimate_with_cache_no_llm_calls(self):
         orientations = self.orientations_small
         # Set the appropriate attribute based on which one exists in the implementation
-        if hasattr(self.estimator_small, "orientations_from_fn"):
-            self.estimator_small.orientations_from_fn = orientations
+        if hasattr(self.estimator_small, "orientation_cache"):
+            self.estimator_small.orientation_cache = orientations
         else:
             self.estimator_small.orientations_llm = orientations
 
@@ -120,7 +120,7 @@ class TestExpertInLoop(unittest.TestCase):
         # Check either attribute depending on which one exists
         orientations_cache = getattr(
             self.estimator_small,
-            "orientations_from_fn",
+            "orientation_cache",
             getattr(self.estimator_small, "orientations_llm", set([])),
         )
         self.assertEqual(orientations_cache, orientations)
@@ -142,7 +142,7 @@ class TestExpertInLoop(unittest.TestCase):
         # Check either attribute depending on which one exists
         orientations_cache = getattr(
             self.estimator_small,
-            "orientations_from_fn",
+            "orientation_cache",
             getattr(self.estimator_small, "orientations_llm", set([])),
         )
         self.assertEqual(orientations_cache, orientations)
@@ -166,30 +166,9 @@ class TestExpertInLoop(unittest.TestCase):
             self.assertTrue(edge[0] < edge[1])
 
         # Check that orientations were cached
-        self.assertTrue(len(self.estimator_small.orientations_from_fn) > 0)
-        for edge in self.estimator_small.orientations_from_fn:
+        self.assertTrue(len(self.estimator_small.orientation_cache) > 0)
+        for edge in self.estimator_small.orientation_cache:
             self.assertTrue(edge[0] < edge[1])
-
-    def test_estimate_with_custom_orientation_function_none_return(self):
-        def custom_orient_with_none(var1, var2, **kwargs):
-            # Return None for any edge involving "Sex"
-            if "Sex" in (var1, var2):
-                return None
-            # Otherwise orient from alphabetically first to second
-            elif var1 < var2:
-                return (var1, var2)
-            else:
-                return (var2, var1)
-
-        dag = self.estimator_small.estimate(
-            orientation_fn=custom_orient_with_none,
-            pval_threshold=0.1,
-            effect_size_threshold=0.1,
-        )
-
-        # Check that no edges involve "Sex"
-        for edge in dag.edges():
-            self.assertTrue("Sex" not in edge)
 
     def test_estimate_with_invalid_orientation_function(self):
         def invalid_orient(var1, var2, **kwargs):
