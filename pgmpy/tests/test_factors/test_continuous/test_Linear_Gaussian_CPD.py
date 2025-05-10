@@ -28,7 +28,7 @@ class TestLGCPD(unittest.TestCase):
     def test_get_random(self):
         cpd_random = LinearGaussianCPD.get_random("x", ["x1", "x2", "x3"], 0.23, 0.56)
         self.assertIn("P(x | x1, x2, x3) = N(", cpd_random.__str__())
+
     def test_variable_type_validation(self):
         with self.assertRaises(TypeError):
             LinearGaussianCPD(variable=["X"], beta=[0], std=1)
-
