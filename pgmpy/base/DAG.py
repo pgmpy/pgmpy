@@ -1346,7 +1346,7 @@ class DAG(nx.DiGraph):
                 )
 
             # Combine parents for conditioning set (excluding x and y themselves)
-            conditioning_set = set(pa_X + pa_Y) - {x, y}
+            conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
             result = pillai_trace(

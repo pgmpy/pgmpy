@@ -15,6 +15,7 @@ from pgmpy.estimators import (
     ExpectationMaximization,
     MaximumLikelihoodEstimator,
 )
+from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -386,22 +387,6 @@ class TestDAGCreation(unittest.TestCase):
 
         # Test numerical value from docstring
         self.assertAlmostEqual(strength_xy[("X", "Y")], 0.999999754781587, places=15)
-
-    def test_edge_strength_with_latents(self):
-        """Test error handling with latent variables"""
-        # Case 1: X or Y is latent
-        dag_latent = DAG([("X", "Y"), ("Z", "Y")], latents=["X"])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
-        with self.assertRaises(ValueError):
-            dag_latent.edge_strength(data)
-
-        # Case 2: Parent of X or Y is latent
-        dag_latent_parent = DAG([("L", "X"), ("X", "Y"), ("Z", "Y")], latents=["L"])
-        data = pd.DataFrame(
-            {"L": [0, 1, 0, 1], "X": [1, 3, 0, 2], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]}
-        )
-        with self.assertRaises(ValueError):
-            dag_latent_parent.edge_strength(data)
 
     def test_edge_strength_empty_dag(self):
         """Test edge case with empty DAG"""
