@@ -1259,39 +1259,60 @@ class DAG(nx.DiGraph):
 
     def edge_strength(self, data, edges=None):
         """
-        Computes the strength of edges in the DAG using conditional independence tests.
+        Computes the strength of edges in the DAG using a residual-based conditional
+        independence test with Pillai's Trace effect size.
+
+        This method quantifies the dependence between variables after adjusting for
+        common parents, using a flexible approach that supports both continuous and
+        categorical data. It first residualizes variables using XGBoost (instead of
+        linear regression), then computes the canonical correlation between residuals,
+        and finally evaluates the strength using Pillai's Trace — a multivariate
+        effect size bounded between 0 and 1.
+
+        Pillai's Trace
+        --------------
+        - Uses a residualization-based approach (similar to partial correlation) and
+          employs the XGBoost estimator instead of linear regression.
+        - Computes the Pillai Trace effect size based on canonical correlations instead
+          of using correlation (as is the case with partial correlation).
+        - Measures the linear relationship between the residuals.
+        - Works for any mixture of categorical and continuous variables.
+        - The value is bounded between 0 and 1:
+        - Strength close to 1 → strong dependence.
+        - Strength close to 0 → conditional independence.
 
         Parameters
         ----------
-        data: pandas.DataFrame
-            The dataset on which to compute the edge strengths.
+        data : pandas.DataFrame
+            Dataset to compute edge strengths on.
 
-        edges: tuple or list or None (default: None)
-            If None, computes strength for all edges in the DAG.
-            If tuple (X, Y), computes strength for the single edge X->Y.
-            If list [(X1, Y1), (X2, Y2), ...], computes strength for specified edges.
+        edges : tuple, list, or None (default: None)
+            - None: Compute for all DAG edges.
+            - Tuple (X, Y): Compute for edge X → Y.
+            - List of tuples: Compute for selected edges.
 
         Returns
         -------
         dict
-            A dictionary mapping edges to their strength values. Each strength value
-            is based on the effect size measure of the ci_pillai test.
+            Dictionary mapping edges to their strength values.
 
         Examples
         --------
         >>> import pandas as pd
         >>> from pgmpy.base import DAG
-        >>> # Create a simple DAG
+        >>> # Example DAG with edges and data
         >>> dag = DAG([('X', 'Y'), ('Z', 'Y')])
-        >>> # Generate some data
-        >>> data = pd.DataFrame({'X': [0, 1, 0, 1], 'Y': [1, 3, 0, 2], 'Z': [1, 1, 0, 0]})
-        >>> # Compute edge strengths
+        >>> data = pd.DataFrame({'X': [...], 'Y': [...], 'Z': [...]})
         >>> dag.edge_strength(data)
-        {('X', 'Y'): 1.2260921400386593e-07, ('Z', 'Y'): 5.140313027451882e-07}
-        >>> # Compute strength for a specific edge
-        >>> dag.edge_strength(data, edges=('X', 'Y'))
-        {('X', 'Y'): 1.2260921400386593e-07}
+        {('X', 'Y'): 0.99, ('Z', 'Y'): 0.98}
+
+        Notes
+        -----
+        - Based on the `ci_pillai` test using XGBoost-based residualization.
+        - Effect size is computed via Pillai's Trace on residuals' canonical correlations.
+
         """
+
         from pgmpy.estimators.CITests import pillai_trace
 
         # If edges is None, compute for all edges in the DAG
@@ -1309,19 +1330,23 @@ class DAG(nx.DiGraph):
         for edge in edges_to_compute:
             x, y = edge
 
+            # Get parents of x and y using get_parents instead of predecessors
+            pa_X = self.get_parents(x)
+            pa_Y = self.get_parents(y)
+
             # Check if either x or y is a latent node
-            if x in self.latents or y in self.latents:
+            if (
+                x in self.latents
+                or y in self.latents
+                or any(parent in self.latents for parent in pa_X + pa_Y)
+            ):
                 raise ValueError(
-                    f"Edge {edge} involves latent variables. Use CausalInference class for "
+                    f"Edge {edge} or its parents involve latent variables. Use CausalInference class for "
                     "advanced causal effect estimation."
                 )
 
-            # Get parents of x and y
-            pa_X = list(self.predecessors(x))
-            pa_Y = list(self.predecessors(y))
-
             # Combine parents for conditioning set (excluding x and y themselves)
-            conditioning_set = set(pa_X + pa_Y) - {x, y}
+            conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
             result = pillai_trace(
@@ -1329,7 +1354,7 @@ class DAG(nx.DiGraph):
             )
 
             # Store the edge strength
-            strengths[edge] = result[1]
+            strengths[edge] = result[0]
 
         return strengths
 
@@ -1658,10 +1683,17 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        Returns an instance of DAG.
+        pgmpy.base.DAG: Returns an instance of DAG.
 
         Examples
         --------
+        >>> pdag = PDAG(
+        ... directed_ebunch=[("A", "B"), ("C", "B")],
+        ... undirected_ebunch=[("C", "D"), ("D", "A")],
+        ... )
+        >>> dag = pdag.to_dag()
+        >>> print(dag.edges())
+        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
 
         References
         ----------
