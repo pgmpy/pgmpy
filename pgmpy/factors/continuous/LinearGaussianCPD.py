@@ -67,6 +67,10 @@ class LinearGaussianCPD(BaseFactor):
     """
 
     def __init__(self, variable, beta, std, evidence=[]):
+        if not isinstance(variable, str):
+            raise TypeError(
+                f"Argument `variable` must be a string. Got {type(variable).__name__} instead."
+            )
         self.variable = variable
         self.beta = np.array(beta)
         self.std = std
