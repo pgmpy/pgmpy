@@ -101,91 +101,6 @@ class TimeSeriesPDAG(PDAG):
                 f"to the lag of the target node {v}."
             )
 
-    # def add_edge(self, u, v, directed=True, **kwargs):
-    #     """
-    #     Adds an edge between the nodes u and v.
-
-    #     These nodes will be automatically added if they are
-    #     not already present in the graph.
-
-    #     Parameters
-    #     ----------
-    #     u, v : nodes
-    #         Nodes should be tuples (variable, lag).
-
-    #     directed : bool, default=True
-    #         If True, adds a directed edge. If False, adds an undirected edge.
-
-    #     **kwargs : keyword arguments
-    #         Additional attributes to add to the edge.
-
-    #     Examples
-    #     --------
-    #     >>> tspdag = TimeSeriesPDAG()
-    #     >>> tspdag.add_edge(('A', 0), ('B', 1))  # Add directed edge
-    #     >>> tspdag.add_edge(('C', 0), ('D', 0), directed=False)  # Add undirected edge
-    #     """
-    #     # Validate nodes
-    #     self._validate_node(u, "Source")
-    #     self._validate_node(v, "Target")
-
-    #     # Validate temporal relationship
-    #     self._validate_temporal_relationship(u, v)
-
-    #     # For undirected edges, additional checks
-    #     if not directed:
-    #         # If different timepoints, check reverse direction
-    #         if u[1] != v[1]:
-    #             try:
-    #                 self._validate_temporal_relationship(v, u)
-    #             except ValueError:
-    #                 raise ValueError(
-    #                     f"Edge between {u} and {v} cannot be undirected due to temporal constraints. "
-    #                     f"Consider adding it as a directed edge."
-    #                 )
-
-    #         # Add edge to appropriate collection
-    #         if (u, v) not in self.undirected_edges:
-    #             self.undirected_edges.add((u, v))
-
-    #         # Add both directions to the graph
-    #         super(PDAG, self).add_edge(u, v, **kwargs)
-    #         super(PDAG, self).add_edge(v, u, **kwargs)
-    #     else:
-    #         # Add to directed edges collection
-    #         if (u, v) not in self.directed_edges:
-    #             self.directed_edges.add((u, v))
-
-    #         # Add directed edge to graph
-    #         super(PDAG, self).add_edge(u, v, **kwargs)
-
-    # def add_edges_from(self, ebunch, directed=True, **kwargs):
-    #     """
-    #     Add all the edges in ebunch.
-
-    #     Parameters
-    #     ----------
-    #     ebunch : container of edges
-    #         Each edge given in the container will be added to the graph.
-    #         The edges must be given as 2-tuples (u, v).
-
-    #     directed : bool, default=True
-    #         If True, adds directed edges. If False, adds undirected edges.
-
-    #     **kwargs : keyword arguments
-    #         Additional attributes to add to the edges.
-
-    #     Examples
-    #     --------
-    #     >>> tspdag = TimeSeriesPDAG()
-    #     >>> directed_edges = [(('A', 0), ('B', 1)), (('B', 1), ('C', 2))]
-    #     >>> tspdag.add_edges_from(directed_edges)
-    #     >>> undirected_edges = [(('A', 0), ('C', 0)), (('B', 0), ('D', 0))]
-    #     >>> tspdag.add_edges_from(undirected_edges, directed=False)
-    #     """
-    #     for u, v in ebunch:
-    #         self.add_edge(u, v, directed=directed, **kwargs)
-
     def to_dag(self):
         """
         Returns one possible TimeSeriesDAG which is represented using the TimeSeriesPDAG.
@@ -212,38 +127,41 @@ class TimeSeriesPDAG(PDAG):
 
         return ts_dag
 
-    def to_summary_graph(self, include_undirected=True):
+    def plot_summary_graph(self, include_undirected=True, **kwargs):
         """
-        Converts the time series PDAG to a summary graph where each variable
-        appears only once, and the edges represent the existence of a causal
-        link at any lag.
+        Builds and plots the summary graph for a TimeSeriesPDAG.
+        Each variable appears once, and edges represent the existence of causal
+        links (directed or undirected) across any lag.
 
         Parameters
         ----------
         include_undirected : bool, default=True
-            If True, includes undirected edges in the summary graph.
+            Whether to include undirected edges in the summary graph.
+
+        **kwargs : dict
+            Keyword arguments to customize the plotting:
+                - node_kwargs: dict of kwargs for drawing nodes
+                - label_kwargs: dict of kwargs for drawing labels
+                - directed_edge_kwargs: dict for directed edges
+                - undirected_edge_kwargs: dict for undirected edges
 
         Returns
         -------
-        summary_graph : nx.DiGraph or nx.Graph
-            A graph where each node is a variable and edges represent
-            the existence of a causal link at any lag. If include_undirected is True,
-            the result will be a mixed graph with both directed and undirected edges.
-
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(directed_ebunch=[(('A', 0), ('B', 1))],
-        ...                         undirected_ebunch=[(('A', 0), ('C', 0))])
-        >>> summary = tspdag.to_summary_graph()
+        summary_graph : nx.DiGraph
+            The summary graph with lag metadata.
+        fig, ax : matplotlib figure and axis
+            The matplotlib objects used for plotting.
         """
-        # Use a mixed graph to represent both directed and undirected edges
-        summary_graph = nx.DiGraph()
+        import matplotlib.pyplot as plt
+        import matplotlib.lines as mlines
+        import networkx as nx
 
-        # Add all the variables as nodes
+        # Build the summary graph
+        summary_graph = nx.DiGraph()
         variables = set(var for var, _ in self.nodes())
         summary_graph.add_nodes_from(variables)
 
-        # Add directed edges with lag information
+        # Add directed edges
         for (var1, lag1), (var2, lag2) in self.directed_edges:
             if not summary_graph.has_edge(var1, var2):
                 summary_graph.add_edge(
@@ -251,105 +169,80 @@ class TimeSeriesPDAG(PDAG):
                 )
             summary_graph[var1][var2]["directed_lags"].add((lag1, lag2))
 
-        # Add undirected edges if requested
+        # Add undirected edges if enabled
         if include_undirected:
             for (var1, lag1), (var2, lag2) in self.undirected_edges:
-                # For undirected edges, ensure we're not duplicating
                 if var1 == var2:
                     continue
+                v1, v2 = sorted([var1, var2])
+                l1, l2 = (lag1, lag2) if var1 < var2 else (lag2, lag1)
 
-                # Determine edge direction in summary graph
-                if var1 < var2:  # Use lexicographical ordering for consistency
-                    v1, v2 = var1, var2
-                    l1, l2 = lag1, lag2
-                else:
-                    v1, v2 = var2, var1
-                    l1, l2 = lag2, lag1
-
-                # Add edge if it doesn't exist
                 if not summary_graph.has_edge(v1, v2):
                     summary_graph.add_edge(
                         v1, v2, directed_lags=set(), undirected_lags=set()
                     )
-
-                # Add the lag information
                 summary_graph[v1][v2]["undirected_lags"].add((l1, l2))
 
-        return summary_graph
+        # Layout for plotting
+        pos = {var: (i, 0) for i, var in enumerate(summary_graph.nodes())}
 
-    def plot(self, **kwargs):
-        """
-        Plots the time series PDAG using networkx.
+        # Plotting
+        fig, ax = plt.subplots(figsize=(10, 6))
 
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments to be passed to the networkx drawing function.
+        nx.draw_networkx_nodes(
+            summary_graph, pos, ax=ax, **kwargs.get("node_kwargs", {})
+        )
+        nx.draw_networkx_labels(
+            summary_graph, pos, ax=ax, **kwargs.get("label_kwargs", {})
+        )
 
-        Returns
-        -------
-        fig, ax : matplotlib figure and axis
-            The matplotlib figure and axis
+        directed_edges = [
+            (u, v)
+            for u, v in summary_graph.edges()
+            if summary_graph[u][v]["directed_lags"]
+        ]
+        undirected_edges = [
+            (u, v)
+            for u, v in summary_graph.edges()
+            if summary_graph[u][v]["undirected_lags"]
+        ]
 
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(directed_ebunch=[(('A', 0), ('B', 1))],
-        ...                         undirected_ebunch=[(('A', 0), ('C', 0))])
-        >>> fig, ax = tspdag.plot()
-        """
-        import matplotlib.pyplot as plt
-        import matplotlib.lines as mlines
-
-        # Create a layout for the nodes
-        pos = {}
-        for node in self.nodes():
-            var, lag = node
-            # Use a hash value for y to separate their positions
-            pos[node] = (lag, hash(var) % 100)
-
-        fig, ax = plt.subplots(figsize=(10, 8))
-
-        # Draw nodes
-        nx.draw_networkx_nodes(self, pos, ax=ax, **kwargs.get("node_kwargs", {}))
-        nx.draw_networkx_labels(self, pos, ax=ax, **kwargs.get("label_kwargs", {}))
-
-        # Draw directed edges
-        directed_edges = list(self.directed_edges)
         if directed_edges:
             nx.draw_networkx_edges(
-                self,
+                summary_graph,
                 pos,
                 edgelist=directed_edges,
-                ax=ax,
                 arrows=True,
+                ax=ax,
                 **kwargs.get("directed_edge_kwargs", {}),
             )
 
-        # Draw undirected edges with custom style to make them distinguishable
-        undirected_edges = []
-        for u, v in self.undirected_edges:
-            # Only include one direction for plotting
-            if (v, u) not in undirected_edges:
-                undirected_edges.append((u, v))
-
         if undirected_edges:
             nx.draw_networkx_edges(
-                self,
+                summary_graph,
                 pos,
                 edgelist=undirected_edges,
-                ax=ax,
                 arrows=False,
                 style="dashed",
+                ax=ax,
                 **kwargs.get("undirected_edge_kwargs", {}),
             )
 
-        # Label the lags on x-axis
-        lags = sorted(set(lag for _, lag in self.nodes()))
-        ax.set_xticks(lags)
-        ax.set_xticklabels([f"t{l}" if l == 0 else f"t{l}" for l in lags])
-        ax.set_title("Time Series Partially Directed Acyclic Graph")
+        # Add edge labels
+        edge_labels = {}
+        for u, v in summary_graph.edges():
+            labels = []
+            if summary_graph[u][v]["directed_lags"]:
+                labels.append(f"D:{sorted(summary_graph[u][v]['directed_lags'])}")
+            if summary_graph[u][v]["undirected_lags"]:
+                labels.append(f"U:{sorted(summary_graph[u][v]['undirected_lags'])}")
+            edge_labels[(u, v)] = "\n".join(labels)
 
-        # Add a legend
+        nx.draw_networkx_edge_labels(summary_graph, pos, edge_labels=edge_labels, ax=ax)
+
+        ax.set_title("Summary Graph (Time Series PDAG)")
+
+        # Add legend
         directed_line = mlines.Line2D(
             [], [], color="black", marker=">", markersize=10, label="Directed Edge"
         )
@@ -358,7 +251,7 @@ class TimeSeriesPDAG(PDAG):
         )
         ax.legend(handles=[directed_line, undirected_line])
 
-        return fig, ax
+        return summary_graph, fig, ax
 
     def get_ancestral_graph(self, nodes):
         """

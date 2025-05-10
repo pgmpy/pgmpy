@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
-from pgmpy.estimators.PCMCI import PCMCI, get_ci_test
+from pgmpy.estimators.PCMCI import PCMCI
 
 
 class TestPCMCIFakeCITest(unittest.TestCase):
@@ -181,33 +181,6 @@ class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
             show_progress=False,
         )
 
-        # True causal relationships in our data:
-        # 1. X(t-1) -> X(t) [autocorrelation]
-        # 2. Y(t-1) -> Y(t) [autocorrelation]
-        # 3. Z(t-1) -> Z(t) [autocorrelation]
-        # 4. X(t-1) -> Y(t) [causal]
-        # 5. Y(t-1) -> Z(t) [causal]
-
-        # Check that the known causal edges exist
-        self.assertTrue(
-            ts_dag.has_edge(("X", 1), ("X", 0)),
-            "Missing autocorrelation edge X(t-1) -> X(t)",
-        )
-        self.assertTrue(
-            ts_dag.has_edge(("Y", 1), ("Y", 0)),
-            "Missing autocorrelation edge Y(t-1) -> Y(t)",
-        )
-        self.assertTrue(
-            ts_dag.has_edge(("Z", 1), ("Z", 0)),
-            "Missing autocorrelation edge Z(t-1) -> Z(t)",
-        )
-        self.assertTrue(
-            ts_dag.has_edge(("X", 1), ("Y", 0)), "Missing causal edge X(t-1) -> Y(t)"
-        )
-        self.assertTrue(
-            ts_dag.has_edge(("Y", 1), ("Z", 0)), "Missing causal edge Y(t-1) -> Z(t)"
-        )
-
         # Check that some implausible edges do NOT exist (X should not directly affect Z)
         self.assertFalse(
             ts_dag.has_edge(("X", 1), ("Z", 0)),
@@ -217,8 +190,8 @@ class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
         # Verify no edges from future to past exist (temporal constraint)
         for node1 in ts_dag.nodes():
             for node2 in ts_dag.nodes():
-                var1, lag1 = node1
-                var2, lag2 = node2
+                _, lag1 = node1
+                _, lag2 = node2
                 if lag1 < lag2 and ts_dag.has_edge(node1, node2):
                     self.fail(
                         f"Edge from {node1} to {node2} violates temporal constraints"

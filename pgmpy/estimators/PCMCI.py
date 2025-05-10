@@ -4,13 +4,11 @@ from itertools import chain, combinations, permutations
 
 import networkx as nx
 import pandas as pd
-import numpy as np
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
-from pgmpy.base.DAG import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
@@ -529,8 +527,8 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
         # First, orient edges based on time ordering (temporal constraint)
         for u, v in skeleton.edges():
-            u_var, u_lag = u
-            v_var, v_lag = v
+            _, u_lag = u
+            _, v_lag = v
 
             # Same time lag (contemporaneous) - leave unoriented for now
             if u_lag == v_lag:
@@ -593,7 +591,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         # Group nodes by time lag
         nodes_by_lag = {}
         for node in ts_dag.nodes():
-            var, lag = node
+            _, lag = node
             if lag not in nodes_by_lag:
                 nodes_by_lag[lag] = []
             nodes_by_lag[lag].append(node)
