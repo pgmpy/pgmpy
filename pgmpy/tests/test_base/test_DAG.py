@@ -257,6 +257,86 @@ class TestDAGCreation(unittest.TestCase):
         # Check that there are no latent variables
         self.assertEqual(pdag.latents, set())
 
+    def test_to_pdag_single_edge(self):
+        dag = DAG([("X", "Y")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {("X", "Y"), ("Y", "X")}
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_v_structure(self):
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {("X", "Y"), ("Z", "Y")}
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_multiple_edges_1(self):
+        dag = DAG(
+            [
+                ("Z1", "X"),
+                ("Z1", "Z3"),
+                ("Z2", "Z3"),
+                ("Z2", "Y"),
+                ("Z3", "X"),
+                ("Z3", "Y"),
+                ("X", "W"),
+                ("W", "Y"),
+            ]
+        )
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("Z1", "Z3"),
+            ("Z1", "X"),
+            ("Z3", "X"),
+            ("Z3", "Y"),
+            ("Z2", "Z3"),
+            ("Z2", "Y"),
+            ("X", "W"),
+            ("W", "Y"),
+        }
+
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"Z1", "Z2", "X", "Y", "Z3", "W"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_multiple_edges_2(self):
+        dag = DAG([("X", "Y"), ("Z", "Y"), ("Z", "X")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("X", "Y"),
+            ("Y", "X"),
+            ("Z", "Y"),
+            ("Y", "Z"),
+            ("Z", "X"),
+            ("X", "Z"),
+        }
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
     def test_minimal_dseparator(self):
         # Without latent variables
 
