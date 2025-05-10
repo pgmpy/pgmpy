@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import networkx as nx
-import itertools
 
-from pgmpy.base.DAG import DAG
 from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 from pgmpy.base.DAG import PDAG
 
@@ -103,90 +101,90 @@ class TimeSeriesPDAG(PDAG):
                 f"to the lag of the target node {v}."
             )
 
-    def add_edge(self, u, v, directed=True, **kwargs):
-        """
-        Adds an edge between the nodes u and v.
+    # def add_edge(self, u, v, directed=True, **kwargs):
+    #     """
+    #     Adds an edge between the nodes u and v.
 
-        These nodes will be automatically added if they are
-        not already present in the graph.
+    #     These nodes will be automatically added if they are
+    #     not already present in the graph.
 
-        Parameters
-        ----------
-        u, v : nodes
-            Nodes should be tuples (variable, lag).
+    #     Parameters
+    #     ----------
+    #     u, v : nodes
+    #         Nodes should be tuples (variable, lag).
 
-        directed : bool, default=True
-            If True, adds a directed edge. If False, adds an undirected edge.
+    #     directed : bool, default=True
+    #         If True, adds a directed edge. If False, adds an undirected edge.
 
-        **kwargs : keyword arguments
-            Additional attributes to add to the edge.
+    #     **kwargs : keyword arguments
+    #         Additional attributes to add to the edge.
 
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG()
-        >>> tspdag.add_edge(('A', 0), ('B', 1))  # Add directed edge
-        >>> tspdag.add_edge(('C', 0), ('D', 0), directed=False)  # Add undirected edge
-        """
-        # Validate nodes
-        self._validate_node(u, "Source")
-        self._validate_node(v, "Target")
+    #     Examples
+    #     --------
+    #     >>> tspdag = TimeSeriesPDAG()
+    #     >>> tspdag.add_edge(('A', 0), ('B', 1))  # Add directed edge
+    #     >>> tspdag.add_edge(('C', 0), ('D', 0), directed=False)  # Add undirected edge
+    #     """
+    #     # Validate nodes
+    #     self._validate_node(u, "Source")
+    #     self._validate_node(v, "Target")
 
-        # Validate temporal relationship
-        self._validate_temporal_relationship(u, v)
+    #     # Validate temporal relationship
+    #     self._validate_temporal_relationship(u, v)
 
-        # For undirected edges, additional checks
-        if not directed:
-            # If different timepoints, check reverse direction
-            if u[1] != v[1]:
-                try:
-                    self._validate_temporal_relationship(v, u)
-                except ValueError:
-                    raise ValueError(
-                        f"Edge between {u} and {v} cannot be undirected due to temporal constraints. "
-                        f"Consider adding it as a directed edge."
-                    )
+    #     # For undirected edges, additional checks
+    #     if not directed:
+    #         # If different timepoints, check reverse direction
+    #         if u[1] != v[1]:
+    #             try:
+    #                 self._validate_temporal_relationship(v, u)
+    #             except ValueError:
+    #                 raise ValueError(
+    #                     f"Edge between {u} and {v} cannot be undirected due to temporal constraints. "
+    #                     f"Consider adding it as a directed edge."
+    #                 )
 
-            # Add edge to appropriate collection
-            if (u, v) not in self.undirected_edges:
-                self.undirected_edges.add((u, v))
+    #         # Add edge to appropriate collection
+    #         if (u, v) not in self.undirected_edges:
+    #             self.undirected_edges.add((u, v))
 
-            # Add both directions to the graph
-            super(PDAG, self).add_edge(u, v, **kwargs)
-            super(PDAG, self).add_edge(v, u, **kwargs)
-        else:
-            # Add to directed edges collection
-            if (u, v) not in self.directed_edges:
-                self.directed_edges.add((u, v))
+    #         # Add both directions to the graph
+    #         super(PDAG, self).add_edge(u, v, **kwargs)
+    #         super(PDAG, self).add_edge(v, u, **kwargs)
+    #     else:
+    #         # Add to directed edges collection
+    #         if (u, v) not in self.directed_edges:
+    #             self.directed_edges.add((u, v))
 
-            # Add directed edge to graph
-            super(PDAG, self).add_edge(u, v, **kwargs)
+    #         # Add directed edge to graph
+    #         super(PDAG, self).add_edge(u, v, **kwargs)
 
-    def add_edges_from(self, ebunch, directed=True, **kwargs):
-        """
-        Add all the edges in ebunch.
+    # def add_edges_from(self, ebunch, directed=True, **kwargs):
+    #     """
+    #     Add all the edges in ebunch.
 
-        Parameters
-        ----------
-        ebunch : container of edges
-            Each edge given in the container will be added to the graph.
-            The edges must be given as 2-tuples (u, v).
+    #     Parameters
+    #     ----------
+    #     ebunch : container of edges
+    #         Each edge given in the container will be added to the graph.
+    #         The edges must be given as 2-tuples (u, v).
 
-        directed : bool, default=True
-            If True, adds directed edges. If False, adds undirected edges.
+    #     directed : bool, default=True
+    #         If True, adds directed edges. If False, adds undirected edges.
 
-        **kwargs : keyword arguments
-            Additional attributes to add to the edges.
+    #     **kwargs : keyword arguments
+    #         Additional attributes to add to the edges.
 
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG()
-        >>> directed_edges = [(('A', 0), ('B', 1)), (('B', 1), ('C', 2))]
-        >>> tspdag.add_edges_from(directed_edges)
-        >>> undirected_edges = [(('A', 0), ('C', 0)), (('B', 0), ('D', 0))]
-        >>> tspdag.add_edges_from(undirected_edges, directed=False)
-        """
-        for u, v in ebunch:
-            self.add_edge(u, v, directed=directed, **kwargs)
+    #     Examples
+    #     --------
+    #     >>> tspdag = TimeSeriesPDAG()
+    #     >>> directed_edges = [(('A', 0), ('B', 1)), (('B', 1), ('C', 2))]
+    #     >>> tspdag.add_edges_from(directed_edges)
+    #     >>> undirected_edges = [(('A', 0), ('C', 0)), (('B', 0), ('D', 0))]
+    #     >>> tspdag.add_edges_from(undirected_edges, directed=False)
+    #     """
+    #     for u, v in ebunch:
+    #         self.add_edge(u, v, directed=directed, **kwargs)
 
     def to_dag(self):
         """

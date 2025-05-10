@@ -189,45 +189,40 @@ class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
         # 5. Y(t-1) -> Z(t) [causal]
 
         # Check that the known causal edges exist
-        # Note: Use explicit tuple comparisons to avoid array comparison issues
-
-        # Check autocorrelation edges
         self.assertTrue(
-            any(u == ("X", 1) and v == ("X", 0) for u, v in ts_dag.edges()),
+            ts_dag.has_edge(("X", 1), ("X", 0)),
             "Missing autocorrelation edge X(t-1) -> X(t)",
         )
         self.assertTrue(
-            any(u == ("Y", 1) and v == ("Y", 0) for u, v in ts_dag.edges()),
+            ts_dag.has_edge(("Y", 1), ("Y", 0)),
             "Missing autocorrelation edge Y(t-1) -> Y(t)",
         )
         self.assertTrue(
-            any(u == ("Z", 1) and v == ("Z", 0) for u, v in ts_dag.edges()),
+            ts_dag.has_edge(("Z", 1), ("Z", 0)),
             "Missing autocorrelation edge Z(t-1) -> Z(t)",
         )
-
-        # Check causal edges
         self.assertTrue(
-            any(u == ("X", 1) and v == ("Y", 0) for u, v in ts_dag.edges()),
-            "Missing causal edge X(t-1) -> Y(t)",
+            ts_dag.has_edge(("X", 1), ("Y", 0)), "Missing causal edge X(t-1) -> Y(t)"
         )
         self.assertTrue(
-            any(u == ("Y", 1) and v == ("Z", 0) for u, v in ts_dag.edges()),
-            "Missing causal edge Y(t-1) -> Z(t)",
+            ts_dag.has_edge(("Y", 1), ("Z", 0)), "Missing causal edge Y(t-1) -> Z(t)"
         )
 
-        # Check that implausible edges do NOT exist (X should not directly affect Z)
+        # Check that some implausible edges do NOT exist (X should not directly affect Z)
         self.assertFalse(
-            any(u == ("X", 1) and v == ("Z", 0) for u, v in ts_dag.edges()),
+            ts_dag.has_edge(("X", 1), ("Z", 0)),
             "Should not have direct edge X(t-1) -> Z(t)",
         )
 
         # Verify no edges from future to past exist (temporal constraint)
-        for u, v in ts_dag.edges():
-            _, lag_u = u
-            _, lag_v = v
-            self.assertFalse(
-                lag_u < lag_v, f"Edge from {u} to {v} violates temporal constraints"
-            )
+        for node1 in ts_dag.nodes():
+            for node2 in ts_dag.nodes():
+                var1, lag1 = node1
+                var2, lag2 = node2
+                if lag1 < lag2 and ts_dag.has_edge(node1, node2):
+                    self.fail(
+                        f"Edge from {node1} to {node2} violates temporal constraints"
+                    )
 
     def test_create_lagged_data(self):
         """Test the creation of lagged data for time series analysis."""
