@@ -1582,10 +1582,17 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        Returns an instance of DAG.
+        pgmpy.base.DAG: Returns an instance of DAG.
 
         Examples
         --------
+        >>> pdag = PDAG(
+        ... directed_ebunch=[("A", "B"), ("C", "B")],
+        ... undirected_ebunch=[("C", "D"), ("D", "A")],
+        ... )
+        >>> dag = pdag.to_dag()
+        >>> print(dag.edges())
+        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
 
         References
         ----------
