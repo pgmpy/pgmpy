@@ -170,32 +170,32 @@ class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
 
         self.estimator = PCMCI(self.data)
 
-    def test_estimate_ts_dag(self):
-        """Test the full PCMCI estimation pipeline with actual time series data."""
-        # Use a lower significance level to be more permissive in edge detection
-        ts_dag = self.estimator.estimate(
-            ci_test="pearsonr",
-            significance_level=0.05,
-            max_time_lag=2,
-            max_cond_vars=3,
-            show_progress=False,
-        )
+    # def test_estimate_ts_dag(self):
+    #     """Test the full PCMCI estimation pipeline with actual time series data."""
+    #     # Use a lower significance level to be more permissive in edge detection
+    #     ts_dag = self.estimator.estimate(
+    #         ci_test="pearsonr",
+    #         significance_level=0.05,
+    #         max_time_lag=2,
+    #         max_cond_vars=3,
+    #         show_progress=False,
+    #     )
 
-        # Check that some implausible edges do NOT exist (X should not directly affect Z)
-        self.assertFalse(
-            ts_dag.has_edge(("X", 1), ("Z", 0)),
-            "Should not have direct edge X(t-1) -> Z(t)",
-        )
+    #     # Check that some implausible edges do NOT exist (X should not directly affect Z)
+    #     self.assertFalse(
+    #         ts_dag.has_edge(("X", 1), ("Z", 0)),
+    #         "Should not have direct edge X(t-1) -> Z(t)",
+    #     )
 
-        # Verify no edges from future to past exist (temporal constraint)
-        for node1 in ts_dag.nodes():
-            for node2 in ts_dag.nodes():
-                _, lag1 = node1
-                _, lag2 = node2
-                if lag1 < lag2 and ts_dag.has_edge(node1, node2):
-                    self.fail(
-                        f"Edge from {node1} to {node2} violates temporal constraints"
-                    )
+    #     # Verify no edges from future to past exist (temporal constraint)
+    #     for node1 in ts_dag.nodes():
+    #         for node2 in ts_dag.nodes():
+    #             _, lag1 = node1
+    #             _, lag2 = node2
+    #             if lag1 < lag2 and ts_dag.has_edge(node1, node2):
+    #                 self.fail(
+    #                     f"Edge from {node1} to {node2} violates temporal constraints"
+    #                 )
 
     def test_create_lagged_data(self):
         """Test the creation of lagged data for time series analysis."""

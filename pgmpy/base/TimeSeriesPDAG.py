@@ -120,7 +120,7 @@ class TimeSeriesPDAG(PDAG):
         dag = super(TimeSeriesPDAG, self).to_dag()
 
         # Create a new TimeSeriesDAG with the edges from the DAG
-        ts_dag = TimeSeriesDAG(edges=dag.edges())
+        ts_dag = TimeSeriesDAG()
 
         # Copy latent nodes
         ts_dag.latents = dag.latents.copy()

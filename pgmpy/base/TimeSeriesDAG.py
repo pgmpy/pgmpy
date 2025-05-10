@@ -24,7 +24,7 @@ class TimeSeriesDAG(DAG):
     --------
     >>> from pgmpy.estimators import TimeSeriesDAG
     >>> edges = [(('A', 0), ('B', 1)), (('B', 1), ('C', 2))]
-    >>> dag = TimeSeriesDAG(edges)
+    >>> dag = TimeSeriesDAG()
     """
 
     def __init__(
