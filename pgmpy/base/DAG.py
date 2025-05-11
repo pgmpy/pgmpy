@@ -869,12 +869,12 @@ class DAG(nx.DiGraph):
 
     def to_pdag(self):
         """
-        Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
 
         Returns
         -------
-        Partially oriented DAG: pgmpy.base.PDAG
-            An instance of pgmpy.base.PDAG.
+        CPDAG: pgmpy.base.PDAG
+            An instance of pgmpy.base.PDAG representing the CPDAG of the given DAG.
 
         Examples
         --------
@@ -883,6 +883,10 @@ class DAG(nx.DiGraph):
         >>> pdag = dag.to_pdag()
         >>> pdag.directed_edges
         {('A', 'B'), ('B', 'C'), ('C', 'D')}
+
+        References
+        ----------
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
