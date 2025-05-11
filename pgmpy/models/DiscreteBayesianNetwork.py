@@ -1144,7 +1144,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes, inplace=False):
+    def do(self, nodes, states, inplace=False):
         """
         Applies the do operation. The do operation removes all incoming edges
         to variables in `nodes` and marginalizes their CPDs to only contain the
@@ -1181,6 +1181,16 @@ class DiscreteBayesianNetwork(DAG):
         else:
             nodes = list(nodes)
 
+        if isinstance(states, (str, int)):
+            states = [states]
+        else:
+            states = list(states)
+
+        if len(nodes) != len(states):
+            raise ValueError(
+                f"Length of nodes and states should be same. Got {len(nodes)} and {len(states)}"
+            )
+
         if not set(nodes).issubset(set(self.nodes())):
             raise ValueError(
                 f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
@@ -1190,9 +1200,28 @@ class DiscreteBayesianNetwork(DAG):
         adj_model = DAG.do(model, nodes, inplace=inplace)
 
         if adj_model.cpds:
-            for node in nodes:
+            for index, node in enumerate(nodes):
                 cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+                state_names = cpd.state_names[node]
+                if states[index] not in state_names:
+                    raise ValueError(
+                        f"State {states[index]} not defined for {node} in the model."
+                    )
+                idx = state_names.index(states[index])
+                card = cpd.variable_card
+                new_vals = [[1.0 if i == idx else 0.0] for i in range(card)]
+
+                # Drop the old CPD
+                adj_model.remove_cpds(cpd)
+                # Create new CPD by setting the values to 1.0 for the state in `states`
+                spike_cpd = TabularCPD(
+                    variable=node,
+                    variable_card=card,
+                    values=new_vals,
+                    state_names={node: state_names},
+                )
+                adj_model.add_cpds(spike_cpd)
+
         return adj_model
 
     def simulate(
