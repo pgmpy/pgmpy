@@ -1418,8 +1418,14 @@ class DAG(nx.DiGraph):
         elif isinstance(edges, tuple) and len(edges) == 2:
             edges_to_compute = [edges]
         # If edges is a list of edge tuples
-        else:
+        elif isinstance(edges, list) and all(
+            isinstance(edge, tuple) and len(edge) == 2 for edge in edges
+        ):
             edges_to_compute = edges
+        else:
+            raise ValueError(
+                "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
+            )
 
         strengths = {}
 
@@ -1427,14 +1433,13 @@ class DAG(nx.DiGraph):
             x, y = edge
 
             # Get parents of x and y using get_parents instead of predecessors
-            pa_X = self.get_parents(x)
             pa_Y = self.get_parents(y)
 
             # Check if either x or y is a latent node
             if (
                 x in self.latents
                 or y in self.latents
-                or any(parent in self.latents for parent in pa_X + pa_Y)
+                or any(parent in self.latents for parent in pa_Y)
             ):
                 raise ValueError(
                     f"Edge {edge} or its parents involve latent variables. Use CausalInference class for "
@@ -1451,6 +1456,9 @@ class DAG(nx.DiGraph):
 
             # Store the edge strength
             strengths[edge] = result[0]
+
+            # store the values in the graph as well
+            self.edges[edge]["strength"] = result[0]
 
         return strengths
 

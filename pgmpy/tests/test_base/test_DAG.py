@@ -510,6 +510,102 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], 0.999999754781587, places=15)
         self.assertAlmostEqual(strengths[("Z", "Y")], 0.9999989719376587, places=15)
 
+    def test_edge_strength_stored_in_graph(self):
+        """Test that edge strengths are stored in the graph after computation"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
+
+        # Compute strengths
+        strengths = dag.edge_strength(data)
+
+        # Verify strengths are stored in graph edges
+        self.assertIn("strength", dag.edges[("X", "Y")])
+        self.assertIn("strength", dag.edges[("Z", "Y")])
+
+        # Verify stored values match computed values
+        self.assertAlmostEqual(
+            dag.edges[("X", "Y")]["strength"], strengths[("X", "Y")], places=15
+        )
+        self.assertAlmostEqual(
+            dag.edges[("Z", "Y")]["strength"], strengths[("Z", "Y")], places=15
+        )
+
+    def test_edge_strength_invalid_edges(self):
+        """Test error handling for invalid edges parameter formats"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
+
+        # Test invalid single edge format (3-tuple)
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=("X", "Y", "extra"))
+        self.assertIn(
+            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
+            str(context.exception),
+        )
+
+        # Test invalid list format (contains non-tuple)
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=[("X", "Y"), "invalid"])
+        self.assertIn(
+            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
+            str(context.exception),
+        )
+
+        # Test invalid list format (contains 3-tuple)
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=[("X", "Y"), ("Z", "Y", "extra")])
+        self.assertIn(
+            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
+            str(context.exception),
+        )
+
+    def test_edge_strength_latent_variables(self):
+        """Test error handling for edges involving latent variables"""
+        # Create DAG with latent variables
+        dag = DAG([("X", "Y"), ("Z", "Y"), ("L", "X")], latents={"L"})
+        data = pd.DataFrame(
+            {
+                "X": [0, 1, 0, 1],
+                "Y": [1, 3, 0, 2],
+                "Z": [1, 1, 0, 0],
+                "L": [0, 1, 0, 1],  # Note: L is latent but included in data for testing
+            }
+        )
+
+        # Test edge where source is latent
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=("L", "X"))
+        self.assertIn(
+            "Edge ('L', 'X') or its parents involve latent variables",
+            str(context.exception),
+        )
+
+        # Test edge where target is latent
+        dag = DAG([("X", "L"), ("Z", "Y")], latents={"L"})
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=("X", "L"))
+        self.assertIn(
+            "Edge ('X', 'L') or its parents involve latent variables",
+            str(context.exception),
+        )
+
+        # Test edge where parent of target is latent
+        dag = DAG([("X", "Y"), ("L", "Y")], latents={"L"})
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data, edges=("X", "Y"))
+        self.assertIn(
+            "Edge ('X', 'Y') or its parents involve latent variables",
+            str(context.exception),
+        )
+
+        # Test computing all edges when some involve latents
+        with self.assertRaises(ValueError) as context:
+            dag.edge_strength(data)
+        self.assertIn(
+            "Edge ('X', 'Y') or its parents involve latent variables",
+            str(context.exception),
+        )
+
 
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
