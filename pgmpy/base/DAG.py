@@ -619,6 +619,98 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
+    def is_dconnected_fast(self, start, end, observed=None, include_latents=False):
+        """
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
+        Time complexity: O(E)
+
+        Parameters
+        ----------
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are included in the active trail analysis.
+
+        Returns
+        -------
+        bool
+            True if there's an active trail between start and end, False otherwise.
+        """
+        from collections import deque
+
+        # Handle None for observed
+        if observed is None:
+            observed = set()
+        else:
+            observed = set(observed)
+
+        # Initialize data structures
+        visited = set()  # Tracks (node, direction) pairs
+        active_nodes = set()  # Nodes in the active trail
+        queue = deque()
+
+        # Get ancestors of observed nodes for v-structure handling
+        ancestors_list = self._get_ancestors_of(observed)
+
+        # Initialize queue with start node in both directions
+        queue.append((start, "up"))
+        queue.append((start, "down"))
+
+        while queue:
+            current, direction = queue.popleft()
+
+            # Skip if already visited in this direction
+            if (current, direction) in visited:
+                continue
+            visited.add((current, direction))
+
+            # Add to active nodes if not observed
+            if current not in observed:
+                active_nodes.add(current)
+
+            # Determine next nodes to visit based on d-separation rules
+            if direction == "up" and current not in observed:
+                # Coming from child to this node, not observed
+                # Can go to parents (moving up)
+                for parent in self.predecessors(current):
+                    queue.append((parent, "up"))
+
+                # Can go to children (moving down)
+                for child in self.successors(current):
+                    queue.append((child, "down"))
+
+            elif direction == "down":
+                # Coming from parent to this node
+                if current not in observed:
+                    # If not observed, can go to children
+                    for child in self.successors(current):
+                        queue.append((child, "down"))
+
+                # If node is in ancestors of observed, can go up (v-structure)
+                if current in ancestors_list:
+                    for parent in self.predecessors(current):
+                        queue.append((parent, "up"))
+
+        # Check if end is in active nodes
+        if end in active_nodes:
+            # If include_latents is False, need to check if there's a path without latents
+            if not include_latents:
+                # If end node is a latent, it's not d-connected when include_latents=False
+                if end in self.latents:
+                    return False
+
+                # Here we just check if end node is in the active nodes after removing latents
+                return end in (active_nodes - self.latents)
+            return True
+        return False
+
     def is_dconnected(self, start, end, observed=None, include_latents=False):
         """
         Returns True if there is an active trail (i.e. d-connection) between
