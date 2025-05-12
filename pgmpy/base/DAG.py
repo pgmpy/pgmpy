@@ -657,7 +657,22 @@ class DAG(nx.DiGraph):
         queue = deque()
 
         # Get ancestors of observed nodes for v-structure handling
-        ancestors_list = self._get_ancestors_of(observed)
+        # ancestors_list = self._get_ancestors_of(observed)
+
+        if not observed:
+            ancestors_list = set()  # No ancestors if nothing is observed
+        else:
+            # Filter out any set objects before passing to _get_ancestors_of
+            valid_observed = []
+            for node in observed:
+                if isinstance(node, (set, frozenset)):  # Skip any set-like objects
+                    continue
+                valid_observed.append(node)
+            # Only call _get_ancestors_of if we have valid nodes
+            if valid_observed:
+                ancestors_list = self._get_ancestors_of(valid_observed)
+            else:
+                ancestors_list = set()
 
         # Initialize queue with start node in both directions
         queue.append((start, "up"))

@@ -706,10 +706,10 @@ class TestBayesianNetworkCPD(unittest.TestCase):
         self.assertFalse(self.G.is_dconnected("g", "s", observed="i"))
 
     def test_is_dconnected_fast(self):
-        self.assertFalse(self.G.is_dconnected("d", "s"))
-        self.assertTrue(self.G.is_dconnected("s", "l"))
-        self.assertTrue(self.G.is_dconnected("d", "s", observed="g"))
-        self.assertFalse(self.G.is_dconnected("s", "l", observed="g"))
+        self.assertFalse(self.G.is_dconnected_fast("d", "s"))
+        self.assertTrue(self.G.is_dconnected_fast("s", "l"))
+        self.assertTrue(self.G.is_dconnected_fast("d", "s", observed="g"))
+        self.assertFalse(self.G.is_dconnected_fast("s", "l", observed="g"))
 
     def test_is_dconnected(self):
         self.assertFalse(self.G.is_dconnected("d", "s"))
