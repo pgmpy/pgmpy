@@ -1406,6 +1406,7 @@ class DAG(nx.DiGraph):
         -----
         - Based on the `ci_pillai` test using XGBoost-based residualization.
         - Effect size is computed via Pillai's Trace on residuals' canonical correlations.
+        - Edges involving latent variables are skipped with a warning.
 
         """
 
@@ -1428,6 +1429,7 @@ class DAG(nx.DiGraph):
             )
 
         strengths = {}
+        skipped_edges = []
 
         for edge in edges_to_compute:
             x, y = edge
@@ -1441,10 +1443,8 @@ class DAG(nx.DiGraph):
                 or y in self.latents
                 or any(parent in self.latents for parent in pa_Y)
             ):
-                raise ValueError(
-                    f"Edge {edge} or its parents involve latent variables. Use CausalInference class for "
-                    "advanced causal effect estimation."
-                )
+                skipped_edges.append(edge)
+                continue
 
             # Combine parents for conditioning set (excluding x and y themselves)
             conditioning_set = set(pa_Y) - {x, y}
@@ -1459,6 +1459,12 @@ class DAG(nx.DiGraph):
 
             # store the values in the graph as well
             self.edges[edge]["strength"] = result[0]
+
+        if skipped_edges:
+            logger.warning(
+                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
+                "Use CausalInference class for advanced causal effect estimation."
+            )
 
         return strengths
 
