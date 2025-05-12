@@ -1394,20 +1394,34 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
-        >>> import pandas as pd
-        >>> from pgmpy.base import DAG
-        >>> # Example DAG with edges and data
-        >>> dag = DAG([('X', 'Y'), ('Z', 'Y')])
-        >>> data = pd.DataFrame({'X': [...], 'Y': [...], 'Z': [...]})
-        >>> dag.edge_strength(data)
-        {('X', 'Y'): 0.99, ('Z', 'Y'): 0.98}
+
+        >>> # Create a linear Gaussian Bayesian network
+        >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+        >>> # Create CPDs with specific beta values
+        >>> x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
+        >>> y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
+        >>> z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
+        >>> # Add CPDs to the model
+        >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
+        >>> # Simulate data from the model
+        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> # Create DAG and compute edge strengths
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> strengths = dag.edge_strength(data)
+        >>> # Verify edge strengths match squared Pearson correlations
+        >>> xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
+        >>> zy_corr = pearsonr("Z", "Y", ["X"], data, boolean=False)[0]
+        >>> # Edge strengths should be close to squared correlations
+        >>> abs(strengths[("X", "Y")] - xy_corr**2) < 0.01
+        True
+        >>> abs(strengths[("Z", "Y")] - zy_corr**2) < 0.01
+        True
 
         Notes
         -----
         - Based on the `ci_pillai` test using XGBoost-based residualization.
         - Effect size is computed via Pillai's Trace on residuals' canonical correlations.
         - Edges involving latent variables are skipped with a warning.
-
         """
 
         from pgmpy.estimators.CITests import pillai_trace
