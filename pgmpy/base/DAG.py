@@ -867,21 +867,117 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    # TODO: Commented out till the method is implemented.
-    #     def to_pdag(self):
-    #         """
-    #         Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
-    #
-    #         Returns
-    #         -------
-    #         Partially oriented DAG: pgmpy.base.PDAG
-    #             An instance of pgmpy.base.PDAG.
-    #
-    #         Examples
-    #         --------
-    #
-    #         """
-    #         pass
+    def to_pdag(self):
+        """
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
+
+        Returns
+        -------
+        CPDAG: pgmpy.base.PDAG
+            An instance of pgmpy.base.PDAG representing the CPDAG of the given DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('A', 'B'), ('B', 'C'), ('C', 'D')])
+        >>> pdag = dag.to_pdag()
+        >>> pdag.directed_edges
+        {('A', 'B'), ('B', 'C'), ('C', 'D')}
+
+        References
+        ----------
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        """
+        # Perform a topological sort on the nodes
+        topo_order = list(nx.topological_sort(self))
+        node_order = {node: i for i, node in enumerate(topo_order)}
+
+        # Initialize edge ordering
+        i = 0
+        edge_order = {}
+        unordered_edges = set(self.edges())
+
+        # While there are unordered edges
+        while unordered_edges:
+            # Find lowest ordered node with unordered edges incident into it
+            nodes_with_unordered_edges = {edge[1] for edge in unordered_edges}
+            y = min(nodes_with_unordered_edges, key=lambda x: node_order[x])
+
+            # Find highest ordered node for which x->y is not ordered
+            unordered_edges_into_y = {edge for edge in unordered_edges if edge[1] == y}
+            x = max(
+                (edge[0] for edge in unordered_edges_into_y),
+                key=lambda x: node_order[x],
+            )
+
+            # Label x->y with order i
+            edge_order[(x, y)] = i
+            i += 1
+            unordered_edges.remove((x, y))
+
+        # Label every edge as "unknown"
+        edge_labels = {edge: "unknown" for edge in self.edges()}
+
+        # While there are edges labeled "unknown"
+        while any(label == "unknown" for label in edge_labels.values()):
+            # Let x -> y be the lowest ordered edge that is labeled "unknown"
+            unknown_edges = [
+                (edge, edge_order[edge])
+                for edge, label in edge_labels.items()
+                if label == "unknown"
+            ]
+            x, y = min(unknown_edges, key=lambda x: x[1])[0]
+
+            # Check compelled parents
+            compelled_parents = [
+                w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"
+            ]
+            for w in compelled_parents:
+                if not self.has_edge(w, y):
+                    # Label x -> y and every edge incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                    break
+                else:
+                    # Label w -> y with "compelled"
+                    edge_labels[(w, y)] = "compelled"
+
+            # Check for v-structures
+            if edge_labels.get((x, y)) != "compelled":
+                v_structure_exists = False
+                for z in self.get_parents(y):
+                    if z != x and not self.has_edge(z, x):
+                        v_structure_exists = True
+                        break
+
+                if v_structure_exists:
+                    # Label x -> y and all "unknown" edges incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                else:
+                    # Label x -> y and all "unknown" edges incident into y with "reversible"
+                    edge_labels[(x, y)] = "reversible"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "reversible"
+
+        # Create PDAG with directed and undirected edges
+        directed_edges = [
+            edge for edge, label in edge_labels.items() if label == "compelled"
+        ]
+        undirected_edges = [
+            edge for edge, label in edge_labels.items() if label == "reversible"
+        ]
+
+        return PDAG(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=self.latents,
+        )
 
     def do(self, nodes, inplace=False):
         """
