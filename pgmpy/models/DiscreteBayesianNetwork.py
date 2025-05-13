@@ -1359,8 +1359,19 @@ class DiscreteBayesianNetwork(DAG):
 
         # Step 1: If do or virtual_intervention is specified, modify the network structure.
         if (do != {}) or (virtual_intervention != []):
-            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
-            model = model.do(list(do.keys()) + virt_nodes)
+            # Create a combined intervention dictionary
+            combined_interventions = do.copy()
+            
+            # Add virtual interventions to the combined dictionary
+            for cpd in virtual_intervention:
+                var = cpd.variables[0]
+                # For virtual interventions, we need to find the state with highest probability
+                state_idx = np.argmax(cpd.values)
+                state = cpd.state_names[var][state_idx]
+                combined_interventions[var] = state
+            
+            # Apply the combined interventions
+            model = model.do(combined_interventions)
             evidence = {**evidence, **do}
             virtual_evidence = [*virtual_evidence, *virtual_intervention]
 
