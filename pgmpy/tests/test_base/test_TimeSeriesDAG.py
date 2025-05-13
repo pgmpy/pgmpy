@@ -73,10 +73,6 @@ class TestTimeSeriesDAGCreation(unittest.TestCase):
         # Check that the plot was created
         self.assertIsInstance(fig, plt.Figure)
         self.assertIsInstance(ax, plt.Axes)
-        graph = TimeSeriesDAG(
-            ebunch=[(("a", 0), ("b", 1), ("c", 2), ("d", 1))],
-            num_time_slices=3,
-        )
 
     def tearDown(self):
         del self.graph

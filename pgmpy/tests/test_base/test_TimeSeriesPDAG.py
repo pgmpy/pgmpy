@@ -3,6 +3,9 @@
 from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 from pgmpy.base.TimeSeriesPDAG import TimeSeriesPDAG
 import unittest
+from unittest.mock import patch
+import matplotlib.pyplot as plt
+import networkx as nx
 
 
 class TestTimeSeriesPDAGCreation(unittest.TestCase):
@@ -120,19 +123,6 @@ class TestTimeSeriesPDAGMethods(unittest.TestCase):
             directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
         )
 
-    # def test_to_dag(self):
-    #     dag = self.pdag.to_dag()
-
-    #     self.assertIsInstance(dag, TimeSeriesDAG)
-    #     # The DAG should have the same number of nodes
-    #     self.assertEqual(len(dag.nodes()), len(self.pdag.nodes()))
-    #     # All edges in the DAG should be directed
-    #     self.assertTrue(all(isinstance(edge, tuple) for edge in dag.edges()))
-
-    #     # The DAG should have at least the same directed edges as the PDAG
-    #     for edge in self.pdag.directed_edges:
-    #         self.assertIn(edge, dag.edges())
-
     def test_get_ancestral_graph(self):
         # Test getting ancestral graph for a node with ancestors
         ancestral = self.pdag.get_ancestral_graph([("B", 1)])
@@ -159,17 +149,11 @@ class TestTimeSeriesPDAGMethods(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.pdag.get_markov_blanket(("Z", 0))
 
-    # def test_is_dconnected(self):
-    #     # Test direct connection
-    #     self.assertTrue(self.pdag.is_dconnected(("A", 0), ("C", 0)))
-
-    #     # Test indirect connection through another node
-    #     self.assertTrue(self.pdag.is_dconnected(("A", 0), ("D", 1)))
-
-    #     # Test with observed node blocking the path
-    #     self.assertFalse(
-    #         self.pdag.is_dconnected(("A", 0), ("D", 1), observed=[("B", 1)])
-    #     )
+    def test_to_dag(self):
+        # Test conversion to TimeSeriesDAG
+        ts_dag = self.pdag.to_dag()
+        self.assertIsInstance(ts_dag, TimeSeriesDAG)
+        self.assertEqual(len(ts_dag.latents), len(self.pdag.latents))
 
     def test_copy(self):
         pdag_copy = self.pdag.copy()
@@ -184,6 +168,140 @@ class TestTimeSeriesPDAGMethods(unittest.TestCase):
         # Modifying the copy should not affect the original
         pdag_copy.add_node(("E", 0))
         self.assertNotEqual(len(pdag_copy.nodes()), len(self.pdag.nodes()))
+
+    def test_is_dconnected(self):
+        # Simple test case
+        self.assertTrue(self.pdag.is_dconnected(("A", 0), ("C", 0)))
+
+        # Test with observed nodes
+        self.assertTrue(
+            self.pdag.is_dconnected(("A", 0), ("C", 1), observed=[("B", 0)])
+        )
+
+        # Test with nodes that should be d-separated
+        # Path A -> B -> D should be blocked if B is observed
+        self.assertFalse(
+            self.pdag.is_dconnected(("A", 0), ("D", 1), observed=[("B", 1)])
+        )
+
+        # Edge case: test with non-existent nodes
+        with self.assertRaises(Exception):
+            self.pdag.is_dconnected(("Z", 0), ("C", 0))
+
+        # Test with empty observed set
+        self.assertTrue(self.pdag.is_dconnected(("A", 0), ("B", 1), observed=[]))
+
+    def tearDown(self):
+        del self.pdag
+
+
+class TestTimeSeriesPDAGPlotting(unittest.TestCase):
+    def setUp(self):
+        directed_edges = [
+            (("A", 0), ("B", 1)),
+            (("B", 1), ("C", 2)),
+            (("A", 0), ("D", 1)),
+        ]
+        undirected_edges = [(("A", 0), ("C", 0)), (("B", 1), ("D", 1))]
+        self.pdag = TimeSeriesPDAG(
+            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
+        )
+
+    @patch(
+        "matplotlib.pyplot.show"
+    )  # Mock plt.show to avoid displaying plots during tests
+    def test_plot_summary_graph_basic(self, mock_show):
+        summary_graph, fig, ax = self.pdag.plot_summary_graph()
+
+        # Verify the summary graph was created
+        self.assertIsInstance(summary_graph, nx.DiGraph)
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsNotNone(ax)
+
+        # Check nodes in summary graph
+        expected_nodes = {"A", "B", "C", "D"}
+        self.assertEqual(set(summary_graph.nodes()), expected_nodes)
+
+        # Check edges and their metadata
+        self.assertIn("directed_lags", summary_graph["A"]["B"])
+        self.assertIn("undirected_lags", summary_graph["A"]["B"])
+
+        # Test that directed lags are recorded correctly
+        self.assertIn((0, 1), summary_graph["A"]["B"]["directed_lags"])
+
+        # Clean up
+        plt.close(fig)
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_summary_graph_no_undirected(self, mock_show):
+        summary_graph, fig, ax = self.pdag.plot_summary_graph(include_undirected=False)
+
+        # Check that undirected edges are not included
+        if "A" in summary_graph and "C" in summary_graph:
+            if summary_graph.has_edge("A", "C"):
+                self.assertFalse(summary_graph["A"]["C"]["undirected_lags"])
+
+        plt.close(fig)
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_summary_graph_custom_kwargs(self, mock_show):
+        # Test with custom kwargs
+        custom_kwargs = {
+            "node_kwargs": {"node_color": "blue", "node_size": 800},
+            "label_kwargs": {"font_size": 12},
+            "directed_edge_kwargs": {"edge_color": "red"},
+            "undirected_edge_kwargs": {"edge_color": "green"},
+        }
+
+        summary_graph, fig, ax = self.pdag.plot_summary_graph(**custom_kwargs)
+
+        # Not much to assert here without complex figure parsing
+        # Just ensure it doesn't crash with custom kwargs
+        self.assertIsNotNone(fig)
+
+        plt.close(fig)
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_summary_graph_empty_graph(self, mock_show):
+        # Test with empty graph
+        empty_pdag = TimeSeriesPDAG()
+        summary_graph, fig, ax = empty_pdag.plot_summary_graph()
+
+        # Check empty graph properties
+        self.assertEqual(len(summary_graph.nodes()), 0)
+        self.assertEqual(len(summary_graph.edges()), 0)
+
+        plt.close(fig)
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_summary_graph_only_directed(self, mock_show):
+        # Test with only directed edges
+        directed_pdag = TimeSeriesPDAG(
+            directed_ebunch=[(("A", 0), ("B", 1)), (("B", 1), ("C", 2))]
+        )
+        summary_graph, fig, ax = directed_pdag.plot_summary_graph()
+
+        # Check that all edges have directed lags
+        for u, v in summary_graph.edges():
+            self.assertTrue(summary_graph[u][v]["directed_lags"])
+            self.assertFalse(summary_graph[u][v]["undirected_lags"])
+
+        plt.close(fig)
+
+    @patch("matplotlib.pyplot.show")
+    def test_plot_summary_graph_only_undirected(self, mock_show):
+        # Test with only undirected edges
+        undirected_pdag = TimeSeriesPDAG(
+            undirected_ebunch=[(("A", 0), ("B", 0)), (("B", 0), ("C", 0))]
+        )
+        summary_graph, fig, ax = undirected_pdag.plot_summary_graph()
+
+        # Check that all edges have undirected lags
+        for u, v in summary_graph.edges():
+            self.assertFalse(summary_graph[u][v]["directed_lags"])
+            self.assertTrue(summary_graph[u][v]["undirected_lags"])
+
+        plt.close(fig)
 
     def tearDown(self):
         del self.pdag

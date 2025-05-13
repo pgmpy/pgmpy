@@ -89,4 +89,4 @@ class TimeSeriesDAG(DAG):
         nx.draw_networkx_edge_labels(summary_graph, pos, edge_labels=edge_labels, ax=ax)
 
         ax.set_title("Summary Graph (Causal Links at Any Lag)")
-        return summary_graph, fig, ax
+        return fig, ax
