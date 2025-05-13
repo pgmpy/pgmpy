@@ -122,6 +122,15 @@ class TimeSeriesPDAG(PDAG):
         # Create a new TimeSeriesDAG with the edges from the DAG
         ts_dag = TimeSeriesDAG()
 
+        # Create a new TimeSeriesDAG with the edges from the DAG
+        ts_dag = TimeSeriesDAG()
+
+        # Add all nodes from the DAG
+        ts_dag.add_nodes_from(dag.nodes())
+
+        # Add all edges from the DAG
+        ts_dag.add_edges_from(dag.edges())
+
         # Copy latent nodes
         ts_dag.latents = dag.latents.copy()
 
