@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 import itertools
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -74,11 +74,12 @@ class DAG(nx.DiGraph):
 
     def __init__(
         self,
-        ebunch=None,
-        latents=set(),
-        lavaan_str=None,
-        dagitty_str=None,
-    ):
+        ebunch: Optional[Union[list, set, nx.Graph]] = None,
+        latents: set = set(),
+        lavaan_str: Optional[str] = None,
+        dagitty_str: Optional[str] = None,
+    ) -> None:
+
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
             if err_corr:
@@ -102,7 +103,9 @@ class DAG(nx.DiGraph):
             raise ValueError(out_str)
 
     @classmethod
-    def from_lavaan(cls, string=None, filename=None):
+    def from_lavaan(
+        cls, string: Optional[str] = None, filename: Optional[str] = None
+    ) -> "DAG":
         """
         Initializes a `DAG` instance using lavaan syntax.
 
@@ -129,7 +132,9 @@ class DAG(nx.DiGraph):
         return cls(lavaan_str=lavaan_str)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None):
+    def from_dagitty(
+        cls, string: Optional[str] = None, filename: Optional[str] = None
+    ) -> "DAG":
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -156,7 +161,12 @@ class DAG(nx.DiGraph):
 
         return cls(dagitty_str=dagitty_str)
 
-    def add_node(self, node, weight=None, latent=False):
+    def add_node(
+        self,
+        node: Union[str, int],
+        weight: Optional[Union[int, float]] = None,
+        latent: bool = False,
+    ) -> None:
         """
         Adds a single node to the Graph.
 
@@ -204,7 +214,12 @@ class DAG(nx.DiGraph):
 
         super(DAG, self).add_node(node, weight=weight)
 
-    def add_nodes_from(self, nodes, weights=None, latent=False):
+    def add_nodes_from(
+        self,
+        nodes: list,
+        weights: Optional[Union[list, tuple]] = None,
+        latent: bool = False,
+    ) -> None:
         """
         Add multiple nodes to the Graph.
 
@@ -260,7 +275,12 @@ class DAG(nx.DiGraph):
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
 
-    def add_edge(self, u, v, weight: int | float = None):
+    def add_edge(
+        self,
+        u: Union[str, int],
+        v: Union[str, int],
+        weight: Optional[Union[int, float]] = None,
+    ) -> None:
         """
         Add an edge between u and v.
 
@@ -302,7 +322,9 @@ class DAG(nx.DiGraph):
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch, weights: list | tuple = None):
+    def add_edges_from(
+        self, ebunch: Union[list, set], weights: Optional[Union[list, tuple]] = None
+    ) -> None:
         """
         Add all the edges in ebunch.
 
@@ -370,7 +392,7 @@ class DAG(nx.DiGraph):
                 else:
                     self.add_edge(edge[0], edge[1], edge[2])
 
-    def get_parents(self, node):
+    def get_parents(self, node: Union[str, int]) -> list:
         """
         Returns a list of parents of node.
 
@@ -390,7 +412,7 @@ class DAG(nx.DiGraph):
         """
         return list(self.predecessors(node))
 
-    def moralize(self):
+    def moralize(self) -> UndirectedGraph:
         """
         Removes all the immoralities in the DAG and creates a moral
         graph (UndirectedGraph).
@@ -417,7 +439,7 @@ class DAG(nx.DiGraph):
 
         return moral_graph
 
-    def get_leaves(self):
+    def get_leaves(self) -> list:
         """
         Returns a list of leaves of the graph.
 
@@ -430,13 +452,21 @@ class DAG(nx.DiGraph):
         """
         return [node for node, out_degree in self.out_degree_iter() if out_degree == 0]
 
-    def out_degree_iter(self, nbunch=None, weight=None):
+    def out_degree_iter(
+        self,
+        nbunch: Optional[Union[list, tuple]] = None,
+        weight: Optional[Union[int, float]] = None,
+    ) -> iter:
         return iter(self.out_degree(nbunch, weight))
 
-    def in_degree_iter(self, nbunch=None, weight=None):
+    def in_degree_iter(
+        self,
+        nbunch: Optional[Union[list, tuple]] = None,
+        weight: Optional[Union[int, float]] = None,
+    ) -> iter:
         return iter(self.in_degree(nbunch, weight))
 
-    def get_roots(self):
+    def get_roots(self) -> list:
         """
         Returns a list of roots of the graph.
 
@@ -451,7 +481,7 @@ class DAG(nx.DiGraph):
             node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0
         ]
 
-    def get_children(self, node):
+    def get_children(self, node: Union[str, int]) -> list:
         """
         Returns a list of children of node.
         Throws an error if the node is not present in the graph.
@@ -471,7 +501,9 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(self, latex=False, include_latents=False):
+    def get_independencies(
+        self, latex: bool = False, include_latents: bool = False
+    ) -> Union[str, Independencies]:
         """
         Computes independencies in the DAG, by checking minimal d-seperation.
 
@@ -512,7 +544,7 @@ class DAG(nx.DiGraph):
         else:
             return independencies.latex_string()
 
-    def local_independencies(self, variables):
+    def local_independencies(self, variables: Union[str, list]) -> Independencies:
         """
         Returns an instance of Independencies containing the local independencies
         of each of the variables.
@@ -549,7 +581,7 @@ class DAG(nx.DiGraph):
                 )
         return independencies
 
-    def is_iequivalent(self, model):
+    def is_iequivalent(self, model: "DAG") -> bool:
         """
         Checks whether the given model is I-equivalent
 
@@ -589,7 +621,7 @@ class DAG(nx.DiGraph):
             return True
         return False
 
-    def get_immoralities(self):
+    def get_immoralities(self) -> dict:
         """
         Finds all the immoralities in the model
         A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
@@ -619,7 +651,13 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
-    def is_dconnected(self, start, end, observed=None, include_latents=False):
+    def is_dconnected(
+        self,
+        start: str,
+        end: str,
+        observed: Optional[List[str]] = None,
+        include_latents: bool = False,
+    ) -> bool:
         """
         Returns True if there is an active trail (i.e. d-connection) between
         `start` and `end` node given that `observed` is observed.
@@ -658,7 +696,9 @@ class DAG(nx.DiGraph):
         else:
             return False
 
-    def minimal_dseparator(self, start, end, include_latents=False):
+    def minimal_dseparator(
+        self, start: str, end: str, include_latents: bool = False
+    ) -> Optional[Set[str]]:
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -719,7 +759,7 @@ class DAG(nx.DiGraph):
 
         return minimal_separator
 
-    def get_markov_blanket(self, node):
+    def get_markov_blanket(self, node: str) -> List[str]:
         """
         Returns a markov blanket for a random variable. In the case
         of Bayesian Networks, the markov blanket is the set of
@@ -753,7 +793,12 @@ class DAG(nx.DiGraph):
         blanket_nodes.discard(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables, observed=None, include_latents=False):
+    def active_trail_nodes(
+        self,
+        variables: Union[str, List[str]],
+        observed: Optional[List[str]] = None,
+        include_latents: bool = False,
+    ) -> Dict[str, Set[str]]:
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -833,7 +878,7 @@ class DAG(nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(self, nodes):
+    def _get_ancestors_of(self, nodes: Union[str, List[str]]) -> Set[str]:
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
@@ -867,7 +912,7 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    def to_pdag(self):
+    def to_pdag(self) -> "PDAG":
         """
         Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
 
@@ -979,7 +1024,9 @@ class DAG(nx.DiGraph):
             latents=self.latents,
         )
 
-    def do(self, nodes, inplace=False):
+    def do(
+        self, nodes: Union[str, int, List[Union[str, int]]], inplace: bool = False
+    ) -> "DAG":
         """
         Applies the do operator to the graph and returns a new DAG with the
         transformed graph.
@@ -1037,7 +1084,7 @@ class DAG(nx.DiGraph):
                 dag.remove_edge(parent, node)
         return dag
 
-    def get_ancestral_graph(self, nodes):
+    def get_ancestral_graph(self, nodes: List[Union[str, int]]) -> "DAG":
         """
         Returns the ancestral graph of the given `nodes`. The ancestral graph only
         contains the nodes which are ancestors of at least one of the variables in
@@ -1064,11 +1111,11 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos="circular",
-        latex=True,
-        pgm_params={},
-        edge_params={},
-        node_params={},
+        node_pos: Union[str, Dict[str, tuple]] = "circular",
+        latex: bool = True,
+        pgm_params: Optional[Dict] = None,
+        edge_params: Optional[Dict[tuple, Dict]] = None,
+        node_params: Optional[Dict[str, Dict]] = None,
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1190,7 +1237,13 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False, seed=None):
+    def get_random(
+        n_nodes: int = 5,
+        edge_prob: float = 0.5,
+        node_names: Optional[List[str]] = None,
+        latents: bool = False,
+        seed: Optional[int] = None,
+    ) -> "DAG":
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1267,7 +1320,14 @@ class DAG(nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs):
+    def fit(
+        self,
+        data: pd.DataFrame,
+        estimator: Optional[type] = None,
+        state_names: Optional[Dict[str, List]] = None,
+        n_jobs: int = 1,
+        **kwargs,
+    ):
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -1339,7 +1399,7 @@ class DAG(nx.DiGraph):
         bn.add_cpds(*cpds_list)
         return bn
 
-    def _variable_name_contains_non_string(self):
+    def _variable_name_contains_non_string(self) -> bool:
         """
         Checks if the variable names contain any non-string values. Used only for CausalInference class.
         """
@@ -1348,7 +1408,7 @@ class DAG(nx.DiGraph):
                 return (node, type(node))
         return False
 
-    def copy(self):
+    def copy(self) -> "DAG":
         dag = DAG(ebunch=self.edges(), latents=self.latents)
         dag.add_nodes_from(self.nodes())
         return dag
@@ -1363,7 +1423,12 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch=[], undirected_ebunch=[], latents=[]):
+    def __init__(
+        self,
+        directed_ebunch: List[Tuple],
+        undirected_ebunch: List[Tuple],
+        latents: List = [],
+    ):
         """
         Initializes a PDAG class.
 
@@ -1395,7 +1460,7 @@ class PDAG(nx.DiGraph):
             )
         )
 
-    def all_neighbors(self, node):
+    def all_neighbors(self, node) -> Set:
         """
         Returns a set of all neighbors of a node in the PDAG. This includes both directed and undirected edges.
 
@@ -1417,19 +1482,19 @@ class PDAG(nx.DiGraph):
         """
         return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
 
-    def directed_children(self, node):
+    def directed_children(self, node) -> Set:
         """
         Returns a set of children of node such that there is a directed edge from `node` to child.
         """
         return {x for x in self.successors(node) if (node, x) in self.directed_edges}
 
-    def directed_parents(self, node):
+    def directed_parents(self, node) -> Set:
         """
         Returns a set of parents of node such that there is a directed edge from the parent to `node`.
         """
         return {x for x in self.predecessors(node) if (x, node) in self.directed_edges}
 
-    def has_directed_edge(self, u, v):
+    def has_directed_edge(self, u, v) -> bool:
         """
         Returns True if there is a directed edge u -> v in the PDAG.
         """
@@ -1438,7 +1503,7 @@ class PDAG(nx.DiGraph):
         else:
             return False
 
-    def has_undirected_edge(self, u, v):
+    def has_undirected_edge(self, u, v) -> bool:
         """
         Returns True if there is an undirected edge u - v in the PDAG.
         """
@@ -1447,7 +1512,7 @@ class PDAG(nx.DiGraph):
         else:
             return False
 
-    def undirected_neighbors(self, node):
+    def undirected_neighbors(self, node) -> Set:
         """
         Returns a set of neighboring nodes such that all of them have an undirected edge with `node`.
 
@@ -1469,7 +1534,7 @@ class PDAG(nx.DiGraph):
         """
         return {var for var in self.successors(node) if self.has_edge(var, node)}
 
-    def is_adjacent(self, u, v):
+    def is_adjacent(self, u, v) -> bool:
         """
         Returns True if there is an edge between u and v. This can be either of u - v, u -> v, or u <- v.
         """
@@ -1478,7 +1543,7 @@ class PDAG(nx.DiGraph):
         else:
             return False
 
-    def copy(self):
+    def copy(self) -> "PDAG":
         """
         Returns a copy of the object instance.
 
@@ -1495,7 +1560,7 @@ class PDAG(nx.DiGraph):
         pdag.add_nodes_from(self.nodes())
         return pdag
 
-    def _directed_graph(self):
+    def _directed_graph(self) -> nx.DiGraph:
         """
         Returns a subgraph containing only directed edges.
         """
@@ -1503,7 +1568,7 @@ class PDAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         return dag
 
-    def orient_undirected_edge(self, u, v, inplace=False):
+    def orient_undirected_edge(self, u, v, inplace: bool = False) -> Optional["PDAG"]:
         """
         Orients an undirected edge u - v as u -> v.
 
@@ -1544,7 +1609,7 @@ class PDAG(nx.DiGraph):
         if not inplace:
             return pdag
 
-    def _check_new_unshielded_collider(self, u, v):
+    def _check_new_unshielded_collider(self, u, v) -> bool:
         """
         Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
 
@@ -1560,7 +1625,9 @@ class PDAG(nx.DiGraph):
                 return True
         return False
 
-    def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
+    def apply_meeks_rules(
+        self, apply_r4: bool = False, inplace: bool = False, debug: bool = False
+    ) -> "PDAG":
         """
         Applies the Meek's rules to orient the undirected edges of a PDAG to return a CPDAG.
 
@@ -1672,7 +1739,7 @@ class PDAG(nx.DiGraph):
         if not inplace:
             return pdag
 
-    def to_dag(self):
+    def to_dag(self) -> "DAG":
         """
         Returns one possible DAG which is represented using the PDAG.
 
@@ -1749,7 +1816,7 @@ class PDAG(nx.DiGraph):
                 break
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self) -> nx.nx_agraph:
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
