@@ -657,6 +657,119 @@ class DAG(nx.DiGraph):
             return True
         else:
             return False
+        
+    def is_dconnected_efficient(self, start, end, observed=None, include_latents=False):
+        """
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
+        Parameters
+        ----------
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are considered in the d-connection check.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_dconnected_efficient('diff', 'intel')
+        False
+        >>> student.is_dconnected_efficient('grades', 'sat')
+        True
+        
+        References
+        ----------
+        [1] Geiger, D., Verma, T., & Pearl, J. (1990). d-separation: From theorems to algorithms.
+            In Machine Intelligence and Pattern Recognition (Vol. 10, pp. 139-148). North-Holland.
+        """
+        # Normalize observed to a list
+        if observed is None:
+            observed = []
+        elif isinstance(observed, (str, int)):
+            observed = [observed]
+        else:
+            observed = list(observed)
+        
+        # If either start or end is observed, they are d-separated
+        if start in observed or end in observed:
+            return False
+        
+        # If start and end are the same node, they are d-connected
+        if start == end:
+            return True
+        
+        # Filter out latent variables if needed
+        if not include_latents:
+            if start in self.latents or end in self.latents:
+                return False
+        
+        # Step 1: Build the descendant table - tracking which nodes have descendants in observed
+        descendants = {}
+        for node in self.nodes():
+            descendants[node] = node in observed
+        
+        # Propagate descendant status up through the graph
+        change = True
+        while change:
+            change = False
+            for node in self.nodes():
+                if not descendants[node]:
+                    for child in self.successors(node):
+                        if descendants[child]:
+                            descendants[node] = True
+                            change = True
+        
+        # Step 2: Find if there's a legal path from start to end using BFS
+        queue = [(start, None)]  # (node, parent)
+        visited = set()
+        
+        while queue:
+            node, parent = queue.pop(0)
+            
+            if node == end:
+                return True
+            
+            if (node, parent) in visited:
+                continue
+            
+            visited.add((node, parent))
+            
+            # Check outgoing edges (original graph)
+            if node not in observed:  # Non-head-to-head node must not be observed
+                for child in self.successors(node):
+                    if child != parent:  # Avoid going back
+                        queue.append((child, node))
+            
+            # Check incoming edges (original graph)
+            for parent_node in self.predecessors(node):
+                if parent_node == parent:  # Avoid going back
+                    continue
+                
+                # Check if this forms a head-to-head structure
+                is_head_to_head = (parent is not None and parent in self.successors(node))
+                
+                if is_head_to_head:
+                    # Head-to-head node: node or its descendant must be observed
+                    if descendants[node]:
+                        queue.append((parent_node, node))
+                elif node not in observed:
+                    # Not head-to-head: node must not be observed
+                    queue.append((parent_node, node))
+        
+        # If we've explored all reachable nodes and haven't found end,
+        # then start and end are d-separated given observed
+        return False
+
 
     def minimal_dseparator(self, start, end, include_latents=False):
         """
