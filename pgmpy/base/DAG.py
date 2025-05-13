@@ -912,7 +912,7 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    def to_pdag(self) -> "PDAG":
+    def to_pdag(self):
         """
         Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
 
@@ -1426,12 +1426,7 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(
-        self,
-        directed_ebunch: List[Tuple],
-        undirected_ebunch: List[Tuple],
-        latents: List = [],
-    ):
+    def __init__(self, directed_ebunch=[], undirected_ebunch=[], latents=[]):
         """
         Initializes a PDAG class.
 
