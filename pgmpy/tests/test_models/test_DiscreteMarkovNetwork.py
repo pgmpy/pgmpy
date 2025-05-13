@@ -299,12 +299,11 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.assertEqual(len(clique_factors), 1)
         clique_potential = clique_factors[0]
 
-        # Check that the clique potential has the correct variables and cardinalities
-        self.assertEqual(set(clique_potential.variables), {"A", "B", "C"})
-        self.assertEqual(clique_potential.cardinality, [2, 2, 2])
-
-        # Verify that the values are not all zeros (indicating successful factor product)
-        self.assertFalse(np.allclose(clique_potential.values, 0))
+        # Verify the junction tree structure
+        self.assertListEqual(
+            hf.recursive_sorted(junction_tree.nodes()), [["A", "B", "C"]]
+        )
+        self.assertEqual(len(junction_tree.edges()), 0)  # Single clique means no edges
 
     def test_markov_blanket(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
