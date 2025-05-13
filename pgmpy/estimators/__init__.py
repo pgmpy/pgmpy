@@ -1,6 +1,4 @@
 from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEstimator
-from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
-from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.StructureScore import (
     get_scoring_method,
     StructureScore,
@@ -16,18 +14,24 @@ from pgmpy.estimators.StructureScore import (
     LogLikelihoodGauss,
     LogLikelihoodCondGauss,
 )
-from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
-from pgmpy.estimators.HillClimbSearch import HillClimbSearch
-from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
-from pgmpy.estimators.MmhcEstimator import MmhcEstimator
-from pgmpy.estimators.EM import ExpectationMaximization
 from pgmpy.estimators.PC import PC
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
 from pgmpy.estimators.expert import ExpertInLoop
-from pgmpy.estimators.GES import GES
+
+
+from pgmpy.structure_estimators.ExhaustiveSearch import ExhaustiveSearch
+from pgmpy.structure_estimators.HillClimbSearch import HillClimbSearch
+from pgmpy.structure_estimators.TreeSearch import TreeSearch
+from pgmpy.structure_estimators.MmhcEstimator import MmhcEstimator
+from pgmpy.structure_estimators.GES import GES
+
+
+from pgmpy.parameter_estimators.MLE import MaximumLikelihoodEstimator
+from pgmpy.parameter_estimators.BayesianEstimator import BayesianEstimator
+from pgmpy.parameter_estimators.EM import ExpectationMaximization
 
 __all__ = [
     "BaseEstimator",
