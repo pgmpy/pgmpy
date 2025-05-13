@@ -1174,6 +1174,9 @@ class DAG(nx.DiGraph):
                 e.msg
                 + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
             ) from None
+        pgm_params = pgm_params or {}
+        edge_params = edge_params or {}
+        node_params = node_params or {}
 
         if isinstance(node_pos, str):
             supported_layouts = {
