@@ -1181,14 +1181,13 @@ class DiscreteBayesianNetwork(DAG):
                 "`do` expects a dict of the form {variable: state}, "
                 f"got {type(interventions)}"
             )
-        
-        nodes  = list(interventions.keys())
+
+        nodes = list(interventions.keys())
         states = list(interventions.values())
 
         missing_nodes = set(nodes) - set(self.nodes())
         if missing_nodes:
             raise ValueError(f"Intervention variable(s) not in model: {missing_nodes}")
-        
 
         for var, forced_state in interventions.items():
             cpd = self.get_cpds(node=var)
@@ -1196,7 +1195,7 @@ class DiscreteBayesianNetwork(DAG):
                 raise ValueError(
                     f"State {forced_state!r} invalid for variable {var!r}; "
                     f"allowed states: {cpd.state_names[var]}"
-                )     
+                )
 
         model = self if inplace else self.copy()
         adj_model = DAG.do(model, nodes, inplace=inplace)
@@ -1205,7 +1204,7 @@ class DiscreteBayesianNetwork(DAG):
             for var, forced_state in interventions.items():
                 old_cpd = adj_model.get_cpds(node=var)
 
-                idx  = old_cpd.get_state_no(var, forced_state)
+                idx = old_cpd.get_state_no(var, forced_state)
                 card = old_cpd.variable_card
 
                 new_vals = [[1.0 if i == idx else 0.0] for i in range(card)]
@@ -1214,10 +1213,10 @@ class DiscreteBayesianNetwork(DAG):
                 adj_model.remove_cpds(cpd)
                 # Create new CPD by setting the values to 1.0 for the state in `states`
                 spike_cpd = TabularCPD(
-                    variable      = var,
-                    variable_card = card,
-                    values        = new_vals,
-                    state_names   = {var: old_cpd.state_names[var]},
+                    variable=var,
+                    variable_card=card,
+                    values=new_vals,
+                    state_names={var: old_cpd.state_names[var]},
                 )
                 adj_model.add_cpds(spike_cpd)
 
@@ -1361,7 +1360,7 @@ class DiscreteBayesianNetwork(DAG):
         if (do != {}) or (virtual_intervention != []):
             # Create a combined intervention dictionary
             combined_interventions = do.copy()
-            
+
             # Add virtual interventions to the combined dictionary
             for cpd in virtual_intervention:
                 var = cpd.variables[0]
@@ -1369,7 +1368,7 @@ class DiscreteBayesianNetwork(DAG):
                 state_idx = np.argmax(cpd.values)
                 state = cpd.state_names[var][state_idx]
                 combined_interventions[var] = state
-            
+
             # Apply the combined interventions
             model = model.do(combined_interventions)
             evidence = {**evidence, **do}

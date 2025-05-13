@@ -545,8 +545,8 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         )
         model.add_cpds(cpd_s, cpd_t, cpd_c)
 
-        model_do_inplace = model.do({'T': 0}, inplace=True)
-        model_do_new = model.do({'T': 0}, inplace=False)
+        model_do_inplace = model.do({"T": 0}, inplace=True)
+        model_do_new = model.do({"T": 0}, inplace=False)
 
         for m in [model_do_inplace, model_do_new]:
             self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
