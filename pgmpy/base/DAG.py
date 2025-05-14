@@ -657,7 +657,7 @@ class DAG(nx.DiGraph):
             return True
         else:
             return False
-        
+
     def is_dconnected_efficient(self, start, end, observed=None, include_latents=False):
         """
         Returns True if there is an active trail (i.e. d-connection) between
@@ -686,12 +686,13 @@ class DAG(nx.DiGraph):
         False
         >>> student.is_dconnected_efficient('grades', 'sat')
         True
-        
+
         References
         ----------
         [1] Geiger, D., Verma, T., & Pearl, J. (1990). d-separation: From theorems to algorithms.
             In Machine Intelligence and Pattern Recognition (Vol. 10, pp. 139-148). North-Holland.
         """
+
         # Normalize observed to a list
         if observed is None:
             observed = []
@@ -699,25 +700,25 @@ class DAG(nx.DiGraph):
             observed = [observed]
         else:
             observed = list(observed)
-        
+
         # If either start or end is observed, they are d-separated
         if start in observed or end in observed:
             return False
-        
+
         # If start and end are the same node, they are d-connected
         if start == end:
             return True
-        
-        # Filter out latent variables if needed
+
+        # Filter out latent variables if include_latents is false
         if not include_latents:
             if start in self.latents or end in self.latents:
                 return False
-        
+
         # Step 1: Build the descendant table - tracking which nodes have descendants in observed
         descendants = {}
         for node in self.nodes():
             descendants[node] = node in observed
-        
+
         # Propagate descendant status up through the graph
         change = True
         while change:
@@ -728,36 +729,36 @@ class DAG(nx.DiGraph):
                         if descendants[child]:
                             descendants[node] = True
                             change = True
-        
+
         # Step 2: Find if there's a legal path from start to end using BFS
         queue = [(start, None)]  # (node, parent)
         visited = set()
-        
+
         while queue:
             node, parent = queue.pop(0)
-            
+
             if node == end:
                 return True
-            
+
             if (node, parent) in visited:
                 continue
-            
+
             visited.add((node, parent))
-            
+
             # Check outgoing edges (original graph)
             if node not in observed:  # Non-head-to-head node must not be observed
                 for child in self.successors(node):
                     if child != parent:  # Avoid going back
                         queue.append((child, node))
-            
+
             # Check incoming edges (original graph)
             for parent_node in self.predecessors(node):
                 if parent_node == parent:  # Avoid going back
                     continue
-                
+
                 # Check if this forms a head-to-head structure
-                is_head_to_head = (parent is not None and parent in self.successors(node))
-                
+                is_head_to_head = parent is not None and parent in self.successors(node)
+
                 if is_head_to_head:
                     # Head-to-head node: node or its descendant must be observed
                     if descendants[node]:
@@ -765,11 +766,10 @@ class DAG(nx.DiGraph):
                 elif node not in observed:
                     # Not head-to-head: node must not be observed
                     queue.append((parent_node, node))
-        
+
         # If we've explored all reachable nodes and haven't found end,
         # then start and end are d-separated given observed
         return False
-
 
     def minimal_dseparator(self, start, end, include_latents=False):
         """
