@@ -629,6 +629,121 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         del self.G1
 
 
+class TestDConnectedEfficient(unittest.TestCase):
+    def setUp(self):
+        self.G = DiscreteBayesianNetwork(
+            [("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")]
+        )
+        self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
+        self.G_latent = DAG(
+            [("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")], latents=["d", "g"]
+        )
+
+    def test_simple_dconnections(self):
+        """Test basic d-connection relationships"""
+        # Tests from test_is_dconnected_triplets
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "l"))
+        self.assertTrue(self.G2.is_dconnected_efficient("g", "s"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "i"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "i", observed="g"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "l", observed="g"))
+        self.assertFalse(self.G2.is_dconnected_efficient("i", "l", observed="g"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "i", observed="l"))
+        self.assertFalse(self.G2.is_dconnected_efficient("g", "s", observed="i"))
+
+        # Tests from test_is_dconnected
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "s"))
+        self.assertTrue(self.G2.is_dconnected_efficient("s", "l"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "s", observed="g"))
+        self.assertFalse(self.G2.is_dconnected_efficient("s", "l", observed="g"))
+
+    def test_multiple_observed(self):
+        """Test d-connections with multiple observed nodes"""
+        # Tests from test_is_dconnected_args
+        self.assertFalse(self.G2.is_dconnected_efficient("s", "l", observed="i"))
+        self.assertFalse(self.G2.is_dconnected_efficient("s", "l", observed="g"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "s", observed="l"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "s", observed=["i", "l"]))
+
+    def test_with_latent_variables(self):
+        """Test d-connections with latent variables both included and excluded"""
+        # Testing connections with latent variables included
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("d", "l", include_latents=True)
+        )
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("g", "l", include_latents=True)
+        )
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("d", "g", include_latents=True)
+        )
+
+        # Testing connections with latent variables excluded
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("l", "i", include_latents=False)
+        )
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("l", "s", include_latents=False)
+        )
+
+        # Testing connections with observed nodes and latent variables
+        self.assertFalse(
+            self.G_latent.is_dconnected_efficient(
+                "l", "s", observed="i", include_latents=True
+            )
+        )
+        self.assertFalse(
+            self.G_latent.is_dconnected_efficient(
+                "d", "l", observed="g", include_latents=True
+            )
+        )
+
+    def test_active_trail_simulation(self):
+        """Simulate the active_trail_nodes tests by checking multiple connections"""
+        # This test simulates test_active_trail_nodes by checking connections between nodes
+        # instead of directly retrieving active trail nodes
+
+        # Test d-connections from 'd'
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "d"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "g"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "l"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "i"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "s"))
+
+        # Test d-connections from 'i'
+        self.assertTrue(self.G2.is_dconnected_efficient("i", "i"))
+        self.assertTrue(self.G2.is_dconnected_efficient("i", "g"))
+        self.assertTrue(self.G2.is_dconnected_efficient("i", "l"))
+        self.assertTrue(self.G2.is_dconnected_efficient("i", "s"))
+        self.assertFalse(self.G2.is_dconnected_efficient("i", "d"))
+
+        # Simulate testing with observed nodes
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "i", observed="g"))
+        self.assertTrue(self.G2.is_dconnected_efficient("d", "s", observed="g"))
+        self.assertFalse(self.G2.is_dconnected_efficient("d", "l", observed="g"))
+
+        # Simulate testing with multiple observed nodes
+        self.assertFalse(self.G2.is_dconnected_efficient("s", "d", observed=["i", "l"]))
+        self.assertTrue(self.G2.is_dconnected_efficient("s", "g", observed=["d", "l"]))
+
+        # Test with latent variables
+        # With latents included
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("d", "l", include_latents=True)
+        )
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("i", "l", include_latents=True)
+        )
+
+        # With latents excluded
+        self.assertTrue(
+            self.G_latent.is_dconnected_efficient("i", "l", include_latents=False)
+        )
+        self.assertFalse(
+            self.G_latent.is_dconnected_efficient("d", "i", include_latents=False)
+        )
+
+
 class TestBayesianNetworkCPD(unittest.TestCase):
     def setUp(self):
         self.G = DiscreteBayesianNetwork(
