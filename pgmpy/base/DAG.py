@@ -634,7 +634,7 @@ class DAG(nx.DiGraph):
             be observed.
 
         include_latents: boolean (default: False)
-            If true, latent variables are considered in the d-connection check.
+            If true, latent variables are return as part of the active trail.
 
         Examples
         --------
@@ -647,89 +647,155 @@ class DAG(nx.DiGraph):
         False
         >>> student.is_dconnected('grades', 'sat')
         True
+        """
+        if (
+            end
+            in self.active_trail_nodes(
+                variables=start, observed=observed, include_latents=include_latents
+            )[start]
+        ):
+            return True
+        else:
+            return False
+
+    def is_dconnected_efficient(self, start, end, observed=None, include_latents=False):
+        """
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
+        Implements Algorithm 2 from Geiger, Verma & Pearl (1990) "d-separation: From theorems to algorithms."
+
+        Parameters
+        ----------
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are considered in the d-connection check.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_dconnected_efficient('diff', 'intel')
+        False
+        >>> student.is_dconnected_efficient('grades', 'sat')
+        True
 
         References
         ----------
         [1] Geiger, D., Verma, T., & Pearl, J. (1990). d-separation: From theorems to algorithms.
             In Machine Intelligence and Pattern Recognition (Vol. 10, pp. 139-148). North-Holland.
         """
-
         # Normalize observed to a list
-        if observed is None:
-            observed = []
-        elif isinstance(observed, (str, int)):
-            observed = [observed]
+        if observed:
+            if isinstance(observed, set):
+                observed = list(observed)
+            observed_list = (
+                observed if isinstance(observed, (list, tuple)) else [observed]
+            )
         else:
-            observed = list(observed)
+            observed_list = []
 
-        # If either start or end is observed, they are d-separated
-        if start in observed or end in observed:
-            return False
-
-        # If start and end are the same node, they are d-connected
+        # Special cases
         if start == end:
             return True
 
-        # Filter out latent variables if include_latents is false
-        if not include_latents:
+        if start in observed_list or end in observed_list:
+            return False
+
+        # Filter nodes based on latent status if needed
+        nodes_to_consider = set(self.nodes())
+        if not include_latents and hasattr(self, "latents"):
+            # If we're not including latents, check if start or end are latent
             if start in self.latents or end in self.latents:
                 return False
+            # Remove latent nodes from consideration
+            nodes_to_consider = nodes_to_consider - self.latents
+            # Also filter observed list
+            observed_list = [node for node in observed_list if node not in self.latents]
 
-        # Step 1: Build the descendant table - tracking which nodes have descendants in observed
-        descendants = {}
-        for node in self.nodes():
-            descendants[node] = node in observed
+        # STEP 1: Construct the descendant table
+        # Mark nodes that are or have descendants in observed_list
+        descendant = {node: False for node in self.nodes()}
 
-        # Propagate descendant status up through the graph
+        # First mark observed nodes
+        for obs_node in observed_list:
+            descendant[obs_node] = True
+
+        # Propagate upward: if a node has a descendant that is observed, mark it
         change = True
         while change:
             change = False
             for node in self.nodes():
-                if not descendants[node]:
+                if not descendant[node]:
                     for child in self.successors(node):
-                        if descendants[child]:
-                            descendants[node] = True
+                        if descendant[child]:
+                            descendant[node] = True
                             change = True
 
-        # Step 2: Find if there's a legal path from start to end using BFS
-        queue = [(start, None)]  # (node, parent)
+        # STEP 2: BFS to find legal paths from start to end
+        queue = [(start, None)]  # (node, parent) to track path direction
         visited = set()
 
         while queue:
             node, parent = queue.pop(0)
 
+            # Check if we've reached the destination
             if node == end:
                 return True
 
+            # Skip if we've already visited this node-parent combo
             if (node, parent) in visited:
                 continue
 
             visited.add((node, parent))
 
-            # Check outgoing edges (original graph)
-            if node not in observed:  # Non-head-to-head node must not be observed
-                for child in self.successors(node):
-                    if child != parent:  # Avoid going back
-                        queue.append((child, node))
-
-            # Check incoming edges (original graph)
-            for parent_node in self.predecessors(node):
-                if parent_node == parent:  # Avoid going back
+            # Explore neighbors
+            for neighbor in self.nodes():
+                # Skip if already visited with this parent
+                if (neighbor, node) in visited:
                     continue
 
-                # Check if this forms a head-to-head structure
-                is_head_to_head = parent is not None and parent in self.successors(node)
+                # Skip self-loops
+                if neighbor == node:
+                    continue
 
+                # Skip parent we just came from
+                if neighbor == parent:
+                    continue
+
+                # Skip nodes that aren't directly connected to current node
+                if not (self.has_edge(node, neighbor) or self.has_edge(neighbor, node)):
+                    continue
+
+                # Determine trail type for node-neighbor
+                # Check if this is a head-to-head node (collider)
+                is_head_to_head = False
+
+                # A head-to-head occurs when parent→node←neighbor
+                if parent is not None:
+                    if self.has_edge(parent, node) and self.has_edge(neighbor, node):
+                        is_head_to_head = True
+
+                # Apply d-separation rules
                 if is_head_to_head:
-                    # Head-to-head node: node or its descendant must be observed
-                    if descendants[node]:
-                        queue.append((parent_node, node))
-                elif node not in observed:
-                    # Not head-to-head: node must not be observed
-                    queue.append((parent_node, node))
+                    # For head-to-head: only traverse if node or descendants are observed
+                    if descendant[node]:
+                        queue.append((neighbor, node))
+                else:
+                    # For non-head-to-head: only traverse if node is not observed
+                    if node not in observed_list:
+                        queue.append((neighbor, node))
 
-        # If we've explored all reachable nodes and haven't found end,
-        # then start and end are d-separated given observed
+        # If we've exhausted all options and haven't found end, they're d-separated
         return False
 
     def minimal_dseparator(self, start, end, include_latents=False):
@@ -941,117 +1007,21 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    def to_pdag(self):
-        """
-        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
-
-        Returns
-        -------
-        CPDAG: pgmpy.base.PDAG
-            An instance of pgmpy.base.PDAG representing the CPDAG of the given DAG.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> dag = DAG([('A', 'B'), ('B', 'C'), ('C', 'D')])
-        >>> pdag = dag.to_pdag()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C'), ('C', 'D')}
-
-        References
-        ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
-        """
-        # Perform a topological sort on the nodes
-        topo_order = list(nx.topological_sort(self))
-        node_order = {node: i for i, node in enumerate(topo_order)}
-
-        # Initialize edge ordering
-        i = 0
-        edge_order = {}
-        unordered_edges = set(self.edges())
-
-        # While there are unordered edges
-        while unordered_edges:
-            # Find lowest ordered node with unordered edges incident into it
-            nodes_with_unordered_edges = {edge[1] for edge in unordered_edges}
-            y = min(nodes_with_unordered_edges, key=lambda x: node_order[x])
-
-            # Find highest ordered node for which x->y is not ordered
-            unordered_edges_into_y = {edge for edge in unordered_edges if edge[1] == y}
-            x = max(
-                (edge[0] for edge in unordered_edges_into_y),
-                key=lambda x: node_order[x],
-            )
-
-            # Label x->y with order i
-            edge_order[(x, y)] = i
-            i += 1
-            unordered_edges.remove((x, y))
-
-        # Label every edge as "unknown"
-        edge_labels = {edge: "unknown" for edge in self.edges()}
-
-        # While there are edges labeled "unknown"
-        while any(label == "unknown" for label in edge_labels.values()):
-            # Let x -> y be the lowest ordered edge that is labeled "unknown"
-            unknown_edges = [
-                (edge, edge_order[edge])
-                for edge, label in edge_labels.items()
-                if label == "unknown"
-            ]
-            x, y = min(unknown_edges, key=lambda x: x[1])[0]
-
-            # Check compelled parents
-            compelled_parents = [
-                w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"
-            ]
-            for w in compelled_parents:
-                if not self.has_edge(w, y):
-                    # Label x -> y and every edge incident into y with "compelled"
-                    edge_labels[(x, y)] = "compelled"
-                    for z in self.get_parents(y):
-                        if edge_labels.get((z, y)) == "unknown":
-                            edge_labels[(z, y)] = "compelled"
-                    break
-                else:
-                    # Label w -> y with "compelled"
-                    edge_labels[(w, y)] = "compelled"
-
-            # Check for v-structures
-            if edge_labels.get((x, y)) != "compelled":
-                v_structure_exists = False
-                for z in self.get_parents(y):
-                    if z != x and not self.has_edge(z, x):
-                        v_structure_exists = True
-                        break
-
-                if v_structure_exists:
-                    # Label x -> y and all "unknown" edges incident into y with "compelled"
-                    edge_labels[(x, y)] = "compelled"
-                    for z in self.get_parents(y):
-                        if edge_labels.get((z, y)) == "unknown":
-                            edge_labels[(z, y)] = "compelled"
-                else:
-                    # Label x -> y and all "unknown" edges incident into y with "reversible"
-                    edge_labels[(x, y)] = "reversible"
-                    for z in self.get_parents(y):
-                        if edge_labels.get((z, y)) == "unknown":
-                            edge_labels[(z, y)] = "reversible"
-
-        # Create PDAG with directed and undirected edges
-        directed_edges = [
-            edge for edge, label in edge_labels.items() if label == "compelled"
-        ]
-        undirected_edges = [
-            edge for edge, label in edge_labels.items() if label == "reversible"
-        ]
-
-        return PDAG(
-            directed_ebunch=directed_edges,
-            undirected_ebunch=undirected_edges,
-            latents=self.latents,
-        )
+    # TODO: Commented out till the method is implemented.
+    #     def to_pdag(self):
+    #         """
+    #         Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
+    #
+    #         Returns
+    #         -------
+    #         Partially oriented DAG: pgmpy.base.PDAG
+    #             An instance of pgmpy.base.PDAG.
+    #
+    #         Examples
+    #         --------
+    #
+    #         """
+    #         pass
 
     def do(self, nodes, inplace=False):
         """
@@ -1459,98 +1429,27 @@ class PDAG(nx.DiGraph):
         Examples
         --------
         """
+        super(PDAG, self).__init__(
+            directed_ebunch
+            + undirected_ebunch
+            + [(Y, X) for (X, Y) in undirected_ebunch]
+        )
         self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
-
-        super(PDAG, self).__init__(
-            self.directed_edges.union(self.undirected_edges).union(
-                set([(Y, X) for (X, Y) in self.undirected_edges])
-            )
-        )
-
-    def all_neighbors(self, node):
-        """
-        Returns a set of all neighbors of a node in the PDAG. This includes both directed and undirected edges.
-
-        Parameters
-        ----------
-        node: any hashable python object
-            The node for which to get the neighboring nodes.
-
-        Returns
-        -------
-        set: A set of neighboring nodes.
-
-        Examples
-        --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(directed_ebunch=[('A', 'C'), ('D', 'C')], undirected_ebunch=[('B', 'A'), ('B', 'D')])
-        >>> pdag.all_neighbors('A')
-        {'B', 'C'}
-        """
-        return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
-
-    def directed_children(self, node):
-        """
-        Returns a set of children of node such that there is a directed edge from `node` to child.
-        """
-        return {x for x in self.successors(node) if (node, x) in self.directed_edges}
-
-    def directed_parents(self, node):
-        """
-        Returns a set of parents of node such that there is a directed edge from the parent to `node`.
-        """
-        return {x for x in self.predecessors(node) if (x, node) in self.directed_edges}
-
-    def has_directed_edge(self, u, v):
-        """
-        Returns True if there is a directed edge u -> v in the PDAG.
-        """
-        if (u, v) in self.directed_edges:
-            return True
-        else:
-            return False
-
-    def has_undirected_edge(self, u, v):
-        """
-        Returns True if there is an undirected edge u - v in the PDAG.
-        """
-        if (u, v) in self.undirected_edges or (v, u) in self.undirected_edges:
-            return True
-        else:
-            return False
-
-    def undirected_neighbors(self, node):
-        """
-        Returns a set of neighboring nodes such that all of them have an undirected edge with `node`.
-
-        Parameters
-        ----------
-        node: any hashable python object
-            The node for which to get the undirected neighboring nodes.
-
-        Returns
-        -------
-        set: A set of neighboring nodes.
-
-        Examples
-        --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(directed_ebunch=[('A', 'C'), ('D', 'C')], undirected_ebunch=[('B', 'A'), ('B', 'D')])
-        >>> pdag.undirected_neighbors('A')
-        {'B'}
-        """
-        return {var for var in self.successors(node) if self.has_edge(var, node)}
-
-    def is_adjacent(self, u, v):
-        """
-        Returns True if there is an edge between u and v. This can be either of u - v, u -> v, or u <- v.
-        """
-        if (u, v) in self.edges or (v, u) in self.edges:
-            return True
-        else:
-            return False
+        # TODO: Fix the cycle issue
+        # import pdb; pdb.set_trace()
+        # try:
+        #     # Filter out undirected edges as they also form a cycle in
+        #     # themself when represented using directed edges.
+        #     cycles = filter(lambda t: len(t) > 2, nx.simple_cycles(self))
+        #     if cycles:
+        #         out_str = "Cycles are not allowed in a PDAG. "
+        #         out_str += "The following path forms a loop: "
+        #         out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
+        #         raise ValueError(out_str)
+        # except nx.NetworkXNoCycle:
+        #     pass
 
     def copy(self):
         """
@@ -1569,200 +1468,16 @@ class PDAG(nx.DiGraph):
         pdag.add_nodes_from(self.nodes())
         return pdag
 
-    def _directed_graph(self):
-        """
-        Returns a subgraph containing only directed edges.
-        """
-        dag = nx.DiGraph(self.directed_edges)
-        dag.add_nodes_from(self.nodes())
-        return dag
-
-    def orient_undirected_edge(self, u, v, inplace=False):
-        """
-        Orients an undirected edge u - v as u -> v.
-
-        Parameters
-        ----------
-        u, v: Any hashable python objects
-            The node names.
-
-        inplace: boolean (default=False)
-            If True, the PDAG object is modified inplace, otherwise a new modified copy is returned.
-
-        Returns
-        -------
-        None or pgmpy.base.PDAG: The modified PDAG object.
-            If inplace=True, returns None and the object itself is modified.
-            If inplace=False, returns a PDAG object.
-        """
-
-        if inplace:
-            pdag = self
-        else:
-            pdag = self.copy()
-
-        # Remove the edge for undirected_edges.
-        if (u, v) in pdag.undirected_edges:
-            pdag.undirected_edges.discard((u, v))
-        elif (v, u) in pdag.undirected_edges:
-            pdag.undirected_edges.discard((v, u))
-        else:
-            raise ValueError(f"Undirected Edge {u} - {v} not present in the PDAG.")
-
-        # Remove the inverse edge from the graph
-        pdag.remove_edge(v, u)
-
-        # Add the edge to directed_edges.
-        pdag.directed_edges.add((u, v))
-
-        if not inplace:
-            return pdag
-
-    def _check_new_unshielded_collider(self, u, v):
-        """
-        Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
-
-        Checks whether v has any directed parents other than u that are not adjacent to u.
-
-        Returns
-        -------
-        True, if the orientation u -> v would lead to creation of a new V-structure.
-        False, if no new V-structures are formed.
-        """
-        for node in self.directed_parents(v):
-            if (node != u) and (not self.is_adjacent(u, node)):
-                return True
-        return False
-
-    def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
-        """
-        Applies the Meek's rules to orient the undirected edges of a PDAG to return a CPDAG.
-
-        Parameters
-        ----------
-        apply_r4: boolean (default=False)
-            If True, applies Rules 1 - 4 of Meek's rules.
-            If False, applies only Rules 1 - 3.
-
-        inplace: boolean (default=False)
-            If True, the PDAG object is modified inplace, otherwise a new modified copy is returned.
-
-        debug: boolean (default=False)
-            If True, prints the rules being applied to the PDAG.
-
-        Returns
-        -------
-        None or pgmpy.base.PDAG: The modified PDAG object.
-            If inplace=True, returns None and the object itself is modified.
-            If inplace=False, returns a PDAG object.
-
-        Examples
-        --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(directed_ebunch=[('A', 'B')], undirected_ebunch=[('B', 'C'), ('C', 'B')])
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C')}
-        """
-        if inplace:
-            pdag = self
-        else:
-            pdag = self.copy()
-
-        changed = True
-        while changed:
-            changed = False
-
-            # Rule 1: If X -> Y - Z and
-            #            (X not adj Z) and
-            #            (adding Y -> Z doesn't create cycle) and
-            #            (adding Y -> Z doesn't create an unshielded collider) =>  Y → Z
-            for y in pdag.nodes():
-                # Select x's such that there are directed edges x -> y.
-                for x in pdag.directed_parents(y):
-                    for z in pdag.undirected_neighbors(y):
-                        if (
-                            (not pdag.is_adjacent(x, z))
-                            and (not pdag._check_new_unshielded_collider(y, z))
-                            and (not nx.has_path(pdag._directed_graph(), z, y))
-                        ):
-                            pdag.orient_undirected_edge(y, z, inplace=True)
-                            changed = True
-                            if debug:
-                                logger.info(
-                                    f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
-                                )
-
-            # Rule 2: If X -> Z -> Y  and X - Y =>  X → Y
-            for z in pdag.nodes():
-                xs = pdag.directed_parents(z)
-                ys = pdag.directed_children(z)
-
-                for x in xs:
-                    for y in ys:
-                        if pdag.has_undirected_edge(x, y):
-                            pdag.orient_undirected_edge(x, y, inplace=True)
-                            changed = True
-                            if debug:
-                                logger.info(
-                                    f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
-                                )
-
-            # Rule 3: If X - {Y, Z, W} and {Z, Y} -> W => X -> W
-            for x in pdag.nodes():
-                undirected_nbs = pdag.undirected_neighbors(x)
-
-                if len(undirected_nbs) < 3:
-                    continue
-
-                for y, z, w in itertools.permutations(undirected_nbs, 3):
-                    if pdag.has_directed_edge(y, w) and pdag.has_directed_edge(z, w):
-                        pdag.orient_undirected_edge(x, w, inplace=True)
-                        changed = True
-                        if debug:
-                            logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w}; {y}, {z} -> {w} => {x} -> {w}"
-                            )
-                        break
-
-            # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
-            if apply_r4:
-                for c in pdag.nodes():
-                    directed_graph = pdag._directed_graph()
-                    for b in pdag.directed_children(c):
-                        for d in pdag.directed_parents(c):
-                            if b == d or pdag.is_adjacent(b, d):
-                                continue  # b adjacent d => rule not applicable
-
-                            # find nodes a that are undirected neighbor to b, d, and directed or undirected neighbor to c
-                            cand = set(pdag.undirected_neighbors(b)).intersection(
-                                pdag.all_neighbors(c),
-                                pdag.undirected_neighbors(d),
-                            )
-                            for a in cand:
-                                pdag.orient_undirected_edge(a, b, inplace=True)
-                                changed = True
-                                break
-        if not inplace:
-            return pdag
-
     def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
 
         Returns
         -------
-        pgmpy.base.DAG: Returns an instance of DAG.
+        Returns an instance of DAG.
 
         Examples
         --------
-        >>> pdag = PDAG(
-        ... directed_ebunch=[("A", "B"), ("C", "B")],
-        ... undirected_ebunch=[("C", "D"), ("D", "A")],
-        ... )
-        >>> dag = pdag.to_dag()
-        >>> print(dag.edges())
-        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
 
         References
         ----------
