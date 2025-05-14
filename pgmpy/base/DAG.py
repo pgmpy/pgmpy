@@ -634,7 +634,7 @@ class DAG(nx.DiGraph):
             be observed.
 
         include_latents: boolean (default: False)
-            If true, latent variables are return as part of the active trail.
+            If true, latent variables are considered in the d-connection check.
 
         Examples
         --------
@@ -646,45 +646,6 @@ class DAG(nx.DiGraph):
         >>> student.is_dconnected('diff', 'intel')
         False
         >>> student.is_dconnected('grades', 'sat')
-        True
-        """
-        if (
-            end
-            in self.active_trail_nodes(
-                variables=start, observed=observed, include_latents=include_latents
-            )[start]
-        ):
-            return True
-        else:
-            return False
-
-    def is_dconnected_efficient(self, start, end, observed=None, include_latents=False):
-        """
-        Returns True if there is an active trail (i.e. d-connection) between
-        `start` and `end` node given that `observed` is observed.
-
-        Parameters
-        ----------
-        start, end : int, str, any hashable python object.
-            The nodes in the DAG between which to check the d-connection/active trail.
-
-        observed : list, array-like (optional)
-            If given the active trail would be computed assuming these nodes to
-            be observed.
-
-        include_latents: boolean (default: False)
-            If true, latent variables are considered in the d-connection check.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> student = DAG()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_dconnected_efficient('diff', 'intel')
-        False
-        >>> student.is_dconnected_efficient('grades', 'sat')
         True
 
         References
