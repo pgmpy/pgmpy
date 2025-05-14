@@ -1243,6 +1243,49 @@ class TestDoQuery(unittest.TestCase):
             inference_algo="random",
         )
 
+    def test_invalid_causal_query_direct_descendant_intervention(self):
+        # Model: R -> S -> W & R -> W. We intervene on S and query R.
+        model = DiscreteBayesianNetwork([("R", "W"), ("S", "W"), ("R", "S")])
+        cpd_rain = TabularCPD(
+            variable="R",
+            variable_card=2,
+            values=[[0.6], [0.4]],
+            state_names={"R": ["True", "False"]},
+        )
+        cpd_sprinkler = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.1, 0.5], [0.9, 0.5]],
+            evidence=["R"],
+            evidence_card=[2],
+            state_names={"S": ["True", "False"], "R": ["True", "False"]},
+        )
+        cpd_wet_grass = TabularCPD(
+            variable="W",
+            variable_card=2,
+            values=[[0.99, 0.9, 0.9, 0.01], [0.01, 0.1, 0.1, 0.99]],
+            evidence=["R", "S"],
+            evidence_card=[2, 2],
+            state_names={
+                "W": ["True", "False"],
+                "R": ["True", "False"],
+                "S": ["True", "False"],
+            },
+        )
+        model.add_cpds(cpd_rain, cpd_sprinkler, cpd_wet_grass)
+        causal_inference = CausalInference(model)
+
+        evidence = {"W": "True"}
+        counterfactual_intervention = {"S": "False"}
+        with self.assertRaises(ValueError) as cm:
+            causal_inference.query(
+                variables=["R"], evidence=evidence, do=counterfactual_intervention
+            )
+        self.assertIn(
+            "Invalid causal query: There is a direct edge from the query variable 'R' to the intervention variable 'S'.",
+            str(cm.exception),
+        )
+
 
 class TestEstimator(unittest.TestCase):
     def test_create_estimator(self):
