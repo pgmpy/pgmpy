@@ -9,7 +9,7 @@ from pgmpy.independencies import IndependenceAssertion
 
 def get_ci_test(test, full=False, data=None, independencies=None):
     if callable(test):
-           return test
+        return test
 
     test = test.lower()
     supported_tests = {
