@@ -4,6 +4,7 @@ import itertools
 from collections import defaultdict
 from functools import reduce
 from operator import mul
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
 
 import networkx as nx
 import numpy as np
@@ -87,7 +88,14 @@ class DiscreteBayesianNetwork(DAG):
     3
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+    def __init__(
+        self,
+        ebunch: Optional[Union[list, set, nx.Graph]] = None,
+        latents: Union[Set, List] = set(),
+        lavaan_str: Optional[str] = None,
+        dagitty_str: Optional[str] = None,
+    ) -> None:
+
         super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
@@ -97,7 +105,7 @@ class DiscreteBayesianNetwork(DAG):
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
-    def add_edge(self, u, v, w=None, **kwargs):
+    def add_edge(self, u: Any, v: Any, w: Optional[Any] = None, **kwargs) -> None:
         """
         Add an edge between u and v.
 
@@ -129,7 +137,7 @@ class DiscreteBayesianNetwork(DAG):
             else:
                 super(DiscreteBayesianNetwork, self).add_edge(u, v, **kwargs)
 
-    def remove_node(self, node):
+    def remove_node(self, node: Any) -> None:
         """
         Remove node from the model.
 
@@ -180,7 +188,7 @@ class DiscreteBayesianNetwork(DAG):
 
         super(DiscreteBayesianNetwork, self).remove_node(node)
 
-    def remove_nodes_from(self, nodes):
+    def remove_nodes_from(self, nodes: Union[List, Set]) -> None:
         """
         Remove multiple nodes from the model.
 
@@ -219,7 +227,7 @@ class DiscreteBayesianNetwork(DAG):
         for node in nodes:
             self.remove_node(node)
 
-    def add_cpds(self, *cpds):
+    def add_cpds(self, *cpds: TabularCPD) -> None:
         """
         Add CPD (Conditional Probability Distribution) to the Bayesian Model.
 
@@ -269,7 +277,9 @@ class DiscreteBayesianNetwork(DAG):
             else:
                 self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(
+        self, node: Optional[Any] = None
+    ) -> Union[TabularCPD, List[TabularCPD], None]:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
@@ -319,7 +329,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return self.cpds
 
-    def remove_cpds(self, *cpds):
+    def remove_cpds(self, *cpds: Union[TabularCPD, Any]) -> None:
         """
         Removes the cpds that are provided in the argument.
 
@@ -345,7 +355,9 @@ class DiscreteBayesianNetwork(DAG):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
-    def get_cardinality(self, node=None):
+    def get_cardinality(
+        self, node: Optional[Any] = None
+    ) -> Union[int, DefaultDict[Any, int]]:
         """
         Returns the cardinality of the node. Throws an error if the CPD for the
         queried node hasn't been added to the network.
@@ -390,7 +402,7 @@ class DiscreteBayesianNetwork(DAG):
             return cardinalities
 
     @property
-    def states(self):
+    def states(self) -> Dict[Any, List[Any]]:
         """
         Returns a dictionary mapping each node to its list of possible states.
 
@@ -405,7 +417,7 @@ class DiscreteBayesianNetwork(DAG):
         }
         return state_dict
 
-    def check_model(self):
+    def check_model(self) -> bool:
         """
         Check the model for various errors. This method checks for the following
         errors.
@@ -464,7 +476,7 @@ class DiscreteBayesianNetwork(DAG):
 
         return True
 
-    def to_markov_model(self):
+    def to_markov_model(self) -> DiscreteMarkovNetwork:
         """
         Converts Bayesian Network to Markov Model. The Markov Model created would
         be the moral graph of the Bayesian Network.
@@ -487,7 +499,11 @@ class DiscreteBayesianNetwork(DAG):
 
         return mm
 
-    def to_junction_tree(self):
+    def to_junction_tree(
+        self,
+    ) -> (
+        nx.Graph
+    ):  # The return type should be nx.Graph as per the base class/implementation
         """
         Creates a junction tree (or clique tree) for a given Bayesian Network.
 
@@ -527,7 +543,9 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit_update(self, data, n_prev_samples=None, n_jobs=1):
+    def fit_update(
+        self, data: pd.DataFrame, n_prev_samples: Optional[int] = None, n_jobs: int = 1
+    ) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
         Internally, uses BayesianEstimator with dirichlet prior, and uses
@@ -589,8 +607,14 @@ class DiscreteBayesianNetwork(DAG):
         logger.disabled = False
 
     def predict(
-        self, data, algo=None, stochastic=False, n_jobs=-1, seed=None, **kwargs
-    ):
+        self,
+        data: pd.DataFrame,
+        algo: Optional[Any] = None,
+        stochastic: bool = False,
+        n_jobs: int = -1,
+        seed: Optional[int] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
         """
         Predicts states of all the missing variables.
 
@@ -758,7 +782,7 @@ class DiscreteBayesianNetwork(DAG):
 
         return predictions.sort_index()
 
-    def predict_probability(self, data):
+    def predict_probability(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Predicts probabilities of all states of the missing variables.
 
@@ -833,7 +857,7 @@ class DiscreteBayesianNetwork(DAG):
                     pred_values[k + "_" + str(state)].append(v.values[l])
         return pd.DataFrame(pred_values, index=data.index)
 
-    def get_state_probability(self, states):
+    def get_state_probability(self, states: dict) -> float:
         """
         Given a fully specified Bayesian Network, returns the probability of the given set
         of states.
@@ -883,11 +907,11 @@ class DiscreteBayesianNetwork(DAG):
 
         return final_prob
 
-    def get_factorized_product(self, latex=False):
+    def get_factorized_product(self, latex: bool = False) -> None:
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
-    def is_imap(self, JPD):
+    def is_imap(self, JPD: "JointProbabilityDistribution") -> bool:
         """
         Checks whether the Bayesian Network is Imap of given JointProbabilityDistribution
 
@@ -931,7 +955,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return False
 
-    def copy(self):
+    def copy(self) -> "DiscreteBayesianNetwork":
         """
         Returns a copy of the model.
 
@@ -969,7 +993,7 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.latents = self.latents
         return model_copy
 
-    def get_markov_blanket(self, node):
+    def get_markov_blanket(self, node: Any) -> List:
         """
         Returns a markov blanket for a random variable. In the case
         of Bayesian Networks, the markov blanket is the set of
@@ -1005,13 +1029,13 @@ class DiscreteBayesianNetwork(DAG):
 
     @staticmethod
     def get_random(
-        n_nodes=5,
-        edge_prob=0.5,
-        node_names=None,
-        n_states=None,
-        latents=False,
-        seed=None,
-    ):
+        n_nodes: int = 5,
+        edge_prob: float = 0.5,
+        node_names: Optional[list] = None,
+        n_states: Optional[Union[int, dict]] = None,
+        latents: bool = False,
+        seed: Optional[int] = None,
+    ) -> "DiscreteBayesianNetwork":
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
@@ -1101,7 +1125,12 @@ class DiscreteBayesianNetwork(DAG):
         bn_model.add_cpds(*cpds)
         return bn_model
 
-    def get_random_cpds(self, n_states=None, inplace=False, seed=None):
+    def get_random_cpds(
+        self,
+        n_states: Optional[Union[int, dict]] = None,
+        inplace: bool = False,
+        seed: Optional[int] = None,
+    ) -> Optional[list]:
         """
         Given a `model`, generates and adds random `TabularCPD` for each node resulting in a fully parameterized network.
 
@@ -1144,7 +1173,11 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes, inplace=False):
+    def do(
+        self,
+        nodes: Union[str, int, list],
+        inplace: bool = False,
+    ) -> Optional["DiscreteBayesianNetwork"]:
         """
         Applies the do operation. The do operation removes all incoming edges
         to variables in `nodes` and marginalizes their CPDs to only contain the
@@ -1197,18 +1230,18 @@ class DiscreteBayesianNetwork(DAG):
 
     def simulate(
         self,
-        n_samples=10,
-        do=None,
-        evidence=None,
-        virtual_evidence=None,
-        virtual_intervention=None,
-        include_latents=False,
-        partial_samples=None,
-        seed=None,
-        show_progress=True,
-        missing_prob=None,
-        return_full=False,
-    ):
+        n_samples: int = 10,
+        do: Optional[Dict[str, Any]] = None,
+        evidence: Optional[Dict[str, Any]] = None,
+        virtual_evidence: Optional[List[TabularCPD]] = None,
+        virtual_intervention: Optional[List[TabularCPD]] = None,
+        include_latents: bool = False,
+        partial_samples: Optional[pd.DataFrame] = None,
+        seed: Optional[int] = None,
+        show_progress: bool = True,
+        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
+        return_full: bool = False,
+    ) -> pd.DataFrame:
         """
         Simulates data from the given model. Internally uses methods from
         pgmpy.sampling.BayesianModelSampling to generate the data.
@@ -1460,7 +1493,7 @@ class DiscreteBayesianNetwork(DAG):
                 "category"
             )
 
-    def save(self, filename, filetype="bif"):
+    def save(self, filename: str, filetype: str = "bif") -> None:
         """
         Writes the model to a file. Plese avoid using any special characters or
         spaces in variable or state names.
@@ -1509,7 +1542,9 @@ class DiscreteBayesianNetwork(DAG):
             writer.write_xdsl(filename=filename)
 
     @staticmethod
-    def load(filename, filetype="bif", **kwargs):
+    def load(
+        filename: str, filetype: str = "bif", **kwargs: Any
+    ) -> "DiscreteBayesianNetwork":
         """
         Read the model from a file.
 
