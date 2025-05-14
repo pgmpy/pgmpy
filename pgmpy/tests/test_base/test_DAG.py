@@ -234,6 +234,109 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
         self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
 
+    def test_to_pdag(self):
+        dag = DAG([("X", "Z"), ("Z", "W"), ("Y", "U")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("Y", "U"),
+            ("U", "Y"),  # Undirected edge between Y and U
+            ("Z", "W"),
+            ("W", "Z"),  # Undirected edge between Z and W
+            ("X", "Z"),
+            ("Z", "X"),  # Undirected edge between X and Z
+        }
+
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z", "W", "U"})
+
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_single_edge(self):
+        dag = DAG([("X", "Y")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {("X", "Y"), ("Y", "X")}
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_v_structure(self):
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {("X", "Y"), ("Z", "Y")}
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_multiple_edges_1(self):
+        dag = DAG(
+            [
+                ("Z1", "X"),
+                ("Z1", "Z3"),
+                ("Z2", "Z3"),
+                ("Z2", "Y"),
+                ("Z3", "X"),
+                ("Z3", "Y"),
+                ("X", "W"),
+                ("W", "Y"),
+            ]
+        )
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("Z1", "Z3"),
+            ("Z1", "X"),
+            ("Z3", "X"),
+            ("Z3", "Y"),
+            ("Z2", "Z3"),
+            ("Z2", "Y"),
+            ("X", "W"),
+            ("W", "Y"),
+        }
+
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"Z1", "Z2", "X", "Y", "Z3", "W"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
+    def test_to_pdag_multiple_edges_2(self):
+        dag = DAG([("X", "Y"), ("Z", "Y"), ("Z", "X")])
+        pdag = dag.to_pdag()
+
+        # Expected edges in the PDAG
+        expected_edges = {
+            ("X", "Y"),
+            ("Y", "X"),
+            ("Z", "Y"),
+            ("Y", "Z"),
+            ("Z", "X"),
+            ("X", "Z"),
+        }
+        # Check that all expected edges are present
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        # Check that the PDAG has the correct number of nodes
+        self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
+        # Check that there are no latent variables
+        self.assertEqual(pdag.latents, set())
+
     def test_minimal_dseparator(self):
         # Without latent variables
 
@@ -646,11 +749,88 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set())
         self.assertEqual(pdag.latents, set(["D"]))
 
-        # TODO: Fix the cycle issue.
-        # Test cycle
-        # directed_edges = [('A', 'C')]
-        # undirected_edges = [('A', 'B'), ('B', 'D'), ('D', 'C')]
-        # self.assertRaises(ValueError, PDAG, directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+    def test_all_neighrors(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.all_neighbors(node="A"), {"B", "C"})
+        self.assertEqual(pdag.all_neighbors(node="B"), {"A", "D"})
+        self.assertEqual(pdag.all_neighbors(node="C"), {"A", "D"})
+        self.assertEqual(pdag.all_neighbors(node="D"), {"B", "C"})
+
+    def test_directed_children(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.directed_children(node="A"), {"C"})
+        self.assertEqual(pdag.directed_children(node="B"), set())
+        self.assertEqual(pdag.directed_children(node="C"), set())
+
+    def test_directed_parents(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.directed_parents(node="A"), set())
+        self.assertEqual(pdag.directed_parents(node="B"), set())
+        self.assertEqual(pdag.directed_parents(node="C"), {"A", "D"})
+
+    def test_has_directed_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertTrue(pdag.has_directed_edge("A", "C"))
+        self.assertTrue(pdag.has_directed_edge("D", "C"))
+        self.assertFalse(pdag.has_directed_edge("A", "B"))
+        self.assertFalse(pdag.has_directed_edge("B", "A"))
+
+    def test_has_undirected_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertFalse(pdag.has_undirected_edge("A", "C"))
+        self.assertFalse(pdag.has_undirected_edge("D", "C"))
+        self.assertTrue(pdag.has_undirected_edge("A", "B"))
+        self.assertTrue(pdag.has_undirected_edge("B", "A"))
+
+    def test_undirected_neighbors(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        self.assertEqual(pdag.undirected_neighbors(node="A"), {"B"})
+        self.assertEqual(pdag.undirected_neighbors(node="B"), {"A", "D"})
+        self.assertEqual(pdag.undirected_neighbors(node="C"), set())
+        self.assertEqual(pdag.undirected_neighbors(node="D"), {"B"})
+
+    def test_orient_undirected_edge(self):
+        directed_edges = [("A", "C"), ("D", "C")]
+        undirected_edges = [("B", "A"), ("B", "D")]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+        mod_pdag = pdag.orient_undirected_edge("B", "A", inplace=False)
+        self.assertEqual(
+            set(mod_pdag.edges()),
+            {("A", "C"), ("D", "C"), ("B", "A"), ("B", "D"), ("D", "B")},
+        )
+        self.assertEqual(mod_pdag.undirected_edges, {("B", "D")})
+        self.assertEqual(mod_pdag.directed_edges, {("A", "C"), ("D", "C"), ("B", "A")})
+
+        pdag.orient_undirected_edge("B", "A", inplace=True)
+        self.assertEqual(
+            set(pdag.edges()),
+            {("A", "C"), ("D", "C"), ("B", "A"), ("B", "D"), ("D", "B")},
+        )
+        self.assertEqual(pdag.undirected_edges, {("B", "D")})
+        self.assertEqual(pdag.directed_edges, {("A", "C"), ("D", "C"), ("B", "A")})
+
+        self.assertRaises(
+            ValueError, pdag.orient_undirected_edge, "B", "A", inplace=True
+        )
 
     def test_copy(self):
         pdag_copy = self.pdag_mix.copy()
@@ -751,3 +931,160 @@ class TestPDAG(unittest.TestCase):
         expected_edges = {("B", "C"), ("C", "D"), ("A", "C")}
         self.assertEqual(expected_edges, set(dag.edges()))
         self.assertEqual(dag.latents, set(["A"]))
+
+    def test_pdag_to_cpdag(self):
+        pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("C", "D")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C")], undirected_ebunch=[("B", "C")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("B", "C"), ("C", "B")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("D", "C"), ("D", "B")],
+            undirected_ebunch=[("B", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("D", "C"), ("D", "B"), ("B", "C")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[("A", "C")]
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C")})
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "C")],
+            undirected_ebunch=[("A", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()), {("A", "B"), ("B", "C"), ("A", "C"), ("D", "C")}
+        )
+
+        # Examples taken from Perkovi\`c 2017.
+        pdag = PDAG(
+            directed_ebunch=[("V1", "X")],
+            undirected_ebunch=[("X", "V2"), ("V2", "Y"), ("X", "Y")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {("V1", "X"), ("X", "V2"), ("X", "Y"), ("V2", "Y"), ("Y", "V2")},
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("Y", "X")],
+            undirected_ebunch=[("V1", "X"), ("X", "V2"), ("V2", "Y")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertEqual(
+            set(cpdag.edges()),
+            {
+                ("X", "V1"),
+                ("Y", "X"),
+                ("X", "V2"),
+                ("V2", "X"),
+                ("V2", "Y"),
+                ("Y", "V2"),
+            },
+        )
+
+        # Examples from Bang 2024
+        pdag = PDAG(
+            directed_ebunch=[("B", "D"), ("C", "D")],
+            undirected_ebunch=[("A", "D"), ("A", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True, debug=True)
+        self.assertEqual(
+            set(cpdag.edges()), {("B", "D"), ("D", "A"), ("C", "A"), ("C", "D")}
+        )
+
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("C", "B")],
+            undirected_ebunch=[("D", "B"), ("D", "A"), ("D", "C")],
+        )
+        cpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(cpdag.edges()),
+            {
+                ("A", "B"),
+                ("C", "B"),
+                ("D", "B"),
+                ("D", "A"),
+                ("A", "D"),
+                ("D", "C"),
+                ("C", "D"),
+            },
+        )
+
+        undirected_edges = [("A", "C"), ("B", "C"), ("D", "C")]
+        directed_edges = [("B", "D"), ("D", "A")]
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        mpdag = pdag.apply_meeks_rules(apply_r4=True)
+        self.assertSetEqual(
+            set(mpdag.edges()),
+            set(
+                [
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        pdag = pdag.apply_meeks_rules()
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+        pdag_inp = PDAG(
+            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
+        )
+        pdag_inp.apply_meeks_rules(inplace=True)
+        self.assertSetEqual(
+            set(pdag_inp.edges()),
+            set(
+                [
+                    ("A", "C"),
+                    ("C", "A"),
+                    ("C", "B"),
+                    ("B", "C"),
+                    ("B", "D"),
+                    ("D", "A"),
+                    ("D", "C"),
+                    ("C", "D"),
+                ]
+            ),
+        )

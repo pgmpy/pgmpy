@@ -14,7 +14,7 @@ from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data=None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
-        self.orientations_llm = set([])
+        self.orientation_cache = set([])
 
     def test_all(self, dag):
         """
@@ -57,9 +57,7 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold=0.05,
         effect_size_threshold=0.05,
-        use_llm=True,
-        llm_model="gemini/gemini-1.5-flash",
-        variable_descriptions=None,
+        orientation_fn=llm_pairwise_orient,
         show_progress=True,
         orientations=set([]),
         use_cache=True,
@@ -89,30 +87,36 @@ class ExpertInLoop(StructureEstimator):
             And if the effect size for an edge is less than the threshold,
             would suggest to remove the edge.
 
-        use_llm: bool
-            Whether to use a Large Language Model for edge orientation. If
-            False, prompts the user to specify the direction between the edges.
+        orientation_fn: callable, (default: pgmpy.utils.llm_pairwise_orient)
+            A function to determine edge orientation. The function should at least take two arguments
+            (the names of the two variables) and return a tuple (source, target) representing
+            the directed edge from source to target.
+            Any additional keyword arguments passed to estimate() will be forwarded to this function.
 
-        llm_model: str (default: gemini/gemini-1.5-flash)
-            The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
-            for available model options. Default is gemini-1.5-flash
+            Built-in functions that can be used:
+            - pgmpy.utils.manual_pairwise_orient: Prompts the user to specify the direction
+              between two variables by presenting options and taking input.
 
-        variable_descriptions: dict
-            A dict of the form {var: description} giving a text description of
-            each variable in the model.
+            - pgmpy.utils.llm_pairwise_orient: Uses a Large Language Model to determine direction.
+              Requires additional parameters:
+              * variable_descriptions: dict of {var_name: description} for context
+              * llm_model: name of the LLM model (default: "gemini/gemini-1.5-flash")
+              * system_prompt: optional custom system prompt
+
+            Custom functions can be provided that implement any desired logic for determining
+            edge orientation, including using local LLMs or domain-specific heuristics.
 
         show_progress: bool (default: True)
             If True, prints info of the running status.
 
         orientations: set
-            preferred orientation for edges
+            Preferred orientations for edges over the output of orientation_fn.
 
         use_cache: bool
-            If False, ask LLM (the same question multiple times)
+            If False, calls the orientation_fn directly(the same (u, v) multiple times)
 
         kwargs: kwargs
-            Any additional parameters to pass to litellm.completion method.
-            Please refer documentation at: https://docs.litellm.ai/docs/completion/input#input-params-1
+            Any additional parameters to pass to orientation_fn
 
         Returns
         -------
@@ -120,20 +124,55 @@ class ExpertInLoop(StructureEstimator):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.utils import get_example_model, llm_pairwise_orient, manual_pairwise_orient
         >>> from pgmpy.estimators import ExpertInLoop
         >>> model = get_example_model('cancer')
         >>> df = model.simulate(int(1e3))
+
+        >>> # Using manual orientation
+        >>> dag = ExpertInLoop(df).estimate(
+        ...     effect_size_threshold=0.0001,
+        ...     orientation_fn=manual_pairwise_orient
+        ... )
+
+        >>> # Using LLM-based orientation
         >>> variable_descriptions = {
         ...     "Smoker": "A binary variable representing whether a person smokes or not.",
-        ...     "Cancer": "A binary variable representing whether a person has cancer. ",
+        ...     "Cancer": "A binary variable representing whether a person has cancer.",
         ...     "Xray": "A binary variable representing the result of an X-ray test.",
-        ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not."
-        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath. "}
+        ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not.",
+        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath."
+        ... }
         >>> dag = ExpertInLoop(df).estimate(
-        ...                 effect_size_threshold=0.0001,
-        ...                 use_llm=True,
-        ...                 variable_descriptions=variable_descriptions)
+        ...     effect_size_threshold=0.0001,
+        ...     orientation_fn=llm_pairwise_orient,
+        ...     variable_descriptions=variable_descriptions,
+        ...     llm_model="gemini/gemini-1.5-flash"
+        ... )
+        >>> dag.edges()
+        OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
+
+        >>> # Using a custom orientation function
+        >>> def my_orientation_func(var1, var2, **kwargs):
+        ...     # Custom logic to determine edge orientation
+        ...     if var1 == "Pollution" and var2 == "Cancer":
+        ...         return ("Pollution", "Cancer")  # Pollution -> Cancer
+        ...     elif var1 == "Cancer" and var2 == "Pollution":
+        ...         return ("Pollution", "Cancer")  # Pollution -> Cancer
+        ...     elif "Smoker" in (var1, var2) and "Cancer" in (var1, var2):
+        ...         return ("Smoker", "Cancer")  # Smoker -> Cancer
+        ...     # For edges involving Xray, always orient from other variable to Xray
+        ...     elif "Xray" in (var1, var2):
+        ...         if var1 == "Xray":
+        ...             return (var2, var1)
+        ...         else:
+        ...             return (var1, var2)
+        ...     # Default: use alphabetical ordering
+        ...     return (var1, var2) if var1 < var2 else (var2, var1)
+        >>> dag = ExpertInLoop(df).estimate(
+        ...     effect_size_threshold=0.0001,
+        ...     orientation_fn=my_orientation_func
+        ... )
         >>> dag.edges()
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
         """
@@ -188,37 +227,55 @@ class ExpertInLoop(StructureEstimator):
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             edge_direction = None
-            if use_llm:
-                if use_cache:
-                    if (selected_edge.u, selected_edge.v) in self.orientations_llm:
-                        edge_direction = (selected_edge.u, selected_edge.v)
-                    elif (selected_edge.v, selected_edge.u) in self.orientations_llm:
-                        edge_direction = (selected_edge.v, selected_edge.u)
-                if edge_direction is None:
-                    edge_direction = llm_pairwise_orient(
-                        selected_edge.u,
-                        selected_edge.v,
-                        variable_descriptions,
-                        llm_model=llm_model,
-                        **kwargs,
-                    )
-                    self.orientations_llm.add(edge_direction)
 
-                if config.SHOW_PROGRESS and show_progress:
-                    sys.stdout.write(
-                        f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
-                    )
-                    sys.stdout.flush()
-            elif orientations:
+            # Edge orientation logic flow (part of step 3.2):
+            # 1. If pre-defined orientations are provided, use those first
+            # 2. Otherwise, try to use cached orientations if use_cache=True
+            # 3. If no cached orientation, call the orientation_fn and validate result
+            #    - Validate that it returns a valid edge direction tuple
+            #    - Cache the orientation and add the edge to the DAG
+
+            if orientations:
                 if (selected_edge.u, selected_edge.v) in orientations:
                     edge_direction = (selected_edge.u, selected_edge.v)
                 elif (selected_edge.v, selected_edge.u) in orientations:
                     edge_direction = (selected_edge.v, selected_edge.u)
-            if edge_direction is None:
-                edge_direction = manual_pairwise_orient(
-                    selected_edge.u, selected_edge.v
-                )
-                orientations.add(edge_direction)
+            else:
+                if use_cache:
+                    if (selected_edge.u, selected_edge.v) in self.orientation_cache:
+                        edge_direction = (selected_edge.u, selected_edge.v)
+                    elif (
+                        selected_edge.v,
+                        selected_edge.u,
+                    ) in self.orientation_cache:
+                        edge_direction = (selected_edge.v, selected_edge.u)
+                if edge_direction is None:
+                    edge_direction = orientation_fn(
+                        selected_edge.u,
+                        selected_edge.v,
+                        **kwargs,
+                    )
+
+                    # Validate that the orientation function returned a valid tuple
+                    if (
+                        not isinstance(edge_direction, tuple)
+                        or len(edge_direction) != 2
+                        or not isinstance(edge_direction[0], str)
+                        or not isinstance(edge_direction[1], str)
+                        or set(edge_direction)
+                        != set([selected_edge.u, selected_edge.v])
+                    ):
+                        raise ValueError(
+                            f"Orientation function returned an invalid value: {edge_direction}. "
+                            f"Must return a tuple containing exactly {selected_edge.u} and {selected_edge.v}."
+                        )
+                    else:
+                        self.orientation_cache.add(edge_direction)
+                        if config.SHOW_PROGRESS and show_progress:
+                            sys.stdout.write(
+                                f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
+                            )
+                            sys.stdout.flush()
 
             # Step 3.3: If the edge creates a cycle add the reverse edge. If no cycle, add the original edge.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):
