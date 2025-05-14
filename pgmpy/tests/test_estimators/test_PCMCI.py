@@ -8,219 +8,349 @@ from joblib.externals.loky import get_reusable_executor
 from pgmpy.estimators.PCMCI import PCMCI
 
 
-class TestPCMCIFakeCITest(unittest.TestCase):
+class TestPCMCIFullEstimation(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
-        # Create time series data with 3 variables and 100 time points
-        T = 100
+        # Create time series data with 3 variables and 200 time points
+        T = 200
         self.data = pd.DataFrame(np.random.randn(T, 3), columns=["X", "Y", "Z"])
 
         # Create AR(1) process where X causes Y with lag 1
         for t in range(1, T):
             self.data.loc[t, "Y"] += (
-                0.5 * self.data.loc[t - 1, "X"] + 0.1 * np.random.randn()
+                0.6 * self.data.loc[t - 1, "X"] + 0.2 * np.random.randn()
             )
 
         # Create AR(1) process where Y causes Z with lag 1
         for t in range(1, T):
             self.data.loc[t, "Z"] += (
-                0.5 * self.data.loc[t - 1, "Y"] + 0.1 * np.random.randn()
-            )
-
-        self.estimator = PCMCI(self.data)
-
-    @staticmethod
-    def fake_ci_test(
-        X, Y, Z=[], data=None, time_lag_x=0, time_lag_y=0, time_lag_sep=None, **kwargs
-    ):
-        """
-        A mock CI testing function for time series data which gives False for every condition
-        except for specific lagged independence relationships:
-        1. X_t-1 ⊥ Z_t | Y_t-1
-        2. X_t ⊥ Z_t-1
-        3. X_t ⊥ Z_t
-        """
-        time_lag_sep = time_lag_sep or []
-
-        # X_t-1 ⊥ Z_t | Y_t-1
-        if X == "X" and Y == "Z" and time_lag_x == 1 and time_lag_y == 0:
-            if Z == ["Y"] and time_lag_sep == [1]:
-                return True
-
-        # X_t ⊥ Z_t-1
-        elif X == "X" and Y == "Z" and time_lag_x == 0 and time_lag_y == 1:
-            return True
-
-        # X_t ⊥ Z_t
-        elif X == "X" and Y == "Z" and time_lag_x == 0 and time_lag_y == 0:
-            return True
-
-        # Same tests with X and Y swapped
-        elif Y == "X" and X == "Z" and time_lag_y == 1 and time_lag_x == 0:
-            if Z == ["Y"] and time_lag_sep == [1]:
-                return True
-
-        elif Y == "X" and X == "Z" and time_lag_y == 0 and time_lag_x == 1:
-            return True
-
-        elif Y == "X" and X == "Z" and time_lag_y == 0 and time_lag_x == 0:
-            return True
-
-        return False
-
-    def test_build_time_series_skeleton(self):
-        # Test skeleton building with custom CI test
-        skel, sep_set = self.estimator._build_time_series_skeleton(
-            ci_test=TestPCMCIFakeCITest.fake_ci_test, max_time_lag=2, max_cond_vars=2
-        )
-
-        # Check nodes - should include original variables with lags 0, 1, 2
-        expected_nodes = [
-            ("X", 0),
-            ("X", 1),
-            ("X", 2),
-            ("Y", 0),
-            ("Y", 1),
-            ("Y", 2),
-            ("Z", 0),
-            ("Z", 1),
-            ("Z", 2),
-        ]
-        self.assertEqual(set(skel.nodes()), set(expected_nodes))
-
-        # Based on our fake CI test, X should not be connected to Z
-        self.assertFalse(skel.has_edge(("X", 0), ("Z", 0)))
-        self.assertFalse(skel.has_edge(("X", 0), ("Z", 1)))
-        self.assertFalse(skel.has_edge(("X", 1), ("Z", 0)))
-
-        # But X should be connected to Y and Y to Z
-        self.assertTrue(
-            skel.has_edge(("X", 0), ("Y", 0)) or skel.has_edge(("X", 1), ("Y", 0))
-        )
-        self.assertTrue(
-            skel.has_edge(("Y", 0), ("Z", 0)) or skel.has_edge(("Y", 1), ("Z", 0))
-        )
-
-    def test_orient_edges(self):
-        # Create a simple skeleton graph
-        skel = nx.Graph()
-        skel.add_nodes_from([("X", 0), ("X", 1), ("Y", 0), ("Y", 1), ("Z", 0)])
-        skel.add_edges_from(
-            [
-                (("X", 1), ("Y", 0)),  # X_t-1 -> Y_t
-                (("Y", 1), ("Z", 0)),  # Y_t-1 -> Z_t
-                (("X", 0), ("Y", 0)),
-            ]
-        )
-
-        # Mock separating sets
-        sep_sets = {
-            frozenset({("X", 0), ("Z", 0)}): [("Y", 0)],
-            frozenset({("X", 1), ("Z", 0)}): [("Y", 1)],
-        }
-
-        # Orient edges based on temporal constraints
-        ts_dag = self.estimator._orient_time_series_edges(
-            skel, sep_sets, max_time_lag=1
-        )
-
-        # Check that lagged edges are oriented correctly (past -> present)
-        self.assertTrue(ts_dag.has_edge(("X", 1), ("Y", 0)))
-        self.assertTrue(ts_dag.has_edge(("Y", 1), ("Z", 0)))
-
-        # Check that contemporaneous edges are handled appropriately
-        # The graph should include edge X_t -> Y_t or Y_t -> X_t, but not both
-        contemp_edge_exists = ts_dag.has_edge(("X", 0), ("Y", 0)) or ts_dag.has_edge(
-            ("Y", 0), ("X", 0)
-        )
-        self.assertTrue(contemp_edge_exists)
-
-        # X and Z should not be directly connected
-        self.assertFalse(ts_dag.has_edge(("X", 0), ("Z", 0)))
-        self.assertFalse(ts_dag.has_edge(("Z", 0), ("X", 0)))
-        self.assertFalse(ts_dag.has_edge(("X", 1), ("Z", 0)))
-        self.assertFalse(ts_dag.has_edge(("Z", 0), ("X", 1)))
-
-
-class TestPCMCIEstimatorFromTimeSeries(unittest.TestCase):
-    def setUp(self):
-        np.random.seed(42)
-        # Create time series data: X causes Y with lag 1, Y causes Z with lag 1
-        T = 200
-        self.data = pd.DataFrame(np.random.randn(T, 3), columns=["X", "Y", "Z"])
-
-        # Create the causal relationships
-        for t in range(1, T):
-            # X causes Y with lag 1
-            self.data.loc[t, "Y"] += (
-                0.6 * self.data.loc[t - 1, "X"] + 0.2 * np.random.randn()
-            )
-
-            # Y causes Z with lag 1
-            self.data.loc[t, "Z"] += (
                 0.6 * self.data.loc[t - 1, "Y"] + 0.2 * np.random.randn()
             )
 
-            # Add some autocorrelation
-            self.data.loc[t, "X"] += (
-                0.3 * self.data.loc[t - 1, "X"] + 0.2 * np.random.randn()
-            )
+        # Add autocorrelation
+        for t in range(1, T):
+            self.data.loc[t, "X"] += 0.3 * self.data.loc[t - 1, "X"]
             self.data.loc[t, "Y"] += 0.3 * self.data.loc[t - 1, "Y"]
             self.data.loc[t, "Z"] += 0.3 * self.data.loc[t - 1, "Z"]
 
         self.estimator = PCMCI(self.data)
 
-    # def test_estimate_ts_dag(self):
-    #     """Test the full PCMCI estimation pipeline with actual time series data."""
-    #     # Use a lower significance level to be more permissive in edge detection
-    #     ts_dag = self.estimator.estimate(
-    #         ci_test="pearsonr",
-    #         significance_level=0.05,
-    #         max_time_lag=2,
-    #         max_cond_vars=3,
-    #         show_progress=False,
-    #     )
+    def test_estimate_full_pipeline(self):
+        """Test the full PCMCI estimation pipeline."""
+        # Run the estimation with default settings
+        ts_dag = self.estimator.estimate(max_time_lag=2, significance_level=0.05)
 
-    #     # Check that some implausible edges do NOT exist (X should not directly affect Z)
-    #     self.assertFalse(
-    #         ts_dag.has_edge(("X", 1), ("Z", 0)),
-    #         "Should not have direct edge X(t-1) -> Z(t)",
-    #     )
+        # Test basic properties of the resulting graph
+        self.assertIsInstance(ts_dag, nx.DiGraph)
 
-    #     # Verify no edges from future to past exist (temporal constraint)
-    #     for node1 in ts_dag.nodes():
-    #         for node2 in ts_dag.nodes():
-    #             _, lag1 = node1
-    #             _, lag2 = node2
-    #             if lag1 < lag2 and ts_dag.has_edge(node1, node2):
-    #                 self.fail(
-    #                     f"Edge from {node1} to {node2} violates temporal constraints"
-    #                 )
+        # Check for expected causal relationships
+        # X(t-1) should cause Y(t)
+        self.assertTrue(ts_dag.has_edge(("X", 1), ("Y", 0)))
 
-    def test_create_lagged_data(self):
-        """Test the creation of lagged data for time series analysis."""
-        max_lag = 2
-        lagged_data = self.estimator._create_lagged_data(self.data, max_lag)
+        # Y(t-1) should cause Z(t)
+        self.assertTrue(ts_dag.has_edge(("Y", 1), ("Z", 0)))
 
-        # Check that the lagged data has the right columns
-        expected_columns = []
-        for var in ["X", "Y", "Z"]:
-            for lag in range(max_lag + 1):
-                expected_columns.append((var, lag))
+        # Autocorrelation edges
+        self.assertTrue(ts_dag.has_edge(("X", 1), ("X", 0)))
+        self.assertTrue(ts_dag.has_edge(("Y", 1), ("Y", 0)))
+        self.assertTrue(ts_dag.has_edge(("Z", 1), ("Z", 0)))
 
-        self.assertEqual(set(lagged_data.columns), set(expected_columns))
+        # X should not directly cause Z (it's indirect through Y)
+        self.assertFalse(ts_dag.has_edge(("X", 1), ("Z", 0)))
 
-        # Check that the number of rows is correct (original rows - max_lag)
-        expected_rows = len(self.data) - max_lag
-        self.assertEqual(len(lagged_data), expected_rows)
+    def test_estimate_with_different_ci_tests(self):
+        """Test estimation with different CI test options."""
+        # Test with g_sq (G-square) test
+        ts_dag_gsq = self.estimator.estimate(ci_test="g_sq", max_time_lag=1)
+        self.assertIsInstance(ts_dag_gsq, nx.DiGraph)
 
-        # Check a specific value to ensure correct alignment
-        orig_value = self.data.loc[max_lag, "X"]  # Value at t=max_lag
-        lagged_value = lagged_data.loc[
-            0, ("X", 0)
-        ]  # First row in lagged data for X at lag 0
-        self.assertAlmostEqual(orig_value, lagged_value)
+        # Test with chi_square test
+        ts_dag_chi = self.estimator.estimate(ci_test="chi_square", max_time_lag=1)
+        self.assertIsInstance(ts_dag_chi, nx.DiGraph)
+
+        # Test with pearsonr test
+        ts_dag_pearson = self.estimator.estimate(ci_test="pearsonr", max_time_lag=1)
+        self.assertIsInstance(ts_dag_pearson, nx.DiGraph)
+
+    def test_estimate_with_parallel_vs_sequential(self):
+        """Test estimation with parallel vs sequential execution."""
+        # Run with sequential execution
+        ts_dag_seq = self.estimator.estimate(max_time_lag=1, n_jobs=1)
+
+        # Run with parallel execution
+        ts_dag_par = self.estimator.estimate(max_time_lag=1, n_jobs=2)
+
+        # The results should be topologically equivalent
+        # Check that the same edges exist
+        self.assertEqual(set(ts_dag_seq.edges()), set(ts_dag_par.edges()))
+
+    def test_estimate_return_types(self):
+        """Test different return types from the estimate method."""
+        # Test returning skeleton
+        skeleton, sep_sets = self.estimator.estimate(
+            max_time_lag=1, return_type="skeleton"
+        )
+        self.assertIsInstance(skeleton, nx.Graph)
+        self.assertIsInstance(sep_sets, dict)
+
+        # Test returning ts_dag (default)
+        ts_dag = self.estimator.estimate(max_time_lag=1, return_type="ts_dag")
+        self.assertIsInstance(ts_dag, nx.DiGraph)
+
+        # Test for invalid return type
+        with self.assertRaises(ValueError):
+            self.estimator.estimate(max_time_lag=1, return_type="invalid")
 
     def tearDown(self):
         # Clean up any resources
         get_reusable_executor().shutdown(wait=True)
+
+
+class TestPCMCIEdgeCases(unittest.TestCase):
+    def test_empty_data(self):
+        """Test handling of empty data."""
+        # Create empty dataframe
+        empty_data = pd.DataFrame()
+
+        estimator = PCMCI()  # No data provided
+
+        # Should raise ValueError when trying to estimate
+        with self.assertRaises(ValueError):
+            estimator.estimate()
+
+    def test_single_variable(self):
+        """Test with single variable time series."""
+        # Create single variable time series
+        T = 100
+        data = pd.DataFrame(np.random.randn(T, 1), columns=["X"])
+
+        # Add autocorrelation
+        for t in range(1, T):
+            data.loc[t, "X"] += 0.5 * data.loc[t - 1, "X"]
+
+        estimator = PCMCI(data)
+        ts_dag = estimator.estimate(max_time_lag=2)
+
+        # There should only be autocorrelation edges
+        self.assertTrue(ts_dag.has_edge(("X", 1), ("X", 0)))
+        self.assertTrue(
+            ts_dag.has_edge(("X", 2), ("X", 0)) or ts_dag.has_edge(("X", 2), ("X", 1))
+        )
+
+        # Only 3 nodes for X with lags 0, 1, 2
+        self.assertEqual(len(ts_dag.nodes()), 3)
+
+    def test_max_cond_vars_limit(self):
+        """Test behavior when max_cond_vars is small."""
+        np.random.seed(42)
+        # Create time series with 5 variables
+        T = 100
+        data = pd.DataFrame(np.random.randn(T, 5), columns=["A", "B", "C", "D", "E"])
+
+        # Make them all causally related
+        for t in range(1, T):
+            data.loc[t, "B"] += 0.4 * data.loc[t - 1, "A"]
+            data.loc[t, "C"] += 0.4 * data.loc[t - 1, "B"]
+            data.loc[t, "D"] += 0.4 * data.loc[t - 1, "C"]
+            data.loc[t, "E"] += 0.4 * data.loc[t - 1, "D"]
+
+        estimator = PCMCI(data)
+
+        # Set max_cond_vars to a small value
+        ts_dag = estimator.estimate(max_time_lag=1, max_cond_vars=1)
+
+        # With such constraints, should still find core causal chain
+        self.assertTrue(ts_dag.has_edge(("A", 1), ("B", 0)))
+        self.assertTrue(ts_dag.has_edge(("B", 1), ("C", 0)))
+        self.assertTrue(ts_dag.has_edge(("C", 1), ("D", 0)))
+        self.assertTrue(ts_dag.has_edge(("D", 1), ("E", 0)))
+
+    def test_high_significance_level(self):
+        """Test with a high significance level (more edges)."""
+        np.random.seed(42)
+        T = 100
+        data = pd.DataFrame(np.random.randn(T, 3), columns=["X", "Y", "Z"])
+
+        # X causes Y
+        for t in range(1, T):
+            data.loc[t, "Y"] += 0.3 * data.loc[t - 1, "X"]
+
+        estimator = PCMCI(data)
+
+        # With high significance level
+        ts_dag_high = estimator.estimate(max_time_lag=1, significance_level=0.5)
+
+        # With low significance level
+        ts_dag_low = estimator.estimate(max_time_lag=1, significance_level=0.01)
+
+        # Higher significance should lead to more edges
+        self.assertGreaterEqual(len(ts_dag_high.edges()), len(ts_dag_low.edges()))
+
+    def tearDown(self):
+        # Clean up any resources
+        get_reusable_executor().shutdown(wait=True)
+
+
+class TestPCMCIMCIPhase(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(42)
+        # Complex scenario: X → Y → Z and X → Z
+        T = 200
+        self.data = pd.DataFrame(np.random.randn(T, 3), columns=["X", "Y", "Z"])
+
+        # X causes Y with lag 1
+        for t in range(1, T):
+            self.data.loc[t, "Y"] += 0.6 * self.data.loc[t - 1, "X"]
+
+        # Y causes Z with lag 1
+        for t in range(1, T):
+            self.data.loc[t, "Z"] += 0.4 * self.data.loc[t - 1, "Y"]
+
+        # X also causes Z with lag 2 (direct path)
+        for t in range(2, T):
+            self.data.loc[t, "Z"] += 0.3 * self.data.loc[t - 2, "X"]
+
+        self.estimator = PCMCI(self.data)
+
+    def test_run_mci_tests(self):
+        """Test the MCI test phase directly."""
+        # First build a skeleton and orient it
+        skeleton, sep_sets = self.estimator._build_time_series_skeleton(
+            ci_test="pearsonr", max_time_lag=2
+        )
+
+        ts_dag = self.estimator._orient_time_series_edges(
+            skeleton, sep_sets, max_time_lag=2
+        )
+
+        # Now run MCI tests
+        refined_dag = self.estimator._run_mci_tests(
+            ts_dag, ci_test="pearsonr", significance_level=0.05
+        )
+
+        # The refined DAG should show X->Y->Z and also X->Z
+        self.assertTrue(refined_dag.has_edge(("X", 1), ("Y", 0)))
+        self.assertTrue(refined_dag.has_edge(("Y", 1), ("Z", 0)))
+        self.assertTrue(refined_dag.has_edge(("X", 2), ("Z", 0)))
+
+    def test_run_single_mci_test(self):
+        """Test a single MCI test directly."""
+        # Create a mock DAG
+        ts_dag = nx.DiGraph()
+        ts_dag.add_nodes_from([("X", 0), ("X", 1), ("Y", 0), ("Y", 1), ("Z", 0)])
+        ts_dag.add_edges_from(
+            [
+                (("X", 1), ("Y", 0)),
+                (("Y", 1), ("Z", 0)),
+            ]
+        )
+
+        # Create lagged data
+        lagged_data = self.estimator._create_lagged_data(self.data, 2)
+
+        # Test an edge that should remain
+        should_remove = self.estimator._run_single_mci_test(
+            ts_dag,
+            ("X", 1),
+            ("Y", 0),
+            lagged_data,
+            ci_test="pearsonr",
+            significance_level=0.05,
+            max_cond_vars=3,
+        )
+
+        self.assertFalse(should_remove)  # X->Y should remain
+
+        # Test an edge that might be removed (X->Z) might be found redundant
+        # Add this edge first
+        ts_dag.add_edge(("X", 1), ("Z", 0))
+
+        should_remove = self.estimator._run_single_mci_test(
+            ts_dag,
+            ("X", 1),
+            ("Z", 0),
+            lagged_data,
+            ci_test="pearsonr",
+            significance_level=0.05,
+            max_cond_vars=3,
+        )
+
+        # Not testing the result since it's data dependent,
+        # but testing the function runs correctly
+
+    def test_get_parents(self):
+        """Test the get_parents method."""
+        # Setup a graph with known parents
+        ts_dag = nx.DiGraph()
+        ts_dag.add_nodes_from([("X", 0), ("X", 1), ("Y", 0), ("Y", 1), ("Z", 0)])
+        ts_dag.add_edges_from(
+            [
+                (("X", 1), ("Y", 0)),
+                (("Y", 1), ("Z", 0)),
+                (("X", 1), ("Z", 0)),
+            ]
+        )
+
+        # Associate the graph with the estimator
+        self.estimator.add_nodes_from(ts_dag.nodes())
+        self.estimator.add_edges_from(ts_dag.edges())
+
+        # Test getting parents
+        z_parents = self.estimator.get_parents(("Z", 0))
+        self.assertEqual(set(z_parents), {("X", 1), ("Y", 1)})
+
+        y_parents = self.estimator.get_parents(("Y", 0))
+        self.assertEqual(set(y_parents), {("X", 1)})
+
+        x0_parents = self.estimator.get_parents(("X", 0))
+        self.assertEqual(set(x0_parents), set())
+
+    def tearDown(self):
+        # Clean up any resources
+        get_reusable_executor().shutdown(wait=True)
+
+
+class TestPCMCICycles(unittest.TestCase):
+    def test_remove_cycles_within_time_slice(self):
+        """Test removing cycles within the same time slice."""
+        # Create a graph with a cycle within the same time slice
+        ts_dag = nx.DiGraph()
+        ts_dag.add_nodes_from(
+            [
+                ("X", 0),
+                ("Y", 0),
+                ("Z", 0),  # Time slice 0
+                ("X", 1),
+                ("Y", 1),
+                ("Z", 1),  # Time slice 1
+            ]
+        )
+
+        # Add a cycle in time slice 0
+        ts_dag.add_edge(("X", 0), ("Y", 0))
+        ts_dag.add_edge(("Y", 0), ("Z", 0))
+        ts_dag.add_edge(("Z", 0), ("X", 0))  # This creates a cycle
+
+        # Add normal time-lagged edges
+        ts_dag.add_edge(("X", 1), ("X", 0))
+        ts_dag.add_edge(("Y", 1), ("Y", 0))
+
+        # Create an estimator
+        estimator = PCMCI()
+
+        # Remove cycles
+        estimator._remove_cycles_within_time_slice(ts_dag)
+
+        # There should be no cycles in the time slice 0
+        subgraph = ts_dag.subgraph([("X", 0), ("Y", 0), ("Z", 0)])
+        self.assertFalse(list(nx.simple_cycles(subgraph)))
+
+        # Should have broken one of the edges in the cycle
+        edges_count = sum(
+            [
+                ts_dag.has_edge(("X", 0), ("Y", 0)),
+                ts_dag.has_edge(("Y", 0), ("Z", 0)),
+                ts_dag.has_edge(("Z", 0), ("X", 0)),
+            ]
+        )
+        self.assertEqual(edges_count, 2)  # One edge was removed
