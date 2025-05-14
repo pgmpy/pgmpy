@@ -22,9 +22,11 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
 )
 from pgmpy.utils import compat_fns
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 class VariableElimination(Inference):
@@ -291,6 +293,14 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
 
+        if isinstance(
+            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
+        ):
+            raise NotImplementedError(
+                f"Variable Elimination is not supported for {self.model.__class__.__name__}."
+                f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
+            )
+
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
@@ -298,6 +308,11 @@ class VariableElimination(Inference):
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
+        if not variables:
+            raise ValueError(
+                "The `variables` argument to query() must contain at least one variable."
             )
 
         # Step 2: If virtual_evidence is provided, modify the network.
