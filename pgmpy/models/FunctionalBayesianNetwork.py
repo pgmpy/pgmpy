@@ -1,3 +1,5 @@
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -20,7 +22,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     of any distribution.
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+    def __init__(
+        self,
+        ebunch: Optional[List[Tuple[Any, Any]]] = None,
+        latents: Set[Any] = set(),
+        lavaan_str: Optional[str] = None,
+        dagitty_str: Optional[str] = None,
+    ) -> None:
         """
         Initializes a FunctionalBayesianNetwork.
 
@@ -46,7 +54,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             dagitty_str=dagitty_str,
         )
 
-    def add_cpds(self, *cpds):
+    def add_cpds(self, *cpds: FunctionalCPD) -> None:
         """
         Adds FunctionalCPDs to the Bayesian Network.
 
@@ -86,7 +94,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             else:
                 self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(
+        self, node: Optional[Any] = None
+    ) -> Union[FunctionalCPD, List[FunctionalCPD]]:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
@@ -117,7 +127,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         """
         return super(FunctionalBayesianNetwork, self).get_cpds(node)
 
-    def remove_cpds(self, *cpds):
+    def remove_cpds(self, *cpds: FunctionalCPD) -> None:
         """
         Removes the given `cpds` from the model.
 
@@ -147,7 +157,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         """
         return super(FunctionalBayesianNetwork, self).remove_cpds(*cpds)
 
-    def check_model(self):
+    def check_model(self) -> bool:
         """
         Checks the model for various errors. This method checks for the following
         error -
@@ -170,7 +180,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                     )
         return True
 
-    def simulate(self, n_samples=1000, seed=None):
+    def simulate(
+        self, n_samples: int = 1000, seed: Optional[int] = None
+    ) -> pd.DataFrame:
         """
         Simulate samples from the model.
 
@@ -218,15 +230,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def fit(
         self,
-        data,
-        method="SVI",
-        optimizer=pyro.optim.Adam({"lr": 1e-2}),
-        prior_fn=None,
-        num_steps=1000,
-        seed=None,
-        nuts_kwargs=None,
-        mcmc_kwargs=None,
-    ):
+        data: pd.DataFrame,
+        method: str = "SVI",
+        optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
+        prior_fn: Optional[
+            Callable[[], Dict[str, pyro.distributions.Distribution]]
+        ] = None,
+        num_steps: int = 1000,
+        seed: Optional[int] = None,
+        nuts_kwargs: Optional[Dict[str, Any]] = None,
+        mcmc_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Fit the Bayesian network to data using Pyro's stochastic variational inference.
 
