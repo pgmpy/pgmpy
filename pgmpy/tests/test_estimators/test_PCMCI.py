@@ -4,6 +4,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
+from scipy.stats import pearsonr
 
 from pgmpy.estimators.PCMCI import PCMCI
 from pgmpy.estimators.CITests import get_ci_test
@@ -215,17 +216,18 @@ class TestPCMCIMCIPhase(unittest.TestCase):
 
     def test_run_mci_tests(self):
         """Test the MCI test phase directly."""
+
+        # Get the CI test function
+        ci_test_func = get_ci_test("pearsonr")
+
         # First build a skeleton and orient it
         skeleton, sep_sets = self.estimator._build_time_series_skeleton(
-            ci_test="pearsonr", max_time_lag=2
+            ci_test=ci_test_func, max_time_lag=2
         )
 
         ts_dag = self.estimator._orient_time_series_edges(
             skeleton, sep_sets, max_time_lag=2
         )
-
-        # Get the CI test function
-        ci_test_func = get_ci_test("pearsonr")
 
         # Now run MCI tests
         refined_dag = self.estimator._run_mci_tests(
@@ -277,7 +279,7 @@ class TestPCMCIMCIPhase(unittest.TestCase):
             ("X", 1),
             ("Z", 0),
             lagged_data,
-            ci_test="pearsonr",
+            ci_test=ci_test_func,
             significance_level=0.05,
             max_cond_vars=3,
         )
