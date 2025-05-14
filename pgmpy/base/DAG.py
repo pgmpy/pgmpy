@@ -619,6 +619,146 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
+    def is_dconnected_efficient(self, start, end, observed=None, include_latents=False):
+        """
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
+        Implements Algorithm 2 from Geiger, Verma & Pearl (1990) "d-separation: From theorems to algorithms."
+
+        Parameters
+        ----------
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
+        include_latents: boolean (default: False)
+            If true, latent variables are considered in the d-connection check.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_dconnected_efficient('diff', 'intel')
+        False
+        >>> student.is_dconnected_efficient('grades', 'sat')
+        True
+
+        References
+        ----------
+        [1] Geiger, D., Verma, T., & Pearl, J. (1990). d-separation: From theorems to algorithms.
+            In Machine Intelligence and Pattern Recognition (Vol. 10, pp. 139-148). North-Holland.
+        """
+        # Normalize observed to a list
+        if observed:
+            if isinstance(observed, set):
+                observed = list(observed)
+            observed_list = (
+                observed if isinstance(observed, (list, tuple)) else [observed]
+            )
+        else:
+            observed_list = []
+
+        # Special cases
+        if start == end:
+            return True
+
+        if start in observed_list or end in observed_list:
+            return False
+
+        # Filter nodes based on latent status if needed
+        nodes_to_consider = set(self.nodes())
+        if not include_latents and hasattr(self, "latents"):
+            # If we're not including latents, check if start or end are latent
+            if start in self.latents or end in self.latents:
+                return False
+            # Remove latent nodes from consideration
+            nodes_to_consider = nodes_to_consider - self.latents
+            # Also filter observed list
+            observed_list = [node for node in observed_list if node not in self.latents]
+
+        # STEP 1: Construct the descendant table
+        # Mark nodes that are or have descendants in observed_list
+        descendant = {node: False for node in self.nodes()}
+
+        # First mark observed nodes
+        for obs_node in observed_list:
+            descendant[obs_node] = True
+
+        # Propagate upward: if a node has a descendant that is observed, mark it
+        change = True
+        while change:
+            change = False
+            for node in self.nodes():
+                if not descendant[node]:
+                    for child in self.successors(node):
+                        if descendant[child]:
+                            descendant[node] = True
+                            change = True
+
+        # STEP 2: BFS to find legal paths from start to end
+        queue = [(start, None)]  # (node, parent) to track path direction
+        visited = set()
+
+        while queue:
+            node, parent = queue.pop(0)
+
+            # Check if we've reached the destination
+            if node == end:
+                return True
+
+            # Skip if we've already visited this node-parent combo
+            if (node, parent) in visited:
+                continue
+
+            visited.add((node, parent))
+
+            # Explore neighbors
+            for neighbor in self.nodes():
+                # Skip if already visited with this parent
+                if (neighbor, node) in visited:
+                    continue
+
+                # Skip self-loops
+                if neighbor == node:
+                    continue
+
+                # Skip parent we just came from
+                if neighbor == parent:
+                    continue
+
+                # Skip nodes that aren't directly connected to current node
+                if not (self.has_edge(node, neighbor) or self.has_edge(neighbor, node)):
+                    continue
+
+                # Determine trail type for node-neighbor
+                # Check if this is a head-to-head node (collider)
+                is_head_to_head = False
+
+                # A head-to-head occurs when parent→node←neighbor
+                if parent is not None:
+                    if self.has_edge(parent, node) and self.has_edge(neighbor, node):
+                        is_head_to_head = True
+
+                # Apply d-separation rules
+                if is_head_to_head:
+                    # For head-to-head: only traverse if node or descendants are observed
+                    if descendant[node]:
+                        queue.append((neighbor, node))
+                else:
+                    # For non-head-to-head: only traverse if node is not observed
+                    if node not in observed_list:
+                        queue.append((neighbor, node))
+
+        # If we've exhausted all options and haven't found end, they're d-separated
+        return False
+
     def is_dconnected(self, start, end, observed=None, include_latents=False):
         """
         Returns True if there is an active trail (i.e. d-connection) between
