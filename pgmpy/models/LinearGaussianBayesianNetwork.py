@@ -1,3 +1,5 @@
+from typing import Hashable, List, Optional, Tuple, Union
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -21,7 +23,13 @@ class LinearGaussianBayesianNetwork(DAG):
 
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+    def __init__(
+        self,
+        ebunch: Optional[Union[List[Tuple[Hashable, Hashable]], nx.DiGraph]] = None,
+        latents: set = set(),
+        lavaan_str: Optional[str] = None,
+        dagitty_str: Optional[str] = None,
+    ) -> None:
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
@@ -30,7 +38,7 @@ class LinearGaussianBayesianNetwork(DAG):
         )
         self.cpds = []
 
-    def add_cpds(self, *cpds):
+    def add_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
         Add linear Gaussian CPD (Conditional Probability Distribution)
         to the Bayesian Network.
@@ -71,7 +79,9 @@ class LinearGaussianBayesianNetwork(DAG):
             else:
                 self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(
+        self, node: Optional[Hashable] = None
+    ) -> Union[LinearGaussianCPD, List[LinearGaussianCPD]]:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
@@ -107,7 +117,7 @@ class LinearGaussianBayesianNetwork(DAG):
         else:
             return self.cpds
 
-    def remove_cpds(self, *cpds):
+    def remove_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
         Removes the cpds that are provided in the argument.
 
@@ -142,7 +152,13 @@ class LinearGaussianBayesianNetwork(DAG):
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
 
-    def get_random_cpds(self, loc=0, scale=1, inplace=False, seed=None):
+    def get_random_cpds(
+        self,
+        loc: float = 0,
+        scale: float = 1,
+        inplace: bool = False,
+        seed: Optional[int] = None,
+    ) -> Optional[List[LinearGaussianCPD]]:
         """
         Generates random Linear Gaussian CPDs for the model. The coefficients
         are sampled from a normal distribution with mean `loc` and standard
@@ -185,7 +201,7 @@ class LinearGaussianBayesianNetwork(DAG):
         else:
             return cpds
 
-    def to_joint_gaussian(self):
+    def to_joint_gaussian(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Linear Gaussian Bayesian Networks can be represented using a joint
         Gaussian distribution over all the variables. This method gives
@@ -244,7 +260,9 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def simulate(self, n_samples=1000, seed=None):
+    def simulate(
+        self, n_samples: int = 1000, seed: Optional[int] = None
+    ) -> pd.DataFrame:
         """
         Simulates data from the given model.
 
@@ -285,7 +303,7 @@ class LinearGaussianBayesianNetwork(DAG):
             columns=variables,
         )
 
-    def check_model(self):
+    def check_model(self) -> bool:
         """
         Checks the model for various errors. This method checks for the following
         error -
@@ -309,13 +327,15 @@ class LinearGaussianBayesianNetwork(DAG):
                     )
         return True
 
-    def get_cardinality(self, node):
+    def get_cardinality(self, node: Hashable) -> int:
         """
         Cardinality is not defined for continuous variables.
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(self, data, method="mle"):
+    def fit(
+        self, data: pd.DataFrame, method: str = "mle"
+    ) -> "LinearGaussianBayesianNetwork":
         """
         Estimates the parameters of the model using the given `data`.
 
@@ -384,7 +404,11 @@ class LinearGaussianBayesianNetwork(DAG):
 
         return self
 
-    def predict(self, data, distribution="joint"):
+    def predict(
+        self,
+        data: pd.DataFrame,
+        distribution: str = "joint",
+    ) -> Tuple[List[Hashable], np.ndarray, np.ndarray]:
         """
         Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
 
@@ -469,14 +493,14 @@ class LinearGaussianBayesianNetwork(DAG):
 
     @staticmethod
     def get_random(
-        n_nodes=5,
-        edge_prob=0.5,
-        node_names=None,
-        latents=False,
-        loc=0,
-        scale=1,
-        seed=None,
-    ):
+        n_nodes: int = 5,
+        edge_prob: float = 0.5,
+        node_names: Optional[List[Union[str, int]]] = None,
+        latents: bool = False,
+        loc: float = 0,
+        scale: float = 1,
+        seed: Optional[int] = None,
+    ) -> "LinearGaussianBayesianNetwork":
         """
         Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
