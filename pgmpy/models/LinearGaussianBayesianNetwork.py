@@ -454,9 +454,8 @@ class LinearGaussianBayesianNetwork(DAG):
     def query(self, variables=None, evidence=None):
         if evidence is None:
             raise ValueError("Evidence must be provided.")
-
+        
         import pandas as pd
-
         df = pd.DataFrame([evidence])
 
         if variables is None:
@@ -466,7 +465,11 @@ class LinearGaussianBayesianNetwork(DAG):
 
         predicted_vars, mu, cov = self.predict(df_missing)
 
-        return {"variables": predicted_vars, "mean": mu, "covariance": cov}
+        return {
+            "variables": predicted_vars,
+            "mean": mu,
+            "covariance": cov
+        }
 
     def to_markov_model(self):
         """

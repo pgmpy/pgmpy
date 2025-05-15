@@ -2,6 +2,7 @@ from math import isclose
 
 from pgmpy.global_vars import logger
 
+
 try:  # pragma: no cover
     import torch
 

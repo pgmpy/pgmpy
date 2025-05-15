@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from pgmpy.utils import get_example_model
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -16,7 +17,6 @@ from pgmpy.models import (
     JunctionTree,
     LinearGaussianBayesianNetwork,
 )
-from pgmpy.utils import get_example_model
 
 
 class TestVariableElimination(unittest.TestCase):

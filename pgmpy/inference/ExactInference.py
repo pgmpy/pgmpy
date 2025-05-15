@@ -24,9 +24,9 @@ from pgmpy.models import (
     FactorGraph,
     FunctionalBayesianNetwork,
     JunctionTree,
-    LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 class VariableElimination(Inference):

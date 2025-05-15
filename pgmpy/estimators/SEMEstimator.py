@@ -4,9 +4,10 @@ import statsmodels.api as sm
 import torch
 
 from pgmpy import config
-from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
+
+from pgmpy.inference import CausalInference
 
 
 class SEMEstimator(object):
