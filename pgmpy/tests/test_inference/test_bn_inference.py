@@ -3,15 +3,15 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.models import BayesianNetwork
-from pgmpy.metrics import BayesianModelProbability
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.metrics import BayesianModelProbability
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestBnInference(unittest.TestCase):
     def setUp(self) -> None:
         # construct a tree graph structure
-        model = BayesianNetwork(
+        model = DiscreteBayesianNetwork(
             [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")]
         )
 

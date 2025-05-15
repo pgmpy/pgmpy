@@ -217,7 +217,15 @@ class DBNInference(Inference):
            The new timeslice to which the factor should belong to.
         """
         new_scope = self._shift_nodes(factor.scope(), shift)
-        return DiscreteFactor(new_scope, factor.cardinality, factor.values)
+
+        # Create new state names
+        new_state_names = {}
+        for i, var in enumerate(factor.scope()):
+            new_state_names[new_scope[i]] = factor.state_names[var]
+
+        return DiscreteFactor(
+            new_scope, factor.cardinality, factor.values, state_names=new_state_names
+        )
 
     def forward_inference(self, variables, evidence=None, args=None):
         """

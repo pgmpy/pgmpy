@@ -1,6 +1,6 @@
 Bayesian Network
 ================
 
-.. automodule:: pgmpy.models.BayesianNetwork
+.. automodule:: pgmpy.models.DiscreteBayesianNetwork
    :members:
    :undoc-members:

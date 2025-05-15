@@ -1,7 +1,7 @@
 import itertools
 
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -11,7 +11,7 @@ class ApproxInference(object):
 
     Parameters
     ----------
-    model: Instance of pgmpy.models.BayesianNetwork or pgmpy.models.DynamicBayesianNetwork
+    model: Instance of pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DynamicBayesianNetwork
 
     Examples
     --------
@@ -21,7 +21,7 @@ class ApproxInference(object):
     """
 
     def __init__(self, model):
-        if not isinstance(model, (BayesianNetwork, DynamicBayesianNetwork)):
+        if not isinstance(model, (DiscreteBayesianNetwork, DynamicBayesianNetwork)):
             raise ValueError(
                 f"model should either be a Bayesian Network or Dynamic Bayesian Network. Got {type(model)}."
             )
@@ -151,7 +151,7 @@ class ApproxInference(object):
         """
         # Step 1: If samples are not provided, generate samples for the query
         if samples is None:
-            if isinstance(self.model, BayesianNetwork):
+            if isinstance(self.model, DiscreteBayesianNetwork):
                 samples = self.model.simulate(
                     n_samples=n_samples,
                     evidence=evidence,
@@ -186,7 +186,7 @@ class ApproxInference(object):
 
         # Step 2: If state_names is None, infer it from samples.
         if state_names is None:
-            if isinstance(self.model, BayesianNetwork):
+            if isinstance(self.model, DiscreteBayesianNetwork):
                 state_names = {
                     var: list(samples.loc[:, var].unique()) for var in variables
                 }

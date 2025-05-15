@@ -5,7 +5,7 @@ import numpy as np
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class BaseEliminationOrder:
@@ -14,13 +14,13 @@ class BaseEliminationOrder:
 
     Parameters
     ----------
-    model: BayesianNetwork instance
+    model: DiscreteBayesianNetwork instance
         The model on which we want to compute the elimination orders.
     """
 
     def __init__(self, model):
-        if not isinstance(model, BayesianNetwork):
-            raise ValueError("Model should be a BayesianNetwork instance")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise ValueError("Model should be a DiscreteBayesianNetwork instance")
         self.bayesian_model = model.copy()
         self.moralized_model = self.bayesian_model.moralize()
 
@@ -51,10 +51,10 @@ class BaseEliminationOrder:
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference.EliminationOrder import WeightedMinFill
-        >>> model = BayesianNetwork([('c', 'd'), ('d', 'g'), ('i', 'g'),
+        >>> model = DiscreteBayesianNetwork([('c', 'd'), ('d', 'g'), ('i', 'g'),
         ...                          ('i', 's'), ('s', 'j'), ('g', 'l'),
         ...                        ('l', 'j'), ('j', 'h'), ('g', 'h')])
         >>> cpd_c = TabularCPD('c', 2, np.random.rand(2, 1))

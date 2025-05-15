@@ -227,9 +227,9 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.get_independencies()
-        (x1 \u27C2 x2)
-        (x1 \u27C2 x3)
-        (x2 \u27C2 x3)
+        (x1 \u27c2 x2)
+        (x1 \u27c2 x3)
+        (x2 \u27c2 x3)
         """
         JPD = self.copy()
         if condition:
@@ -319,14 +319,14 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> bayesian_model.edges()
         [('x1', 'x3'), ('x2', 'x3')]
         """
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
         def get_subsets(u):
             for r in range(len(u) + 1):
                 for i in itertools.combinations(u, r):
                     yield i
 
-        G = BayesianNetwork()
+        G = DiscreteBayesianNetwork()
         for variable_index in range(len(order)):
             u = order[:variable_index]
             for subset in get_subsets(u):
@@ -340,11 +340,11 @@ class JointProbabilityDistribution(DiscreteFactor):
 
     def is_imap(self, model):
         """
-        Checks whether the given BayesianNetwork is Imap of JointProbabilityDistribution
+        Checks whether the given DiscreteBayesianNetwork is Imap of JointProbabilityDistribution
 
         Parameters
         ----------
-        model : An instance of BayesianNetwork Class, for which you want to
+        model : An instance of DiscreteBayesianNetwork Class, for which you want to
             check the Imap
 
         Returns
@@ -354,10 +354,10 @@ class JointProbabilityDistribution(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
-        >>> bm = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
+        >>> bm = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
         >>> grade_cpd = TabularCPD('grade', 3,
@@ -373,10 +373,10 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> JPD.is_imap(bm)
         True
         """
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
-        if not isinstance(model, BayesianNetwork):
-            raise TypeError("model must be an instance of BayesianNetwork")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
         factors = [cpd.to_factor() for cpd in model.get_cpds()]
         factor_prod = reduce(mul, factors)
         JPD_fact = DiscreteFactor(self.variables, self.cardinality, self.values)

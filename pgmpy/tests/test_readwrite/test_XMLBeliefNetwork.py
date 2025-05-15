@@ -8,7 +8,7 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBeliefNetwork
 
 
@@ -349,7 +349,7 @@ class TestXBNWriter(unittest.TestCase):
                 "TYPE": "discrete",
             },
         }
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
         model.add_edges_from(
             [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
@@ -395,12 +395,8 @@ class TestXBNWriter(unittest.TestCase):
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        if nx.__version__.startswith("1"):
-            for var, properties in nodes.items():
-                model.nodes[var] = properties
-        else:
-            for var, properties in nodes.items():
-                model._node[var] = properties
+        for var, properties in nodes.items():
+            model._node[var] = properties
 
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
@@ -853,7 +849,7 @@ class TestXBNWriterTorch(unittest.TestCase):
                 "TYPE": "discrete",
             },
         }
-        model = BayesianNetwork()
+        model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
         model.add_edges_from(
             [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
@@ -899,12 +895,8 @@ class TestXBNWriterTorch(unittest.TestCase):
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        if nx.__version__.startswith("1"):
-            for var, properties in nodes.items():
-                model.nodes[var] = properties
-        else:
-            for var, properties in nodes.items():
-                model._node[var] = properties
+        for var, properties in nodes.items():
+            model._node[var] = properties
 
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)

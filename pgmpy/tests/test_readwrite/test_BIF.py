@@ -7,7 +7,7 @@ import numpy.testing as np_test
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import BIFReader, BIFWriter
 
 
@@ -385,7 +385,7 @@ class TestBIFWriter(unittest.TestCase):
             "light-on": ["position = (218, 195)"],
         }
 
-        self.model = BayesianNetwork()
+        self.model = DiscreteBayesianNetwork()
         self.model.add_nodes_from(variables)
         self.model.add_edges_from(edges)
 
@@ -409,7 +409,7 @@ class TestBIFWriter(unittest.TestCase):
                 prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
                 self.model.nodes[node][prop_name] = prop_value
 
-        self.writer = BIFWriter(model=self.model)
+        self.writer = BIFWriter(model=self.model, round_values=2)
 
     def test_str(self):
         self.expected_string = """network unknown {
@@ -864,7 +864,7 @@ class TestBIFWriterTorch(unittest.TestCase):
             "light-on": ["position = (218, 195)"],
         }
 
-        self.model = BayesianNetwork()
+        self.model = DiscreteBayesianNetwork()
         self.model.add_nodes_from(variables)
         self.model.add_edges_from(edges)
 

@@ -5,14 +5,13 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 
 
-class LinearGaussianBayesianNetwork(BayesianNetwork):
+class LinearGaussianBayesianNetwork(DAG):
     """
-    A Linear Gaussian Bayesian Network is a Bayesian Network, all
+    A linear Gaussian Bayesian Network is a Bayesian Network, all
     of whose variables are continuous, and where all of the CPDs
     are linear Gaussians.
 
@@ -21,6 +20,15 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
     Gaussian distributions.
 
     """
+
+    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+        super(LinearGaussianBayesianNetwork, self).__init__(
+            ebunch=ebunch,
+            latents=latents,
+            lavaan_str=lavaan_str,
+            dagitty_str=dagitty_str,
+        )
+        self.cpds = []
 
     def add_cpds(self, *cpds):
         """
@@ -43,7 +51,6 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.cpds:
         ...     print(cpd)
-
         P(x1) = N(1; 4)
         P(x2| x1) = N(0.5*x1_mu); -5)
         P(x3| x2) = N(-1*x2_mu); 4)
@@ -69,8 +76,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         node: any hashable python object (optional)
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
@@ -90,7 +97,15 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
-        return super(LinearGaussianBayesianNetwork, self).get_cpds(node)
+        if node is not None:
+            if node not in self.nodes():
+                raise ValueError("Node not present in the Directed Graph")
+            else:
+                for cpd in self.cpds:
+                    if cpd.variable == node:
+                        return cpd
+        else:
+            return self.cpds
 
     def remove_cpds(self, *cpds):
         """
@@ -127,7 +142,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
 
-    def get_random_cpds(self, loc=0, scale=1, seed=None):
+    def get_random_cpds(self, loc=0, scale=1, inplace=False, seed=None):
         """
         Generates random Linear Gaussian CPDs for the model. The coefficients
         are sampled from a normal distribution with mean `loc` and standard
@@ -143,25 +158,32 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
 
+        inplace: bool (default: False)
+            If inplace=True, adds the generated LinearGaussianCPDs to `model` itself,
+            else creates a copy of the model.
+
         seed: int
             The seed for the random number generator.
         """
-        rng = np.random.default_rng(seed=seed)
+        # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
+        seed = seed if seed else 42
 
         cpds = []
-        for var in self.nodes():
+        for i, var in enumerate(self.nodes()):
             parents = self.get_parents(var)
             cpds.append(
-                LinearGaussianCPD(
-                    var,
-                    evidence_mean=rng.normal(
-                        loc=loc, scale=scale, size=(len(parents) + 1)
-                    ),
-                    evidence_variance=abs(rng.normal(loc=loc, scale=scale)),
+                LinearGaussianCPD.get_random(
+                    variable=var,
                     evidence=parents,
+                    loc=loc,
+                    scale=scale,
+                    seed=(seed + i),
                 )
             )
-        return cpds
+        if inplace:
+            self.add_cpds(*cpds)
+        else:
+            return cpds
 
     def to_joint_gaussian(self):
         """
@@ -201,7 +223,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         for var in variables:
             cpd = self.get_cpds(node=var)
             mean[var] = (
-                cpd.mean * (np.array([1] + [mean[u] for u in cpd.evidence]))
+                cpd.beta * (np.array([1] + [mean[u] for u in cpd.evidence]))
             ).sum()
         mean = np.array([mean[u] for u in variables])
 
@@ -211,8 +233,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         for var in variables:
             cpd = self.get_cpds(node=var)
             for i, evidence_var in enumerate(cpd.evidence):
-                B[var_to_index[evidence_var], var_to_index[var]] = cpd.mean[i + 1]
-            omega[var_to_index[var], var_to_index[var]] = cpd.variance
+                B[var_to_index[evidence_var], var_to_index[var]] = cpd.beta[i + 1]
+            omega[var_to_index[var], var_to_index[var]] = cpd.std
 
         # Step 3: Compute the implied covariance matrix
         I = np.eye(n_nodes)
@@ -337,8 +359,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        evidence_mean=[data.loc[:, node].mean()],
-                        evidence_variance=data.loc[:, node].var(),
+                        beta=[data.loc[:, node].mean()],
+                        std=data.loc[:, node].var(),
                     )
                 )
 
@@ -350,8 +372,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        evidence_mean=np.append([lm.intercept_], lm.coef_),
-                        evidence_variance=error_var,
+                        beta=np.append([lm.intercept_], lm.coef_),
+                        std=error_var,
                         evidence=parents,
                     )
                 )
@@ -495,10 +517,6 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
         <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
         """
-
-        if node_names is None:
-            node_names = list(range(n_nodes))
-
         dag = DAG.get_random(
             n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
         )

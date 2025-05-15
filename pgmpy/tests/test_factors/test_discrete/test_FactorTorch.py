@@ -13,7 +13,7 @@ from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.utils import compat_fns, get_example_model
 
 
@@ -556,7 +556,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
     def test_reduce_scopeerror(self):
         self.assertRaises(ValueError, self.phi1.reduce, [("x4", 1)])
-        self.assertRaises(ValueError, self.phi5.reduce, [((("x1", 0.1), 0))])
+        self.assertRaises(ValueError, self.phi5.reduce, [(("x1", 0.1), 0)])
 
     def test_reduce_sizeerror(self):
         self.assertRaises(IndexError, self.phi1.reduce, [("x3", 5)])

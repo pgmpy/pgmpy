@@ -8,6 +8,7 @@ from shutil import get_terminal_size
 from typing import Hashable, Optional
 from warnings import warn
 
+import pandas as pd
 import numpy as np
 import torch
 
@@ -39,14 +40,21 @@ class TabularCPD(DiscreteFactor):
     evidence_card: array-like
         cardinality/no. of states of variables in `evidence`(if any)
 
+    state_names: dict (default: dict())
+        A dictionary of the form {variable: list of states} specifying the
+        names of possible states for each variable (variable + evidence) in
+        the TabularCPD. The order in which the states are specified should
+        match the order in the values array. If state_names is not specified,
+        auto-assigns state names starting from 0.
+
     Examples
     --------
     For a distribution of P(grade|diff, intel)
 
     +---------+-------------------------+------------------------+
-    |diff:    |          easy           |         hard           |
+    |diff     |          easy           |         hard           |
     +---------+------+--------+---------+------+--------+--------+
-    |aptitude:| low  | medium |  high   | low  | medium |  high  |
+    |intel    | low  | medium |  high   | low  | medium |  high  |
     +---------+------+--------+---------+------+--------+--------+
     |gradeA   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
     +---------+------+--------+---------+------+--------+--------+
@@ -55,27 +63,33 @@ class TabularCPD(DiscreteFactor):
     |gradeC   | 0.8  | 0.8    |   0.8   |  0.8 |  0.8   |   0.8  |
     +---------+------+--------+---------+------+--------+--------+
 
-    values should be
+    the values array should be
     [[0.1,0.1,0.1,0.1,0.1,0.1],
-    [0.1,0.1,0.1,0.1,0.1,0.1],
-    [0.8,0.8,0.8,0.8,0.8,0.8]]
+     [0.1,0.1,0.1,0.1,0.1,0.1],
+     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
-    >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                             [0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                             [0.8,0.8,0.8,0.8,0.8,0.8]],
-    ...                             evidence=['diff', 'intel'], evidence_card=[2,3])
+    >>> cpd = TabularCPD(variable='grade',
+    ...                  variable_card=3,
+    ...                  values=[[0.1,0.1,0.1,0.1,0.1,0.1],
+    ...                          [0.1,0.1,0.1,0.1,0.1,0.1],
+    ...                          [0.8,0.8,0.8,0.8,0.8,0.8]],
+    ...                  evidence=['diff', 'intel'],
+    ...                  evidence_card=[2, 3],
+    ...                  state_names={'diff': ['easy', 'hard'],
+    ...                               'intel': ['low', 'mid', 'high'],
+    ...                               'grade': ['A', 'B', 'C']})
     >>> print(cpd)
-    +---------+---------+---------+---------+---------+---------+---------+
-    | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | intel   | intel_0 | intel_1 | intel_2 | intel_0 | intel_1 | intel_2 |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_0 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_1 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
-    +---------+---------+---------+---------+---------+---------+---------+
-    | grade_2 | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     |
-    +---------+---------+---------+---------+---------+---------+---------+
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | diff    |diff(easy)|diff(easy)|diff(easy) |diff(hard)|diff(hard)|diff(hard) |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | intel   |intel(low)|intel(mid)|intel(high)|intel(low)|intel(mid)|intel(high)|
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(A)| 0.1      | 0.1      | 0.1       | 0.1      | 0.1      | 0.1       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(B)| 0.1      | 0.1      | 0.1       | 0.1      | 0.1      | 0.1       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
+    | grade(C)| 0.8      | 0.8      | 0.8       | 0.8      | 0.8      | 0.8       |
+    +---------+----------+----------+-----------+----------+----------+-----------+
     >>> cpd.values
     array([[[ 0.1,  0.1,  0.1],
             [ 0.1,  0.1,  0.1]],
@@ -304,6 +318,45 @@ class TabularCPD(DiscreteFactor):
         with open(filename, "w") as f:
             writer = csv.writer(f)
             writer.writerows(self._make_table_str(tablefmt="grid", return_list=True))
+
+    def to_dataframe(self):
+        """
+        Exports the CPD as a pandas dataframe.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("insurance")
+        >>> cpd = model.get_cpds("ThisCarCost")
+        >>> df = cpd.to_dataframe()
+        >>> df.query("CarValue=='FiftyThou' and Theft == 'True'")
+        ThisCarCost                 HundredThou  Million   TenThou  Thousand
+        ThisCarDam CarValue  Theft
+        Mild       FiftyThou True      0.950000      0.0  0.020000  0.030000
+        Moderate   FiftyThou True      0.998000      0.0  0.001000  0.001000
+        None       FiftyThou True      0.950000      0.0  0.010000  0.040000
+        Severe     FiftyThou True      0.999998      0.0  0.000001  0.000001
+        >>> # Probability sums up to zero, for every combination of evidence variables
+        >>> df.sum(axis=1)
+        ThisCarDam  CarValue    Theft
+        Mild        FiftyThou   False    1.0
+                                True     1.0
+                    FiveThou    False    1.0
+                                True     1.0
+                    Million     False    1.0
+                                True     1.0
+        """
+        state_combinations_with_all_variables = pd.MultiIndex.from_product(
+            [self.state_names[var] for var in self.variables], names=self.variables
+        )
+        df_with_1_column = pd.DataFrame(
+            {"probability": self.values.flatten()},
+            index=state_combinations_with_all_variables,
+        )
+        df_with_prob_rowsum_to_1 = df_with_1_column["probability"].unstack(
+            self.variable
+        )
+        return df_with_prob_rowsum_to_1
 
     def copy(self):
         """

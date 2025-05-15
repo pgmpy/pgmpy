@@ -22,14 +22,14 @@ try:
         nums,
         printables,
     )
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        e.message()
+        e.msg
         + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    )
+    ) from None
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -48,13 +48,13 @@ class BIFReader(object):
     include_properties: boolean
         If True, gets the properties tag from the file and stores in graph properties.
 
-    n_jobs: int (default: -1)
+    n_jobs: int (default: 1)
         Number of jobs to run in parallel. `-1` means use all processors.
 
     Examples
     --------
-    # dog-problem.bif file is present at
-    # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
+    >>> # dog-problem.bif file is present at
+    >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
     >>> from pgmpy.readwrite import BIFReader
     >>> reader = BIFReader("bif_test.bif")
     <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
@@ -66,7 +66,7 @@ class BIFReader(object):
         http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
     """
 
-    def __init__(self, path=None, string=None, include_properties=False, n_jobs=-1):
+    def __init__(self, path=None, string=None, include_properties=False, n_jobs=1):
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
@@ -374,10 +374,10 @@ class BIFReader(object):
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
         >>> reader.get_model()
-        <pgmpy.models.BayesianNetwork.BayesianNetwork object at 0x7f20af154320>
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x7f20af154320>
         """
         try:
-            model = BayesianNetwork()
+            model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variable_names)
             model.add_edges_from(self.variable_edges)
             model.name = self.network_name
@@ -427,7 +427,7 @@ class BIFWriter(object):
 
     Parameters
     ----------
-    model: BayesianNetwork Instance
+    model: DiscreteBayesianNetwork Instance
 
     round_values: int (default: None)
         Round the probability values to `round_values` decimals. If None, keeps all decimal points.
@@ -444,8 +444,8 @@ class BIFWriter(object):
     """
 
     def __init__(self, model, round_values=None):
-        if not isinstance(model, BayesianNetwork):
-            raise TypeError("model must be an instance of BayesianNetwork")
+        if not isinstance(model, DiscreteBayesianNetwork):
+            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
         self.model = model
         self.round_values = round_values
         if not self.model.name:

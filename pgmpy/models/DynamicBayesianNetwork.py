@@ -87,6 +87,7 @@ class DynamicBayesianNetwork(DAG):
     Examples
     --------
     Create an empty Dynamic Bayesian Network with no nodes and no edges:
+
     >>> from pgmpy.models import DynamicBayesianNetwork as DBN
     >>> dbn = DBN()
 
@@ -103,6 +104,7 @@ class DynamicBayesianNetwork(DAG):
     ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
 
     We can query the edges and nodes in the network as:
+
     >>> dbn.nodes()
     ['G', 'D', 'I', 'L']
     >>> dbn.edges()
@@ -118,6 +120,7 @@ class DynamicBayesianNetwork(DAG):
     slice as it is common in all the time slices. And therefore pgmpy
     automatically replicated it all the time slices. For example, for
     adding a new variable `S` in the above network we can simply do:
+
     >>> dbn.add_node('S')
     >>> dbn.nodes()
     ['S', 'G', 'D', 'I', 'L']
@@ -637,6 +640,8 @@ class DynamicBayesianNetwork(DAG):
         for cpd in self.cpds:
             temp_var = DynamicNode(cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
+            state_names = self.states.copy()
+            state_names[temp_var] = state_names[cpd.variable]
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
@@ -649,6 +654,7 @@ class DynamicBayesianNetwork(DAG):
                             ),
                             parents,
                             evidence_card,
+                            state_names.copy(),
                         )
                     else:
                         if cpd.get_evidence():
@@ -659,12 +665,14 @@ class DynamicBayesianNetwork(DAG):
                                 temp_var,
                                 cpd.variable_card,
                                 np.reshape(initial_cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
                         else:
                             new_cpd = TabularCPD(
                                 temp_var,
                                 cpd.variable_card,
                                 np.reshape(cpd.values, (2, -1)),
+                                state_names=state_names.copy(),
                             )
                     self.add_cpds(new_cpd)
             self.check_model()
@@ -786,7 +794,7 @@ class DynamicBayesianNetwork(DAG):
 
         The node names are changed to strings in the form `{var}_{time}`.
         """
-        from pgmpy.models import BayesianNetwork
+        from pgmpy.models import DiscreteBayesianNetwork
 
         edges = [
             (
@@ -800,6 +808,9 @@ class DynamicBayesianNetwork(DAG):
             new_vars = [
                 str(var) + "_" + str(time + t_slice) for var, time in cpd.variables
             ]
+            new_state_names = dict(
+                zip(new_vars, [cpd.state_names[var] for var in cpd.variables])
+            )
             new_cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -807,10 +818,11 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=new_state_names,
                 )
             )
 
-        bn = BayesianNetwork(edges)
+        bn = DiscreteBayesianNetwork(edges)
         bn.add_cpds(*new_cpds)
         return bn
 
@@ -903,6 +915,9 @@ class DynamicBayesianNetwork(DAG):
         for cpd in const_bn.cpds:
             var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
             new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
+            new_state_names = dict(
+                zip(new_vars, [cpd.state_names[var] for var in cpd.variables])
+            )
             cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -910,6 +925,7 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=new_state_names,
                 )
             )
 
@@ -1163,3 +1179,19 @@ class DynamicBayesianNetwork(DAG):
             )
             sampled = pd.concat((remaining_df, new_samples), axis=1)
         return self._postprocess(sampled)
+
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [cpd.state_names for cpd in self.cpds]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict

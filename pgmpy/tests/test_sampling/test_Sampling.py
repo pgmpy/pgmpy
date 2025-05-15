@@ -5,7 +5,7 @@ from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 from pgmpy.sampling.base import BayesianModelInference
 
@@ -13,7 +13,7 @@ from pgmpy.sampling.base import BayesianModelInference
 class TestBayesianModelSampling(unittest.TestCase):
     def setUp(self):
         # Bayesian Model without state names
-        self.bayesian_model = BayesianNetwork(
+        self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
@@ -33,7 +33,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         )
 
         # Bayesian Model without state names and with latent variables
-        self.bayesian_model_lat = BayesianNetwork(
+        self.bayesian_model_lat = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
             latents=["R", "Q"],
         )
@@ -51,7 +51,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.sampling_inference_lat = BayesianModelSampling(self.bayesian_model_lat)
 
         # Bayesian Model with state names
-        self.bayesian_model_names = BayesianNetwork(
+        self.bayesian_model_names = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a_names = TabularCPD(
@@ -94,7 +94,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
 
         # Bayesian Model with state names and with latent variables
-        self.bayesian_model_names_lat = BayesianNetwork(
+        self.bayesian_model_names_lat = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
             latents=["R", "Q"],
         )
@@ -477,7 +477,7 @@ class TestGibbsSampling(unittest.TestCase):
             evidence=["diff", "intel"],
             evidence_card=[2, 2],
         )
-        self.bayesian_model = BayesianNetwork()
+        self.bayesian_model = DiscreteBayesianNetwork()
         self.bayesian_model.add_nodes_from(["diff", "intel", "grade"])
         self.bayesian_model.add_edges_from([("diff", "grade"), ("intel", "grade")])
         self.bayesian_model.add_cpds(diff_cpd, intel_cpd, grade_cpd)
@@ -502,7 +502,7 @@ class TestGibbsSampling(unittest.TestCase):
             evidence_card=[2, 2],
         )
 
-        self.bayesian_model_sprinkler = BayesianNetwork()
+        self.bayesian_model_sprinkler = DiscreteBayesianNetwork()
         self.bayesian_model_sprinkler.add_edges_from(
             [
                 ("Cloudy", "Sprinkler"),
@@ -633,3 +633,27 @@ class TestGibbsSampling(unittest.TestCase):
         samples = [sample for sample in gen]
         random_state.assert_called_once_with(self.gibbs)
         self.assertEqual(len(samples), 2)
+
+
+class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
+    def setUp(self):
+        # Bayesian Model with integer state names.
+        self.bayesian_model_names = DiscreteBayesianNetwork([("X", "Y")])
+        cpd_x_names = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": [1, 2]})
+        cpd_y_names = TabularCPD(
+            "Y",
+            2,
+            [[1.0, 0.0], [0.0, 1.0]],
+            ["X"],
+            [2],
+            state_names={"Y": [1, 2], "X": [1, 2]},
+        )
+        self.bayesian_model_names.add_cpds(cpd_x_names, cpd_y_names)
+
+        self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
+
+    def test_rejection_sample(self):
+        sampled_y = self.sampling_inference_names.rejection_sample(
+            evidence=[State("X", 2)], size=1
+        )["Y"][0]
+        self.assertEqual(sampled_y, 2)

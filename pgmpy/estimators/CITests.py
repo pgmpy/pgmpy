@@ -2,27 +2,63 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-from statsmodels.multivariate.manova import MANOVA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
 
 
+def get_ci_test(test, full=False, data=None, independencies=None):
+    if callable(test):
+        return test
+
+    test = test.lower()
+    supported_tests = {
+        "chi_square": chi_square,
+        "g_sq": g_sq,
+        "log_likelihood": log_likelihood,
+        "modified_log_likelihood": modified_log_likelihood,
+        "pearsonr": pearsonr,
+        "pillai": pillai_trace,
+        "gcm": gcm,
+    }
+    if full:
+        supported_tests["power_divergence"] = power_divergence
+        supported_tests["independence_match"] = independence_match
+
+    if test not in supported_tests.keys():
+        raise ValueError(
+            f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
+        )
+
+    if full:
+        if test == "independence_match":
+            if independencies is None:
+                raise ValueError(
+                    "For using independence_match, independencies argument must be specified"
+                )
+        elif data is None:
+            raise ValueError(
+                "For using Chi Square or Pearsonr, data argument must be specified"
+            )
+
+    return supported_tests[test]
+
+
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
-    Checks if `X \u27C2 Y | Z` is in `independencies`. This method is implemented to
+    Checks if `X \u27c2 Y | Z` is in `independencies`. This method is implemented to
     have an uniform API when the independencies are provided instead of data.
 
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame The dataset in which to test the indepenedence condition.
 
@@ -72,7 +108,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -132,7 +168,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -192,7 +228,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -251,7 +287,7 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -325,7 +361,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -381,14 +417,14 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                 if isinstance(z_state, str):
                     logger.info(
-                        f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
+                        f"Skipping the test {X} \u27c2 {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
                     logger.info(
-                        f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
+                        f"Skipping the test {X} \u27c2 {Y} | {z_str}. Not enough samples"
                     )
             else:
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
@@ -412,13 +448,13 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.
@@ -484,9 +520,9 @@ def _get_predictions(X, Y, Z, data, **kwargs):
         from xgboost import XGBClassifier, XGBRegressor
     except ImportError as e:
         raise ImportError(
-            e.message
+            e.msg
             + ". xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
-        )
+        ) from None
 
     # Step 1: Check if any of the conditional variables are categorical
     if any(data.loc[:, Z].dtypes == "category"):
@@ -550,13 +586,13 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27C2 Y | Z
+        The first variable for testing the independence condition X \u27c2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27C2 Y | Z
+        The second variable for testing the independence condition X \u27c2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27C2 Y | Z
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.
@@ -649,3 +685,82 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
             return False
     else:
         return coef, p_value
+
+
+def gcm(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    The Generalized Covariance Measure(GCM) test for CI.
+
+    It performs linear regressions on the conditioning variable and then tests
+    for a vanishing covariance between the resulting residuals. Details of the
+    method can be found in [1].
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X \u27c2 Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X \u27c2 Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the indepenedence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+
+        If boolean=False, returns the pearson correlation coefficient and p_value
+            of the test.
+
+    Returns
+    -------
+    CI Test results: tuple or bool
+        If boolean=True, returns True if p-value >= significance_level, else False. If
+        boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
+
+    References
+    ----------
+    [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised Covariance Measure".
+    """
+    # Step 1: Test if the inputs are correct
+    if not hasattr(Z, "__iter__"):
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
+    else:
+        Z = list(Z)
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
+        )
+
+    # Step 1.1: Add another column with constant values to handle intercepts. When Z=[],
+    #           this can act as the constant vector.
+    Z += ["intercept"]
+    data = data.assign(intercept=np.ones(data.shape[0]))
+
+    # Step 2: Compute the linear regression and the residuals
+    X_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, X], rcond=None)[0]
+    Y_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, Y], rcond=None)[0]
+    res_x = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
+    res_y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
+
+    # Step 3: Compute the Generalised Covariance Measure.
+    n = res_x.shape[0]
+    t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
+
+    # Step 4: Compute p-value using standard normal distribution.
+    p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
+
+    # Step 6: Return
+    if boolean:
+        if p_value >= kwargs["significance_level"]:
+            return True
+        else:
+            return False
+    else:
+        return t_stat, p_value

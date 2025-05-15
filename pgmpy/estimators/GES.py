@@ -6,16 +6,21 @@ import numpy as np
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    AICScore,
-    AICScoreGauss,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    K2Score,
-    ScoreCache,
+    AIC,
+    BIC,
+    K2,
+    AICCondGauss,
+    AICGauss,
+    BDeu,
+    BDs,
+    BICCondGauss,
+    BICGauss,
+    ExpertKnowledge,
+    LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
+    get_scoring_method,
 )
 from pgmpy.global_vars import logger
 
@@ -24,7 +29,7 @@ class GES(StructureEstimator):
     """
     Implementation of Greedy Equivalence Search (GES) causal discovery / structure learning algorithm.
 
-    GES is a score-based casual discovery / structure learning algorithm that works in three phases:
+    GES is a score-based causal discovery / structure learning algorithm that works in three phases:
         1. Forward phase: New edges are added such that the model score improves.
         2. Backward phase: Edges are removed from the model such that the model score improves.
         3. Edge flipping phase: Edge orientations are flipped such that model score improves.
@@ -51,20 +56,34 @@ class GES(StructureEstimator):
 
         super(GES, self).__init__(data=data, **kwargs)
 
-    def _legal_edge_additions(self, current_model):
+    def _legal_edge_additions(self, current_model, expert_knowledge):
         """
         Returns a list of all edges that can be added to the graph such that it remains a DAG.
         """
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
             if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u):
+                if not nx.has_path(current_model, v, u) and (
+                    (u, v) not in expert_knowledge.forbidden_edges
+                ):
                     edges.append((u, v))
-                if not nx.has_path(current_model, u, v):
+                if not nx.has_path(current_model, u, v) and (
+                    (v, u) not in expert_knowledge.forbidden_edges
+                ):
                     edges.append((v, u))
         return edges
 
-    def _legal_edge_flips(self, current_model):
+    def _legal_edge_removals(self, current_model, expert_knowledge):
+        """
+        Returns a list of all edges that can be removed from the graph such that it remains a DAG.
+        """
+        edges = []
+        for u, v in current_model.edges():
+            if (u, v) not in expert_knowledge.required_edges:
+                edges.append((u, v))
+        return edges
+
+    def _legal_edge_flips(self, current_model, expert_knowledge):
         """
         Returns a list of all the edges in the `current_model` that can be flipped such that the model
         remains a DAG.
@@ -72,15 +91,24 @@ class GES(StructureEstimator):
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
-            current_model.remove_edge(u, v)
-            if not nx.has_path(current_model, u, v):
-                potential_flips.append((v, u))
+            if ((u, v) not in expert_knowledge.required_edges) and (
+                (v, u) not in expert_knowledge.forbidden_edges
+            ):
+                current_model.remove_edge(u, v)
+                if not nx.has_path(current_model, u, v):
+                    potential_flips.append((v, u))
 
-            # Restore the edge to get to the original model
-            current_model.add_edge(u, v)
+                # Restore the edge to get to the original model
+                current_model.add_edge(u, v)
         return potential_flips
 
-    def estimate(self, scoring_method="bic", debug=False):
+    def estimate(
+        self,
+        scoring_method="bic-d",
+        expert_knowledge=None,
+        min_improvement=1e-6,
+        debug=False,
+    ):
         """
         Estimates the DAG from the data.
 
@@ -88,8 +116,18 @@ class GES(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
-            custom score, but it should be an instance of `StructureScore`.
+            structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
+            ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
+            be an instance of `StructureScore`.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            allows specification of required and forbidden edges, as well as temporal
+            order of nodes.
+
+        min_improvement: float
+            The operation (edge addition, removal, or flipping) would only be performed if the
+            model score improves by atleast `min_improvement`.
 
         Returns
         -------
@@ -106,7 +144,7 @@ class GES(StructureEstimator):
         >>> # Learn the model structure using GES algorithm from `df`
         >>> from pgmpy.estimators import GES
         >>> est = GES(data)
-        >>> dag = est.estimate(scoring_method='bic')
+        >>> dag = est.estimate(scoring_method='bic-d')
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())
@@ -114,52 +152,23 @@ class GES(StructureEstimator):
         """
 
         # Step 0: Initial checks and setup for arguments
-        supported_methods = {
-            "k2": K2Score,
-            "bdeu": BDeuScore,
-            "bds": BDsScore,
-            "bic": BicScore,
-            "aic": AICScore,
-            "aic-g": AICScoreGauss,
-            "bic-g": BicScoreGauss,
-        }
-        if isinstance(scoring_method, str):
-            if scoring_method.lower() in [
-                "k2score",
-                "bdeuscore",
-                "bdsscore",
-                "bicscore",
-                "aicscore",
-            ]:
-                raise ValueError(
-                    f"The scoring method names have been changed. Please refer the documentation."
-                )
-            elif scoring_method.lower() not in list(supported_methods.keys()):
-                raise ValueError(
-                    f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
-                )
-        elif not isinstance(scoring_method, StructureScore):
-            raise ValueError(
-                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
-            )
-
-        if isinstance(scoring_method, str):
-            score = supported_methods[scoring_method.lower()](data=self.data)
-        else:
-            score = scoring_method
-
-        if self.use_cache:
-            score_fn = ScoreCache(score, self.data).local_score
-        else:
-            score_fn = score.local_score
+        _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
+        score_fn = score_c.local_score
 
         # Step 1: Initialize an empty model.
         current_model = DAG()
         current_model.add_nodes_from(list(self.data.columns))
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        expert_knowledge._orient_temporal_forbidden_edges(
+            current_model, only_edges=False
+        )
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
-            potential_edges = self._legal_edge_additions(current_model)
+            potential_edges = self._legal_edge_additions(
+                current_model, expert_knowledge
+            )
             score_deltas = np.zeros(len(potential_edges))
             for index, (u, v) in enumerate(potential_edges):
                 current_parents = current_model.get_parents(v)
@@ -168,7 +177,7 @@ class GES(StructureEstimator):
                 )
                 score_deltas[index] = score_delta
 
-            if (len(potential_edges) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
                 break
 
             edge_to_add = potential_edges[np.argmax(score_deltas)]
@@ -180,7 +189,9 @@ class GES(StructureEstimator):
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
-            potential_removals = list(current_model.edges())
+            potential_removals = self._legal_edge_removals(
+                current_model, expert_knowledge
+            )
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
@@ -188,7 +199,9 @@ class GES(StructureEstimator):
                 score_deltas[index] = score_fn(
                     v, [node for node in current_parents if node != u]
                 ) - score_fn(v, current_parents)
-            if (len(potential_removals) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_removals) == 0) or (
+                np.all(score_deltas < min_improvement)
+            ):
                 break
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_remove[0], edge_to_remove[1])
@@ -199,7 +212,7 @@ class GES(StructureEstimator):
 
         # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
         while True:
-            potential_flips = self._legal_edge_flips(current_model)
+            potential_flips = self._legal_edge_flips(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_flips))
             for index, (u, v) in enumerate(potential_flips):
                 v_parents = current_model.get_parents(v)
@@ -211,7 +224,7 @@ class GES(StructureEstimator):
                     - score_fn(u, u_parents)
                 )
 
-            if (len(potential_flips) == 0) or (np.all(score_deltas <= 0)):
+            if (len(potential_flips) == 0) or (np.all(score_deltas < min_improvement)):
                 break
             edge_to_flip = potential_flips[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_flip[1], edge_to_flip[0])

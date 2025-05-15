@@ -7,48 +7,13 @@ import pandas as pd
 import pytest
 from tqdm.auto import tqdm
 
+from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
     llm_pairwise_orient,
     preprocess_data,
 )
-
-
-class TestDAGCreation(unittest.TestCase):
-    def test_get_example_model(self):
-        all_models = [
-            "asia",
-            "cancer",
-            "earthquake",
-            "sachs",
-            "survey",
-            "alarm",
-            "barley",
-            "child",
-            "insurance",
-            "mildew",
-            "water",
-            "hailfinder",
-            "hepar2",
-            "win95pts",
-            "andes",
-            "diabetes",
-            "link",
-            "munin1",
-            "munin2",
-            "munin3",
-            "munin4",
-            "pathfinder",
-            "pigs",
-            "munin",
-        ]
-        # Would take too much time to load all the models. Hence, randomly select
-        # 5 and try to load them.
-        choices = random.choices(all_models, k=5)
-        for model in tqdm(choices):
-            m = get_example_model(model=model)
-            del m
 
 
 class TestDiscretization(unittest.TestCase):
@@ -170,3 +135,112 @@ class TestPreprocessData(unittest.TestCase):
                 "B_int": "O",
             },
         )
+
+
+class TestGetExampleModel(unittest.TestCase):
+    def test_get_categorical_models(self):
+        """Test loading of categorical Bayesian network models."""
+        cat_models = {
+            "asia",
+            "cancer",
+            "earthquake",
+            "sachs",
+            "survey",
+            "alarm",
+            "barley",
+            "child",
+            "insurance",
+            "mildew",
+            "water",
+            "hailfinder",
+            "hepar2",
+            "win95pts",
+            "andes",
+            "diabetes",
+            "link",
+            "munin1",
+            "munin2",
+            "munin3",
+            "munin4",
+            "pathfinder",
+            "pigs",
+            "munin",
+        }
+
+        # Randomly select 5 categorical models to test
+        choices = random.sample(list(cat_models), k=5)
+        for model in tqdm(choices, desc="Testing categorical models"):
+            m = get_example_model(model=model)
+            # Basic model validation
+            self.assertIsNotNone(m)
+            self.assertTrue(hasattr(m, "nodes"))
+            self.assertTrue(hasattr(m, "edges"))
+            del m
+
+    def test_get_continuous_models(self):
+        """Test loading of continuous Bayesian network models."""
+        cont_models = {
+            "ecoli70",
+            "magic-niab",
+            "magic-irri",
+            "arth150",
+            "sangiovese",
+            "mehra",
+        }
+
+        # Test ecoli70 model specifically as we have its structure
+        model = get_example_model("ecoli70")
+        self.assertIsInstance(model, LinearGaussianBayesianNetwork)
+        self.assertEqual(len(model.nodes()), 46)  # Number of nodes in ecoli70
+
+        # Verify some known relationships from the provided structure
+        self.assertIn(("asnA", "icdA"), model.edges())
+        self.assertIn(("asnA", "lacA"), model.edges())
+        self.assertIn(("sucA", "atpD"), model.edges())
+
+        # Verify CPD structure for a known node
+        cpd = model.get_cpds("aceB")
+        self.assertIsNotNone(cpd)
+        self.assertEqual(cpd.variable, "aceB")
+        self.assertEqual(len(cpd.evidence), 1)
+        self.assertIn("icdA", cpd.evidence)
+
+    def test_get_example_model_dagitty(self):
+        dag_models = [
+            "M-bias",
+            "confounding",
+            "mediator",
+            "paths",
+            "Sebastiani_2005",
+            "Polzer_2012",
+            "Schipf_2010",
+            "Shrier_2008",
+            "Acid_1996",
+            "Thoemmes_2013",
+            "Kampen_2014",
+            "Didelez_2010",
+        ]
+        # Would take too much time to load all the models. Hence, randomly select
+        # 3 and try to load them.
+        choices = random.sample(dag_models, k=3)
+        for model in tqdm(choices):
+            print(model)
+            m = get_example_model(model=model)
+            self.assertIsNotNone(m)
+            self.assertTrue(hasattr(m, "nodes"))
+            self.assertTrue(hasattr(m, "edges"))
+            del m
+
+    def test_invalid_model_name(self):
+        """Test handling of invalid model names."""
+        with self.assertRaises(ValueError):
+            get_example_model("nonexistent_model")
+
+    def test_model_categorization(self):
+        """Test that all models are properly categorized."""
+        # Test a model from each category
+        cat_model = get_example_model("asia")
+        self.assertNotIsInstance(cat_model, LinearGaussianBayesianNetwork)
+
+        cont_model = get_example_model("magic-irri")
+        self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)

@@ -5,7 +5,7 @@ import numpy as np
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
@@ -106,10 +106,7 @@ class TestUAIReader(unittest.TestCase):
         }
 
         self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        if nx.__version__.startswith("1"):
-            self.assertDictEqual(dict(model.edge), edge_expected)
-        else:
-            self.assertDictEqual(dict(model.adj), edge_expected)
+        self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -176,7 +173,7 @@ class TestUAIWriter(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 
@@ -370,10 +367,7 @@ class TestUAIReaderTorch(unittest.TestCase):
         }
 
         self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        if nx.__version__.startswith("1"):
-            self.assertDictEqual(dict(model.edge), edge_expected)
-        else:
-            self.assertDictEqual(dict(model.adj), edge_expected)
+        self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -445,7 +439,7 @@ class TestUAIWriterTorch(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianNetwork()
+        self.bayesmodel = DiscreteBayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 

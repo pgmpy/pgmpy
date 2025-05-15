@@ -7,7 +7,7 @@ from joblib.externals.loky import get_reusable_executor
 from pgmpy import config
 from pgmpy.estimators import ExpectationMaximization as EM
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import compat_fns, get_example_model
 
@@ -17,7 +17,7 @@ class TestEM(unittest.TestCase):
         self.model1 = get_example_model("cancer")
         self.data1 = self.model1.simulate(int(1e4), seed=42)
 
-        self.model2 = BayesianNetwork(self.model1.edges(), latents={"Smoker"})
+        self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), seed=42)
 
@@ -131,7 +131,7 @@ class TestEMTorch(unittest.TestCase):
         self.model1 = get_example_model("cancer")
         self.data1 = self.model1.simulate(int(1e4), seed=42)
 
-        self.model2 = BayesianNetwork(self.model1.edges(), latents={"Smoker"})
+        self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), seed=42)
 

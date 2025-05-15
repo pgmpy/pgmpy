@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -19,7 +19,7 @@ class CausalInference(object):
 
     Parameters
     ----------
-    model: pgmpy.base.DAG | pgmpy.models.BayesianNetwork
+    model: pgmpy.base.DAG | pgmpy.models.DiscreteBayesianNetwork
         The model that we'll perform inference over.
 
     set_nodes: list[node:str] or None
@@ -30,8 +30,8 @@ class CausalInference(object):
     --------
     Create a small Bayesian Network.
 
-    >>> from pgmpy.models import BayesianNetwork
-    >>> game = BayesianNetwork([('X', 'A'),
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> game = DiscreteBayesianNetwork([('X', 'A'),
     ...                         ('A', 'Y'),
     ...                         ('A', 'B')])
 
@@ -48,9 +48,14 @@ class CausalInference(object):
     """
 
     def __init__(self, model, set_nodes=None):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, DiscreteBayesianNetwork):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianNetworks at this time."
+            )
+        bad_variable = model._variable_name_contains_non_string()
+        if bad_variable != False:
+            raise NotImplementedError(
+                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
             )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
@@ -85,7 +90,7 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = BayesianNetwork([('X', 'A'),
+        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
         ...                          ('A', 'Y'),
         ...                          ('A', 'B')])
         >>> inference = CausalInference(game1)
@@ -125,7 +130,7 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = BayesianNetwork([('X', 'A'),
+        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
         ...                          ('A', 'Y'),
         ...                          ('A', 'B')])
         >>> inference = CausalInference(game1)
@@ -323,7 +328,7 @@ class CausalInference(object):
         Examples
         --------
         >>> import pandas as pd
-        >>> game1 = BayesianNetwork([('X', 'A'),
+        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
         ...                          ('A', 'Y'),
         ...                          ('A', 'B')])
         >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
@@ -385,18 +390,23 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = BayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
         ...                        ("z2", "x2"), ("y2", "z2")])
         >>> c_infer = CausalInference(model)
         >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
-        <pgmpy.models.BayesianNetwork.BayesianNetwork at 0x7fba501ad940>
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7fba501ad940>
 
         References
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         for var in chain(X, Y):
             if var not in self.model.nodes():
                 raise ValueError(f"{var} not found in the model.")
@@ -435,9 +445,9 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = BayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
         ...                        ("z2", "x2"), ("y2", "z2")])
         >>> c_infer = CausalInference(model)
         >>> c_infer.is_valid_adjustment_set(X=['x1', 'x2'], Y=['y1', 'y2'], adjustment_set=['z1', 'z2'])
@@ -447,6 +457,11 @@ class CausalInference(object):
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
+        if isinstance(X, str):
+            X = [X]
+        if isinstance(Y, str):
+            Y = [Y]
+
         backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
         for x, y in zip(X, Y):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
@@ -455,7 +470,7 @@ class CausalInference(object):
 
     def get_minimal_adjustment_set(self, X, Y):
         """
-        Method to test whether `adjustment_set` is a valid adjustment set for
+        Returns a minimal adjustment set for
         identifying the causal effect of `X` on `Y`.
 
         Parameters
@@ -474,9 +489,9 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> dag = BayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        >>> dag = DiscreteBayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
         >>> infer = CausalInference(dag)
         >>> infer.get_minimal_adjustment_set("X_1", "X_2")
         {'Z'}

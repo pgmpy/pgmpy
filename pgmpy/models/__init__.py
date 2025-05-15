@@ -1,21 +1,18 @@
-from .BayesianNetwork import BayesianNetwork
-from .BayesianModel import BayesianModel
 from .ClusterGraph import ClusterGraph
+from .DiscreteBayesianNetwork import DiscreteBayesianNetwork
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
 from .FactorGraph import FactorGraph
+from .FunctionalBayesianNetwork import FunctionalBayesianNetwork
 from .JunctionTree import JunctionTree
+from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .MarkovChain import MarkovChain
 from .MarkovNetwork import MarkovNetwork
-from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
-from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
-from .SEM import SEMGraph, SEMAlg, SEM
+from .SEM import SEM, SEMAlg, SEMGraph
 
 __all__ = [
-    "BayesianModel",
-    "BayesianNetwork",
+    "DiscreteBayesianNetwork",
     "MarkovNetwork",
-    "MarkovModel",
     "FactorGraph",
     "JunctionTree",
     "ClusterGraph",
@@ -26,4 +23,5 @@ __all__ = [
     "SEMGraph",
     "SEMAlg",
     "SEM",
+    "FunctionalBayesianNetwork",
 ]

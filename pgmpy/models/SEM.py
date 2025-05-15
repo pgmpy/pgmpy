@@ -7,6 +7,7 @@ from networkx.algorithms.dag import descendants
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import logger
+from pgmpy.utils.parser import parse_lavaan
 
 
 class SEMGraph(DAG):
@@ -40,7 +41,8 @@ class SEMGraph(DAG):
 
     Examples
     --------
-    Defining a model (Union sentiment model[1]) without setting any paramaters.
+    Defining a model (Union sentiment model[1]) without setting any paramaters:
+
     >>> from pgmpy.models import SEMGraph
     >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
     ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
@@ -51,6 +53,7 @@ class SEMGraph(DAG):
 
     Defining a model (Education [2]) with all the parameters set. For not setting any
     parameter `np.nan` can be explicitly passed.
+
     >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
     ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
     ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
@@ -589,20 +592,20 @@ class SEMGraph(DAG):
         """
         nodelist = list(self.observed) + list(self.latents)
         graph_adj = nx.to_numpy_array(self.graph, nodelist=nodelist, weight=None)
-        graph_fixed = nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight")
+        graph_fixed = np.nan_to_num(
+            nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight")
+        )
 
         err_adj = nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight=None)
         np.fill_diagonal(err_adj, 1.0)  # Variance exists for each error term.
-        err_fixed = nx.to_numpy_array(
-            self.err_graph, nodelist=nodelist, weight="weight"
+        err_fixed = np.nan_to_num(
+            nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight="weight")
         )
 
         # Add the variance of the error terms.
         for index, node in enumerate(nodelist):
-            try:
-                err_fixed[index, index] = self.err_graph.nodes[node]["weight"]
-            except KeyError:
-                err_fixed[index, index] = 0.0
+            weight = self.err_graph.nodes[node]["weight"]
+            err_fixed[index, index] = 0.0 if np.isnan(weight) else weight
 
         wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
         for index, obs_var in enumerate(self.observed):
@@ -1023,88 +1026,9 @@ class SEM(SEMGraph):
         """
         if syntax.lower() == "lavaan":
             # Create a SEMGraph model using the lavaan str.
-            # Step 0: Check if pyparsing is installed
-            try:
-                from pyparsing import (
-                    OneOrMore,
-                    Optional,
-                    Suppress,
-                    Word,
-                    alphanums,
-                    nums,
-                )
-            except ImportError as e:
-                raise ImportError(
-                    e.message()
-                    + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
-                )
+            ebunch, latents, err_corr, err_var = parse_lavaan(kwargs["lavaan_str"])
 
-            # Step 1: Define the grammar for each type of string.
-            var = Word(alphanums)
-            reg_gram = (
-                OneOrMore(
-                    var.setResultsName("predictors", listAllMatches=True)
-                    + Optional(Suppress("+"))
-                )
-                + "~"
-                + OneOrMore(
-                    var.setResultsName("covariates", listAllMatches=True)
-                    + Optional(Suppress("+"))
-                )
-            )
-            intercept_gram = var("inter_var") + "~" + Word("1")
-            covar_gram = (
-                var("covar_var1")
-                + "~~"
-                + OneOrMore(
-                    var.setResultsName("covar_var2", listAllMatches=True)
-                    + Optional(Suppress("+"))
-                )
-            )
-            latent_gram = (
-                var("latent")
-                + "=~"
-                + OneOrMore(
-                    var.setResultsName("obs", listAllMatches=True)
-                    + Optional(Suppress("+"))
-                )
-            )
-
-            # Step 2: Preprocess string to lines
-            lines = kwargs["lavaan_str"]
-
-            # Step 3: Initialize arguments and fill them by parsing each line.
-            ebunch = []
-            latents = []
-            err_corr = []
-            err_var = []
-            for line in lines:
-                line = line.strip()
-                if (line != "") and (not line.startswith("#")):
-                    if intercept_gram.matches(line):
-                        continue
-                    elif reg_gram.matches(line):
-                        results = reg_gram.parseString(line, parseAll=True)
-                        for pred in results["predictors"]:
-                            ebunch.extend(
-                                [
-                                    (covariate, pred)
-                                    for covariate in results["covariates"]
-                                ]
-                            )
-                    elif covar_gram.matches(line):
-                        results = covar_gram.parseString(line, parseAll=True)
-                        for var in results["covar_var2"]:
-                            err_corr.append((results["covar_var1"], var))
-
-                    elif latent_gram.matches(line):
-                        results = latent_gram.parseString(line, parseAll=True)
-                        latents.append(results["latent"])
-                        ebunch.extend(
-                            [(results["latent"], obs) for obs in results["obs"]]
-                        )
-
-            # Step 4: Call the parent __init__ with the arguments
+            # Call the parent __init__ with the arguments
             super(SEM, self).__init__(ebunch=ebunch, latents=latents, err_corr=err_corr)
 
         elif syntax.lower() == "graph":
@@ -1194,6 +1118,7 @@ class SEM(SEMGraph):
         Examples
         --------
         Defining a model (Union sentiment model[1]) without setting any paramaters.
+
         >>> from pgmpy.models import SEM
         >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
         ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
@@ -1204,6 +1129,7 @@ class SEM(SEMGraph):
 
         Defining a model (Education [2]) with all the parameters set. For not setting any
         parameter `np.nan` can be explicitly passed.
+
         >>> sem_edu = SEM.from_graph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
         ...                                  ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
         ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),

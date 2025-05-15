@@ -12,7 +12,7 @@ from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -300,6 +300,18 @@ class TestFactorMethods(unittest.TestCase):
             )
             self.assertEqual(phi, phi_copy)
 
+    def test_to_dataframe(self):
+        model = get_example_model("sachs")
+        cpd = model.get_cpds("Mek")
+        df = cpd.to_dataframe()
+        self.assertEqual(df.shape, (27, 3))
+        self.assertEqual(df.index.shape, (27,))
+        self.assertEqual(
+            df.query('PKA=="AVG" and Raf =="HIGH" and PKC=="LOW"')["LOW"].values,
+            0.8652899,
+        )
+        np_test.assert_array_almost_equal(df.sum(axis=1).values, np.ones(27))
+
     def test_set_value(self):
         model = get_example_model("asia")
         cpd = model.get_cpds("either")
@@ -509,7 +521,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_reduce_scopeerror(self):
         self.assertRaises(ValueError, self.phi1.reduce, [("x4", 1)])
-        self.assertRaises(ValueError, self.phi5.reduce, [((("x1", 0.1), 0))])
+        self.assertRaises(ValueError, self.phi5.reduce, [(("x1", 0.1), 0)])
 
     def test_reduce_sizeerror(self):
         self.assertRaises(IndexError, self.phi1.reduce, [("x3", 5)])
@@ -3240,7 +3252,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         )
 
     def test_is_imap(self):
-        G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        G1 = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
         diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
         grade_cpd = TabularCPD(

@@ -5,7 +5,7 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.estimators import K2Score, ScoreCache, StructureEstimator
+from pgmpy.estimators import StructureEstimator, get_scoring_method
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
 
@@ -22,8 +22,8 @@ class ExhaustiveSearch(StructureEstimator):
         (If some values in the data are missing the data cells should be set to `numpy.NaN`.
         Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
-    scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
-        An instance of `K2Score`, `BDeuScore`, `BicScore` or 'AICScore'.
+    scoring_method: Instance of a `StructureScore`-subclass (`K2` is used as default)
+        An instance of `K2`, `BDeu`, `BIC` or 'AIC'.
         This score is optimized during structure estimation by the `estimate`-method.
 
     state_names: dict (optional)
@@ -37,16 +37,11 @@ class ExhaustiveSearch(StructureEstimator):
         give wrong results in case of custom scoring methods.
     """
 
-    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
-        if scoring_method is not None:
-            if use_cache:
-                self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
-            else:
-                self.scoring_method = scoring_method
-        else:
-            self.scoring_method = ScoreCache.ScoreCache(K2Score(data, **kwargs), data)
-
+    def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
+        _, self.scoring_method = get_scoring_method(
+            scoring_method, self.data, use_cache
+        )
 
     def all_dags(self, nodes=None):
         """
@@ -117,11 +112,11 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ExhaustiveSearch, K2Score
+        >>> from pgmpy.estimators import ExhaustiveSearch, K2
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         >>> data['C'] = data['B']
-        >>> searcher = ExhaustiveSearch(data, scoring_method=K2Score(data))
+        >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> for score, model in searcher.all_scores():
         ...   print("{0}\t{1}".format(score, model.edges()))
         -24234.44977974726      [('A', 'B'), ('A', 'C')]

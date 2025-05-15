@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+import networkx as nx
+
 from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import BDeuScore, HillClimbSearch, StructureEstimator
+from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.independencies import IndependenceAssertion, Independencies
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.mathext import powerset
 
 
@@ -35,7 +37,7 @@ class MmhcEstimator(StructureEstimator):
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
-        Estimates a BayesianNetwork for the data set, using MMHC. First estimates a
+        Estimates a DiscreteBayesianNetwork for the data set, using MMHC. First estimates a
         graph skeleton using MMPC and then orients the edges using score-based local
         search (hill climbing).
 
@@ -44,7 +46,7 @@ class MmhcEstimator(StructureEstimator):
         significance_level: float, default: 0.01
             The significance level to use for conditional independence tests in the data set. See `mmpc`-method.
 
-        scoring_method: instance of a Scoring method (default: BDeuScore)
+        scoring_method: instance of a Scoring method (default: BDeu)
             The method to use for scoring during Hill Climb Search. Can be an instance of any of the
             scoring methods implemented in pgmpy.
 
@@ -77,15 +79,22 @@ class MmhcEstimator(StructureEstimator):
         [('Z', 'sum'), ('X', 'sum'), ('W', 'sum'), ('Y', 'sum')]
         """
         if scoring_method is None:
-            scoring_method = BDeuScore(self.data, equivalent_sample_size=10)
+            scoring_method = BDeu(self.data, equivalent_sample_size=10)
 
         skel = self.mmpc(significance_level)
-
         hc = HillClimbSearch(self.data)
+
+        possible_edges = nx.complete_graph(
+            n=self.state_names.keys(), create_using=nx.Graph
+        ).edges()
+
+        expert_knowledge = ExpertKnowledge(
+            forbidden_edges=possible_edges - skel.to_directed().edges()
+        )
 
         model = hc.estimate(
             scoring_method=scoring_method,
-            white_list=skel.to_directed().edges(),
+            expert_knowledge=expert_knowledge,
             tabu_length=tabu_length,
         )
 

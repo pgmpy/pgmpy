@@ -8,16 +8,21 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    AICScore,
-    AICScoreGauss,
-    BDeuScore,
-    BDsScore,
-    BicScore,
-    BicScoreGauss,
-    K2Score,
-    ScoreCache,
+    AIC,
+    BIC,
+    K2,
+    AICCondGauss,
+    AICGauss,
+    BDeu,
+    BDs,
+    BICCondGauss,
+    BICGauss,
+    ExpertKnowledge,
+    LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
+    get_scoring_method,
 )
 
 
@@ -61,9 +66,8 @@ class HillClimbSearch(StructureEstimator):
         structure_score,
         tabu_list,
         max_indegree,
-        black_list,
-        white_list,
-        fixed_edges,
+        forbidden_edges,
+        required_edges,
     ):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
@@ -88,11 +92,7 @@ class HillClimbSearch(StructureEstimator):
             # Check if adding (X, Y) will create a cycle.
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
-                if (
-                    (operation not in tabu_list)
-                    and ((X, Y) not in black_list)
-                    and ((X, Y) in white_list)
-                ):
+                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if len(new_parents) <= max_indegree:
@@ -103,7 +103,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
-            if (operation not in tabu_list) and ((X, Y) not in fixed_edges):
+            if (operation not in tabu_list) and ((X, Y) not in required_edges):
                 old_parents = model.get_parents(Y)
                 new_parents = [var for var in old_parents if var != X]
                 score_delta = score(Y, new_parents) - score(Y, old_parents)
@@ -119,9 +119,8 @@ class HillClimbSearch(StructureEstimator):
                 operation = ("flip", (X, Y))
                 if (
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                    and ((X, Y) not in fixed_edges)
-                    and ((Y, X) not in black_list)
-                    and ((Y, X) in white_list)
+                    and ((X, Y) not in required_edges)
+                    and ((Y, X) not in forbidden_edges)
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
@@ -139,13 +138,11 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method="k2",
+        scoring_method="bic-d",
         start_dag=None,
-        fixed_edges=set(),
         tabu_length=100,
         max_indegree=None,
-        black_list=None,
-        white_list=None,
+        expert_knowledge=None,
         epsilon=1e-4,
         max_iter=1e6,
         show_progress=True,
@@ -161,43 +158,35 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2, bdeu, bds, bic, aic, bic-g, aic-g. Also accepts a
-            custom score, but it should be an instance of `StructureScore`.
+            structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
+            ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
+            be an instance of `StructureScore`.
 
         start_dag: DAG instance
             The starting point for the local search. By default, a completely
             disconnected network is used.
 
-        fixed_edges: iterable
-            A list of edges that will always be there in the final learned model.
-            The algorithm will add these edges at the start of the algorithm and
-            will never change it.
-
         tabu_length: int
-            If provided, the last `tabu_length` graph modifications cannot be reversed
-            during the search procedure. This serves to enforce a wider exploration
-            of the search space. Default value: 100.
+            If provided, the last `tabu_length` graph modifications cannot be
+            reversed during the search procedure. This serves to enforce a
+            wider exploration of the search space. Default value: 100.
 
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
 
-        black_list: list or None
-            If a list of edges is provided as `black_list`, they are excluded from the search
-            and the resulting model will not contain any of those edges. Default: None
-
-        white_list: list or None
-            If a list of edges is provided as `white_list`, the search is limited to those
-            edges. The resulting model will then only contain edges that are in `white_list`.
-            Default: None
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            allows specification of required and forbidden edges, as well as temporal
+            order of nodes.
 
         epsilon: float (default: 1e-4)
-            Defines the exit condition. If the improvement in score is less than `epsilon`,
-            the learned model is returned.
+            Defines the exit condition. If the improvement in score is less
+            than `epsilon`, the learned model is returned.
 
         max_iter: int (default: 1e6)
-            The maximum number of iterations allowed. Returns the learned model when the
-            number of iterations is greater than `max_iter`.
+            The maximum number of iterations allowed. Returns the learned model
+            when the number of iterations is greater than `max_iter`.
 
         Returns
         -------
@@ -214,7 +203,7 @@ class HillClimbSearch(StructureEstimator):
         >>> # Learn the model structure using HillClimbSearch algorithm from `df`
         >>> from pgmpy.estimators import HillClimbSearch
         >>> est = HillClimbSearch(data)
-        >>> dag = est.estimate(scoring_method='bic')
+        >>> dag = est.estimate(scoring_method='bic-d')
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())
@@ -223,44 +212,9 @@ class HillClimbSearch(StructureEstimator):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
-        supported_methods = {
-            "k2": K2Score,
-            "bdeu": BDeuScore,
-            "bds": BDsScore,
-            "bic": BicScore,
-            "aic": AICScore,
-            "aic-g": AICScoreGauss,
-            "bic-g": BicScoreGauss,
-        }
-        if isinstance(scoring_method, str):
-            if scoring_method.lower() in [
-                "k2score",
-                "bdeuscore",
-                "bdsscore",
-                "bicscore",
-                "aicscore",
-            ]:
-                raise ValueError(
-                    f"The scoring method names have been changed. Please refer the documentation."
-                )
-            elif scoring_method.lower() not in list(supported_methods.keys()):
-                raise ValueError(
-                    f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
-                )
-        elif not isinstance(scoring_method, StructureScore):
-            raise ValueError(
-                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
-            )
 
-        if isinstance(scoring_method, str):
-            score = supported_methods[scoring_method.lower()](data=self.data)
-        else:
-            score = scoring_method
-
-        if self.use_cache:
-            score_fn = ScoreCache.ScoreCache(score, self.data).local_score
-        else:
-            score_fn = score.local_score
+        score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
+        score_fn = score_c.local_score
 
         # Step 1.2: Check the start_dag
         if start_dag is None:
@@ -273,24 +227,18 @@ class HillClimbSearch(StructureEstimator):
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        # Step 1.3: Check fixed_edges
-        if not hasattr(fixed_edges, "__iter__"):
-            raise ValueError("fixed_edges must be an iterable")
-        else:
-            fixed_edges = set(fixed_edges)
-            start_dag.add_edges_from(fixed_edges)
-            if not nx.is_directed_acyclic_graph(start_dag):
-                raise ValueError(
-                    "fixed_edges creates a cycle in start_dag. Please modify either fixed_edges or start_dag."
-                )
+        # Step 1.3: Check if expert knowledge was specified
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
 
-        # Step 1.4: Check black list and white list
-        black_list = set() if black_list is None else set(black_list)
-        white_list = (
-            set([(u, v) for u in self.variables for v in self.variables])
-            if white_list is None
-            else set(white_list)
-        )
+        # Step 1.4: Check if required edges cause a cycle
+        start_dag.add_edges_from(expert_knowledge.required_edges)
+        if not nx.is_directed_acyclic_graph(start_dag):
+            raise ValueError(
+                "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
+            )
+        expert_knowledge._orient_temporal_forbidden_edges(start_dag, only_edges=False)
+        start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         if max_indegree is None:
@@ -315,9 +263,8 @@ class HillClimbSearch(StructureEstimator):
                     score.structure_prior_ratio,
                     tabu_list,
                     max_indegree,
-                    black_list,
-                    white_list,
-                    fixed_edges,
+                    expert_knowledge.forbidden_edges,
+                    expert_knowledge.required_edges,
                 ),
                 key=lambda t: t[1],
                 default=(None, None),

@@ -312,7 +312,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
-class TestApproxInferenceDBN(unittest.TestCase):
+class TestApproxInferenceDBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
