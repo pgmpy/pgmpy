@@ -1353,6 +1353,122 @@ class DAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         return dag
 
+    def edge_strength(self, data, edges=None):
+        """
+        Computes the strength of each edge in `edges`. The strength is bounded
+        between 0 and 1, with 1 signifying strong effect.
+
+        The edge strength is defined as the effect size measure of a
+        Conditional Independence test using the parents as the conditional set.
+        The strength quantifies the effect of edge[0] on edge[1] after
+        controlling for any other influence paths. We use a residualization-based
+        CI test[1] to compute the strengths.
+
+        Interpretation:
+        - The strength is the Pillai's Trace effect size of partial correlation.
+        - Measures the strength of linear relationship between the residuals.
+        - Works for any mixture of categorical and continuous variables.
+        - The value is bounded between 0 and 1:
+        - Strength close to 1 → strong dependence.
+        - Strength close to 0 → conditional independence.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Dataset to compute edge strengths on.
+
+        edges : tuple, list, or None (default: None)
+            - None: Compute for all DAG edges.
+            - Tuple (X, Y): Compute for edge X → Y.
+            - List of tuples: Compute for selected edges.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping edges to their strength values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+        >>> # Create a linear Gaussian Bayesian network
+        >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+        >>> # Create CPDs with specific beta values
+        >>> x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
+        >>> y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
+        >>> z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
+        >>> # Add CPDs to the model
+        >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
+        >>> # Simulate data from the model
+        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> # Create DAG and compute edge strengths
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> strengths = dag.edge_strength(data)
+        {('X', 'Y'): np.float64(0.14587166611282304),
+         ('Z', 'Y'): np.float64(0.25683780900125613)}
+
+        References
+        ----------
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        """
+
+        from pgmpy.estimators.CITests import pillai_trace
+
+        # If edges is None, compute for all edges in the DAG
+        if edges is None:
+            edges_to_compute = list(self.edges())
+        # If edges is a single edge tuple
+        elif isinstance(edges, tuple) and len(edges) == 2:
+            edges_to_compute = [edges]
+        # If edges is a list of edge tuples
+        elif isinstance(edges, list) and all(
+            isinstance(edge, tuple) and len(edge) == 2 for edge in edges
+        ):
+            edges_to_compute = edges
+        else:
+            raise ValueError(
+                "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
+            )
+
+        strengths = {}
+        skipped_edges = []
+
+        for edge in edges_to_compute:
+            x, y = edge
+
+            # Get parents of x and y using get_parents instead of predecessors
+            pa_Y = self.get_parents(y)
+
+            # Check if either x or y is a latent node
+            if (
+                x in self.latents
+                or y in self.latents
+                or any(parent in self.latents for parent in pa_Y)
+            ):
+                skipped_edges.append(edge)
+                continue
+
+            # Combine parents for conditioning set (excluding x and y themselves)
+            conditioning_set = set(pa_Y) - {x, y}
+
+            # Run CI test and get effect size
+            effect_size, _ = pillai_trace(
+                X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
+            )
+
+            # Store the edge strength
+            strengths[edge] = effect_size
+
+            # store the values in the graph as well
+            self.edges[edge]["strength"] = effect_size
+
+        if skipped_edges:
+            logger.warning(
+                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
+                "Use CausalInference class for advanced causal effect estimation."
+            )
+
+        return strengths
+
 
 class PDAG(nx.DiGraph):
     """
