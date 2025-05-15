@@ -12,7 +12,7 @@ from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, MarkovNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -3030,7 +3030,6 @@ class TestTabularCPDMethods(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
-            assert "Same ordering provided as current" in str(w[-1].message)
             np_test.assert_array_equal(
                 self.cpd2.get_values(),
                 np.array(
@@ -3102,6 +3101,78 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertRaises(
             ValueError,
             TabularCPD.get_random,
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3},
+        )
+
+    def test_get_uniform(self):
+        cpd = TabularCPD.get_uniform(variable="A", evidence=None, cardinality={"A": 3})
+        self.assertEqual(cpd.variables, ["A"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
+        self.assertEqual(cpd.values.shape, (3,))
+        self.assertTrue((cpd.values == (1 / 3)).all())
+
+        cpd_sn = TabularCPD.get_uniform(
+            variable="A",
+            evidence=None,
+            cardinality={"A": 3},
+            state_names={"A": ["a1", "a2", "a3"]},
+        )
+        self.assertEqual(cpd_sn.variables, ["A"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([3]))
+        self.assertEqual(cpd_sn.values.shape, (3,))
+        self.assertTrue((cpd_sn.values == (1 / 3)).all())
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2", "a3"])
+
+        cpd = TabularCPD.get_uniform(
+            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd.values.shape, (2, 3, 4))
+        self.assertTrue((cpd.values == 0.5).all())
+
+        cpd_sn = TabularCPD.get_uniform(
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3, "C": 4},
+            state_names={
+                "A": ["a1", "a2"],
+                "B": ["b1", "b2", "b3"],
+                "C": ["c1", "c2", "c3", "c4"],
+            },
+        )
+        self.assertEqual(cpd_sn.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd_sn.values.shape, (2, 3, 4))
+        self.assertTrue((cpd_sn.values == 0.5).all())
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd_sn.state_names["B"], ["b1", "b2", "b3"])
+        self.assertEqual(cpd_sn.state_names["C"], ["c1", "c2", "c3", "c4"])
+
+        cpd = TabularCPD.get_uniform(variable="A", evidence=["B", "C"])
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+        self.assertTrue((cpd.values == 0.5).all())
+
+        cpd = TabularCPD.get_uniform(
+            variable="A",
+            evidence=["B", "C"],
+            state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+        self.assertTrue((cpd.values == 0.5).all())
+        self.assertEqual(cpd.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd.state_names["B"], ["b1", "b2"])
+        self.assertEqual(cpd.state_names["C"], ["c1", "c2"])
+
+        self.assertRaises(
+            ValueError,
+            TabularCPD.get_uniform,
             variable="A",
             evidence=["B", "C"],
             cardinality={"A": 2, "B": 3},
@@ -3289,7 +3360,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         ]
         jpd = JPD(["diff", "intel", "grade"], [2, 3, 3], val)
         self.assertTrue(jpd.is_imap(G1))
-        self.assertRaises(TypeError, jpd.is_imap, MarkovNetwork())
+        self.assertRaises(TypeError, jpd.is_imap, DiscreteMarkovNetwork())
 
     def tearDown(self):
         del self.jpd

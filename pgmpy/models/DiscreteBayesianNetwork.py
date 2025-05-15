@@ -18,22 +18,18 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.global_vars import logger
-from pgmpy.models.MarkovNetwork import MarkovNetwork
+from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
 
 class DiscreteBayesianNetwork(DAG):
     """
-    Initializes a Bayesian Network.
-    A models stores nodes and edges with conditional probability
-    distribution (cpd) and other attributes.
+    Initializes a Discrete Bayesian Network.
 
-    Models hold directed edges.  Self loops are not allowed neither
-    multiple (parallel) edges.
-
-    Nodes can be any hashable python object.
-
-    Edges are represented as links between nodes.
+    A Bayesian Network is defined using a model structure and a conditional
+    probability distribution (CPDs) associated with each node (i.e., variable)
+    in the network. For a discrete Bayesian Network, pgmpy offers two ways to
+    define these CPDs: TabularCPD and NoisyORCPD
 
     Parameters
     ----------
@@ -485,7 +481,7 @@ class DiscreteBayesianNetwork(DAG):
         EdgeView([('diff', 'grade'), ('diff', 'intel'), ('grade', 'letter'), ('grade', 'intel'), ('intel', 'SAT')])
         """
         moral_graph = self.moralize()
-        mm = MarkovNetwork(moral_graph.edges())
+        mm = DiscreteMarkovNetwork(moral_graph.edges())
         mm.add_nodes_from(moral_graph.nodes())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
@@ -721,7 +717,7 @@ class DiscreteBayesianNetwork(DAG):
             lambda t: t.index.tolist()
         )
         data_unique = data_unique_indexes.index.to_frame()
-        pred_values = Parallel(n_jobs=n_jobs)(
+        pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(
                     set(data_point.index[data_point.isna()])

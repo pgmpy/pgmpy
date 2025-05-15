@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, permutations
 
 from pgmpy.global_vars import logger
 
@@ -24,6 +24,12 @@ class ExpertKnowledge:
             graph structure. Refer to the algorithm documentation for details
             on how the argument is handled.
 
+    search_space: iterable (default: None)
+            The set of directed edges that form the search space for the
+            structure learning algorithm (a white list of all possible edges).
+            Refer to the algorithm documentation for details on how the
+            argument is handled.
+
     temporal order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list/structure in the (2 dimensional) iterator contains
@@ -45,7 +51,10 @@ class ExpertKnowledge:
 
     >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
     >>> req_edges = [("smoke","bronc")]
-    >>> expert_knowledge = ExpertKnowledge(required_edges=req_edges, forbidden_edges)
+    >>> expert_knowledge = ExpertKnowledge(
+    ...        required_edges=req_edges,
+    ...        forbidden_edges=forb_edges
+    ...        )
 
     **Use during structure learning**
 
@@ -63,7 +72,7 @@ class ExpertKnowledge:
 
     **Use during structure learning**
 
-    >>> data = BayesianModelSampling(cancer_model).forward_sample(size=int(1e4))
+    >>> data = cancer_model.simulate(n_samples=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
     ...         variant="stable",
@@ -71,6 +80,32 @@ class ExpertKnowledge:
     ...         show_progress=False,
     ...     )
     """
+
+    def __init__(
+        self,
+        forbidden_edges=None,
+        required_edges=None,
+        temporal_order=None,
+        search_space=None,
+        **kwargs,
+    ):
+        self.forbidden_edges = (
+            self._validate_edges(forbidden_edges)
+            if forbidden_edges is not None
+            else set()
+        )
+        self.required_edges = (
+            self._validate_edges(required_edges)
+            if required_edges is not None
+            else set()
+        )
+
+        self.search_space = (
+            self._validate_edges(search_space) if search_space is not None else set()
+        )
+
+        self.temporal_order = temporal_order if temporal_order is not None else [[]]
+        self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
@@ -177,27 +212,6 @@ class ExpertKnowledge:
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
 
-    def __init__(
-        self,
-        forbidden_edges=None,
-        required_edges=None,
-        temporal_order=None,
-        **kwargs,
-    ):
-        self.forbidden_edges = (
-            self._validate_edges(forbidden_edges)
-            if forbidden_edges is not None
-            else set()
-        )
-        self.required_edges = (
-            self._validate_edges(required_edges)
-            if required_edges is not None
-            else set()
-        )
-
-        self.temporal_order = temporal_order if temporal_order is not None else [[]]
-        self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
-
     def apply_expert_knowledge(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
@@ -229,8 +243,8 @@ class ExpertKnowledge:
         for edge in self.forbidden_edges:
             u, v = edge
 
-            if pdag.has_edge(u, v) and pdag.has_edge(v, u):
-                pdag.remove_edge(u, v)
+            if pdag.has_undirected_edge(u, v):
+                pdag.orient_undirected_edge(v, u, inplace=True)
             elif pdag.has_edge(u, v):
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from forbidden edges."
@@ -239,11 +253,35 @@ class ExpertKnowledge:
         for edge in self.required_edges:
             u, v = edge
 
-            if pdag.has_edge(u, v) and pdag.has_edge(v, u):
-                pdag.remove_edge(v, u)
+            if pdag.has_undirected_edge(u, v):
+                pdag.orient_undirected_edge(u, v, inplace=True)
             elif pdag.has_edge(u, v) is False:
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from required edges"
                 )
 
         return pdag
+
+    def limit_search_space(self, data_coulumn_labels):
+        """
+        Forms an additive set of forbidden edges by subtracting the
+        search space from the set of all possible edges.
+
+        Parameters
+        ----------
+        data_coulumn_labels: set | list | pd.DataFrame.columns
+            Set of edges to be used for structure learning.
+            If None, all possible edges are used.
+
+        Returns
+        -------
+        forbidden_edges_additive: set
+            Set of edges that are not allowed in the structure.
+        """
+        # Generate all possible edges
+        all_possible_edges = set(permutations(data_coulumn_labels, 2))
+
+        # Calculate forbidden edges by subtracting the search space from all possible edges
+        forbidden_edges_additive = set(all_possible_edges) - self.search_space
+
+        self.forbidden_edges = self.forbidden_edges.union(forbidden_edges_additive)

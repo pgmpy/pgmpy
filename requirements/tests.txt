@@ -1,8 +1,0 @@
-xdoctest >= 0.11.0
-pytest >= 3.3.1
-pytest-cov
-pytest-xdist
-coverage >= 4.3.4
-mock
-black
-pre-commit

@@ -303,6 +303,11 @@ def llm_pairwise_orient(
 
     kwargs: kwargs
         Any additional parameters to pass to litellm.completion method.
+
+    Returns
+    -------
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     try:
         from litellm import completion
@@ -323,7 +328,7 @@ def llm_pairwise_orient(
         1. <A> causes <B>
         2. <B> causes <A>
 
-        Return a single letter answer between the choices above. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
         """
 
     response = completion(
@@ -352,6 +357,11 @@ def manual_pairwise_orient(x, y):
 
     y: str
         The second variable's name
+
+    Returns
+    -------
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     user_input = input(
         f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"

@@ -40,17 +40,16 @@
    :hidden:
 
    started/base.rst
-   base/base.rst
+   examples.rst
    models/base.rst
    factors/base.rst
-   exact_infer/base.rst
-   approx_infer/base.rst
+   infer/base.rst
+   causal_infer/base.rst
    param_estimator/base.rst
    structure_estimator/base.rst
    metrics/metrics.rst
    readwrite/base.rst
    plotting.rst
-   examples.rst
    tutorial.rst
 
 pgmpy is a Python package for causal inference and probabilistic inference
@@ -62,6 +61,7 @@ Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
 |
 
 .. figure:: pgmpy_workflow.png
+   :alt: Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
 
    Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
 
@@ -118,9 +118,9 @@ Algorithms
 Examples
 ========
 
-**Example notebooks:** https://pgmpy.org/examples.html
+**Example notebooks:** :doc:`examples`
 
-**Tutorial notebooks:** https://pgmpy.org/tutorial.html
+**Tutorial notebooks:** :doc:`tutorial`
 
 |
 
@@ -146,10 +146,3 @@ Bibtex:
      pages   = {1--8},
      url     = {http://jmlr.org/papers/v25/23-0487.html}
    }
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

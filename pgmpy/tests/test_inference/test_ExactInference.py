@@ -3,15 +3,19 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from pgmpy.utils import get_example_model
 
+from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
 from pgmpy.models import (
     DiscreteBayesianNetwork,
+    DiscreteMarkovNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
-    MarkovNetwork,
+    LinearGaussianBayesianNetwork,
 )
 
 
@@ -46,6 +50,15 @@ class TestVariableElimination(unittest.TestCase):
 
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
+
+    def test_query_raises_for_empty_variables(self):
+        model = get_example_model("earthquake")
+        infer = VariableElimination(model)
+
+        with self.assertRaises(ValueError) as context:
+            infer.query(variables=[], evidence={"A": 1})
+
+        self.assertIn("must contain at least one variable", str(context.exception))
 
     def test_query_single_variable(self):
         for order in [
@@ -625,7 +638,7 @@ class TestSnowNetwork(unittest.TestCase):
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
-        self.markov_model = MarkovNetwork([("A", "B"), ("A", "C")])
+        self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
         f1 = DiscreteFactor(
             variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2
         )
@@ -647,7 +660,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
         # are under consideration for inference so this should be fine.
-        self.markov_model = MarkovNetwork(
+        self.markov_model = DiscreteMarkovNetwork(
             [
                 ("A", "J"),
                 ("R", "J"),
@@ -1299,3 +1312,29 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
         assert np.allclose(
             messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
         )
+
+
+class TestVariableEliminationLinearGaussianAndFunctionalBayesian(unittest.TestCase):
+    def setUp(self):
+        from pgmpy.utils import get_example_model
+
+        self.lgbm = get_example_model("ecoli70")
+        self.fbn = FunctionalBayesianNetwork([("X", "Y")])
+
+    def test_query_linear_gaussian(self):
+        inference = VariableElimination(self.lgbm)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for LinearGaussianBayesianNetwork."
+            "Please use the 'predict' method of the LinearGaussianBayesianNetwork class instead.",
+        ):
+            inference.query(["Y"])
+
+    def test_query_functional_bayesian(self):
+        inference = VariableElimination(self.fbn)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Variable Elimination is not supported for FunctionalBayesianNetwork."
+            "Please use the 'predict' method of the FunctionalBayesianNetwork class instead.",
+        ):
+            inference.query(["Y"])

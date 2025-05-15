@@ -33,7 +33,6 @@ sys.path.insert(0, os.path.abspath("../../pgmpy_notebooks/notebooks"))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinx.ext.imgmath",
@@ -45,6 +44,10 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
     "alabaster",
+    "sphinx_copybutton",
+    "sphinx_design",
+    "sphinxext.opengraph",
+    "sphinx_sitemap",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -141,7 +144,7 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
-# html_title = 'pgmpy v0.1.2'
+html_title = f"{release} | pgmpy docs"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
@@ -153,7 +156,7 @@ html_theme_options = {
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-# html_favicon = None
+html_favicon = "logo_favi.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -178,12 +181,11 @@ html_static_path = ["logo.png"]
 html_sidebars = {
     "**": [
         "about.html",
+        "searchbox.html",
         "navigation.html",
         "relations.html",
-        "donate.html",
         "ethicalads.html",
         "ga.html",
-        "searchbox.html",
     ]
 }
 
@@ -316,8 +318,8 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/": None}
-
 # To suppress autosupress warnings while building docs. Remove this line to see the warning
 numpydoc_show_class_members = False
+
+# For sphinx sitemap
+html_baseurl = "https://pgmpy.org"

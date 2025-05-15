@@ -187,7 +187,7 @@ class ParameterEstimator(BaseEstimator):
 
     Parameters
     ----------
-    model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.MarkovNetwork model
+    model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DiscreteMarkovNetwork model
         for which parameter estimation is to be done.
 
     data: pandas DataFrame object
@@ -207,7 +207,7 @@ class ParameterEstimator(BaseEstimator):
 
         Parameters
         ----------
-        model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.MarkovNetwork model
+        model: pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DiscreteMarkovNetwork model
             for which parameter estimation is to be done.
 
         data: pandas DataFrame object
@@ -308,7 +308,7 @@ class MarginalEstimator(BaseEstimator):
 
     Parameters
     ----------
-    model: MarkovNetwork | FactorGraph | JunctionTree
+    model: DiscreteMarkovNetwork | FactorGraph | JunctionTree
         A model to optimize, using Belief Propagation and an estimation method.
 
     data: pandas DataFrame object

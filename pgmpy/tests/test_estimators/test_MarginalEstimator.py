@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 import pandas as pd
 
@@ -6,12 +7,12 @@ from pgmpy import config
 from pgmpy.estimators import MarginalEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import FactorGraph, MarkovNetwork
+from pgmpy.models import DiscreteMarkovNetwork, FactorGraph
 
 
 class TestMarginalEstimator(unittest.TestCase):
     def setUp(self):
-        self.m1 = MarkovNetwork([("A", "B"), ("B", "C")])
+        self.m1 = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
         self.df = pd.DataFrame({"A": np.repeat([0, 1], 50)})
         self.m2 = FactorGraph()
         self.m2.add_node("A")
@@ -24,7 +25,7 @@ class TestMarginalEstimator(unittest.TestCase):
 
     def test_class_init(self):
         marginal_estimator = MarginalEstimator(
-            MarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame()
+            DiscreteMarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame()
         )
         self.assertTrue(marginal_estimator)
 

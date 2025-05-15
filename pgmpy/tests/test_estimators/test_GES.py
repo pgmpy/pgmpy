@@ -55,6 +55,29 @@ class TestGESDiscrete(unittest.TestCase):
             set(dag2.edges()),
         )
 
+    def test_search_space(self):
+        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+        search_space = [
+            ("Age", "Education"),
+            ("Education", "HoursPerWeek"),
+            ("Education", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("Age", "Income"),
+        ]
+
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+        est = GES(adult_data)
+
+        dag = est.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+        )
+        # assert if dag is a subset of search_space
+        for edge in dag.edges():
+            self.assertIn(edge, search_space)
+
 
 class TestGESGauss(unittest.TestCase):
     def setUp(self):

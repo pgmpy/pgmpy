@@ -7,6 +7,8 @@ from pgmpy import config
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
+from pgmpy.inference import CausalInference
+
 
 class SEMEstimator(object):
     """
@@ -423,8 +425,9 @@ class IVEstimator:
         >>> from pgmpy.estimators import IVEstimator # TODO: Finish example.
         """
         if (ivs is None) and (civs is None):
-            ivs = self.model.get_ivs(X, Y)
-            civs = self.model.get_conditional_ivs(X, Y)
+            inference = CausalInference(self.model)
+            ivs = inference.get_ivs(X, Y)
+            civs = inference.get_conditional_ivs(X, Y)
 
         civs = [civ for civ in civs if civ[0] not in ivs]
 

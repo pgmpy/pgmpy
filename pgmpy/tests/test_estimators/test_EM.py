@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -114,6 +115,37 @@ class TestEM(unittest.TestCase):
                 )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
+    def test_em_init_missing_data_handling(self):
+        df = pd.DataFrame(
+            {"A": [1, 2, 3], "B": [None, None, None], "C": [1, None, 3], "D": [4, 5, 6]}
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            est = EM(self.model1, df)
+
+        # Data shape and column removal
+        self.assertEqual(est.data.shape, (2, 3))
+        self.assertNotIn("B", est.data.columns)
+
+    def test_get_parameters_random_init_cpds(self):
+        est = EM(self.model1, self.data1)
+        cpds = est.get_parameters(
+            init_cpds="random", seed=42, n_jobs=1, show_progress=False
+        )
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
+    def test_get_parameters_uniform_init_cpds(self):
+        est = EM(self.model1, self.data1)
+        cpds = est.get_parameters(init_cpds="uniform", n_jobs=1, show_progress=False)
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
     def tearDown(self):
         del self.model1

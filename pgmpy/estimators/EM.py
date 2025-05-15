@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -61,6 +62,29 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = model.latents
             model = model_bn
+
+        # Drop fully missing columns and treat them as latent if not already
+        original_cols = set(data.columns)
+        data = data.dropna(axis=1, how="all")
+        dropped_cols = original_cols - set(data.columns)
+        new_latents = [col for col in dropped_cols if col not in model.latents]
+
+        if new_latents:
+            logger.warning(
+                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                "Treating them as latent variables."
+            )
+            model.latents.update(new_latents)
+
+        # Drop rows with any missing values in partially observed columns
+        original_rows_count = data.shape[0]
+        data = data.dropna()
+        dropped_rows_count = original_rows_count - data.shape[0]
+
+        if dropped_rows_count:
+            logger.warning(
+                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
+            )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
@@ -180,12 +204,15 @@ class ExpectationMaximization(ParameterEstimator):
         seed: int
             The random seed to use for generating the intial values.
 
-        init_cpds: dict
-            A dictionary of the form {variable: instance of TabularCPD}
+        init_cpds: dict or str
+            dict: A dictionary of the form {variable: instance of TabularCPD}
             specifying the initial CPD values for the EM optimizer to start
             with. If not specified, CPDs involving latent variables are
             initialized randomly, and CPDs involving only observed variables are
             initialized with their MLE estimates.
+
+            str: `uniform`, all CPDs will be initialized to have a uniform distribution.
+                 `random`, all CPDs will be initialized randomly.
 
         show_progress: boolean (default: True)
             Whether to show a progress bar for iterations.
@@ -222,6 +249,46 @@ class ExpectationMaximization(ParameterEstimator):
             self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize CPDs.
+        # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
+        if isinstance(init_cpds, str):
+            parents_dict = {
+                var: self.model.get_parents(var) for var in self.model.nodes()
+            }
+            if init_cpds == "random":
+                init_cpds = {
+                    var: TabularCPD.get_random(
+                        variable=var,
+                        evidence=parents_dict[var],
+                        cardinality={
+                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
+                        },
+                        state_names={
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                        },
+                        seed=seed,
+                    )
+                    for var in self.model.nodes()
+                }
+            elif init_cpds == "uniform":
+                init_cpds = {
+                    var: TabularCPD.get_uniform(
+                        variable=var,
+                        evidence=parents_dict[var],
+                        cardinality={
+                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
+                        },
+                        state_names={
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                        },
+                        seed=seed,
+                    )
+                    for var in self.model.nodes()
+                }
+            else:
+                raise ValueError(
+                    f"If `init_cpds` is a string, it must be either 'random' or 'uniform'. Got: {init_cpds}"
+                )
+
         # Step 3.1: Learn the CPDs of variables which don't involve
         #           latent variables using MLE if their init_cpd is
         #           not specified.

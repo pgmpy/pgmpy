@@ -1,7 +1,9 @@
-Models
-======
+Supported Models
+================
 
-- :doc:`discretebayesiannetwork`
+- :doc:`dag`
+- :doc:`pdag`
+- :doc:`bayesiannetwork`
 - :doc:`gaussianbn`
 - :doc:`functionalbn`
 - :doc:`dbn`
@@ -17,7 +19,9 @@ Models
    :maxdepth: 1
    :hidden:
 
-   discretebayesiannetwork.rst
+   dag.rst
+   pdag.rst
+   bayesiannetwork.rst
    gaussianbn.rst
    functionalbn.rst
    dbn.rst
