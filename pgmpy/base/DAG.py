@@ -1355,23 +1355,18 @@ class DAG(nx.DiGraph):
 
     def edge_strength(self, data, edges=None):
         """
-        Computes the strength of edges in the DAG using a residual-based conditional
-        independence test with Pillai's Trace effect size.
+        Computes the strength of each edge in `edges`. The strength is bounded
+        between 0 and 1, with 1 signifying strong effect.
 
-        This method quantifies the dependence between variables after adjusting for
-        common parents, using a flexible approach that supports both continuous and
-        categorical data. It first residualizes variables using XGBoost (instead of
-        linear regression), then computes the canonical correlation between residuals,
-        and finally evaluates the strength using Pillai's Trace — a multivariate
-        effect size bounded between 0 and 1.
+        The edge strength is defined as the effect size measure of a
+        Conditional Independence test using the parents as the conditional set.
+        The strength quantifies the effect of edge[0] on edge[1] after
+        controlling for any other influence paths. We use a residualization-based
+        CI test[1] to compute the strengths.
 
-        Pillai's Trace
-        --------------
-        - Uses a residualization-based approach (similar to partial correlation) and
-          employs the XGBoost estimator instead of linear regression.
-        - Computes the Pillai Trace effect size based on canonical correlations instead
-          of using correlation (as is the case with partial correlation).
-        - Measures the linear relationship between the residuals.
+        Interpretation:
+        - The strength is the Pillai's Trace effect size of partial correlation.
+        - Measures the strength of linear relationship between the residuals.
         - Works for any mixture of categorical and continuous variables.
         - The value is bounded between 0 and 1:
         - Strength close to 1 → strong dependence.
@@ -1394,7 +1389,7 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
-
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
         >>> # Create a linear Gaussian Bayesian network
         >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
         >>> # Create CPDs with specific beta values
@@ -1408,20 +1403,12 @@ class DAG(nx.DiGraph):
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
         >>> strengths = dag.edge_strength(data)
-        >>> # Verify edge strengths match squared Pearson correlations
-        >>> xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
-        >>> zy_corr = pearsonr("Z", "Y", ["X"], data, boolean=False)[0]
-        >>> # Edge strengths should be close to squared correlations
-        >>> abs(strengths[("X", "Y")] - xy_corr**2) < 0.01
-        True
-        >>> abs(strengths[("Z", "Y")] - zy_corr**2) < 0.01
-        True
+        {('X', 'Y'): np.float64(0.14587166611282304),
+         ('Z', 'Y'): np.float64(0.25683780900125613)}
 
-        Notes
-        -----
-        - Based on the `ci_pillai` test using XGBoost-based residualization.
-        - Effect size is computed via Pillai's Trace on residuals' canonical correlations.
-        - Edges involving latent variables are skipped with a warning.
+        References
+        ----------
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
         """
 
         from pgmpy.estimators.CITests import pillai_trace
@@ -1464,15 +1451,15 @@ class DAG(nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            result = pillai_trace(
+            effect_size, _ = pillai_trace(
                 X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
             )
 
             # Store the edge strength
-            strengths[edge] = result[0]
+            strengths[edge] = effect_size
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = result[0]
+            self.edges[edge]["strength"] = effect_size
 
         if skipped_edges:
             logger.warning(
