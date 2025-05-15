@@ -51,7 +51,7 @@ def get_scoring_method(scoring_method, data, use_cache):
         score = scoring_method
 
     if use_cache:
-        from pgmpy.estimators.ScoreCache import ScoreCache
+        from pgmpy.structure_estimators.ScoreCache import ScoreCache
 
         score_c = ScoreCache(score, data)
     else:
