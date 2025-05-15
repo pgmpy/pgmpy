@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+from os import PathLike
 
 import networkx as nx
 import numpy as np
@@ -75,10 +76,10 @@ class DAG(nx.DiGraph):
 
     def __init__(
         self,
-        ebunch:Optional[Iterable[tuple[Hashable, Hashable]]]=None,
-        latents:set[Hashable]=set(),
-        lavaan_str=None,
-        dagitty_str=None,
+        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        latents: set[Hashable] = set(),
+        lavaan_str: Optional[list[str]] = None,
+        dagitty_str: Optional[list[str]] = None,
     ):
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
@@ -103,7 +104,11 @@ class DAG(nx.DiGraph):
             raise ValueError(out_str)
 
     @classmethod
-    def from_lavaan(cls, string=None, filename=None):
+    def from_lavaan(
+        cls,
+        string: Optional[str] = None,
+        filename: Optional[str | PathLike] = None,
+    ) -> "DAG":
         """
         Initializes a `DAG` instance using lavaan syntax.
 
@@ -130,7 +135,7 @@ class DAG(nx.DiGraph):
         return cls(lavaan_str=lavaan_str)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None):
+    def from_dagitty(cls, string=None, filename=None) -> "DAG":
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -590,7 +595,7 @@ class DAG(nx.DiGraph):
             return True
         return False
 
-    def get_immoralities(self) -> set[tuple[Hashable, Hashable]]:
+    def get_immoralities(self) -> dict[Hashable, list[tuple[Hashable, Hashable]]]:
         """
         Finds all the immoralities in the model
         A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
@@ -620,7 +625,13 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
-    def is_dconnected(self, start: Hashable, end: Hashable, observed: Optional[Sequence[Hashable]]=None):
+    def is_dconnected(
+        self,
+        start: Hashable,
+        end: Hashable,
+        observed: Optional[Sequence[Hashable]] = None,
+        include_latents=False,
+    ):
         """
         Returns True if there is an active trail (i.e. d-connection) between
         `start` and `end` node given that `observed` is observed.
@@ -659,7 +670,9 @@ class DAG(nx.DiGraph):
         else:
             return False
 
-    def minimal_dseparator(self, start: Hashable, end: Hashable, include_latents=False):
+    def minimal_dseparator(
+        self, start: Hashable, end: Hashable, include_latents=False
+    ) -> set[Hashable]:
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -720,7 +733,7 @@ class DAG(nx.DiGraph):
 
         return minimal_separator
 
-    def get_markov_blanket(self, node: Hashable):
+    def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
         Returns a markov blanket for a random variable. In the case
         of Bayesian Networks, the markov blanket is the set of
@@ -1098,7 +1111,13 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, node_names: Optional[list[Hashable]]=None, latents=False, seed: Optional[int]=None):
+    def get_random(
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names: Optional[list[Hashable]] = None,
+        latents=False,
+        seed: Optional[int] = None,
+    ) -> "DAG":
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1175,7 +1194,7 @@ class DAG(nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs):
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -1324,7 +1343,7 @@ class PDAG(nx.DiGraph):
             latents=self.latents,
         )
 
-    def to_dag(self):
+    def to_dag(self) -> "DAG":
         """
         Returns one possible DAG which is represented using the PDAG.
 
