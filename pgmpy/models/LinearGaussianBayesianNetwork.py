@@ -451,6 +451,26 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Return values
         return ([variable_order[i] for i in missing_indexes], mu_cond, cov_cond)
 
+    def query(self, variables=None, evidence=None):
+        if evidence is None:
+            raise ValueError("Evidence must be provided.")
+        
+        import pandas as pd
+        df = pd.DataFrame([evidence])
+
+        if variables is None:
+            variables = list(set(self.nodes()) - set(evidence.keys()))
+
+        df_missing = df.drop(columns=variables, errors="ignore")
+
+        predicted_vars, mu, cov = self.predict(df_missing)
+
+        return {
+            "variables": predicted_vars,
+            "mean": mu,
+            "covariance": cov
+        }
+
     def to_markov_model(self):
         """
         For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.

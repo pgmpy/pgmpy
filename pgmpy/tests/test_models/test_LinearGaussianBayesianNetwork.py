@@ -193,6 +193,29 @@ class TestLGBNMethods(unittest.TestCase):
         # self.assertEqual(cov.shape, (2, 2))
         # self.assertTrue(np.allclose(cov, expected_cov, atol=1e-1))
 
+    def test_query(self):
+        # Setup: create a simple LGBN with known structure
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        # Simulate 1 row of data
+        df = self.model.simulate(n_samples=1, seed=42)
+
+        # Drop the target variable (the one we want to query)
+        target_var = "x2"
+        evidence = df.drop(columns=[target_var]).iloc[0].to_dict()
+
+        # Call query()
+        result = self.model.query(variables=[target_var], evidence=evidence)
+
+        # Assertions
+        self.assertIn("variables", result)
+        self.assertIn("mean", result)
+        self.assertIn("covariance", result)
+
+        self.assertEqual(result["variables"], [target_var])
+        self.assertEqual(result["mean"].shape, (1, 1))
+        self.assertEqual(result["covariance"].shape, (1, 1))
+
     def test_get_random_cpds(self):
         model = get_example_model("alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
