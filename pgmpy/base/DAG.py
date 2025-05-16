@@ -867,21 +867,117 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    # TODO: Commented out till the method is implemented.
-    #     def to_pdag(self):
-    #         """
-    #         Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
-    #
-    #         Returns
-    #         -------
-    #         Partially oriented DAG: pgmpy.base.PDAG
-    #             An instance of pgmpy.base.PDAG.
-    #
-    #         Examples
-    #         --------
-    #
-    #         """
-    #         pass
+    def to_pdag(self):
+        """
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
+
+        Returns
+        -------
+        CPDAG: pgmpy.base.PDAG
+            An instance of pgmpy.base.PDAG representing the CPDAG of the given DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('A', 'B'), ('B', 'C'), ('C', 'D')])
+        >>> pdag = dag.to_pdag()
+        >>> pdag.directed_edges
+        {('A', 'B'), ('B', 'C'), ('C', 'D')}
+
+        References
+        ----------
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        """
+        # Perform a topological sort on the nodes
+        topo_order = list(nx.topological_sort(self))
+        node_order = {node: i for i, node in enumerate(topo_order)}
+
+        # Initialize edge ordering
+        i = 0
+        edge_order = {}
+        unordered_edges = set(self.edges())
+
+        # While there are unordered edges
+        while unordered_edges:
+            # Find lowest ordered node with unordered edges incident into it
+            nodes_with_unordered_edges = {edge[1] for edge in unordered_edges}
+            y = min(nodes_with_unordered_edges, key=lambda x: node_order[x])
+
+            # Find highest ordered node for which x->y is not ordered
+            unordered_edges_into_y = {edge for edge in unordered_edges if edge[1] == y}
+            x = max(
+                (edge[0] for edge in unordered_edges_into_y),
+                key=lambda x: node_order[x],
+            )
+
+            # Label x->y with order i
+            edge_order[(x, y)] = i
+            i += 1
+            unordered_edges.remove((x, y))
+
+        # Label every edge as "unknown"
+        edge_labels = {edge: "unknown" for edge in self.edges()}
+
+        # While there are edges labeled "unknown"
+        while any(label == "unknown" for label in edge_labels.values()):
+            # Let x -> y be the lowest ordered edge that is labeled "unknown"
+            unknown_edges = [
+                (edge, edge_order[edge])
+                for edge, label in edge_labels.items()
+                if label == "unknown"
+            ]
+            x, y = min(unknown_edges, key=lambda x: x[1])[0]
+
+            # Check compelled parents
+            compelled_parents = [
+                w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"
+            ]
+            for w in compelled_parents:
+                if not self.has_edge(w, y):
+                    # Label x -> y and every edge incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                    break
+                else:
+                    # Label w -> y with "compelled"
+                    edge_labels[(w, y)] = "compelled"
+
+            # Check for v-structures
+            if edge_labels.get((x, y)) != "compelled":
+                v_structure_exists = False
+                for z in self.get_parents(y):
+                    if z != x and not self.has_edge(z, x):
+                        v_structure_exists = True
+                        break
+
+                if v_structure_exists:
+                    # Label x -> y and all "unknown" edges incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                else:
+                    # Label x -> y and all "unknown" edges incident into y with "reversible"
+                    edge_labels[(x, y)] = "reversible"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "reversible"
+
+        # Create PDAG with directed and undirected edges
+        directed_edges = [
+            edge for edge, label in edge_labels.items() if label == "compelled"
+        ]
+        undirected_edges = [
+            edge for edge, label in edge_labels.items() if label == "reversible"
+        ]
+
+        return PDAG(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=self.latents,
+        )
 
     def do(self, nodes, inplace=False):
         """
@@ -1257,6 +1353,122 @@ class DAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         return dag
 
+    def edge_strength(self, data, edges=None):
+        """
+        Computes the strength of each edge in `edges`. The strength is bounded
+        between 0 and 1, with 1 signifying strong effect.
+
+        The edge strength is defined as the effect size measure of a
+        Conditional Independence test using the parents as the conditional set.
+        The strength quantifies the effect of edge[0] on edge[1] after
+        controlling for any other influence paths. We use a residualization-based
+        CI test[1] to compute the strengths.
+
+        Interpretation:
+        - The strength is the Pillai's Trace effect size of partial correlation.
+        - Measures the strength of linear relationship between the residuals.
+        - Works for any mixture of categorical and continuous variables.
+        - The value is bounded between 0 and 1:
+        - Strength close to 1 → strong dependence.
+        - Strength close to 0 → conditional independence.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Dataset to compute edge strengths on.
+
+        edges : tuple, list, or None (default: None)
+            - None: Compute for all DAG edges.
+            - Tuple (X, Y): Compute for edge X → Y.
+            - List of tuples: Compute for selected edges.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping edges to their strength values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+        >>> # Create a linear Gaussian Bayesian network
+        >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+        >>> # Create CPDs with specific beta values
+        >>> x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
+        >>> y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
+        >>> z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
+        >>> # Add CPDs to the model
+        >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
+        >>> # Simulate data from the model
+        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> # Create DAG and compute edge strengths
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> strengths = dag.edge_strength(data)
+        {('X', 'Y'): np.float64(0.14587166611282304),
+         ('Z', 'Y'): np.float64(0.25683780900125613)}
+
+        References
+        ----------
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        """
+
+        from pgmpy.estimators.CITests import pillai_trace
+
+        # If edges is None, compute for all edges in the DAG
+        if edges is None:
+            edges_to_compute = list(self.edges())
+        # If edges is a single edge tuple
+        elif isinstance(edges, tuple) and len(edges) == 2:
+            edges_to_compute = [edges]
+        # If edges is a list of edge tuples
+        elif isinstance(edges, list) and all(
+            isinstance(edge, tuple) and len(edge) == 2 for edge in edges
+        ):
+            edges_to_compute = edges
+        else:
+            raise ValueError(
+                "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
+            )
+
+        strengths = {}
+        skipped_edges = []
+
+        for edge in edges_to_compute:
+            x, y = edge
+
+            # Get parents of x and y using get_parents instead of predecessors
+            pa_Y = self.get_parents(y)
+
+            # Check if either x or y is a latent node
+            if (
+                x in self.latents
+                or y in self.latents
+                or any(parent in self.latents for parent in pa_Y)
+            ):
+                skipped_edges.append(edge)
+                continue
+
+            # Combine parents for conditioning set (excluding x and y themselves)
+            conditioning_set = set(pa_Y) - {x, y}
+
+            # Run CI test and get effect size
+            effect_size, _ = pillai_trace(
+                X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
+            )
+
+            # Store the edge strength
+            strengths[edge] = effect_size
+
+            # store the values in the graph as well
+            self.edges[edge]["strength"] = effect_size
+
+        if skipped_edges:
+            logger.warning(
+                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
+                "Use CausalInference class for advanced causal effect estimation."
+            )
+
+        return strengths
+
 
 class PDAG(nx.DiGraph):
     """
@@ -1582,10 +1794,17 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        Returns an instance of DAG.
+        pgmpy.base.DAG: Returns an instance of DAG.
 
         Examples
         --------
+        >>> pdag = PDAG(
+        ... directed_ebunch=[("A", "B"), ("C", "B")],
+        ... undirected_ebunch=[("C", "D"), ("D", "A")],
+        ... )
+        >>> dag = pdag.to_dag()
+        >>> print(dag.edges())
+        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
 
         References
         ----------

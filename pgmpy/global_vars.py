@@ -7,6 +7,27 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
 
 
+class DuplicateFilter(logging.Filter):
+    """
+    A logging filter that prevents duplicate consecutive log messages.
+    This filter only allows a message to pass through if it differs from the previous message.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.last_msg = None
+
+    def filter(self, record):
+        msg = record.getMessage()
+        is_new = msg != self.last_msg
+        if is_new:
+            self.last_msg = msg
+        return is_new
+
+
+logger.addFilter(DuplicateFilter())
+
+
 class Config:
     def __init__(self):
         """
