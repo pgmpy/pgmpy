@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from tqdm.auto import tqdm
 
-from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
@@ -230,6 +230,167 @@ class TestGetExampleModel(unittest.TestCase):
             self.assertTrue(hasattr(m, "nodes"))
             self.assertTrue(hasattr(m, "edges"))
             del m
+
+    def test_hybrid_model(self):
+        """Test loading of hybrid Bayesian network models."""
+        health = get_example_model("health")
+        sangiovese = get_example_model("sangiovese")
+        mehra = get_example_model("mehra")
+
+        hybrid_modes = [health, sangiovese, mehra]
+        for hybrid_model in hybrid_modes:
+            self.assertIsNotNone(hybrid_model)
+            self.assertTrue(hasattr(hybrid_model, "nodes"))
+            self.assertTrue(hasattr(hybrid_model, "edges"))
+            self.assertTrue(hasattr(hybrid_model, "get_cpds"))
+            self.assertIsInstance(hybrid_model, FunctionalBayesianNetwork)
+
+    def test_health_model_stimulate(self):
+        """Verify that simulated samples from the health model have expected properties."""
+        health = get_example_model("health")
+        samples = health.simulate(n_samples=200, seed=42)
+        self.assertTrue(set(samples["A"].unique()).issubset({"young", "adult", "old"}))
+        self.assertTrue(set(samples["C"].unique()).issubset({"none", "mild", "severe"}))
+        self.assertTrue(set(samples["H"].unique()).issubset({"none", "any"}))
+
+        self.assertTrue(samples["D"].min() >= -0.5)
+
+        young_samples = samples[samples["A"] == "young"]
+        adult_samples = samples[samples["A"] == "adult"]
+        old_samples = samples[samples["A"] == "old"]
+
+        if not young_samples.empty:
+            self.assertAlmostEqual(young_samples["O"].mean(), 60, delta=10)
+        if not adult_samples.empty:
+            self.assertAlmostEqual(adult_samples["O"].mean(), 180, delta=10)
+        if not old_samples.empty:
+            self.assertAlmostEqual(old_samples["O"].mean(), 360, delta=10)
+
+        i_correlation = samples["I"].corr(samples["T"])
+        o_correlation = samples["O"].corr(samples["T"])
+        self.assertGreater(i_correlation, 0.5)
+        self.assertGreater(o_correlation, 0.5)
+
+        a_counts = samples["A"].value_counts(normalize=True)
+        self.assertAlmostEqual(a_counts.get("young", 0), 0.35, delta=0.05)
+        self.assertAlmostEqual(a_counts.get("adult", 0), 0.45, delta=0.05)
+        self.assertAlmostEqual(a_counts.get("old", 0), 0.2, delta=0.05)
+
+    def test_sangiovese_model_stimulate(self):
+        """Verify that simulated samples from the sangiovese model have expected properties."""
+        sangiovese = get_example_model("sangiovese")
+        samples = sangiovese.simulate(n_samples=200, seed=42)
+        self.assertTrue(
+            set(samples["Treatment"].unique()).issubset(
+                {
+                    "T1a",
+                    "T1b",
+                    "T2a",
+                    "T2b",
+                    "T3a",
+                    "T3b",
+                    "T4a",
+                    "T4b",
+                    "T5a",
+                    "T5b",
+                    "T6a",
+                    "T6b",
+                    "T7a",
+                    "T7b",
+                    "T8a",
+                    "T8b",
+                }
+            )
+        )
+
+        treatment_counts = samples["Treatment"].value_counts(normalize=True)
+        self.assertAlmostEqual(treatment_counts.get("T1a", 0), 0.0592, delta=0.02)
+        self.assertAlmostEqual(treatment_counts.get("T5b", 0), 0.0653, delta=0.02)
+        self.assertAlmostEqual(treatment_counts.get("T8b", 0), 0.0637, delta=0.02)
+
+        sproutn_ndvi06_corr = samples["SproutN"].corr(samples["NDVI06"])
+        spad06_ndvi06_corr = samples["SPAD06"].corr(samples["NDVI06"])
+
+        self.assertGreater(sproutn_ndvi06_corr, 0)
+        self.assertGreater(spad06_ndvi06_corr, 0)
+
+        bunchn_anthoc_corr = samples["BunchN"].corr(samples["Anthoc"])
+        woodw_anthoc_corr = samples["WoodW"].corr(samples["Anthoc"])
+        ndvi08_anthoc_corr = samples["NDVI08"].corr(samples["Anthoc"])
+
+        self.assertLess(bunchn_anthoc_corr, 0)
+        self.assertLess(woodw_anthoc_corr, 0)
+        self.assertLess(ndvi08_anthoc_corr, 0)
+
+        anthoc_polyph_corr = samples["Anthoc"].corr(samples["Polyph"])
+        brix_polyph_corr = samples["Brix"].corr(samples["Polyph"])
+
+        self.assertGreater(anthoc_polyph_corr, 0)
+        self.assertGreater(brix_polyph_corr, 0)
+
+    def test_mehra_model_simulation(self):
+        """Verify that simulated samples from the mehra model have expected properties."""
+
+        mehra = get_example_model("mehra")
+        samples = mehra.simulate(n_samples=200, seed=42)
+        self.assertTrue(
+            set(samples["Region"].unique()).issubset(
+                set(
+                    [
+                        "East Midlands",
+                        "East of England",
+                        "Greater London Authority",
+                        "North East",
+                        "North West",
+                        "South East",
+                        "South West",
+                        "West Midlands",
+                        "Yorkshire and The Humber",
+                    ]
+                )
+            )
+        )
+
+        self.assertTrue(
+            set(samples["Type"].unique()).issubset(
+                set(
+                    [
+                        "Background Rural",
+                        "Background Suburban",
+                        "Background Urban",
+                        "Industrial Suburban",
+                        "Industrial Urban",
+                        "Traffic Urban",
+                    ]
+                )
+            )
+        )
+
+        region_counts = samples["Region"].value_counts(normalize=True)
+        type_counts = samples["Type"].value_counts(normalize=True)
+
+        self.assertAlmostEqual(
+            region_counts.get("Greater London Authority", 0), 0.2161, delta=0.03
+        )
+        self.assertAlmostEqual(type_counts.get("Background Urban", 0), 0.5, delta=0.05)
+        self.assertAlmostEqual(type_counts.get("Traffic Urban", 0), 0.3025, delta=0.04)
+
+        self.assertAlmostEqual(samples["Latitude"].mean(), 52.4435, delta=2.0)
+        self.assertAlmostEqual(samples["Longitude"].mean(), -1.1804, delta=2.0)
+
+        urban_traffic = samples[samples["Type"] == "Traffic Urban"]
+        rural_background = samples[samples["Type"] == "Background Rural"]
+
+        if not urban_traffic.empty and not rural_background.empty:
+            self.assertGreater(
+                urban_traffic["no2"].mean(), rural_background["no2"].mean()
+            )
+
+        lat_t2m_corr = samples["Latitude"].corr(samples["t2m"])
+        long_ws_corr = samples["Longitude"].corr(samples["ws"])
+
+        self.assertIsNotNone(lat_t2m_corr)
+        self.assertIsNotNone(long_ws_corr)
 
     def test_invalid_model_name(self):
         """Test handling of invalid model names."""

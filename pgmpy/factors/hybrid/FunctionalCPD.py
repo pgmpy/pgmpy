@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
 import pyro
+import torch
 
+from pgmpy import config
 from pgmpy.factors.base import BaseFactor
+from pgmpy.utils import StateNameMixin, compat_fns
 
 
-class FunctionalCPD(BaseFactor):
+class FunctionalCPD(BaseFactor, StateNameMixin):
     """
     Defines a Functional CPD.
 
@@ -42,13 +45,83 @@ class FunctionalCPD(BaseFactor):
     ['x1', 'x2']
     """
 
-    def __init__(self, variable, fn, parents=[]):
+    def __init__(self, variable, fn, parents=[], cardinality=None, state_names=[]):
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")
         self.fn = fn
         self.parents = parents if parents else []
         self.variables = [variable] + self.parents
+
+        if not isinstance(state_names, list):
+            raise ValueError(
+                f"state_names must be of type list. Got {type(state_names)}."
+            )
+
+        self.cardinality = None
+        if len(state_names) > 0:
+            if cardinality is None and len(state_names) > 0:
+                self.cardinality = np.array(len(state_names), dtype=int)
+            else:
+                if len(state_names) != cardinality:
+                    raise ValueError(
+                        f"""Length of state_names and cardinality should be equal.
+                    Got state_names length {len(state_names)} for cardinality {cardinality}.
+                    """
+                    )
+                self.cardinality = np.array(cardinality, dtype=int)
+
+            state_names = {variable: state_names}
+            super(FunctionalCPD, self).store_state_names(
+                variable, cardinality, state_names
+            )
+
+    def assignment(self, index):
+        """
+        Returns a list of assignments (variable and state) for the corresponding index.
+
+        Parameters
+        ----------
+        index: list, array-like
+            List of indices whose assignment is to be computed
+
+        Returns
+        -------
+        Full assignments: list
+            Returns a list of full assignments of all the variables of the factor.
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> cpd = FunctionalCPD(
+        ...     variable="Region",
+        ...     fn=lambda _: dist.Categorical(probs=torch.Tensor([0.25, 0.25, 0.5])),
+        ...     parents=None,
+        ...     cardinality=3,
+        ...     state_names=['A', 'B', 'C'])
+        >>> cpd.assignment([0, 1])
+        ['A', 'B']
+        """
+        if config.get_backend() == "numpy":
+            index = np.array(index)
+        else:
+            if (len(index) == 1) and (isinstance(index[0], torch.Tensor)):
+                index = index[0][None]
+            else:
+                index = torch.tensor(index, dtype=torch.int, device=config.get_device())
+
+        max_possible_index = np.prod(self.cardinality) - 1
+
+        if not all(i <= max_possible_index for i in index):
+            raise IndexError("Index greater than max possible index")
+
+        return [
+            self.get_state_names(
+                self.variable, idx if config.get_backend() == "numpy" else idx.item()
+            )
+            for idx in index
+        ]
 
     def sample(self, n_samples=100, parent_sample=None):
         """
@@ -110,7 +183,14 @@ class FunctionalCPD(BaseFactor):
                     pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
                 )
 
-        sampled_values = np.array(sampled_values)
+        array = []
+        if self.cardinality is not None:
+            for i, value in enumerate(sampled_values):
+                assignment = self.assignment([value])
+                array.append(assignment)
+            sampled_values = np.array(array)
+        else:
+            sampled_values = np.array(sampled_values)
 
         return sampled_values
 

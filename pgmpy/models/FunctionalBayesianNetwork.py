@@ -74,7 +74,6 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 raise ValueError(
                     "Only FunctionalCPD can be added to Functional Bayesian Network."
                 )
-
             if set(cpd.variables) - set(cpd.variables).intersection(set(self.nodes())):
                 raise ValueError(f"CPD defined on variable not in the model: {cpd}")
 
