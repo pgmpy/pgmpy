@@ -467,124 +467,124 @@ def SHD(true_model, est_model):
     return int(shd)
 
 
-def self_compatibility_score(
-    estimator_class,
-    data: pd.DataFrame,
-    num_subsets: int = 50,
-    subset_fraction: float = 0.8,
-    random_state: int = None,
-    **estimator_kwargs,
-) -> float:
+def latent_admg(dag: DiscreteBayesianNetwork, observed: list) -> nx.MultiDiGraph:
     """
-    Self-compatibility via variable subsampling (Faller et al., AISTATS 2024).
+    Compute the latent‐projection ADMG L(G, S) of a DAG G onto a subset S ⊂ V.
 
-    Estimate the self-compatibility score of a causal discovery algorithm
-    under variable subsampling.
-
-    This metric quantifies the stability of a causal structure learning algorithm
-    (e.g., PC or HillClimbSearch) by measuring how consistently it recovers
-    the same structural dependencies when applied to different random subsets
-    of the observed variables. Unlike traditional stability methods that
-    subsample rows (i.e., datapoints), this score evaluates how graph structures
-    vary when only a subset of the variables (columns) is retained for learning.
-
-    It is particularly useful in scenarios where no ground-truth causal graph is
-    available, offering a model-free way to evaluate the internal consistency of
-    an estimator. The score is computed as the average pairwise agreement
-    (based on overlapping variables) between the adjacency matrices of the
-    learned graphs across multiple such subsets.
-
-    Introduced in:
-    Faller et al. (2024), *Self-compatibility: Evaluating causal discovery without ground truth*, AISTATS.
-
+    Definition 5 (latent ADMG) (Faller et al., AISTATS 2024):
+    Let G be an ADMG with variables V and S ⊂ V . The latent ADMG L(G, S)
+    is the ADMG that contains all nodes in S,
+    all edges between nodes in S and additionally
+      1) a directed edge between X, Y ∈ S if there is a directed path from X to Y where all intermediate
+         nodes are in V \ S
+      2) a bidirected edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ S and there are arrowheads towards
+         X and Y on the incident edges on the path.
 
     Parameters
     ----------
-    estimator_class : class
-        A pgmpy StructureEstimator (e.g. PC, HillClimbSearch).
-    data : pd.DataFrame, shape (n_samples, n_vars)
-        Observed dataset.
-    num_subsets : int, default=50
-        Number of variable‐subset runs (B).
-    subset_fraction : float in (0,1], default=0.8
-        Fraction α of all variables to include in each subset.
-    random_state : int or None, default=None
-        Random seed for reproducibility.
-    **estimator_kwargs
-        Extra keyword arguments forwarded to `estimator_class(...).estimate()`.
+    dag : DiscreteBayesianNetwork
+        The full DAG G on variables V (may include latent nodes).
+    observed : list of hashable
+        The subset S of variables to keep (observed nodes).
 
     Returns
     -------
-    float
-        Average pairwise adjacency‐agreement over overlapping variable subsets,
-        in [0,1].
+    nx.MultiDiGraph
+        A NetworkX MultiDiGraph over nodes in S where:
+        - Each `kind="directed"` arc (u→v) represents condition (1).
+        - Each pair of opposite arcs with `kind="bidirected"` (u→v and v→u)
+          represents a bidirected edge u↔v per condition (2).
 
-    Examples
-    --------
-    >>> from pgmpy.metrics import self_compatibility_score
-    >>> from pgmpy.estimators import PC
+    Example
+    -------
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.factors.discrete import TabularCPD
-    >>> from pgmpy.sampling import BayesianModelSampling
-    >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-    >>> cpd_a = TabularCPD("A", 2, [[0.5], [0.5]])
-    >>> cpd_b = TabularCPD("B", 2, [[0.5], [0.5]])
-    >>> cpd_c = TabularCPD("C", 2, [[0.9, 0.2, 0.3, 0.1],
-    ...                              [0.1, 0.8, 0.7, 0.9]],
-    ...                    evidence=["A", "B"], evidence_card=[2, 2])
-    >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
-    >>> sampler = BayesianModelSampling(model)
-    >>> df = sampler.forward_sample(size=1000)
-    >>> score = self_compatibility_score(PC, df,
-    ...                                  num_subsets=5,
-    ...                                  subset_fraction=0.7,
-    ...                                  random_state=42,
-    ...                                  significance_level=0.05)
-    >>> isinstance(score, float)
-    True
+    >>> from pgmpy.metrics import latent_admg
+    >>> # Full DAG: A→H→B (latent H), observed S={A,B}
+    >>> full = DiscreteBayesianNetwork([("A","H"), ("H","B")])
+    >>> admg = latent_admg(full, ["A","B"])
+    >>> sorted(admg.edges(data=True))
+    [('A', 'B', {'kind': 'directed'})]
+
+    >>> # Collider: A→H←B (latent H), observed S={A,B}
+    >>> full = DiscreteBayesianNetwork([("A","H"), ("B","H")])
+    >>> admg = latent_admg(full, ["A","B"])
+    >>> sorted(admg.edges(data=True))
+    [('A', 'B', {'kind': 'bidirected'}), ('B', 'A', {'kind': 'bidirected'})]
 
     References
     ----------
-    [1] Faller, P. M., et al. (2024). *Self-compatibility: Evaluating causal
-        discovery without ground truth.* In AISTATS.
-        arXiv:2307.09552 :contentReference[oaicite:2]{index=2}
+    Definition 5, Faller, P. M., et al. (2024).
+    “Self-compatibility: Evaluating Causal Discovery without Ground Truth.”
+    In AISTATS. arXiv:2307.09552
     """
-    rng = np.random.RandomState(random_state)
-    variables = list(data.columns)
-    p = len(variables)
-    k = max(2, int(np.floor(subset_fraction * p)))
+    G = dag.to_directed()
+    admg = nx.MultiDiGraph()
+    admg.add_nodes_from(observed)
 
-    subsets = []
-    graphs = []
-    for _ in range(num_subsets):
-        # Sample random subset of variables
-        S = rng.choice(variables, size=k, replace=False).tolist()
-        D_sub = data[S]
+    def is_noncollider_path(path):
+        # helper function that checks whether a path has no internal colliders
+        for a, b, c in zip(path, path[1:], path[2:]):
+            if G.has_edge(a, b) and G.has_edge(c, b):
+                return False
+        return True
 
-        # Instantiate and learn
-        try:
-            learner = estimator_class(D_sub)
-        except Exception as e:
-            raise AttributeError(
-                f"Cannot instantiate {estimator_class.__name__}: {e}"
-            ) from e
-        if not hasattr(learner, "estimate"):
-            raise AttributeError(f"{estimator_class.__name__}.estimate not found.")
+    directed_edges = set()
+    bidirected_edges = set()
+    V = set(G.nodes())
+    latent = V - set(observed)
 
-        # Pass through estimator_kwargs to .estimate()
-        G = learner.estimate(**estimator_kwargs)
+    # 1) Directed edges via latent-only intermediate nodes
+    for u, v in combinations(observed, 2):
+        # u -> v?
+        for path in nx.all_simple_paths(G, source=u, target=v):
+            if all(n in latent for n in path[1:-1]) and all(
+                G.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1)
+            ):
+                directed_edges.add((u, v))
+                break
+        # v -> u?
+        for path in nx.all_simple_paths(G, source=v, target=u):
+            if all(n in latent for n in path[1:-1]) and all(
+                G.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1)
+            ):
+                directed_edges.add((v, u))
+                break
 
-        subsets.append(S)
-        graphs.append(G)
+    # 2) Bidirected edges via latent colliders
+    for u, v in combinations(observed, 2):
+        found = False
+        for c in latent:
+            # Find all paths with no collider among latent intermediates
+            # valid_u: all simple paths from u to the latent node c that
+            #          1) follow directed edges in G (each step is u→…→c)
+            #          2) have no internal collider nodes (checked by is_noncollider_path)
+            valid_u = [
+                p
+                for p in nx.all_simple_paths(G, source=u, target=c)
+                if all(G.has_edge(p[i], p[i + 1]) for i in range(len(p) - 1))
+                and is_noncollider_path(p)
+            ]
+            # Same for v → … → c
+            valid_v = [
+                p
+                for p in nx.all_simple_paths(G, source=v, target=c)
+                if all(G.has_edge(p[i], p[i + 1]) for i in range(len(p) - 1))
+                and is_noncollider_path(p)
+            ]
+            # If both u and v point to the same latent c via valid paths,
+            # then u↔v is added (both directions to represent bidirected)
+            if valid_u and valid_v:
+                found = True
+                break
+        if found:
+            bidirected_edges.add((u, v))
+            bidirected_edges.add((v, u))
 
-    # Compute pairwise compatibility over overlaps
-    sims = []
-    for (i, Gi), (j, Gj) in combinations(enumerate(graphs), 2):
-        common = list(set(subsets[i]).intersection(subsets[j]))
-        if len(common) < 2:
-            continue
-        A_i = np.array([[int(Gi.has_edge(u, v)) for v in common] for u in common])
-        A_j = np.array([[int(Gj.has_edge(u, v)) for v in common] for u in common])
-        sims.append((A_i == A_j).mean())
+    # Combine and return as an ADMG over observed nodes
+    for u, v in directed_edges:
+        admg.add_edge(u, v, kind="directed")
 
-    return float(np.mean(sims)) if sims else 0.0
+    for u, v in bidirected_edges:
+        admg.add_edge(u, v, kind="bidirected")
+
+    return admg

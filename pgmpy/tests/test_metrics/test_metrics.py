@@ -14,8 +14,8 @@ from pgmpy.metrics import (
     correlation_score,
     fisher_c,
     implied_cis,
+    latent_admg,
     log_likelihood_score,
-    self_compatibility_score,
     structure_score,
 )
 from pgmpy.models import DiscreteBayesianNetwork
@@ -218,156 +218,66 @@ class TestStructuralHammingDistance(unittest.TestCase):
             SHD(self.dag_4, self.dag_5)
 
 
-class TestStructuralHammingDistance(unittest.TestCase):
+class TestLatentADMG(unittest.TestCase):
+    """Unit tests for the `latent_admg` function"""
+
     def setUp(self):
-        self.dag_1 = DiscreteBayesianNetwork([(1, 2)])
-        self.dag_2 = DiscreteBayesianNetwork([(2, 1)])
+        """Prepare three canonical full DAGs for reuse in tests."""
+        # 1) Simple chain A → H → B
+        self.dag_chain = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
 
-        self.dag_3 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
-        self.dag_4 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+        # 2) Simple collider A → H ← B
+        self.dag_collider = DiscreteBayesianNetwork([("A", "H"), ("B", "H")])
 
-        self.dag_5 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
-
-        self.large_dag_1 = DiscreteBayesianNetwork(
-            [(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)]
-        )
-        self.large_dag_2 = DiscreteBayesianNetwork(
-            [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
-        )
-
-    def test_shd(self):
-        self.assertEqual(SHD(self.dag_1, self.dag_2), 1)
-
-    def test_shd(self):
-        self.assertEqual(SHD(self.dag_3, self.dag_4), 2)
-
-    def test_shd(self):
-        self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
-
-    def test_shd_unequal_graphs(self):
-        with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
-            SHD(self.dag_4, self.dag_5)
-
-
-class TestSelfCompatibility(unittest.TestCase):
-    """Unit tests for the self_compatibility_score metric."""
-
-    def setUp(cls):
-        """Prepare a clean chain model and both large and noisy datasets."""
-        model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
-        model.add_cpds(
-            TabularCPD("A", 2, [[0.6], [0.4]]),
-            TabularCPD(
-                "B", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["A"], evidence_card=[2]
-            ),
-            TabularCPD(
-                "C", 2, [[0.9, 0.3], [0.1, 0.7]], evidence=["B"], evidence_card=[2]
-            ),
-        )
-        sampler = BayesianModelSampling(model)
-        cls.large_data = sampler.forward_sample(size=5000, seed=0)
-        noisy = cls.large_data.copy()
-        mask = np.random.RandomState(1).rand(*noisy.shape) < 0.05
-        noisy_vals = noisy.values.astype(int)
-        noisy_vals[mask] = 1 - noisy_vals[mask]
-        cls.noisy_data = pd.DataFrame(noisy_vals, columns=noisy.columns)
-
-    def test_full_subsampling_perfect_score(self):
-        """
-        When subset_fraction=1.0, all variables are used each run.
-        On clean data, learned graphs are identical, so score == 1.0.
-        """
-        score = self_compatibility_score(
-            PC, self.large_data, num_subsets=10, subset_fraction=1.0, random_state=42
-        )
-        self.assertAlmostEqual(score, 1.0, places=5)
-
-    def test_partial_subsampling_high_score(self):
-        """
-        With subset_fraction=2/3 on three variables, subgraphs are size 2.
-        On clean data, PC recovers each subgraph consistently → score ≥ 0.95.
-        """
-        score = self_compatibility_score(
-            PC, self.large_data, num_subsets=30, subset_fraction=2 / 3, random_state=123
-        )
-        self.assertGreaterEqual(score, 0.95)
-        self.assertLessEqual(score, 1.0)
-
-    def test_partial_subsampling_noisy_lower_score(self):
-        """
-        Noisy data should reduce consistency on partial subsampling:
-        score remains > 0 but < 1.
-        """
-        score = self_compatibility_score(
-            PC, self.noisy_data, num_subsets=30, subset_fraction=2 / 3, random_state=7
-        )
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
-
-    def test_estimator_kwargs_passed(self):
-        """
-        Ensure that arbitrary estimator_kwargs (e.g. significance_level)
-        are forwarded into the learner’s .estimate() call.
-        """
-
-        # Stub that records whatever kwargs are passed to .estimate()
-        class StubEstimator:
-            def __init__(self, df):
-                self.df = df
-                self.kwargs_seen = {}
-
-            def estimate(self, **kwargs):
-                self.kwargs_seen = kwargs
-
-                # Return a minimal graph-like object
-                class G:
-                    def nodes(self):
-                        return []
-
-                    def has_edge(self, u, v):
-                        return False
-
-                return G()
-
-        # Always return our single stub instance
-        stub = StubEstimator(self.large_data)
-
-        class StubFactory:
-            def __new__(cls, df):
-                return stub
-
-        # Call the compatibility score with a custom kwarg
-        _ = self_compatibility_score(
-            StubFactory,
-            self.large_data,
-            num_subsets=3,
-            subset_fraction=1.0,
-            random_state=0,
-            myparam=123,
+        # 3) Mixed example:
+        #    A → H1 → B       (chain)
+        #    A → C ← H2 ← B   (collider into C)
+        self.dag_mixed = DiscreteBayesianNetwork(
+            [
+                ("A", "H1"),
+                ("H1", "B"),
+                ("A", "C"),
+                ("H2", "C"),
+                ("B", "H2"),
+            ]
         )
 
-        # Verify it arrived intact
-        self.assertIn("myparam", stub.kwargs_seen)
-        self.assertEqual(stub.kwargs_seen["myparam"], 123)
-
-    def test_invalid_estimator_raises(self):
+    def test_latent_chain_projects_to_directed(self):
         """
-        Providing an invalid estimator class (non-class, missing .estimate,
-        or bad constructor) must raise AttributeError.
+        A → H → B projects to A → B when H is hidden.
         """
-        with self.assertRaises(AttributeError):
-            self_compatibility_score("notaclass", self.large_data)
+        admg = latent_admg(self.dag_chain, ["A", "B"])
+        self.assertEqual(set(admg.edges()), {("A", "B")})
 
-        class BadEstimator:
-            def __init__(self, df):
-                pass
+    def test_latent_collider_projects_to_bidirected(self):
+        """
+        A → H ← B projects to A↔B when H is hidden (bidirected edge).
+        """
+        admg = latent_admg(self.dag_collider, ["A", "B"])
+        self.assertEqual(set(admg.edges()), {("A", "B"), ("B", "A")})
 
-        with self.assertRaises(AttributeError):
-            self_compatibility_score(BadEstimator, self.large_data)
+    def test_latent_mixed_directed_and_bidirected(self):
+        """
+        Mixed DAG projects to:
+        - A→B (latent chain via H1)
+        - A↔B (latent collider via H2)
+        - A→C (original)
+        - B→C (latent chain via H2)
+        - No edge C→B, C→A, B→A beyond the bidirected link
+        """
+        admg = latent_admg(self.dag_mixed, ["A", "B", "C"])
+        edges = set(admg.edges())
 
-        class BadInit:
-            def __init__(self, df):
-                raise RuntimeError
+        # Directed A→B and latent chain B→C
+        self.assertIn(("A", "B"), edges)
+        self.assertIn(("B", "C"), edges)
 
-        with self.assertRaises(AttributeError):
-            self_compatibility_score(BadInit, self.large_data)
+        # Bidirected A↔B
+        self.assertIn(("B", "A"), edges)
+
+        # Original A→C
+        self.assertIn(("A", "C"), edges)
+
+        # Should not have reverse-only edges
+        self.assertNotIn(("C", "B"), edges)
+        self.assertNotIn(("C", "A"), edges)
