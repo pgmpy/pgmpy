@@ -235,8 +235,9 @@ class TestPCMCIMCIPhase(unittest.TestCase):
         )
 
         # The refined DAG should show X->Y->Z and also X->Z
-        # self.assertTrue(refined_dag.has_edge(("X", 1), ("Y", 0)))
-        # self.assertTrue(refined_dag.has_edge(("Y", 1), ("Z", 0)))
+        self.assertTrue((refined_dag.has_edge(("X", 1), ("Y", 0))).any())
+        self.assertTrue((refined_dag.has_edge(("Y", 1), ("Z", 0))).any())
+        self.assertTrue((refined_dag.has_edge(("X", 2), ("Z", 0))).any())
         # self.assertTrue(refined_dag.has_edge(("X", 2), ("Z", 0)))
 
     def test_run_single_mci_test(self):
