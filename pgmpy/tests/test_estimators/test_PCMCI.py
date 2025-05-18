@@ -235,10 +235,9 @@ class TestPCMCIMCIPhase(unittest.TestCase):
         )
 
         # The refined DAG should show X->Y->Z and also X->Z
-        self.assertTrue((refined_dag.has_edge(("X", 1), ("Y", 0))).any())
-        self.assertTrue((refined_dag.has_edge(("Y", 1), ("Z", 0))).any())
-        self.assertTrue((refined_dag.has_edge(("X", 2), ("Z", 0))).any())
-        # self.assertTrue(refined_dag.has_edge(("X", 2), ("Z", 0)))
+        self.assertTrue(bool(refined_dag.has_edge(("X", 1), ("Y", 0))))
+        self.assertTrue(bool(refined_dag.has_edge(("Y", 1), ("Z", 0))))
+        self.assertTrue(bool(refined_dag.has_edge(("X", 2), ("Z", 0))))
 
     def test_run_single_mci_test(self):
         """Test a single MCI test directly."""
@@ -269,7 +268,10 @@ class TestPCMCIMCIPhase(unittest.TestCase):
             max_cond_vars=3,
         )
 
-        self.assertFalse(should_remove)  # X->Y should remain
+        if isinstance(should_remove, np.ndarray):
+            should_remove = bool(should_remove.any())
+
+        self.assertFalse(should_remove)
 
         # Test an edge that might be removed (X->Z) might be found redundant
         # Add this edge first
@@ -284,6 +286,9 @@ class TestPCMCIMCIPhase(unittest.TestCase):
             significance_level=0.05,
             max_cond_vars=3,
         )
+
+        if isinstance(should_remove, np.ndarray):
+            should_remove = bool(should_remove.any())
 
         # Not testing the result since it's data dependent,
         # but testing the function runs correctly
