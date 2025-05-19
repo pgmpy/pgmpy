@@ -292,7 +292,7 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
-        if not isinstance(variables, (list, tuple, set)):
+        if variables is not None and not isinstance(variables, (list, tuple, set)):
             raise TypeError(
                 "variables must be an iterable of variable names (list, tuple, or set"
             )
