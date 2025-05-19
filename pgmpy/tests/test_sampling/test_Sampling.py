@@ -145,6 +145,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         with self.assertRaises(TypeError):
             BayesianModelSampling(self.markov_model)
 
+    def test_sample_raises_typeerror_for_invalid_variables(self):
+        with self.assertRaises(TypeError):
+            self.sampling_inference.sample(variables="A")  # Should be list, not str
+        with self.assertRaises(TypeError):
+            self.sampling_inference.sample(variables=5)  # Should be iterable, not int
+
     def test_pre_compute_reduce_maps(self):
         base_infer = BayesianModelInference(self.bayesian_model)
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
