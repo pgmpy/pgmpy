@@ -316,6 +316,8 @@ class BayesianModelSampling(BayesianModelInference):
         """
         if seed is not None:
             np.random.seed(seed)
+        if evidence is not None and not isinstance(evidence, (list, tuple)):
+            raise TypeError("evidence must be a list or tuple of (var, state) pairs")
 
         # Convert evidence state names to number
         evidence = [
