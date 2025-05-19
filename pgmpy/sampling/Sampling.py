@@ -1,5 +1,6 @@
 import itertools
 from collections import namedtuple
+from collections.abc import Iterable
 
 import networkx as nx
 import numpy as np
@@ -89,10 +90,8 @@ class BayesianModelSampling(BayesianModelInference):
         if variables is None:
             variables = list(self.model.nodes())
 
-        if not isinstance(variables, (list, tuple, set)):
-            raise TypeError(
-                "variables must be an iterable of variable names (list, tuple, or set)"
-            )
+        if not isinstance(variables, Iterable):
+            raise TypeError("variables must be an iterable of variable names")
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
         if show_progress and config.SHOW_PROGRESS:
@@ -324,9 +323,6 @@ class BayesianModelSampling(BayesianModelInference):
         """
         if seed is not None:
             np.random.seed(seed)
-        if evidence is not None and not isinstance(evidence, (list, tuple)):
-            raise TypeError("evidence must be a list or tuple of (var, state) pairs")
-
         # Convert evidence state names to number
         evidence = [
             (var, self.model.get_cpds(var).get_state_no(var, state))
