@@ -232,6 +232,23 @@ class TestVariableElimination(unittest.TestCase):
                 elimination_order=order,
             )
 
+    def test_query_raises_typeerror_when_variables_is_string(self):
+        # Should raise TypeError if a string is passed instead of a list/tuple/set
+        self.assertRaises(
+            TypeError,
+            self.bayesian_inference.query,
+            "J",
+        )
+
+    def test_query_raises_typeerror_when_evidence_is_not_dict(self):
+        # Should raise TypeError if evidence is passed as a non-dict
+        self.assertRaises(
+            TypeError,
+            self.bayesian_inference.query,
+            ["J"],  # Correct variables
+            "R",  # Incorrect usage: evidence should be a dict like {"R": 0}
+        )
+
     def test_max_marginal(self):
         np_test.assert_almost_equal(
             self.bayesian_inference.max_marginal(), 0.1659, decimal=4
