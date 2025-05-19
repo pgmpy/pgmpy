@@ -294,7 +294,7 @@ class VariableElimination(Inference):
         evidence = evidence if evidence is not None else dict()
         if variables is not None and not isinstance(variables, (list, tuple, set)):
             raise TypeError(
-                "variables must be an iterable of variable names (list, tuple, or set"
+                "variables must be an iterable of variable names (list, tuple, or set)"
             )
         if not isinstance(evidence, dict):
             raise TypeError("evidence must be a dictionary of {var: state}.")

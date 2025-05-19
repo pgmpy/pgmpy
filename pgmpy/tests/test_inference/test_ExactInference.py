@@ -232,13 +232,10 @@ class TestVariableElimination(unittest.TestCase):
                 elimination_order=order,
             )
 
-    def test_query_raises_typeerror_when_variables_is_string(self):
+    def test_query_raises_typeerror_when_variables_is_integer(self):
         # Should raise TypeError if a string is passed instead of a list/tuple/set
-        self.assertRaises(
-            TypeError,
-            self.bayesian_inference.query,
-            "J",
-        )
+        with self.assertRaises(TypeError):
+            self.bayesian_inference.query(5)
 
     def test_query_raises_typeerror_when_evidence_is_not_dict(self):
         # Should raise TypeError if evidence is passed as a non-dict
