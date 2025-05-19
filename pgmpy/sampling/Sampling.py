@@ -37,6 +37,7 @@ class BayesianModelSampling(BayesianModelInference):
         seed=None,
         show_progress=True,
         partial_samples=None,
+        variables=None,
         n_jobs=-1,
     ):
         """
@@ -85,6 +86,13 @@ class BayesianModelSampling(BayesianModelInference):
         rec.array([(0, 0, 1), (1, 0, 2)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
+        if variables is None:
+            variables = list(self.model.nodes())
+
+        if not isinstance(variables, (list, tuple, set)):
+            raise TypeError(
+                "variables must be an iterable of variable names (list, tuple, or set)"
+            )
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
         if show_progress and config.SHOW_PROGRESS:

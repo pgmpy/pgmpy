@@ -120,6 +120,8 @@ class BayesianModelInference(Inference):
             dictionary with mapping of probability array-index to probability array.
         """
         variable_cpd = self.model.get_cpds(variable)
+        if evidence is not None and not isinstance(evidence, (list, tuple, set)):
+            raise TypeError("evidence must be a list, tuple, or set of variable names")
         if evidence is None:
             evidence = [
                 var
