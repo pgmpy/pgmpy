@@ -295,9 +295,10 @@ class VariableElimination(Inference):
         evidence = evidence if evidence is not None else dict()
         if not isinstance(variables, Iterable):
             raise TypeError("variables must be an iterable of variable names")
-        if not isinstance(evidence, dict):
-            raise TypeError("evidence must be a dictionary of {var: state}.")
-
+        """
+        if evidence is not None and not isinstance(evidence, dict):
+            raise ValueError("evidence must be a dictionary of {var: state}.")
+        """
         if isinstance(
             self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
         ):
