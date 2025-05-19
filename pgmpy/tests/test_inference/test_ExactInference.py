@@ -237,10 +237,10 @@ class TestVariableElimination(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.bayesian_inference.query(5)
 
-    def test_query_raises_typeerror_when_evidence_is_not_dict(self):
+    def test_query_raises_valueerror_when_evidence_is_not_dict(self):
         # Should raise TypeError if evidence is passed as a non-dict
         self.assertRaises(
-            TypeError,
+            ValueError,
             self.bayesian_inference.query,
             ["J"],  # Correct variables
             "R",  # Incorrect usage: evidence should be a dict like {"R": 0}
