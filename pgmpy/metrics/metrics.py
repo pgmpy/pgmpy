@@ -465,3 +465,33 @@ def SHD(true_model, est_model):
     shd = shd + (np.sum((d + d.T) > 0) / 2)
 
     return int(shd)
+
+
+def mutual_info_with_percents(infer, node):
+    nodes = list(infer.model.nodes())
+
+    mis = []
+    mi_percentages = []
+    for other_node in nodes:
+        mis.append(mi(infer, node, other_node))
+        mi_percentages.append(mi(infer, node, other_node, True))
+
+    return pd.DataFrame(
+        {"MutualInfo": mis, "MIPercentChange": mi_percentages}, index=nodes
+    )
+
+
+def mi(infer, node1, node2, percent=False):
+    if node1 == node2:
+        return np.nan
+    proby1 = infer.query([node1])
+    proby2 = infer.query([node2])
+    proby = infer.query([node1, node2], joint=True)
+    probs = np.outer(proby1.values, proby2.values)
+    cond_entropy = np.sum(proby.values * np.log(probs))
+    entropy = np.sum(proby.values * np.log(proby.values))
+
+    if percent:
+        return (1 - cond_entropy / entropy) * -100
+
+    return entropy - cond_entropy

@@ -2,6 +2,7 @@ import unittest
 
 import networkx as nx
 import numpy as np
+from numpy import testing as np_test
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
@@ -14,9 +15,14 @@ from pgmpy.metrics import (
     implied_cis,
     log_likelihood_score,
     structure_score,
+    mi,
+    mutual_info_with_percents,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
+
+from pgmpy.inference.CausalInference import CausalInference
+from pgmpy.inference import VariableElimination
 
 
 class TestCorrelationScore(unittest.TestCase):
@@ -212,3 +218,26 @@ class TestStructuralHammingDistance(unittest.TestCase):
     def test_shd_unequal_graphs(self):
         with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
             SHD(self.dag_4, self.dag_5)
+
+
+class TestMutualInformation(unittest.TestCase):
+    def setUp(self):
+        self.model = get_example_model("alarm")
+        self.causal_inference = CausalInference(self.model)
+        self.var_elim = VariableElimination(self.model)
+
+    def test_mi(self):
+        expected_mi = np.float64(0.24527944)
+        self.assertAlmostEqual(mi(self.causal_inference, "CO", "HR"), expected_mi)
+        self.assertAlmostEqual(mi(self.var_elim, "CO", "HR"), expected_mi)
+
+    def test_mi_percentchange(self):
+        expected_mi = np.float64(20.749906985)
+        self.assertAlmostEqual(mi(self.causal_inference, "CO", "HR", True), expected_mi)
+        self.assertAlmostEqual(mi(self.var_elim, "CO", "HR", True), expected_mi)
+
+    def test_mutual_info_with_percents(self):
+        df = mutual_info_with_percents(self.causal_inference, "CO")
+        dg = mutual_info_with_percents(self.var_elim, "CO")
+        np_test.assert_almost_equal(df.values, dg.values)
+        np_test.assert_equal(df.shape, (37, 2))
