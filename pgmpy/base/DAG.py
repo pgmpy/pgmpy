@@ -619,111 +619,86 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
-    def is_dconnected_fast(self, start, end, observed=None, include_latents=False):
+    def is_dconnected_moral(self, start, end, observed=None, include_latents=False):
         """
-        Returns True if there is an active trail (i.e. d-connection) between
-        `start` and `end` node given that `observed` is observed.
+        Returns True if `start` and `end` are d-connected given `observed`
+        according to moral‐graph test.
 
-        Time complexity: O(E)
+        Time complexity: O(V + E) for sparse / bounded–in-degree graphs.
 
         Parameters
         ----------
-        start, end : int, str, any hashable python object.
-            The nodes in the DAG between which to check the d-connection/active trail.
-
-        observed : list, array-like (optional)
-            If given the active trail would be computed assuming these nodes to
-            be observed.
-
-        include_latents: boolean (default: False)
-            If true, latent variables are included in the active trail analysis.
+        start, end : hashable
+            The two nodes X, Y whose d-connection we want to test.
+        observed : iterable (optional)
+            The conditioning set Z.  Treated as “removed” in the moral graph.
+        include_latents : bool (default=False)
+            If False, latent nodes are also treated like observed (i.e. removed).
 
         Returns
         -------
         bool
             True if there's an active trail between start and end, False otherwise.
         """
-        from collections import deque
-
-        # Handle None for observed
+        # 1. Build the observed set Z
         if observed is None:
-            observed = set()
+            Z = set()
         else:
-            observed = set(observed)
+            Z = set(observed)
+        if not include_latents:
+            Z |= set(getattr(self, "latents", []))
 
-        # Initialize data structures
-        visited = set()  # Tracks (node, direction) pairs
-        active_nodes = set()  # Nodes in the active trail
-        queue = deque()
+        # 2. Compute A = Ancestors({start, end} ∪ Z)
+        to_visit = [start, end] + list(Z)
+        ancestors = set()
+        while to_visit:
+            node = to_visit.pop()
+            if node not in ancestors:
+                ancestors.add(node)
+                for p in self.predecessors(node):
+                    to_visit.append(p)
 
-        # Get ancestors of observed nodes for v-structure handling
-        # ancestors_list = self._get_ancestors_of(observed)
+        # 3. Induce subgraph on A, and
+        # 4. Moralize it → build an undirected adjacency U: dict[node] -> set(neighbors)
+        U = {v: set() for v in ancestors}
+        for v in ancestors:
+            # (a) connect v to each of its in- or out-neighbors in A
+            for nbr in self.predecessors(v):
+                if nbr in ancestors:
+                    U[v].add(nbr)
+                    U[nbr].add(v)
+            for nbr in self.successors(v):
+                if nbr in ancestors:
+                    U[v].add(nbr)
+                    U[nbr].add(v)
+            # (b) connect all parents of v pairwise (the “moral” step)
+            parents = [p for p in self.predecessors(v) if p in ancestors]
+            for i in range(len(parents)):
+                for j in range(i + 1, len(parents)):
+                    p1, p2 = parents[i], parents[j]
+                    U[p1].add(p2)
+                    U[p2].add(p1)
 
-        if not observed:
-            ancestors_list = set()  # No ancestors if nothing is observed
-        else:
-            # Filter out any set objects before passing to _get_ancestors_of
-            valid_observed = []
-            for node in observed:
-                if isinstance(node, (set, frozenset)):  # Skip any set-like objects
-                    continue
-                valid_observed.append(node)
-            # Only call _get_ancestors_of if we have valid nodes
-            if valid_observed:
-                ancestors_list = self._get_ancestors_of(valid_observed)
-            else:
-                ancestors_list = set()
+        # 5. Remove observed (and unwanted) nodes Z from U
+        for z in Z:
+            U.pop(z, None)
+        for nbrs in U.values():
+            nbrs.difference_update(Z)
 
-        # Initialize queue with start node in both directions
-        queue.append((start, "up"))
-        queue.append((start, "down"))
+        # 6. Check undirected connectivity from start to end
+        if start not in U or end not in U:
+            return False
 
-        while queue:
-            current, direction = queue.popleft()
-
-            # Skip if already visited in this direction
-            if (current, direction) in visited:
-                continue
-            visited.add((current, direction))
-
-            # Add to active nodes if not observed
-            if current not in observed:
-                active_nodes.add(current)
-
-            # Determine next nodes to visit based on d-separation rules
-            if direction == "up" and current not in observed:
-                # Coming from child to this node, not observed
-                # Can go to parents (moving up)
-                for parent in self.predecessors(current):
-                    queue.append((parent, "up"))
-
-                # Can go to children (moving down)
-                for child in self.successors(current):
-                    queue.append((child, "down"))
-
-            elif direction == "down":
-                # Coming from parent to this node
-                if current not in observed:
-                    # If not observed, can go to children
-                    for child in self.successors(current):
-                        queue.append((child, "down"))
-
-                # If node is in ancestors of observed, can go up (v-structure)
-                if current in ancestors_list:
-                    for parent in self.predecessors(current):
-                        queue.append((parent, "up"))
-
-        # Check if end is in active nodes
-        if end in active_nodes:
-            # If include_latents is False, need to check if there's a path without latents
-            if not include_latents:
-                # If end node is a latent, it's not d-connected when include_latents=False
-                if end in self.latents:
-                    return False
-
-                # Here we just check if end node is in the active nodes after removing latents
-                return end in (active_nodes - self.latents)
-            return True
+        seen = {start}
+        stack = [start]
+        while stack:
+            v = stack.pop()
+            if v == end:
+                return True
+            for w in U[v]:
+                if w not in seen:
+                    seen.add(w)
+                    stack.append(w)
         return False
 
     def is_dconnected(self, start, end, observed=None, include_latents=False):
