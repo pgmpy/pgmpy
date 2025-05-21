@@ -808,7 +808,8 @@ def equivalent_t(X, Y, Z, data, boolean=True, delta_th=0.1, **kwargs) -> tuple |
 
     References
     ----------
-    [1]
+    [1] https://arxiv.org/pdf/2404.18232
+    [2] https://en.wikipedia.org/wiki/Fisher_transformation
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -828,16 +829,19 @@ def equivalent_t(X, Y, Z, data, boolean=True, delta_th=0.1, **kwargs) -> tuple |
         if boolean:
             reject = p_value < kwargs["significance_level"]
 
-    # Step 3: If Z is non-empty, use linear regression to compute residuals and test independence on it.
+    # Step 3: If Z is non-empty, use the inverting the empirical covariance matrix
     else:
         rho, _ = pearsonr(X, Y, Z, data, False)
-        rho = np.clip(rho, -0.999999, 0.999999)  # numerical stability
+        # clip values for numerical stability
+        rho = np.clip(rho, -0.999999, 0.999999)
+
+        # the z-transformation is equivalent to the inverse hyperbolic tangent
         coeff = np.arctanh(rho)
         z_delta = np.arctanh(delta_th)
         n = data.shape[0]
         s = len(Z)
 
-        # might not be correct
+        # might not be a correct name
         variance_stab = np.sqrt(n - s - 3)
 
         z_score_low = variance_stab * (coeff - z_delta)
