@@ -20,6 +20,7 @@ def get_ci_test(test, full=False, data=None, independencies=None):
         "pearsonr": pearsonr,
         "pillai": pillai_trace,
         "gcm": gcm,
+        "equivalent_t": equivalent_t,
     }
     if full:
         supported_tests["power_divergence"] = power_divergence
