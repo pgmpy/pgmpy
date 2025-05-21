@@ -764,3 +764,99 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
             return False
     else:
         return t_stat, p_value
+
+
+def equivalent_t(X, Y, Z, data, boolean=True, delta_th=0.1, **kwargs) -> tuple | bool:
+    """
+    Computes a two-sided level-alpha equivalent test using partial correlations.
+
+    In case when :math:`Z != \null` uses
+    linear regression and computes pearson coefficient on residuals.
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X \u27c2 Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X \u27c2 Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X \u27c2 Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the indepenedence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+
+        If boolean=False, returns the coefficient and p_value
+            of the test.
+
+    delta_th: float
+        Fixed tolerance threshold, by default 0.1
+
+
+    Returns
+    -------
+    CI Test results: tuple or bool
+        If boolean=True, returns True if p-value_low > significance_level and value_low < significance_level, else False. If
+        boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
+
+    References
+    ----------
+    [1]
+    """
+    # Step 1: Test if the inputs are correct
+    if not hasattr(Z, "__iter__"):
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
+    else:
+        Z = list(Z)
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
+        )
+
+    # Step 2: If Z is empty compute a non-conditional test.
+    if len(Z) == 0:
+        coeff, p_value = pearsonr(X, Y, Z, data, boolean)
+
+        if boolean:
+            reject = p_value < kwargs["significance_level"]
+
+    # Step 3: If Z is non-empty, use linear regression to compute residuals and test independence on it.
+    else:
+        rho, _ = pearsonr(X, Y, Z, data, False)
+        rho = np.clip(rho, -0.999999, 0.999999)  # numerical stability
+        coeff = np.arctanh(rho)
+        z_delta = np.arctanh(delta_th)
+        n = data.shape[0]
+        s = len(Z)
+
+        # might not be correct
+        variance_stab = np.sqrt(n - s - 3)
+
+        z_score_low = variance_stab * (coeff - z_delta)
+        z_score_high = variance_stab * (coeff + z_delta)
+
+        # Compute p-value two-tailed test
+        p_value_low = stats.norm.cdf(z_score_low)
+        p_value_high = 1 - stats.norm.cdf(z_score_high)
+
+        # The probability level (p-value) of the equivalence test is equal
+        # to the maximum of the probability levels of the two one-sided tests
+        p_value = max(p_value_low, p_value_high)
+
+        if boolean:
+            threshold = stats.norm.ppf(kwargs["significance_level"])
+            # both one-side tests need to be rejected
+            reject = z_score_low <= threshold and z_score_high >= -threshold
+
+    # Step 4: Return
+    if boolean:
+        return not reject
+    else:
+        return coeff, p_value
