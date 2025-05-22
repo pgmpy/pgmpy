@@ -48,6 +48,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx_sitemap",
+    "sphinx_multiversion"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -323,3 +324,9 @@ numpydoc_show_class_members = False
 
 # For sphinx sitemap
 html_baseurl = "https://pgmpy.org"
+
+smv_tag_whitelist = r'^v\d+\.\d+.*$'     # Include tags like v0.1, v1.2.3
+smv_branch_whitelist = r'^(main|dev)$'   # Include these branches
+smv_remote_whitelist = r'^origin$'       # Use origin remote
+smv_released_pattern = r'^tags/v\d+\.\d+.*$'  # Mark tag builds as released
+smv_outputdir = '_multiversion'          # Output folder for all versions
