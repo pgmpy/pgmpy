@@ -3,13 +3,10 @@ from pgmpy.estimators import MaximumLikelihoodEstimator
 import pandas as pd
 
 # Step 1: Create sample data
-data = pd.DataFrame({
-    'A': [0, 0, 1, 1],
-    'B': [0, 1, 0, 1]
-})
+data = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 1, 0, 1]})
 
 # Step 2: Define model structure
-model = BayesianModel([('A', 'B')])  # A → B
+model = BayesianModel([("A", "B")])  # A → B
 
 # Step 3: Fit model with data
 model.fit(data, estimator=MaximumLikelihoodEstimator)
