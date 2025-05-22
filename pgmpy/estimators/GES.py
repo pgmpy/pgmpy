@@ -106,6 +106,7 @@ class GES(StructureEstimator):
         self,
         scoring_method="bic-d",
         expert_knowledge=None,
+        force_required_edges=False
         min_improvement=1e-6,
         debug=False,
     ):
@@ -124,6 +125,10 @@ class GES(StructureEstimator):
             Expert knowledge to be used with the algorithm. Expert knowledge
             allows specification of required and forbidden edges, as well as temporal
             order of nodes.
+
+        force_required_edges: boolean (default: False)  # ADD THIS DOCUMENTATION
+            If True, ensures all required edges are present and correctly oriented
+            in the final model.
 
         min_improvement: float
             The operation (edge addition, removal, or flipping) would only be performed if the
@@ -237,6 +242,25 @@ class GES(StructureEstimator):
                 logger.info(
                     f"Fliping edge {edge_to_flip[1]} -> {edge_to_flip[0]}. Improves score by: {score_deltas.max()}"
                 )
+        
+        if force_required_edges:
+            for u, v in expert_knowledge.required_edges:
+                if not current_model.has_edge(u, v):
+                    if current_model.has_edge(v, u):
+                        # Edge exists in wrong direction
+                        current_model.remove_edge(v, u)
+                        current_model.add_edge(u, v)
+                        if debug:
+                            logger.info(
+                                f"Post-processing: Flipping edge {v}->{u} to {u}->{v}."
+                            )
+                    else:
+                        # Edge doesn't exist
+                        current_model.add_edge(u, v)
+                        if debug:
+                            logger.info(
+                                f"Post-processing: Adding required edge {u}->{v}."
+                            )
 
         # Step 5: Return the model.
         return current_model

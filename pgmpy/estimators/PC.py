@@ -48,6 +48,7 @@ class PC(StructureEstimator):
         max_cond_vars=5,
         expert_knowledge=None,
         enforce_expert_knowledge=False,
+        force_required_edges=False,
         n_jobs=-1,
         show_progress=True,
         **kwargs,
@@ -132,6 +133,10 @@ class PC(StructureEstimator):
                     would either have u -> v or no edge except if v <- u is part of a
                     collider structure in the learned skeleton.
 
+        force_required_edges: boolean (default: False)  # ADD THIS DOCUMENTATION
+            If True, forces the addition and orientation of required edges
+            even if they conflict with the learned skeleton structure.
+
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
@@ -194,6 +199,9 @@ class PC(StructureEstimator):
             show_progress=show_progress,
             **kwargs,
         )
+
+        if force_required_edges:
+            skel = expert_knowledge.enforce_required_edges_in_skeleton(skel)
 
         if return_type.lower() == "skeleton":
             return skel, separating_sets

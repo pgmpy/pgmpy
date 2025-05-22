@@ -286,6 +286,21 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         # assert if dag is a subset of search_space
         for edge in dag.edges():
             self.assertIn(edge, search_space)
+    
+    def test_force_required_edges(self):
+        """Test force_required_edges parameter in Hill Climb Search."""
+        required_edges = [("A", "B")]
+        expert_knowledge = ExpertKnowledge(required_edges=required_edges)
+        
+        dag = self.est_rand.estimate(
+            scoring_method="k2",
+            expert_knowledge=expert_knowledge,
+            force_required_edges=True,
+            show_progress=False,
+        )
+        
+        # Required edge should be present
+        self.assertTrue(dag.has_edge("A", "B"))
 
     def tearDown(self):
         del self.rand_data

@@ -6,6 +6,7 @@ import networkx as nx
 from tqdm.auto import trange
 
 from pgmpy import config
+from pgmpy.global_vars import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import (
     AIC,
@@ -143,6 +144,7 @@ class HillClimbSearch(StructureEstimator):
         tabu_length=100,
         max_indegree=None,
         expert_knowledge=None,
+        force_required_edges=False,
         epsilon=1e-4,
         max_iter=1e6,
         show_progress=True,
@@ -179,6 +181,10 @@ class HillClimbSearch(StructureEstimator):
             Expert knowledge to be used with the algorithm. Expert knowledge
             allows specification of required and forbidden edges, as well as temporal
             order of nodes.
+        
+        force_required_edges: boolean (default: False)  # ADD THIS DOCUMENTATION
+            If True, ensures all required edges are present and correctly oriented
+            in the final model, even if this means adding edges with negative scores.
 
         epsilon: float (default: 1e-4)
             Defines the exit condition. If the improvement in score is less
@@ -287,6 +293,23 @@ class HillClimbSearch(StructureEstimator):
                 current_model.remove_edge(X, Y)
                 current_model.add_edge(Y, X)
                 tabu_list.append(best_operation)
+        
+        if force_required_edges:
+            for u, v in expert_knowledge.required_edges:
+                if not current_model.has_edge(u, v):
+                    if current_model.has_edge(v, u):
+                        # Edge exists in wrong direction
+                        current_model.remove_edge(v, u)
+                        current_model.add_edge(u, v)
+                        logger.info(
+                            f"Flipping edge {v}->{u} to {u}->{v} to satisfy required edges."
+                        )
+                    else:
+                        # Edge doesn't exist
+                        current_model.add_edge(u, v)
+                        logger.info(
+                            f"Adding required edge {u}->{v} in post-processing."
+                        )
 
         # Step 3: Return if no more improvements or maximum iterations reached.
         return current_model

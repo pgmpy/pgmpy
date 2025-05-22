@@ -403,6 +403,33 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
         for edge in dag.edges():
             self.assertIn(edge, search_space)
 
+    def test_force_required_edges(self):
+        """Test force_required_edges parameter in PC algorithm."""
+        np.random.seed(42)
+        data = pd.DataFrame(
+            np.random.randint(0, 2, size=(1000, 4)), columns=["A", "B", "C", "D"]
+        )
+        
+        required_edges = [("A", "B"), ("C", "D")]
+        expert_knowledge = ExpertKnowledge(required_edges=required_edges)
+        
+        est = PC(data)
+        
+        # Test with force_required_edges=True
+        pdag = est.estimate(
+            ci_test="chi_square",
+            expert_knowledge=expert_knowledge,
+            force_required_edges=True,
+            show_progress=False,
+        )
+        
+        # All required edges should be present
+        for u, v in required_edges:
+            self.assertTrue(
+                pdag.has_edge(u, v),
+                f"Required edge {u}-{v} not found when force_required_edges=True"
+            )
+
     def tearDown(self):
         get_reusable_executor().shutdown(wait=True)
 

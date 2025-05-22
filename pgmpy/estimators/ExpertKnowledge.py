@@ -212,7 +212,7 @@ class ExpertKnowledge:
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
 
-    def apply_expert_knowledge(self, pdag):
+    def apply_expert_knowledge(self, pdag, force_required_edges=False):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
 
@@ -226,6 +226,10 @@ class ExpertKnowledge:
         ----------
         pdag: pgmpy.base.PDAG
             A partial DAG with directed and undirected edges.
+
+        force_required_edges: bool (default: False)
+        If True, forces the addition of required edges even if they
+        don't exist in the learned skeleton.
 
         Returns
         --------
@@ -256,9 +260,25 @@ class ExpertKnowledge:
             if pdag.has_undirected_edge(u, v):
                 pdag.orient_undirected_edge(u, v, inplace=True)
             elif pdag.has_edge(u, v) is False:
+                if force_required_edges:
+                    pdag.add_directed_edge(u, v)
+                    logger.info(
+                        f"Forcing addition of required edge {u}->{v} as specified in expert knowledge."
+                    )
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from required edges"
                 )
+            elif pdag.has_edge(v, u) and not pdag.has_edge(u, v):
+                if force_required_edges:
+                    pdag.remove_edge(v, u)
+                    pdag.add_directed_edge(u, v)
+                    logger.info(
+                        f"Forcing orientation of edge {u}->{v} as specified in expert knowledge (was {v}->{u})."
+                    )
+                else:
+                    logger.warning(
+                        f"Required edge {u}->{v} conflicts with learned edge {v}->{u}. Keeping learned structure."
+                    )
 
         return pdag
 
@@ -285,3 +305,26 @@ class ExpertKnowledge:
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges_additive)
+
+    def enforce_required_edges_in_skeleton(self, skeleton):
+        """
+        Ensures that all required edges are present in the skeleton by adding them if missing.
+        
+        Parameters
+        ----------
+        skeleton: networkx.Graph
+            The undirected graph skeleton
+            
+        Returns
+        -------
+        skeleton: networkx.Graph
+            The skeleton with required edges added
+        """
+        for u, v in self.required_edges:
+            if not skeleton.has_edge(u, v):
+                skeleton.add_edge(u, v)
+                logger.info(
+                    f"Adding required edge {u}-{v} to skeleton as specified in expert knowledge."
+                )
+        
+        return skeleton
