@@ -22,7 +22,7 @@ class TimeSeriesDAG(DAG):
 
     Examples
     --------
-    >>> from pgmpy.estimators import TimeSeriesDAG
+    >>> from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
     >>> edges = [(('A', 0), ('B', 1)), (('B', 1), ('C', 2))]
     >>> dag = TimeSeriesDAG()
     """
