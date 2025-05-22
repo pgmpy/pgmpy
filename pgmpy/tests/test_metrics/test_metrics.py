@@ -9,10 +9,12 @@ from pgmpy.base import DAG
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import (
     SHD,
+    SID,
     correlation_score,
     fisher_c,
     implied_cis,
     log_likelihood_score,
+    sid_matrix,
     structure_score,
 )
 from pgmpy.models import DiscreteBayesianNetwork
@@ -200,15 +202,233 @@ class TestStructuralHammingDistance(unittest.TestCase):
             [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
         )
 
-    def test_shd(self):
+    def test_shd1(self):
         self.assertEqual(SHD(self.dag_1, self.dag_2), 1)
 
-    def test_shd(self):
+    def test_shd2(self):
         self.assertEqual(SHD(self.dag_3, self.dag_4), 2)
 
-    def test_shd(self):
+    def test_shd_large(self):
         self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
 
     def test_shd_unequal_graphs(self):
         with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
             SHD(self.dag_4, self.dag_5)
+
+
+class TestStructuralInterventionDistanceFromBayesianNetwork(unittest.TestCase):
+    def setUp(self):
+        ebunch = [
+            ("X1", "Y1"),
+            ("X1", "Y2"),
+            ("X1", "Y3"),
+            ("X2", "Y1"),
+            ("X2", "Y2"),
+            ("X2", "Y3"),
+        ]
+        self.G = BayesianNetwork(ebunch + [("X1", "X2")])
+        self.H1 = BayesianNetwork(ebunch + [("X1", "X2"), ("Y1", "Y2")])
+        self.H2 = BayesianNetwork(ebunch + [("X2", "X1")])
+
+    def test_two_cases_from_paper(self):
+        self.assertEqual(SID(self.G, self.H1), 0)
+        self.assertEqual(SID(self.G, self.H2), 8)
+
+
+class TestStructuralInterventionDistanceFromDAG(unittest.TestCase):
+    def setUp(self):
+
+        self.no_edge = DAG(np.array([[0, 0], [0, 0]]))
+        self.one_edge = DAG(np.array([[0, 1], [0, 0]]))
+        self.opposite_edge = DAG(np.array([[0, 0], [1, 0]]))
+
+    def test_empty_true_no_penalty_when_estimate_is_supergraph(self):
+        self.assertEqual(SID(self.no_edge, self.one_edge), 0)
+        self.assertEqual(SID(self.one_edge, self.no_edge), 1)
+        self.assertEqual(SID(self.one_edge, self.opposite_edge), 2)
+
+
+class TestStructuralInterventionDistanceElementWise(unittest.TestCase):
+    def setUp(self):
+        self.adj_mat = [
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0],
+                    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+                    [1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+                ]
+            ),
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1],
+                    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0],
+                ]
+            ),
+            np.array(
+                [
+                    [0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0],
+                    [1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0],
+                ]
+            ),
+        ]
+
+    def test_compare_0_1(self):
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[0], self.adj_mat[1]),
+                np.array(
+                    [
+                        [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+                        [1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0],
+                        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+                        [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
+
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[1], self.adj_mat[0]),
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                        [1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0],
+                        [1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
+
+    def test_compare_1_2(self):
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[2], self.adj_mat[1]),
+                np.array(
+                    [
+                        [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+                        [1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0],
+                        [1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0],
+                        [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
+
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[1], self.adj_mat[2]),
+                np.array(
+                    [
+                        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+                        [0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0],
+                        [0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1],
+                        [0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
+
+    def test_compare_0_2(self):
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[0], self.adj_mat[2]),
+                np.array(
+                    [
+                        [0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+                        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+                        [0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
+
+        self.assertTrue(
+            np.allclose(
+                sid_matrix(self.adj_mat[2], self.adj_mat[0]),
+                np.array(
+                    [
+                        [0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0],
+                        [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0],
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+                        [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0],
+                        [1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0],
+                        [1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0],
+                        [0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+                        [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+                    ]
+                )
+                > 0,
+            )
+        )
