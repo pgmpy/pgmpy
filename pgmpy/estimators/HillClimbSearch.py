@@ -23,6 +23,7 @@ from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
     get_scoring_method,
+    scoring,
 )
 
 
@@ -209,6 +210,8 @@ class HillClimbSearch(StructureEstimator):
         >>> len(dag.edges())
         45
         """
+        if scoring_method == None:
+            scoring_method = scoring.get_scoring_method(self.data)
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method

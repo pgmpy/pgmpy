@@ -764,3 +764,33 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
             return False
     else:
         return t_stat, p_value
+
+
+def get_scoring_method(data):
+    """
+    Class function for determining the scoring method based on the input data of dataframe
+    All columns categorical data defaults to chi_square
+    All columns numerical data defaults to pearsonr
+    Mixed data columns defaults to pillai_trace
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable type.
+
+    Returns
+    ----------
+    string: Corresponding CI_method
+    """
+    c_type = 0
+    n_type = 0
+    for key in data.dtypes:
+        if key in ["category", "C"]:
+            c_type += 1
+        elif key in ["float32", "float64", "N"]:
+            n_type += 1
+    if len(data.columns) == c_type:
+        return "chi_square"
+    elif len(data.columns) == n_type:
+        return "pearsonr"
+    return "pillai_trace"

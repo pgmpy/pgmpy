@@ -764,3 +764,36 @@ class AICCondGauss(LogLikelihoodCondGauss):
         k = self._get_num_parameters(variable=variable, parents=parents)
 
         return ll - k
+
+
+class scoring:
+    """
+    Class function for determining the scoring method based on the input data of dataframe
+    All columns categorical data defaults to  BIC
+    All columns numerical data defaults to BICGaussian
+    Mixed data columns defaults to BICConditionalGaussian
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable type.
+
+    Returns
+    ----------
+    string: Corresponding Scoring Method
+    """
+
+    @staticmethod
+    def get_scoring_method(data):
+        c_type = 0
+        n_type = 0
+        for key in data.dtypes:
+            if key in ["category", "C"]:
+                c_type += 1
+            elif key in ["float32", "float64", "N"]:
+                n_type += 1
+        if len(data.columns) == c_type:
+            return "bic-d"
+        elif len(data.columns) == n_type:
+            return "bic-g"
+        return "bic-cg"

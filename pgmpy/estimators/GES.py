@@ -21,6 +21,7 @@ from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
     get_scoring_method,
+    scoring,
 )
 from pgmpy.global_vars import logger
 
@@ -55,6 +56,22 @@ class GES(StructureEstimator):
         self.use_cache = use_cache
 
         super(GES, self).__init__(data=data, **kwargs)
+
+    def Test_type(
+        self,
+    ):  # Ideally I would run this in over to choose the proper test depending on the kind of data.
+        Ctype = 0
+        Ntype = 0
+        for key in self.data.dtypes:
+            if key in ["category", "C"]:
+                Ctype += 1
+            elif key in ["float32", "float64", "N"]:
+                Ntype += 1
+        if len(self.data.columns) == Ctype:
+            return "BIC"
+        elif len(self.data.columns) == Ntype:
+            return "BICGauss"
+        return "BICCondGauss"
 
     def _legal_edge_additions(self, current_model, expert_knowledge):
         """
@@ -150,6 +167,8 @@ class GES(StructureEstimator):
         >>> len(dag.edges())
         45
         """
+        if scoring_method == None:
+            scoring_method = scoring.get_scoring_method(self.data)
 
         # Step 0: Initial checks and setup for arguments
         _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)

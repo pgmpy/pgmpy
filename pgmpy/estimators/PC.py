@@ -167,6 +167,9 @@ class PC(StructureEstimator):
         >>> print(len(model_gsq.edges()))
         33
         """
+        if ci_test == None:
+            ci_test = get_scoring_method(self.data)
+
         # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
             raise ValueError(
