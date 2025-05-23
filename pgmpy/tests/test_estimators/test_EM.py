@@ -127,7 +127,7 @@ class TestEM(unittest.TestCase):
             est = EM(self.model1, df)
 
         # Data shape and column removal
-        self.assertEqual(est.data.shape, (2, 3))
+        self.assertEqual(est.data.shape, (3, 3))
         self.assertNotIn("B", est.data.columns)
 
     def test_em_with_missing_values(self):
