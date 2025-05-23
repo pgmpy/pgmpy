@@ -116,27 +116,28 @@ class ExpectationMaximization(ParameterEstimator):
         self, data_unique, latent_card, n_counts, offset, batch_size
     ):
         cache = []
-        
+
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             # Get missing variables for this specific data point
-            missing_vars = [var for var in latent_card.keys() 
-                            if pd.isna(data_unique.iloc[i][var])]
-            
+            missing_vars = [
+                var for var in latent_card.keys() if pd.isna(data_unique.iloc[i][var])
+            ]
+
             # Only generate combinations for actually missing variables in this point
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
                 latent_combinations = np.array(v, dtype=int)
-                
+
                 df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
                     drop=True
                 )
-                
+
                 for index, latent_var in enumerate(missing_vars):
                     df[latent_var] = latent_combinations[:, index]
             else:
                 # No missing values for this data point
                 df = data_unique.iloc[[i]].reset_index(drop=True)
-                
+
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
@@ -144,7 +145,7 @@ class ExpectationMaximization(ParameterEstimator):
                 tuple(data_unique.iloc[i])
             ]
             cache.append(df)
-        
+
         return pd.concat(cache, copy=False)
 
     def _compute_weights(self, n_jobs, latent_card, batch_size):
