@@ -4,8 +4,8 @@ from .metrics import (
     correlation_score,
     fisher_c,
     implied_cis,
-    latent_admg,
     log_likelihood_score,
+    self_compatibility_graphical,
     structure_score,
 )
 
@@ -16,5 +16,5 @@ __all__ = [
     "implied_cis",
     "fisher_c",
     "SHD",
-    "latent_admg",
+    "self_compatibility_graphical",
 ]

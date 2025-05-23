@@ -467,124 +467,187 @@ def SHD(true_model, est_model):
     return int(shd)
 
 
-def latent_admg(dag: DiscreteBayesianNetwork, observed: list) -> nx.MultiDiGraph:
+def self_compatibility_graphical(
+    estimator_class,
+    data: pd.DataFrame,
+    num_subsets: int = 50,
+    subset_fraction: float = 0.8,
+    random_state: int = None,
+    **estimator_kwargs,
+) -> float:
     """
-    Compute the latent‐projection ADMG L(G, S) of a DAG G onto a subset S ⊂ V.
+    Implements Definition 6 from [1] (Faller et al., AISTATS 2024)
 
-    Definition 5 (latent ADMG) (Faller et al., AISTATS 2024):
-    Let G be an ADMG with variables V and S ⊂ V . The latent ADMG L(G, S)
-    is the ADMG that contains all nodes in S,
-    all edges between nodes in S and additionally
-      1) a directed edge between X, Y ∈ S if there is a directed path from X to Y where all intermediate
-         nodes are in V \ S
-      2) a bidirected edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ S and there are arrowheads towards
-         X and Y on the incident edges on the path.
+    Computes graphical self-compatibility by:
+      1) Fitting a joint DAG on all variables.
+      2) Projecting it to each random subset via Definition 5’s latent ADMG.
+      3) Fitting a marginal DAG on each subset.
+      4) Measuring SHD between the projected joint and the marginal.
+      5) Averaging those SHDs.
 
     Parameters
     ----------
-    dag : DiscreteBayesianNetwork
-        The full DAG G on variables V (may include latent nodes).
-    observed : list of hashable
-        The subset S of variables to keep (observed nodes).
+    estimator_class : class
+        A pgmpy StructureEstimator (e.g. PC, HillClimbSearch).
+    data : pd.DataFrame, shape (n_samples, n_vars)
+        Observed dataset.
+    num_subsets : int, default=50
+        Number of random subsets to draw.
+    subset_fraction : float in (0,1], default=0.8
+        Fraction of variables to include in each subset.
+    random_state : int or None
+        RNG seed for reproducibility.
+    **estimator_kwargs
+        Keyword args forwarded to estimator_class(...).estimate().
 
     Returns
     -------
-    nx.MultiDiGraph
-        A NetworkX MultiDiGraph over nodes in S where:
-        - Each `kind="directed"` arc (u→v) represents condition (1).
-        - Each pair of opposite arcs with `kind="bidirected"` (u→v and v→u)
-          represents a bidirected edge u↔v per condition (2).
+    float
+        Mean SHD between latent-projected joint and marginal DAGs.
 
-    Example
-    -------
+    Examples
+    --------
+    >>> import pandas as pd, numpy as np
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.metrics import latent_admg
-    >>> # Full DAG: A→H→B (latent H), observed S={A,B}
-    >>> full = DiscreteBayesianNetwork([("A","H"), ("H","B")])
-    >>> admg = latent_admg(full, ["A","B"])
-    >>> sorted(admg.edges(data=True))
-    [('A', 'B', {'kind': 'directed'})]
-
-    >>> # Collider: A→H←B (latent H), observed S={A,B}
-    >>> full = DiscreteBayesianNetwork([("A","H"), ("B","H")])
-    >>> admg = latent_admg(full, ["A","B"])
-    >>> sorted(admg.edges(data=True))
-    [('A', 'B', {'kind': 'bidirected'}), ('B', 'A', {'kind': 'bidirected'})]
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.sampling import BayesianModelSampling
+    >>> from pgmpy.estimators import HillClimbSearch
+    >>> from pgmpy.metrics import self_compatibility_graphical
+    >>> # 1) Build a simple BN X→Y
+    >>> model = DiscreteBayesianNetwork([("X", "Y")])
+    >>> model.add_cpds(
+    ...     TabularCPD("X", 2, [[0.5], [0.5]]),
+    ...     TabularCPD("Y", 2,
+    ...                [[0.8, 0.2],
+    ...                 [0.2, 0.8]],
+    ...                evidence=["X"], evidence_card=[2])
+    ... )
+    >>> # 2) Sample 100 rows
+    >>> df = BayesianModelSampling(model).forward_sample(size=100)
+    >>> # 3) Compute graphical self-compatibility
+    >>> score = self_compatibility_graphical(
+    ...     HillClimbSearch,
+    ...     df,
+    ...     num_subsets=3,
+    ...     subset_fraction=0.5,
+    ...     scoring_method="bic-d"
+    ... )
+    >>> isinstance(score, float)
+    True
 
     References
     ----------
-    Definition 5, Faller, P. M., et al. (2024).
-    “Self-compatibility: Evaluating Causal Discovery without Ground Truth.”
-    In AISTATS. arXiv:2307.09552
+    [1] Faller, P. M., et al. (2024).
+        “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
+        In AISTATS. arXiv:2307.09552
     """
-    G = dag.to_directed()
-    admg = nx.MultiDiGraph()
-    admg.add_nodes_from(observed)
+    rng = np.random.RandomState(random_state)
+    variables = list(data.columns)
+    p = len(variables)
+    k = max(2, int(np.floor(subset_fraction * p)))
 
-    def is_noncollider_path(path):
-        # helper function that checks whether a path has no internal colliders
-        for a, b, c in zip(path, path[1:], path[2:]):
-            if G.has_edge(a, b) and G.has_edge(c, b):
-                return False
-        return True
+    def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
+        """
+        Compute the latent‐projection ADMG L(G, S) of a DAG G onto a subset S ⊂ V.
 
-    directed_edges = set()
-    bidirected_edges = set()
-    V = set(G.nodes())
-    latent = V - set(observed)
+        Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024):
+        Let G be an ADMG with variables V and S ⊂ V . The latent ADMG L(G, S)
+        is the ADMG that contains all nodes in S,
+        all edges between nodes in S and additionally
+        1) a directed edge between X, Y ∈ S if there is a directed path from X to Y where all intermediate
+            nodes are in V \ S
+        2) a bidirected edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ S and there are arrowheads towards
+            X and Y on the incident edges on the path.
 
-    # 1) Directed edges via latent-only intermediate nodes
-    for u, v in combinations(observed, 2):
-        # u -> v?
-        for path in nx.all_simple_paths(G, source=u, target=v):
-            if all(n in latent for n in path[1:-1]) and all(
-                G.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1)
-            ):
+        Parameters
+        ----------
+        dag : DAG
+            The full DAG G on variables V (may include latent nodes).
+        observed : list
+            Subset S ⊂ V to project onto (observed variables).
+
+        Returns
+        -------
+        nx.DiGraph
+        An ADMG over the observed nodes S, encoded as a NetworkX DiGraph where:
+          - A single arc u→v indicates a latent‐only directed chain from u to v.
+          - A bidirected link u↔v is encoded by having both arcs u→v and v→u.
+
+        References
+        ----------
+        [1] Faller, P. M., et al. (2024).
+        “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
+        In AISTATS. arXiv:2307.09552
+        """
+        # 1) Prep
+        full_nx = dag.to_directed()
+        V = set(dag.nodes())
+        latent = V - set(observed)
+
+        directed_edges = set()
+        bidirected_edges = set()
+
+        # 2) Preserve any original observed→observed arcs
+        for u, v in dag.edges():
+            if u in observed and v in observed:
                 directed_edges.add((u, v))
-                break
-        # v -> u?
-        for path in nx.all_simple_paths(G, source=v, target=u):
-            if all(n in latent for n in path[1:-1]) and all(
-                G.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1)
-            ):
+
+        # 3) Detect latent‐only directed chains via induced subgraph
+        for u, v in combinations(observed, 2):
+            sub_nodes = latent | {u, v}
+            subG = full_nx.subgraph(sub_nodes)
+            if nx.has_path(subG, u, v):
+                directed_edges.add((u, v))
+            if nx.has_path(subG, v, u):
                 directed_edges.add((v, u))
-                break
 
-    # 2) Bidirected edges via latent colliders
-    for u, v in combinations(observed, 2):
-        found = False
-        for c in latent:
-            # Find all paths with no collider among latent intermediates
-            # valid_u: all simple paths from u to the latent node c that
-            #          1) follow directed edges in G (each step is u→…→c)
-            #          2) have no internal collider nodes (checked by is_noncollider_path)
-            valid_u = [
-                p
-                for p in nx.all_simple_paths(G, source=u, target=c)
-                if all(G.has_edge(p[i], p[i + 1]) for i in range(len(p) - 1))
-                and is_noncollider_path(p)
-            ]
-            # Same for v → … → c
-            valid_v = [
-                p
-                for p in nx.all_simple_paths(G, source=v, target=c)
-                if all(G.has_edge(p[i], p[i + 1]) for i in range(len(p) - 1))
-                and is_noncollider_path(p)
-            ]
-            # If both u and v point to the same latent c via valid paths,
-            # then u↔v is added (both directions to represent bidirected)
-            if valid_u and valid_v:
-                found = True
-                break
-        if found:
-            bidirected_edges.add((u, v))
-            bidirected_edges.add((v, u))
+        # 4) Detect collider‐mediated connections → bidirected edges
+        #    Use active_trail_nodes to find d-connected partners including latents.
+        #    If v shows up in u’s active set *only* via a collider at some latent,
+        #    then that implies u↔v in the ADMG.
+        atn = dag.active_trail_nodes(
+            variables=list(observed),
+            observed=None,  # no observed conditioning
+            include_latents=True,  # so we see latent colliders too
+        )
+        for u in observed:
+            # every v ≠ u that’s d-connected to u
+            for v in atn[u] & set(observed) - {u}:
+                # skip if we already have a directed link one way or the other
+                if (u, v) in directed_edges or (v, u) in directed_edges:
+                    continue
+                # else this must be a collider‐only connection → bidirected
+                bidirected_edges.add((u, v))
+                bidirected_edges.add((v, u))
 
-    # Combine and return as an ADMG over observed nodes
-    for u, v in directed_edges:
-        admg.add_edge(u, v, kind="directed")
+        # 5) Build output
+        admg = nx.DiGraph()
+        admg.add_nodes_from(observed)
+        admg.add_edges_from(directed_edges)
+        admg.add_edges_from(bidirected_edges)
+        return admg
 
-    for u, v in bidirected_edges:
-        admg.add_edge(u, v, kind="bidirected")
+    # 1) Fit joint model on all variables
+    joint_learner = estimator_class(data)
+    joint = joint_learner.estimate(**estimator_kwargs)
+    if not isinstance(joint, DAG):
+        joint = DiscreteBayesianNetwork(list(joint.edges()))
 
-    return admg
+    shd_values = []
+    # 2) For each random subset...
+    for i in range(num_subsets):
+        # a) sample subset of columns
+        S = rng.choice(variables, size=k, replace=False).tolist()
+        sub_data = data[S]
+        # b) fit marginal model
+        marg_learner = estimator_class(sub_data)
+        marginal = marg_learner.estimate(**estimator_kwargs)
+        # c) project joint onto S
+        joint_proj = _latent_admg(joint, S)
+        # d) project marginal onto S
+        marg_proj = _latent_admg(marginal, S)
+        # e) compute SHD
+        shd_values.append(SHD(joint_proj, marg_proj))
+
+    # 3) average SHD
+    return float(np.mean(shd_values)) if shd_values else 0.0

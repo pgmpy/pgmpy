@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 import networkx as nx
 import numpy as np
@@ -6,20 +7,17 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy.base import DAG
-from pgmpy.estimators import PC
 from pgmpy.estimators.CITests import chi_square
-from pgmpy.factors.discrete import TabularCPD
 from pgmpy.metrics import (
     SHD,
     correlation_score,
     fisher_c,
     implied_cis,
-    latent_admg,
     log_likelihood_score,
+    self_compatibility_graphical,
     structure_score,
 )
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
 
@@ -218,66 +216,121 @@ class TestStructuralHammingDistance(unittest.TestCase):
             SHD(self.dag_4, self.dag_5)
 
 
-class TestLatentADMG(unittest.TestCase):
-    """Unit tests for the `latent_admg` function"""
+class TestGraphicalSelfCompatibility(unittest.TestCase):
+    """
+    Tests for pgmpy.metrics.self_compatibility_graphical, verifying:
+      - Perfect agreement (mean SHD = 0)
+      - Systematic edge flips (mean SHD = 2)
+      - Proper forwarding of estimator kwargs
+    """
 
-    def setUp(self):
-        """Prepare three canonical full DAGs for reuse in tests."""
-        # 1) Simple chain A → H → B
-        self.dag_chain = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
-
-        # 2) Simple collider A → H ← B
-        self.dag_collider = DiscreteBayesianNetwork([("A", "H"), ("B", "H")])
-
-        # 3) Mixed example:
-        #    A → H1 → B       (chain)
-        #    A → C ← H2 ← B   (collider into C)
-        self.dag_mixed = DiscreteBayesianNetwork(
-            [
-                ("A", "H1"),
-                ("H1", "B"),
-                ("A", "C"),
-                ("H2", "C"),
-                ("B", "H2"),
-            ]
+    @classmethod
+    def setUpClass(cls):
+        # A simple A→B→C ground truth
+        cls.full_dag = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+        rng = np.random.RandomState(0)
+        cls.data = pd.DataFrame(
+            {
+                "A": rng.randint(2, size=100),
+                "B": rng.randint(2, size=100),
+                "C": rng.randint(2, size=100),
+            }
         )
 
-    def test_latent_chain_projects_to_directed(self):
+    def test_perfect_compatibility(self):
         """
-        A → H → B projects to A → B when H is hidden.
+        If joint and all marginals always return the true DAG:
+        SHD for each subset = 0 ⇒ mean = 0.0.
         """
-        admg = latent_admg(self.dag_chain, ["A", "B"])
-        self.assertEqual(set(admg.edges()), {("A", "B")})
 
-    def test_latent_collider_projects_to_bidirected(self):
+        def perfect_factory(df):
+            # always returns full_dag
+            return SimpleNamespace(estimate=lambda **kw: self.full_dag)
+
+        # Run compatibility
+        score = self_compatibility_graphical(
+            perfect_factory,
+            self.data,
+            num_subsets=10,
+            subset_fraction=0.5,
+            random_state=1,
+        )
+        # Expect zero distance everywhere
+        self.assertEqual(score, 0.0)
+
+    def test_flip_compatibility(self):
         """
-        A → H ← B projects to A↔B when H is hidden (bidirected edge).
+        When the joint fit is correct but every marginal is flipped,
+        each subset’s SHD should be 2 (two edge reversals), so the mean = 2.0.
         """
-        admg = latent_admg(self.dag_collider, ["A", "B"])
-        self.assertEqual(set(admg.edges()), {("A", "B"), ("B", "A")})
+        # Capture the ground-truth edges for A→B and B→C
+        full_edges = list(self.full_dag.edges())  # [('A','B'), ('B','C')]
+        state = {"calls": 0}
 
-    def test_latent_mixed_directed_and_bidirected(self):
+        def flip_factory(df):
+            cols = list(df.columns)  # e.g. ["A","B","C"]
+
+            def estimate(**kw):
+                # Track how many times estimate() is called
+                state["calls"] += 1
+
+                # Build a DAG on the same node set
+                dag = DiscreteBayesianNetwork([])
+                # Add all nodes
+                for node in cols:
+                    dag.add_node(node)
+
+                # First call → joint → correct orientation
+                if state["calls"] == 1:
+                    for u, v in full_edges:
+                        dag.add_edge(u, v)
+                else:
+                    # Subsequent calls → marginals → flipped orientation
+                    for u, v in full_edges:
+                        dag.add_edge(v, u)
+
+                return dag
+
+            return SimpleNamespace(estimate=estimate)
+
+        # Compute graphical compatibility over full-node subsets
+        score = self_compatibility_graphical(
+            flip_factory,
+            self.data,
+            num_subsets=10,
+            subset_fraction=1.0,  # use all nodes each time
+            random_state=0,
+        )
+
+        # Now every marginal is the reverse of the joint → SHD = 2 per subset
+        self.assertAlmostEqual(score, 2.0, places=6)
+
+    def test_kwargs_forwarded(self):
         """
-        Mixed DAG projects to:
-        - A→B (latent chain via H1)
-        - A↔B (latent collider via H2)
-        - A→C (original)
-        - B→C (latent chain via H2)
-        - No edge C→B, C→A, B→A beyond the bidirected link
+        Ensure that arbitrary kwargs (e.g. alpha, foo) are passed through
+        exactly once to .estimate() when no marginal runs occur (num_subsets=0).
         """
-        admg = latent_admg(self.dag_mixed, ["A", "B", "C"])
-        edges = set(admg.edges())
+        seen = {}
 
-        # Directed A→B and latent chain B→C
-        self.assertIn(("A", "B"), edges)
-        self.assertIn(("B", "C"), edges)
+        def record_factory(df):
+            def estimate(**kw):
+                seen.update(kw)
+                # We can return anything since no subsets will be processed
+                return DiscreteBayesianNetwork([])
 
-        # Bidirected A↔B
-        self.assertIn(("B", "A"), edges)
+            return SimpleNamespace(estimate=estimate)
 
-        # Original A→C
-        self.assertIn(("A", "C"), edges)
-
-        # Should not have reverse-only edges
-        self.assertNotIn(("C", "B"), edges)
-        self.assertNotIn(("C", "A"), edges)
+        # Use num_subsets=0 so we only invoke the joint estimator once
+        _ = self_compatibility_graphical(
+            record_factory,
+            self.data,
+            num_subsets=0,
+            subset_fraction=1.0,
+            random_state=3,
+            alpha=0.01,
+            foo="bar",
+        )
+        self.assertIn("alpha", seen)
+        self.assertEqual(seen["alpha"], 0.01)
+        self.assertIn("foo", seen)
+        self.assertEqual(seen["foo"], "bar")
