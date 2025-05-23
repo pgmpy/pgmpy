@@ -1,9 +1,11 @@
+import logging
 import unittest
 
 import numpy as np
 import torch
 
 from pgmpy import config
+from pgmpy.global_vars import DuplicateFilter
 
 
 class TestConfig(unittest.TestCase):
@@ -69,3 +71,45 @@ class TestConfig(unittest.TestCase):
     def tearDown(self):
         config.set_backend("numpy")
         config.set_show_progress(show_progress=True)
+
+
+class TestDuplicateFilter(unittest.TestCase):
+    def test_duplicate_filter(self):
+        test_logger = logging.getLogger("test_logger")
+        test_logger.setLevel(logging.INFO)
+
+        for handler in test_logger.handlers[:]:
+            test_logger.removeHandler(handler)
+        for filter_ in test_logger.filters[:]:
+            test_logger.removeFilter(filter_)
+
+        captured_logs = []
+
+        class ListHandler(logging.Handler):
+            def emit(self, record):
+                captured_logs.append(record.getMessage())
+
+        handler = ListHandler()
+        test_logger.addHandler(handler)
+
+        # Add duplicate filter
+        duplicate_filter = DuplicateFilter()
+        test_logger.addFilter(duplicate_filter)
+
+        test_logger.info("First message")  # Should pass
+        test_logger.info("First message")  # Should be filtered out (duplicate)
+        test_logger.info("Second message")  # Should pass
+        test_logger.info("Second message")  # Should be filtered out (duplicate)
+        test_logger.info("Second message")  # Should be filtered out (duplicate)
+        test_logger.info("First message")  # Should pass (not consecutive duplicate)
+        test_logger.info("First message")  # Should be filtered out (duplicate)
+        test_logger.info("Third message")  # Should pass
+
+        expected_logs = [
+            "First message",
+            "Second message",
+            "First message",
+            "Third message",
+        ]
+
+        self.assertEqual(captured_logs, expected_logs)
