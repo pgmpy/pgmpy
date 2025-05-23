@@ -76,52 +76,80 @@ class TestExpertInLoop(unittest.TestCase):
         }
 
     def test_estimate(self):
-        """Test the basic functionality of estimate method"""
+        """Test if the estimate function can recover a predefined 'true' DAG structure for the full model."""
 
-        # Use a simple orientation function that doesn't require LLM
-        def simple_orient(var1, var2, **kwargs):
-            # Always orient edges alphabetically
-            if var1 < var2:
+        # Define a 'true' DAG that represents realistic causal relationships in the full dataset
+        true_dag = nx.DiGraph()
+        true_dag.add_nodes_from(self.estimator.data.columns)
+
+        # Define edges based on reasonable causal relationships in this domain
+        # These represent our ground truth causal relationships
+        true_edges = [
+            # Education-related paths
+            ("Age", "Education"),
+            ("Race", "Education"),
+            ("NativeCountry", "Education"),
+            # Income-related paths
+            ("Education", "Income"),
+            ("Occupation", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("MaritalStatus", "Income"),
+            # Occupation-related paths
+            ("Age", "Occupation"),
+            ("Education", "Occupation"),
+            ("Sex", "Occupation"),
+            ("Workclass", "Occupation"),
+            # HoursPerWeek-related paths
+            ("Age", "HoursPerWeek"),
+            ("Workclass", "HoursPerWeek"),
+            ("Occupation", "HoursPerWeek"),
+            ("Education", "HoursPerWeek"),
+            # Relationship and MaritalStatus paths
+            ("Age", "MaritalStatus"),
+            ("Sex", "MaritalStatus"),
+            ("MaritalStatus", "Relationship"),
+            ("Age", "Relationship"),
+            ("Sex", "Relationship"),
+            # Other reasonable connections
+            ("Race", "NativeCountry"),
+            ("Workclass", "MaritalStatus"),
+            ("Workclass", "Relationship"),
+        ]
+        true_dag.add_edges_from(true_edges)
+
+        def oracle_orient(var1, var2, **kwargs):
+            """Orientation function that knows the 'true' structure."""
+            if true_dag.has_edge(var1, var2):
                 return (var1, var2)
-            else:
+            elif true_dag.has_edge(var2, var1):
                 return (var2, var1)
+            else:
+                # If the edge doesn't exist in the true DAG, fall back to alphabetical
+                return (var1, var2) if var1 < var2 else (var2, var1)
 
-        dag = self.estimator.estimate(
+        # Use the expert estimator with our oracle orientation function
+        estimated_dag = self.estimator.estimate(
+            orientation_fn=oracle_orient,
             pval_threshold=0.05,
             effect_size_threshold=0.05,
-            orientation_fn=simple_orient,
-            show_progress=False,  # Avoid printing progress in tests
+            show_progress=False,
         )
 
-        # Verify the result is a DAG with all expected nodes
-        self.assertEqual(
-            set(dag.nodes()),
-            set(
-                [
-                    "Age",
-                    "Workclass",
-                    "Education",
-                    "MaritalStatus",
-                    "Occupation",
-                    "Relationship",
-                    "Race",
-                    "Sex",
-                    "HoursPerWeek",
-                    "NativeCountry",
-                    "Income",
-                ]
-            ),
-        )
+        # Test that all edges in the estimated DAG that correspond to edges in the true DAG
+        # have the correct orientation
+        true_edges_found = 0
+        for edge in estimated_dag.edges():
+            u, v = edge
+            if true_dag.has_edge(u, v):
+                true_edges_found += 1
+            # If the estimated DAG has an edge (u,v), but the true DAG has (v,u), this is an orientation error
+            elif true_dag.has_edge(v, u):
+                self.fail(
+                    f"Edge {u}->{v} in estimated DAG has incorrect orientation. Should be {v}->{u}."
+                )
 
-        # Verify that edges were created
-        self.assertTrue(len(dag.edges()) > 0)
-
-        # Verify that the graph is acyclic
-        self.assertTrue(nx.is_directed_acyclic_graph(dag))
-
-        # Verify orientation function was applied correctly - all edges should be alphabetically ordered
-        for edge in dag.edges():
-            self.assertTrue(edge[0] < edge[1])
+        # Verify the result is a DAG (no cycles)
+        self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
 
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small

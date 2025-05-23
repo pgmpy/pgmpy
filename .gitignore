@@ -42,3 +42,9 @@ docs/examples/*
 
 # Macos files
 .DS_Store
+
+#virtualenv
+venv/
+
+#test files
+temp_test_expert.py
