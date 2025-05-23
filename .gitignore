@@ -42,3 +42,6 @@ docs/examples/*
 
 # Macos files
 .DS_Store
+
+# Python virtualenv
+pgmpy_env/
