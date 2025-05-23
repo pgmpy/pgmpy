@@ -193,12 +193,25 @@ class TestStructuralHammingDistance(unittest.TestCase):
 
         self.dag_5 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
 
+        self.dag_6 = DiscreteBayesianNetwork([(1, 2)])
+        self.dag_6.add_nodes_from([3])
+        self.dag_7 = DiscreteBayesianNetwork([(1, 2), (2, 3)])
+
         self.large_dag_1 = DiscreteBayesianNetwork(
             [(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)]
         )
         self.large_dag_2 = DiscreteBayesianNetwork(
             [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
         )
+
+        self.mixed_dag_1 = DiscreteBayesianNetwork(
+            [(1, 2), (2, 3), (2, 4), (4, 5), (6, 5), (7, 8)]
+        )
+        self.mixed_dag_1.add_nodes_from([9, 10])
+        self.mixed_dag_2 = DiscreteBayesianNetwork(
+            [(1, 2), (2, 4), (5, 4), (6, 5), (8, 7), (9, 10)]
+        )
+        self.mixed_dag_2.add_nodes_from([3, 7])
 
     def test_shd(self):
         self.assertEqual(SHD(self.dag_1, self.dag_2), 1)
@@ -208,6 +221,14 @@ class TestStructuralHammingDistance(unittest.TestCase):
 
     def test_shd(self):
         self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
+
+    def test_shd_isolated_nodes(self):
+        self.assertEqual(SHD(self.dag_6, self.dag_7), 1)
+        self.assertEqual(SHD(self.dag_7, self.dag_6), 1)
+
+    def test_shd_mixed_differences(self):
+        self.assertEqual(SHD(self.mixed_dag_1, self.mixed_dag_2), 4)
+        self.assertEqual(SHD(self.mixed_dag_2, self.mixed_dag_1), 4)
 
     def test_shd_unequal_graphs(self):
         with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
