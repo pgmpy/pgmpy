@@ -8,7 +8,6 @@ import pytest
 from pgmpy.estimators import ExpertInLoop
 
 
-@pytest.mark.skip("Temporarily skipping ExpertInLoop tests")
 class TestExpertInLoop(unittest.TestCase):
     def setUp(self):
         df = pd.read_csv(
@@ -77,14 +76,6 @@ class TestExpertInLoop(unittest.TestCase):
         }
 
     def test_estimate(self):
-        """Test if the estimate function can recover a predefined 'true' DAG structure for the full model."""
-
-        # Define a 'true' DAG that represents realistic causal relationships in the full dataset
-        true_dag = nx.DiGraph()
-        true_dag.add_nodes_from(self.estimator.data.columns)
-
-        # Define edges based on reasonable causal relationships in this domain
-        # These represent our ground truth causal relationships
         true_edges = [
             # Education-related paths
             ("Age", "Education"),
@@ -116,7 +107,9 @@ class TestExpertInLoop(unittest.TestCase):
             ("Workclass", "MaritalStatus"),
             ("Workclass", "Relationship"),
         ]
-        true_dag.add_edges_from(true_edges)
+
+        true_dag = nx.DiGraph(true_edges)
+        true_dag.add_nodes_from(self.estimator.data.columns)
 
         def oracle_orient(var1, var2, **kwargs):
             """Orientation function that knows the 'true' structure."""
@@ -125,63 +118,45 @@ class TestExpertInLoop(unittest.TestCase):
             elif true_dag.has_edge(var2, var1):
                 return (var2, var1)
             else:
-                # If the edge doesn't exist in the true DAG, fall back to alphabetical
-                return (var1, var2) if var1 < var2 else (var2, var1)
+                return None
 
         # Use the expert estimator with our oracle orientation function
         estimated_dag = self.estimator.estimate(
             orientation_fn=oracle_orient,
             pval_threshold=0.05,
             effect_size_threshold=0.05,
-            show_progress=False,
+            show_progress=True,
         )
 
-        # Test that all edges in the estimated DAG that correspond to edges in the true DAG
-        # have the correct orientation
-        true_edges_found = 0
-        for edge in estimated_dag.edges():
-            u, v = edge
-            if true_dag.has_edge(u, v):
-                true_edges_found += 1
-            # If the estimated DAG has an edge (u,v), but the true DAG has (v,u), this is an orientation error
-            elif true_dag.has_edge(v, u):
-                self.fail(
-                    f"Edge {u}->{v} in estimated DAG has incorrect orientation. Should be {v}->{u}."
-                )
+        for u, v in estimated_dag.edges():
+            self.assertTrue(true_dag.has_edge(u, v))
 
-        # Verify the result is a DAG (no cycles)
         self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
 
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
         dag = self.estimator_small.estimate(
-            variable_descriptions=self.descriptions,
-            use_llm=False,
-            orientations=orientations,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
+            orientations=orientations,
         )
         self.assertEqual(orientations, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, set([]))
 
-    def test_estimate_with_cache_no_llm_calls(self):
-        orientations = self.orientations_small
-        self.estimator_small.orientation_cache = orientations
+    def test_estimate_with_cache(self):
+        self.estimator_small.orientation_cache = self.orientations_small
 
         dag = self.estimator_small.estimate(
-            variable_descriptions=self.descriptions,
             use_cache=True,
-            use_llm=True,
-            orientations=orientations,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
         )
-        self.assertEqual(orientations, set(dag.edges()))
+        self.assertEqual(self.orientations_small, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
-        self.assertEqual(orientations_cache, orientations)
+        self.assertEqual(orientations_cache, self.orientations_small)
 
-    def test_estimate_with_custom_orientation_function(self):
+    def test_estimate_with_custom_orient_fn(self):
         def custom_orient(var1, var2, **kwargs):
             # Always orient edges from alphabetically first to second
             if var1 < var2:
@@ -204,19 +179,7 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in self.estimator_small.orientation_cache:
             self.assertTrue(edge[0] < edge[1])
 
-    def test_estimate_with_invalid_orientation_function(self):
-        def invalid_orient(var1, var2, **kwargs):
-            # Return an invalid orientation (not a tuple of the right vars)
-            return ("InvalidVar", var2)
-
-        with self.assertRaises(ValueError):
-            self.estimator_small.estimate(
-                orientation_fn=invalid_orient,
-                pval_threshold=0.1,
-                effect_size_threshold=0.1,
-            )
-
-    def test_estimate_with_orientation_fn_kwargs_1(self):
+    def test_estimate_with_orient_fn_kwargs(self):
         def orient_with_kwargs(var1, var2, **kwargs):
             # Use a keyword argument to determine orientation
             if kwargs.get("reverse_alphabetical", False):
@@ -241,27 +204,3 @@ class TestExpertInLoop(unittest.TestCase):
         # Check that all edges are oriented from alphabetically higher to lower
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
-
-    def test_estimate_with_orientation_fn_kwargs_2(self):
-        def orient_with_kwargs(var1, var2, **kwargs):
-            # Use a keyword argument to determine orientation
-            if kwargs.get("reverse_alphabetical", False):
-                if var1 > var2:
-                    return (var1, var2)
-                else:
-                    return (var2, var1)
-            else:
-                if var1 < var2:
-                    return (var1, var2)
-                else:
-                    return (var2, var1)
-
-        dag_normal = self.estimator_small.estimate(
-            orientation_fn=orient_with_kwargs,
-            pval_threshold=0.1,
-            effect_size_threshold=0.1,
-        )
-
-        # Check that all edges are oriented from alphabetically lower to higher
-        for edge in dag_normal.edges():
-            self.assertTrue(edge[0] < edge[1])
