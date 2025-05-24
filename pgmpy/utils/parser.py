@@ -69,7 +69,6 @@ def parse_lavaan(lines):
 
 
 def parse_dagitty(lines):
-
     def handle_edge_stat(edge_stat, latents, ebunch):
         all_vars = set()
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
