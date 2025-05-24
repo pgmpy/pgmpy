@@ -364,12 +364,14 @@ def manual_pairwise_orient(x, y):
         Returns a tuple (source, target) representing the edge direction.
     """
     user_input = input(
-        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"
+        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n 3. No edge \n Please enter 1, 2 or 3: "
     )
     if user_input == "1":
         return (x, y)
     elif user_input == "2":
         return (y, x)
+    elif user_input == "3":
+        return None
 
 
 def preprocess_data(df):
