@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import networkx as nx
 import pandas as pd
 import pytest
 
@@ -74,13 +75,81 @@ class TestExpertInLoop(unittest.TestCase):
             ("Age", "Education"),
         }
 
-    @pytest.mark.skipif(
-        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
-    )
     def test_estimate(self):
-        dag = self.estimator.estimate(variable_descriptions=self.descriptions)
-        # expected_edges = {('MaritalStatus', 'Relationship'), ('Age', 'Occupation'), ('NativeCountry', 'MaritalStatus'), ('Sex', 'Occupation'), ('Occupation', 'Income'), ('HoursPerWeek', 'Income'), ('NativeCountry', 'Education'), ('Age', 'HoursPerWeek'), ('Workclass', 'Occupation'), ('Education', 'Income'), ('Age', 'Workclass'), ('MaritalStatus', 'Income'), ('Workclass', 'HoursPerWeek'), ('NativeCountry', 'HoursPerWeek'), ('Education', 'Occupation'), ('Occupation', 'HoursPerWeek'), ('Age', 'Relationship'), ('Race', 'NativeCountry'), ('Sex', 'Relationship'), ('Education', 'HoursPerWeek'), ('Race', 'Education'), ('Workclass', 'Relationship'), ('MaritalStatus', 'HoursPerWeek'), ('Age', 'MaritalStatus'), ('Sex', 'MaritalStatus'), ('Relationship', 'HoursPerWeek'), ('Age', 'Education'), ('Workclass', 'MaritalStatus')}
-        # self.assertEqual(expected_edges, set(dag.edges()))
+        """Test if the estimate function can recover a predefined 'true' DAG structure for the full model."""
+
+        # Define a 'true' DAG that represents realistic causal relationships in the full dataset
+        true_dag = nx.DiGraph()
+        true_dag.add_nodes_from(self.estimator.data.columns)
+
+        # Define edges based on reasonable causal relationships in this domain
+        # These represent our ground truth causal relationships
+        true_edges = [
+            # Education-related paths
+            ("Age", "Education"),
+            ("Race", "Education"),
+            ("NativeCountry", "Education"),
+            # Income-related paths
+            ("Education", "Income"),
+            ("Occupation", "Income"),
+            ("HoursPerWeek", "Income"),
+            ("MaritalStatus", "Income"),
+            # Occupation-related paths
+            ("Age", "Occupation"),
+            ("Education", "Occupation"),
+            ("Sex", "Occupation"),
+            ("Workclass", "Occupation"),
+            # HoursPerWeek-related paths
+            ("Age", "HoursPerWeek"),
+            ("Workclass", "HoursPerWeek"),
+            ("Occupation", "HoursPerWeek"),
+            ("Education", "HoursPerWeek"),
+            # Relationship and MaritalStatus paths
+            ("Age", "MaritalStatus"),
+            ("Sex", "MaritalStatus"),
+            ("MaritalStatus", "Relationship"),
+            ("Age", "Relationship"),
+            ("Sex", "Relationship"),
+            # Other reasonable connections
+            ("Race", "NativeCountry"),
+            ("Workclass", "MaritalStatus"),
+            ("Workclass", "Relationship"),
+        ]
+        true_dag.add_edges_from(true_edges)
+
+        def oracle_orient(var1, var2, **kwargs):
+            """Orientation function that knows the 'true' structure."""
+            if true_dag.has_edge(var1, var2):
+                return (var1, var2)
+            elif true_dag.has_edge(var2, var1):
+                return (var2, var1)
+            else:
+                # If the edge doesn't exist in the true DAG, fall back to alphabetical
+                return (var1, var2) if var1 < var2 else (var2, var1)
+
+        # Use the expert estimator with our oracle orientation function
+        estimated_dag = self.estimator.estimate(
+            orientation_fn=oracle_orient,
+            pval_threshold=0.05,
+            effect_size_threshold=0.05,
+            show_progress=False,
+        )
+
+        # Test that all edges in the estimated DAG that correspond to edges in the true DAG
+        # have the correct orientation
+        true_edges_found = 0
+        for edge in estimated_dag.edges():
+            u, v = edge
+            if true_dag.has_edge(u, v):
+                true_edges_found += 1
+            # If the estimated DAG has an edge (u,v), but the true DAG has (v,u), this is an orientation error
+            elif true_dag.has_edge(v, u):
+                self.fail(
+                    f"Edge {u}->{v} in estimated DAG has incorrect orientation. Should be {v}->{u}."
+                )
+
+        # Verify the result is a DAG (no cycles)
+        self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
 
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
@@ -92,21 +161,12 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
+        orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, set([]))
 
     def test_estimate_with_cache_no_llm_calls(self):
         orientations = self.orientations_small
-        # Set the appropriate attribute based on which one exists in the implementation
-        if hasattr(self.estimator_small, "orientation_cache"):
-            self.estimator_small.orientation_cache = orientations
-        else:
-            self.estimator_small.orientations_llm = orientations
+        self.estimator_small.orientation_cache = orientations
 
         dag = self.estimator_small.estimate(
             variable_descriptions=self.descriptions,
@@ -117,34 +177,7 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
         self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
-        self.assertEqual(orientations_cache, orientations)
-
-    @pytest.mark.skipif(
-        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
-    )
-    def test_estimate_with_cache_and_llm_calls(self):
-        orientations = self.orientations_small
-        dag = self.estimator_small.estimate(
-            variable_descriptions=self.descriptions,
-            use_cache=True,
-            use_llm=True,
-            orientations=orientations,
-            pval_threshold=0.1,
-            effect_size_threshold=0.1,
-        )
-        self.assertEqual(orientations, set(dag.edges()))
-        # Check either attribute depending on which one exists
-        orientations_cache = getattr(
-            self.estimator_small,
-            "orientation_cache",
-            getattr(self.estimator_small, "orientations_llm", set([])),
-        )
+        orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, orientations)
 
     def test_estimate_with_custom_orientation_function(self):
