@@ -758,8 +758,8 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         v_var, v_lag = v
 
         # Get the parents of u and v in the current ts_dag, excluding each other
-        parents_u = set(ts_dag.predecessors(u))
-        parents_v = set(ts_dag.predecessors(v))
+        parents_u = set(ts_dag.get_parents(u))
+        parents_v = set(ts_dag.get_parents(v))
 
         # Exclude each other from parents
         parents_u.discard(v)
