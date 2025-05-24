@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
-from scipy.stats import pearsonr
 
 from pgmpy.estimators.PCMCI import PCMCI
 from pgmpy.estimators.CITests import get_ci_test
@@ -80,75 +79,75 @@ class TestPCMCIMCIPhase(unittest.TestCase):
 
         self.estimator = PCMCI(self.data)
 
-    # def test_run_mci_tests(self):
-    #     """Test the MCI test phase directly."""
+    def test_run_mci_tests(self):
+        """Test the MCI test phase directly."""
 
-    #     # Get the CI test function
-    #     ci_test_func = get_ci_test("pearsonr")
+        # Get the CI test function
+        ci_test_func = get_ci_test("pearsonr")
 
-    #     # First build a skeleton and orient it
-    #     skeleton, sep_sets = self.estimator._build_time_series_skeleton(
-    #         ci_test=ci_test_func, max_time_lag=2
-    #     )
+        # First build a skeleton and orient it
+        skeleton, sep_sets = self.estimator._build_time_series_skeleton(
+            ci_test=ci_test_func, max_time_lag=2
+        )
 
-    #     ts_dag = self.estimator._orient_time_series_edges(
-    #         skeleton, sep_sets, max_time_lag=2
-    #     )
+        ts_dag = self.estimator._orient_time_series_edges(
+            skeleton, sep_sets, max_time_lag=2
+        )
 
-    #     # Now run MCI tests
-    #     refined_dag = self.estimator._run_mci_tests(
-    #         ts_dag, ci_test=ci_test_func, significance_level=0.05
-    #     )
+        # Now run MCI tests
+        refined_dag = self.estimator._run_mci_tests(
+            ts_dag, ci_test=ci_test_func, significance_level=0.05
+        )
 
-    #     # The refined DAG should show X->Y->Z and also X->Z
-    #     self.assertTrue(refined_dag.has_edge(("Y", 1), ("Z", 0)))
-    #     self.assertTrue(refined_dag.has_edge(("X", 2), ("Z", 0)))
-    #     self.assertTrue(refined_dag.has_edge(("X", 1), ("Y", 0)))
+        # The refined DAG should show X->Y->Z and also X->Z
+        self.assertTrue(refined_dag.has_edge(("Y", 1), ("Z", 0)))
+        self.assertTrue(refined_dag.has_edge(("X", 2), ("Z", 0)))
+        self.assertTrue(refined_dag.has_edge(("X", 1), ("Y", 0)))
 
-    # def test_run_single_mci_test(self):
-    #     """Test a single MCI test directly."""
-    #     # Create a mock DAG
-    #     ts_dag = nx.DiGraph()
-    #     ts_dag.add_nodes_from([("X", 0), ("X", 1), ("Y", 0), ("Y", 1), ("Z", 0)])
-    #     ts_dag.add_edges_from(
-    #         [
-    #             (("X", 1), ("Y", 0)),
-    #             (("Y", 1), ("Z", 0)),
-    #         ]
-    #     )
+    def test_run_single_mci_test(self):
+        """Test a single MCI test directly."""
+        # Create a mock DAG
+        ts_dag = nx.DiGraph()
+        ts_dag.add_nodes_from([("X", 0), ("X", 1), ("Y", 0), ("Y", 1), ("Z", 0)])
+        ts_dag.add_edges_from(
+            [
+                (("X", 1), ("Y", 0)),
+                (("Y", 1), ("Z", 0)),
+            ]
+        )
 
-    #     # get the CI test function
-    #     ci_test_func = get_ci_test("pearsonr")
+        # get the CI test function
+        ci_test_func = get_ci_test("pearsonr")
 
-    #     # Create lagged data
-    #     lagged_data = self.estimator._create_lagged_data(self.data, 2)
+        # Create lagged data
+        lagged_data = self.estimator._create_lagged_data(self.data, 2)
 
-    #     # Test an edge that should remain
-    #     should_remove = self.estimator._run_single_mci_test(
-    #         ts_dag,
-    #         ("X", 1),
-    #         ("Y", 0),
-    #         lagged_data,
-    #         ci_test=ci_test_func,
-    #         significance_level=0.05,
-    #         max_cond_vars=3,
-    #     )
+        # Test an edge that should remain
+        should_remove = self.estimator._run_single_mci_test(
+            ts_dag,
+            ("X", 1),
+            ("Y", 0),
+            lagged_data,
+            ci_test=ci_test_func,
+            significance_level=0.05,
+            max_cond_vars=3,
+        )
 
-    #     self.assertFalse(should_remove)  # X->Y should remain
+        self.assertFalse(should_remove)  # X->Y should remain
 
-    #     # Test an edge that might be removed (X->Z) might be found redundant
-    #     # Add this edge first
-    #     ts_dag.add_edge(("X", 1), ("Z", 0))
+        # Test an edge that might be removed (X->Z) might be found redundant
+        # Add this edge first
+        ts_dag.add_edge(("X", 1), ("Z", 0))
 
-    #     should_remove = self.estimator._run_single_mci_test(
-    #         ts_dag,
-    #         ("X", 1),
-    #         ("Z", 0),
-    #         lagged_data,
-    #         ci_test=ci_test_func,
-    #         significance_level=0.05,
-    #         max_cond_vars=3,
-    #     )
+        should_remove = self.estimator._run_single_mci_test(
+            ts_dag,
+            ("X", 1),
+            ("Z", 0),
+            lagged_data,
+            ci_test=ci_test_func,
+            significance_level=0.05,
+            max_cond_vars=3,
+        )
 
     # Not testing the result since it's data dependent,
     # but testing the function runs correctly
