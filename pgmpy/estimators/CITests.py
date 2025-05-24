@@ -488,7 +488,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         raise ValueError(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
-    
+
     # Extracting time lags from kwargs
     time_lag_u = kwargs.get("time_lag_u")
     time_lag_v = kwargs.get("time_lag_v")
@@ -516,7 +516,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         # Ensure Z_data is a DataFrame even if it has a single column
         if len(Z_cols_to_select) == 1:
             Z_data = pd.DataFrame(Z_data)
-    
+
     # Step 2: If Z is empty compute a non-conditional test.
     if len(Z) == 0:
         coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
@@ -536,7 +536,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
             residual_X = X_data - Z_data.dot(X_coef)
         except ValueError as e:
             # This catch is for when Z_data might cause issues with lstsq, e.g., if it's empty after selection due to an error
-            logger.error(f"Error in X regression: {e}, Z_data shape: {Z_data.shape}, X_data shape: {X_data.shape}")
+            logger.error(
+                f"Error in X regression: {e}, Z_data shape: {Z_data.shape}, X_data shape: {X_data.shape}"
+            )
             raise
 
         # Perform linear regression for Y
@@ -544,16 +546,19 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
             Y_coef = np.linalg.lstsq(Z_data, Y_data, rcond=None)[0]
             residual_Y = Y_data - Z_data.dot(Y_coef)
         except ValueError as e:
-            logger.error(f"Error in Y regression: {e}, Z_data shape: {Z_data.shape}, Y_data shape: {Y_data.shape}")
+            logger.error(
+                f"Error in Y regression: {e}, Z_data shape: {Z_data.shape}, Y_data shape: {Y_data.shape}"
+            )
             raise
 
-        coef, p_value = stats.pearsonr(residual_X, residual_Y) # Use the residuals (Series)
-
+        coef, p_value = stats.pearsonr(
+            residual_X, residual_Y
+        )  # Use the residuals (Series)
 
     if boolean:
         # Check for NaN p_value (e.g., if residuals are constant)
         if np.isnan(p_value):
-            return True # Assume independent if p-value cannot be computed (e.g., no variance)
+            return True  # Assume independent if p-value cannot be computed (e.g., no variance)
 
         if p_value >= kwargs["significance_level"]:
             return True
