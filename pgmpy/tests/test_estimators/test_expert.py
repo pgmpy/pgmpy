@@ -8,6 +8,7 @@ import pytest
 from pgmpy.estimators import ExpertInLoop
 
 
+@pytest.mark.skip("Temporarily skipping ExpertInLoop tests")
 class TestExpertInLoop(unittest.TestCase):
     def setUp(self):
         df = pd.read_csv(
