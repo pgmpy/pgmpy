@@ -63,7 +63,6 @@ class ExpectationMaximization(ParameterEstimator):
             model_bn.latents = model.latents
             model = model_bn
 
-        # Drop fully missing columns and treat them as latent if not already
         original_cols = set(data.columns)
         data = data.dropna(axis=1, how="any")
         dropped_cols = original_cols - set(data.columns)
