@@ -81,17 +81,14 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         max_time_lag : int
             Maximum time lag to consider for causal relationships.
 
-        significance_level : float
+        significance_level : float, default=0.05
             Significance level for the conditional independence test.
-            Default is 0.05.
 
-        max_cond_vars : int
+        max_cond_vars : int, default=5
             Maximum number of conditioning variables to consider for the conditional independence test.
-            Default is 5.
 
-        show_progress : bool
+        show_progress : bool, default=True
             Whether to show a progress bar during the estimation process.
-            Default is True.
 
         n_jobs : int
             Number of jobs to run in parallel. Default is -1, which means using all processors.

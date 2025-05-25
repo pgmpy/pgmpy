@@ -439,7 +439,9 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         return chi, p_value, dof
 
 
-def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
+def pearsonr(
+    X, Y, Z, data, boolean=True, time_lag_u=0, time_lag_v=0, time_lag_sep=None, **kwargs
+):
     """
     Computes Pearson correlation coefficient and p-value for testing non-correlation.
     Should be used only on continuous data. In case when :math:`Z != \null` uses
@@ -488,6 +490,16 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         raise ValueError(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
+
+    # Initialize the time_lag_sep if it's None (for non time series contexts)
+    if time_lag_sep is None:
+        time_lag_sep = [0] * len(Z)
+
+    # Ensure consistency betweeen Z and time_lag_sep if Z elements are not tuples
+    if len(Z) > 0 and not isinstance(Z[0], tuple) and len(Z) != len(time_lag_sep):
+        raise ValueError("Length of Z and time_lag_sep must be equal")
+
+    # ------ Data Selection Logic ----#
 
     # Extracting time lags from kwargs
     time_lag_u = kwargs.get("time_lag_u")
