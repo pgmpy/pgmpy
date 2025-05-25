@@ -564,8 +564,11 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         ts_dag : TimeSeriesDAG
             A directed acyclic graph for time series data.
         """
-        # Initialize a directed graph
+        # Create a new TimeSeriesDAG instance instead of calling the constructor
         ts_dag = TimeSeriesDAG()
+
+        # Clear any existing nodes/edges and add nodes from skeleton
+        ts_dag.clear()
         ts_dag.add_nodes_from(skeleton.nodes())
 
         # First, orient edges based on time ordering (temporal constraint)
@@ -798,8 +801,8 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             True if the edge should be removed, False otherwise.
         """
         # Get the parents of u and v in the current ts_dag, excluding each other
-        parents_u = set(ts_dag.get_parents(u))
-        parents_v = set(ts_dag.get_parents(v))
+        parents_u = set(ts_dag.predecessors(u))
+        parents_v = set(ts_dag.predecessors(v))
 
         # Exclude each other from parents
         parents_u.discard(v)
