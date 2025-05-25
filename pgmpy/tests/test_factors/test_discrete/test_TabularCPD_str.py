@@ -223,26 +223,26 @@ class TestTabularCPDStr(unittest.TestCase):
         """Test exporting CPD to CSV file."""
         import tempfile
         import os
-        
+
         # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False) as temp:
             temp_filename = temp.name
-        
+
         try:
             # Export the CPD to CSV
             self.cpd3.to_csv(temp_filename)
-            
+
             # Read the CSV back and verify contents
-            with open(temp_filename, 'r') as f:
+            with open(temp_filename, "r") as f:
                 content = f.read()
-                
+
             # Basic validation
             self.assertIn("A", content)
             self.assertIn("B", content)
             self.assertIn("C", content)
             self.assertIn("0.1", content)
             self.assertIn("0.4", content)
-            
+
         finally:
             # Clean up the temporary file
             os.unlink(temp_filename)
