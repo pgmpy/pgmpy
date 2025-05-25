@@ -7,12 +7,16 @@ from .metrics import (
     log_likelihood_score,
     structure_score,
 )
+from .permutation_test import permutation_based_falsification_test, falsify_graph
 
 __all__ = [
     "correlation_score",
-    "log_likelihood_score",
+    "log_likelihood_score", 
     "structure_score",
     "implied_cis",
     "fisher_c",
     "SHD",
+    "BayesianModelProbability",
+    "permutation_based_falsification_test",
+    "falsify_graph",
 ]
