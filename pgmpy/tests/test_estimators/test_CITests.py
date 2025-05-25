@@ -40,7 +40,9 @@ class TestPearsonr(unittest.TestCase):
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind, boolean=False)
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z"], data=self.df_cind, boolean=False
+        )
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
@@ -50,7 +52,9 @@ class TestPearsonr(unittest.TestCase):
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_vstruct, boolean=False)
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z"], data=self.df_vstruct, boolean=False
+        )
         self.assertTrue(abs(coef) > 0.9)
         self.assertTrue(p_value < 0.05)
 
@@ -237,80 +241,156 @@ class TestResidualMethod(unittest.TestCase):
     def setUp(self):
         # Independent model
         self.model_indep = LinearGaussianBayesianNetwork(
-            [("Z1", "X"), ("Z2", "X"), ("Z3", "X"), ("Z1", "Y"), ("Z2", "Y"), ("Z3", "Y")]
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+            ]
         )
         self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
         self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
         self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
         self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.model_indep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep)
+        self.cpd_y_indep = LinearGaussianCPD(
+            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
+        )
+        self.model_indep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
+        )
         self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
-        self.df_indep_cont_cont.Z2 = pd.cut(self.df_indep_cont_cont.Z2, bins=4, labels=["z21","z22","z23","z24"])
+        self.df_indep_cont_cont.Z2 = pd.cut(
+            self.df_indep_cont_cont.Z2, bins=4, labels=["z21", "z22", "z23", "z24"]
+        )
 
         self.df_indep_cat_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cont.X = pd.cut(self.df_indep_cat_cont.X, bins=4, labels=["x1","x2","x3","x4"])
+        self.df_indep_cat_cont.X = pd.cut(
+            self.df_indep_cat_cont.X, bins=4, labels=["x1", "x2", "x3", "x4"]
+        )
 
         self.df_indep_cat_cat = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cat.X = pd.cut(self.df_indep_cat_cat.X, bins=4, labels=["x1","x2","x3","x4"])
-        self.df_indep_cat_cat.Y = pd.cut(self.df_indep_cat_cat.Y, bins=4, labels=["y1","y2","y3","y4"])
+        self.df_indep_cat_cat.X = pd.cut(
+            self.df_indep_cat_cat.X, bins=4, labels=["x1", "x2", "x3", "x4"]
+        )
+        self.df_indep_cat_cat.Y = pd.cut(
+            self.df_indep_cat_cat.Y, bins=4, labels=["y1", "y2", "y3", "y4"]
+        )
 
         self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
         self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
 
         # Dependent model
         self.model_dep = LinearGaussianBayesianNetwork(
-            [("Z1", "X"), ("Z2", "X"), ("Z3", "X"), ("Z1", "Y"), ("Z2", "Y"), ("Z3", "Y"), ("X", "Y")]
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+                ("X", "Y"),
+            ]
         )
-        self.cpd_y_dep = LinearGaussianCPD("Y", [0,0.5,0.5,0.5,0.5], 1, ["Z1","Z2","Z3","X"])
-        self.model_dep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep)
+        self.cpd_y_dep = LinearGaussianCPD(
+            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
+        )
+        self.model_dep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
+        )
         self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()
-        self.df_dep_cont_cont.Z2 = pd.cut(self.df_dep_cont_cont.Z2, bins=4, labels=["z21","z22","z23","z24"])
+        self.df_dep_cont_cont.Z2 = pd.cut(
+            self.df_dep_cont_cont.Z2, bins=4, labels=["z21", "z22", "z23", "z24"]
+        )
 
         self.df_dep_cat_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cont.X = pd.cut(self.df_dep_cat_cont.X, bins=4, labels=["x1","x2","x3","x4"])
+        self.df_dep_cat_cont.X = pd.cut(
+            self.df_dep_cat_cont.X, bins=4, labels=["x1", "x2", "x3", "x4"]
+        )
 
         self.df_dep_cat_cat = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cat.X = pd.cut(self.df_dep_cat_cat.X, bins=4, labels=["x1","x2","x3","x4"])
-        self.df_dep_cat_cat.Y = pd.cut(self.df_dep_cat_cat.Y, bins=4, labels=["y1","y2","y3","y4"])
+        self.df_dep_cat_cat.X = pd.cut(
+            self.df_dep_cat_cat.X, bins=4, labels=["x1", "x2", "x3", "x4"]
+        )
+        self.df_dep_cat_cat.Y = pd.cut(
+            self.df_dep_cat_cat.Y, bins=4, labels=["y1", "y2", "y3", "y4"]
+        )
 
         self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
         self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
 
     def test_pearsonr(self):
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=self.df_indep, boolean=False, seed=42)
+        coef, p_value = pearsonr(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
         self.assertTrue(abs(coef) <= 0.1)
         self.assertTrue(p_value >= 0.04)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=self.df_dep, boolean=False, seed=42)
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
     def test_pillai(self):
         # Non-conditional tests
-        dep_coefs = [0.20384248111995296, 0.20384248111995296, 0.17328996401736146, 0.15273841541416583, 0.17328996401736146]
+        dep_coefs = [
+            0.20384248111995296,
+            0.20384248111995296,
+            0.17328996401736146,
+            0.15273841541416583,
+            0.17328996401736146,
+        ]
         dep_pvalues = [0, 0, 0, 0, 0]
 
         computed_coefs, computed_pvalues = [], []
-        for df in [self.df_indep, self.df_indep_cont_cont, self.df_indep_cat_cont, self.df_indep_cat_cat, self.df_indep_ord_cont]:
+        for df in [
+            self.df_indep,
+            self.df_indep_cont_cont,
+            self.df_indep_cat_cont,
+            self.df_indep_cat_cat,
+            self.df_indep_ord_cont,
+        ]:
             c, p = pillai_trace(X="X", Y="Y", Z=[], data=df, boolean=False, seed=42)
-            computed_coefs.append(c); computed_pvalues.append(p)
+            computed_coefs.append(c)
+            computed_pvalues.append(p)
 
         self.assertTrue(np.allclose(computed_coefs, dep_coefs, atol=0.01))
         self.assertTrue(np.allclose(computed_pvalues, dep_pvalues, atol=0.01))
 
         # Conditional independent
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.24301695814712598, 0.016089038200486905, 0.0628047175294103, 0.030237263848127527, 0.0628047175294103]
+        indep_pvalues = [
+            0.24301695814712598,
+            0.016089038200486905,
+            0.0628047175294103,
+            0.030237263848127527,
+            0.0628047175294103,
+        ]
 
         computed_coefs, computed_pvalues = [], []
-        for df in [self.df_indep, self.df_indep_cont_cont, self.df_indep_cat_cont, self.df_indep_cat_cat, self.df_indep_ord_cont]:
-            c, p = pillai_trace(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=df, boolean=False, seed=42)
-            computed_coefs.append(c); computed_pvalues.append(p)
+        for df in [
+            self.df_indep,
+            self.df_indep_cont_cont,
+            self.df_indep_cat_cont,
+            self.df_indep_cat_cat,
+            self.df_indep_ord_cont,
+        ]:
+            c, p = pillai_trace(
+                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df, boolean=False, seed=42
+            )
+            computed_coefs.append(c)
+            computed_pvalues.append(p)
 
         self.assertTrue(np.allclose(computed_coefs, indep_coefs, atol=0.01))
         self.assertTrue(np.allclose(computed_pvalues, indep_pvalues, atol=0.01))
@@ -320,23 +400,43 @@ class TestResidualMethod(unittest.TestCase):
         dep2_pvalues = [0, 0, 0, 0, 0]
 
         computed_coefs, computed_pvalues = [], []
-        for df in [self.df_dep, self.df_dep_cont_cont, self.df_dep_cat_cont, self.df_dep_cat_cat, self.df_dep_ord_cont]:
-            c, p = pillai_trace(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=df, boolean=False, seed=42)
-            computed_coefs.append(c); computed_pvalues.append(p)
+        for df in [
+            self.df_dep,
+            self.df_dep_cont_cont,
+            self.df_dep_cat_cont,
+            self.df_dep_cat_cat,
+            self.df_dep_ord_cont,
+        ]:
+            c, p = pillai_trace(
+                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df, boolean=False, seed=42
+            )
+            computed_coefs.append(c)
+            computed_pvalues.append(p)
 
         self.assertTrue(np.allclose(computed_coefs, dep2_coefs, atol=0.01))
         self.assertTrue(np.allclose(computed_pvalues, dep2_pvalues, atol=0.01))
 
     def test_gcm(self):
         # Non-conditional tests
-        coef, p_value = gcm(X="X", Y="Y", Z=[], data=self.df_indep, boolean=False, seed=42)
+        coef, p_value = gcm(
+            X="X", Y="Y", Z=[], data=self.df_indep, boolean=False, seed=42
+        )
         self.assertAlmostEqual(round(coef, 3), 11.934)
         self.assertAlmostEqual(p_value, 0.0)
 
-        coef, p_value = gcm(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=self.df_indep, boolean=False, seed=42)
+        coef, p_value = gcm(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
         self.assertAlmostEqual(round(coef, 3), -1.908)
         self.assertEqual(round(p_value, 4), 0.0564)
 
-        coef, p_value = gcm(X="X", Y="Y", Z=["Z1","Z2","Z3"], data=self.df_dep, boolean=False, seed=42)
+        coef, p_value = gcm(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
