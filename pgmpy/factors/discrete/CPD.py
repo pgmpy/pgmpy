@@ -208,7 +208,7 @@ class TabularCPD(DiscreteFactor):
         return self._make_table_str(tablefmt="grid")
 
     def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
-        return super(TabularCPD, self)._str(phi_or_p, tablefmt)
+        return super(TabularCPD, self)._str(phi_or_p=phi_or_p, tablefmt=tablefmt)
 
     def _make_table_str(
         self, tablefmt="fancy_grid", print_state_names=True, return_list=False
