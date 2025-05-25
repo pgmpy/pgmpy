@@ -219,6 +219,59 @@ class TestTabularCPDStr(unittest.TestCase):
         self.assertIsInstance(result, str)
         self.assertIn("A", result)
 
+    def test_to_csv(self):
+        """Test exporting CPD to CSV file."""
+        import tempfile
+        import os
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as temp:
+            temp_filename = temp.name
+        
+        try:
+            # Export the CPD to CSV
+            self.cpd3.to_csv(temp_filename)
+            
+            # Read the CSV back and verify contents
+            with open(temp_filename, 'r') as f:
+                content = f.read()
+                
+            # Basic validation
+            self.assertIn("A", content)
+            self.assertIn("B", content)
+            self.assertIn("C", content)
+            self.assertIn("0.1", content)
+            self.assertIn("0.4", content)
+            
+        finally:
+            # Clean up the temporary file
+            os.unlink(temp_filename)
+
+    def test_truncate_strtable_vertical(self):
+        """Test vertical truncation of tall CPD tables."""
+        # Create a CPD with many states to force vertical truncation
+        states = 100  # Large number of states to ensure table is taller than terminal
+        values = [[0.5] * 2] * states  # 2 columns of 0.5s
+        tall_cpd = TabularCPD(
+            "tall_var",
+            states,
+            values,
+            evidence=["evidence"],
+            evidence_card=[2],
+        )
+
+        # Get the table string and check its height
+        cdf_str = tall_cpd._make_table_str(tablefmt="grid")
+        terminal_width, terminal_height = get_terminal_size()
+        list_rows_str = cdf_str.split("\n")
+        table_height = len(list_rows_str)
+
+        # Verify that the table height is not greater than terminal height
+        self.assertLessEqual(table_height, terminal_height)
+
+        # Verify that the table has been truncated by checking for ellipsis
+        self.assertIn("...", cdf_str)
+
 
 if __name__ == "__main__":
     unittest.main()
