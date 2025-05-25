@@ -182,6 +182,16 @@ _table_formats = {
         padding=1,
         with_header_hide=None,
     ),
+    "fancy_grid": TableFormat(
+        lineabove=Line("╒", "═", "╤", "╕"),
+        linebelowheader=Line("╞", "═", "╪", "╡"),
+        linebetweenrows=Line("├", "─", "┼", "┤"),
+        linebelow=Line("╘", "═", "╧", "╛"),
+        headerrow=DataRow("│", "│", "│"),
+        datarow=DataRow("│", "│", "│"),
+        padding=1,
+        with_header_hide=None,
+    ),
     "pipe": TableFormat(
         lineabove=_pipe_line_with_colons,
         linebelowheader=_pipe_line_with_colons,
