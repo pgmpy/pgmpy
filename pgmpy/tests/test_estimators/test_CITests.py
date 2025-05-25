@@ -385,13 +385,15 @@ class TestResidualMethod(unittest.TestCase):
 
         computed_coefs = []
         computed_pvalues = []
-        for i, df_indep in enumerate([
-            self.df_indep,
-            self.df_indep_cont_cont,
-            self.df_indep_cat_cont,
-            self.df_indep_cat_cat,
-            self.df_indep_ord_cont,
-        ]):
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
             coef, p_value = pillai_trace(
                 X="X",
                 Y="Y",
@@ -418,13 +420,15 @@ class TestResidualMethod(unittest.TestCase):
 
         computed_coefs = []
         computed_pvalues = []
-        for i, df_indep in enumerate([
-            self.df_indep,
-            self.df_indep_cont_cont,
-            self.df_indep_cat_cont,
-            self.df_indep_cat_cat,
-            self.df_indep_ord_cont,
-        ]):
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
             coef, p_value = pillai_trace(
                 X="X",
                 Y="Y",
@@ -451,13 +455,15 @@ class TestResidualMethod(unittest.TestCase):
 
         computed_coefs = []
         computed_pvalues = []
-        for i, df_dep in enumerate([
-            self.df_dep,
-            self.df_dep_cont_cont,
-            self.df_dep_cat_cont,
-            self.df_dep_cat_cat,
-            self.df_dep_ord_cont,
-        ]):
+        for i, df_dep in enumerate(
+            [
+                self.df_dep,
+                self.df_dep_cont_cont,
+                self.df_dep_cat_cont,
+                self.df_dep_cat_cat,
+                self.df_dep_ord_cont,
+            ]
+        ):
             coef, p_value = pillai_trace(
                 X="X",
                 Y="Y",
@@ -477,7 +483,6 @@ class TestResidualMethod(unittest.TestCase):
             np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
             msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
         )
-
 
     def test_gcm(self):
         # Non-conditional tests
