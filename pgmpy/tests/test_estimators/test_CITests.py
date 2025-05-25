@@ -473,7 +473,6 @@ class TestResidualMethod(unittest.TestCase):
         self.assertTrue(np.allclose(computed_coefs, dep_coefs, atol=0.01))
         self.assertTrue(np.allclose(computed_pvalues, dep_pvalues, atol=0.01))
 
-
     def test_gcm(self):
         # Non-conditional tests
         coef, p_value = gcm(
