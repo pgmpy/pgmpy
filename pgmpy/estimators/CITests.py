@@ -439,9 +439,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         return chi, p_value, dof
 
 
-def pearsonr(
-    X, Y, Z, data, boolean=True, time_lag_u=0, time_lag_v=0, time_lag_sep=None, **kwargs
-):
+def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     """
     Computes Pearson correlation coefficient and p-value for testing non-correlation.
     Should be used only on continuous data. In case when :math:`Z != \null` uses
@@ -491,87 +489,20 @@ def pearsonr(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
-    # Initialize the time_lag_sep if it's None (for non time series contexts)
-    if time_lag_sep is None:
-        time_lag_sep = [0] * len(Z)
-
-    # Ensure consistency betweeen Z and time_lag_sep if Z elements are not tuples
-    if len(Z) > 0 and not isinstance(Z[0], tuple) and len(Z) != len(time_lag_sep):
-        raise ValueError("Length of Z and time_lag_sep must be equal")
-
-    # ------ Data Selection Logic ----#
-
-    # Extracting time lags from kwargs
-    time_lag_u = kwargs.get("time_lag_u")
-    time_lag_v = kwargs.get("time_lag_v")
-    time_lag_sep = kwargs.get("time_lag_sep", [])
-
-    # validate that the time lags are provided
-    if time_lag_u is None or time_lag_v is None:
-        raise ValueError(
-            "time_lag_u and time_lag_v must be provided in kwargs for the pearsonr test."
-        )
-    if len(Z) != len(time_lag_sep):
-        raise ValueError(
-            "Length of Z must match the length of time_lag_sep. "
-            f"Got {len(Z)} and {len(time_lag_sep)}."
-        )
-
-    # Select the specific lag columns
-    X_data = data.loc[:, (X, time_lag_u)]
-    Y_data = data.loc[:, (Y, time_lag_v)]
-
-    Z_data = pd.DataFrame()
-    if len(Z) > 0:
-        Z_cols_to_select = [(z_var, z_lag) for z_var, z_lag in zip(Z, time_lag_sep)]
-        Z_data = data.loc[:, Z_cols_to_select]
-        # Ensure Z_data is a DataFrame even if it has a single column
-        if len(Z_cols_to_select) == 1:
-            Z_data = pd.DataFrame(Z_data)
-
     # Step 2: If Z is empty compute a non-conditional test.
     if len(Z) == 0:
         coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
 
     # Step 3: If Z is non-empty, use linear regression to compute residuals and test independence on it.
     else:
-        # It's good practice to ensure Z_data is treated as a 2D array/DataFrame here.
-        # np.linalg.lstsq expects (A, b) where A is the design matrix and b is the response vector.
-        # So Z_data should be (n_samples, n_features) and X_data/Y_data should be (n_samples,)
+        X_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, X], rcond=None)[0]
+        Y_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, Y], rcond=None)[0]
 
-        # Perform linear regression for X
-        # Convert Series to numpy array before passing to lstsq if there are issues
-        # Or ensure Z_data is correctly shaped for the regression (n_samples, n_features)
-        try:
-            X_coef = np.linalg.lstsq(Z_data, X_data, rcond=None)[0]
-            # Ensure X_data.values and Z_data.values are used if passing numpy arrays
-            residual_X = X_data - Z_data.dot(X_coef)
-        except ValueError as e:
-            # This catch is for when Z_data might cause issues with lstsq, e.g., if it's empty after selection due to an error
-            logger.error(
-                f"Error in X regression: {e}, Z_data shape: {Z_data.shape}, X_data shape: {X_data.shape}"
-            )
-            raise
-
-        # Perform linear regression for Y
-        try:
-            Y_coef = np.linalg.lstsq(Z_data, Y_data, rcond=None)[0]
-            residual_Y = Y_data - Z_data.dot(Y_coef)
-        except ValueError as e:
-            logger.error(
-                f"Error in Y regression: {e}, Z_data shape: {Z_data.shape}, Y_data shape: {Y_data.shape}"
-            )
-            raise
-
-        coef, p_value = stats.pearsonr(
-            residual_X, residual_Y
-        )  # Use the residuals (Series)
+        residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
+        residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
+        coef, p_value = stats.pearsonr(residual_X, residual_Y)
 
     if boolean:
-        # Check for NaN p_value (e.g., if residuals are constant)
-        if np.isnan(p_value):
-            return True  # Assume independent if p-value cannot be computed (e.g., no variance)
-
         if p_value >= kwargs["significance_level"]:
             return True
         else:

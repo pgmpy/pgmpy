@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from itertools import chain, combinations, permutations
+import copy
 
 import networkx as nx
 import pandas as pd
@@ -423,24 +424,13 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         sep_set : list
             The separating set that renders u and v conditionally independent.
         """
-        u_var, u_lag = u
-        v_var, v_lag = v
-
         # Find potential separating sets
         potential_sepsets = self._get_potential_sepsets(u, v, graph, cond_set_size)
 
         for sep_set in potential_sepsets:
-            # Test conditional independence
-            is_independent = ci_test(
-                u_var,
-                v_var,
-                [s[0] for s in sep_set],
-                data=lagged_data,
-                time_lag_u=u_lag,
-                time_lag_v=v_lag,
-                time_lag_sep=[s[1] for s in sep_set],
-                significance_level=significance_level,
-                **kwargs,
+            # Test conditional independence using the time-series aware CI test wrapper
+            is_independent = self._ci_test_wrapper(
+                u, v, sep_set, lagged_data, ci_test, significance_level, **kwargs
             )
 
             if is_independent:
@@ -497,6 +487,62 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
         # Generate combinations of valid neighbors of the correct size
         return list(combinations(all_valid_neighbors, cond_set_size))
+
+    def _ci_test_wrapper(
+        self, u, v, sep_set, lagged_data, ci_test, significance_level, **kwargs
+    ):
+        """
+        Wrapper function to handle the mismatch between tuple-based variable names
+        and what the CI test expects.
+
+        Parameters
+        ----------
+        u, v : tuple
+            The nodes to test, each is (variable, lag).
+        sep_set : list
+            List of conditioning variables (each is a tuple).
+        lagged_data : pandas.DataFrame
+            DataFrame with tuple column names.
+        ci_test : callable
+            The CI test function.
+        significance_level : float
+            Alpha level for CI tests.
+
+        Returns
+        -------
+        bool
+            True if u and v are conditionally independent given sep_set.
+        """
+        # Convert tuple column names to string column names for the CI test
+        col_mapping = {}
+        temp_data = lagged_data.copy()
+
+        # Create string representations of tuple column names
+        for col in lagged_data.columns:
+            if isinstance(col, tuple):
+                var_name, lag = col
+                string_col = f"{var_name}_lag_{lag}"
+                col_mapping[col] = string_col
+            else:
+                col_mapping[col] = str(col)
+
+        # Rename columns in the temporary dataframe
+        temp_data.columns = [col_mapping[col] for col in temp_data.columns]
+
+        # Convert node tuples to their string representations
+        u_str = col_mapping[u]
+        v_str = col_mapping[v]
+        sep_set_str = [col_mapping[s] for s in sep_set]
+
+        # Call the CI test with string column names
+        return ci_test(
+            u_str,
+            v_str,
+            sep_set_str,
+            data=temp_data,
+            significance_level=significance_level,
+            **kwargs,
+        )
 
     def _orient_time_series_edges(self, skeleton, separating_sets, max_time_lag=3):
         """
@@ -751,9 +797,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         should_remove : bool
             True if the edge should be removed, False otherwise.
         """
-        u_var, u_lag = u
-        v_var, v_lag = v
-
         # Get the parents of u and v in the current ts_dag, excluding each other
         parents_u = set(ts_dag.get_parents(u))
         parents_v = set(ts_dag.get_parents(v))
@@ -774,17 +817,9 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             )  # Sort by lag (more recent first)
             cond_vars = cond_vars[:max_cond_vars]
 
-        # Run the MCI test with the specified conditional variables
-        is_independent = ci_test(
-            u_var,
-            v_var,
-            [s[0] for s in cond_vars],
-            data=data,
-            time_lag_u=u_lag,
-            time_lag_v=v_lag,
-            time_lag_sep=[s[1] for s in cond_vars],
-            significance_level=significance_level,
-            **kwargs,
+        # Run the MCI test using the wrapper function
+        is_independent = self._ci_test_wrapper(
+            u, v, cond_vars, data, ci_test, significance_level, **kwargs
         )
 
         return is_independent
