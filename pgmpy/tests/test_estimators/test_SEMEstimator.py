@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 
 from pgmpy import config
-from pgmpy.estimators.SEMEstimator import IVEstimator, SEMEstimator
+from pgmpy.estimators import IVEstimator, SEMEstimator
 from pgmpy.models import SEM, SEMGraph
 
 
