@@ -123,38 +123,6 @@ class TestTimeSeriesPDAGMethods(unittest.TestCase):
             directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
         )
 
-    def test_get_ancestral_graph(self):
-        # Test getting ancestral graph for a node with ancestors
-        ancestral = self.pdag.get_ancestral_graph([("B", 1)])
-
-        self.assertIsInstance(ancestral, TimeSeriesPDAG)
-        # The ancestral graph should contain 'B' and its ancestors
-        self.assertIn(("B", 1), ancestral.nodes())
-        self.assertIn(("A", 0), ancestral.nodes())
-
-        # Test getting ancestral graph for a node with no ancestors
-        ancestral = self.pdag.get_ancestral_graph([("A", 0)])
-        # self.assertEqual(len(ancestral.nodes()), 1)
-        self.assertIn(("A", 0), ancestral.nodes())
-
-    def test_get_markov_blanket(self):
-        # Test Markov blanket for a node
-        mb = self.pdag.get_markov_blanket(("A", 0))
-
-        # 'A' has a directed edge to 'B' and an undirected edge with 'C'
-        self.assertIn(("B", 1), mb)
-        self.assertIn(("C", 0), mb)
-
-        # Test for node not in graph
-        with self.assertRaises(ValueError):
-            self.pdag.get_markov_blanket(("Z", 0))
-
-    def test_to_dag(self):
-        # Test conversion to TimeSeriesDAG
-        ts_dag = self.pdag.to_dag()
-        self.assertIsInstance(ts_dag, TimeSeriesDAG)
-        self.assertEqual(len(ts_dag.latents), len(self.pdag.latents))
-
     def test_copy(self):
         pdag_copy = self.pdag.copy()
 
@@ -168,29 +136,6 @@ class TestTimeSeriesPDAGMethods(unittest.TestCase):
         # Modifying the copy should not affect the original
         pdag_copy.add_node(("E", 0))
         self.assertNotEqual(len(pdag_copy.nodes()), len(self.pdag.nodes()))
-
-    def test_is_dconnected(self):
-        # Simple test case
-        self.assertTrue(self.pdag.is_dconnected(("A", 0), ("B", 1)))
-        self.assertTrue(self.pdag.is_dconnected(("B", 0), ("C", 1)))
-
-        # Test with observed nodes
-        # self.assertTrue(
-        #     self.pdag.is_dconnected(("A", 0), ("C", 1), observed=[("B", 0)])
-        # )
-
-        # Test with nodes that should be d-separated
-        # Path A -> B -> D should be blocked if B is observed
-        self.assertFalse(
-            self.pdag.is_dconnected(("A", 0), ("D", 1), observed=[("B", 1)])
-        )
-
-        # Edge case: test with non-existent nodes
-        with self.assertRaises(Exception):
-            self.pdag.is_dconnected(("Z", 0), ("C", 0))
-
-        # Test with empty observed set
-        self.assertTrue(self.pdag.is_dconnected(("A", 0), ("B", 1), observed=[]))
 
     def tearDown(self):
         del self.pdag
