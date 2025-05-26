@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch
+from pgmpy.estimators import BIC, BDeu, ExhaustiveSearch
 
 
 class TestBaseEstimator(unittest.TestCase):

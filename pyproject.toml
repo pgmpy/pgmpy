@@ -94,4 +94,3 @@ pgmpy = [
 ]
 [tool.setuptools]
 include-package-data = true
-

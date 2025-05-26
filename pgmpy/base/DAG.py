@@ -1600,7 +1600,7 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        Copy of PDAG: pgmpy.dag.PDAG
+        Copy of PDAG: pgmpy.base.PDAG
             Returns a copy of self.
         """
         pdag = PDAG(
@@ -1878,3 +1878,137 @@ class PDAG(nx.DiGraph):
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         """
         return nx.nx_agraph.to_agraph(self)
+
+
+class IPDAG(PDAG):
+    """
+    Class for representing Interventional PDAGs (I-PDAGs). I-PDAGs are the equivalence classes of
+    DAGs under interventions and contain both directed and undirected edges.
+
+    Parameters
+    ----------
+    directed_ebunch: list, array-like of 2-tuples
+        List of directed edges in the I-PDAG.
+    undirected_ebunch: list, array-like of 2-tuples
+        List of undirected edges in the I-PDAG.
+    latents: list, array-like
+        List of nodes which are latent variables.
+    intervention_targets: list, array-like
+        List of intervention targets for each sample in the data.
+
+    Examples
+    --------
+    >>> from pgmpy.base import IPDAG
+    >>> ipdag = IPDAG(directed_ebunch=[('A', 'B')], undirected_ebunch=[('B', 'C')],
+    ...               intervention_targets=['A', None, 'B'])
+    """
+
+    def __init__(
+        self,
+        directed_ebunch=[],
+        undirected_ebunch=[],
+        latents=[],
+        intervention_targets=[],
+    ):
+        super(IPDAG, self).__init__(directed_ebunch, undirected_ebunch, latents)
+        self.intervention_targets = intervention_targets
+
+    def copy(self):
+        """
+        Returns a copy of the object instance.
+
+        Returns
+        -------
+        Copy of IPDAG: pgmpy.base.IPDAG
+            Returns a copy of self.
+        """
+        ipdag = IPDAG(
+            directed_ebunch=list(self.directed_edges.copy()),
+            undirected_ebunch=list(self.undirected_edges.copy()),
+            latents=self.latents,
+            intervention_targets=self.intervention_targets.copy(),
+        )
+        ipdag.add_nodes_from(self.nodes())
+        return ipdag
+
+    def get_interventional_ancestors(self, node):
+        """
+        Returns the set of nodes that are ancestors of the given node in the interventional graph.
+        A node X is an interventional ancestor of Y if there exists a directed path from X to Y
+        that does not go through any intervention target.
+
+        Parameters
+        ----------
+        node: any hashable python object
+            The node for which to get the interventional ancestors.
+
+        Returns
+        -------
+        set: A set of interventional ancestor nodes.
+        """
+        ancestors = set()
+        visited = set()
+
+        def dfs(current):
+            if current in visited:
+                return
+            visited.add(current)
+
+            for parent in self.directed_parents(current):
+                if parent not in self.intervention_targets:
+                    ancestors.add(parent)
+                    dfs(parent)
+
+        dfs(node)
+        return ancestors
+
+    def get_interventional_children(self, node):
+        """
+        Returns the set of nodes that are children of the given node in the interventional graph.
+        A node Y is an interventional child of X if there exists a directed edge from X to Y
+        and Y is not an intervention target.
+
+        Parameters
+        ----------
+        node: any hashable python object
+            The node for which to get the interventional children.
+
+        Returns
+        -------
+        set: A set of interventional child nodes.
+        """
+        return {
+            child
+            for child in self.directed_children(node)
+            if child not in self.intervention_targets
+        }
+
+    def is_interventional_ancestor(self, u, v):
+        """
+        Returns True if u is an interventional ancestor of v.
+
+        Parameters
+        ----------
+        u, v: any hashable python objects
+            The nodes to check the interventional ancestry relationship.
+
+        Returns
+        -------
+        bool: True if u is an interventional ancestor of v, False otherwise.
+        """
+        return u in self.get_interventional_ancestors(v)
+
+    def is_interventional_child(self, u, v):
+        """
+        Returns True if v is an interventional child of u.
+
+        Parameters
+        ----------
+        u, v: any hashable python objects
+            The nodes to check the interventional parent-child relationship.
+
+        Returns
+        -------
+        bool: True if v is an interventional child of u, False otherwise.
+        """
+        return v in self.get_interventional_children(u)

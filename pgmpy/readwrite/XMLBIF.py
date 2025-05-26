@@ -15,9 +15,9 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import State, TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
-from pgmpy.global_vars import logger
 
 
 class XMLBIFReader(object):
