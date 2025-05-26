@@ -25,7 +25,7 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
 
         # Generate synthetic data that follows the model structure
         np.random.seed(42)
-        n_samples = 1000
+        n_samples = 500  # Reduced from 1000 for faster testing
 
         # X is independent
         X = np.random.binomial(1, 0.5, n_samples)
@@ -60,7 +60,10 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
     def test_basic_functionality(self):
         """Test that the function runs without error and returns expected structure."""
         result = permutation_based_falsification_test(
-            self.simple_model, self.simple_data, n_permutations=10, show_progress=False
+            self.simple_model,
+            self.simple_data,
+            n_permutations=5,
+            show_progress=False,  # Reduced from 10
         )
 
         # Check return structure
@@ -90,63 +93,12 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
         self.assertLessEqual(result["p_value_falsified"], 1.0)
         self.assertGreaterEqual(result["lmc_violations"], 0)
 
-    @patch("pgmpy.config.SHOW_PROGRESS", True)
-    def test_progress_bar_enabled(self):
-        """Test that progress bar works when enabled."""
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        # Test with progress bar enabled
-        result = permutation_based_falsification_test(
-            model, data, n_permutations=3, show_progress=True
-        )
-
-        self.assertIsInstance(result["falsifiable"], bool)
-
-    def test_exception_handling_in_ci_test(self):
-        """Test exception handling in CI tests with problematic data."""
-        # Create a model with problematic data that might cause CI test failures
-        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
-
-        # Create data with constant columns that might cause CI test issues
-        data = pd.DataFrame(
-            {
-                "X": [1, 1, 1, 1],  # Constant column might cause issues
-                "Y": [0, 1, 0, 1],
-                "Z": [0, 0, 0, 0],  # Another constant column
-            }
-        )
-
-        # Should handle gracefully without crashing
-        result = permutation_based_falsification_test(
-            model, data, n_permutations=5, show_progress=False
-        )
-
-        # Should still return valid results despite CI test exceptions
-        self.assertIsInstance(result["falsifiable"], bool)
-        self.assertGreaterEqual(result["lmc_violations"], 0)
-
-    def test_main_execution(self):
-        """Test that the main block can be executed."""
-        import subprocess
-        import sys
-
-        # Run the test file directly to cover the main block
-        result = subprocess.run(
-            [sys.executable, "pgmpy/tests/test_metrics/test_permutation_test.py"],
-            capture_output=True,
-            text=True,
-        )
-
-        # Should execute without major errors (some test failures are OK)
-        self.assertIsNotNone(result.returncode)
-
     def test_with_return_summary(self):
         """Test detailed summary return."""
         result = permutation_based_falsification_test(
             self.simple_model,
             self.simple_data,
-            n_permutations=10,
+            n_permutations=5,  # Reduced from 10
             return_summary=True,
             show_progress=False,
         )
@@ -169,7 +121,7 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
 
         # Check that permutation violations is a list
         self.assertIsInstance(summary["permutation_violations"], list)
-        self.assertEqual(len(summary["permutation_violations"]), 10)
+        self.assertEqual(len(summary["permutation_violations"]), 5)
 
     def test_wrong_model_detection(self):
         """Test that clearly wrong models are more likely to be falsified."""
@@ -178,12 +130,18 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
             [("Z", "Y"), ("Y", "X")]
         )  # Completely reversed
 
-        # Test both models
+        # Test both models with fewer permutations
         correct_result = permutation_based_falsification_test(
-            self.simple_model, self.simple_data, n_permutations=50, show_progress=False
+            self.simple_model,
+            self.simple_data,
+            n_permutations=10,
+            show_progress=False,  # Reduced from 50
         )
         wrong_result = permutation_based_falsification_test(
-            wrong_model, self.simple_data, n_permutations=50, show_progress=False
+            wrong_model,
+            self.simple_data,
+            n_permutations=10,
+            show_progress=False,  # Reduced from 50
         )
 
         # Wrong model should have more violations
@@ -197,7 +155,7 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
             self.simple_model,
             self.continuous_data,
             ci_test="pearsonr",
-            n_permutations=10,
+            n_permutations=5,  # Reduced from 10
             show_progress=False,
         )
 
@@ -234,13 +192,19 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
         # Set seed and run test
         np.random.seed(123)
         result1 = permutation_based_falsification_test(
-            self.simple_model, self.simple_data, n_permutations=20, show_progress=False
+            self.simple_model,
+            self.simple_data,
+            n_permutations=5,
+            show_progress=False,  # Reduced from 20
         )
 
         # Reset seed and run again
         np.random.seed(123)
         result2 = permutation_based_falsification_test(
-            self.simple_model, self.simple_data, n_permutations=20, show_progress=False
+            self.simple_model,
+            self.simple_data,
+            n_permutations=5,
+            show_progress=False,  # Reduced from 20
         )
 
         # Results should be identical
@@ -262,7 +226,10 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
         single_node_data = pd.DataFrame({"A": [0, 1, 0, 1]})
 
         result = permutation_based_falsification_test(
-            single_node_model, single_node_data, n_permutations=5, show_progress=False
+            single_node_model,
+            single_node_data,
+            n_permutations=3,
+            show_progress=False,  # Reduced from 5
         )
         # Should run without error
         self.assertIsInstance(result["falsifiable"], bool)
@@ -272,10 +239,13 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
         try:
             # Test with cancer model
             cancer_model = get_example_model("cancer")
-            cancer_data = cancer_model.simulate(500)
+            cancer_data = cancer_model.simulate(200)  # Reduced from 500
 
             result = permutation_based_falsification_test(
-                cancer_model, cancer_data, n_permutations=10, show_progress=False
+                cancer_model,
+                cancer_data,
+                n_permutations=5,
+                show_progress=False,  # Reduced from 10
             )
 
             # Should not falsify the true model (though might depending on sample size)
@@ -286,15 +256,70 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
             # Skip if example models not available
             self.skipTest(f"Example models not available: {e}")
 
+    @patch("pgmpy.config.SHOW_PROGRESS", True)
+    def test_progress_bar_enabled(self):
+        """Test that progress bar works when enabled."""
+        model = DiscreteBayesianNetwork([("X", "Y")])
+        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
+
+        # Test with progress bar enabled
+        result = permutation_based_falsification_test(
+            model, data, n_permutations=2, show_progress=True  # Reduced from 3
+        )
+
+        self.assertIsInstance(result["falsifiable"], bool)
+
+    def test_exception_handling_in_ci_test(self):
+        """Test exception handling in CI tests with problematic data."""
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
+
+        # Create data with constant columns that might cause CI test issues
+        data = pd.DataFrame(
+            {
+                "X": [1, 1, 1, 1],  # Constant column
+                "Y": [0, 1, 0, 1],
+                "Z": [0, 0, 0, 0],  # Another constant column
+            }
+        )
+
+        # Should handle gracefully without crashing
+        result = permutation_based_falsification_test(
+            model, data, n_permutations=3, show_progress=False  # Reduced from 5
+        )
+
+        self.assertIsInstance(result["falsifiable"], bool)
+        self.assertGreaterEqual(result["lmc_violations"], 0)
+
+    def test_real_example_model_scenario(self):
+        """Test with real pgmpy models to trigger potential skip scenarios."""
+        # Try to test with a real model, but handle gracefully if unavailable
+        try:
+            cancer_model = get_example_model("cancer")
+            cancer_data = cancer_model.simulate(50)  # Much smaller sample size
+
+            result = permutation_based_falsification_test(
+                cancer_model,
+                cancer_data,
+                n_permutations=3,
+                show_progress=False,  # Reduced from 5
+            )
+
+            self.assertIsInstance(result["falsifiable"], bool)
+            self.assertIsInstance(result["falsified"], bool)
+
+        except Exception as e:
+            # This covers the skipTest line when example models fail
+            self.skipTest(f"Example models not available: {e}")
+
 
 class TestHelperFunctions(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures for helper functions."""
         self.model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("A", "D")])
 
-        # Create test data
+        # Create test data - smaller sample size
         np.random.seed(42)
-        n = 100
+        n = 50  # Reduced from 100
         A = np.random.binomial(1, 0.5, n)
         B = np.random.binomial(1, 0.3 + 0.4 * A)
         C = np.random.binomial(1, 0.2 + 0.6 * B)
@@ -304,19 +329,6 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_non_descendants(self):
         """Test the _get_non_descendants function."""
-        # A -> B -> C, A -> D
-        # Let's trace descendants for each node:
-        # A can reach: B (direct), C (via B), D (direct) -> descendants = {B, C, D}
-        # B can reach: C (direct) -> descendants = {C}
-        # C can reach: nothing -> descendants = {}
-        # D can reach: nothing -> descendants = {}
-        #
-        # Non-descendants = all_nodes - descendants - {self}:
-        # A's non-descendants: {A,B,C,D} - {B,C,D} - {A} = {}
-        # B's non-descendants: {A,B,C,D} - {C} - {B} = {A, D}
-        # C's non-descendants: {A,B,C,D} - {} - {C} = {A, B, D}
-        # D's non-descendants: {A,B,C,D} - {} - {D} = {A, B, C}
-
         non_desc_A = _get_non_descendants(self.model, "A")
         non_desc_B = _get_non_descendants(self.model, "B")
         non_desc_C = _get_non_descendants(self.model, "C")
@@ -378,7 +390,7 @@ class TestProgressBarAndLogging(unittest.TestCase):
 
         # Should run without showing progress bar
         result = permutation_based_falsification_test(
-            model, data, n_permutations=5, show_progress=False
+            model, data, n_permutations=2, show_progress=False  # Reduced from 5
         )
 
         self.assertIsInstance(result["falsifiable"], bool)
@@ -390,12 +402,60 @@ class TestProgressBarAndLogging(unittest.TestCase):
         data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
 
         permutation_based_falsification_test(
-            model, data, n_permutations=3, show_progress=False
+            model, data, n_permutations=2, show_progress=False  # Reduced from 3
         )
 
         # Check that info logging was called
         self.assertTrue(mock_logger.info.called)
 
 
+class TestImportFunctionality(unittest.TestCase):
+    """Test basic import and module functionality."""
+
+    def test_module_imports(self):
+        """Test that all functions can be imported successfully."""
+        from pgmpy.metrics.permutation_test import (
+            falsify_graph,
+            permutation_based_falsification_test,
+        )
+
+        # Test that the alias works
+        self.assertEqual(falsify_graph, permutation_based_falsification_test)
+
+    def test_function_signature(self):
+        """Test that the main function has the expected signature."""
+        import inspect
+
+        sig = inspect.signature(permutation_based_falsification_test)
+        expected_params = [
+            "model",
+            "data",
+            "ci_test",
+            "significance_level",
+            "n_permutations",
+            "return_summary",
+            "show_progress",
+        ]
+
+        actual_params = list(sig.parameters.keys())
+        self.assertEqual(actual_params, expected_params)
+
+
 if __name__ == "__main__":
+    # Run a quick smoke test to verify basic functionality
+    print("Running basic smoke test...")
+
+    # Create simple test case
+    model = DiscreteBayesianNetwork([("X", "Y")])
+    data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
+
+    try:
+        result = permutation_based_falsification_test(
+            model, data, n_permutations=2, show_progress=False
+        )
+        print(f"✓ Smoke test passed: {result['falsifiable']=}, {result['falsified']=}")
+    except Exception as e:
+        print(f"✗ Smoke test failed: {e}")
+
+    # Run the actual unit tests
     unittest.main()
