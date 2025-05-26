@@ -244,7 +244,9 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def simulate(self, n_samples=1000, seed=None):
+    def simulate(
+        self, n_samples=1000, do=None, evidence=None, seed=None, missing_prob=None
+    ):
         """
         Simulates data from the given model.
 
@@ -252,6 +254,14 @@ class LinearGaussianBayesianNetwork(DAG):
         ----------
         n_samples: int
             The number of samples to draw from the model.
+
+        do: dict (default: None)
+            The interventions to apply to the model. dict should be of the form
+            {variable_name: state}
+
+        evidence: dict (default: None)
+            Observed evidence to apply to the model. dict should be of the form
+            {variable_name: state}
 
         seed: int (default: None)
             Seed for the random number generator.
@@ -272,18 +282,125 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=500, seed=42)
         """
+        evidence = {} if evidence is None else evidence
+
+        do = {} if do is None else do
+
+        if set(do.keys()).intersection(set(evidence.keys())):
+            raise ValueError("Variable can't be in both do and evidence")
+
+        nodes = list(do.keys())
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+            )
+
         if len(self.cpds) != len(self.nodes()):
             raise ValueError(
                 "Each node in the model should have a CPD associated with it"
             )
 
-        mean, cov = self.to_joint_gaussian()
-        variables = list(nx.topological_sort(self))
+        if do != {}:
+            model = LinearGaussianBayesianNetwork(self.edges())
+            model.add_nodes_from(self.nodes())
+            model.add_cpds(*self.cpds)
+            for var, val in do.items():
+                for parent in list(model.get_parents(var)):
+                    model.remove_edge(parent, var)
+
+                    new_cpd = LinearGaussianCPD(
+                        variable=var, beta=[val], std=1e-3, evidence=[]
+                    )
+                    model.remove_cpds(model.get_cpds(var))
+                    model.add_cpds(new_cpd)
+
+        else:
+            model = self
+
+        mean, cov = model.to_joint_gaussian()
+        variables = list(nx.topological_sort(model))
         rng = np.random.default_rng(seed=seed)
-        return pd.DataFrame(
-            rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
-            columns=variables,
-        )
+
+        evidence_var = list(evidence.keys())
+        sample_var = [v for v in variables if v not in evidence_var]
+
+        if missing_prob is not None:
+            if isinstance(missing_prob, list):
+                for cpd in missing_prob:
+                    if not isinstance(cpd, LinearGaussianCPD):
+                        raise ValueError(
+                            f"missing_prob must be a list of LinearGaussianCPD objects. Got {type(cpd)}"
+                        )
+            else:
+                if isinstance(missing_prob, LinearGaussianCPD):
+                    missing_prob = [missing_prob]
+                else:
+                    raise ValueError(
+                        f"missing_prob should be LinearGaussianCPD. Got {type(missing_prob)}"
+                    )
+
+            for cpd in missing_prob:
+                missing_var = cpd.variables[0]
+
+                if not missing_var.endswith("*"):
+                    raise ValueError(
+                        f"Got variable '{missing_var}'. Missingness variable should end with '*' to represent missingness (e.g., 'X*')."
+                    )
+
+                base_var = missing_var[:-1]
+
+                if base_var not in model.nodes:
+                    raise ValueError(
+                        f"Missingness variable '{missing_var}' refers to base variable '{base_var}', which is not in model nodes."
+                    )
+
+                if cpd.cardinality[0] != 2:
+                    raise ValueError(
+                        f"Missingness variable '{missing_var}' must have cardinality 2 (0=observed, 1=missing). Got {cpd.cardinality[0]}."
+                    )
+
+                model.add_node(missing_var)
+
+                if len(cpd.variables) > 1:
+                    evidences = cpd.variables[1:]
+                    for parent in evidences:
+                        if parent not in model.nodes:
+                            raise ValueError(
+                                f"Missingness CPD refers to evidence variable '{parent}', which is not in the model."
+                            )
+                        model.add_edge(parent, missing_var)
+
+                model.add_cpds(cpd)
+
+        if len(evidence) == 0:
+            df = pd.DataFrame(
+                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+                columns=variables,
+            )
+
+        else:
+            df = pd.DataFrame([evidence])
+            _, mean_cond, cov_cond = model.predict(data=df)
+            df = pd.DataFrame(
+                rng.multivariate_normal(mean=mean_cond, cov=cov_cond, size=n_samples),
+                columns=sample_var,
+            )
+
+        if missing_prob is not None:
+            for cpd in missing_prob:
+                missing_var = cpd.variables[0]
+                base_var = missing_var[:-1]
+
+                if missing_var not in df.columns or base_var not in df.columns:
+                    continue
+
+                mask = df[missing_var].round().astype(int) == 1
+                df.loc[mask, base_var] = np.nan
+
+            df = df[[col for col in df.columns if not col.endswith("*")]]
+
+        return df
 
     def check_model(self):
         """
