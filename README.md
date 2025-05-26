@@ -84,7 +84,7 @@ pred_FIO2 = dag_fitted.predict(evidence_df)
 
 ### Linear Gaussian Data
 ```python
-# Load an example Gaussian Bayesian Network and simulate data
+# Load an example Gaussian Bayesian Network and simulate data.
 gaussian_bn = get_example_model('ecoli70')
 ecoli_df = gaussian_bn.simulate(n_samples=100)
 
