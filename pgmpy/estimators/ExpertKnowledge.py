@@ -30,7 +30,7 @@ class ExpertKnowledge:
             Refer to the algorithm documentation for details on how the
             argument is handled.
 
-    temporal order: iterator (default: None)
+    temporal_order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list/structure in the (2 dimensional) iterator contains
             variables with the same temporal significance; the more prior
