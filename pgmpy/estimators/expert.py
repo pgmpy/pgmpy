@@ -269,7 +269,7 @@ class ExpertInLoop(StructureEstimator):
             if (selected_edge.u, selected_edge.v) in orientations:
                 edge_direction = (selected_edge.u, selected_edge.v)
             elif (selected_edge.v, selected_edge.u) in orientations:
-                    edge_direction = (selected_edge.v, selected_edge.u)
+                edge_direction = (selected_edge.v, selected_edge.u)
             elif expert_knowledge is not None and expert_knowledge.temporal_ordering:
                 # Check if temporal order can determine the direction
                 u_order = expert_knowledge.temporal_ordering.get(selected_edge.u)
