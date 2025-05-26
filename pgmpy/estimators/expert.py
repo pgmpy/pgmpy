@@ -6,7 +6,7 @@ import pandas as pd
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
@@ -61,6 +61,7 @@ class ExpertInLoop(StructureEstimator):
         show_progress=True,
         orientations=set([]),
         use_cache=True,
+        expert_knowledge: ExpertKnowledge = None,
         **kwargs,
     ):
         """
@@ -114,6 +115,12 @@ class ExpertInLoop(StructureEstimator):
 
         use_cache: bool
             If False, calls the orientation_fn directly(the same (u, v) multiple times)
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge (default: None)
+            Expert knowledge about the causal structure. This can include:
+            - forbidden_edges: Edges that should not be present in the final model
+            - required_edges: Edges that must be present in the final model (can be removed during pruning)
+            - temporal_order: The temporal ordering of variables
 
         kwargs: kwargs
             Any additional parameters to pass to orientation_fn
@@ -181,7 +188,14 @@ class ExpertInLoop(StructureEstimator):
         dag = DAG()
         dag.add_nodes_from(nodes)
 
+        # Initialize blacklisted_edges with forbidden_edges from expert knowledge
         blacklisted_edges = []
+        if expert_knowledge is not None:
+            blacklisted_edges = list(expert_knowledge.forbidden_edges)
+            # Add required edges to the DAG
+            if expert_knowledge.required_edges:
+                dag.add_edges_from(expert_knowledge.required_edges)
+
         while True:
             # Step 1: Compute effects and p-values between every combination of variables.
             all_effects = self.test_all(dag)
@@ -230,8 +244,9 @@ class ExpertInLoop(StructureEstimator):
 
             # Edge orientation logic flow (part of step 3.2):
             # 1. If pre-defined orientations are provided, use those first
-            # 2. Otherwise, try to use cached orientations if use_cache=True
-            # 3. If no cached orientation, call the orientation_fn and validate result
+            # 2. Check if temporal order can determine the direction
+            # 3. Otherwise, try to use cached orientations if use_cache=True
+            # 4. If no cached orientation, call the orientation_fn and validate result
             #    - Validate that it returns a valid edge direction tuple
             #    - Cache the orientation and add the edge to the DAG
 
@@ -240,6 +255,15 @@ class ExpertInLoop(StructureEstimator):
                     edge_direction = (selected_edge.u, selected_edge.v)
                 elif (selected_edge.v, selected_edge.u) in orientations:
                     edge_direction = (selected_edge.v, selected_edge.u)
+            elif expert_knowledge is not None and expert_knowledge.temporal_ordering:
+                # Check if temporal order can determine the direction
+                u_order = expert_knowledge.temporal_ordering.get(selected_edge.u)
+                v_order = expert_knowledge.temporal_ordering.get(selected_edge.v)
+                if u_order is not None and v_order is not None:
+                    if u_order < v_order:
+                        edge_direction = (selected_edge.u, selected_edge.v)
+                    elif v_order < u_order:
+                        edge_direction = (selected_edge.v, selected_edge.u)
             else:
                 if use_cache:
                     if (selected_edge.u, selected_edge.v) in self.orientation_cache:
