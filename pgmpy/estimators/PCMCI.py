@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from itertools import chain, combinations, permutations
-import copy
+from itertools import combinations, permutations
 
 import networkx as nx
 import pandas as pd
@@ -15,7 +14,7 @@ from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
 
 
-class PCMCI(StructureEstimator, TimeSeriesDAG):
+class PCMCI(StructureEstimator, TimeSeriesDAG, nx.Graph):
     """Class for constraint-based estimation of time series causal graphs using the PCMCI algorithm.
 
     PCMCI is a two-step procedure that first applies a variant of the PC algorithm to
@@ -348,7 +347,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
                     edges_to_test.append((node, neigh))
 
         # For each edge, test conditional independence with all possible conditioning sets
-        if n_jobs != 1 and len(edges_to_test) > 0:
+        if n_jobs >= 1 and len(edges_to_test) > 0:
             # Parallel implementation
             results = Parallel(n_jobs=n_jobs)(
                 delayed(self._test_edge_independence)(
@@ -366,23 +365,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
             # Process results
             for (u, v), (is_independent, sep_set) in zip(edges_to_test, results):
-                if is_independent:
-                    separating_sets[frozenset((u, v))] = sep_set
-                    if graph.has_edge(u, v):  # Check if edge still exists
-                        graph.remove_edge(u, v)
-        else:
-            # Sequential implementation
-            for u, v in edges_to_test:
-                is_independent, sep_set = self._test_edge_independence(
-                    u,
-                    v,
-                    graph,
-                    lagged_data,
-                    ci_test,
-                    cond_set_size,
-                    significance_level,
-                    **kwargs,
-                )
                 if is_independent:
                     separating_sets[frozenset((u, v))] = sep_set
                     if graph.has_edge(u, v):  # Check if edge still exists
@@ -714,7 +696,7 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
         result_dag = ts_dag.copy()
 
         # Run MCI tests in parallel
-        if n_jobs != 1 and len(edges_to_test) > 0:
+        if n_jobs >= 1 and len(edges_to_test) > 0:
             results = Parallel(n_jobs=n_jobs)(
                 delayed(self._run_single_mci_test)(
                     ts_dag,
@@ -733,23 +715,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
             for edge, should_remove in zip(edges_to_test, results):
                 if should_remove:
                     result_dag.remove_edge(*edge)
-                if show_progress and config.SHOW_PROGRESS:
-                    pbar.update(1)
-        else:
-            # Sequential implementation
-            for u, v in edges_to_test:
-                should_remove = self._run_single_mci_test(
-                    ts_dag,
-                    u,
-                    v,
-                    lagged_data,
-                    ci_test,
-                    significance_level,
-                    max_cond_vars,
-                    **kwargs,
-                )
-                if should_remove:
-                    result_dag.remove_edge(u, v)
                 if show_progress and config.SHOW_PROGRESS:
                     pbar.update(1)
 
@@ -810,15 +775,6 @@ class PCMCI(StructureEstimator, TimeSeriesDAG):
 
         # Create a list of all potential conditioning variables
         cond_vars = list(parents_u | parents_v)
-
-        # Check if there are too many conditioning variables
-        if len(cond_vars) > max_cond_vars:
-            # Prioritize more recent parents and those with stronger causal effects
-            # This is simplified; in practice, a more sophisticated selection might be used
-            cond_vars = sorted(
-                cond_vars, key=lambda x: x[1]
-            )  # Sort by lag (more recent first)
-            cond_vars = cond_vars[:max_cond_vars]
 
         # Run the MCI test using the wrapper function
         is_independent = self._ci_test_wrapper(

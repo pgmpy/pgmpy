@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
+# from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
 from pgmpy.base.DAG import PDAG
 
 
@@ -101,7 +101,7 @@ class TimeSeriesPDAG(PDAG):
                 f"to the lag of the target node {v}."
             )
 
-    def to_dag(self):
+    def to_TimeSeriesDAG(self):
         """
         Returns one possible TimeSeriesDAG which is represented using the TimeSeriesPDAG.
 
@@ -117,6 +117,8 @@ class TimeSeriesPDAG(PDAG):
         >>> ts_dag = tspdag.to_dag()
         """
         # First get a DAG from the PDAG using the parent class method
+        from pgmpy.base.TimeSeriesDAG import TimeSeriesDAG
+
         dag = super(TimeSeriesPDAG, self).to_dag()
 
         # Create a new TimeSeriesDAG with the edges from the DAG
@@ -160,7 +162,6 @@ class TimeSeriesPDAG(PDAG):
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as mlines
-        import networkx as nx
 
         # Build the summary graph
         summary_graph = nx.DiGraph()
@@ -259,189 +260,92 @@ class TimeSeriesPDAG(PDAG):
 
         return summary_graph, fig, ax
 
-    def get_ancestral_graph(self, nodes):
-        """
-        Returns the ancestral graph of the given `nodes` in the time series PDAG.
+    # def get_markov_blanket(self, node):
+    #     """
+    #     Returns the Markov blanket for a node in the TimeSeriesPDAG.
 
-        The ancestral graph only contains the nodes which are ancestors of at least
-        one of the variables in nodes.
+    #     In the context of a PDAG, the Markov blanket of a node includes:
+    #     - Parents (directed edges coming in)
+    #     - Children (directed edges going out)
+    #     - Neighbors (connected by undirected edges)
+    #     - Other parents of children
 
-        Parameters
-        ----------
-        nodes: iterable
-            List of nodes whose ancestral graph needs to be computed.
-            Each node should be a tuple (variable, lag).
+    #     Parameters
+    #     ----------
+    #     node: tuple
+    #         The node whose Markov blanket is to be determined.
+    #         Should be in the form (variable, lag).
 
-        Returns
-        -------
-        TimeSeriesPDAG
-            A new TimeSeriesPDAG containing only the ancestors of the specified nodes.
+    #     Returns
+    #     -------
+    #     list
+    #         List of nodes in the Markov blanket.
 
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(
-        ...     directed_ebunch=[(('A', 0), ('B', 1)), (('B', 1), ('C', 2))],
-        ...     undirected_ebunch=[(('A', 0), ('D', 0))]
-        ... )
-        >>> ancestral = tspdag.get_ancestral_graph([('C', 2)])
-        """
-        # Find all ancestors
-        ancestors = set()
-        for node in nodes:
-            # For each node, trace back through both directed and undirected edges
-            visited = set()
-            stack = [node]
+    #     Examples
+    #     --------
+    #     >>> tspdag = TimeSeriesPDAG(
+    #     ...     directed_ebunch=[(('A', 0), ('C', 1)), (('B', 0), ('C', 1))],
+    #     ...     undirected_ebunch=[(('A', 0), ('D', 0))]
+    #     ... )
+    #     >>> mb = tspdag.get_markov_blanket(('A', 0))
+    #     """
+    #     if node not in self.nodes():
+    #         raise ValueError(f"Node {node} not found in the graph")
 
-            while stack:
-                current = stack.pop()
-                if current in visited:
-                    continue
+    #     markov_blanket = set()
 
-                visited.add(current)
-                ancestors.add(current)
+    #     # Get parents (direct predecessors that are not neighbors)
+    #     parents = set()
+    #     for predecessor in self.predecessors(node):
+    #         if node not in self.predecessors(predecessor):  # Not an undirected edge
+    #             parents.add(predecessor)
 
-                # Add predecessors (both from directed and undirected edges)
-                stack.extend(self.predecessors(current))
+    #     # Get children (direct successors that are not neighbors)
+    #     children = set()
+    #     for successor in self.successors(node):
+    #         if node not in self.successors(successor):  # Not an undirected edge
+    #             children.add(successor)
 
-        # Create a new TimeSeriesPDAG with only the ancestors
-        directed_ancestors = [
-            (u, v) for u, v in self.directed_edges if u in ancestors and v in ancestors
-        ]
-        undirected_ancestors = [
-            (u, v)
-            for u, v in self.undirected_edges
-            if u in ancestors and v in ancestors
-        ]
-        latent_ancestors = [node for node in self.latents if node in ancestors]
+    #     # Get neighbors (connected by undirected edges)
+    #     neighbors = set()
+    #     for possible_neighbor in self.predecessors(node):
+    #         if node in self.predecessors(possible_neighbor):  # Undirected edge
+    #             neighbors.add(possible_neighbor)
 
-        return TimeSeriesPDAG(
-            directed_ebunch=directed_ancestors,
-            undirected_ebunch=undirected_ancestors,
-            latents=latent_ancestors,
-        )
+    #     # Add parents, children, and neighbors to the Markov blanket
+    #     markov_blanket.update(parents)
+    #     markov_blanket.update(children)
+    #     markov_blanket.update(neighbors)
 
-    def get_markov_blanket(self, node):
-        """
-        Returns the Markov blanket for a node in the TimeSeriesPDAG.
+    #     # Add other parents of children
+    #     for child in children:
+    #         for parent in self.predecessors(child):
+    #             if parent != node:
+    #                 markov_blanket.add(parent)
 
-        In the context of a PDAG, the Markov blanket of a node includes:
-        - Parents (directed edges coming in)
-        - Children (directed edges going out)
-        - Neighbors (connected by undirected edges)
-        - Other parents of children
+    #     return list(markov_blanket)
 
-        Parameters
-        ----------
-        node: tuple
-            The node whose Markov blanket is to be determined.
-            Should be in the form (variable, lag).
+    # def get_independencies(self):
+    #     """
+    #     Returns the independencies implied by the d-separation in the TimeSeriesPDAG.
 
-        Returns
-        -------
-        list
-            List of nodes in the Markov blanket.
+    #     Returns
+    #     -------
+    #     Independencies
+    #         An Independencies object containing the conditional independencies
+    #         implied by the graph structure.
 
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(
-        ...     directed_ebunch=[(('A', 0), ('C', 1)), (('B', 0), ('C', 1))],
-        ...     undirected_ebunch=[(('A', 0), ('D', 0))]
-        ... )
-        >>> mb = tspdag.get_markov_blanket(('A', 0))
-        """
-        if node not in self.nodes():
-            raise ValueError(f"Node {node} not found in the graph")
-
-        markov_blanket = set()
-
-        # Get parents (direct predecessors that are not neighbors)
-        parents = set()
-        for predecessor in self.predecessors(node):
-            if node not in self.predecessors(predecessor):  # Not an undirected edge
-                parents.add(predecessor)
-
-        # Get children (direct successors that are not neighbors)
-        children = set()
-        for successor in self.successors(node):
-            if node not in self.successors(successor):  # Not an undirected edge
-                children.add(successor)
-
-        # Get neighbors (connected by undirected edges)
-        neighbors = set()
-        for possible_neighbor in self.predecessors(node):
-            if node in self.predecessors(possible_neighbor):  # Undirected edge
-                neighbors.add(possible_neighbor)
-
-        # Add parents, children, and neighbors to the Markov blanket
-        markov_blanket.update(parents)
-        markov_blanket.update(children)
-        markov_blanket.update(neighbors)
-
-        # Add other parents of children
-        for child in children:
-            for parent in self.predecessors(child):
-                if parent != node:
-                    markov_blanket.add(parent)
-
-        return list(markov_blanket)
-
-    def is_dconnected(self, start, end, observed=None):
-        """
-        Determines if there is a d-connecting path between start and end nodes,
-        given that observed nodes are observed.
-
-        Parameters
-        ----------
-        start: tuple
-            The starting node, in the form (variable, lag).
-
-        end: tuple
-            The ending node, in the form (variable, lag).
-
-        observed: list, set, or None
-            A list or set of observed nodes. If None, no nodes are observed.
-
-        Returns
-        -------
-        bool
-            True if there is a d-connecting path, False otherwise.
-
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(
-        ...     directed_ebunch=[(('A', 0), ('B', 1)), (('C', 0), ('B', 1))],
-        ...     undirected_ebunch=[(('A', 0), ('C', 0))]
-        ... )
-        >>> tspdag.is_dconnected(('A', 0), ('C', 0))
-        True
-        >>> tspdag.is_dconnected(('A', 0), ('B', 1), observed=[('C', 0)])
-        True
-        """
-        # Convert to DAG to use the d-separation algorithm
-        dag = self.to_dag()
-        return dag.is_dconnected(start, end, observed=observed)
-
-    def get_independencies(self):
-        """
-        Returns the independencies implied by the d-separation in the TimeSeriesPDAG.
-
-        Returns
-        -------
-        Independencies
-            An Independencies object containing the conditional independencies
-            implied by the graph structure.
-
-        Examples
-        --------
-        >>> tspdag = TimeSeriesPDAG(
-        ...     directed_ebunch=[(('A', 0), ('B', 1)), (('C', 0), ('B', 1))],
-        ...     undirected_ebunch=[]
-        ... )
-        >>> independencies = tspdag.get_independencies()
-        """
-        # Convert to DAG to use the get_independencies method
-        dag = self.to_dag()
-        return dag.get_independencies()
+    #     Examples
+    #     --------
+    #     >>> tspdag = TimeSeriesPDAG(
+    #     ...     directed_ebunch=[(('A', 0), ('B', 1)), (('C', 0), ('B', 1))],
+    #     ...     undirected_ebunch=[]
+    #     ... )
+    #     >>> independencies = tspdag.get_independencies()
+    #     """
+    #     # Convert to DAG to use the get_independencies method
+    #     dag = self.to_dag()
+    #     return dag.get_independencies()
 
     def copy(self):
         """
