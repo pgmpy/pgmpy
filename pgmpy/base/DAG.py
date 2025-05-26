@@ -86,7 +86,12 @@ class DAG(nx.DiGraph):
                     f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
                 )
         elif dagitty_str:
-            ebunch, latents = parse_dagitty(dagitty_str)
+            ebunch, latents, betas = parse_dagitty(dagitty_str)
+        betas = []
+        if len(betas) > 0:
+            raise ValueError(
+                "Invalid arguments (beta): to create LGBN from daggity use from_dagitty method"
+            )
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -154,7 +159,13 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        return cls(dagitty_str=dagitty_str)
+        ebunch, latents, betas = parse_dagitty(dagitty_str)
+        if len(betas) == 0:
+            return cls(dagitty_str=dagitty_str)
+        else:
+            from pgmpy.models import LinearGaussianBayesianNetwork
+
+            return LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
 
     def add_node(self, node, weight=None, latent=False):
         """

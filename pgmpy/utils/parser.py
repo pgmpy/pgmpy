@@ -69,7 +69,7 @@ def parse_lavaan(lines):
 
 
 def parse_dagitty(lines):
-    def handle_edge_stat(edge_stat, latents, ebunch):
+    def handle_edge_stat(edge_stat, latents, ebunch, betas):
         all_vars = set()
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
             return set([edge_stat.strip('"')])
@@ -88,17 +88,34 @@ def parse_dagitty(lines):
                     end_i = start_i + 1
 
                 all_vars.update(
-                    handle_edge_stat(edge_stat[start_i : end_i + 1], latents, ebunch)
+                    handle_edge_stat(
+                        edge_stat[start_i : end_i + 1], latents, ebunch, betas
+                    )
                 )
-                start_i = end_i
+
+                if end_i + 1 < l and isinstance(edge_stat[end_i + 1], ParseResults):
+                    if (
+                        isinstance(edge_stat[end_i + 1][0], str)
+                        and edge_stat[end_i + 1][0] == "beta"
+                    ):
+                        betas.append(
+                            (
+                                edge_stat[start_i],
+                                edge_stat[end_i],
+                                edge_stat[end_i + 1][1],
+                            )
+                        )
+                        break
+                else:
+                    start_i = end_i
 
             return all_vars
 
         l = len(edge_stat)
         right_i = 1 if l == 2 else 2
         # length is three. Now check if any node is a subgraph
-        left_vars = handle_edge_stat(edge_stat[0], latents, ebunch)
-        right_vars = handle_edge_stat(edge_stat[right_i], latents, ebunch)
+        left_vars = handle_edge_stat(edge_stat[0], latents, ebunch, betas)
+        right_vars = handle_edge_stat(edge_stat[right_i], latents, ebunch, betas)
         all_vars.update(left_vars)
         all_vars.update(right_vars)
 
@@ -131,18 +148,31 @@ def parse_dagitty(lines):
 
         return all_vars
 
+    def split_at_betas(lines):
+        import re
+
+        split_regex = r'(?<=\])\s+(?=[\w"]+\s*->)'
+        new_dag_lines = []
+        for line in lines:
+            split_lines = re.split(split_regex, line)
+            new_dag_lines.extend(split_lines)
+        return new_dag_lines
+
     # Step 0: Check if pyparsing is installed
     try:
         from pyparsing import (
             Combine,
+            Group,
             OneOrMore,
             Optional,
             ParseResults,
             QuotedString,
+            Suppress,
             Word,
             ZeroOrMore,
             alphanums,
             nestedExpr,
+            pyparsing_common,
         )
     except ImportError as e:
         raise ImportError(
@@ -166,7 +196,16 @@ def parse_dagitty(lines):
     # edge type (which can be ->, <-, or <->)
     edge = Word("><-")
     # edge chaining
-    edge_relation = var_or_subgraph + OneOrMore(edge + var_or_subgraph)
+    beta = (
+        Suppress("[")
+        + Group(Word("beta") + Suppress("=") + pyparsing_common.number())
+        + Suppress("]")
+    )
+    edge_relation = (
+        var_or_subgraph
+        + OneOrMore(edge + var_or_subgraph)
+        + Optional(beta.setResultsName("annotation"))
+    )
 
     # Display info bb="1,2,3,4", [pos="1,2"] will be parsed and discarded
     bb_re = Combine("bb=" + QuotedString('"'))
@@ -182,6 +221,8 @@ def parse_dagitty(lines):
 
     # different statements on the same line without semicolon
     dagitty_line = ZeroOrMore(statement + Optional(";"))
+
+    lines = split_at_betas(lines)
 
     # Step 2:
     # Clean the opening of the enclosing dag{ .. } or dag Smoking { .. }
@@ -215,6 +256,7 @@ def parse_dagitty(lines):
     # Step 3: Initialize arguments and fill them by parsing each line.
     ebunch = []
     latents = []
+    betas = []
     for line in lines:
         line = line.strip()
         if line != "":
@@ -230,6 +272,6 @@ def parse_dagitty(lines):
                     ):
                         latents.append(var_stat[0].strip('"'))
             for edge_stat in results.get("edge_stat", []):
-                handle_edge_stat(edge_stat, latents, ebunch)
+                handle_edge_stat(edge_stat, latents, ebunch, betas)
 
-    return ebunch, latents
+    return ebunch, latents, betas
