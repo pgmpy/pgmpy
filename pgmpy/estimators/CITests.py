@@ -60,7 +60,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     Z: list/array-like
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
-    data: pandas.DataFrame The dataset in which to test the indepenedence condition.
+    data: pandas.DataFrame The dataset in which to test the independence condition.
 
     Returns
     -------
@@ -457,7 +457,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
@@ -595,7 +595,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
@@ -707,7 +707,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
