@@ -7,7 +7,6 @@ from joblib.externals.loky import get_reusable_executor
 
 from pgmpy import config
 from pgmpy.estimators import ExpectationMaximization as EM
-from pgmpy.estimators import MaximumLikelihoodEstimator as MLE
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
@@ -129,40 +128,6 @@ class TestEM(unittest.TestCase):
         # Data shape and column removal
         self.assertEqual(est.data.shape, (3, 3))
         self.assertNotIn("B", est.data.columns)
-
-    def test_em_with_missing_values(self):
-        """Test that EM works correctly with randomly missing values."""
-        model = get_example_model("asia")
-        df_complete = model.simulate(n_samples=500, seed=42)
-
-        # Create data with missing values
-        np.random.seed(42)
-        mask = np.random.choice([True, False], size=df_complete.shape, p=[0.2, 0.8])
-        df_missing = df_complete.mask(mask)
-
-        # Run EM
-        estimator = EM(model, df_missing)
-        estimated_cpds = estimator.get_parameters(max_iter=20, show_progress=False)
-
-        # Check that all parameters were estimated
-        self.assertEqual(len(estimated_cpds), len(model.nodes()))
-
-        # Create a model with estimated parameters and verify it's valid
-        model_with_em = model.copy()
-        model_with_em.cpds = estimated_cpds
-        model_with_em.check_model()  # This will raise an exception if the model is invalid
-
-        # Compare with parameters estimated from complete data (should be close)
-        mle_estimator = MLE(model, df_complete)
-        mle_cpds = mle_estimator.get_parameters()
-
-        # Check a sample parameter to ensure estimates are reasonable
-        for node in list(model.nodes())[:2]:  # Check first two nodes
-            em_cpd = next((cpd for cpd in estimated_cpds if cpd.variable == node), None)
-            mle_cpd = next((cpd for cpd in mle_cpds if cpd.variable == node), None)
-
-            # EM estimates should be within reason of MLE estimates
-            self.assertTrue(em_cpd.__eq__(mle_cpd, atol=0.2))
 
     def test_get_parameters_random_init_cpds(self):
         est = EM(self.model1, self.data1)

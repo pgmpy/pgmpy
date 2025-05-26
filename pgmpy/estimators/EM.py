@@ -65,8 +65,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Drop fully missing columns and treat them as latent if not already
         original_cols = set(data.columns)
-        fully_missing_cols = data.columns[data.isna().all()]
-        data = data.drop(columns=fully_missing_cols)
+        data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
         new_latents = [col for col in dropped_cols if col not in model.latents]
 
@@ -77,7 +76,7 @@ class ExpectationMaximization(ParameterEstimator):
             )
             model.latents.update(new_latents)
 
-        # Do NOT drop rows with missing values - the EM algorithm will handle them
+        # Alarm rows have missing values in partially observed columns and will be treated as mini latents
         if data.isna().any().any():
             logger.info(
                 f"Dataset contains missing values. These will be treated as values to be estimated by EM."
@@ -85,9 +84,6 @@ class ExpectationMaximization(ParameterEstimator):
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
-
-        # Track which values are missing in the data
-        self.missing_mask = data.isna()
 
     def _get_log_likelihood(self, datapoint):
         """
@@ -98,207 +94,81 @@ class ExpectationMaximization(ParameterEstimator):
         likelihood = 0
         for cpd in self.model_copy.cpds:
             scope = set(cpd.scope())
-
-            # Get relevant datapoint values for this CPD
-            scope_values = {
-                key: value
-                for key, value in datapoint.items()
-                if key in scope and not pd.isna(value)
-            }
-
-            # Only compute likelihood if we have complete information for this CPD
-            if len(scope_values) == len(scope):
-                likelihood += log(
-                    max(
-                        cpd.get_value(**scope_values),
-                        1e-10,
-                    )
+            likelihood += log(
+                max(
+                    cpd.get_value(
+                        **{
+                            key: value
+                            for key, value in datapoint.items()
+                            if key in scope
+                        }
+                    ),
+                    1e-10,
                 )
+            )
         return likelihood
 
-    def _safe_tuple_key(self, row):
-        """Create a safe tuple key for dictionary lookups that handles NaN and categorical values."""
-        result = []
-        for x in row:
-            if pd.isna(x):
-                result.append("__NA__")  # Use a string placeholder for NaN
-            else:
-                result.append(str(x))  # Convert all values to strings
-        return tuple(result)
-
     def _parallel_compute_weights(
-        self, data_unique, latent_card, missing_patterns, n_counts, offset, batch_size
+        self, data_unique, latent_card, unique_cats, n_counts, offset, batch_size
     ):
         cache = []
-        MAX_MISSING_VARS = (
-            8  # Limit the number of missing variables we try to fill at once
-        )
 
-        # First, let's check for categorical columns and get their categories
-        categorical_columns = {
-            col: data_unique[col].cat.categories.tolist()
-            for col in data_unique.columns
-            if hasattr(data_unique[col], "cat")
-        }
-
-        for i in range(offset, min(offset + batch_size, len(missing_patterns))):
-            pattern, indices = missing_patterns[i]
-            pattern_data = data_unique.iloc[indices]
-
-            # Get the list of variables that need to be filled
-            missing_vars = pattern.index[pattern].tolist()
-            latent_vars = list(latent_card.keys())
-
-            # Combine both types of missing values
-            all_missing_vars = missing_vars + [
-                v for v in latent_vars if v not in missing_vars
-            ]
-
-            if not all_missing_vars:
-                # If nothing is missing for this pattern, just add the original data
-                pattern_data["_weight"] = pattern_data.apply(
-                    lambda row: n_counts.get(self._safe_tuple_key(row), 1), axis=1
+        for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
+            missing_cols = data_unique.columns[data_unique.iloc[i].isna()]
+            latent_card_copy = latent_card.copy()
+            for col in missing_cols:
+                if col not in latent_card:
+                    latent_card_copy[col] = unique_cats[col]
+            v = list(
+                product(
+                    *[
+                        val if isinstance(val, list) else np.arange(val, dtype=int)
+                        for val in latent_card_copy.values()
+                    ]
                 )
-                cache.append(pattern_data)
-                continue
-
-            # If we have too many missing variables, only use the first MAX_MISSING_VARS
-            # to keep computation tractable
-            if len(all_missing_vars) > MAX_MISSING_VARS:
-                print(
-                    f"Warning: Pattern has {len(all_missing_vars)} missing variables, limiting to {MAX_MISSING_VARS}"
-                )
-                all_missing_vars = all_missing_vars[:MAX_MISSING_VARS]
-
-            # Create combinations of all possible values for missing variables
-            var_cards = {
-                v: latent_card.get(v, len(self.state_names.get(v, [0, 1])))
-                for v in all_missing_vars
-            }
-            combinations = list(
-                product(*[range(var_cards[v]) for v in all_missing_vars])
             )
+            latent_combinations = list(zip(*v))
+            n_count_ = n_counts[
+                tuple("__NA__" if pd.isna(x) else str(x) for x in data_unique.iloc[i])
+            ]
+            df = data_unique.iloc[[i] * len(v)].reset_index(drop=True)
 
-            for idx in indices:
-                row = data_unique.iloc[
-                    idx
-                ].copy()  # Make a copy to prevent modifying original
-                row_tuple_key = self._safe_tuple_key(row)
-                expanded_rows = []
+            for index, latent_var in enumerate(latent_card_copy.keys()):
+                df[latent_var] = list(latent_combinations[index])
+            weights = np.e ** (
+                df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
+            )
+            df["_weight"] = (weights / weights.sum()) * n_count_
+            cache.append(df)
 
-                # Convert to dictionary for manipulation
-                row_dict = {}
-                for col in row.index:
-                    # Handle categorical columns specially
-                    if pd.isna(row[col]):
-                        row_dict[col] = None
-                    else:
-                        row_dict[col] = row[col]
-
-                for combo in combinations:
-                    new_row_dict = row_dict.copy()
-                    for j, var in enumerate(all_missing_vars):
-                        # Handle categorical columns properly
-                        if var in categorical_columns:
-                            # Make sure we're using valid categories from the column
-                            cat_value = combo[j] % len(categorical_columns[var])
-                            new_row_dict[var] = categorical_columns[var][cat_value]
-                        else:
-                            new_row_dict[var] = combo[j]
-
-                    # Calculate the likelihood using the dictionary
-                    log_likelihood = self._get_log_likelihood(new_row_dict)
-                    new_row_dict["_log_likelihood"] = log_likelihood
-                    expanded_rows.append(new_row_dict)
-
-                if expanded_rows:
-                    # Create DataFrame from row dictionaries to avoid category issues
-                    expanded_df = pd.DataFrame(expanded_rows)
-
-                    # Calculate weights based on likelihood
-                    likelihoods = np.exp(expanded_df["_log_likelihood"].values)
-                    sum_likelihood = likelihoods.sum()
-                    if sum_likelihood > 0:
-                        expanded_df["_weight"] = (
-                            likelihoods / sum_likelihood
-                        ) * n_counts.get(row_tuple_key, 1)
-                    else:
-                        # Handle case where all likelihoods are very small
-                        expanded_df["_weight"] = (
-                            np.ones(len(likelihoods))
-                            / len(likelihoods)
-                            * n_counts.get(row_tuple_key, 1)
-                        )
-
-                    expanded_df = expanded_df.drop(columns=["_log_likelihood"])
-                    cache.append(expanded_df)
-
-        if not cache:
-            return pd.DataFrame()
-
-        # Combine all dataframes
-        result = pd.concat(cache, ignore_index=True, copy=False)
-
-        # Convert back to categorical if needed
-        for col, categories in categorical_columns.items():
-            if col in result.columns:
-                result[col] = pd.Categorical(result[col], categories=categories)
-
-        return result
+        return pd.concat(cache, copy=False)
 
     def _compute_weights(self, n_jobs, latent_card, batch_size):
         """
-        For each data pattern, creates extra data points for each possible combination
-        of states of latent variables and missing values, and assigns weights to each of them.
+        For each data point, creates extra data points for each possible combination
+        of states of latent variables and assigns weights to each of them.
         """
-        data_unique = self.data.drop_duplicates().reset_index(drop=True)
 
-        # Use a more efficient way to count occurrences
+        data_unique = self.data.drop_duplicates()
+
         n_counts = {}
         for _, row in self.data.iterrows():
-            row_key = self._safe_tuple_key(row)
+            row_key = tuple(["__NA__" if pd.isna(x) else str(x) for x in row])
             n_counts[row_key] = n_counts.get(row_key, 0) + 1
 
-        # Group data by missing patterns manually instead of using groupby
-        missing_mask = data_unique.isna()
-        pattern_dict = {}
+        unique_cats = {
+            col: data_unique[col].dropna().unique().tolist()
+            for col in data_unique.columns
+        }
 
-        for idx, row in missing_mask.iterrows():
-            # Create a safe pattern tuple that won't cause issues
-            pattern_tuple = tuple([bool(x) for x in row])
-            if pattern_tuple not in pattern_dict:
-                pattern_dict[pattern_tuple] = [idx]
-            else:
-                pattern_dict[pattern_tuple].append(idx)
-
-        pattern_groups = [
-            (missing_mask.iloc[indices[0]], indices)
-            for pattern_tuple, indices in pattern_dict.items()
-        ]
-
-        # Process in batches
-        batch_pattern_groups = [
-            pattern_groups[i : i + batch_size]
-            for i in range(0, len(pattern_groups), batch_size)
-        ]
-
-        if n_jobs > 1:
-            cache = Parallel(n_jobs=n_jobs)(
-                delayed(self._parallel_compute_weights)(
-                    data_unique, latent_card, batch, n_counts, 0, len(batch)
-                )
-                for batch in batch_pattern_groups
+        cache = Parallel(n_jobs=n_jobs)(
+            delayed(self._parallel_compute_weights)(
+                data_unique, latent_card, unique_cats, n_counts, i, batch_size
             )
-        else:
-            # Process sequentially for debugging or if n_jobs=1
-            cache = [
-                self._parallel_compute_weights(
-                    data_unique, latent_card, batch, n_counts, 0, len(batch)
-                )
-                for batch in batch_pattern_groups
-            ]
+            for i in range(0, data_unique.shape[0], batch_size)
+        )
 
-        return pd.concat(cache, copy=False) if cache else pd.DataFrame()
+        return pd.concat(cache, copy=False)
 
     def _is_converged(self, new_cpds, atol=1e-08):
         """
@@ -386,19 +256,6 @@ class ExpectationMaximization(ParameterEstimator):
         # Step 1: Parameter checks
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
-
-        # Add cardinality for variables with missing values
-        for col in self.data.columns:
-            if (
-                col not in latent_card
-                and col not in self.model_copy.latents
-                and self.missing_mask[col].any()
-            ):
-                if col in self.state_names:
-                    latent_card[col] = len(self.state_names[col])
-                else:
-                    # Default to 2 states if not specified
-                    latent_card[col] = 2
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
