@@ -126,6 +126,34 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
+    def test_query_with_model_states(self):
+        """Test that query method correctly uses model states"""
+        # Test with a single variable
+        query_results = self.infer_alarm.query(variables=["HISTORY"])
+        self.assertEqual(
+            set(query_results.state_names["HISTORY"]),
+            set(self.alarm_model.states["HISTORY"]),
+        )
+
+        # Test with multiple variables
+        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
+        self.assertEqual(
+            set(query_results.state_names["HISTORY"]),
+            set(self.alarm_model.states["HISTORY"]),
+        )
+        self.assertEqual(
+            set(query_results.state_names["CVP"]), set(self.alarm_model.states["CVP"])
+        )
+
+        # Test with evidence
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
+        )
+        self.assertEqual(
+            set(query_results.state_names["HISTORY"]),
+            set(self.alarm_model.states["HISTORY"]),
+        )
+
 
 class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
@@ -185,6 +213,29 @@ class TestApproxInferenceDBN(unittest.TestCase):
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
+    def test_query_with_model_states(self):
+        """Test that query method correctly uses model states for DBN"""
+        # Test with a single variable
+        res1 = self.infer.query([("Y", 1)])
+        self.assertEqual(
+            set(res1.state_names[("Y", 1)]), set(self.model.states[("Y", 1)])
+        )
+
+        # Test with multiple variables
+        res2 = self.infer.query([("Y", 0), ("Y", 1)])
+        self.assertEqual(
+            set(res2.state_names[("Y", 0)]), set(self.model.states[("Y", 0)])
+        )
+        self.assertEqual(
+            set(res2.state_names[("Y", 1)]), set(self.model.states[("Y", 1)])
+        )
+
+        # Test with evidence
+        res3 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
+        self.assertEqual(
+            set(res3.state_names[("Y", 4)]), set(self.model.states[("Y", 4)])
+        )
 
 
 class TestApproxInferenceBNTorch(unittest.TestCase):

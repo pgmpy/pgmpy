@@ -29,25 +29,32 @@ class ApproxInference(object):
         self.model = model
 
     @staticmethod
-    def _get_factor_from_df(df, state_names):
+    def _get_factor_from_df(df, model_states):
         """
         Takes a groupby dataframe and converts it into a pgmpy.factors.discrete.DiscreteFactor object.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            A groupby dataframe containing the counts/probabilities.
+
+        model_states: dict
+            A dict of state names for each variable from the model in the form {variable_name: list of states}.
         """
         variables = list(df.index.names)
         if len(variables) == 1:
-            df_index = state_names[variables[0]]
+            df_index = model_states[variables[0]]
         else:
-            df_index = itertools.product(*[state_names[var] for var in variables])
-        # state_names = {var: list(df.index.unique(var)) for var in variables}
-        cardinality = [len(state_names[var]) for var in variables]
+            df_index = itertools.product(*[model_states[var] for var in variables])
+        cardinality = [len(model_states[var]) for var in variables]
         return DiscreteFactor(
             variables=variables,
             cardinality=cardinality,
             values=df.reindex(df_index).fillna(0).values,
-            state_names=state_names,
+            state_names=model_states,
         )
 
-    def get_distribution(self, samples, variables, state_names=None, joint=True):
+    def get_distribution(self, samples, variables, joint=True):
         """
         Computes distribution of `variables` from given data `samples`.
 
@@ -59,10 +66,6 @@ class ApproxInference(object):
         variables: list (array-like)
             A list of variables whose distribution needs to be computed.
 
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
         joint: boolean
             If joint=True, computes the joint distribution over `variables`.
             Else, returns a dict with marginal distribution of each variable in
@@ -71,14 +74,18 @@ class ApproxInference(object):
         if isinstance(variables, (set, tuple)):
             variables = list(variables)
 
+        # Get state names from the model
+        model_states = {var: self.model.states[var] for var in variables}
+
         if joint == True:
             return self._get_factor_from_df(
-                samples.groupby(variables).size() / samples.shape[0], state_names
+                samples.groupby(variables).size() / samples.shape[0], model_states
             )
         else:
             return {
                 var: self._get_factor_from_df(
-                    samples.groupby([var]).size() / samples.shape[0], state_names
+                    samples.groupby([var]).size() / samples.shape[0],
+                    {var: model_states[var]},
                 )
                 for var in variables
             }
@@ -91,7 +98,6 @@ class ApproxInference(object):
         evidence=None,
         virtual_evidence=None,
         joint=True,
-        state_names=None,
         show_progress=True,
         seed=None,
     ):
@@ -120,9 +126,9 @@ class ApproxInference(object):
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
 
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
+        joint: boolean (default: True)
+            If True, returns a Joint Distribution over `variables`.
+            If False, returns a dict of distributions over each of the `variables`.
 
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
@@ -184,22 +190,8 @@ class ApproxInference(object):
                     seed=seed,
                 )
 
-        # Step 2: If state_names is None, infer it from samples.
-        if state_names is None:
-            if isinstance(self.model, DiscreteBayesianNetwork):
-                state_names = {
-                    var: list(samples.loc[:, var].unique()) for var in variables
-                }
-            elif isinstance(self.model, DynamicBayesianNetwork):
-                state_names = {
-                    var: list(samples.loc[:, [var]].iloc[:, 0].unique())
-                    for var in variables
-                }
-
-        # Step 3: Compute the distributions and return it.
-        return self.get_distribution(
-            samples, variables=variables, state_names=state_names, joint=joint
-        )
+        # Step 2: Compute the distributions and return it.
+        return self.get_distribution(samples, variables=variables, joint=joint)
 
     def map_query(
         self,
@@ -208,7 +200,6 @@ class ApproxInference(object):
         samples=None,
         evidence=None,
         virtual_evidence=None,
-        state_names=None,
         show_progress=True,
         seed=None,
     ):
@@ -237,10 +228,6 @@ class ApproxInference(object):
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
 
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
 
@@ -251,21 +238,6 @@ class ApproxInference(object):
         -------
         MAP values: dict
             The most probable state of provided `variables` given the evidence.
-
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> from pgmpy.inference import ApproxInference
-        >>> from pgmpy.factors.discrete import State,TabularCPD
-        >>> model = get_example_model("alarm")
-        >>> infer = ApproxInference(model)
-        >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
-        {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
-        >>> virtual_evidence_history = TabularCPD(variable='HISTORY', variable_card=2,values=[[0.99],[0.01]],
-        ...                                  state_names={"HISTORY": ["TRUE", "FALSE"]})
-        >>> evidence = {'CVP':'NORMAL'}
-        >>> print(infer.map_query(variables=["HISTORY"], evidence=evidence, virtual_evidence=[virtual_evidence_history]))
-        {'HISTORY': 'TRUE'}
         """
         final_distribution = self.query(
             variables,
@@ -274,7 +246,6 @@ class ApproxInference(object):
             evidence=evidence,
             virtual_evidence=virtual_evidence,
             joint=True,
-            state_names=state_names,
             show_progress=show_progress,
             seed=seed,
         )
