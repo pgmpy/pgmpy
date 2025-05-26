@@ -129,6 +129,37 @@ class TestEM(unittest.TestCase):
         self.assertEqual(est.data.shape, (3, 3))
         self.assertNotIn("B", est.data.columns)
 
+    def test_get_parameters_with_missing_values(self):
+        """Test that EM algorithm works correctly with missing values."""
+        np.random.seed(42)
+        data_missing = self.data1.copy()
+
+        # Create a mask for 10% of values to be missing, except for categorical columns
+        mask = np.random.random(data_missing.shape) < 0.1
+
+        for col in data_missing.columns:
+            data_missing[col] = data_missing[col].mask(
+                mask[:, data_missing.columns.get_loc(col)]
+            )
+
+        # Run EM on this dataset with missing values
+        est = EM(self.model1, data_missing)
+        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+
+        # Check that we get valid CPDs
+        self.assertEqual(len(cpds), len(self.model1.nodes()))
+
+        # Check that the model with these CPDs is valid
+        model_copy = self.model1.copy()
+        model_copy.add_cpds(*cpds)
+        model_copy.check_model()
+
+        # Check that parameters are close to the original ones
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
     def test_get_parameters_random_init_cpds(self):
         est = EM(self.model1, self.data1)
         cpds = est.get_parameters(
