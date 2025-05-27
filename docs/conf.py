@@ -48,7 +48,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx_sitemap",
-    "sphinx_multiversion"
+    "sphinx_multiversion",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
