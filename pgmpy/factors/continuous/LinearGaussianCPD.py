@@ -176,3 +176,66 @@ class LinearGaussianCPD(BaseFactor):
         )
 
         return node_cpd
+
+    @staticmethod
+    def fill_unknown_random(
+        variable, evidence, known_betas, loc=0.0, scale=1.0, seed=None
+    ):
+        """
+        Generates a LinearGaussianCPD instance with with random std dev, and random beta
+        parameters for evidence with unknown beta parameters. Known values are copied.
+
+        For each parent in `evidence`, if a known beta is provided in `known_betas`, it is used;
+        otherwise, a random beta is sampled from a normal distribution. The intercepts are always
+        0 and standard deviations are always randomly sampled.
+
+        Parameters
+        ----------
+        variable : str, int, or any hashable Python object
+            The variable for which the CPD is defined.
+
+        evidence : list of hashable
+            A list of parent variables for `variable`.
+
+        known_betas : dict
+            A dictionary mapping evidence variables to their known beta values.
+            Variables not in this dict will have betas sampled randomly.
+
+        loc : float, optional (default: 0.0)
+            Mean of the normal distribution used to sample random betas.
+
+        scale : float, optional (default: 1.0)
+            Standard deviation of the normal distribution used to sample random betas.
+
+        seed : int, optional (default: None)
+            Random seed for reproducibility.
+
+        Returns
+        -------
+        LinearGaussianCPD
+            A CPD for `variable` with the given `evidence`, using known and sampled beta values.
+
+        Examples
+        --------
+        >>> known = {'Age': 1.5}
+        >>> cpd = fill_unknown_random('Income', ['Age', 'Experience'], known_betas=known, loc=0, scale=1, seed=42)
+        >>> print(cpd)
+        <LinearGaussianCPD: P(Income | Age, Experience) = N(1.5*Age + 0.6*Experience + 0.2; 1.0)>
+        """
+        rng = np.random.default_rng(seed=seed)
+
+        beta = rng.normal(loc=loc, scale=scale, size=(len(evidence) + 1))
+        std = abs(rng.normal(loc=loc, scale=scale))
+
+        for i, ev in enumerate(evidence):
+            if ev in known_betas:
+                beta[i] = known_betas[ev]
+
+        node_cpd = LinearGaussianCPD(
+            variable=variable,
+            beta=beta,
+            std=std,
+            evidence=evidence,
+        )
+
+        return node_cpd

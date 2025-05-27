@@ -92,19 +92,18 @@ def parse_dagitty(lines):
                         edge_stat[start_i : end_i + 1], latents, ebunch, betas
                     )
                 )
-
+                # Parse `edge` [beta=float]
                 if end_i + 1 < l and isinstance(edge_stat[end_i + 1], ParseResults):
                     if (
                         isinstance(edge_stat[end_i + 1][0], str)
                         and edge_stat[end_i + 1][0] == "beta"
                     ):
-                        betas.append(
-                            (
-                                edge_stat[start_i],
-                                edge_stat[end_i],
-                                edge_stat[end_i + 1][1],
-                            )
-                        )
+                        source = edge_stat[start_i]
+                        target = edge_stat[end_i]
+                        beta = edge_stat[end_i + 1][1]
+                        if target not in betas:
+                            betas[target] = {}
+                        betas[target][source] = beta
                         break
                 else:
                     start_i = end_i
@@ -195,12 +194,13 @@ def parse_dagitty(lines):
     var_or_subgraph = subgraph ^ var
     # edge type (which can be ->, <-, or <->)
     edge = Word("><-")
-    # edge chaining
+    # beta parameters [beta=float]
     beta = (
         Suppress("[")
         + Group(Word("beta") + Suppress("=") + pyparsing_common.number())
         + Suppress("]")
     )
+    # edge chaining
     edge_relation = (
         var_or_subgraph
         + OneOrMore(edge + var_or_subgraph)
@@ -222,10 +222,10 @@ def parse_dagitty(lines):
     # different statements on the same line without semicolon
     dagitty_line = ZeroOrMore(statement + Optional(";"))
 
-    lines = split_at_betas(lines)
-
     # Step 2:
+    # Split the lines where beta values are specified
     # Clean the opening of the enclosing dag{ .. } or dag Smoking { .. }
+    lines = split_at_betas(lines)
     cleaned_dag = False
     while True:
         first_line = lines.pop(0).strip()
@@ -256,7 +256,7 @@ def parse_dagitty(lines):
     # Step 3: Initialize arguments and fill them by parsing each line.
     ebunch = []
     latents = []
-    betas = []
+    betas = {}
     for line in lines:
         line = line.strip()
         if line != "":

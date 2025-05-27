@@ -87,11 +87,10 @@ class DAG(nx.DiGraph):
                 )
         elif dagitty_str:
             ebunch, latents, betas = parse_dagitty(dagitty_str)
-        betas = []
-        if len(betas) > 0:
-            raise ValueError(
-                "Invalid arguments (beta): to create LGBN from daggity use from_dagitty method"
-            )
+            if len(betas) > 0:
+                raise ValueError(
+                    "Invalid arguments: to create LGBN from daggity use from_dagitty method"
+                )
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -136,7 +135,8 @@ class DAG(nx.DiGraph):
     @classmethod
     def from_dagitty(cls, string=None, filename=None):
         """
-        Initializes a `DAG` instance using DAGitty syntax.
+        Initializes a `DAG` instance using DAGitty syntax. If beta values are specified between dependencies
+        then a linear gaussian bayesian network is returned instead of a DAG.
 
         Parameters
         ----------
@@ -150,6 +150,13 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+
+        # specifying beta creats a LinearGaussianBayesianNetwork instance
+        >>> dag = DAG.from_dagitty("dag{X -> Y [beta=0.3] Y -> Z [beta=0.1]}")
+        # simulate data from the model
+        >>> data = dag.simulate(n_samples=int(1e4))
         """
         if filename:
             with open(filename, "r") as f:
@@ -165,7 +172,9 @@ class DAG(nx.DiGraph):
         else:
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            return LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn.fill_unkown_cpds_random(betas)
+            return lgbn
 
     def add_node(self, node, weight=None, latent=False):
         """
