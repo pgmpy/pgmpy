@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Optional
+
 import numpy as np
 from scipy.special import logsumexp
 from tqdm.auto import tqdm
@@ -88,7 +89,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         marginals: list[tuple[str, ...]],
         metric="L2",
         iterations=100,
-        stepsize: Optional[float]=None,
+        stepsize: Optional[float] = None,
         show_progress=True,
     ):
         """

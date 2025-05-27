@@ -76,7 +76,12 @@ class Config:
         """
         return self.DEVICE
 
-    def set_backend(self, backend: str, device: Optional[str]=None, dtype: Optional[np.dtype[Any] | torch._C.dtype]=None):
+    def set_backend(
+        self,
+        backend: str,
+        device: Optional[str] = None,
+        dtype: Optional[np.dtype[Any] | torch._C.dtype] = None,
+    ):
         """
         Setup the compute backend.
 
@@ -132,7 +137,7 @@ class Config:
         """
         return self.SHOW_PROGRESS
 
-    def set_dtype(self, dtype: Optional[np.dtype[Any] | torch.dtype]=None):
+    def set_dtype(self, dtype: Optional[np.dtype[Any] | torch.dtype] = None):
         """
         Sets the dtype for value matrices.
 

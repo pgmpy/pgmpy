@@ -25,9 +25,9 @@ from pgmpy.models import (
     FactorGraph,
     FunctionalBayesianNetwork,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
-from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 class VariableElimination(Inference):
@@ -245,8 +245,8 @@ class VariableElimination(Inference):
     def query(
         self,
         variables: list[Hashable],
-        evidence: Optional[dict[Hashable, int]]=None,
-        virtual_evidence: Optional[list]=None,
+        evidence: Optional[dict[Hashable, int]] = None,
+        virtual_evidence: Optional[list] = None,
         elimination_order="greedy",
         joint=True,
         show_progress=True,

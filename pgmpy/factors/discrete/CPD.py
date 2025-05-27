@@ -2,10 +2,9 @@
 """Contains the different formats of CPDs used in PGM"""
 import csv
 import numbers
-from itertools import chain, product
 import os
+from itertools import chain, product
 from shutil import get_terminal_size
-
 from typing import Hashable, Optional
 from warnings import warn
 
@@ -114,8 +113,8 @@ class TabularCPD(DiscreteFactor):
         variable: Hashable,
         variable_card: int,
         values: list | np.typing.ArrayLike,
-        evidence: Optional[list | tuple]=None,
-        evidence_card: Optional[list | tuple]=None,
+        evidence: Optional[list | tuple] = None,
+        evidence_card: Optional[list | tuple] = None,
         state_names={},
     ):
         self.variable = variable
@@ -136,16 +135,18 @@ class TabularCPD(DiscreteFactor):
             if isinstance(evidence, str):
                 raise TypeError("Evidence must be list, tuple or array of strings.")
             if isinstance(evidence_card, type(None)):
-                raise ValueError("Evidence card must be provided if Evidence is provided!")
+                raise ValueError(
+                    "Evidence card must be provided if Evidence is provided!"
+                )
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
                 raise ValueError(
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
-        values_casted: np.ndarray | torch.Tensor 
+        values_casted: np.ndarray | torch.Tensor
         if config.BACKEND == "numpy":
-            values_casted  = np.array(object=values, dtype=config.get_dtype())
+            values_casted = np.array(object=values, dtype=config.get_dtype())
         else:
             values_casted = (
                 torch.tensor(values).type(config.get_dtype()).to(config.get_device())

@@ -11,7 +11,7 @@ from pgmpy.utils import compat_fns
 State = namedtuple("State", ["var", "state"])
 
 
-def cartesian(arrays: list[Any], out: Optional[np.ndarray]=None) -> np.ndarray:
+def cartesian(arrays: list[Any], out: Optional[np.ndarray] = None) -> np.ndarray:
     """Generate a cartesian product of input arrays.
 
     Parameters
@@ -94,7 +94,9 @@ def _adjusted_weights(weights: np.ndarray):
     return weights
 
 
-def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed: Optional[int]=None):
+def sample_discrete(
+    values, weights: np.ndarray | list[np.ndarray], size=1, seed: Optional[int] = None
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -145,7 +147,13 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
         return samples
 
 
-def sample_discrete_maps(states: np.ndarray, weight_indices: np.ndarray, index_to_weight: np.ndarray, size=1, seed: Optional[int]=None):
+def sample_discrete_maps(
+    states: np.ndarray,
+    weight_indices: np.ndarray,
+    index_to_weight: np.ndarray,
+    size=1,
+    seed: Optional[int] = None,
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -211,4 +219,6 @@ def powerset(l_input: list):
     >>> list(powerset([1,2,3]))
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
-    return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
+    return chain.from_iterable(
+        combinations(l_input, r) for r in range(len(l_input) + 1)
+    )

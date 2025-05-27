@@ -2,6 +2,7 @@
 
 import itertools
 from os import PathLike
+from typing import Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
@@ -12,7 +13,6 @@ from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
-from typing import Iterable, Optional, Sequence, Hashable
 
 class DAG(nx.DiGraph):
     """
@@ -162,7 +162,9 @@ class DAG(nx.DiGraph):
 
         return cls(dagitty_str=dagitty_str)
 
-    def add_node(self, node: Hashable, weight: Optional[float]=None, latent: bool=False):
+    def add_node(
+        self, node: Hashable, weight: Optional[float] = None, latent: bool = False
+    ):
         """
         Adds a single node to the Graph.
 
@@ -210,7 +212,12 @@ class DAG(nx.DiGraph):
 
         super(DAG, self).add_node(node, weight=weight)
 
-    def add_nodes_from(self, nodes: Iterable[Hashable], weights: Optional[list[float] | tuple[float]]=None, latent: Sequence[bool] | bool=False):
+    def add_nodes_from(
+        self,
+        nodes: Iterable[Hashable],
+        weights: Optional[list[float] | tuple[float]] = None,
+        latent: Sequence[bool] | bool = False,
+    ):
         """
         Add multiple nodes to the Graph.
 
@@ -266,7 +273,7 @@ class DAG(nx.DiGraph):
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
 
-    def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float]=None):
+    def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float] = None):
         """
         Add an edge between u and v.
 
@@ -308,7 +315,11 @@ class DAG(nx.DiGraph):
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch: Iterable[tuple[Hashable, Hashable]], weights: list[float] | tuple[float] | None=None):
+    def add_edges_from(
+        self,
+        ebunch: Iterable[tuple[Hashable, Hashable]],
+        weights: list[float] | tuple[float] | None = None,
+    ):
         """
         Add all the edges in ebunch.
 
@@ -477,7 +488,9 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(self, latex=False, include_latents=False) -> Independencies | list[str]:
+    def get_independencies(
+        self, latex=False, include_latents=False
+    ) -> Independencies | list[str]:
         """
         Computes independencies in the DAG, by checking minimal d-seperation.
 
@@ -518,7 +531,9 @@ class DAG(nx.DiGraph):
         else:
             return independencies.latex_string()
 
-    def local_independencies(self, variables: list[Hashable] | tuple[Hashable, ...] | str):
+    def local_independencies(
+        self, variables: list[Hashable] | tuple[Hashable, ...] | str
+    ):
         """
         Returns an instance of Independencies containing the local independencies
         of each of the variables.
@@ -767,7 +782,14 @@ class DAG(nx.DiGraph):
         blanket_nodes.discard(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables: list[Hashable] | Hashable, observed: Optional[Hashable | list[Hashable] | tuple[Hashable, Hashable]]=None, include_latents=False) -> dict[Hashable, set[Hashable]]:
+    def active_trail_nodes(
+        self,
+        variables: list[Hashable] | Hashable,
+        observed: Optional[
+            Hashable | list[Hashable] | tuple[Hashable, Hashable]
+        ] = None,
+        include_latents=False,
+    ) -> dict[Hashable, set[Hashable]]:
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -848,7 +870,9 @@ class DAG(nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]) -> set[Hashable]:
+    def _get_ancestors_of(
+        self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]
+    ) -> set[Hashable]:
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
@@ -994,7 +1018,11 @@ class DAG(nx.DiGraph):
             latents=self.latents,
         )
 
-    def do(self, nodes: Hashable | Iterable[Hashable] | tuple[Hashable, Hashable], inplace=False):
+    def do(
+        self,
+        nodes: Hashable | Iterable[Hashable] | tuple[Hashable, Hashable],
+        inplace=False,
+    ):
         """
         Applies the do operator to the graph and returns a new DAG with the
         transformed graph.
@@ -1079,7 +1107,7 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos: str | dict[Hashable, tuple[int, int]] ="circular",
+        node_pos: str | dict[Hashable, tuple[int, int]] = "circular",
         latex=True,
         pgm_params={},
         edge_params={},
@@ -1500,7 +1528,12 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch: list[tuple[Hashable, Hashable]]=[], undirected_ebunch: list[tuple[Hashable, Hashable]]=[], latents: Iterable[Hashable]=[]):
+    def __init__(
+        self,
+        directed_ebunch: list[tuple[Hashable, Hashable]] = [],
+        undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
+        latents: Iterable[Hashable] = [],
+    ):
         """
         Initializes a PDAG class.
 
