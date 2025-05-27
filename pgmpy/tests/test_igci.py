@@ -1,6 +1,7 @@
 import numpy as np
 from pgmpy.causal.igci import infer_causal_direction
 
+
 def test_entropy_direction():
     np.random.seed(42)  # Set a seed for reproducibility
     X = np.random.uniform(0, 1, 1000)
