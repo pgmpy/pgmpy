@@ -67,13 +67,9 @@ class LinearGaussianCPD(BaseFactor):
     """
 
     def __init__(self, variable, beta, std, evidence=[]):
-        try:
-            hash(
-                variable
-            )  # It rejects any unhashable type (lists, dicts, sets, custom mutable objects, etc)
-        except TypeError:
+        if not hasattr(variable, '__hash__'):
             raise ValueError(
-                f"`variable` argument must be hashable, not {type(variable).__name__}"
+                f"`variable` argument must be hashable, Got {type(variable).__name__}"
             )
         self.variable = variable
         self.beta = np.array(beta)
