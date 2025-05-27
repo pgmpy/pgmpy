@@ -229,7 +229,7 @@ class LinearGaussianCPD(BaseFactor):
 
         for i, ev in enumerate(evidence):
             if ev in known_betas:
-                beta[i] = known_betas[ev]
+                beta[i + 1] = known_betas[ev]
 
         node_cpd = LinearGaussianCPD(
             variable=variable,

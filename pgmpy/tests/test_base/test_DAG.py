@@ -1303,3 +1303,12 @@ class TestPDAG(unittest.TestCase):
                 ]
             ),
         )
+
+    def test_dag_ctor_with_beta(self):
+        # Creating DAG with beta specified in ctor directly should fail (from_dagitty is used instead)
+        with self.assertRaises(ValueError) as err:
+            DAG(dagitty_str=["dag{X -> Y [beta=0.3] Y -> Z}"])
+        self.assertEqual(
+            str(err.exception),
+            "Invalid arguments: to create LGBN from daggity use from_dagitty method",
+        )
