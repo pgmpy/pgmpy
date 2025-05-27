@@ -185,46 +185,6 @@ class LinearGaussianBayesianNetwork(DAG):
         else:
             return cpds
 
-    def fill_unkown_cpds_random(self, known_betas, loc=0, scale=1):
-        """
-        Generates and assigns random Linear Gaussian CPDs for all variables in the model.
-
-        For each variable in the model, a LinearGaussianCPD is created. If beta coefficients
-        for some evidence variables are known (provided in `known_betas`), they are used;
-        otherwise, coefficients are sampled from a normal distribution with mean `loc` and
-        standard deviation `scale`. The intercept and standard deviation are always sampled randomly.
-
-        Parameters
-        ----------
-        known_betas : dict
-            A dictionary mapping each variable name to a dictionary of known beta coefficients
-            for its parents.
-
-        loc : float, optional (default: 0)
-            Mean of the normal distribution used to sample unknown beta coefficients.
-
-        scale : float, optional (default: 1)
-            Standard deviation of the normal distribution used to sample unknown beta coefficients.
-        """
-        seed = 42
-
-        cpds = []
-        for i, var in enumerate(self.nodes()):
-            parents = self.get_parents(var)
-            if var not in known_betas:
-                known_betas[var] = {}
-            cpds.append(
-                LinearGaussianCPD.fill_unknown_random(
-                    variable=var,
-                    evidence=parents,
-                    known_betas=known_betas[var],
-                    loc=loc,
-                    scale=scale,
-                    seed=(seed + i),
-                )
-            )
-        self.add_cpds(*cpds)
-
     def to_joint_gaussian(self):
         """
         Linear Gaussian Bayesian Networks can be represented using a joint

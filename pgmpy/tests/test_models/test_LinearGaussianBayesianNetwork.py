@@ -314,3 +314,13 @@ class TestDAGParser(unittest.TestCase):
         # Check if the betas specified were correctly set
         self.assertEqual(model_from_str.get_cpds("cancer").beta[1], 0.5)
         self.assertEqual(model_from_str.get_cpds("carry matches").beta[1], 0.2)
+
+        # Check if intercepts are 0
+        self.assertEqual(model_from_str.get_cpds("cancer").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("carry matches").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("smoking").beta[0], 0.0)
+
+        # Check if std devs are 1
+        self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
+        self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
+        self.assertEqual(model_from_str.get_cpds("smoking").std, 1)

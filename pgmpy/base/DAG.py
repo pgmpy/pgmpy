@@ -166,14 +166,44 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, betas = parse_dagitty(dagitty_str)
-        if len(betas) == 0:
+        ebunch, latents, known_betas = parse_dagitty(dagitty_str)
+        if len(known_betas) == 0:
             return cls(dagitty_str=dagitty_str)
         else:
+            from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
             lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
-            lgbn.fill_unkown_cpds_random(betas)
+
+            seed = 42
+            std = 1
+            intercept = 0
+
+            cpds = []
+            for i, var in enumerate(lgbn.nodes()):
+                parents = lgbn.get_parents(var)
+                if var not in known_betas:
+                    known_betas[var] = {}
+
+                rng = np.random.default_rng(seed=seed)
+
+                beta = rng.normal(loc=0, scale=1, size=(len(parents) + 1))
+                beta[0] = intercept
+
+                for i, ev in enumerate(parents):
+                    if ev in known_betas[var]:
+                        beta[i + 1] = known_betas[var][ev]
+
+                cpd = LinearGaussianCPD(
+                    variable=var,
+                    beta=beta,
+                    std=std,
+                    evidence=parents,
+                )
+
+                cpds.append(cpd)
+            lgbn.add_cpds(*cpds)
+
             return lgbn
 
     def add_node(self, node, weight=None, latent=False):
