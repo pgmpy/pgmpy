@@ -79,6 +79,7 @@ class DAG(nx.DiGraph):
         lavaan_str=None,
         dagitty_str=None,
     ):
+        stat_nodes = []
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
             if err_corr:
@@ -86,13 +87,14 @@ class DAG(nx.DiGraph):
                     f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
                 )
         elif dagitty_str:
-            ebunch, latents, betas = parse_dagitty(dagitty_str)
+            ebunch, latents, betas, stat_nodes = parse_dagitty(dagitty_str)
             if len(betas) > 0:
                 raise ValueError(
                     "Invalid arguments: to create LGBN from daggity use from_dagitty method"
                 )
 
         super(DAG, self).__init__(ebunch)
+        self.add_nodes_from(stat_nodes)
         self.latents = set(latents)
         cycles = []
         try:
@@ -166,14 +168,17 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, known_betas = parse_dagitty(dagitty_str)
+        ebunch, latents, known_betas, stat_nodes = parse_dagitty(dagitty_str)
         if len(known_betas) == 0:
-            return cls(dagitty_str=dagitty_str)
+            dag = cls(ebunch=ebunch, latents=latents)
+            dag.add_nodes_from(stat_nodes)
+            return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
             lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn.add_nodes_from(stat_nodes)
 
             seed = 42
             std = 1
