@@ -148,7 +148,7 @@ def _mediawiki_row_with_attrs(separator, cell_values, colwidths, colaligns):
 def _latex_line_begin_tabular(colwidths, colaligns):
     alignment = {"left": "l", "right": "r", "center": "c", "decimal": "r"}
     tabular_columns_fmt = "".join([alignment.get(a, "l") for a in colaligns])
-    return "\\begin{tabular}{" + tabular_columns_fmt + "}\n\hline"
+    return r"\begin{tabular}{" + tabular_columns_fmt + r"}\n\hline"
 
 
 _table_formats = {
@@ -263,8 +263,8 @@ _table_formats = {
 tabulate_formats = list(sorted(_table_formats.keys()))
 
 
-_invisible_codes = re.compile("\x1b\[\d*m")  # ANSI color codes
-_invisible_codes_bytes = re.compile(b"\x1b\[\d*m")  # ANSI color codes
+_invisible_codes = re.compile(r"\x1b\[\d*m")  # ANSI color codes
+_invisible_codes_bytes = re.compile(rb"\x1b\[\d*m")  # ANSI color codes
 
 
 def simple_separated_format(separator):
