@@ -67,7 +67,7 @@ class LinearGaussianCPD(BaseFactor):
     """
 
     def __init__(self, variable, beta, std, evidence=[]):
-        if not hasattr(variable, '__hash__'):
+        if not hasattr(variable, "__hash__"):
             raise ValueError(
                 f"`variable` argument must be hashable, Got {type(variable).__name__}"
             )
