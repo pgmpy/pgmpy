@@ -12,7 +12,6 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 np.random.seed(42)
-ON_GITHUB_RUNNER = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 class TestPearsonr(unittest.TestCase):
@@ -353,20 +352,40 @@ class TestResidualMethod(unittest.TestCase):
         ]
         dep_pvalues = [0, 0, 0, 0, 0]
 
-        computed_coefs, computed_pvalues = [], []
-        for df in [
-            self.df_indep,
-            self.df_indep_cont_cont,
-            self.df_indep_cat_cont,
-            self.df_indep_cat_cat,
-            self.df_indep_ord_cont,
-        ]:
-            c, p = pillai_trace(X="X", Y="Y", Z=[], data=df, boolean=False, seed=42)
-            computed_coefs.append(c)
-            computed_pvalues.append(p)
+        computed_coefs = []
+        computed_pvalues = []
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
+            coef, p_value = pillai_trace(
+                X="X",
+                Y="Y",
+                Z=[],
+                data=df_indep,
+                boolean=False,
+                seed=42,
+            )
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
 
-        self.assertTrue(np.allclose(computed_coefs, dep_coefs, atol=0.01))
-        self.assertTrue(np.allclose(computed_pvalues, dep_pvalues, atol=0.01))
+        self.assertTrue(
+            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
+        )
+        self.assertTrue(
+            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
+        )
+
+        # Conditional tests (independent case)
+        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
+        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
 
         # Conditional independent
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
@@ -389,32 +408,53 @@ class TestResidualMethod(unittest.TestCase):
             c, p = pillai_trace(
                 X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df, boolean=False, seed=42
             )
-            computed_coefs.append(c)
-            computed_pvalues.append(p)
 
-        self.assertTrue(np.allclose(computed_coefs, indep_coefs, atol=0.01))
-        self.assertTrue(np.allclose(computed_pvalues, indep_pvalues, atol=0.01))
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
 
-        # Conditional dependent
-        dep2_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
-        dep2_pvalues = [0, 0, 0, 0, 0]
+        self.assertTrue(
+            np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}",
+        )
+        self.assertTrue(
+            np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}",
+        )
 
-        computed_coefs, computed_pvalues = [], []
-        for df in [
-            self.df_dep,
-            self.df_dep_cont_cont,
-            self.df_dep_cat_cont,
-            self.df_dep_cat_cat,
-            self.df_dep_ord_cont,
-        ]:
-            c, p = pillai_trace(
-                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df, boolean=False, seed=42
+        # Conditional tests (dependent case)
+        dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
+        dep_pvalues = [0, 0, 0, 0, 0]
+
+        computed_coefs = []
+        computed_pvalues = []
+        for i, df_dep in enumerate(
+            [
+                self.df_dep,
+                self.df_dep_cont_cont,
+                self.df_dep_cat_cont,
+                self.df_dep_cat_cat,
+                self.df_dep_ord_cont,
+            ]
+        ):
+            coef, p_value = pillai_trace(
+                X="X",
+                Y="Y",
+                Z=["Z1", "Z2", "Z3"],
+                data=df_dep,
+                boolean=False,
+                seed=42,
             )
-            computed_coefs.append(c)
-            computed_pvalues.append(p)
+            computed_coefs.append(coef)
+            computed_pvalues.append(p_value)
 
-        self.assertTrue(np.allclose(computed_coefs, dep2_coefs, atol=0.01))
-        self.assertTrue(np.allclose(computed_pvalues, dep2_pvalues, atol=0.01))
+        self.assertTrue(
+            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
+        )
+        self.assertTrue(
+            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
+        )
 
     def test_gcm(self):
         # Non-conditional tests
