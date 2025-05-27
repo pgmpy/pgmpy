@@ -6,14 +6,14 @@ import pandas as pd
 
 try:
     from importlib.resources import files
-except:
+except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
 from pgmpy.global_vars import logger
 
 
-def get_example_model(model):
+def get_example_model(model: str):
     """
     Fetches the specified model from bnlearn repository and returns a
     pgmpy.model instance.
@@ -388,7 +388,7 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): Tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}
