@@ -2,8 +2,11 @@
 """Contains the different formats of CPDs used in PGM"""
 import csv
 import numbers
+import os
 from itertools import chain, product
 from shutil import get_terminal_size
+from typing import Hashable, Optional
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -107,15 +110,14 @@ class TabularCPD(DiscreteFactor):
 
     def __init__(
         self,
-        variable,
-        variable_card,
-        values,
-        evidence=None,
-        evidence_card=None,
+        variable: Hashable,
+        variable_card: int,
+        values: list | np.typing.ArrayLike,
+        evidence: Optional[list | tuple] = None,
+        evidence_card: Optional[list | tuple] = None,
         state_names={},
     ):
         self.variable = variable
-        self.variable_card = None
 
         variables = [variable]
 
@@ -132,29 +134,34 @@ class TabularCPD(DiscreteFactor):
         if evidence is not None:
             if isinstance(evidence, str):
                 raise TypeError("Evidence must be list, tuple or array of strings.")
+            if isinstance(evidence_card, type(None)):
+                raise ValueError(
+                    "Evidence card must be provided if Evidence is provided!"
+                )
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
                 raise ValueError(
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
+        values_casted: np.ndarray | torch.Tensor
         if config.BACKEND == "numpy":
-            values = np.array(values, dtype=config.get_dtype())
+            values_casted = np.array(object=values, dtype=config.get_dtype())
         else:
-            values = (
-                torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
+            values_casted = (
+                torch.tensor(values).type(config.get_dtype()).to(config.get_device())
             )
 
-        if values.ndim != 2:
+        if values_casted.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
         if evidence is None:
             expected_cpd_shape = (variable_card, 1)
         else:
             expected_cpd_shape = (variable_card, np.prod(evidence_card))
-        if values.shape != expected_cpd_shape:
+        if values_casted.shape != expected_cpd_shape:
             raise ValueError(
-                f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}"
+                f"values must be of shape {expected_cpd_shape}. Got shape: {values_casted.shape}"
             )
 
         if not isinstance(state_names, dict):
@@ -163,7 +170,7 @@ class TabularCPD(DiscreteFactor):
             )
 
         super(TabularCPD, self).__init__(
-            variables, cardinality, values.flatten(), state_names=state_names
+            variables, cardinality, values_casted.flatten(), state_names=state_names
         )
 
     def __repr__(self):
@@ -212,7 +219,7 @@ class TabularCPD(DiscreteFactor):
 
     def _make_table_str(
         self, tablefmt="fancy_grid", print_state_names=True, return_list=False
-    ):
+    ) -> str | list[str]:
         headers_list = []
 
         # Build column headers
@@ -251,7 +258,7 @@ class TabularCPD(DiscreteFactor):
                 [f"{self.variable}_{i}" for i in range(self.variable_card)]
             ]
         # Stack with data
-        labeled_rows = np.hstack(
+        labeled_rows: list = np.hstack(
             (np.array(variable_array).T, compat_fns.to_numpy(self.get_values()))
         ).tolist()
 
@@ -265,7 +272,7 @@ class TabularCPD(DiscreteFactor):
 
         return cdf_str
 
-    def _truncate_strtable(self, cdf_str):
+    def _truncate_strtable(self, cdf_str: str):
         terminal_width, terminal_height = get_terminal_size()
 
         list_rows_str = cdf_str.split("\n")
@@ -300,7 +307,7 @@ class TabularCPD(DiscreteFactor):
 
         return cdf_str
 
-    def to_csv(self, filename):
+    def to_csv(self, filename: str | os.PathLike):
         """
         Exports the CPD to a CSV file.
 
@@ -522,7 +529,7 @@ class TabularCPD(DiscreteFactor):
         factor.no_to_name = self.no_to_name.copy()
         return factor
 
-    def reorder_parents(self, new_order, inplace=True):
+    def reorder_parents(self, new_order: list, inplace=True):
         """
         Returns a new cpd table according to provided parent/evidence order.
 
