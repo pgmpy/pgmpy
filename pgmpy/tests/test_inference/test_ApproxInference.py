@@ -182,31 +182,27 @@ class TestApproxInferenceBN(unittest.TestCase):
         """Test query method with evidence."""
         # Test single variable with evidence
         query_results = self.infer_alarm.query(
-            variables=["HISTORY"], 
-            evidence={"PVSAT": "LOW"}, 
+            variables=["HISTORY"],
+            evidence={"PVSAT": "LOW"},
             joint=True,
             n_samples=int(1e5),  # Increase number of samples
-            seed=42  # Set fixed seed for reproducibility
+            seed=42,  # Set fixed seed for reproducibility
         )
         ve_results = self.alarm_ve.query(
-            variables=["HISTORY"], 
-            evidence={"PVSAT": "LOW"}, 
-            joint=True
+            variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         # Test multiple variables with evidence
         query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], 
-            evidence={"PVSAT": "LOW"}, 
+            variables=["HISTORY", "CVP"],
+            evidence={"PVSAT": "LOW"},
             joint=True,
             n_samples=int(1e5),  # Increase number of samples
-            seed=42  # Set fixed seed for reproducibility
+            seed=42,  # Set fixed seed for reproducibility
         )
         ve_results = self.alarm_ve.query(
-            variables=["HISTORY", "CVP"], 
-            evidence={"PVSAT": "LOW"}, 
-            joint=True
+            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -216,7 +212,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             variables=["HISTORY", "CVP"],
             evidence={"PVSAT": "LOW"},
             samples=filtered_samples,
-            joint=True
+            joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
