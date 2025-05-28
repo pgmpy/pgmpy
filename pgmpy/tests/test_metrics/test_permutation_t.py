@@ -9,11 +9,11 @@ import pandas as pd
 
 # Import pgmpy components
 from pgmpy.base import DAG
-from pgmpy.metrics.permutation_test import (
+from pgmpy.metrics import permutation_t
+from pgmpy.metrics.permutation_t import (
     _count_lmc_violations,
     _create_permuted_graph,
     _get_non_descendants,
-    permutation_based_falsification_test,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -431,7 +431,7 @@ class TestProgressBarAndLogging(unittest.TestCase):
         model = DiscreteBayesianNetwork([("X", "Y")])
         data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
 
-        permutation_based_falsification_test(
+        permutation_bt(
             model, data, n_permutations=2, show_progress=False  # Reduced from 3
         )
 
@@ -444,19 +444,16 @@ class TestImportFunctionality(unittest.TestCase):
 
     def test_module_imports(self):
         """Test that all functions can be imported successfully."""
-        from pgmpy.metrics.permutation_test import (
-            falsify_graph,
-            permutation_based_falsification_test,
-        )
+        from pgmpy.metrics import falsify_graph, permutation_t
 
         # Test that the alias works
-        self.assertEqual(falsify_graph, permutation_based_falsification_test)
+        self.assertEqual(falsify_graph, permutation_t)
 
     def test_function_signature(self):
         """Test that the main function has the expected signature."""
         import inspect
 
-        sig = inspect.signature(permutation_based_falsification_test)
+        sig = inspect.signature(permutation_t)
         expected_params = [
             "model",
             "data",
@@ -481,9 +478,7 @@ class TestMainBlockExecution(unittest.TestCase):
         data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
 
         try:
-            result = permutation_based_falsification_test(
-                model, data, n_permutations=2, show_progress=False
-            )
+            result = permutation_t(model, data, n_permutations=2, show_progress=False)
             # This should work and cover lines 607-610
             self.assertIsNotNone(result)
             self.assertIn("falsifiable", result)
@@ -500,7 +495,7 @@ class TestMainBlockExecution(unittest.TestCase):
         # Mock a failing scenario
         try:
             # This should trigger exception handling in __main__
-            result = permutation_based_falsification_test(
+            result = permutation_t(
                 None,  # Invalid model to cause failure
                 None,  # Invalid data
                 n_permutations=2,
@@ -564,7 +559,7 @@ if __name__ == "__main__":
     data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})  # Line 604 coverage
 
     try:  # Line 606 coverage
-        result = permutation_based_falsification_test(  # Line 607 coverage
+        result = permutation_t(  # Line 607 coverage
             model, data, n_permutations=2, show_progress=False
         )
         print(

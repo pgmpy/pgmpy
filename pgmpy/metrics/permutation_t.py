@@ -14,7 +14,7 @@ from pgmpy.estimators.CITests import chi_square, pearsonr
 from pgmpy.global_vars import logger
 
 
-def permutation_based_falsification_test(
+def permutation_t(
     model,
     data,
     ci_test="chi_square",
@@ -317,4 +317,4 @@ def _create_permuted_graph(model, perm_mapping):
 
 
 # Alias for shorter function name
-falsify_graph = permutation_based_falsification_test
+falsify_graph = permutation_t
