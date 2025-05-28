@@ -2,32 +2,88 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-
+from collections.abc import Callable
+from typing import Union, Optional
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
+from pgmpy.utils.utils import check_variable_type
 
 
-def get_ci_test(test, full=False, data=None, independencies=None):
+def get_callable_ci_test(
+    test: Union[str, None, Callable],
+    full=False,
+    data: Optional[pd.DataFrame] = None,
+    independencies=None,
+) -> Callable:
+    """_summary_
+
+    Parameters
+    ----------
+    test : Union[str, None, Callable]
+        _description_
+    full : bool, optional
+        _description_, by default False
+    data : Optional[pd.DataFrame], optional
+        _description_, by default None
+    independencies : _type_, optional
+        _description_, by default None
+
+    Returns
+    -------
+    Callable
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    ValueError
+        _description_
+    ValueError
+        _description_
+    """
+    # renamed to specify you are obtaining a Callable
     if callable(test):
         return test
 
-    test = test.lower()
     supported_tests = {
-        "chi_square": chi_square,
-        "g_sq": g_sq,
-        "log_likelihood": log_likelihood,
-        "modified_log_likelihood": modified_log_likelihood,
-        "pearsonr": pearsonr,
-        "pillai": pillai_trace,
-        "gcm": gcm,
+        "continuous": {
+            "pearsonr": pearsonr,
+            "gcm": gcm,
+        },
+        "discrete": {
+            "chi_square": chi_square,
+            "g_sq": g_sq,
+            "log_likelihood": log_likelihood,
+            "modified_log_likelihood": modified_log_likelihood,
+        },
+        "mixed": {
+            "pillai": pillai_trace,
+        },
     }
-    if full:
-        supported_tests["power_divergence"] = power_divergence
-        supported_tests["independence_match"] = independence_match
+    flattened_supported_methods = {
+        key: value
+        for subdict in supported_tests.values()
+        for key, value in subdict.items()
+    }
 
-    if test not in supported_tests.keys():
+    if isinstance(test, type(None)):
+        if data is not None:
+            var_type = check_variable_type(data)
+            # Automatically determine method
+            test = list(supported_tests[var_type].values())[0]
+        else:
+            test = "pillai"
+
+    test = test.lower()
+
+    if full:
+        flattened_supported_methods["power_divergence"] = power_divergence
+        flattened_supported_methods["independence_match"] = independence_match
+
+    if test not in list(flattened_supported_methods.keys()):
         raise ValueError(
-            f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
+            f"ci_test must either be one of {list(flattened_supported_methods.keys())}, or a function. Got: {test}"
         )
 
     if full:
@@ -41,7 +97,7 @@ def get_ci_test(test, full=False, data=None, independencies=None):
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
-    return supported_tests[test]
+    return flattened_supported_methods[test]
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):
@@ -766,31 +822,41 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         return t_stat, p_value
 
 
-def get_scoring_method(data):
-    """
-    Class function for determining the scoring method based on the input data of dataframe
-    All columns categorical data defaults to chi_square
-    All columns numerical data defaults to pearsonr
-    Mixed data columns defaults to pillai_trace
+# def select_CI_test(data: pd.DataFrame) -> tuple[str, list[str]]:
+#     """
+#     Class function for determining the CI method based on the input data of dataframe
+#     All columns categorical data defaults to chi_square
+#     All columns numerical data defaults to pearsonr
+#     Mixed data columns defaults to pillai_trace
 
-    Parameters
-    ----------
-    data: pandas DataFrame object
-        dataframe object where each column represents one variable type.
+#     Parameters
+#     ----------
+#     data: pandas DataFrame object
+#         dataframe object where each column represents one variable type.
 
-    Returns
-    ----------
-    string: Corresponding CI_method
-    """
-    c_type = 0
-    n_type = 0
-    for key in data.dtypes:
-        if key in ["category", "C"]:
-            c_type += 1
-        elif key in ["float32", "float64", "N"]:
-            n_type += 1
-    if len(data.columns) == c_type:
-        return "chi_square"
-    elif len(data.columns) == n_type:
-        return "pearsonr"
-    return "pillai_trace"
+#     Returns
+#     ----------
+#         tuple[string, list[string]]
+#         Corresponding CI_method, list of available methods
+#     """
+#     from utils.check_functions import check_variable_type
+
+#     supported_methods = {
+#         "continuous": {
+#             "pearsonr": pearsonr,
+#             "gcm": gcm,
+#         },
+#         "discrete": {
+#             "chi_square": chi_square,
+#             "g_sq": g_sq,
+#             "log_likelihood": log_likelihood,
+#             "modified_log_likelihood": modified_log_likelihood,
+#         },
+#             "mixed": {
+#             "pillai": pillai_trace,
+#         },
+#     }
+
+#     var_type = check_variable_type(data)
+
+#     return supported_methods[var_type], [key for subdict in supported_methods.values() for key in subdict.keys()]

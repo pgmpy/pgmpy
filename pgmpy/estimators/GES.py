@@ -20,9 +20,9 @@ from pgmpy.estimators import (
     LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
-    get_scoring_method,
-    scoring,
 )
+from pgmpy.estimators.StructureScore import get_scoring_method
+from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.global_vars import logger
 
 
@@ -56,22 +56,6 @@ class GES(StructureEstimator):
         self.use_cache = use_cache
 
         super(GES, self).__init__(data=data, **kwargs)
-
-    def Test_type(
-        self,
-    ):  # Ideally I would run this in over to choose the proper test depending on the kind of data.
-        Ctype = 0
-        Ntype = 0
-        for key in self.data.dtypes:
-            if key in ["category", "C"]:
-                Ctype += 1
-            elif key in ["float32", "float64", "N"]:
-                Ntype += 1
-        if len(self.data.columns) == Ctype:
-            return "BIC"
-        elif len(self.data.columns) == Ntype:
-            return "BICGauss"
-        return "BICCondGauss"
 
     def _legal_edge_additions(self, current_model, expert_knowledge):
         """
@@ -121,7 +105,7 @@ class GES(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method="bic-d",
+        scoring_method=None,
         expert_knowledge=None,
         min_improvement=1e-6,
         debug=False,
@@ -167,10 +151,9 @@ class GES(StructureEstimator):
         >>> len(dag.edges())
         45
         """
-        if scoring_method == None:
-            scoring_method = scoring.get_scoring_method(self.data)
 
         # Step 0: Initial checks and setup for arguments
+        score_c: ScoreCache
         _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
 

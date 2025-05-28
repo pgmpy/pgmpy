@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from collections import deque
 from itertools import permutations
+from typing import Union
 
 import networkx as nx
 from tqdm.auto import trange
@@ -22,9 +23,8 @@ from pgmpy.estimators import (
     LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
-    get_scoring_method,
-    scoring,
 )
+from pgmpy.estimators.StructureScore import get_scoring_method
 
 
 class HillClimbSearch(StructureEstimator):
@@ -139,7 +139,7 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method="bic-d",
+        scoring_method: Union[str, StructureScore, None] = None,
         start_dag=None,
         tabu_length=100,
         max_indegree=None,
@@ -210,12 +210,9 @@ class HillClimbSearch(StructureEstimator):
         >>> len(dag.edges())
         45
         """
-        if scoring_method == None:
-            scoring_method = scoring.get_scoring_method(self.data)
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
-
         score, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
 

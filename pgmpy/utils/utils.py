@@ -413,3 +413,31 @@ def preprocess_data(df):
         f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
+
+
+def check_variable_type(data: pd.DataFrame) -> str:
+    """Returns continuous, discrete or mixed depending on the type of variable data in the given dataset
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        DataFrame to analyze
+
+    Returns
+    -------
+    str
+        `continuous`, `discrete` or `mixed`.
+    """
+    cat_type = 0
+    num_type = 0
+    for key in data.dtypes:
+        if key in ["category", "C"]:
+            cat_type += 1
+        elif key in ["int16", "int32", "int64", "float16", "float32", "float64", "N"]:
+            num_type += 1
+
+    if len(data.columns) == cat_type:
+        return "discrete"
+    elif len(data.columns) == num_type:
+        return "continuous"
+    return "mixed"
