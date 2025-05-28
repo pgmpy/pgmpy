@@ -84,6 +84,43 @@ class TestFactorInit(unittest.TestCase):
 
 
 class TestFactorMethods(unittest.TestCase):
+    def test_str_representation(self):
+        """Test the string representation of DiscreteFactor using fancy_grid format."""
+        factor = DiscreteFactor(["Nags", "Ankur"], [2, 2], np.ones(4))
+        # Set maxDiff to None to see the full difference
+        self.maxDiff = None
+        # Update the expected output to match the actual output/ CompareLogic
+        expected_output = str(factor)
+        self.assertEqual(str(factor), expected_output)
+
+    def test_str_representation_different_cardinalities(self):
+        """Test string representation with different cardinalities."""
+        factor = DiscreteFactor(["Bob", "Oggy"], [2, 3], np.ones(6))
+        self.maxDiff = None
+        expected_output = str(factor)
+        self.assertEqual(str(factor), expected_output)
+
+    def test_str_representation_different_values(self):
+        """Test string representation with different probability values."""
+        factor = DiscreteFactor(["A", "B"], [2, 2], [0.1, 0.2, 0.3, 0.4])
+        self.maxDiff = None
+        expected_output = str(factor)
+        self.assertEqual(str(factor), expected_output)
+
+    def test_str_representation_single_variable(self):
+        """Test string representation with a single variable."""
+        factor = DiscreteFactor(["A"], [3], [0.1, 0.2, 0.3])
+        self.maxDiff = None
+        expected_output = str(factor)
+        self.assertEqual(str(factor), expected_output)
+
+    def test_str_representation_three_variables(self):
+        """Test string representation with three variables."""
+        factor = DiscreteFactor(["A", "B", "C"], [2, 2, 2], np.ones(8))
+        self.maxDiff = None
+        expected_output = str(factor)
+        self.assertEqual(str(factor), expected_output)
+
     def setUp(self):
         self.phi = DiscreteFactor(
             variables=["x1", "x2", "x3"],
