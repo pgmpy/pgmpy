@@ -41,7 +41,13 @@ class ApproxInference(object):
         model_states: dict
             A dict of state names for each variable from the model in the form {variable_name: list of states}.
         """
+        if df.empty:
+            raise ValueError("Cannot create factor from empty dataframe")
+
         variables = list(df.index.names)
+        if not variables or None in variables:
+            raise ValueError("DataFrame must have valid index names")
+
         if len(variables) == 1:
             df_index = model_states[variables[0]]
         else:
@@ -171,6 +177,34 @@ class ApproxInference(object):
                 if virtual_evidence is None:
                     virtual_evidence = dict()
 
+                # Validate time slices in evidence
+                for var, state in evidence.items():
+                    if not isinstance(var, tuple) or len(var) != 2:
+                        raise ValueError(
+                            f"Invalid variable format in evidence: {var}. Expected (node, time_slice)."
+                        )
+                    if var[1] < 0:
+                        raise ValueError(
+                            f"Invalid time slice in evidence: {var[1]}. Time slice must be non-negative."
+                        )
+                    if var not in self.model.states:
+                        raise KeyError(f"Variable {var} not found in model states.")
+                # Validate virtual evidence normalization and time slices
+                for cpd in virtual_evidence:
+                    values = (
+                        cpd.values.detach().cpu().numpy()
+                        if hasattr(cpd.values, "detach")
+                        else cpd.values
+                    )
+                    if not (abs(sum(values) - 1.0) < 1e-3):
+                        raise ValueError(
+                            f"Virtual evidence CPD for {cpd.variable} is not normalized."
+                        )
+                    if cpd.variable not in self.model.states:
+                        raise ValueError(
+                            f"Virtual evidence variable {cpd.variable} not found in model states."
+                        )
+
                 max_time_slices = 0
                 for var in variables:
                     if var[1] > max_time_slices:
@@ -180,7 +214,7 @@ class ApproxInference(object):
                         max_time_slices = var[1]
                 for cpd in virtual_evidence:
                     if cpd.variable[1] > max_time_slices:
-                        max_time_slices = cpd.variable[2]
+                        max_time_slices = cpd.variable[1]
                 samples = self.model.simulate(
                     n_samples=n_samples,
                     n_time_slices=max_time_slices + 1,
