@@ -333,14 +333,14 @@ class TestApproxInferenceDBN(unittest.TestCase):
         samples = self.model.simulate(n_samples=1000)
 
         # Test single variable
-        grouped_df = samples.groupby([( "Y", 0)]).size() / samples.shape[0]
-        state_names = {( "Y", 0): ["0", "1"]}
+        grouped_df = samples.groupby([("Y", 0)]).size() / samples.shape[0]
+        state_names = {("Y", 0): ["0", "1"]}
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
         self.assertIsInstance(result, DiscreteFactor)
-        self.assertEqual(set(result.variables), {( "Y", 0)})
+        self.assertEqual(set(result.variables), {("Y", 0)})
 
         # Test error cases
-        empty_df = pd.DataFrame(columns=[( "Y", 0), ( "Y", 1)])
+        empty_df = pd.DataFrame(columns=[("Y", 0), ("Y", 1)])
         with self.assertRaises(ValueError):
             ApproxInference._get_factor_from_df(empty_df, state_names)
 
@@ -356,11 +356,11 @@ class TestApproxInferenceDBN(unittest.TestCase):
             self.infer.get_distribution(samples=samples, variables=[], joint=True)
 
         # Test invalid state names
-        invalid_state_names = {( "Y", 0): ["INVALID_STATE"], ( "Y", 1): ["0", "1"]}
+        invalid_state_names = {("Y", 0): ["INVALID_STATE"], ("Y", 1): ["0", "1"]}
         with self.assertRaises(ValueError):
             self.infer.get_distribution(
                 samples=samples,
-                variables=[( "Y", 0), ( "Y", 1)],
+                variables=[("Y", 0), ("Y", 1)],
                 state_names=invalid_state_names,
                 joint=True,
             )
