@@ -1519,7 +1519,6 @@ class DAG(nx.DiGraph):
         return strengths
 
 
-
 class PDAG(nx.DiGraph):
     """
     Class for representing PDAGs (also known as CPDAG). PDAGs are the equivalence classes of
