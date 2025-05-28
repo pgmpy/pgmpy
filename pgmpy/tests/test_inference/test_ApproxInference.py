@@ -5,8 +5,6 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
-
-# Fix 1: Import DiscreteBayesianNetwork instead of BayesianNetwork
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork as DBN
 from pgmpy.utils import get_example_model
 
@@ -20,7 +18,6 @@ class TestApproxInferenceBN(unittest.TestCase):
 
     def test_get_factor_from_df_multiple_variables(self):
         """Test that _get_factor_from_df works correctly with multiple variables."""
-        # Fix 2: Use DiscreteBayesianNetwork instead of BayesianNetwork
         model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
         cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
         cpd_b = TabularCPD(
@@ -59,17 +56,26 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.assertEqual(set(result.variables), {"A", "B"})
         self.assertEqual(result.cardinality, [2, 2])
 
-        self.assertAlmostEqual(np.sum(result.values), 1.0, places=5)
+        # Fix: Use np.isclose instead of direct comparison
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
 
         self.assertEqual(result.state_names["A"], ["a0", "a1"])
         self.assertEqual(result.state_names["B"], ["b0", "b1"])
 
     def test_get_factor_from_df_edge_cases(self):
         """Test _get_factor_from_df with edge cases."""
-        # Fix 2: Use DiscreteBayesianNetwork instead of BayesianNetwork
         model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
-        model.add_cpds(cpd_a)
+        cpd_b = TabularCPD(
+            "B",
+            2,
+            [[0.8, 0.2], [0.2, 0.8]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["b0", "b1"], "A": ["a0", "a1"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
         inference = ApproxInference(model)
         samples = model.simulate(n_samples=1000)
         grouped_df = samples.groupby(["A"]).size() / samples.shape[0]
@@ -263,14 +269,14 @@ class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
         # Create a simple DBN with proper node format (node, time_slice)
         self.dbn = DBN()
-        # Fix 4: Use proper node format for DBN
+
+        # Add edges with proper format
         self.dbn.add_edges_from(
             [
                 (("Z", 0), ("X", 0)),
                 (("X", 0), ("Y", 0)),
                 (("Z", 0), ("Z", 1)),
                 (("X", 0), ("X", 1)),
-                # Fix: Add transition for Y as well
                 (("Y", 0), ("Y", 1)),
             ]
         )
@@ -305,7 +311,6 @@ class TestApproxInferenceDBN(unittest.TestCase):
             evidence=[("Z", 1), ("X", 0)],
             evidence_card=[2, 2],
         )
-        # Fix: Add CPD for Y_1
         cpd_y1 = TabularCPD(
             ("Y", 1),
             2,
@@ -316,6 +321,9 @@ class TestApproxInferenceDBN(unittest.TestCase):
 
         # Add CPDs to the model
         self.dbn.add_cpds(cpd_z0, cpd_x0, cpd_y0, cpd_z1, cpd_x1, cpd_y1)
+
+        # Initialize the model
+        self.dbn.initialize_initial_state()
 
         # Create inference object
         self.inference = ApproxInference(self.dbn)
@@ -360,23 +368,165 @@ class TestApproxInferenceDBN(unittest.TestCase):
 
     def test_get_factor_from_df(self):
         """Test _get_factor_from_df with DBN variables."""
-        # Skip this test for now as it needs more complex setup
-        pass
+        # Test with single time slice
+        variables = [("X", 0)]
+        grouped_df = self.samples.groupby(variables).size() / self.samples.shape[0]
+        state_names = {("X", 0): ["0", "1"]}
+        result = ApproxInference._get_factor_from_df(grouped_df, state_names)
+
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {("X", 0)})
+        self.assertEqual(result.cardinality, [2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
+
+        # Test with multiple time slices
+        variables = [("X", 0), ("Y", 0)]
+        grouped_df = self.samples.groupby(variables).size() / self.samples.shape[0]
+        state_names = {("X", 0): ["0", "1"], ("Y", 0): ["0", "1"]}
+        result = ApproxInference._get_factor_from_df(grouped_df, state_names)
+
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {("X", 0), ("Y", 0)})
+        self.assertEqual(result.cardinality, [2, 2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
+
+        # Test with empty dataframe
+        empty_df = pd.DataFrame(columns=[("X", 0), ("Y", 0)])
+        with self.assertRaises(ValueError):
+            ApproxInference._get_factor_from_df(empty_df, state_names)
+
+        # Test with missing state names
+        with self.assertRaises(KeyError):
+            ApproxInference._get_factor_from_df(grouped_df, {})
 
     def test_get_distribution_edge_cases(self):
         """Test get_distribution edge cases with DBN."""
-        # Skip this test for now
-        pass
+        # Test empty variables list
+        with self.assertRaises(ValueError):
+            self.inference.get_distribution(
+                samples=self.samples, variables=[], joint=True
+            )
+
+        # Test missing variables in samples
+        with self.assertRaises(KeyError):
+            self.inference.get_distribution(
+                samples=self.samples, variables=[("NONEXISTENT", 0)], joint=True
+            )
+
+        # Test with invalid time slice
+        with self.assertRaises(ValueError):
+            self.inference.get_distribution(
+                samples=self.samples, variables=[("X", -1)], joint=True
+            )
+
+        # Test with joint=False
+        result = self.inference.get_distribution(
+            samples=self.samples, variables=[("X", 0), ("Y", 0)], joint=False
+        )
+        self.assertIsInstance(result, dict)
+        self.assertEqual(set(result.keys()), {("X", 0), ("Y", 0)})
+        for var in result:
+            self.assertIsInstance(result[var], DiscreteFactor)
+            self.assertTrue(np.isclose(np.sum(result[var].values), 1.0, atol=1e-5))
+
+        # Test with filtered samples
+        filtered_samples = self.samples[self.samples[("X", 0)] == 0]
+        result = self.inference.get_distribution(
+            samples=filtered_samples, variables=[("Y", 0)], joint=True
+        )
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
 
     def test_error_cases(self):
         """Test error handling in DBN inference."""
-        # Skip this test for now
-        pass
+        # Test invalid model type
+        with self.assertRaises(ValueError):
+            ApproxInference("invalid_model")
+
+        # Test invalid variable names
+        with self.assertRaises(KeyError):
+            self.inference.query(variables=[("NONEXISTENT", 0)])
+
+        # Test invalid evidence values
+        with self.assertRaises(ValueError):
+            self.inference.query(
+                variables=[("X", 0)], evidence={("Z", 0): "INVALID_STATE"}
+            )
+
+        # Test invalid time slice in evidence
+        with self.assertRaises(ValueError):
+            self.inference.query(variables=[("X", 0)], evidence={("Z", -1): 0})
+
+        # Test invalid virtual evidence format
+        invalid_virtual_evid = TabularCPD(
+            ("Z", 0),
+            2,
+            [[0.2], [0.3]],  # Sum not equal to 1
+            state_names={("Z", 0): ["0", "1"]},
+        )
+        with self.assertRaises(ValueError):
+            self.inference.query(
+                variables=[("X", 0)], virtual_evidence=[invalid_virtual_evid]
+            )
+
+        # Test invalid time slice in virtual evidence
+        invalid_virtual_evid = TabularCPD(
+            ("Z", -1),
+            2,
+            [[0.5], [0.5]],
+            state_names={("Z", -1): ["0", "1"]},
+        )
+        with self.assertRaises(ValueError):
+            self.inference.query(
+                variables=[("X", 0)], virtual_evidence=[invalid_virtual_evid]
+            )
 
     def test_query_parameters(self):
         """Test query parameters with DBN."""
-        # Skip this test for now
-        pass
+        # Test n_samples parameter
+        result = self.inference.query(variables=[("X", 0)], n_samples=1000)
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(result.variables, [("X", 0)])
+        self.assertEqual(result.cardinality, [2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
+
+        # Test show_progress parameter
+        result = self.inference.query(variables=[("X", 0)], show_progress=False)
+        self.assertIsInstance(result, DiscreteFactor)
+
+        # Test seed parameter for reproducibility
+        result1 = self.inference.query(variables=[("X", 0)], seed=42)
+        result2 = self.inference.query(variables=[("X", 0)], seed=42)
+        self.assertTrue(result1.__eq__(result2))
+
+        # Test with different time slices
+        result = self.inference.query(variables=[("X", 1)], n_samples=1000)
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(result.variables, [("X", 1)])
+        self.assertEqual(result.cardinality, [2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
+
+        # Test with multiple variables
+        result = self.inference.query(
+            variables=[("X", 0), ("Y", 0)], n_samples=1000, joint=True
+        )
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {("X", 0), ("Y", 0)})
+        self.assertEqual(result.cardinality, [2, 2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
+
+        # Test with evidence and parameters
+        result = self.inference.query(
+            variables=[("X", 1)],
+            evidence={("Z", 0): 0},
+            n_samples=1000,
+            show_progress=False,
+            seed=42,
+        )
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(result.variables, [("X", 1)])
+        self.assertEqual(result.cardinality, [2])
+        self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
 
 
 class TestApproxInferenceBNTorch(unittest.TestCase):
@@ -428,8 +578,10 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        # Fix: Use proper node format for DBN
+        # Create a simple DBN
         self.model = DBN()
+
+        # Add edges with proper format
         self.model.add_edges_from(
             [
                 (("Z", 0), ("X", 0)),
@@ -440,6 +592,7 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
             ]
         )
 
+        # Define CPDs with proper node format
         z_start_cpd = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
         x_i_cpd = TabularCPD(
             ("X", 0),
@@ -465,9 +618,9 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         x_trans_cpd = TabularCPD(
             ("X", 1),
             2,
-            [[0.1, 0.9], [0.9, 0.1]],
-            evidence=[("X", 0)],
-            evidence_card=[2],
+            [[0.1, 0.9, 0.9, 0.1], [0.9, 0.1, 0.1, 0.9]],
+            evidence=[("Z", 1), ("X", 0)],
+            evidence_card=[2, 2],
         )
         y_trans_cpd = TabularCPD(
             ("Y", 1),
@@ -477,10 +630,15 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
             evidence_card=[2],
         )
 
+        # Add CPDs to the model
         self.model.add_cpds(
             z_start_cpd, x_i_cpd, y_i_cpd, z_trans_cpd, x_trans_cpd, y_trans_cpd
         )
+
+        # Initialize the model
         self.model.initialize_initial_state()
+
+        # Create inference object
         self.infer = ApproxInference(self.model)
 
     def test_inference(self):
