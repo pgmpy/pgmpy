@@ -15,7 +15,7 @@ class Independencies(object):
 
     Parameters
     ----------
-    assertions: Lists or Tuples
+    assertions: Lists or tuples
             Each assertion is a list or tuple of the form: [event1,
             event2 and event3]
             eg: assertion ['X', 'Y', 'Z'] would be X is independent
@@ -125,7 +125,7 @@ class Independencies(object):
 
         Parameters
         ----------
-        assertions: Lists or Tuples
+        assertions: Lists or tuples
                 Each assertion is a list or tuple of variable, independent_of and given.
 
         Examples
@@ -375,7 +375,7 @@ class Independencies(object):
 
         return Independencies(*reduced_assertions)
 
-    def latex_string(self):
+    def latex_string(self) -> list[str]:
         """
         Returns a list of string.
         Each string represents the IndependenceAssertion in latex.

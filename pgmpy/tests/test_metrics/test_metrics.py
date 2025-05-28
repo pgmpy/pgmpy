@@ -184,31 +184,43 @@ class TestImpliedCI(unittest.TestCase):
 
 
 class TestStructuralHammingDistance(unittest.TestCase):
-    def setUp(self):
-        self.dag_1 = DiscreteBayesianNetwork([(1, 2)])
-        self.dag_2 = DiscreteBayesianNetwork([(2, 1)])
+    def test_shd1(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2)])
+        dag2 = DiscreteBayesianNetwork([(2, 1)])
+        self.assertEqual(SHD(dag1, dag2), 1)
 
-        self.dag_3 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
-        self.dag_4 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+    def test_shd2(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
+        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+        self.assertEqual(SHD(dag1, dag2), 2)
 
-        self.dag_5 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
+    def test_shd3(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)])
+        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)])
+        self.assertEqual(SHD(dag1, dag2), 3)
 
-        self.large_dag_1 = DiscreteBayesianNetwork(
-            [(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)]
+    def test_shd_isolated_nodes(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2)])
+        dag1.add_nodes_from([3])
+        dag2 = DiscreteBayesianNetwork([(1, 2), (2, 3)])
+
+        self.assertEqual(SHD(dag1, dag2), 1)
+        self.assertEqual(SHD(dag2, dag1), 1)
+
+    def test_shd_mixed_differences(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2), (2, 3), (2, 4), (4, 5), (6, 5), (7, 8)])
+        dag1.add_nodes_from([9, 10])
+        dag2 = DiscreteBayesianNetwork(
+            [(1, 2), (2, 4), (5, 4), (6, 5), (8, 7), (9, 10)]
         )
-        self.large_dag_2 = DiscreteBayesianNetwork(
-            [(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)]
-        )
+        dag2.add_nodes_from([3, 7])
 
-    def test_shd(self):
-        self.assertEqual(SHD(self.dag_1, self.dag_2), 1)
-
-    def test_shd(self):
-        self.assertEqual(SHD(self.dag_3, self.dag_4), 2)
-
-    def test_shd(self):
-        self.assertEqual(SHD(self.large_dag_1, self.large_dag_2), 3)
+        self.assertEqual(SHD(dag1, dag2), 4)
+        self.assertEqual(SHD(dag2, dag1), 4)
 
     def test_shd_unequal_graphs(self):
+        dag1 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
+        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
+
         with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
-            SHD(self.dag_4, self.dag_5)
+            SHD(dag1, dag2)

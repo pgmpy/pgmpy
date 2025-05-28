@@ -172,7 +172,6 @@ class XDSLReader(object):
         """
         variable_CPD = {}
         for cpt in self.cpt_elements:
-
             combined_prob = cpt.find("probabilities")
             num_states = len([state for state in cpt.findall("state")])
             cpd_arr = [[] for k in range(num_states)]
