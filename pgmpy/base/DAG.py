@@ -24,7 +24,7 @@ class DAG(nx.DiGraph):
     ----------
     data: input graph
         Data to initialize graph. If data=None (default) an empty graph is
-        created. The data can be an edge list or any Networkx graph object.
+        created. The data can be an edge list or any NetworkX graph object.
 
     Examples
     --------
@@ -1468,6 +1468,7 @@ class DAG(nx.DiGraph):
             )
 
         return strengths
+
 
 
 class PDAG(nx.DiGraph):

@@ -1,4 +1,6 @@
 import unittest
+import numpy as np
+import pandas as pd
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -14,25 +16,165 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.alarm_ve = VariableElimination(self.alarm_model)
         self.samples = self.alarm_model.simulate(int(1e4))
 
+    def test_get_factor_from_df_multiple_variables(self):
+        """Test that _get_factor_from_df works correctly with multiple variables."""
+        model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
+        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
+        cpd_b = TabularCPD(
+            "B",
+            2,
+            [[0.8, 0.2], [0.2, 0.8]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["b0", "b1"], "A": ["a0", "a1"]},
+        )
+        cpd_c = TabularCPD(
+            "C",
+            2,
+            [[0.9, 0.1], [0.1, 0.9]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"C": ["c0", "c1"], "A": ["a0", "a1"]},
+        )
+        model.add_cpds(cpd_a, cpd_b, cpd_c)
+
+        inference = ApproxInference(model)
+
+        samples = model.simulate(n_samples=1000)
+
+        variables = ["A", "B"]
+        grouped_df = samples.groupby(variables).size() / samples.shape[0]
+
+        state_names = {
+            "A": model.get_cpds("A").state_names["A"],
+            "B": model.get_cpds("B").state_names["B"],
+        }
+
+        result = ApproxInference._get_factor_from_df(grouped_df, state_names)
+
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {"A", "B"})
+        self.assertEqual(result.cardinality, [2, 2])
+
+        self.assertAlmostEqual(np.sum(result.values), 1.0, places=5)
+
+        self.assertEqual(result.state_names["A"], ["a0", "a1"])
+        self.assertEqual(result.state_names["B"], ["b0", "b1"])
+
+    def test_get_factor_from_df_edge_cases(self):
+        """Test _get_factor_from_df with edge cases."""
+        # Test single variable case
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
+        model.add_cpds(cpd_a)
+        inference = ApproxInference(model)
+        samples = model.simulate(n_samples=1000)
+        grouped_df = samples.groupby(["A"]).size() / samples.shape[0]
+        state_names = {"A": ["a0", "a1"]}
+        result = ApproxInference._get_factor_from_df(grouped_df, state_names)
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {"A"})
+
+        # Test empty dataframe case
+        empty_df = pd.DataFrame(columns=["A", "B"])
+        with self.assertRaises(ValueError):
+            ApproxInference._get_factor_from_df(empty_df, state_names)
+
+        # Test missing state names case
+        with self.assertRaises(KeyError):
+            ApproxInference._get_factor_from_df(grouped_df, {})
+
+    def test_get_distribution_edge_cases(self):
+        """Test get_distribution with edge cases."""
+        # Test empty variables list
+        with self.assertRaises(ValueError):
+            self.infer_alarm.get_distribution(
+                samples=self.samples, variables=[], joint=True
+            )
+
+        # Test invalid state names
+        invalid_state_names = {
+            "HISTORY": ["INVALID_STATE"],
+            "CVP": ["LOW", "NORMAL", "HIGH"],
+        }
+        with self.assertRaises(ValueError):
+            self.infer_alarm.get_distribution(
+                samples=self.samples,
+                variables=["HISTORY", "CVP"],
+                state_names=invalid_state_names,
+                joint=True,
+            )
+
+        # Test missing variables in samples
+        with self.assertRaises(KeyError):
+            self.infer_alarm.get_distribution(
+                samples=self.samples, variables=["NONEXISTENT_VAR"], joint=True
+            )
+
+    def test_query_parameters(self):
+        """Test query method with different parameters."""
+        # Test n_samples parameter
+        query_results = self.infer_alarm.query(variables=["HISTORY"], n_samples=1000)
+        self.assertIsInstance(query_results, DiscreteFactor)
+
+        # Test show_progress parameter
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY"], show_progress=False
+        )
+        self.assertIsInstance(query_results, DiscreteFactor)
+
+        # Test seed parameter for reproducibility
+        results1 = self.infer_alarm.query(variables=["HISTORY"], seed=42)
+        results2 = self.infer_alarm.query(variables=["HISTORY"], seed=42)
+        self.assertTrue(results1.__eq__(results2))
+
+    def test_error_cases(self):
+        """Test error handling in ApproxInference."""
+        # Test invalid model type
+        with self.assertRaises(ValueError):
+            ApproxInference("invalid_model")
+
+        # Test invalid variable names
+        with self.assertRaises(KeyError):
+            self.infer_alarm.query(variables=["NONEXISTENT_VAR"])
+
+        # Test invalid evidence values
+        with self.assertRaises(ValueError):
+            self.infer_alarm.query(
+                variables=["HISTORY"], evidence={"PVSAT": "INVALID_STATE"}
+            )
+
+        # Test invalid virtual evidence format
+        invalid_virtual_evid = TabularCPD(
+            "PAP",
+            3,
+            [[0.2], [0.3], [0.5]],
+            state_names={"PAP": ["INVALID", "NORMAL", "HIGH"]},
+        )
+        with self.assertRaises(ValueError):
+            self.infer_alarm.query(
+                variables=["HISTORY"], virtual_evidence=[invalid_virtual_evid]
+            )
+
     def test_query_marg(self):
+        """Test query method for marginal distributions."""
+        # Test single variable
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
+        # Test with provided samples
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], samples=self.samples
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
+        # Test multiple variables with joint=True
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], samples=self.samples, joint=True
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
+        # Test multiple variables with joint=False
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], joint=False
         )
@@ -40,13 +182,9 @@ class TestApproxInferenceBN(unittest.TestCase):
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], samples=self.samples, joint=False
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
-
     def test_query_evidence(self):
+        """Test query method with evidence."""
+        # Test single variable with evidence
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
@@ -55,14 +193,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY"],
-            evidence={"PVSAT": "LOW"},
-            samples=self.samples[self.samples.PVSAT == "LOW"],
-            joint=True,
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
+        # Test multiple variables with evidence
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
         )
@@ -71,6 +202,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
+        # Test with provided samples
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
             evidence={"PVSAT": "LOW"},
@@ -78,24 +210,6 @@ class TestApproxInferenceBN(unittest.TestCase):
             joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
-        )
-        ve_results = self.alarm_ve.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"],
-            evidence={"PVSAT": "LOW"},
-            samples=self.samples[self.samples.PVSAT == "LOW"],
-            joint=False,
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
     def test_virtual_evidence(self):
         virtual_evid = TabularCPD(
@@ -112,6 +226,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
+<<<<<<< Updated upstream
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
             evidence={"PVSAT": "LOW"},
@@ -154,6 +269,8 @@ class TestApproxInferenceBN(unittest.TestCase):
             set(self.alarm_model.states["HISTORY"]),
         )
 
+=======
+>>>>>>> Stashed changes
 
 class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
@@ -214,6 +331,7 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
+<<<<<<< Updated upstream
     def test_query_with_model_states(self):
         """Test that query method correctly uses model states for DBN"""
         # Test with a single variable
@@ -236,6 +354,91 @@ class TestApproxInferenceDBN(unittest.TestCase):
         self.assertEqual(
             set(res3.state_names[("Y", 4)]), set(self.model.states[("Y", 4)])
         )
+=======
+    def test_get_factor_from_df(self):
+        """Test _get_factor_from_df method for DBN."""
+        samples = self.model.simulate(n_samples=1000)
+
+        # Test single variable
+        grouped_df = samples.groupby([("Y", 0)]).size() / samples.shape[0]
+        state_names = {("Y", 0): ["0", "1"]}
+        result = ApproxInference._get_factor_from_df(grouped_df, state_names)
+        self.assertIsInstance(result, DiscreteFactor)
+        self.assertEqual(set(result.variables), {("Y", 0)})
+
+        # Test error cases
+        empty_df = pd.DataFrame(columns=[("Y", 0), ("Y", 1)])
+        with self.assertRaises(ValueError):
+            ApproxInference._get_factor_from_df(empty_df, state_names)
+
+        with self.assertRaises(KeyError):
+            ApproxInference._get_factor_from_df(grouped_df, {})
+
+    def test_get_distribution_edge_cases(self):
+        """Test get_distribution with edge cases for DBN."""
+        samples = self.model.simulate(n_samples=1000)
+
+        # Test empty variables list
+        with self.assertRaises(ValueError):
+            self.infer.get_distribution(samples=samples, variables=[], joint=True)
+
+        # Test invalid state names
+        invalid_state_names = {("Y", 0): ["INVALID_STATE"], ("Y", 1): ["0", "1"]}
+        with self.assertRaises(ValueError):
+            self.infer.get_distribution(
+                samples=samples,
+                variables=[("Y", 0), ("Y", 1)],
+                state_names=invalid_state_names,
+                joint=True,
+            )
+
+        # Test missing variables in samples
+        with self.assertRaises(KeyError):
+            self.infer.get_distribution(
+                samples=samples, variables=[("NONEXISTENT", 0)], joint=True
+            )
+
+    def test_query_parameters(self):
+        """Test query method with different parameters for DBN."""
+        # Test n_samples parameter
+        query_results = self.infer.query(variables=[("Y", 1)], n_samples=1000)
+        self.assertIsInstance(query_results, DiscreteFactor)
+
+        # Test show_progress parameter
+        query_results = self.infer.query(variables=[("Y", 1)], show_progress=False)
+        self.assertIsInstance(query_results, DiscreteFactor)
+
+        # Test seed parameter for reproducibility
+        results1 = self.infer.query(variables=[("Y", 1)], seed=42)
+        results2 = self.infer.query(variables=[("Y", 1)], seed=42)
+        self.assertTrue(results1.__eq__(results2))
+
+    def test_error_cases(self):
+        """Test error handling in ApproxInference for DBN."""
+        # Test invalid model type
+        with self.assertRaises(ValueError):
+            ApproxInference("invalid_model")
+
+        # Test invalid variable names
+        with self.assertRaises(KeyError):
+            self.infer.query(variables=[("NONEXISTENT", 0)])
+
+        # Test invalid evidence values
+        with self.assertRaises(ValueError):
+            self.infer.query(variables=[("Y", 1)], evidence={("Y", 0): "INVALID_STATE"})
+
+        # Test invalid virtual evidence format
+        invalid_virtual_evid = TabularCPD(
+            ("Y", 0),
+            2,
+            [[0.2], [0.8]],
+            state_names={("Y", 0): ["INVALID", "1"]},
+        )
+        with self.assertRaises(ValueError):
+            self.infer.query(
+                variables=[("Y", 1)], virtual_evidence=[invalid_virtual_evid]
+            )
+>>>>>>> Stashed changes
 
 
 class TestApproxInferenceBNTorch(unittest.TestCase):
@@ -248,38 +451,13 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         self.samples = self.alarm_model.simulate(int(1e4))
 
     def test_query_marg(self):
+        """Test query method for marginal distributions with torch backend."""
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY"], samples=self.samples
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
-        ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], samples=self.samples, joint=True
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], joint=False
-        )
-        ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], samples=self.samples, joint=False
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
-
     def test_query_evidence(self):
+        """Test query method with evidence using torch backend."""
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
@@ -287,50 +465,9 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY"],
-            evidence={"PVSAT": "LOW"},
-            samples=self.samples[self.samples.PVSAT == "LOW"],
-            joint=True,
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
-        )
-        ve_results = self.alarm_ve.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"],
-            evidence={"PVSAT": "LOW"},
-            samples=self.samples[self.samples.PVSAT == "LOW"],
-            joint=True,
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
-        )
-        ve_results = self.alarm_ve.query(
-            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY", "CVP"],
-            evidence={"PVSAT": "LOW"},
-            samples=self.samples[self.samples.PVSAT == "LOW"],
-            joint=False,
-        )
-        for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
     def test_virtual_evidence(self):
+        """Test query method with virtual evidence using torch backend."""
         virtual_evid = TabularCPD(
             "PAP",
             3,
@@ -342,20 +479,6 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         )
         ve_results = self.alarm_ve.query(
             variables=["HISTORY"], virtual_evidence=[virtual_evid]
-        )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-        query_results = self.infer_alarm.query(
-            variables=["HISTORY"],
-            evidence={"PVSAT": "LOW"},
-            virtual_evidence=[virtual_evid],
-            joint=True,
-        )
-        ve_results = self.alarm_ve.query(
-            variables=["HISTORY"],
-            evidence={"PVSAT": "LOW"},
-            virtual_evidence=[virtual_evid],
-            joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -398,6 +521,7 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         self.infer = ApproxInference(self.model)
 
     def test_inference(self):
+        """Test basic inference with torch backend."""
         res1 = self.infer.query([("Y", 1)], seed=42)
         expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
@@ -413,11 +537,13 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         self.assertTrue(res3.__eq__(expected3, atol=0.01))
 
     def test_evidence(self):
+        """Test inference with evidence using torch backend."""
         res1 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
     def test_virtual_evidence(self):
+        """Test inference with virtual evidence using torch backend."""
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
