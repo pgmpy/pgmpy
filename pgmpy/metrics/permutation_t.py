@@ -22,7 +22,6 @@ def permutation_t(
     n_permutations=None,
     return_summary=False,
     show_progress=True,
-    random_seed=None,
 ):
     """
     Permutation-based test for falsifying causal graphs using observational data.
@@ -63,8 +62,6 @@ def permutation_t(
     show_progress : bool, default=True
         Whether to show progress bar during permutation testing.
 
-    random_seed : int, optional
-        Random seed for reproducibility. If None, uses current random state.
 
     Returns
     -------
@@ -143,10 +140,6 @@ def permutation_t(
     logger.info(
         f"Starting permutation-based falsification test with {n_permutations} permutations"
     )
-    original_random_state = np.random.get_state()
-    if random_seed is not None:
-        np.random.seed(random_seed)
-
     # Step 1: Count LMC violations in the given graph
     lmc_violations_given = _count_lmc_violations(
         model, data, ci_test_func, significance_level

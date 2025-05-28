@@ -72,7 +72,6 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
             self.simple_data,
             n_permutations=5,
             show_progress=False,  # Reduced from 10
-            random_seed=42,
         )
 
         # Check return structure
@@ -110,7 +109,6 @@ class TestPermutationBasedFalsificationTest(unittest.TestCase):
             n_permutations=5,  # Reduced from 10
             return_summary=True,
             show_progress=False,
-            random_seed=42,
         )
 
         self.assertIn("summary", result)
