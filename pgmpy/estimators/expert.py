@@ -8,6 +8,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import pillai_trace
+from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
 
@@ -58,21 +59,21 @@ class ExpertInLoop(StructureEstimator):
         pval_threshold=0.05,
         effect_size_threshold=0.05,
         orientation_fn=llm_pairwise_orient,
-        show_progress=True,
         orientations=set([]),
         use_cache=True,
+        show_progress=True,
         **kwargs,
     ):
         """
         Estimates a DAG from the data by utilizing expert knowledge.
 
         The method iteratively adds and removes edges between variables
-        (similar to Greedy Equivalence Search algorithm) based on a score
-        metric that improves the model's fit to the data the most. The score
-        metric used is based on conditional independence testing. When adding
-        an edge to the model, the method asks for expert knowledge to decide
-        the orientation of the edge. Alternatively, an LLM can used to decide
-        the orientation of the edge.
+        (similar to Greedy Equivalence Search (GES) algorithm) based on a
+        global score metric that improves the model's fit in each iteration.
+        The score metric used is based on conditional independence testing.
+        When adding an edge to the model, the method asks for expert knowledge
+        to decide the orientation of the edge. Alternatively, an LLM can used
+        to decide the orientation of the edge.
 
         Parameters
         ----------
@@ -87,36 +88,44 @@ class ExpertInLoop(StructureEstimator):
             And if the effect size for an edge is less than the threshold,
             would suggest to remove the edge.
 
-        orientation_fn: callable, (default: pgmpy.utils.llm_pairwise_orient)
-            A function to determine edge orientation. The function should at least take two arguments
-            (the names of the two variables) and return a tuple (source, target) representing
-            the directed edge from source to target.
-            Any additional keyword arguments passed to estimate() will be forwarded to this function.
+        orientation_fn: callable (default: pgmpy.utils.llm_pairwise_orient)
+            A function to determine edge orientation. The function should at
+            least take two arguments (the names of the two variables) and
+            return either a tuple (source, target) representing the directed
+            edge from source to target or None representing no edge between the
+            variables. Any additional keyword arguments passed to estimate()
+            will be forwarded to this function.
 
             Built-in functions that can be used:
-            - pgmpy.utils.manual_pairwise_orient: Prompts the user to specify the direction
+
+            - `pgmpy.utils.manual_pairwise_orient`: Prompts the user to specify the direction
               between two variables by presenting options and taking input.
 
-            - pgmpy.utils.llm_pairwise_orient: Uses a Large Language Model to determine direction.
+            - `pgmpy.utils.llm_pairwise_orient`: Uses a Large Language Model to determine direction.
               Requires additional parameters:
+
               * variable_descriptions: dict of {var_name: description} for context
               * llm_model: name of the LLM model (default: "gemini/gemini-1.5-flash")
               * system_prompt: optional custom system prompt
 
-            Custom functions can be provided that implement any desired logic for determining
-            edge orientation, including using local LLMs or domain-specific heuristics.
+            Custom functions can be provided that implement any desired logic
+            for determining edge orientation, including using local LLMs or
+            domain-specific heuristics.
+
+        orientations: set
+            Users can specify a set of edges which would be used as the
+            preferred orientation for edges over the output of orientation_fn.
+
+        use_cache: bool
+            If True, the method will cache the results returned by
+            `orientation_fn` and reuse it in future calls of the `estimate`
+            method instead of calling the `orientation_fn`.
 
         show_progress: bool (default: True)
             If True, prints info of the running status.
 
-        orientations: set
-            Preferred orientations for edges over the output of orientation_fn.
-
-        use_cache: bool
-            If False, calls the orientation_fn directly(the same (u, v) multiple times)
-
         kwargs: kwargs
-            Any additional parameters to pass to orientation_fn
+            Any additional parameters to pass to the `orientation_fn`.
 
         Returns
         -------
@@ -197,13 +206,14 @@ class ExpertInLoop(StructureEstimator):
                 dag.remove_edge(edge[0], edge[1])
 
             # Step 3: Add edge between variables which have significant association.
+            # Step 3.1: Find edges that are not present in the DAG but have significant association.
             nonedge_effects = all_effects[all_effects.edge_present == False]
             nonedge_effects = nonedge_effects[
                 (nonedge_effects.effect >= effect_size_threshold)
                 & (nonedge_effects.p_val <= pval_threshold)
             ]
 
-            # Step 3.2: Else determine the edge direction and add it if not in blacklisted_edges.
+            # Step 3.2: Remove any pair of variables that are blacklisted.
             if len(blacklisted_edges) > 0:
                 blacklisted_edges_us = [edge[0] for edge in blacklisted_edges]
                 blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
@@ -221,66 +231,63 @@ class ExpertInLoop(StructureEstimator):
                     :,
                 ]
 
-            # Step 3.1: Exit loop if all correlations in data are explained by the model.
+            # Step 3.3: Exit loop if all correlations in data are explained by the model.
             if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
                 break
 
+            # Step 3.4: Find for the pair of variable with the highest effect size.
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-            edge_direction = None
 
-            # Edge orientation logic flow (part of step 3.2):
-            # 1. If pre-defined orientations are provided, use those first
-            # 2. Otherwise, try to use cached orientations if use_cache=True
+            # Step 3.5: Find the edge orientation for the selected pair of variables.
+            #
+            # 1. If `orientations` are provided, use them.
+            # 2. Otherwise, try to use cached orientations if `use_cache=True`
             # 3. If no cached orientation, call the orientation_fn and validate result
             #    - Validate that it returns a valid edge direction tuple
             #    - Cache the orientation and add the edge to the DAG
 
-            if orientations:
-                if (selected_edge.u, selected_edge.v) in orientations:
-                    edge_direction = (selected_edge.u, selected_edge.v)
-                elif (selected_edge.v, selected_edge.u) in orientations:
-                    edge_direction = (selected_edge.v, selected_edge.u)
+            if (selected_edge.u, selected_edge.v) in orientations:
+                edge_direction = (selected_edge.u, selected_edge.v)
+            elif (selected_edge.v, selected_edge.u) in orientations:
+                edge_direction = (selected_edge.v, selected_edge.u)
+            elif (
+                use_cache
+                and (selected_edge.u, selected_edge.v) in self.orientation_cache
+            ):
+                edge_direction = (selected_edge.u, selected_edge.v)
+            elif (
+                use_cache
+                and (selected_edge.v, selected_edge.u) in self.orientation_cache
+            ):
+                edge_direction = (selected_edge.v, selected_edge.u)
             else:
-                if use_cache:
-                    if (selected_edge.u, selected_edge.v) in self.orientation_cache:
-                        edge_direction = (selected_edge.u, selected_edge.v)
-                    elif (
-                        selected_edge.v,
-                        selected_edge.u,
-                    ) in self.orientation_cache:
-                        edge_direction = (selected_edge.v, selected_edge.u)
-                if edge_direction is None:
-                    edge_direction = orientation_fn(
-                        selected_edge.u,
-                        selected_edge.v,
-                        **kwargs,
+                edge_direction = orientation_fn(
+                    selected_edge.u, selected_edge.v, **kwargs
+                )
+                if use_cache is True:
+                    self.orientation_cache.add(edge_direction)
+
+                if config.SHOW_PROGRESS and show_progress:
+                    logger.info(
+                        f"\rQueried for edge orientation between"
+                        "{selected_edge.u} and {selected_edge.v}. Got:"
+                        "{edge_direction[0]} -> {edge_direction[1]}"
                     )
 
-                    # Validate that the orientation function returned a valid tuple
-                    if (
-                        not isinstance(edge_direction, tuple)
-                        or len(edge_direction) != 2
-                        or not isinstance(edge_direction[0], str)
-                        or not isinstance(edge_direction[1], str)
-                        or set(edge_direction)
-                        != set([selected_edge.u, selected_edge.v])
-                    ):
-                        raise ValueError(
-                            f"Orientation function returned an invalid value: {edge_direction}. "
-                            f"Must return a tuple containing exactly {selected_edge.u} and {selected_edge.v}."
-                        )
-                    else:
-                        self.orientation_cache.add(edge_direction)
-                        if config.SHOW_PROGRESS and show_progress:
-                            sys.stdout.write(
-                                f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
-                            )
-                            sys.stdout.flush()
+            # Step 3.6: Try adding the edge to the DAG. If edge creates a
+            #           cycle, add the reversed edge, and blacklist the original edge.
+            if edge_direction is None:
+                logger.info(
+                    f"Orientation function returned None for edge {selected_edge.u} - {selected_edge.v}. "
+                    "Skipping this edge."
+                )
+                blacklisted_edges.append((selected_edge.u, selected_edge.v))
 
-            # Step 3.3: If the edge creates a cycle add the reverse edge. If no cycle, add the original edge.
-            if nx.has_path(dag, edge_direction[1], edge_direction[0]):
+            elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 blacklisted_edges.append(edge_direction)
                 dag.add_edges_from([(edge_direction[1], edge_direction[0])])
             else:
                 dag.add_edges_from([edge_direction])
+
+        # Step 4: Return the final DAG.
         return dag

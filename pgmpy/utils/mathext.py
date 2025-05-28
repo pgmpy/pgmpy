@@ -1,5 +1,6 @@
 from collections import namedtuple
 from itertools import chain, combinations
+from typing import Any, Optional
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from pgmpy.utils import compat_fns
 State = namedtuple("State", ["var", "state"])
 
 
-def cartesian(arrays, out=None):
+def cartesian(arrays: list[Any], out: Optional[np.ndarray] = None) -> np.ndarray:
     """Generate a cartesian product of input arrays.
 
     Parameters
@@ -45,22 +46,25 @@ def cartesian(arrays, out=None):
 
     """
     arrays = [np.asarray(x) for x in arrays]
-    shape = (len(x) for x in arrays)
+    shape = list(len(x) for x in arrays)
     dtype = arrays[0].dtype
 
-    ix = np.indices(shape)
+    ix = np.indices((shape))
     ix = ix.reshape(len(arrays), -1).T
 
+    result: np.ndarray
     if out is None:
-        out = np.empty_like(ix, dtype=dtype)
+        result = np.empty_like(ix, dtype=dtype)
+    else:
+        result = out
 
-    for n, arr in enumerate(arrays):
-        out[:, n] = arrays[n][ix[:, n]]
+    for n, _ in enumerate(arrays):
+        result[:, n] = arrays[n][ix[:, n]]
 
-    return out
+    return result
 
 
-def _adjusted_weights(weights):
+def _adjusted_weights(weights: np.ndarray):
     """
     Adjusts the weights such that it sums to 1. When the total weights is less
     than or greater than 1 by 1e-3, add/substracts the difference from the last
@@ -90,7 +94,9 @@ def _adjusted_weights(weights):
     return weights
 
 
-def sample_discrete(values, weights, size=1, seed=None):
+def sample_discrete(
+    values, weights: np.ndarray | list[np.ndarray], size=1, seed: Optional[int] = None
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -141,7 +147,13 @@ def sample_discrete(values, weights, size=1, seed=None):
         return samples
 
 
-def sample_discrete_maps(states, weight_indices, index_to_weight, size=1, seed=None):
+def sample_discrete_maps(
+    states: np.ndarray,
+    weight_indices: np.ndarray,
+    index_to_weight: np.ndarray,
+    size=1,
+    seed: Optional[int] = None,
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -197,9 +209,9 @@ def sample_discrete_maps(states, weight_indices, index_to_weight, size=1, seed=N
     return samples
 
 
-def powerset(l):
+def powerset(l_input: list):
     """
-    Generates all subsets of list `l` (as tuples).
+    Generates all subsets of list `l_input` (as tuples).
 
     Example
     -------
@@ -207,4 +219,6 @@ def powerset(l):
     >>> list(powerset([1,2,3]))
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
-    return chain.from_iterable(combinations(l, r) for r in range(len(l) + 1))
+    return chain.from_iterable(
+        combinations(l_input, r) for r in range(len(l_input) + 1)
+    )
