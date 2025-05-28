@@ -226,7 +226,6 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-<<<<<<< Updated upstream
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
             evidence={"PVSAT": "LOW"},
@@ -269,14 +268,12 @@ class TestApproxInferenceBN(unittest.TestCase):
             set(self.alarm_model.states["HISTORY"]),
         )
 
-=======
->>>>>>> Stashed changes
 
 class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
         self.model = DBN()
         self.model.add_edges_from(
-            [(("Z", 0), ("X", 0)), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
+            [("Z", 0), ("X", 0), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
         )
         z_start_cpd = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
         x_i_cpd = TabularCPD(
@@ -331,43 +328,19 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
-<<<<<<< Updated upstream
-    def test_query_with_model_states(self):
-        """Test that query method correctly uses model states for DBN"""
-        # Test with a single variable
-        res1 = self.infer.query([("Y", 1)])
-        self.assertEqual(
-            set(res1.state_names[("Y", 1)]), set(self.model.states[("Y", 1)])
-        )
-
-        # Test with multiple variables
-        res2 = self.infer.query([("Y", 0), ("Y", 1)])
-        self.assertEqual(
-            set(res2.state_names[("Y", 0)]), set(self.model.states[("Y", 0)])
-        )
-        self.assertEqual(
-            set(res2.state_names[("Y", 1)]), set(self.model.states[("Y", 1)])
-        )
-
-        # Test with evidence
-        res3 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
-        self.assertEqual(
-            set(res3.state_names[("Y", 4)]), set(self.model.states[("Y", 4)])
-        )
-=======
     def test_get_factor_from_df(self):
         """Test _get_factor_from_df method for DBN."""
         samples = self.model.simulate(n_samples=1000)
 
         # Test single variable
-        grouped_df = samples.groupby([("Y", 0)]).size() / samples.shape[0]
-        state_names = {("Y", 0): ["0", "1"]}
+        grouped_df = samples.groupby([( "Y", 0)]).size() / samples.shape[0]
+        state_names = {( "Y", 0): ["0", "1"]}
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
         self.assertIsInstance(result, DiscreteFactor)
-        self.assertEqual(set(result.variables), {("Y", 0)})
+        self.assertEqual(set(result.variables), {( "Y", 0)})
 
         # Test error cases
-        empty_df = pd.DataFrame(columns=[("Y", 0), ("Y", 1)])
+        empty_df = pd.DataFrame(columns=[( "Y", 0), ( "Y", 1)])
         with self.assertRaises(ValueError):
             ApproxInference._get_factor_from_df(empty_df, state_names)
 
@@ -383,11 +356,11 @@ class TestApproxInferenceDBN(unittest.TestCase):
             self.infer.get_distribution(samples=samples, variables=[], joint=True)
 
         # Test invalid state names
-        invalid_state_names = {("Y", 0): ["INVALID_STATE"], ("Y", 1): ["0", "1"]}
+        invalid_state_names = {( "Y", 0): ["INVALID_STATE"], ( "Y", 1): ["0", "1"]}
         with self.assertRaises(ValueError):
             self.infer.get_distribution(
                 samples=samples,
-                variables=[("Y", 0), ("Y", 1)],
+                variables=[( "Y", 0), ( "Y", 1)],
                 state_names=invalid_state_names,
                 joint=True,
             )
@@ -438,7 +411,6 @@ class TestApproxInferenceDBN(unittest.TestCase):
             self.infer.query(
                 variables=[("Y", 1)], virtual_evidence=[invalid_virtual_evid]
             )
->>>>>>> Stashed changes
 
 
 class TestApproxInferenceBNTorch(unittest.TestCase):
@@ -492,7 +464,7 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
 
         self.model = DBN()
         self.model.add_edges_from(
-            [(("Z", 0), ("X", 0)), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
+            [("Z", 0), ("X", 0), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
         )
         z_start_cpd = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
         x_i_cpd = TabularCPD(
