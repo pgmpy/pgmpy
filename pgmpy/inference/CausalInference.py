@@ -987,23 +987,23 @@ class CausalInference(object):
             )
 
         if do:
-            
+
             if do and evidence:
                 from pgmpy.utils import get_example_model
                 from pgmpy.models import BayesianNetwork
                 from pgmpy.base import DAG
 
-               
                 do_vars = set(do.keys())
                 query_vars = set(variables)
                 evidence_vars = set(evidence.keys())
 
-                
                 invalid_evidence_nodes = []
             for z in evidence_vars:
                 for x in do_vars:
                     for y in query_vars:
-                        if not self.model.is_dconnected(x, y, observed=set(evidence_vars - {z})):
+                        if not self.model.is_dconnected(
+                            x, y, observed=set(evidence_vars - {z})
+                        ):
                             # conditioning on z changes the d-connection
                             invalid_evidence_nodes.append(z)
 
@@ -1013,7 +1013,6 @@ class CausalInference(object):
                     f"in a way that violates identifiability. This may lead to incorrect causal effect estimates."
                 )
 
-            
             for var, do_var in product(variables, do):
                 if do_var in nx.descendants(self.dag, var):
                     raise ValueError(
@@ -1049,7 +1048,7 @@ class CausalInference(object):
 
         infer = inference_algo(self.model)
 
-        #If no do variable specified, do a normal probabilistic inference.
+        # If no do variable specified, do a normal probabilistic inference.
         if do == {}:
             return infer.query(variables, evidence, show_progress=False)
         # If no adjustment is required, do a normal probabilistic
@@ -1058,10 +1057,8 @@ class CausalInference(object):
             evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
-        
         values = []
 
-       
         evidence_adj_inter = {
             var: state
             for var, state in evidence.items()
