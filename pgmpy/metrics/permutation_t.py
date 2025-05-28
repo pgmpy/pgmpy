@@ -217,9 +217,6 @@ def permutation_t(
 
     logger.info(f"Test completed. Falsifiable: {falsifiable}, Falsified: {falsified}")
 
-    # Restore original random state
-    np.random.set_state(original_random_state)
-
     return result
 
 
