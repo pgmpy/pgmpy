@@ -1243,48 +1243,29 @@ class TestDoQuery(unittest.TestCase):
             inference_algo="random",
         )
 
-    def test_invalid_causal_query_direct_descendant_intervention(self):
-        # Model: R -> S -> W & R -> W. We intervene on S and query R.
-        model = DiscreteBayesianNetwork([("R", "W"), ("S", "W"), ("R", "S")])
-        cpd_rain = TabularCPD(
-            variable="R",
-            variable_card=2,
-            values=[[0.6], [0.4]],
-            state_names={"R": ["True", "False"]},
-        )
-        cpd_sprinkler = TabularCPD(
-            variable="S",
-            variable_card=2,
-            values=[[0.1, 0.5], [0.9, 0.5]],
-            evidence=["R"],
-            evidence_card=[2],
-            state_names={"S": ["True", "False"], "R": ["True", "False"]},
-        )
-        cpd_wet_grass = TabularCPD(
-            variable="W",
-            variable_card=2,
-            values=[[0.99, 0.9, 0.9, 0.01], [0.01, 0.1, 0.1, 0.99]],
-            evidence=["R", "S"],
-            evidence_card=[2, 2],
-            state_names={
-                "W": ["True", "False"],
-                "R": ["True", "False"],
-                "S": ["True", "False"],
-            },
-        )
-        model.add_cpds(cpd_rain, cpd_sprinkler, cpd_wet_grass)
-        causal_inference = CausalInference(model)
+    def test_invalid_causal_query_due_to_bad_evidence(self):
+    # Model: X -> Y -> Z, and X -> Z
+            model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
+    
+            cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+            cpd_y = TabularCPD("Y", 2, [[0.6, 0.2], [0.4, 0.8]],
+                       evidence=["X"], evidence_card=[2],
+                       state_names={"Y": ["T", "F"], "X": ["T", "F"]})
+            cpd_z = TabularCPD("Z", 2, [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
+                       evidence=["X", "Y"], evidence_card=[2, 2],
+                       state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]})
+    
+            model.add_cpds(cpd_x, cpd_y, cpd_z)
+            inference = CausalInference(model)
 
-        evidence = {"W": "True"}
-        counterfactual_intervention = {"S": "False"}
-        with self.assertRaises(ValueError) as cm:
-            causal_inference.query(
-                variables=["R"], evidence=evidence, do=counterfactual_intervention
+            # Evidence includes 'Z', which creates a collider problem
+            with self.assertRaises(ValueError) as cm:
+                inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
+    
+            self.assertIn(
+                "Invalid causal query: conditioning on ['Z']",
+                str(cm.exception),
             )
-        self.assertIn(
-            "Invalid causal query: There is a direct edge from the query variable 'R' to the intervention variable 'S'.",
-            str(cm.exception),
-        )
 
 
 class TestEstimator(unittest.TestCase):
