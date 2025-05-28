@@ -987,6 +987,33 @@ class CausalInference(object):
             )
 
         if do:
+            
+            if do and evidence:
+                from pgmpy.utils import get_example_model
+                from pgmpy.models import BayesianNetwork
+                from pgmpy.base import DAG
+
+               
+                do_vars = set(do.keys())
+                query_vars = set(variables)
+                evidence_vars = set(evidence.keys())
+
+                
+                invalid_evidence_nodes = []
+            for z in evidence_vars:
+                for x in do_vars:
+                    for y in query_vars:
+                        if not self.model.is_dconnected(x, y, observed=set(evidence_vars - {z})):
+                            # conditioning on z changes the d-connection
+                            invalid_evidence_nodes.append(z)
+
+            if invalid_evidence_nodes:
+                raise ValueError(
+                    f"Invalid causal query: conditioning on {invalid_evidence_nodes} blocks or opens paths "
+                    f"in a way that violates identifiability. This may lead to incorrect causal effect estimates."
+                )
+
+            
             for var, do_var in product(variables, do):
                 if do_var in nx.descendants(self.dag, var):
                     raise ValueError(
@@ -1009,7 +1036,7 @@ class CausalInference(object):
                 f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
-        # Step 2: Check if adjustment set is provided, otherwise try calculating it.
+        # Checking if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
             adjustment_set = set(
@@ -1022,21 +1049,19 @@ class CausalInference(object):
 
         infer = inference_algo(self.model)
 
-        # Step 3.1: If no do variable specified, do a normal probabilistic inference.
+        #If no do variable specified, do a normal probabilistic inference.
         if do == {}:
             return infer.query(variables, evidence, show_progress=False)
-        # Step 3.2: If no adjustment is required, do a normal probabilistic
+        # If no adjustment is required, do a normal probabilistic
         #           inference with do variables as the evidence.
         elif len(adjustment_set) == 0:
             evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
-        # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
+        
         values = []
 
-        # Step 4.1: Compute p_z and states of z to iterate over.
-        # For computing p_z, if evidence variables also in adjustment set,
-        # manually do reduce else inference will throw error.
+       
         evidence_adj_inter = {
             var: state
             for var, state in evidence.items()
@@ -1071,7 +1096,7 @@ class CausalInference(object):
             else:
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
-        # Step 4.2: Iterate over states of adjustment set and compute values.
+        #  Iterate over states of adjustment set and compute values.
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
