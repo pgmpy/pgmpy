@@ -5,7 +5,7 @@ import networkx as nx
 import pandas as pd
 import pytest
 
-from pgmpy.estimators import ExpertInLoop
+from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
 
 
 class TestExpertInLoop(unittest.TestCase):
@@ -74,35 +74,39 @@ class TestExpertInLoop(unittest.TestCase):
             ("Race", "Education"),
             ("Age", "Education"),
         }
+        # ExpertKnowledge for testing
+        self.expert_knowledge = ExpertKnowledge(
+            forbidden_edges=[("Income", "Education")],
+            required_edges=[("Age", "Education")],
+            temporal_order=["Age", "Race", "Education", "Sex", "Income"],
+        )
+        self.estimator_expert = ExpertInLoop(
+            data=df[["Age", "Education", "Race", "Sex", "Income"]],
+            expert_knowledge=self.expert_knowledge,
+        )
 
     def test_estimate(self):
         true_edges = [
-            # Education-related paths
             ("Age", "Education"),
             ("Race", "Education"),
             ("NativeCountry", "Education"),
-            # Income-related paths
             ("Education", "Income"),
             ("Occupation", "Income"),
             ("HoursPerWeek", "Income"),
             ("MaritalStatus", "Income"),
-            # Occupation-related paths
             ("Age", "Occupation"),
             ("Education", "Occupation"),
             ("Sex", "Occupation"),
             ("Workclass", "Occupation"),
-            # HoursPerWeek-related paths
             ("Age", "HoursPerWeek"),
             ("Workclass", "HoursPerWeek"),
             ("Occupation", "HoursPerWeek"),
             ("Education", "HoursPerWeek"),
-            # Relationship and MaritalStatus paths
             ("Age", "MaritalStatus"),
             ("Sex", "MaritalStatus"),
             ("MaritalStatus", "Relationship"),
             ("Age", "Relationship"),
             ("Sex", "Relationship"),
-            # Other reasonable connections
             ("Race", "NativeCountry"),
             ("Workclass", "MaritalStatus"),
             ("Workclass", "Relationship"),
@@ -120,7 +124,6 @@ class TestExpertInLoop(unittest.TestCase):
             else:
                 return None
 
-        # Use the expert estimator with our oracle orientation function
         estimated_dag = self.estimator.estimate(
             orientation_fn=oracle_orient,
             pval_threshold=0.05,
@@ -158,7 +161,6 @@ class TestExpertInLoop(unittest.TestCase):
 
     def test_estimate_with_custom_orient_fn(self):
         def custom_orient(var1, var2, **kwargs):
-            # Always orient edges from alphabetically first to second
             if var1 < var2:
                 return (var1, var2)
             else:
@@ -170,18 +172,15 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
 
-        # Check that all edges are oriented from alphabetically lower to higher
         for edge in dag.edges():
             self.assertTrue(edge[0] < edge[1])
 
-        # Check that orientations were cached
         self.assertTrue(len(self.estimator_small.orientation_cache) > 0)
         for edge in self.estimator_small.orientation_cache:
             self.assertTrue(edge[0] < edge[1])
 
     def test_estimate_with_orient_fn_kwargs(self):
         def orient_with_kwargs(var1, var2, **kwargs):
-            # Use a keyword argument to determine orientation
             if kwargs.get("reverse_alphabetical", False):
                 if var1 > var2:
                     return (var1, var2)
@@ -193,7 +192,6 @@ class TestExpertInLoop(unittest.TestCase):
                 else:
                     return (var2, var1)
 
-        # Test with reverse_alphabetical=True
         dag_reverse = self.estimator_small.estimate(
             orientation_fn=orient_with_kwargs,
             reverse_alphabetical=True,
@@ -201,6 +199,35 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
         )
 
-        # Check that all edges are oriented from alphabetically higher to lower
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
+
+    def test_forbidden_edges(self):
+        """Test that forbidden edges are not added to the DAG."""
+        dag = self.estimator_expert.estimate(
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+            orientation_fn=lambda x, y, **kwargs: (x, y) if x < y else (y, x),
+        )
+        self.assertNotIn(("Income", "Education"), dag.edges())
+        self.assertIn(("Income", "Education"), self.estimator_expert.blacklisted_edges)
+
+    def test_required_edges(self):
+        """Test that required edges are included in the initial DAG."""
+        self.assertIn(("Age", "Education"), self.estimator_expert.dag.edges())
+        # Note: Required edges may be removed during pruning, so we don't test final DAG
+
+    def test_temporal_order(self):
+        """Test that temporal order resolves edge orientations."""
+        dag = self.estimator_expert.estimate(
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+            orientation_fn=lambda x, y, **kwargs: None,  # Force temporal order to dominate
+        )
+        # Since Age precedes Education in temporal_order, expect Age -> Education
+        for edge in dag.edges():
+            if "Age" in edge and "Education" in edge:
+                self.assertEqual(edge, ("Age", "Education"))
+            # Since Race precedes Sex, expect Race -> Sex if edge exists
+            if "Race" in edge and "Sex" in edge:
+                self.assertEqual(edge, ("Race", "Sex"))
