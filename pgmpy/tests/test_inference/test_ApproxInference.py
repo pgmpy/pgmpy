@@ -5,7 +5,9 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
-from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork as DBN
+
+# Fix 1: Import DiscreteBayesianNetwork instead of BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork as DBN
 from pgmpy.utils import get_example_model
 
 
@@ -18,7 +20,8 @@ class TestApproxInferenceBN(unittest.TestCase):
 
     def test_get_factor_from_df_multiple_variables(self):
         """Test that _get_factor_from_df works correctly with multiple variables."""
-        model = BayesianNetwork([("A", "B"), ("A", "C")])
+        # Fix 2: Use DiscreteBayesianNetwork instead of BayesianNetwork
+        model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
         cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
         cpd_b = TabularCPD(
             "B",
@@ -63,7 +66,8 @@ class TestApproxInferenceBN(unittest.TestCase):
 
     def test_get_factor_from_df_edge_cases(self):
         """Test _get_factor_from_df with edge cases."""
-        model = BayesianNetwork([("A", "B")])
+        # Fix 2: Use DiscreteBayesianNetwork instead of BayesianNetwork
+        model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
         model.add_cpds(cpd_a)
         inference = ApproxInference(model)
@@ -266,6 +270,8 @@ class TestApproxInferenceDBN(unittest.TestCase):
                 (("X", 0), ("Y", 0)),
                 (("Z", 0), ("Z", 1)),
                 (("X", 0), ("X", 1)),
+                # Fix: Add transition for Y as well
+                (("Y", 0), ("Y", 1)),
             ]
         )
 
@@ -299,9 +305,17 @@ class TestApproxInferenceDBN(unittest.TestCase):
             evidence=[("Z", 1), ("X", 0)],
             evidence_card=[2, 2],
         )
+        # Fix: Add CPD for Y_1
+        cpd_y1 = TabularCPD(
+            ("Y", 1),
+            2,
+            [[0.3, 0.6], [0.7, 0.4]],
+            evidence=[("Y", 0)],
+            evidence_card=[2],
+        )
 
         # Add CPDs to the model
-        self.dbn.add_cpds(cpd_z0, cpd_x0, cpd_y0, cpd_z1, cpd_x1)
+        self.dbn.add_cpds(cpd_z0, cpd_x0, cpd_y0, cpd_z1, cpd_x1, cpd_y1)
 
         # Create inference object
         self.inference = ApproxInference(self.dbn)
@@ -414,10 +428,18 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
+        # Fix: Use proper node format for DBN
         self.model = DBN()
         self.model.add_edges_from(
-            [("Z", 0), ("X", 0), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
+            [
+                (("Z", 0), ("X", 0)),
+                (("X", 0), ("Y", 0)),
+                (("Z", 0), ("Z", 1)),
+                (("X", 0), ("X", 1)),
+                (("Y", 0), ("Y", 1)),
+            ]
         )
+
         z_start_cpd = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
         x_i_cpd = TabularCPD(
             ("X", 0),
@@ -440,7 +462,24 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
             evidence=[("Z", 0)],
             evidence_card=[2],
         )
-        self.model.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
+        x_trans_cpd = TabularCPD(
+            ("X", 1),
+            2,
+            [[0.1, 0.9], [0.9, 0.1]],
+            evidence=[("X", 0)],
+            evidence_card=[2],
+        )
+        y_trans_cpd = TabularCPD(
+            ("Y", 1),
+            2,
+            [[0.3, 0.6], [0.7, 0.4]],
+            evidence=[("Y", 0)],
+            evidence_card=[2],
+        )
+
+        self.model.add_cpds(
+            z_start_cpd, x_i_cpd, y_i_cpd, z_trans_cpd, x_trans_cpd, y_trans_cpd
+        )
         self.model.initialize_initial_state()
         self.infer = ApproxInference(self.model)
 
@@ -449,11 +488,13 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         res1 = self.infer.query([("Y", 1)], seed=42)
         expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
         res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
         expected2 = DiscreteFactor(
             [("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029]
         )
         self.assertTrue(res2.__eq__(expected2, atol=0.01))
+
         res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
         expected3 = DiscreteFactor(
             [("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030]
