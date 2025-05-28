@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pyro
 import pyro.distributions as dist
+import torch
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -103,3 +104,100 @@ class TestFCPD(unittest.TestCase):
 
         self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
         self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
+
+    def test_sample_vectorized(self):
+        """
+        Test FunctionalCPD with vectorized sampling.
+        """
+
+        def vectorized_fn(parent_sample):
+            x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
+            x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
+            mean = 1.0 + 0.5 * x1 + 0.25 * x2
+            return dist.Normal(mean, torch.ones_like(mean))
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=vectorized_fn, parents=["x1", "x2"], vectorized=True
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_sample_parallel(self):
+        """
+        Test FunctionalCPD with parallelized iterative sampling (vectorized=False).
+        """
+
+        def row_fn(row):
+            mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
+            return dist.Normal(mean, 1.0)
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=row_fn, parents=["x1", "x2"], vectorized=False
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    # This test needs to be commented out as the method sample_v0 is not needed in actual use.
+    def test_sampling_time_vectorized_vs_parallel(self):
+        """
+        Compare sampling time between vectorized=True and vectorized=False.
+        """
+        import time
+
+        n_samples = 10000
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(n_samples), "x2": np.random.randn(n_samples)}
+        )
+
+        def fn_vectorized(parent_sample):
+            x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
+            x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
+            mean = 1.0 + 0.5 * x1 + 0.25 * x2
+            return dist.Normal(mean, torch.ones_like(mean))
+
+        def fn_iterative(row):
+            mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
+            return dist.Normal(mean, 1.0)
+
+        cpd_vec = FunctionalCPD(
+            "x3", fn=fn_vectorized, parents=["x1", "x2"], vectorized=True
+        )
+        start_vec = time.time()
+        _ = cpd_vec.sample(n_samples=n_samples, parent_sample=parent_samples)
+        end_vec = time.time()
+
+        cpd_iter = FunctionalCPD(
+            "x3", fn=fn_iterative, parents=["x1", "x2"], vectorized=False
+        )
+        start_iter = time.time()
+        _ = cpd_iter.sample(n_samples=n_samples, parent_sample=parent_samples)
+        end_iter = time.time()
+
+        cp_iter_old = FunctionalCPD(
+            "x3", fn=fn_iterative, parents=["x1", "x2"], vectorized=False
+        )
+        start_iter_old = time.time()
+        _ = cp_iter_old.sample_v0(n_samples=n_samples, parent_sample=parent_samples)
+        end_iter_old = time.time()
+
+        print(f"\nVectorized sampling time   : {end_vec - start_vec:.4f} seconds")
+        print(
+            f"Iterative sampling time (parallel)   : {end_iter - start_iter:.4f} seconds"
+        )
+        print(
+            f"Iterative sampling time existing implemetation : {end_iter_old - start_iter_old:.4f} seconds"
+        )
+
+        self.assertTrue(True)

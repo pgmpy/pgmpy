@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import pandas as pd
 import pyro
@@ -42,15 +44,17 @@ class FunctionalCPD(BaseFactor):
     ['x1', 'x2']
     """
 
-    def __init__(self, variable, fn, parents=[]):
+    def __init__(self, variable, fn, parents=[], vectorized=False):
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")
         self.fn = fn
         self.parents = parents if parents else []
         self.variables = [variable] + self.parents
+        self.vectorized = vectorized
 
-    def sample(self, n_samples=100, parent_sample=None):
+    # This method is deprecated and will remove after PR approval.
+    def sample_v0(self, n_samples=100, parent_sample=None):
         """
         Simulates a value for the variable based on its CPD.
 
@@ -109,6 +113,98 @@ class FunctionalCPD(BaseFactor):
                 sampled_values.append(
                     pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
                 )
+
+        sampled_values = np.array(sampled_values)
+
+        return sampled_values
+
+    def sample(self, n_samples=100, parent_sample=None):
+        """
+        Simulates a value for the variable based on its CPD.
+
+        Parameters
+        ----------
+
+        n_samples: int, (default: 100)
+            The number of samples to generate.
+
+        parent_sample: pandas.DataFrame, optional
+            A DataFrame where each column represents a parent variable and rows are samples.
+
+        Returns
+        -------
+        sampled_values: numpy.ndarray
+            Array of sampled values for the variable.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> import pyro.distributions as dist
+        >>> cpd = FunctionalCPD(
+        ...    variable="x3",
+        ...    fn=lambda parent_sample: dist.Normal(
+        ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
+        ...    parents=["x1", "x2"])
+
+        >>> parent_samples = pd.DataFrame({'x1' : [5, 10], 'x2' : [1, -1]})
+        >>> cpd.sample(2, parent_samples)
+
+        """
+        sampled_values = []
+
+        if parent_sample is not None:
+            if not isinstance(parent_sample, pd.DataFrame):
+                raise TypeError("`parent_sample` must be a pandas DataFrame.")
+
+            if not all(parent in parent_sample.columns for parent in self.parents):
+                missing_parents = [
+                    p for p in self.parents if p not in parent_sample.columns
+                ]
+                raise ValueError(
+                    f"Missing values for parent variables: {missing_parents}"
+                )
+            if len(parent_sample) != n_samples:
+                raise ValueError("Length of `parent_sample` must match `n_samples`.")
+            if self.vectorized:
+                dists = self.fn(parent_sample)
+                if isinstance(dists, list):
+                    for i in range(n_samples):
+                        sampled_values.append(
+                            pyro.sample(f"{self.variable}_{i}", dists[i]).item()
+                        )
+                else:
+                    samples = pyro.sample(f"{self.variable}_vectorized", dists)
+                    sampled_values = samples.detach().numpy()
+            else:
+
+                def sample_one(i):
+                    row = parent_sample.iloc[i]
+                    return pyro.sample(f"{self.variable}_{i}", self.fn(row)).item()
+
+                with ThreadPoolExecutor() as executor:
+                    sampled_values = list(executor.map(sample_one, range(n_samples)))
+
+        else:
+            if self.vectorized:
+                distribution = self.fn(None)
+                if isinstance(distribution, list):
+                    for i in range(n_samples):
+                        sampled_values.append(
+                            pyro.sample(f"{self.variable}_{i}", distribution[i]).item()
+                        )
+                else:
+                    samples = pyro.sample(f"{self.variable}", distribution)
+                    sampled_values = samples.detach().numpy()
+            else:
+                with ThreadPoolExecutor() as executor:
+                    sampled_values = list(
+                        executor.map(
+                            lambda _: pyro.sample(
+                                f"{self.variable}", self.fn(None)
+                            ).item(),
+                            range(n_samples),
+                        )
+                    )
 
         sampled_values = np.array(sampled_values)
 
