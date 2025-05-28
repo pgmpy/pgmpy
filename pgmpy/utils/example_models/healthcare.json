@@ -1,0 +1,188 @@
+{
+  "name": "healthcare",
+  "type": "hybrid",
+  "nodes": ["A", "C", "D", "H", "I", "O", "T"],
+  "arcs": [
+    {
+      "from": "A",
+      "to": "C"
+    },
+    {
+      "from": "A",
+      "to": "D"
+    },
+    {
+      "from": "A",
+      "to": "H"
+    },
+    {
+      "from": "A",
+      "to": "O"
+    },
+    {
+      "from": "C",
+      "to": "I"
+    },
+    {
+      "from": "D",
+      "to": "I"
+    },
+    {
+      "from": "H",
+      "to": "D"
+    },
+    {
+      "from": "I",
+      "to": "T"
+    },
+    {
+      "from": "O",
+      "to": "T"
+    }
+  ],
+  "cpds": {
+    "A": {
+      "type": "discrete",
+      "parents": [],
+      "children": ["C", "D", "H", "O"],
+      "levels": ["young", "adult", "old"],
+      "cpt": {
+        "young": 0.35,
+        "adult": 0.45,
+        "old": 0.2
+      }
+    },
+    "C": {
+      "type": "discrete",
+      "parents": "A",
+      "children": "I",
+      "levels": ["none", "mild", "severe"],
+      "cpt": {
+        "A=young": {
+          "none": 0.88,
+          "mild": 0.1,
+          "severe": 0.02
+        },
+        "A=adult": {
+          "none": 0.75,
+          "mild": 0.2,
+          "severe": 0.05
+        },
+        "A=old": {
+          "none": 0.42,
+          "mild": 0.53,
+          "severe": 0.05
+        }
+      }
+    },
+    "D": {
+      "type": "cgnode",
+      "parents": ["A", "H"],
+      "children": "I",
+      "dparents": [1, 2],
+      "gparents": [],
+      "dlevels": {
+        "A": ["young", "adult", "old"],
+        "H": ["none", "any"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 1,
+          "4": 4,
+          "5": 7
+        }
+      },
+      "sd": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0.5,
+        "4": 1,
+        "5": 1.5
+      }
+    },
+    "H": {
+      "type": "discrete",
+      "parents": "A",
+      "children": "D",
+      "levels": ["none", "any"],
+      "cpt": {
+        "A=young": {
+          "none": 0.9,
+          "any": 0.1
+        },
+        "A=adult": {
+          "none": 0.75,
+          "any": 0.25
+        },
+        "A=old": {
+          "none": 0.6,
+          "any": 0.4
+        }
+      }
+    },
+    "I": {
+      "type": "cgnode",
+      "parents": ["C", "D"],
+      "children": "T",
+      "dparents": 1,
+      "gparents": 2,
+      "dlevels": {
+        "C": ["none", "mild", "severe"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": 100,
+          "1": 100,
+          "2": 100
+        },
+        "D": {
+          "0": 300,
+          "1": 550,
+          "2": 800
+        }
+      },
+      "sd": {
+        "0": 30,
+        "1": 50,
+        "2": 100
+      }
+    },
+    "O": {
+      "type": "cgnode",
+      "parents": "A",
+      "children": "T",
+      "dparents": 1,
+      "gparents": [],
+      "dlevels": {
+        "A": ["young", "adult", "old"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": 60,
+          "1": 180,
+          "2": 360
+        }
+      },
+      "sd": {
+        "0": 10,
+        "1": 20,
+        "2": 40
+      }
+    },
+    "T": {
+      "type": "gaussian",
+      "parents": ["I", "O"],
+      "children": [],
+      "coefficients": {
+        "(Intercept)": 120,
+        "I": 1.02,
+        "O": 1.05
+      },
+      "variance": 100
+    }
+  }
+}

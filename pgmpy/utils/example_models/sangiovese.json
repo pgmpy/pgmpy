@@ -1,0 +1,637 @@
+{
+  "name": "sangiovese",
+  "type": "hybrid",
+  "nodes": ["Treatment", "SproutN", "BunchN", "GrapeW", "WoodW", "SPAD06", "NDVI06", "SPAD08", "NDVI08", "Acid", "Potass", "Brix", "pH", "Anthoc", "Polyph"],
+  "arcs": [
+    {
+      "from": "Treatment",
+      "to": "SproutN"
+    },
+    {
+      "from": "Treatment",
+      "to": "BunchN"
+    },
+    {
+      "from": "Treatment",
+      "to": "SPAD06"
+    },
+    {
+      "from": "Treatment",
+      "to": "Brix"
+    },
+    {
+      "from": "SproutN",
+      "to": "BunchN"
+    },
+    {
+      "from": "SproutN",
+      "to": "GrapeW"
+    },
+    {
+      "from": "SproutN",
+      "to": "WoodW"
+    },
+    {
+      "from": "SproutN",
+      "to": "SPAD06"
+    },
+    {
+      "from": "SproutN",
+      "to": "NDVI06"
+    },
+    {
+      "from": "SproutN",
+      "to": "NDVI08"
+    },
+    {
+      "from": "SproutN",
+      "to": "Acid"
+    },
+    {
+      "from": "SproutN",
+      "to": "pH"
+    },
+    {
+      "from": "BunchN",
+      "to": "GrapeW"
+    },
+    {
+      "from": "BunchN",
+      "to": "WoodW"
+    },
+    {
+      "from": "BunchN",
+      "to": "Acid"
+    },
+    {
+      "from": "BunchN",
+      "to": "Potass"
+    },
+    {
+      "from": "BunchN",
+      "to": "Anthoc"
+    },
+    {
+      "from": "BunchN",
+      "to": "Polyph"
+    },
+    {
+      "from": "WoodW",
+      "to": "GrapeW"
+    },
+    {
+      "from": "WoodW",
+      "to": "pH"
+    },
+    {
+      "from": "WoodW",
+      "to": "Anthoc"
+    },
+    {
+      "from": "SPAD06",
+      "to": "WoodW"
+    },
+    {
+      "from": "SPAD06",
+      "to": "NDVI06"
+    },
+    {
+      "from": "SPAD06",
+      "to": "SPAD08"
+    },
+    {
+      "from": "SPAD06",
+      "to": "Acid"
+    },
+    {
+      "from": "SPAD06",
+      "to": "Potass"
+    },
+    {
+      "from": "SPAD06",
+      "to": "pH"
+    },
+    {
+      "from": "NDVI06",
+      "to": "GrapeW"
+    },
+    {
+      "from": "NDVI06",
+      "to": "SPAD08"
+    },
+    {
+      "from": "NDVI06",
+      "to": "NDVI08"
+    },
+    {
+      "from": "NDVI06",
+      "to": "Acid"
+    },
+    {
+      "from": "NDVI06",
+      "to": "Polyph"
+    },
+    {
+      "from": "SPAD08",
+      "to": "WoodW"
+    },
+    {
+      "from": "SPAD08",
+      "to": "NDVI08"
+    },
+    {
+      "from": "NDVI08",
+      "to": "GrapeW"
+    },
+    {
+      "from": "NDVI08",
+      "to": "WoodW"
+    },
+    {
+      "from": "NDVI08",
+      "to": "Acid"
+    },
+    {
+      "from": "NDVI08",
+      "to": "Anthoc"
+    },
+    {
+      "from": "NDVI08",
+      "to": "Polyph"
+    },
+    {
+      "from": "Acid",
+      "to": "GrapeW"
+    },
+    {
+      "from": "Acid",
+      "to": "pH"
+    },
+    {
+      "from": "Potass",
+      "to": "pH"
+    },
+    {
+      "from": "Brix",
+      "to": "GrapeW"
+    },
+    {
+      "from": "Brix",
+      "to": "Acid"
+    },
+    {
+      "from": "Brix",
+      "to": "pH"
+    },
+    {
+      "from": "Brix",
+      "to": "Polyph"
+    },
+    {
+      "from": "pH",
+      "to": "GrapeW"
+    },
+    {
+      "from": "Anthoc",
+      "to": "GrapeW"
+    },
+    {
+      "from": "Anthoc",
+      "to": "Acid"
+    },
+    {
+      "from": "Anthoc",
+      "to": "Potass"
+    },
+    {
+      "from": "Anthoc",
+      "to": "Brix"
+    },
+    {
+      "from": "Anthoc",
+      "to": "pH"
+    },
+    {
+      "from": "Anthoc",
+      "to": "Polyph"
+    },
+    {
+      "from": "Polyph",
+      "to": "Acid"
+    },
+    {
+      "from": "Polyph",
+      "to": "pH"
+    }
+  ],
+  "cpds": {
+    "Treatment": {
+      "type": "discrete",
+      "parents": [],
+      "children": ["SproutN", "BunchN", "SPAD06", "Brix"],
+      "levels": ["T1a", "T1b", "T2a", "T2b", "T3a", "T3b", "T4a", "T4b", "T5a", "T5b", "T6a", "T6b", "T7a", "T7b", "T8a", "T8b"],
+      "cpt": {
+        "T1a": 0.0592,
+        "T1b": 0.0668,
+        "T2a": 0.0577,
+        "T2b": 0.0637,
+        "T3a": 0.0592,
+        "T3b": 0.0668,
+        "T4a": 0.0607,
+        "T4b": 0.0668,
+        "T5a": 0.0592,
+        "T5b": 0.0653,
+        "T6a": 0.0607,
+        "T6b": 0.0668,
+        "T7a": 0.0607,
+        "T7b": 0.0637,
+        "T8a": 0.0592,
+        "T8b": 0.0637
+      }
+    },
+    "SproutN": {
+      "type": "cgnode",
+      "parents": "Treatment",
+      "children": ["BunchN", "GrapeW", "WoodW", "SPAD06", "NDVI06", "NDVI08", "Acid", "pH"],
+      "dparents": 1,
+      "gparents": [],
+      "dlevels": {
+        "Treatment": ["T1a", "T1b", "T2a", "T2b", "T3a", "T3b", "T4a", "T4b", "T5a", "T5b", "T6a", "T6b", "T7a", "T7b", "T8a", "T8b"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": -0.1455,
+          "1": -0.1338,
+          "2": -0.1476,
+          "3": -0.1326,
+          "4": -0.1247,
+          "5": -0.0976,
+          "6": -0.1135,
+          "7": -0.0728,
+          "8": 0.0625,
+          "9": 0.1344,
+          "10": 0.0558,
+          "11": 0.1157,
+          "12": 0.1257,
+          "13": 0.1077,
+          "14": 0.1237,
+          "15": 0.1477
+        }
+      },
+      "sd": {
+        "0": 0.1424,
+        "1": 0.1813,
+        "2": 0.1362,
+        "3": 0.1595,
+        "4": 0.1871,
+        "5": 0.148,
+        "6": 0.1714,
+        "7": 0.1351,
+        "8": 0.1901,
+        "9": 0.1702,
+        "10": 0.1881,
+        "11": 0.182,
+        "12": 0.1482,
+        "13": 0.2006,
+        "14": 0.1706,
+        "15": 0.177
+      }
+    },
+    "BunchN": {
+      "type": "cgnode",
+      "parents": ["Treatment", "SproutN"],
+      "children": ["GrapeW", "WoodW", "Acid", "Potass", "Anthoc", "Polyph"],
+      "dparents": 1,
+      "gparents": 2,
+      "dlevels": {
+        "Treatment": ["T1a", "T1b", "T2a", "T2b", "T3a", "T3b", "T4a", "T4b", "T5a", "T5b", "T6a", "T6b", "T7a", "T7b", "T8a", "T8b"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": 0.1267,
+          "1": 0.1244,
+          "2": -0.0449,
+          "3": -0.1576,
+          "4": 0.1295,
+          "5": 0.1626,
+          "6": -0.2482,
+          "7": -0.1678,
+          "8": 0.2268,
+          "9": 0.2042,
+          "10": -0.1273,
+          "11": -0.1925,
+          "12": 0.1497,
+          "13": 0.1778,
+          "14": -0.2316,
+          "15": -0.2524
+        },
+        "SproutN": {
+          "0": 0.8628,
+          "1": 0.5831,
+          "2": 1.2177,
+          "3": 1.0167,
+          "4": 1.0279,
+          "5": 0.8058,
+          "6": 0.7365,
+          "7": 1.2097,
+          "8": 1.1078,
+          "9": 0.9565,
+          "10": 0.6334,
+          "11": 1.0481,
+          "12": 0.7934,
+          "13": 0.8422,
+          "14": 1.2592,
+          "15": 0.9309
+        }
+      },
+      "sd": {
+        "0": 0.2817,
+        "1": 0.3208,
+        "2": 0.3243,
+        "3": 0.3856,
+        "4": 0.3408,
+        "5": 0.2826,
+        "6": 0.3512,
+        "7": 0.339,
+        "8": 0.3076,
+        "9": 0.4227,
+        "10": 0.3603,
+        "11": 0.3448,
+        "12": 0.2961,
+        "13": 0.3669,
+        "14": 0.2435,
+        "15": 0.3222
+      }
+    },
+    "GrapeW": {
+      "type": "gaussian",
+      "parents": ["SproutN", "BunchN", "WoodW", "NDVI06", "NDVI08", "Acid", "Brix", "pH", "Anthoc"],
+      "children": [],
+      "coefficients": {
+        "(Intercept)": 0.0038,
+        "SproutN": -0.2338,
+        "BunchN": 0.7797,
+        "WoodW": 0.3829,
+        "NDVI06": 0.8191,
+        "NDVI08": 0.2782,
+        "Acid": -1.0997,
+        "Brix": -1.4242,
+        "pH": -2.8167,
+        "Anthoc": -0.1386
+      },
+      "variance": 0.0834
+    },
+    "WoodW": {
+      "type": "gaussian",
+      "parents": ["SproutN", "BunchN", "SPAD06", "SPAD08", "NDVI08"],
+      "children": ["GrapeW", "pH", "Anthoc"],
+      "coefficients": {
+        "(Intercept)": -0.0106,
+        "SproutN": 0.2087,
+        "BunchN": 0.1055,
+        "SPAD06": 1.3207,
+        "SPAD08": 1.1707,
+        "NDVI08": 0.6973
+      },
+      "variance": 0.072
+    },
+    "SPAD06": {
+      "type": "cgnode",
+      "parents": ["Treatment", "SproutN"],
+      "children": ["WoodW", "NDVI06", "SPAD08", "Acid", "Potass", "pH"],
+      "dparents": 1,
+      "gparents": 2,
+      "dlevels": {
+        "Treatment": ["T1a", "T1b", "T2a", "T2b", "T3a", "T3b", "T4a", "T4b", "T5a", "T5b", "T6a", "T6b", "T7a", "T7b", "T8a", "T8b"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": 0.0837,
+          "1": 0.0654,
+          "2": 0.0768,
+          "3": 0.0636,
+          "4": 0.0282,
+          "5": 0.0336,
+          "6": 0.0419,
+          "7": 0.0368,
+          "8": -0.0446,
+          "9": -0.0765,
+          "10": -0.0222,
+          "11": -0.044,
+          "12": -0.0899,
+          "13": -0.0503,
+          "14": -0.057,
+          "15": -0.0393
+        },
+        "SproutN": {
+          "0": 0.4876,
+          "1": 0.3731,
+          "2": 0.4973,
+          "3": 0.3159,
+          "4": 0.34,
+          "5": 0.3377,
+          "6": 0.576,
+          "7": 0.6348,
+          "8": 0.5151,
+          "9": 0.478,
+          "10": 0.4625,
+          "11": 0.4561,
+          "12": 0.5056,
+          "13": 0.3506,
+          "14": 0.4828,
+          "15": 0.2765
+        }
+      },
+      "sd": {
+        "0": 0.0995,
+        "1": 0.1012,
+        "2": 0.096,
+        "3": 0.095,
+        "4": 0.0718,
+        "5": 0.1068,
+        "6": 0.0781,
+        "7": 0.1056,
+        "8": 0.0772,
+        "9": 0.0808,
+        "10": 0.0964,
+        "11": 0.0605,
+        "12": 0.0984,
+        "13": 0.0945,
+        "14": 0.095,
+        "15": 0.1072
+      }
+    },
+    "NDVI06": {
+      "type": "gaussian",
+      "parents": ["SproutN", "SPAD06"],
+      "children": ["GrapeW", "SPAD08", "NDVI08", "Acid", "Polyph"],
+      "coefficients": {
+        "(Intercept)": 0.0009,
+        "SproutN": 0.0525,
+        "SPAD06": 0.4392
+      },
+      "variance": 0.0084
+    },
+    "SPAD08": {
+      "type": "gaussian",
+      "parents": ["SPAD06", "NDVI06"],
+      "children": ["WoodW", "NDVI08"],
+      "coefficients": {
+        "(Intercept)": 0.0034,
+        "SPAD06": 0.6572,
+        "NDVI06": 0.3472
+      },
+      "variance": 0.0076
+    },
+    "NDVI08": {
+      "type": "gaussian",
+      "parents": ["SproutN", "NDVI06", "SPAD08"],
+      "children": ["GrapeW", "WoodW", "Acid", "Anthoc", "Polyph"],
+      "coefficients": {
+        "(Intercept)": -0.0049,
+        "SproutN": 0.1043,
+        "NDVI06": 0.136,
+        "SPAD08": 0.4317
+      },
+      "variance": 0.0126
+    },
+    "Acid": {
+      "type": "gaussian",
+      "parents": ["SproutN", "BunchN", "SPAD06", "NDVI06", "NDVI08", "Brix", "Anthoc", "Polyph"],
+      "children": ["GrapeW", "pH"],
+      "coefficients": {
+        "(Intercept)": 0.0009,
+        "SproutN": -0.0859,
+        "BunchN": 0.0745,
+        "SPAD06": -0.3684,
+        "NDVI06": -0.1936,
+        "NDVI08": -0.2441,
+        "Brix": -0.6116,
+        "Anthoc": -0.0685,
+        "Polyph": 0.1803
+      },
+      "variance": 0.0146
+    },
+    "Potass": {
+      "type": "gaussian",
+      "parents": ["BunchN", "SPAD06", "Anthoc"],
+      "children": "pH",
+      "coefficients": {
+        "(Intercept)": -0.005,
+        "BunchN": -0.0718,
+        "SPAD06": 0.3918,
+        "Anthoc": 0.0612
+      },
+      "variance": 0.0211
+    },
+    "Brix": {
+      "type": "cgnode",
+      "parents": ["Treatment", "Anthoc"],
+      "children": ["GrapeW", "Acid", "pH", "Polyph"],
+      "dparents": 1,
+      "gparents": 2,
+      "dlevels": {
+        "Treatment": ["T1a", "T1b", "T2a", "T2b", "T3a", "T3b", "T4a", "T4b", "T5a", "T5b", "T6a", "T6b", "T7a", "T7b", "T8a", "T8b"]
+      },
+      "coefficients": {
+        "(Intercept)": {
+          "0": -0.0632,
+          "1": 0.0202,
+          "2": -0.0388,
+          "3": 0.0258,
+          "4": -0.0207,
+          "5": 0.0597,
+          "6": -0.02,
+          "7": 0.0601,
+          "8": -0.0694,
+          "9": -0.0051,
+          "10": -0.0425,
+          "11": 0.0161,
+          "12": -0.0321,
+          "13": 0.0341,
+          "14": -0.0004,
+          "15": 0.0585
+        },
+        "Anthoc": {
+          "0": 0.0916,
+          "1": 0.0811,
+          "2": 0.0993,
+          "3": 0.0424,
+          "4": 0.1556,
+          "5": 0.0939,
+          "6": 0.1036,
+          "7": 0.0727,
+          "8": 0.1702,
+          "9": 0.0727,
+          "10": 0.1102,
+          "11": 0.0469,
+          "12": 0.1192,
+          "13": 0.0878,
+          "14": 0.0857,
+          "15": 0.0846
+        }
+      },
+      "sd": {
+        "0": 0.0543,
+        "1": 0.0548,
+        "2": 0.0546,
+        "3": 0.0555,
+        "4": 0.0462,
+        "5": 0.0885,
+        "6": 0.0631,
+        "7": 0.0654,
+        "8": 0.0658,
+        "9": 0.073,
+        "10": 0.0441,
+        "11": 0.062,
+        "12": 0.0568,
+        "13": 0.0632,
+        "14": 0.0565,
+        "15": 0.0617
+      }
+    },
+    "pH": {
+      "type": "gaussian",
+      "parents": ["SproutN", "WoodW", "SPAD06", "Acid", "Potass", "Brix", "Anthoc", "Polyph"],
+      "children": "GrapeW",
+      "coefficients": {
+        "(Intercept)": -0.0004,
+        "SproutN": 0.0115,
+        "WoodW": 0.0061,
+        "SPAD06": 0.0408,
+        "Acid": -0.1814,
+        "Potass": 0.057,
+        "Brix": 0.1606,
+        "Anthoc": -0.024,
+        "Polyph": 0.0211
+      },
+      "variance": 0.0003
+    },
+    "Anthoc": {
+      "type": "gaussian",
+      "parents": ["BunchN", "WoodW", "NDVI08"],
+      "children": ["GrapeW", "Acid", "Potass", "Brix", "pH", "Polyph"],
+      "coefficients": {
+        "(Intercept)": 0.0068,
+        "BunchN": -0.1361,
+        "WoodW": -0.3303,
+        "NDVI08": -0.453
+      },
+      "variance": 0.1009
+    },
+    "Polyph": {
+      "type": "gaussian",
+      "parents": ["BunchN", "NDVI06", "NDVI08", "Brix", "Anthoc"],
+      "children": ["Acid", "pH"],
+      "coefficients": {
+        "(Intercept)": 0.0021,
+        "BunchN": 0.0554,
+        "NDVI06": -0.3734,
+        "NDVI08": 0.2344,
+        "Brix": 0.2868,
+        "Anthoc": 0.5501
+      },
+      "variance": 0.0245
+    }
+  }
+}

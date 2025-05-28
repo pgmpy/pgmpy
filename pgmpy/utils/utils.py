@@ -76,10 +76,7 @@ def get_example_model(model: str):
         "arth150",
     }
 
-    hybrid_models = {
-        "sangiovese",
-        "mehra",
-    }
+    hybrid_models = {"sangiovese", "mehra", "health"}
 
     # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd + year
     dag_models = {
@@ -126,8 +123,9 @@ def get_example_model(model: str):
         "magic-niab": "utils/example_models/magic-niab.json",
         "magic-irri": "utils/example_models/magic-irri.json",
         "arth150": "utils/example_models/arth150.json",
-        "sangiovese": "",
-        "mehra": "",
+        "health": "utils/example_models/healthcare.json",
+        "sangiovese": "utils/example_models/sangiovese.json",
+        "mehra": "utils/example_models/mehra.json",
         "M-bias": "utils/example_models/M-bias.txt",
         "confounding": "utils/example_models/confounding.txt",
         "mediator": "utils/example_models/mediator.txt",
@@ -208,7 +206,183 @@ def get_example_model(model: str):
         return DAG.from_dagitty(filename=fullpath)
 
     elif model in hybrid_models:
-        raise ValueError("Hybrid models aren't supported yet.")
+        import pyro.distributions as dist
+        import torch
+
+        from pgmpy.factors.hybrid import FunctionalCPD
+        from pgmpy.models import FunctionalBayesianNetwork
+
+        with open(files("pgmpy") / path, "r") as f:
+            data = json.load(f)
+
+        nodes = data.get("nodes")
+        arcs = [(arc["from"], arc["to"]) for arc in data.get("arcs")]
+        cpds_data = data.get("cpds")
+
+        model = FunctionalBayesianNetwork(arcs)
+
+        for node, cpd_info in cpds_data.items():
+            node_type = cpd_info.get("type")
+            parents = cpd_info.get("parents", [])
+
+            if node_type == "discrete":
+                levels = cpd_info.get("levels", [])
+                cpt = cpd_info.get("cpt", {})
+
+                if len(parents) == 0:
+                    probs = torch.tensor([float(cpt[level]) for level in levels])
+
+                    def create_categorical_fn(node_probs):
+                        return lambda _: dist.Categorical(probs=node_probs)
+
+                    cpd = FunctionalCPD(
+                        variable=node,
+                        fn=create_categorical_fn(probs),
+                        parents=None,
+                        cardinality=len(levels),
+                        state_names=levels,
+                    )
+                else:
+
+                    def create_discrete_conditional_fn(levels, cpt, parents):
+                        def discrete_fn(parent_sample):
+                            parent = parents[0]
+                            parent_val = parent_sample[parent]
+                            config_key = f"{parent}={parent_val}"
+
+                            if config_key in cpt:
+                                config_probs = cpt[config_key]
+                                probs = torch.tensor(
+                                    [
+                                        float(config_probs.get(level, 0.0))
+                                        for level in levels
+                                    ]
+                                )
+                                return dist.Categorical(probs=probs)
+                            else:
+                                probs = torch.ones(len(levels)) / len(levels)
+                                return dist.Categorical(probs=probs)
+
+                        return discrete_fn
+
+                    cpd = FunctionalCPD(
+                        variable=node,
+                        fn=create_discrete_conditional_fn(levels, cpt, parents),
+                        parents=parents if isinstance(parents, list) else [parents],
+                        cardinality=len(levels),
+                        state_names=levels,
+                    )
+
+            elif node_type == "gaussian":
+                coefficients = cpd_info.get("coefficients", {})
+                variance = cpd_info.get("variance", 1.0)
+
+                def create_gaussian_fn(coeffs, var, parents):
+                    def gaussian_fn(parent_sample):
+                        mean = float(coeffs.get("(Intercept)", 0.0))
+                        for parent in parents:
+                            if parent in coeffs:
+                                mean += float(coeffs[parent]) * parent_sample[parent]
+
+                        return dist.Normal(mean, torch.sqrt(torch.tensor(float(var))))
+
+                    return gaussian_fn
+
+                cpd = FunctionalCPD(
+                    variable=node,
+                    fn=create_gaussian_fn(coefficients, variance, parents),
+                    parents=parents if isinstance(parents, list) else [parents],
+                )
+
+            elif node_type == "cgnode":
+                dparents = cpd_info.get("dparents", [])
+                gparents = cpd_info.get("gparents", [])
+                dlevels = cpd_info.get("dlevels", {})
+                coefficients = cpd_info.get("coefficients", {})
+                sd = cpd_info.get("sd", {})
+
+                if isinstance(dparents, list):
+                    discrete_parents = [parents[i - 1] for i in dparents]
+                else:
+                    if not isinstance(parents, list):
+                        parents = [parents]
+                    discrete_parents = [parents[dparents - 1]]
+
+                if isinstance(gparents, list):
+                    gaussian_parents = (
+                        [parents[i - 1] for i in gparents] if gparents else []
+                    )
+                else:
+                    gaussian_parents = [parents[gparents - 1]] if gparents > 0 else []
+
+                def create_cgnode_fn(
+                    discrete_parents, gaussian_parents, dlevels, coeffs, sd
+                ):
+                    def cg_fn(parent_sample):
+                        if not discrete_parents:
+                            config_idx = 0
+                        elif len(discrete_parents) == 1:
+                            parent = discrete_parents[0]
+                            parent_val = parent_sample[parent]
+                            if parent in dlevels:
+                                config_idx = dlevels[parent].index(parent_val)
+                            else:
+                                config_idx = 0
+                        else:
+                            indices = []
+                            sizes = []
+
+                            for parent in discrete_parents:
+                                if parent in dlevels:
+                                    parent_val = parent_sample[parent]
+                                    try:
+                                        idx = dlevels[parent].index(parent_val)
+                                        indices.append(idx)
+                                        sizes.append(len(dlevels[parent]))
+                                    except ValueError:
+                                        indices.append(0)
+                                        sizes.append(len(dlevels[parent]))
+
+                            config_idx = 0
+                            for i, idx in enumerate(indices):
+                                prod = 1
+                                for j in range(i + 1, len(sizes)):
+                                    prod *= sizes[j]
+                                config_idx += idx * prod
+
+                        intercept = float(
+                            coeffs.get("(Intercept)", {}).get(str(config_idx), 0.0)
+                        )
+                        std_dev = float(sd.get(str(config_idx), 1.0))
+                        std_dev = max(std_dev, 1e-6)  # Avoid zero standard deviation
+
+                        mean = intercept
+                        for parent in gaussian_parents:
+                            if parent in coeffs:
+                                coeff_dict = coeffs[parent]
+                                if str(config_idx) in coeff_dict:
+                                    mean += (
+                                        float(coeff_dict[str(config_idx)])
+                                        * parent_sample[parent]
+                                    )
+
+                        return dist.Normal(mean, std_dev)
+
+                    return cg_fn
+
+                cpd = FunctionalCPD(
+                    variable=node,
+                    fn=create_cgnode_fn(
+                        discrete_parents, gaussian_parents, dlevels, coefficients, sd
+                    ),
+                    parents=parents if isinstance(parents, list) else [parents],
+                )
+
+            model.add_cpds(cpd)
+
+        return model
+    else:
+        raise ValueError(f"Unknown model: {model}")
 
 
 def discretize(data, cardinality, labels=dict(), method="rounding"):
