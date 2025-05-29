@@ -1277,6 +1277,40 @@ class TestDoQuery(unittest.TestCase):
             str(cm.exception),
         )
 
+    def test_valid_causal_query_with_safe_evidence(self):
+        # Same graph as before: X -> Y -> Z and X -> Z
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
+
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.6, 0.2], [0.4, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["T", "F"], "X": ["T", "F"]},
+        )
+        cpd_z = TabularCPD(
+            "Z",
+            2,
+            [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
+            evidence=["X", "Y"],
+            evidence_card=[2, 2],
+            state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y, cpd_z)
+        inference = CausalInference(model)
+
+        # Evidence is on Y, which is safe when doing do(X)
+        try:
+            result = inference.query(
+                variables=["Z"], do={"X": "T"}, evidence={"Y": "T"}
+            )
+            self.assertIsNotNone(result)
+        except Exception as e:
+            self.fail(f"Valid query unexpectedly failed with: {e}")
+
 
 class TestEstimator(unittest.TestCase):
     def test_create_estimator(self):
