@@ -149,6 +149,34 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
+    # Test parent sample none vectorized
+    def test_vectorized_without_parent(self):
+        """
+        Test FunctionalCPD with vectorized sampling without parents.
+        """
+
+        def vectorized_fn(parent_sample):
+            return dist.Normal(torch.zeros(1000), torch.ones(1000))
+
+        cpd = FunctionalCPD(variable="z", fn=vectorized_fn, parents=[], vectorized=True)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    # Test parent sample none parallelized
+    def test_parallel_without_parent(self):
+        """
+        Test FunctionalCPD with parallelized iterative sampling (vectorized=False) without parents.
+        """
+
+        def iterative_fn(parent_sample):
+            return dist.Normal(0.0, 1.0)
+
+        cpd = FunctionalCPD(variable="z", fn=iterative_fn, parents=[], vectorized=False)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
     # This test needs to be commented out as the method sample_v0 is not needed in actual use.
     def test_sampling_time_vectorized_vs_parallel(self):
         """
