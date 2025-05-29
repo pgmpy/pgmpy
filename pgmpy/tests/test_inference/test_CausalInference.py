@@ -1244,28 +1244,38 @@ class TestDoQuery(unittest.TestCase):
         )
 
     def test_invalid_causal_query_due_to_bad_evidence(self):
-    # Model: X -> Y -> Z, and X -> Z
-            model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
-    
-            cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
-            cpd_y = TabularCPD("Y", 2, [[0.6, 0.2], [0.4, 0.8]],
-                       evidence=["X"], evidence_card=[2],
-                       state_names={"Y": ["T", "F"], "X": ["T", "F"]})
-            cpd_z = TabularCPD("Z", 2, [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
-                       evidence=["X", "Y"], evidence_card=[2, 2],
-                       state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]})
-    
-            model.add_cpds(cpd_x, cpd_y, cpd_z)
-            inference = CausalInference(model)
+        # Model: X -> Y -> Z, and X -> Z
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
 
-            # Evidence includes 'Z', which creates a collider problem
-            with self.assertRaises(ValueError) as cm:
-                inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
-    
-            self.assertIn(
-                "Invalid causal query: conditioning on ['Z']",
-                str(cm.exception),
-            )
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.6, 0.2], [0.4, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["T", "F"], "X": ["T", "F"]},
+        )
+        cpd_z = TabularCPD(
+            "Z",
+            2,
+            [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
+            evidence=["X", "Y"],
+            evidence_card=[2, 2],
+            state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y, cpd_z)
+        inference = CausalInference(model)
+
+        # Evidence includes 'Z', which creates a collider problem
+        with self.assertRaises(ValueError) as cm:
+            inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
+
+        self.assertIn(
+            "Invalid causal query: conditioning on ['Z']",
+            str(cm.exception),
+        )
 
 
 class TestEstimator(unittest.TestCase):
