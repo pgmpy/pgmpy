@@ -1112,6 +1112,7 @@ class DAG(nx.DiGraph):
         pgm_params={},
         edge_params={},
         node_params={},
+        plot_edge_strength=False,
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1143,6 +1144,10 @@ class DAG(nx.DiGraph):
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
+        plot_edge_strength: boolean (default: False)
+            Whether to plot edge strengths as labels on edges. Requires edge strengths to be
+            computed first using the `edge_strength` method.
+
         Returns
         -------
         Daft object: daft.PGM object
@@ -1161,6 +1166,10 @@ class DAG(nx.DiGraph):
         >>> dag.to_daft(node_pos="circular",
         ...             edge_params={('a', 'b'): {'label': 2}},
         ...             node_params={'a': {'shape': 'rectangle'}})
+        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> # To plot edge strengths, first compute them:
+        >>> # strengths = dag.edge_strength(data)
+        >>> # dag.to_daft(node_pos="circular", plot_edge_strength=True)
         <daft.PGM at 0x7f9bb48b0bb0>
         """
         try:
@@ -1229,6 +1238,22 @@ class DAG(nx.DiGraph):
                 extra_params = edge_params[(u, v)]
             except KeyError:
                 extra_params = dict()
+
+            # Add edge strength as label if requested and available
+            if plot_edge_strength:
+                if "strength" in self.edges[(u, v)]:
+                    strength_value = self.edges[(u, v)]["strength"]
+                    # Format the strength value to 3 decimal places
+                    strength_label = f"{strength_value:.3f}"
+                    # If user didn't provide a custom label, use the strength
+                    if "label" not in extra_params:
+                        extra_params["label"] = strength_label
+                else:
+                    logger.warning(
+                        f"Edge strength not found for edge ({u}, {v}). "
+                        "Use edge_strength() method to compute strengths first."
+                    )
+
             daft_pgm.add_edge(u, v, **extra_params)
 
         return daft_pgm
@@ -1302,10 +1327,16 @@ class DAG(nx.DiGraph):
             )
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self, plot_edge_strength=False):
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
+
+        Parameters
+        ----------
+        plot_edge_strength: boolean (default: False)
+            Whether to plot edge strengths as labels on edges. Requires edge strengths to be
+            computed first using the `edge_strength` method.
 
         Examples
         --------
@@ -1314,8 +1345,26 @@ class DAG(nx.DiGraph):
         >>> model.to_graphviz()
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         >>> model.draw('model.png', prog='neato')
+        >>> # To plot edge strengths, first compute them:
+        >>> # strengths = model.edge_strength(data)
+        >>> # model.to_graphviz(plot_edge_strength=True)
         """
-        return nx.nx_agraph.to_agraph(self)
+        agraph = nx.nx_agraph.to_agraph(self)
+
+        if plot_edge_strength:
+            for u, v in self.edges():
+                if "strength" in self.edges[(u, v)]:
+                    strength_value = self.edges[(u, v)]["strength"]
+                    # Format the strength value to 3 decimal places
+                    strength_label = f"{strength_value:.3f}"
+                    agraph.get_edge(u, v).attr["label"] = strength_label
+                else:
+                    logger.warning(
+                        f"Edge strength not found for edge ({u}, {v}). "
+                        "Use edge_strength() method to compute strengths first."
+                    )
+
+        return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """

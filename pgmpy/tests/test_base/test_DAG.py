@@ -21,6 +21,21 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 
+# Check for optional packages
+try:
+    import daft
+
+    HAS_DAFT = True
+except ImportError:
+    HAS_DAFT = False
+
+try:
+    import pygraphviz
+
+    HAS_PYGRAPHVIZ = True
+except ImportError:
+    HAS_PYGRAPHVIZ = False
+
 
 class TestDAGCreation(unittest.TestCase):
     def setUp(self):
@@ -677,6 +692,222 @@ class TestDAGCreation(unittest.TestCase):
         self.assertNotIn(("L", "X"), strengths)
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
+
+    @unittest.skipIf(not HAS_DAFT, "daft package required for this test")
+    def test_to_daft_with_edge_strength(self):
+        """Test that to_daft correctly displays edge strengths when plot_edge_strength=True"""
+        # Create a simple DAG with some edges
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+
+        # Manually add edge strengths to test plotting
+        dag.edges[("X", "Y")]["strength"] = 0.123
+        dag.edges[("Z", "Y")]["strength"] = 0.456
+
+        # Test with plot_edge_strength=True
+        daft_pgm = dag.to_daft(
+            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
+        )
+
+        # Verify the daft object is created
+        self.assertIsNotNone(daft_pgm)
+
+        # Test with plot_edge_strength=False (default behavior)
+        daft_pgm_no_strength = dag.to_daft(
+            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}
+        )
+        self.assertIsNotNone(daft_pgm_no_strength)
+
+    @unittest.skipIf(not HAS_DAFT, "daft package required for this test")
+    def test_to_daft_edge_strength_missing(self):
+        """Test warning when edge strength is requested but not computed"""
+        # Create a DAG without edge strengths
+        dag = DAG([("A", "B"), ("C", "B")])
+
+        # Test that it works but shows warning for missing edge strengths
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            daft_pgm = dag.to_daft(
+                node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)},
+                plot_edge_strength=True,
+            )
+
+            # Should still return a valid daft object
+            self.assertIsNotNone(daft_pgm)
+
+            # Should generate warnings for missing edge strengths
+            warning_messages = [str(warning.message) for warning in w]
+            self.assertTrue(
+                any("Edge strength not found" in msg for msg in warning_messages)
+            )
+
+    @unittest.skipIf(not HAS_DAFT, "daft package required for this test")
+    def test_to_daft_edge_strength_with_custom_edge_params(self):
+        """Test that custom edge_params work together with plot_edge_strength"""
+        dag = DAG([("A", "B")])
+        dag.edges[("A", "B")]["strength"] = 0.789
+
+        # Test with custom edge params that don't include label
+        custom_edge_params = {("A", "B"): {"color": "red"}}
+        daft_pgm = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0)},
+            plot_edge_strength=True,
+            edge_params=custom_edge_params,
+        )
+        self.assertIsNotNone(daft_pgm)
+
+        # Test with custom edge params that include label (should not be overwritten)
+        custom_edge_params_with_label = {
+            ("A", "B"): {"label": "custom", "color": "blue"}
+        }
+        daft_pgm_custom = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0)},
+            plot_edge_strength=True,
+            edge_params=custom_edge_params_with_label,
+        )
+        self.assertIsNotNone(daft_pgm_custom)
+
+    @unittest.skipIf(not HAS_PYGRAPHVIZ, "pygraphviz package required for this test")
+    def test_to_graphviz_with_edge_strength(self):
+        """Test that to_graphviz correctly displays edge strengths when plot_edge_strength=True"""
+        # Create a simple DAG with some edges
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+
+        # Manually add edge strengths to test plotting
+        dag.edges[("X", "Y")]["strength"] = 0.123
+        dag.edges[("Z", "Y")]["strength"] = 0.456
+
+        # Test with plot_edge_strength=True
+        agraph = dag.to_graphviz(plot_edge_strength=True)
+
+        # Verify the agraph object is created
+        self.assertIsNotNone(agraph)
+
+        # Verify edge labels are set correctly
+        edge_xy = agraph.get_edge("X", "Y")
+        edge_zy = agraph.get_edge("Z", "Y")
+
+        self.assertEqual(edge_xy.attr["label"], "0.123")
+        self.assertEqual(edge_zy.attr["label"], "0.456")
+
+        # Test with plot_edge_strength=False (default behavior)
+        agraph_no_strength = dag.to_graphviz()
+        self.assertIsNotNone(agraph_no_strength)
+
+    @unittest.skipIf(not HAS_PYGRAPHVIZ, "pygraphviz package required for this test")
+    def test_to_graphviz_edge_strength_missing(self):
+        """Test warning when edge strength is requested but not computed for graphviz"""
+        # Create a DAG without edge strengths
+        dag = DAG([("A", "B"), ("C", "B")])
+
+        # Test that it works but shows warning for missing edge strengths
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            agraph = dag.to_graphviz(plot_edge_strength=True)
+
+            # Should still return a valid agraph object
+            self.assertIsNotNone(agraph)
+
+            # Should generate warnings for missing edge strengths
+            warning_messages = [str(warning.message) for warning in w]
+            self.assertTrue(
+                any("Edge strength not found" in msg for msg in warning_messages)
+            )
+
+    @unittest.skipIf(
+        not HAS_DAFT or not HAS_PYGRAPHVIZ,
+        "daft and pygraphviz packages required for this test",
+    )
+    def test_edge_strength_integration_with_plotting(self):
+        """Integration test: compute edge strengths and plot them"""
+        # Create a linear Gaussian Bayesian network for controlled testing
+        linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+
+        # Create CPDs with specific beta values
+        x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
+        y_cpd = LinearGaussianCPD(
+            variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"]
+        )
+        z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
+
+        # Add CPDs to the model
+        linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
+
+        # Simulate data from the model
+        data = linear_model.simulate(n_samples=int(1e4))
+
+        # Create DAG and compute edge strengths
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+        strengths = dag.edge_strength(data)
+
+        # Test that plotting works after computing strengths
+        daft_pgm = dag.to_daft(
+            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_pgm)
+
+        agraph = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(agraph)
+
+        # Verify that edge labels contain the computed strengths
+        edge_xy = agraph.get_edge("X", "Y")
+        edge_zy = agraph.get_edge("Z", "Y")
+
+        # The labels should be formatted to 3 decimal places
+        expected_xy_label = f"{strengths[('X', 'Y')]:.3f}"
+        expected_zy_label = f"{strengths[('Z', 'Y')]:.3f}"
+
+        self.assertEqual(edge_xy.attr["label"], expected_xy_label)
+        self.assertEqual(edge_zy.attr["label"], expected_zy_label)
+
+    def test_to_daft_plot_edge_strength_parameter(self):
+        """Test that plot_edge_strength parameter is accepted by to_daft method"""
+        dag = DAG([("A", "B")])
+
+        # Test that the parameter is accepted without error (even if daft isn't available)
+        try:
+            # This should raise ImportError for missing daft, not a parameter error
+            dag.to_daft(node_pos={"A": (0, 0), "B": (1, 0)}, plot_edge_strength=True)
+        except ImportError:
+            # Expected when daft is not installed
+            pass
+        except TypeError as e:
+            # This would indicate the parameter wasn't properly added
+            self.fail(
+                f"plot_edge_strength parameter not properly added to to_daft: {e}"
+            )
+
+    def test_to_graphviz_plot_edge_strength_parameter(self):
+        """Test that plot_edge_strength parameter is accepted by to_graphviz method"""
+        dag = DAG([("A", "B")])
+
+        # Test that the parameter is accepted without error (even if pygraphviz isn't available)
+        try:
+            # This should raise ImportError for missing pygraphviz, not a parameter error
+            dag.to_graphviz(plot_edge_strength=True)
+        except ImportError:
+            # Expected when pygraphviz is not installed
+            pass
+        except TypeError as e:
+            # This would indicate the parameter wasn't properly added
+            self.fail(
+                f"plot_edge_strength parameter not properly added to to_graphviz: {e}"
+            )
+
+    def test_edge_strength_storage_in_graph(self):
+        """Test that edge strengths can be manually stored in graph for plotting"""
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+
+        # Manually add edge strengths (simulating what edge_strength method would do)
+        dag.edges[("X", "Y")]["strength"] = 0.123
+        dag.edges[("Z", "Y")]["strength"] = 0.456
+
+        # Verify strengths are stored correctly
+        self.assertEqual(dag.edges[("X", "Y")]["strength"], 0.123)
+        self.assertEqual(dag.edges[("Z", "Y")]["strength"], 0.456)
+
+        # Test that strengths can be accessed
+        self.assertIn("strength", dag.edges[("X", "Y")])
+        self.assertIn("strength", dag.edges[("Z", "Y")])
 
 
 class TestDAGParser(unittest.TestCase):
