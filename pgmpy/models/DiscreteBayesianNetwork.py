@@ -91,8 +91,6 @@ class DiscreteBayesianNetwork(DAG):
         super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
-            lavaan_str=lavaan_str,
-            dagitty_str=dagitty_str,
         )
         self.cpds = []
         self.cardinalities = defaultdict(int)

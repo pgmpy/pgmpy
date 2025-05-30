@@ -76,25 +76,8 @@ class DAG(nx.DiGraph):
         self,
         ebunch=None,
         latents=set(),
-        lavaan_str=None,
-        dagitty_str=None,
     ):
-        stat_nodes = []
-        if lavaan_str:
-            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
-            if err_corr:
-                logger.warning(
-                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
-                )
-        elif dagitty_str:
-            ebunch, latents, betas, stat_nodes = parse_dagitty(dagitty_str)
-            if len(betas) > 0:
-                raise ValueError(
-                    "Invalid arguments: to create LGBN from daggity use from_dagitty method"
-                )
-
         super(DAG, self).__init__(ebunch)
-        self.add_nodes_from(stat_nodes)
         self.latents = set(latents)
         cycles = []
         try:
@@ -131,14 +114,20 @@ class DAG(nx.DiGraph):
             lavaan_str = string.split("\n")
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
-
-        return cls(lavaan_str=lavaan_str)
+        ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+        if err_corr:
+            logger.warning(
+                f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+            )
+        return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
     def from_dagitty(cls, string=None, filename=None):
         """
-        Initializes a `DAG` instance using DAGitty syntax. If beta values are specified between dependencies
-        then a linear gaussian bayesian network is returned instead of a DAG.
+        Initializes a `DAG` instance using DAGitty syntax.
+
+        Creates a `DAG` from the dagitty string. If parameter `beta` is specified in the DAGitty
+        string, the method returns a `LinearGaussianBayesianNetwork` instead of a plain `DAG`.
 
         Parameters
         ----------
@@ -153,12 +142,25 @@ class DAG(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DAG
+        >>> dag = DAG.from_dagitty(\"""dag{
+        ...     "carry matches" [latent]
+        ...     cancer [outcome]
+        ...     smoking -> "carry matches" [beta=0.2]
+        ...     smoking -> cancer [beta=0.5]
+        ...     "carry matches" -> cancer
+        ... }\""")
+
+        Creating a linear gaussian bayesian network from dagitty:
+
+        >>> from pgmpy.base import DAG
         >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 
-        # specifying beta creats a LinearGaussianBayesianNetwork instance
+        # Specifying beta creates a LinearGaussianBayesianNetwork instance
         >>> dag = DAG.from_dagitty("dag{X -> Y [beta=0.3] Y -> Z [beta=0.1]}")
-        # simulate data from the model
         >>> data = dag.simulate(n_samples=int(1e4))
+
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
         """
         if filename:
             with open(filename, "r") as f:
@@ -168,36 +170,35 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, known_betas, stat_nodes = parse_dagitty(dagitty_str)
-        if len(known_betas) == 0:
+        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        if len(coefs) == 0:
             dag = cls(ebunch=ebunch, latents=latents)
-            dag.add_nodes_from(stat_nodes)
+            dag.add_nodes_from(nodes)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
             lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
-            lgbn.add_nodes_from(stat_nodes)
+            lgbn.add_nodes_from(nodes)
 
-            seed = 42
             std = 1
             intercept = 0
 
             cpds = []
             for i, var in enumerate(lgbn.nodes()):
                 parents = lgbn.get_parents(var)
-                if var not in known_betas:
-                    known_betas[var] = {}
+                if var not in coefs:
+                    coefs[var] = {}
 
-                rng = np.random.default_rng(seed=seed)
+                rng = np.random.default_rng()
 
                 beta = rng.normal(loc=0, scale=1, size=(len(parents) + 1))
                 beta[0] = intercept
 
                 for i, ev in enumerate(parents):
-                    if ev in known_betas[var]:
-                        beta[i + 1] = known_betas[var][ev]
+                    if ev in coefs[var]:
+                        beta[i + 1] = coefs[var][ev]
 
                 cpd = LinearGaussianCPD(
                     variable=var,

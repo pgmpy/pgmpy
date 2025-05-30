@@ -257,14 +257,14 @@ def parse_dagitty(lines):
     ebunch = []
     latents = []
     betas = {}
-    stat_nodes = []
+    nodes = set()
     for line in lines:
         line = line.strip()
         if line != "":
             results = dagitty_line.parseString(line, parseAll=True)
 
             for var_stat in results.get("var_stat", []):
-                stat_nodes.append(var_stat[0])
+                nodes.add(var_stat[0])
                 if len(var_stat) == 2:
                     option = var_stat[1][0].lower()
                     if (
@@ -276,4 +276,8 @@ def parse_dagitty(lines):
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch, betas)
 
-    return ebunch, latents, betas, stat_nodes
+    for e in ebunch:
+        nodes.add(e[0])
+        nodes.add(e[1])
+
+    return ebunch, latents, betas, nodes
