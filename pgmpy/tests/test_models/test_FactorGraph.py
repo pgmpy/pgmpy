@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 
-
 class TestFactorGraphCreation(unittest.TestCase):
     def setUp(self):
         self.graph = FactorGraph()
@@ -123,7 +122,7 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.add_edge("a", phi)
         message = self.graph.get_uniform_message("a")
         assert (message == np.array([0.25, 0.25, 0.25, 0.25])).all()
-        
+
     def test_add_edge_sets_default_weight(self):
         G = FactorGraph()
         G.add_nodes_from(["a", "b"])
@@ -133,12 +132,13 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
 
         G.add_edge("a", phi1)
         self.assertEqual(G.get_edge_data("a", phi1)["weight"], 0)
-                         
+
         try:
             nx.draw(G)
-            plt.close() 
+            plt.close()
         except Exception as e:
             self.fail(f"Drawing the graph failed with error: {e}")
+
 
 class TestFactorGraphMethods(unittest.TestCase):
     def setUp(self):
