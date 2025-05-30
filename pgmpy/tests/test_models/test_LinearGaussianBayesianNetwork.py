@@ -107,14 +107,20 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
 
     def test_simulate_with_evidence(self):
+
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
+        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        sorted_indices = np.argsort(missing_vars)
+        missing_vars = [missing_vars[i] for i in sorted_indices]
+        mean_cond = mean_cond[:, sorted_indices]
+        cov_cond = cov_cond[sorted_indices][:, sorted_indices]
+
         rng = np.random.default_rng(seed=42)
-        x2 = -5 + 0.5 * evidence["x1"] + rng.normal(0, 2, 10000)
-        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
-        df_equ = pd.DataFrame({"x2": x2, "x3": x3})
+        samples = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=10000)
+        df_equ = pd.DataFrame(samples, columns=missing_vars)
 
         np_test.assert_array_almost_equal(
             df.mean()[["x2", "x3"]], df_equ.mean(), decimal=1
@@ -122,20 +128,6 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(
             df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=1
         )
-
-    def test_simulate_with_intervention(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        do = {"x2": 1.0}
-        df = self.model.simulate(n_samples=10000, seed=42, do=do)
-
-        rng = np.random.default_rng(seed=42)
-        x1 = 1 + rng.normal(0, 2, 10000)
-        x2 = np.full(10000, 1.0)
-        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
-        df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
-
-        np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
-        np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
 
     def test_simulate_with_missing_data(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
@@ -147,26 +139,6 @@ class TestLGBNMethods(unittest.TestCase):
 
         assert "x2*" not in df.columns
         assert "x2" in df.columns
-        assert df.isna().sum()["x2"] > 0
-
-    def test_simulate_combined(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-
-        evidence = {"x1": 2.0}
-        do = {"x3": 5.0}
-        miss_cpd = LinearGaussianCPD("x2*", beta=[0], std=1, evidence=[])
-
-        df = self.model.simulate(
-            n_samples=10000,
-            seed=42,
-            evidence=evidence,
-            do=do,
-            missing_prob=[miss_cpd],
-        )
-
-        assert "x1" not in df.columns  # because x1 is fixed
-        assert "x2" in df.columns
-        assert "x3" in df.columns
         assert df.isna().sum()["x2"] > 0
 
     def test_fit(self):

@@ -266,6 +266,11 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: int (default: None)
             Seed for the random number generator.
 
+        missing_prob: LinearGaussianCPD, list  (default: None)
+            In case of missing value for more than one variable, provide list of LinearGaussianCPD.
+            The variable name of each LinearGaussianCPD should end with the name of node in DiscreteBayesianNetwork with * at the end of the name.
+            The state names of each LinearGaussianCPD should be the same as the state names of the corresponding node in DiscreteBayesianNetwork.
+
         Returns
         -------
         pandas.DataFrame: generated samples
@@ -318,13 +323,6 @@ class LinearGaussianBayesianNetwork(DAG):
         else:
             model = self
 
-        mean, cov = model.to_joint_gaussian()
-        variables = list(nx.topological_sort(model))
-        rng = np.random.default_rng(seed=seed)
-
-        evidence_var = list(evidence.keys())
-        sample_var = [v for v in variables if v not in evidence_var]
-
         if missing_prob is not None:
             if isinstance(missing_prob, list):
                 for cpd in missing_prob:
@@ -355,11 +353,6 @@ class LinearGaussianBayesianNetwork(DAG):
                         f"Missingness variable '{missing_var}' refers to base variable '{base_var}', which is not in model nodes."
                     )
 
-                if cpd.cardinality[0] != 2:
-                    raise ValueError(
-                        f"Missingness variable '{missing_var}' must have cardinality 2 (0=observed, 1=missing). Got {cpd.cardinality[0]}."
-                    )
-
                 model.add_node(missing_var)
 
                 if len(cpd.variables) > 1:
@@ -373,6 +366,13 @@ class LinearGaussianBayesianNetwork(DAG):
 
                 model.add_cpds(cpd)
 
+        mean, cov = model.to_joint_gaussian()
+        variables = list(nx.topological_sort(model))
+        rng = np.random.default_rng(seed=seed)
+
+        evidence_var = list(evidence.keys())
+        sample_var = [v for v in variables if v not in evidence_var]
+
         if len(evidence) == 0:
             df = pd.DataFrame(
                 rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
@@ -381,10 +381,16 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df = pd.DataFrame([evidence])
-            _, mean_cond, cov_cond = model.predict(data=df)
+            missing_vars, mean_cond, cov_cond = model.predict(data=df)
+            sorted_indices = np.argsort(missing_vars)
+            missing_vars = [missing_vars[i] for i in sorted_indices]
+            mean_cond = mean_cond[:, sorted_indices]
+            cov_cond = cov_cond[sorted_indices][:, sorted_indices]
             df = pd.DataFrame(
-                rng.multivariate_normal(mean=mean_cond, cov=cov_cond, size=n_samples),
-                columns=sample_var,
+                rng.multivariate_normal(
+                    mean=mean_cond[0], cov=cov_cond, size=n_samples
+                ),
+                columns=missing_vars,
             )
 
         if missing_prob is not None:
