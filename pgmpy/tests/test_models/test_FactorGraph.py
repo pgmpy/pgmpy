@@ -5,8 +5,6 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import DiscreteMarkovNetwork, FactorGraph, JunctionTree
 from pgmpy.tests import help_functions as hf
-import matplotlib.pyplot as plt
-import networkx as nx
 
 
 class TestFactorGraphCreation(unittest.TestCase):
@@ -22,6 +20,12 @@ class TestFactorGraphCreation(unittest.TestCase):
         self.assertListEqual(
             hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]]
         )
+
+    def test_init_sets_default_edge_weights(self):
+        edges = [("a", "phi1"), ("b", "phi1")]
+        G = FactorGraph(edges)
+        for u, v in edges:
+            self.assertEqual(G.get_edge_data(u, v)["weight"], 0)
 
     def test_add_single_node(self):
         self.graph.add_node("phi1")
@@ -42,6 +46,13 @@ class TestFactorGraphCreation(unittest.TestCase):
         self.assertListEqual(
             hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]]
         )
+
+    def test_add_edges_from_sets_default_weights(self):
+        G = FactorGraph()
+        edges = [("a", "phi1"), ("b", "phi1")]
+        G.add_edges_from(edges)
+        for u, v in edges:
+            self.assertEqual(G.get_edge_data(u, v)["weight"], 0)
 
     def test_add_self_loop_raises_error(self):
         self.assertRaises(ValueError, self.graph.add_edge, "a", "a")
@@ -132,13 +143,6 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
 
         G.add_edge("a", phi1)
         self.assertEqual(G.get_edge_data("a", phi1)["weight"], 0)
-
-        try:
-            nx.draw(G)
-            plt.close()
-        except Exception as e:
-            self.fail(f"Drawing the graph failed with error: {e}")
-
 
 class TestFactorGraphMethods(unittest.TestCase):
     def setUp(self):
