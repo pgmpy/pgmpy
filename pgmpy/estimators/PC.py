@@ -7,7 +7,8 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG
+from pgmpy.base import PDAG, UndirectedGraph
+from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
