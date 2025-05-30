@@ -129,6 +129,20 @@ class TestLGBNMethods(unittest.TestCase):
             df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=1
         )
 
+    def test_simulate_with_intervention(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        do = {"x2": 1.0}
+        df = self.model.simulate(n_samples=10000, seed=42, do=do)
+
+        rng = np.random.default_rng(seed=42)
+        x1 = 1 + rng.normal(0, 2, 10000)
+        x2 = np.full(10000, 1.0)
+        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+        df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+        np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
+        np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
+
     def test_simulate_with_missing_data(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 

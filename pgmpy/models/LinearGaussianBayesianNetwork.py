@@ -140,7 +140,10 @@ class LinearGaussianBayesianNetwork(DAG):
         P(x1) = N(1; 4)
 
         """
-        return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
+        for cpd in cpds:
+            if isinstance(cpd, (str, int)):
+                cpd = self.get_cpds(cpd)
+            self.cpds.remove(cpd)
 
     def get_random_cpds(self, loc=0, scale=1, inplace=False, seed=None):
         """
