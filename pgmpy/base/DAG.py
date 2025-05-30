@@ -1145,8 +1145,8 @@ class DAG(nx.DiGraph):
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
         plot_edge_strength: boolean (default: False)
-            Whether to plot edge strengths as labels on edges. Requires edge strengths to be
-            computed first using the `edge_strength` method.
+            Whether to plot edge strengths as labels on edges.
+            Requires edge strengths to be computed first using the `edge_strength` method.
 
         Returns
         -------
@@ -1166,10 +1166,6 @@ class DAG(nx.DiGraph):
         >>> dag.to_daft(node_pos="circular",
         ...             edge_params={('a', 'b'): {'label': 2}},
         ...             node_params={'a': {'shape': 'rectangle'}})
-        <daft.PGM at 0x7f9bb48b0bb0>
-        >>> # To plot edge strengths, first compute them:
-        >>> # strengths = dag.edge_strength(data)
-        >>> # dag.to_daft(node_pos="circular", plot_edge_strength=True)
         <daft.PGM at 0x7f9bb48b0bb0>
         """
         try:
@@ -1239,7 +1235,7 @@ class DAG(nx.DiGraph):
             except KeyError:
                 extra_params = dict()
 
-            # Add edge strength as label if requested and available
+            # Add edge strength as label if requested
             if plot_edge_strength:
                 if "strength" in self.edges[(u, v)]:
                     strength_value = self.edges[(u, v)]["strength"]
@@ -1329,14 +1325,19 @@ class DAG(nx.DiGraph):
 
     def to_graphviz(self, plot_edge_strength=False):
         """
-        Retuns a pygraphviz object for the DAG. pygraphviz is useful for
+        Returns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
 
         Parameters
         ----------
         plot_edge_strength: boolean (default: False)
-            Whether to plot edge strengths as labels on edges. Requires edge strengths to be
-            computed first using the `edge_strength` method.
+            Whether to plot edge strengths as labels on edges.
+            Requires edge strengths to be computed first using the `edge_strength` method.
+
+        Returns
+        -------
+        pygraphviz object: pygraphviz.AGraph object
+            pygraphviz object for the DAG.
 
         Examples
         --------
@@ -1344,18 +1345,13 @@ class DAG(nx.DiGraph):
         >>> model = get_example_model('alarm')
         >>> model.to_graphviz()
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        >>> model.draw('model.png', prog='neato')
-        >>> # To plot edge strengths, first compute them:
-        >>> # strengths = model.edge_strength(data)
-        >>> # model.to_graphviz(plot_edge_strength=True)
         """
         agraph = nx.nx_agraph.to_agraph(self)
-
+        # Add edge strength labels if requested
         if plot_edge_strength:
             for u, v in self.edges():
                 if "strength" in self.edges[(u, v)]:
                     strength_value = self.edges[(u, v)]["strength"]
-                    # Format the strength value to 3 decimal places
                     strength_label = f"{strength_value:.3f}"
                     agraph.get_edge(u, v).attr["label"] = strength_label
                 else:
@@ -1363,7 +1359,6 @@ class DAG(nx.DiGraph):
                         f"Edge strength not found for edge ({u}, {v}). "
                         "Use edge_strength() method to compute strengths first."
                     )
-
         return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
