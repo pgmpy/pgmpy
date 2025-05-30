@@ -18,3 +18,12 @@ Joint Probability Distribution
 
 .. automodule:: pgmpy.factors.discrete.JointProbabilityDistribution
    :members:
+
+FactorSet
+^^^^^^^^^
+
+.. automodule:: pgmpy.factors.discrete.FactorSet
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
