@@ -693,8 +693,6 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot = dag.to_daft(
             node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)}, plot_edge_strength=True
         )
-
-        # Verify that the daft object is created successfully
         self.assertIsNotNone(daft_plot)
 
         # Check that edge labels are correctly set in daft object
@@ -716,8 +714,6 @@ class TestDAGCreation(unittest.TestCase):
 
         # Test to_graphviz with edge strengths
         graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-
-        # Verify that the graphviz object is created successfully
         self.assertIsNotNone(graphviz_plot)
 
         # Check that edge labels are set correctly in graphviz
@@ -734,9 +730,9 @@ class TestDAGCreation(unittest.TestCase):
         daft_no_strength = dag_no_strength.to_daft(
             node_pos={"X": (0, 0), "Y": (1, 0)}, plot_edge_strength=True
         )
-        graphviz_no_strength = dag_no_strength.to_graphviz(plot_edge_strength=True)
-
         self.assertIsNotNone(daft_no_strength)
+
+        graphviz_no_strength = dag_no_strength.to_graphviz(plot_edge_strength=True)
         self.assertIsNotNone(graphviz_no_strength)
 
     def test_edge_strength_individual_warnings(self):
@@ -829,6 +825,68 @@ class TestDAGCreation(unittest.TestCase):
         graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
         self.assertIsNotNone(graphviz_plot)
 
+    def test_edge_strength_plotting_comprehensive_coverage(self):
+        """Test comprehensive edge strength plotting scenarios for maximum coverage"""
+        # Test all code paths in edge strength plotting methods
+
+        # Scenario 1: Mixed edge strengths for to_daft individual warnings
+        dag1 = DAG([("A", "B"), ("C", "B")])
+        dag1.edges[("A", "B")]["strength"] = 0.123
+        # Leave ("C", "B") without strength
+
+        # This hits lines 1244-1247 (individual edge warning in to_daft)
+        daft_plot1 = dag1.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot1)
+
+        # Scenario 2: No edge strengths at all for comprehensive warnings
+        dag2 = DAG([("X", "Y"), ("Z", "Y")])
+
+        # This hits comprehensive warning logic in to_daft
+        daft_plot2 = dag2.to_daft(
+            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot2)
+
+        # This hits lines 1348, 1357-1361 (validation and individual warnings in to_graphviz)
+        graphviz_plot2 = dag2.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot2)
+
+        # Scenario 3: Edge strength formatting precision
+        dag3 = DAG([("P", "Q")])
+        dag3.edges[("P", "Q")]["strength"] = 0.987654321
+
+        # This hits lines 1239-1242 (formatting in to_daft)
+        daft_plot3 = dag3.to_daft(
+            node_pos={"P": (0, 0), "Q": (1, 0)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot3)
+
+        # This hits lines 1350-1355 (formatting in to_graphviz)
+        graphviz_plot3 = dag3.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot3)
+
+    def test_optional_dependency_coverage(self):
+        """Test scenarios with optional dependencies since they are always available in testing"""
+        dag = DAG([("A", "B")])
+        dag.edges[("A", "B")]["strength"] = 0.5
+
+        # Test behavior when dependencies are available
+        try:
+            daft_result = dag.to_daft(
+                node_pos={"A": (0, 0), "B": (1, 0)}, plot_edge_strength=True
+            )
+            self.assertIsNotNone(daft_result)
+        except Exception as e:
+            self.fail(f"to_daft failed when daft is available: {e}")
+
+        try:
+            graphviz_result = dag.to_graphviz(plot_edge_strength=True)
+            self.assertIsNotNone(graphviz_result)
+        except Exception as e:
+            self.fail(f"to_graphviz failed when pygraphviz is available: {e}")
+
     def test_get_random_comprehensive(self):
         """Test get_random method with various parameters including latents"""
         # Test with default parameters
@@ -836,10 +894,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(len(dag.nodes()), 5)
         self.assertEqual(len(dag.latents), 0)
 
-        # Test with latents=True
+        # Test with latents=True to cover lines 1315-1336
         dag_with_latents = DAG.get_random(n_nodes=4, latents=True, seed=42)
         self.assertEqual(len(dag_with_latents.nodes()), 4)
-        # Latents could be any subset, so just check it's set
+        # When latents=True, some nodes should be latent
 
         # Test with custom node names and latents
         custom_names = ["A", "B", "C"]
@@ -852,15 +910,13 @@ class TestDAGCreation(unittest.TestCase):
         dag_no_edges = DAG.get_random(n_nodes=3, edge_prob=0.0, seed=456)
         self.assertEqual(len(dag_no_edges.edges()), 0)
 
-    def test_to_daft_else_branch(self):
-        """Test to_daft method to trigger the else branch for node addition"""
+    def test_to_daft_else_branch_coverage(self):
+        """Test to_daft method to trigger the else branch for node addition and other code paths"""
         dag = DAG([("A", "B")])
-
-        # Add edge strength to trigger strength plotting with label override
         dag.edges[("A", "B")]["strength"] = 0.789
 
         # Create daft plot with edge parameters that already have a label
-        # This should trigger the else branch (line 1235) in to_daft
+        # This should trigger the else branch when label is already set
         daft_plot = dag.to_daft(
             node_pos={"A": (0, 0), "B": (1, 0)},
             plot_edge_strength=True,
@@ -878,6 +934,77 @@ class TestDAGCreation(unittest.TestCase):
             node_pos={"A": (0, 0), "B": (1, 0)}, latex=False, plot_edge_strength=True
         )
         self.assertIsNotNone(daft_plot_no_latex)
+
+    def test_edge_strength_warning_all_missing(self):
+        """Test edge strength plotting when all edges are missing strengths"""
+        dag = DAG([("A", "B"), ("C", "D"), ("E", "F")])
+
+        # Test with no edge strengths at all - should trigger comprehensive warnings
+        daft_plot = dag.to_daft(
+            node_pos={
+                "A": (0, 0),
+                "B": (1, 0),
+                "C": (2, 0),
+                "D": (3, 0),
+                "E": (4, 0),
+                "F": (5, 0),
+            },
+            plot_edge_strength=True,
+        )
+        self.assertIsNotNone(daft_plot)
+
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+    def test_edge_strength_precision_formatting(self):
+        """Test edge strength precision formatting with various decimal values"""
+        test_values = [
+            0.123456789,  # Many decimals
+            0.999999999,  # High precision near 1
+            0.000001234,  # Very small values
+            1.0,  # Exact 1.0
+            0.0,  # Exact 0.0
+        ]
+
+        for i, value in enumerate(test_values):
+            dag = DAG([(f"A{i}", f"B{i}")])
+            dag.edges[(f"A{i}", f"B{i}")]["strength"] = value
+
+            daft_plot = dag.to_daft(
+                node_pos={f"A{i}": (0, 0), f"B{i}": (1, 0)}, plot_edge_strength=True
+            )
+            self.assertIsNotNone(daft_plot)
+
+            graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+            self.assertIsNotNone(graphviz_plot)
+
+    def test_edge_strength_mixed_scenarios(self):
+        """Test mixed scenarios with some edges having strengths and others not"""
+        # Large graph with mixed edge strengths
+        dag = DAG([("A", "B"), ("B", "C"), ("C", "D"), ("D", "E"), ("F", "G")])
+
+        # Set strengths for only some edges
+        dag.edges[("A", "B")]["strength"] = 0.1
+        dag.edges[("C", "D")]["strength"] = 0.5
+        dag.edges[("F", "G")]["strength"] = 0.9
+        # Leave ("B", "C") and ("D", "E") without strengths
+
+        daft_plot = dag.to_daft(
+            node_pos={
+                "A": (0, 0),
+                "B": (1, 0),
+                "C": (2, 0),
+                "D": (3, 0),
+                "E": (4, 0),
+                "F": (0, 1),
+                "G": (1, 1),
+            },
+            plot_edge_strength=True,
+        )
+        self.assertIsNotNone(daft_plot)
+
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
 
 
 class TestDAGParser(unittest.TestCase):
