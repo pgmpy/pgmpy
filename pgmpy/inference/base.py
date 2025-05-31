@@ -104,10 +104,29 @@ class Inference(object):
                     self.factors[var].append(factor)
 
         elif isinstance(self.model, DynamicBayesianNetwork):
-            self.start_bayesian_model = DiscreteBayesianNetwork(
-                self.model.get_intra_edges(0)
-            )
+            # Initialize main inference properties for DBN
+            self.state_names_map = {}
+            for node in self.model.nodes():
+                cpd = self.model.get_cpds(node)
+                if isinstance(cpd, TabularCPD):
+                    self.cardinality[node] = cpd.variable_card
+                    cpd_factor = cpd.to_factor()
+                for var in cpd_factor.scope():
+                    self.factors[var].append(cpd_factor)
+                self.state_names_map.update(cpd_factor.no_to_name)
+
+            # Create start_bayesian_model
+            intra_edges_0 = self.model.get_intra_edges(0)
+            self.start_bayesian_model = DiscreteBayesianNetwork(intra_edges_0)
+
+            # Add all nodes from time slice 0 even if there are no intra-edges
+            time_slice_0_nodes = self.model.get_slice_nodes(time_slice=0)
+            for node in time_slice_0_nodes:
+                if node not in self.start_bayesian_model.nodes():
+                    self.start_bayesian_model.add_node(node)
+
             self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
+
             cpd_inter = [
                 self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
             ]
