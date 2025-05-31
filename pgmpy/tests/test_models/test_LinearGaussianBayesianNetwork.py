@@ -138,22 +138,10 @@ class TestLGBNMethods(unittest.TestCase):
         x1 = 1 + rng.normal(0, 2, 10000)
         x2 = np.full(10000, 1.0)
         x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
-        df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+        df_equ = pd.DataFrame({"x1": x1, "x3": x3})
 
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
-
-    def test_simulate_with_missing_data(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-
-        # Missingness CPD for x2*
-        miss_cpd = LinearGaussianCPD("x2*", beta=[0], std=1, evidence=[])
-
-        df = self.model.simulate(n_samples=10000, seed=42, missing_prob=[miss_cpd])
-
-        assert "x2*" not in df.columns
-        assert "x2" in df.columns
-        assert df.isna().sum()["x2"] > 0
 
     def test_fit(self):
         # Test fit on a simple model

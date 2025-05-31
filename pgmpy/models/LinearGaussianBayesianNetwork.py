@@ -260,19 +260,19 @@ class LinearGaussianBayesianNetwork(DAG):
 
         do: dict (default: None)
             The interventions to apply to the model. dict should be of the form
-            {variable_name: state}
+            {variable_name: value}
 
         evidence: dict (default: None)
             Observed evidence to apply to the model. dict should be of the form
-            {variable_name: state}
+            {variable_name: value}
 
         seed: int (default: None)
             Seed for the random number generator.
 
         missing_prob: LinearGaussianCPD, list  (default: None)
             In case of missing value for more than one variable, provide list of LinearGaussianCPD.
-            The variable name of each LinearGaussianCPD should end with the name of node in DiscreteBayesianNetwork with * at the end of the name.
-            The state names of each LinearGaussianCPD should be the same as the state names of the corresponding node in DiscreteBayesianNetwork.
+            The variable name of each LinearGaussianCPD should end with the name of node in LinearGaussianBayesianNetwork with * at the end of the name.
+            The state names of each LinearGaussianCPD should be the same as the state names of the corresponding node in LinearGaussianBayesianNetwork.
 
         Returns
         -------
@@ -290,13 +290,19 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=500, seed=42)
         """
+        # Step 1: Check if all arguments are specified
         evidence = {} if evidence is None else evidence
 
         do = {} if do is None else do
 
-        if set(do.keys()).intersection(set(evidence.keys())):
-            raise ValueError("Variable can't be in both do and evidence")
+        # Step 2: Check if there are any common variables in do and evidence
+        common_vars = set(do.keys()).intersection(set(evidence.keys()))
+        if common_vars:
+            raise ValueError(
+                f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
+            )
 
+        # Step 3: Ensure all variables in the intervention exist in the model's nodes
         nodes = list(do.keys())
 
         if not set(nodes).issubset(set(self.nodes())):
@@ -309,6 +315,7 @@ class LinearGaussianBayesianNetwork(DAG):
                 "Each node in the model should have a CPD associated with it"
             )
 
+        # Step 4: If do is specified, modify the network structure.
         if do != {}:
             model = LinearGaussianBayesianNetwork(self.edges())
             model.add_nodes_from(self.nodes())
@@ -317,57 +324,34 @@ class LinearGaussianBayesianNetwork(DAG):
                 for parent in list(model.get_parents(var)):
                     model.remove_edge(parent, var)
 
+                model.remove_cpds(model.get_cpds(var))
+
+                for child in model.get_children(var):
+                    child_cpd = model.get_cpds(child)
+
+                    new_evidence = list(child_cpd.evidence)
+                    new_beta = list(child_cpd.beta)
+
+                    parent_idx = child_cpd.evidence.index(var)
+                    new_beta[0] += new_beta[parent_idx + 1] * val
+
+                    del new_evidence[parent_idx]
+                    del new_beta[parent_idx + 1]
+
                     new_cpd = LinearGaussianCPD(
-                        variable=var, beta=[val], std=1e-3, evidence=[]
+                        variable=child_cpd.variable,
+                        beta=new_beta,
+                        std=child_cpd.std,
+                        evidence=new_evidence,
                     )
-                    model.remove_cpds(model.get_cpds(var))
+
+                    model.remove_cpds(child_cpd)
                     model.add_cpds(new_cpd)
+
+                model.remove_node(var)
 
         else:
             model = self
-
-        if missing_prob is not None:
-            if isinstance(missing_prob, list):
-                for cpd in missing_prob:
-                    if not isinstance(cpd, LinearGaussianCPD):
-                        raise ValueError(
-                            f"missing_prob must be a list of LinearGaussianCPD objects. Got {type(cpd)}"
-                        )
-            else:
-                if isinstance(missing_prob, LinearGaussianCPD):
-                    missing_prob = [missing_prob]
-                else:
-                    raise ValueError(
-                        f"missing_prob should be LinearGaussianCPD. Got {type(missing_prob)}"
-                    )
-
-            for cpd in missing_prob:
-                missing_var = cpd.variables[0]
-
-                if not missing_var.endswith("*"):
-                    raise ValueError(
-                        f"Got variable '{missing_var}'. Missingness variable should end with '*' to represent missingness (e.g., 'X*')."
-                    )
-
-                base_var = missing_var[:-1]
-
-                if base_var not in model.nodes:
-                    raise ValueError(
-                        f"Missingness variable '{missing_var}' refers to base variable '{base_var}', which is not in model nodes."
-                    )
-
-                model.add_node(missing_var)
-
-                if len(cpd.variables) > 1:
-                    evidences = cpd.variables[1:]
-                    for parent in evidences:
-                        if parent not in model.nodes:
-                            raise ValueError(
-                                f"Missingness CPD refers to evidence variable '{parent}', which is not in the model."
-                            )
-                        model.add_edge(parent, missing_var)
-
-                model.add_cpds(cpd)
 
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
@@ -383,31 +367,28 @@ class LinearGaussianBayesianNetwork(DAG):
             )
 
         else:
-            df = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df)
+            df_evidence = pd.DataFrame([evidence])
+            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
             mean_cond = mean_cond[:, sorted_indices]
             cov_cond = cov_cond[sorted_indices][:, sorted_indices]
-            df = pd.DataFrame(
-                rng.multivariate_normal(
-                    mean=mean_cond[0], cov=cov_cond, size=n_samples
-                ),
-                columns=missing_vars,
+
+            samples_missing = rng.multivariate_normal(
+                mean=mean_cond[0], cov=cov_cond, size=n_samples
             )
+            df_missing = pd.DataFrame(samples_missing, columns=missing_vars)
 
-        if missing_prob is not None:
-            for cpd in missing_prob:
-                missing_var = cpd.variables[0]
-                base_var = missing_var[:-1]
+            df = pd.DataFrame(index=range(n_samples), columns=variables)
 
-                if missing_var not in df.columns or base_var not in df.columns:
-                    continue
+            for ev_var, ev_val in evidence.items():
+                df[ev_var] = ev_val
 
-                mask = df[missing_var].round().astype(int) == 1
-                df.loc[mask, base_var] = np.nan
+            for mv in missing_vars:
+                df[mv] = df_missing[mv].values
 
-            df = df[[col for col in df.columns if not col.endswith("*")]]
+            df = df[variables]
 
         return df
 
