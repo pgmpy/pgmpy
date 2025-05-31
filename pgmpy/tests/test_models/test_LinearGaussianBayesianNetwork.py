@@ -138,10 +138,39 @@ class TestLGBNMethods(unittest.TestCase):
         x1 = 1 + rng.normal(0, 2, 10000)
         x2 = np.full(10000, 1.0)
         x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
-        df_equ = pd.DataFrame({"x1": x1, "x3": x3})
+        df_equ = pd.DataFrame({"x1": x1, "x3": x3, "x2": do["x2"]})
 
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
+
+    def test_simulate_against_manual_results(self):
+        model = LinearGaussianBayesianNetwork(
+            [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
+        )
+
+        cpd_X1 = LinearGaussianCPD("X1", beta=[0.0], std=1.0, evidence=[])
+        cpd_X2 = LinearGaussianCPD("X2", beta=[0.0, 2.0], std=1.0, evidence=["X1"])
+        cpd_X3 = LinearGaussianCPD(
+            "X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"]
+        )
+
+        model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
+
+        df = model.simulate(n_samples=100000, seed=42, do={"X1": 1.0})
+
+        E_X1 = 1.0
+        E_X2 = 2.0 * E_X1
+        E_X3 = -E_X1 + 0.5 * E_X2
+
+        expected_mean = np.array([E_X1, E_X2, E_X3])
+
+        expected_cov = np.array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.5], [0.0, 0.5, 1.25]])
+
+        sim_mean = df[["X1", "X2", "X3"]].mean().values
+        sim_cov = df[["X1", "X2", "X3"]].cov().values
+
+        np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
+        np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
 
     def test_fit(self):
         # Test fit on a simple model

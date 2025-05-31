@@ -247,6 +247,39 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
+    def copy(self):
+        """
+        Returns a copy of the model.
+
+        Returns
+        -------
+        Model's copy: pgmpy.models.LinearGaussianBayesianNetwork
+            Copy of the model on which the method was called.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('A', 'B'), ('B', 'C')])
+        >>> cpd_a = LinearGaussianCPD(variable='A', beta=[1], std=4)
+        >>> cpd_b = LinearGaussianCPD(variable='B', beta=[-5, 0.5], std=4, evidence=['A'])
+        >>> cpd_c = LinearGaussianCPD(variable='C', beta=[4, -1], std=3, evidence=["x2"])
+        >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+        >>> copy_model = model.copy()
+        >>> copy_model.nodes()
+        NodeView(('A', 'B', 'C'))
+        >>> copy_model.edges()
+        OutEdgeView([('A', 'B'), ('B', 'C')])
+        >>> len(copy_model.get_cpds())
+        3
+        """
+        model_copy = LinearGaussianBayesianNetwork()
+        model_copy.add_nodes_from(self.nodes())
+        model_copy.add_edges_from(self.edges())
+        if self.cpds:
+            model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+        return model_copy
+
     def simulate(
         self, n_samples=1000, do=None, evidence=None, seed=None, missing_prob=None
     ):
@@ -290,19 +323,11 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=500, seed=42)
         """
-        # Step 1: Check if all arguments are specified
+        # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
 
         do = {} if do is None else do
 
-        # Step 2: Check if there are any common variables in do and evidence
-        common_vars = set(do.keys()).intersection(set(evidence.keys()))
-        if common_vars:
-            raise ValueError(
-                f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
-            )
-
-        # Step 3: Ensure all variables in the intervention exist in the model's nodes
         nodes = list(do.keys())
 
         if not set(nodes).issubset(set(self.nodes())):
@@ -315,11 +340,15 @@ class LinearGaussianBayesianNetwork(DAG):
                 "Each node in the model should have a CPD associated with it"
             )
 
-        # Step 4: If do is specified, modify the network structure.
+        common_vars = set(do.keys()).intersection(set(evidence.keys()))
+        if common_vars:
+            raise ValueError(
+                f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
+            )
+
+        # Step 2: If do is specified, modify the network structure.
         if do != {}:
-            model = LinearGaussianBayesianNetwork(self.edges())
-            model.add_nodes_from(self.nodes())
-            model.add_cpds(*self.cpds)
+            model = self.copy()
             for var, val in do.items():
                 for parent in list(model.get_parents(var)):
                     model.remove_edge(parent, var)
@@ -360,6 +389,7 @@ class LinearGaussianBayesianNetwork(DAG):
         evidence_var = list(evidence.keys())
         sample_var = [v for v in variables if v not in evidence_var]
 
+        # Step 4: Sample according to evidence
         if len(evidence) == 0:
             df = pd.DataFrame(
                 rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
@@ -389,6 +419,10 @@ class LinearGaussianBayesianNetwork(DAG):
                 df[mv] = df_missing[mv].values
 
             df = df[variables]
+
+        # Step 5: Add do variables to the final dataframe
+        for do_var, do_val in do.items():
+            df[do_var] = do_val
 
         return df
 
