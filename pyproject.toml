@@ -48,13 +48,14 @@ tests = [
   "coverage>=4.3.4",
   "mock",
   "black",
-  "pre-commit",
-  "pygraphviz"
+  "pre-commit"
 ]
 optional = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm==1.61.15"
+  "litellm==1.61.15",
+  "pyparsing>=3.0",
+  "pygraphviz"
 ]
 all = [
   "networkx>=3.0",
