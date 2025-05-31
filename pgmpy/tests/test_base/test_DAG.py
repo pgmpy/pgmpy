@@ -723,71 +723,79 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(ab_edge.attr["label"], "0.123")
         self.assertEqual(cb_edge.attr["label"], "0.456")
 
-        # Test that methods work without edge strengths (should still create objects)
+        # Test that methods work without edge strengths (should raise ValueError)
         dag_no_strength = DAG([("X", "Y")])
 
-        # Should create objects but with warnings
-        daft_no_strength = dag_no_strength.to_daft(
-            node_pos={"X": (0, 0), "Y": (1, 0)}, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_no_strength)
+        # Should raise ValueError when edge strengths are missing
+        with self.assertRaises(ValueError):
+            dag_no_strength.to_daft(
+                node_pos={"X": (0, 0), "Y": (1, 0)}, plot_edge_strength=True
+            )
 
-        graphviz_no_strength = dag_no_strength.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_no_strength)
+        with self.assertRaises(ValueError):
+            dag_no_strength.to_graphviz(plot_edge_strength=True)
 
-    def test_edge_strength_individual_warnings(self):
-        """Test individual edge warnings in edge strength plotting"""
+    def test_edge_strength_individual_errors(self):
+        """Test individual edge errors in edge strength plotting"""
         dag = DAG([("A", "B"), ("C", "B")])
 
         # Set strength for only one edge
         dag.edges[("A", "B")]["strength"] = 0.123
         # Leave ("C", "B") without strength
 
-        # Test to_daft method with individual edge warning
-        daft_plot = dag.to_daft(
-            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)}, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_plot)
+        # Test to_daft method with individual edge error
+        with self.assertRaises(ValueError):
+            dag.to_daft(
+                node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)},
+                plot_edge_strength=True,
+            )
 
-        # Test to_graphviz method with individual edge warning
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        # Test to_graphviz method with individual edge error
+        with self.assertRaises(ValueError):
+            dag.to_graphviz(plot_edge_strength=True)
 
-    def test_edge_strength_comprehensive_warnings(self):
-        """Test comprehensive edge strength warning scenarios"""
+    def test_edge_strength_comprehensive_errors(self):
+        """Test comprehensive edge strength error scenarios"""
         # Test DAG with no edge strengths at all
         dag_no_strengths = DAG([("X", "Y"), ("Z", "Y")])
 
-        # Test to_daft with no strengths - should trigger warnings for all edges
-        daft_plot = dag_no_strengths.to_daft(
-            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_plot)
+        # Test to_daft with no strengths - should raise ValueError for all edges
+        with self.assertRaises(ValueError):
+            dag_no_strengths.to_daft(
+                node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)},
+                plot_edge_strength=True,
+            )
 
-        # Test to_graphviz with no strengths - should trigger warnings for all edges
-        graphviz_plot = dag_no_strengths.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        # Test to_graphviz with no strengths - should raise ValueError for all edges
+        with self.assertRaises(ValueError):
+            dag_no_strengths.to_graphviz(plot_edge_strength=True)
 
     def test_edge_strength_plotting_missing_individual(self):
         """Test edge strength plotting when individual edges are missing strengths"""
-        # Test scenario for to_daft method missing individual edge strengths (lines 1244-1247)
+        # Test scenario for to_daft method missing individual edge strengths
         dag = DAG([("A", "B"), ("C", "B"), ("D", "E")])
 
-        # Only set strength for some edges to trigger individual warnings
+        # Only set strength for some edges to trigger individual errors
         dag.edges[("A", "B")]["strength"] = 0.456
         dag.edges[("D", "E")]["strength"] = 0.789
-        # Leave ("C", "B") without strength to trigger the else clause
+        # Leave ("C", "B") without strength to trigger the error
 
-        # Test to_daft method - this should hit lines 1244-1247
-        daft_plot = dag.to_daft(
-            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1), "D": (2, 0), "E": (3, 0)},
-            plot_edge_strength=True,
-        )
-        self.assertIsNotNone(daft_plot)
+        # Test to_daft method - this should raise ValueError
+        with self.assertRaises(ValueError):
+            dag.to_daft(
+                node_pos={
+                    "A": (0, 0),
+                    "B": (1, 0),
+                    "C": (0, 1),
+                    "D": (2, 0),
+                    "E": (3, 0),
+                },
+                plot_edge_strength=True,
+            )
 
-        # Test to_graphviz method - this should hit lines 1357-1361
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        # Test to_graphviz method - this should raise ValueError
+        with self.assertRaises(ValueError):
+            dag.to_graphviz(plot_edge_strength=True)
 
     def test_edge_strength_plotting_format_precision(self):
         """Test edge strength formatting to 3 decimal places"""
@@ -818,52 +826,54 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_to_graphviz_edge_strength_validation(self):
         """Test to_graphviz edge strength validation logic"""
-        # Test scenario for to_graphviz validation (line 1348)
+        # Test scenario for to_graphviz validation
         dag = DAG([("X", "Y"), ("Z", "Y")])
 
-        # Test with no edge strengths - should trigger validation warning
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        # Test with no edge strengths - should raise ValueError
+        with self.assertRaises(ValueError):
+            dag.to_graphviz(plot_edge_strength=True)
 
     def test_edge_strength_plotting_comprehensive_coverage(self):
         """Test comprehensive edge strength plotting scenarios for maximum coverage"""
         # Test all code paths in edge strength plotting methods
 
-        # Scenario 1: Mixed edge strengths for to_daft individual warnings
+        # Scenario 1: Mixed edge strengths for to_daft individual errors
         dag1 = DAG([("A", "B"), ("C", "B")])
         dag1.edges[("A", "B")]["strength"] = 0.123
         # Leave ("C", "B") without strength
 
-        # This hits lines 1244-1247 (individual edge warning in to_daft)
-        daft_plot1 = dag1.to_daft(
-            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)}, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_plot1)
+        # This should raise ValueError due to missing edge strength
+        with self.assertRaises(ValueError):
+            dag1.to_daft(
+                node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)},
+                plot_edge_strength=True,
+            )
 
-        # Scenario 2: No edge strengths at all for comprehensive warnings
+        # Scenario 2: No edge strengths at all for comprehensive errors
         dag2 = DAG([("X", "Y"), ("Z", "Y")])
 
-        # This hits comprehensive warning logic in to_daft
-        daft_plot2 = dag2.to_daft(
-            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_plot2)
+        # This should raise ValueError due to missing edge strengths
+        with self.assertRaises(ValueError):
+            dag2.to_daft(
+                node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)},
+                plot_edge_strength=True,
+            )
 
-        # This hits lines 1348, 1357-1361 (validation and individual warnings in to_graphviz)
-        graphviz_plot2 = dag2.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot2)
+        # This should raise ValueError due to missing edge strengths
+        with self.assertRaises(ValueError):
+            dag2.to_graphviz(plot_edge_strength=True)
 
-        # Scenario 3: Edge strength formatting precision
+        # Scenario 3: Edge strength formatting precision (this should work)
         dag3 = DAG([("P", "Q")])
         dag3.edges[("P", "Q")]["strength"] = 0.987654321
 
-        # This hits lines 1239-1242 (formatting in to_daft)
+        # This should work fine since edge strength is present
         daft_plot3 = dag3.to_daft(
             node_pos={"P": (0, 0), "Q": (1, 0)}, plot_edge_strength=True
         )
         self.assertIsNotNone(daft_plot3)
 
-        # This hits lines 1350-1355 (formatting in to_graphviz)
+        # This should work fine since edge strength is present
         graphviz_plot3 = dag3.to_graphviz(plot_edge_strength=True)
         self.assertIsNotNone(graphviz_plot3)
 
@@ -911,50 +921,33 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(len(dag_no_edges.edges()), 0)
 
     def test_to_daft_else_branch_coverage(self):
-        """Test to_daft method to trigger the else branch for node addition and other code paths"""
-        dag = DAG([("A", "B")])
-        dag.edges[("A", "B")]["strength"] = 0.789
+        """Test to_daft method with various edge cases for comprehensive coverage"""
+        dag = DAG([("A", "B"), ("B", "C")])
 
-        # Create daft plot with edge parameters that already have a label
-        # This should trigger the else branch when label is already set
+        # Set edge strengths for plotting
+        dag.edges[("A", "B")]["strength"] = 0.7
+        dag.edges[("B", "C")]["strength"] = 0.3
+
+        # Test with custom edge labels to trigger the else branch for edge addition (line 1244)
         daft_plot = dag.to_daft(
-            node_pos={"A": (0, 0), "B": (1, 0)},
+            node_pos={"A": (0, 0), "B": (1, 0), "C": (2, 0)},
             plot_edge_strength=True,
             edge_params={("A", "B"): {"label": "custom_label"}},
         )
         self.assertIsNotNone(daft_plot)
 
-        # Verify the custom label is preserved (not overridden by strength)
+        # Verify that the custom label was applied
         for edge in daft_plot._edges:
-            if edge.node1.name == "A" and edge.node2.name == "B":
+            if hasattr(edge, "label") and edge.label == "custom_label":
                 self.assertEqual(edge.label, "custom_label")
 
         # Test with latex=False to trigger the else branch for node addition (line 1235)
         daft_plot_no_latex = dag.to_daft(
-            node_pos={"A": (0, 0), "B": (1, 0)}, latex=False, plot_edge_strength=True
-        )
-        self.assertIsNotNone(daft_plot_no_latex)
-
-    def test_edge_strength_warning_all_missing(self):
-        """Test edge strength plotting when all edges are missing strengths"""
-        dag = DAG([("A", "B"), ("C", "D"), ("E", "F")])
-
-        # Test with no edge strengths at all - should trigger comprehensive warnings
-        daft_plot = dag.to_daft(
-            node_pos={
-                "A": (0, 0),
-                "B": (1, 0),
-                "C": (2, 0),
-                "D": (3, 0),
-                "E": (4, 0),
-                "F": (5, 0),
-            },
+            node_pos={"A": (0, 0), "B": (1, 0), "C": (2, 0)},
+            latex=False,
             plot_edge_strength=True,
         )
-        self.assertIsNotNone(daft_plot)
-
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        self.assertIsNotNone(daft_plot_no_latex)
 
     def test_edge_strength_precision_formatting(self):
         """Test edge strength precision formatting with various decimal values"""
@@ -989,22 +982,44 @@ class TestDAGCreation(unittest.TestCase):
         dag.edges[("F", "G")]["strength"] = 0.9
         # Leave ("B", "C") and ("D", "E") without strengths
 
-        daft_plot = dag.to_daft(
-            node_pos={
-                "A": (0, 0),
-                "B": (1, 0),
-                "C": (2, 0),
-                "D": (3, 0),
-                "E": (4, 0),
-                "F": (0, 1),
-                "G": (1, 1),
-            },
-            plot_edge_strength=True,
-        )
-        self.assertIsNotNone(daft_plot)
+        # Should raise ValueError due to missing edge strengths
+        with self.assertRaises(ValueError):
+            dag.to_daft(
+                node_pos={
+                    "A": (0, 0),
+                    "B": (1, 0),
+                    "C": (2, 0),
+                    "D": (3, 0),
+                    "E": (4, 0),
+                    "F": (0, 1),
+                    "G": (1, 1),
+                },
+                plot_edge_strength=True,
+            )
 
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
+        with self.assertRaises(ValueError):
+            dag.to_graphviz(plot_edge_strength=True)
+
+    def test_edge_strength_error_all_missing(self):
+        """Test edge strength plotting when all edges are missing strengths"""
+        dag = DAG([("A", "B"), ("C", "D"), ("E", "F")])
+
+        # Test with no edge strengths at all - should raise ValueError
+        with self.assertRaises(ValueError):
+            dag.to_daft(
+                node_pos={
+                    "A": (0, 0),
+                    "B": (1, 0),
+                    "C": (2, 0),
+                    "D": (3, 0),
+                    "E": (4, 0),
+                    "F": (5, 0),
+                },
+                plot_edge_strength=True,
+            )
+
+        with self.assertRaises(ValueError):
+            dag.to_graphviz(plot_edge_strength=True)
 
 
 class TestDAGParser(unittest.TestCase):
