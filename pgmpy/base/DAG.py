@@ -1168,6 +1168,19 @@ class DAG(nx.DiGraph):
         ...             node_params={'a': {'shape': 'rectangle'}})
         <daft.PGM at 0x7f9bb48b0bb0>
         """
+        # Validate edge strengths if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                logger.warning(
+                    f"Edge strength not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
+
         try:
             from daft import PGM
         except ImportError as e:
@@ -1236,19 +1249,13 @@ class DAG(nx.DiGraph):
                 extra_params = dict()
 
             # Add edge strength as label if requested
-            if plot_edge_strength:
-                if "strength" in self.edges[(u, v)]:
-                    strength_value = self.edges[(u, v)]["strength"]
-                    # Format the strength value to 3 decimal places
-                    strength_label = f"{strength_value:.3f}"
-                    # If user didn't provide a custom label, use the strength
-                    if "label" not in extra_params:
-                        extra_params["label"] = strength_label
-                else:
-                    logger.warning(
-                        f"Edge strength not found for edge ({u}, {v}). "
-                        "Use edge_strength() method to compute strengths first."
-                    )
+            if plot_edge_strength and "strength" in self.edges[(u, v)]:
+                strength_value = self.edges[(u, v)]["strength"]
+                # Format the strength value to 3 decimal places
+                strength_label = f"{strength_value:.3f}"
+                # If user didn't provide a custom label, use the strength
+                if "label" not in extra_params:
+                    extra_params["label"] = strength_label
 
             daft_pgm.add_edge(u, v, **extra_params)
 
@@ -1346,6 +1353,19 @@ class DAG(nx.DiGraph):
         >>> model.to_graphviz()
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         """
+        # Validate edge strengths if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                logger.warning(
+                    f"Edge strength not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
+
         agraph = nx.nx_agraph.to_agraph(self)
         # Add edge strength labels if requested
         if plot_edge_strength:
@@ -1354,11 +1374,6 @@ class DAG(nx.DiGraph):
                     strength_value = self.edges[(u, v)]["strength"]
                     strength_label = f"{strength_value:.3f}"
                     agraph.get_edge(u, v).attr["label"] = strength_label
-                else:
-                    logger.warning(
-                        f"Edge strength not found for edge ({u}, {v}). "
-                        "Use edge_strength() method to compute strengths first."
-                    )
         return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
