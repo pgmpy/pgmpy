@@ -176,13 +176,12 @@ class FunctionalCPD(BaseFactor):
                     samples = pyro.sample(f"{self.variable}_vectorized", dists)
                     sampled_values = samples.detach().numpy()
             else:
-
-                def sample_one(i):
-                    row = parent_sample.iloc[i]
-                    return pyro.sample(f"{self.variable}_{i}", self.fn(row)).item()
-
-                with ThreadPoolExecutor() as executor:
-                    sampled_values = list(executor.map(sample_one, range(n_samples)))
+                for i in range(n_samples):
+                    sampled_values.append(
+                        pyro.sample(
+                            f"{self.variable}", self.fn(parent_sample.iloc[i, :])
+                        ).item()
+                    )
 
         else:
             if self.vectorized:
@@ -196,14 +195,9 @@ class FunctionalCPD(BaseFactor):
                     samples = pyro.sample(f"{self.variable}", distribution)
                     sampled_values = samples.detach().numpy()
             else:
-                with ThreadPoolExecutor() as executor:
-                    sampled_values = list(
-                        executor.map(
-                            lambda _: pyro.sample(
-                                f"{self.variable}", self.fn(None)
-                            ).item(),
-                            range(n_samples),
-                        )
+                for i in range(n_samples):
+                    sampled_values.append(
+                        pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
                     )
 
         sampled_values = np.array(sampled_values)

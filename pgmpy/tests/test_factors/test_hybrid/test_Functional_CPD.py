@@ -128,9 +128,9 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    def test_sample_parallel(self):
+    def test_sample_iterative(self):
         """
-        Test FunctionalCPD with parallelized iterative sampling (vectorized=False).
+        Test FunctionalCPD with iterative sampling (vectorized=False).
         """
 
         def row_fn(row):
@@ -163,10 +163,10 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # Test parent sample none parallelized
-    def test_parallel_without_parent(self):
+    # Test parent sample none iterative
+    def test_iterative_without_parent(self):
         """
-        Test FunctionalCPD with parallelized iterative sampling (vectorized=False) without parents.
+        Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
         """
 
         def iterative_fn(parent_sample):
@@ -177,8 +177,8 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # This test needs to be commented out as the method sample_v0 is not needed in actual use.
-    def test_sampling_time_vectorized_vs_parallel(self):
+    # Benchmark test to see performance improvement between vectorized vs iterative. Use -s option to run this test to be able to see prints.
+    def test_sampling_time_vectorized_vs_iterative(self):
         """
         Compare sampling time between vectorized=True and vectorized=False.
         """
@@ -213,19 +213,8 @@ class TestFCPD(unittest.TestCase):
         _ = cpd_iter.sample(n_samples=n_samples, parent_sample=parent_samples)
         end_iter = time.time()
 
-        cp_iter_old = FunctionalCPD(
-            "x3", fn=fn_iterative, parents=["x1", "x2"], vectorized=False
-        )
-        start_iter_old = time.time()
-        _ = cp_iter_old.sample_v0(n_samples=n_samples, parent_sample=parent_samples)
-        end_iter_old = time.time()
-
         print(f"\nVectorized sampling time   : {end_vec - start_vec:.4f} seconds")
         print(
-            f"Iterative sampling time (parallel)   : {end_iter - start_iter:.4f} seconds"
+            f"Iterative sampling time iterative  : {end_iter - start_iter:.4f} seconds"
         )
-        print(
-            f"Iterative sampling time existing implemetation : {end_iter_old - start_iter_old:.4f} seconds"
-        )
-
-        self.assertTrue(True)
+        self.assertTrue((end_vec - start_vec) < (end_iter - start_iter))
