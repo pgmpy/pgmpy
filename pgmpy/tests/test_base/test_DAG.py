@@ -4,9 +4,11 @@ import os
 import unittest
 import warnings
 
+import daft
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pygraphviz
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
@@ -736,6 +738,146 @@ class TestDAGCreation(unittest.TestCase):
 
         self.assertIsNotNone(daft_no_strength)
         self.assertIsNotNone(graphviz_no_strength)
+
+    def test_edge_strength_individual_warnings(self):
+        """Test individual edge warnings in edge strength plotting"""
+        dag = DAG([("A", "B"), ("C", "B")])
+
+        # Set strength for only one edge
+        dag.edges[("A", "B")]["strength"] = 0.123
+        # Leave ("C", "B") without strength
+
+        # Test to_daft method with individual edge warning
+        daft_plot = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot)
+
+        # Test to_graphviz method with individual edge warning
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+    def test_edge_strength_comprehensive_warnings(self):
+        """Test comprehensive edge strength warning scenarios"""
+        # Test DAG with no edge strengths at all
+        dag_no_strengths = DAG([("X", "Y"), ("Z", "Y")])
+
+        # Test to_daft with no strengths - should trigger warnings for all edges
+        daft_plot = dag_no_strengths.to_daft(
+            node_pos={"X": (0, 0), "Y": (1, 0), "Z": (0, 1)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot)
+
+        # Test to_graphviz with no strengths - should trigger warnings for all edges
+        graphviz_plot = dag_no_strengths.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+    def test_edge_strength_plotting_missing_individual(self):
+        """Test edge strength plotting when individual edges are missing strengths"""
+        # Test scenario for to_daft method missing individual edge strengths (lines 1244-1247)
+        dag = DAG([("A", "B"), ("C", "B"), ("D", "E")])
+
+        # Only set strength for some edges to trigger individual warnings
+        dag.edges[("A", "B")]["strength"] = 0.456
+        dag.edges[("D", "E")]["strength"] = 0.789
+        # Leave ("C", "B") without strength to trigger the else clause
+
+        # Test to_daft method - this should hit lines 1244-1247
+        daft_plot = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0), "C": (0, 1), "D": (2, 0), "E": (3, 0)},
+            plot_edge_strength=True,
+        )
+        self.assertIsNotNone(daft_plot)
+
+        # Test to_graphviz method - this should hit lines 1357-1361
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+    def test_edge_strength_plotting_format_precision(self):
+        """Test edge strength formatting to 3 decimal places"""
+        # Test scenario for formatting lines 1239-1242
+        dag = DAG([("A", "B")])
+
+        # Set edge strength with many decimal places
+        dag.edges[("A", "B")]["strength"] = 0.123456789
+
+        # Test to_daft method with precision formatting (lines 1239-1242)
+        daft_plot = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0)}, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot)
+
+        # Verify the edge label is formatted correctly
+        for edge in daft_plot._edges:
+            if edge.node1.name == "A" and edge.node2.name == "B":
+                self.assertEqual(edge.label, "0.123")
+
+        # Test to_graphviz method with precision formatting (lines 1350-1355)
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+        # Verify the edge label is formatted correctly
+        ab_edge = graphviz_plot.get_edge("A", "B")
+        self.assertEqual(ab_edge.attr["label"], "0.123")
+
+    def test_to_graphviz_edge_strength_validation(self):
+        """Test to_graphviz edge strength validation logic"""
+        # Test scenario for to_graphviz validation (line 1348)
+        dag = DAG([("X", "Y"), ("Z", "Y")])
+
+        # Test with no edge strengths - should trigger validation warning
+        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
+        self.assertIsNotNone(graphviz_plot)
+
+    def test_get_random_comprehensive(self):
+        """Test get_random method with various parameters including latents"""
+        # Test with default parameters
+        dag = DAG.get_random()
+        self.assertEqual(len(dag.nodes()), 5)
+        self.assertEqual(len(dag.latents), 0)
+
+        # Test with latents=True
+        dag_with_latents = DAG.get_random(n_nodes=4, latents=True, seed=42)
+        self.assertEqual(len(dag_with_latents.nodes()), 4)
+        # Latents could be any subset, so just check it's set
+
+        # Test with custom node names and latents
+        custom_names = ["A", "B", "C"]
+        dag_custom = DAG.get_random(
+            n_nodes=3, node_names=custom_names, latents=True, seed=123
+        )
+        self.assertEqual(set(dag_custom.nodes()), set(custom_names))
+
+        # Test edge probability scenarios
+        dag_no_edges = DAG.get_random(n_nodes=3, edge_prob=0.0, seed=456)
+        self.assertEqual(len(dag_no_edges.edges()), 0)
+
+    def test_to_daft_else_branch(self):
+        """Test to_daft method to trigger the else branch for node addition"""
+        dag = DAG([("A", "B")])
+
+        # Add edge strength to trigger strength plotting with label override
+        dag.edges[("A", "B")]["strength"] = 0.789
+
+        # Create daft plot with edge parameters that already have a label
+        # This should trigger the else branch (line 1235) in to_daft
+        daft_plot = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0)},
+            plot_edge_strength=True,
+            edge_params={("A", "B"): {"label": "custom_label"}},
+        )
+        self.assertIsNotNone(daft_plot)
+
+        # Verify the custom label is preserved (not overridden by strength)
+        for edge in daft_plot._edges:
+            if edge.node1.name == "A" and edge.node2.name == "B":
+                self.assertEqual(edge.label, "custom_label")
+
+        # Test with latex=False to trigger the else branch for node addition (line 1235)
+        daft_plot_no_latex = dag.to_daft(
+            node_pos={"A": (0, 0), "B": (1, 0)}, latex=False, plot_edge_strength=True
+        )
+        self.assertIsNotNone(daft_plot_no_latex)
 
 
 class TestDAGParser(unittest.TestCase):
