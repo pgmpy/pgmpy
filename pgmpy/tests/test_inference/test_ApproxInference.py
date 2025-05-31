@@ -552,7 +552,8 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         """Test query method for marginal distributions with torch backend."""
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.001))
+        print(query_results, ve_results)
 
     def test_query_evidence(self):
         """Test query method with evidence using torch backend."""
