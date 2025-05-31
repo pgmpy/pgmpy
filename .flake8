@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 120
+exclude = docs,tests
+ignore = E203,W503,E501,W605,F401,E741,E722,F811,F405,F821,E712,F541,E266,E201,E202,E231,E221
