@@ -123,10 +123,10 @@ class TestLGBNMethods(unittest.TestCase):
         df_equ = pd.DataFrame(samples, columns=missing_vars)
 
         np_test.assert_array_almost_equal(
-            df.mean()[["x2", "x3"]], df_equ.mean(), decimal=1
+            df.mean()[["x2", "x3"]], df_equ.mean(), decimal=5
         )
         np_test.assert_array_almost_equal(
-            df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=1
+            df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=5
         )
 
     def test_simulate_with_intervention(self):

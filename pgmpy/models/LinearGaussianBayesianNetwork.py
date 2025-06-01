@@ -321,18 +321,31 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.simulate(n_samples=500, seed=42)
+
+        Simple forward sampling
+        >>> model.simulate(n_samples=3, seed=42)
+
+        Sampling with intervention (do)
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+
+        Sampling with evidence
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+
+        Sampling with both intervention and evidence
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
 
         do = {} if do is None else do
 
-        nodes = list(do.keys())
+        do_nodes = list(do.keys())
 
-        if not set(nodes).issubset(set(self.nodes())):
+        invalid_nodes = set(do_nodes) - set(self.nodes())
+        if not set(do_nodes).issubset(set(self.nodes())):
             raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+                f"The following do-nodes are not present in the model: {invalid_nodes}. "
+                f"do argument contains: {do_nodes}"
             )
 
         if len(self.cpds) != len(self.nodes()):
@@ -340,21 +353,24 @@ class LinearGaussianBayesianNetwork(DAG):
                 "Each node in the model should have a CPD associated with it"
             )
 
-        common_vars = set(do.keys()).intersection(set(evidence.keys()))
-        if common_vars:
+        if common_vars := set(do.keys()) & set(evidence.keys()):
             raise ValueError(
                 f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
             )
 
         # Step 2: If do is specified, modify the network structure.
         if do != {}:
+            # Step 2.1: Create a copy of the network
             model = self.copy()
             for var, val in do.items():
+                # Step 2.2: Remove incoming edges to the intervened node as well as remove the CPD's of the intervened nodes.
                 for parent in list(model.get_parents(var)):
                     model.remove_edge(parent, var)
 
                 model.remove_cpds(model.get_cpds(var))
 
+                # Step 2.3 : For each children of an intervened node, change its CPD to remove
+                #  the parent (intervened node) from the evidence and update its intercept accordingly
                 for child in model.get_children(var):
                     child_cpd = model.get_cpds(child)
 
