@@ -65,6 +65,53 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.model.add_cpds, 1)
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
 
+    def test_remove_cpds(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2"), ("X2", "X3")])
+
+        cpd_X1 = LinearGaussianCPD("X1", beta=[1.0], std=2.0)
+        cpd_X2 = LinearGaussianCPD("X2", beta=[-1.0, 0.5], std=1.5, evidence=["X1"])
+        cpd_X3 = LinearGaussianCPD("X3", beta=[0.0, 1.0], std=1.0, evidence=["X2"])
+
+        model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
+
+        self.assertEqual(len(model.get_cpds()), 3)
+
+        model.remove_cpds(cpd_X2, cpd_X3)
+
+        remaining_cpds = model.get_cpds()
+        self.assertEqual(len(remaining_cpds), 1)
+        self.assertEqual(remaining_cpds[0], cpd_X1)
+
+        self.assertNotIn(cpd_X2, remaining_cpds)
+        self.assertNotIn(cpd_X3, remaining_cpds)
+
+    def test_copy(self):
+        model = LinearGaussianBayesianNetwork([("A", "B"), ("B", "C")])
+        cpd_a = LinearGaussianCPD(variable="A", beta=[1], std=4)
+        cpd_b = LinearGaussianCPD(variable="B", beta=[-5, 0.5], std=4, evidence=["A"])
+        cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
+
+        model.add_cpds(cpd_a, cpd_b, cpd_c)
+
+        copy_model = model.copy()
+
+        assert set(copy_model.nodes()) == set(model.nodes())
+        assert set(copy_model.edges()) == set(model.edges())
+
+        original_cpds = model.get_cpds()
+        copied_cpds = copy_model.get_cpds()
+
+        assert len(original_cpds) == len(copied_cpds)
+        for orig_cpd, copied_cpd in zip(original_cpds, copied_cpds):
+            assert orig_cpd.variable == copied_cpd.variable
+            assert orig_cpd.evidence == copied_cpd.evidence
+            np_test.assert_array_almost_equal(orig_cpd.beta, copied_cpd.beta)
+            assert orig_cpd.std == copied_cpd.std
+
+        model.remove_cpds(cpd_b)
+        assert len(model.get_cpds()) == 2
+        assert len(copy_model.get_cpds()) == 3
+
     def test_to_joint_gaussian(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         mean, cov = self.model.to_joint_gaussian()
@@ -171,6 +218,21 @@ class TestLGBNMethods(unittest.TestCase):
 
         np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
         np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
+
+    def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
+        model = LinearGaussianBayesianNetwork([("A", "B")])
+        cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
+        cpd_b = LinearGaussianCPD("B", beta=[0.5, 2.0], std=1.0, evidence=["A"])
+        model.add_cpds(cpd_a, cpd_b)
+
+        with self.assertRaisesRegex(ValueError, "do-nodes.*not present.*X"):
+            model.simulate(n_samples=100, do={"X": 5.0})
+
+        with self.assertRaisesRegex(ValueError, "evidence-nodes.*not present.*Y"):
+            model.simulate(n_samples=100, evidence={"Y": 1.0})
+
+        with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
+            model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
 
     def test_fit(self):
         # Test fit on a simple model

@@ -340,12 +340,21 @@ class LinearGaussianBayesianNetwork(DAG):
         do = {} if do is None else do
 
         do_nodes = list(do.keys())
+        evidence_nodes = list(evidence.keys())
+        rng = np.random.default_rng(seed=seed)
 
         invalid_nodes = set(do_nodes) - set(self.nodes())
         if not set(do_nodes).issubset(set(self.nodes())):
             raise ValueError(
                 f"The following do-nodes are not present in the model: {invalid_nodes}. "
                 f"do argument contains: {do_nodes}"
+            )
+
+        invalid_nodes = set(evidence_nodes) - set(self.nodes())
+        if not set(evidence_nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"The following evidence-nodes are not present in the model: {invalid_nodes}. "
+                f"evidence argument contains: {evidence_nodes}"
             )
 
         if len(self.cpds) != len(self.nodes()):
@@ -400,7 +409,6 @@ class LinearGaussianBayesianNetwork(DAG):
 
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
-        rng = np.random.default_rng(seed=seed)
 
         evidence_var = list(evidence.keys())
         sample_var = [v for v in variables if v not in evidence_var]
