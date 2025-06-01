@@ -1,11 +1,12 @@
-from .base import Inference
-from .CausalInference import CausalInference
-from .ExactInference import BeliefPropagation
-from .ExactInference import VariableElimination
-from .ExactInference import BeliefPropagationWithMessagePassing
-from .ApproxInference import ApproxInference
-from .dbn_inference import DBNInference
-from .mplp import Mplp
+from pgmpy.inference.base import Inference
+from pgmpy.inference.CausalInference import CausalInference
+from pgmpy.inference.ExactInference import BeliefPropagation
+from pgmpy.inference.ExactInference import VariableElimination
+from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
+from pgmpy.inference.ApproxInference import ApproxInference
+from pgmpy.inference.dbn_inference import DBNInference
+from pgmpy.inference.mplp import Mplp
+from pgmpy.inference.visualization import plot_causal_graph
 
 __all__ = [
     "Inference",
@@ -19,4 +20,5 @@ __all__ = [
     "GibbsSampling",
     "Mplp",
     "continuous",
+    "plot_causal_graph",
 ]
