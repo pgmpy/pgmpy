@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import itertools
+from os import PathLike
+from typing import Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
@@ -74,10 +76,10 @@ class DAG(nx.DiGraph):
 
     def __init__(
         self,
-        ebunch=None,
-        latents=set(),
-        lavaan_str=None,
-        dagitty_str=None,
+        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        latents: set[Hashable] = set(),
+        lavaan_str: Optional[list[str]] = None,
+        dagitty_str: Optional[list[str]] = None,
     ):
         if lavaan_str:
             ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
@@ -102,7 +104,11 @@ class DAG(nx.DiGraph):
             raise ValueError(out_str)
 
     @classmethod
-    def from_lavaan(cls, string=None, filename=None):
+    def from_lavaan(
+        cls,
+        string: Optional[str] = None,
+        filename: Optional[str | PathLike] = None,
+    ) -> "DAG":
         """
         Initializes a `DAG` instance using lavaan syntax.
 
@@ -129,7 +135,7 @@ class DAG(nx.DiGraph):
         return cls(lavaan_str=lavaan_str)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None):
+    def from_dagitty(cls, string=None, filename=None) -> "DAG":
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -156,7 +162,9 @@ class DAG(nx.DiGraph):
 
         return cls(dagitty_str=dagitty_str)
 
-    def add_node(self, node, weight=None, latent=False):
+    def add_node(
+        self, node: Hashable, weight: Optional[float] = None, latent: bool = False
+    ):
         """
         Adds a single node to the Graph.
 
@@ -204,7 +212,12 @@ class DAG(nx.DiGraph):
 
         super(DAG, self).add_node(node, weight=weight)
 
-    def add_nodes_from(self, nodes, weights=None, latent=False):
+    def add_nodes_from(
+        self,
+        nodes: Iterable[Hashable],
+        weights: Optional[list[float] | tuple[float]] = None,
+        latent: Sequence[bool] | bool = False,
+    ):
         """
         Add multiple nodes to the Graph.
 
@@ -213,14 +226,14 @@ class DAG(nx.DiGraph):
         Parameters
         ----------
         nodes: iterable container
-            A container of nodes (list, dict, set, or any hashable python
+            A container (list, dict, set) of nodes (str, int or any hashable python
             object).
 
         weights: list, tuple (default=None)
             A container of weights (int, float). The weight value at index i
             is associated with the variable at index i.
 
-        latent: list, tuple (default=False)
+        latent: bool, list, tuple (default=False)
             A container of boolean. The value at index i tells whether the
             node at index i is latent or not.
 
@@ -260,7 +273,7 @@ class DAG(nx.DiGraph):
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
 
-    def add_edge(self, u, v, weight: int | float = None):
+    def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float] = None):
         """
         Add an edge between u and v.
 
@@ -302,7 +315,11 @@ class DAG(nx.DiGraph):
         """
         super(DAG, self).add_edge(u, v, weight=weight)
 
-    def add_edges_from(self, ebunch, weights: list | tuple = None):
+    def add_edges_from(
+        self,
+        ebunch: Iterable[tuple[Hashable, Hashable]],
+        weights: list[float] | tuple[float] | None = None,
+    ):
         """
         Add all the edges in ebunch.
 
@@ -370,7 +387,7 @@ class DAG(nx.DiGraph):
                 else:
                     self.add_edge(edge[0], edge[1], edge[2])
 
-    def get_parents(self, node):
+    def get_parents(self, node: Hashable):
         """
         Returns a list of parents of node.
 
@@ -451,7 +468,7 @@ class DAG(nx.DiGraph):
             node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0
         ]
 
-    def get_children(self, node):
+    def get_children(self, node: Hashable):
         """
         Returns a list of children of node.
         Throws an error if the node is not present in the graph.
@@ -471,7 +488,9 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(self, latex=False, include_latents=False):
+    def get_independencies(
+        self, latex=False, include_latents=False
+    ) -> Independencies | list[str]:
         """
         Computes independencies in the DAG, by checking minimal d-seperation.
 
@@ -512,7 +531,9 @@ class DAG(nx.DiGraph):
         else:
             return independencies.latex_string()
 
-    def local_independencies(self, variables):
+    def local_independencies(
+        self, variables: list[Hashable] | tuple[Hashable, ...] | str
+    ):
         """
         Returns an instance of Independencies containing the local independencies
         of each of the variables.
@@ -549,7 +570,7 @@ class DAG(nx.DiGraph):
                 )
         return independencies
 
-    def is_iequivalent(self, model):
+    def is_iequivalent(self, model: "DAG"):
         """
         Checks whether the given model is I-equivalent
 
@@ -589,7 +610,7 @@ class DAG(nx.DiGraph):
             return True
         return False
 
-    def get_immoralities(self):
+    def get_immoralities(self) -> dict[Hashable, list[tuple[Hashable, Hashable]]]:
         """
         Finds all the immoralities in the model
         A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
@@ -619,7 +640,13 @@ class DAG(nx.DiGraph):
             immoralities[node] = parent_pairs
         return immoralities
 
-    def is_dconnected(self, start, end, observed=None, include_latents=False):
+    def is_dconnected(
+        self,
+        start: Hashable,
+        end: Hashable,
+        observed: Optional[Sequence[Hashable]] = None,
+        include_latents=False,
+    ):
         """
         Returns True if there is an active trail (i.e. d-connection) between
         `start` and `end` node given that `observed` is observed.
@@ -658,7 +685,9 @@ class DAG(nx.DiGraph):
         else:
             return False
 
-    def minimal_dseparator(self, start, end, include_latents=False):
+    def minimal_dseparator(
+        self, start: Hashable, end: Hashable, include_latents=False
+    ) -> set[Hashable]:
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -719,7 +748,7 @@ class DAG(nx.DiGraph):
 
         return minimal_separator
 
-    def get_markov_blanket(self, node):
+    def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
         Returns a markov blanket for a random variable. In the case
         of Bayesian Networks, the markov blanket is the set of
@@ -753,7 +782,14 @@ class DAG(nx.DiGraph):
         blanket_nodes.discard(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables, observed=None, include_latents=False):
+    def active_trail_nodes(
+        self,
+        variables: list[Hashable] | Hashable,
+        observed: Optional[
+            Hashable | list[Hashable] | tuple[Hashable, Hashable]
+        ] = None,
+        include_latents=False,
+    ) -> dict[Hashable, set[Hashable]]:
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -787,6 +823,7 @@ class DAG(nx.DiGraph):
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
         """
+        observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
             if isinstance(observed, set):
                 observed = list(observed)
@@ -833,7 +870,9 @@ class DAG(nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(self, nodes):
+    def _get_ancestors_of(
+        self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]
+    ) -> set[Hashable]:
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
@@ -867,23 +906,123 @@ class DAG(nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
-    # TODO: Commented out till the method is implemented.
-    #     def to_pdag(self):
-    #         """
-    #         Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
-    #
-    #         Returns
-    #         -------
-    #         Partially oriented DAG: pgmpy.base.PDAG
-    #             An instance of pgmpy.base.PDAG.
-    #
-    #         Examples
-    #         --------
-    #
-    #         """
-    #         pass
+    def to_pdag(self):
+        """
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
 
-    def do(self, nodes, inplace=False):
+        Returns
+        -------
+        CPDAG: pgmpy.base.PDAG
+            An instance of pgmpy.base.PDAG representing the CPDAG of the given DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('A', 'B'), ('B', 'C'), ('C', 'D')])
+        >>> pdag = dag.to_pdag()
+        >>> pdag.directed_edges
+        {('A', 'B'), ('B', 'C'), ('C', 'D')}
+
+        References
+        ----------
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        """
+        # Perform a topological sort on the nodes
+        topo_order = list(nx.topological_sort(self))
+        node_order = {node: i for i, node in enumerate(topo_order)}
+
+        # Initialize edge ordering
+        i = 0
+        edge_order = {}
+        unordered_edges = set(self.edges())
+
+        # While there are unordered edges
+        while unordered_edges:
+            # Find lowest ordered node with unordered edges incident into it
+            nodes_with_unordered_edges = {edge[1] for edge in unordered_edges}
+            y = min(nodes_with_unordered_edges, key=lambda x: node_order[x])
+
+            # Find highest ordered node for which x->y is not ordered
+            unordered_edges_into_y = {edge for edge in unordered_edges if edge[1] == y}
+            x = max(
+                (edge[0] for edge in unordered_edges_into_y),
+                key=lambda x: node_order[x],
+            )
+
+            # Label x->y with order i
+            edge_order[(x, y)] = i
+            i += 1
+            unordered_edges.remove((x, y))
+
+        # Label every edge as "unknown"
+        edge_labels = {edge: "unknown" for edge in self.edges()}
+
+        # While there are edges labeled "unknown"
+        while any(label == "unknown" for label in edge_labels.values()):
+            # Let x -> y be the lowest ordered edge that is labeled "unknown"
+            unknown_edges = [
+                (edge, edge_order[edge])
+                for edge, label in edge_labels.items()
+                if label == "unknown"
+            ]
+            x, y = min(unknown_edges, key=lambda x: x[1])[0]
+
+            # Check compelled parents
+            compelled_parents = [
+                w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"
+            ]
+            for w in compelled_parents:
+                if not self.has_edge(w, y):
+                    # Label x -> y and every edge incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                    break
+                else:
+                    # Label w -> y with "compelled"
+                    edge_labels[(w, y)] = "compelled"
+
+            # Check for v-structures
+            if edge_labels.get((x, y)) != "compelled":
+                v_structure_exists = False
+                for z in self.get_parents(y):
+                    if z != x and not self.has_edge(z, x):
+                        v_structure_exists = True
+                        break
+
+                if v_structure_exists:
+                    # Label x -> y and all "unknown" edges incident into y with "compelled"
+                    edge_labels[(x, y)] = "compelled"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "compelled"
+                else:
+                    # Label x -> y and all "unknown" edges incident into y with "reversible"
+                    edge_labels[(x, y)] = "reversible"
+                    for z in self.get_parents(y):
+                        if edge_labels.get((z, y)) == "unknown":
+                            edge_labels[(z, y)] = "reversible"
+
+        # Create PDAG with directed and undirected edges
+        directed_edges = [
+            edge for edge, label in edge_labels.items() if label == "compelled"
+        ]
+        undirected_edges = [
+            edge for edge, label in edge_labels.items() if label == "reversible"
+        ]
+
+        return PDAG(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=self.latents,
+        )
+
+    def do(
+        self,
+        nodes: Hashable | Iterable[Hashable] | tuple[Hashable, Hashable],
+        inplace=False,
+    ):
         """
         Applies the do operator to the graph and returns a new DAG with the
         transformed graph.
@@ -941,7 +1080,7 @@ class DAG(nx.DiGraph):
                 dag.remove_edge(parent, node)
         return dag
 
-    def get_ancestral_graph(self, nodes):
+    def get_ancestral_graph(self, nodes: Iterable[Hashable]):
         """
         Returns the ancestral graph of the given `nodes`. The ancestral graph only
         contains the nodes which are ancestors of at least one of the variables in
@@ -968,7 +1107,7 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos="circular",
+        node_pos: str | dict[Hashable, tuple[int, int]] = "circular",
         latex=True,
         pgm_params={},
         edge_params={},
@@ -1094,7 +1233,13 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False, seed=None):
+    def get_random(
+        n_nodes=5,
+        edge_prob=0.5,
+        node_names: Optional[list[Hashable]] = None,
+        latents=False,
+        seed: Optional[int] = None,
+    ) -> "DAG":
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1171,7 +1316,7 @@ class DAG(nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs):
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -1257,6 +1402,122 @@ class DAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         return dag
 
+    def edge_strength(self, data, edges=None):
+        """
+        Computes the strength of each edge in `edges`. The strength is bounded
+        between 0 and 1, with 1 signifying strong effect.
+
+        The edge strength is defined as the effect size measure of a
+        Conditional Independence test using the parents as the conditional set.
+        The strength quantifies the effect of edge[0] on edge[1] after
+        controlling for any other influence paths. We use a residualization-based
+        CI test[1] to compute the strengths.
+
+        Interpretation:
+        - The strength is the Pillai's Trace effect size of partial correlation.
+        - Measures the strength of linear relationship between the residuals.
+        - Works for any mixture of categorical and continuous variables.
+        - The value is bounded between 0 and 1:
+        - Strength close to 1 → strong dependence.
+        - Strength close to 0 → conditional independence.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Dataset to compute edge strengths on.
+
+        edges : tuple, list, or None (default: None)
+            - None: Compute for all DAG edges.
+            - Tuple (X, Y): Compute for edge X → Y.
+            - List of tuples: Compute for selected edges.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping edges to their strength values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+        >>> # Create a linear Gaussian Bayesian network
+        >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+        >>> # Create CPDs with specific beta values
+        >>> x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
+        >>> y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
+        >>> z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
+        >>> # Add CPDs to the model
+        >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
+        >>> # Simulate data from the model
+        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> # Create DAG and compute edge strengths
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> strengths = dag.edge_strength(data)
+        {('X', 'Y'): np.float64(0.14587166611282304),
+         ('Z', 'Y'): np.float64(0.25683780900125613)}
+
+        References
+        ----------
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        """
+
+        from pgmpy.estimators.CITests import pillai_trace
+
+        # If edges is None, compute for all edges in the DAG
+        if edges is None:
+            edges_to_compute = list(self.edges())
+        # If edges is a single edge tuple
+        elif isinstance(edges, tuple) and len(edges) == 2:
+            edges_to_compute = [edges]
+        # If edges is a list of edge tuples
+        elif isinstance(edges, list) and all(
+            isinstance(edge, tuple) and len(edge) == 2 for edge in edges
+        ):
+            edges_to_compute = edges
+        else:
+            raise ValueError(
+                "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
+            )
+
+        strengths = {}
+        skipped_edges = []
+
+        for edge in edges_to_compute:
+            x, y = edge
+
+            # Get parents of x and y using get_parents instead of predecessors
+            pa_Y = self.get_parents(y)
+
+            # Check if either x or y is a latent node
+            if (
+                x in self.latents
+                or y in self.latents
+                or any(parent in self.latents for parent in pa_Y)
+            ):
+                skipped_edges.append(edge)
+                continue
+
+            # Combine parents for conditioning set (excluding x and y themselves)
+            conditioning_set = set(pa_Y) - {x, y}
+
+            # Run CI test and get effect size
+            effect_size, _ = pillai_trace(
+                X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
+            )
+
+            # Store the edge strength
+            strengths[edge] = effect_size
+
+            # store the values in the graph as well
+            self.edges[edge]["strength"] = effect_size
+
+        if skipped_edges:
+            logger.warning(
+                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
+                "Use CausalInference class for advanced causal effect estimation."
+            )
+
+        return strengths
+
 
 class PDAG(nx.DiGraph):
     """
@@ -1267,7 +1528,12 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch=[], undirected_ebunch=[], latents=[]):
+    def __init__(
+        self,
+        directed_ebunch: list[tuple[Hashable, Hashable]] = [],
+        undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
+        latents: Iterable[Hashable] = [],
+    ):
         """
         Initializes a PDAG class.
 
@@ -1576,7 +1842,7 @@ class PDAG(nx.DiGraph):
         if not inplace:
             return pdag
 
-    def to_dag(self):
+    def to_dag(self) -> "DAG":
         """
         Returns one possible DAG which is represented using the PDAG.
 
@@ -1653,7 +1919,7 @@ class PDAG(nx.DiGraph):
                 break
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self) -> object:
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.

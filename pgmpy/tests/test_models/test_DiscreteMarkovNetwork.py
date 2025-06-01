@@ -273,6 +273,38 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         factors = junction_tree.get_factors()
         self.assertEqual(factors[0], factor_product(*phi))
 
+    def test_junction_tree_with_empty_clique_factors(self):
+        """
+        Test that junction tree correctly handles the case when a clique has no associated factors.
+        This tests the edge case where clique_factors is empty before factor product.
+        """
+        # Create a simple Markov network with 3 nodes in a triangle
+        self.graph.add_edges_from([("A", "B"), ("B", "C"), ("C", "A")])
+
+        # Create factors only for edges A-B and B-C, leaving C-A without a factor
+        phi1 = DiscreteFactor(["A", "B"], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(["B", "C"], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1, phi2)
+
+        # Convert to junction tree
+        junction_tree = self.graph.to_junction_tree()
+
+        # Check that we have a single clique containing all three nodes
+        self.assertEqual(len(junction_tree.nodes()), 1)
+        clique = list(junction_tree.nodes())[0]
+        self.assertEqual(set(clique), {"A", "B", "C"})
+
+        # Verify that the clique potential was created correctly
+        clique_factors = junction_tree.get_factors()
+        self.assertEqual(len(clique_factors), 1)
+        clique_potential = clique_factors[0]
+
+        # Verify the junction tree structure
+        self.assertListEqual(
+            hf.recursive_sorted(junction_tree.nodes()), [["A", "B", "C"]]
+        )
+        self.assertEqual(len(junction_tree.edges()), 0)  # Single clique means no edges
+
     def test_markov_blanket(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
         self.assertListEqual(list(self.graph.markov_blanket("a")), ["b"])
