@@ -14,3 +14,8 @@ repos:
     rev: 24.8.0
     hooks:
       - id: black
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=120"]
