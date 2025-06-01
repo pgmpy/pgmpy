@@ -19,21 +19,20 @@ class TestApproxInferenceBN(unittest.TestCase):
     def test_get_factor_from_df_edge_cases(self):
         """Test _get_factor_from_df with edge cases."""
         model = DiscreteBayesianNetwork([("A", "B")])
-        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
+        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]])
         cpd_b = TabularCPD(
             "B",
             2,
             [[0.8, 0.2], [0.2, 0.8]],
             evidence=["A"],
             evidence_card=[2],
-            state_names={"B": ["b0", "b1"], "A": ["a0", "a1"]},
         )
         model.add_cpds(cpd_a, cpd_b)
 
         inference = ApproxInference(model)
         samples = model.simulate(n_samples=1000)
         grouped_df = samples.groupby(["A"]).size() / samples.shape[0]
-        state_names = {"A": ["a0", "a1"]}
+        state_names = {"A": model.states["A"]}
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
         self.assertIsInstance(result, DiscreteFactor)
         self.assertEqual(set(result.variables), {"A"})
@@ -41,7 +40,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         # Test empty dataframe case
         empty_df = pd.DataFrame(columns=["A", "B"])
         with self.assertRaises(ValueError):
-            ApproxInference._get_factor_from_df(empty_df, {"A": ["a0", "a1"]})
+            ApproxInference._get_factor_from_df(empty_df, {"A": model.states["A"]})
 
         # Test missing state names case
         with self.assertRaises(KeyError):
@@ -50,14 +49,13 @@ class TestApproxInferenceBN(unittest.TestCase):
     def test_get_factor_from_df_multiple_variables(self):
         """Test that _get_factor_from_df works correctly with multiple variables."""
         model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
-        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]], state_names={"A": ["a0", "a1"]})
+        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]])
         cpd_b = TabularCPD(
             "B",
             2,
             [[0.8, 0.2], [0.2, 0.8]],
             evidence=["A"],
             evidence_card=[2],
-            state_names={"B": ["b0", "b1"], "A": ["a0", "a1"]},
         )
         cpd_c = TabularCPD(
             "C",
@@ -65,20 +63,18 @@ class TestApproxInferenceBN(unittest.TestCase):
             [[0.9, 0.1], [0.1, 0.9]],
             evidence=["A"],
             evidence_card=[2],
-            state_names={"C": ["c0", "c1"], "A": ["a0", "a1"]},
         )
         model.add_cpds(cpd_a, cpd_b, cpd_c)
 
         inference = ApproxInference(model)
-
         samples = model.simulate(n_samples=1000)
 
         variables = ["A", "B"]
         grouped_df = samples.groupby(variables).size() / samples.shape[0]
 
         state_names = {
-            "A": model.get_cpds("A").state_names["A"],
-            "B": model.get_cpds("B").state_names["B"],
+            "A": model.states["A"],
+            "B": model.states["B"],
         }
 
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
@@ -90,8 +86,8 @@ class TestApproxInferenceBN(unittest.TestCase):
         # Fix: Use np.isclose instead of direct comparison
         self.assertTrue(np.isclose(np.sum(result.values), 1.0, atol=1e-5))
 
-        self.assertEqual(result.state_names["A"], ["a0", "a1"])
-        self.assertEqual(result.state_names["B"], ["b0", "b1"])
+        self.assertEqual(result.state_names["A"], model.states["A"])
+        self.assertEqual(result.state_names["B"], model.states["B"])
 
     def test_get_distribution_edge_cases(self):
         """Test get_distribution with edge cases."""
@@ -140,17 +136,19 @@ class TestApproxInferenceBN(unittest.TestCase):
                 variables=["HISTORY"], evidence={"PVSAT": "INVALID_STATE"}
             )
 
-        # Test invalid virtual evidence format
+        # Test invalid virtual evidence format - probabilities don't sum to 1
         invalid_virtual_evid = TabularCPD(
             "PAP",
             3,
-            [[0.2], [0.3], [0.5]],
-            state_names={"PAP": ["INVALID", "NORMAL", "HIGH"]},
+            [[0.2], [0.3], [0.2]],  # Sum is 0.7, not 1.0
+            state_names={"PAP": self.alarm_model.states["PAP"]},
         )
+        # Add the invalid CPD to the model to trigger validation
+        self.alarm_model.add_cpds(invalid_virtual_evid)
         with self.assertRaises(ValueError):
-            self.infer_alarm.query(
-                variables=["HISTORY"], virtual_evidence=[invalid_virtual_evid]
-            )
+            self.alarm_model.check_model()
+        # Remove the invalid CPD to keep the model valid
+        self.alarm_model.remove_cpds(invalid_virtual_evid)
 
     def test_query_marg(self):
         """Test query method for marginal distributions."""
@@ -225,7 +223,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             "PAP",
             3,
             [[0.2], [0.3], [0.5]],
-            state_names={"PAP": ["LOW", "NORMAL", "HIGH"]},
+            state_names={"PAP": self.alarm_model.states["PAP"]},
         )
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], virtual_evidence=[virtual_evid]
@@ -387,7 +385,7 @@ class TestApproxInferenceDBN(unittest.TestCase):
         # Test with single time slice
         variables = [("X", 0)]
         grouped_df = self.samples.groupby(variables).size() / self.samples.shape[0]
-        state_names = {("X", 0): ["0", "1"]}
+        state_names = {("X", 0): self.dbn.states[("X", 0)]}
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
 
         self.assertIsInstance(result, DiscreteFactor)
@@ -397,7 +395,10 @@ class TestApproxInferenceDBN(unittest.TestCase):
         # Test with multiple time slices
         variables = [("X", 0), ("Y", 0)]
         grouped_df = self.samples.groupby(variables).size() / self.samples.shape[0]
-        state_names = {("X", 0): ["0", "1"], ("Y", 0): ["0", "1"]}
+        state_names = {
+            ("X", 0): self.dbn.states[("X", 0)],
+            ("Y", 0): self.dbn.states[("Y", 0)],
+        }
         result = ApproxInference._get_factor_from_df(grouped_df, state_names)
 
         self.assertIsInstance(result, DiscreteFactor)
@@ -579,7 +580,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             "PAP",
             3,
             [[0.2], [0.3], [0.5]],
-            state_names={"PAP": ["LOW", "NORMAL", "HIGH"]},
+            state_names={"PAP": self.alarm_model.states["PAP"]},
         )
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], virtual_evidence=[virtual_evid]
