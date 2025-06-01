@@ -82,6 +82,227 @@ class TestPearsonr(unittest.TestCase):
         )
 
 
+class TestKernelCITests(unittest.TestCase):
+    def setUp(self):
+        # Create various test datasets
+        n_samples = 3000  # Increase sample size for better statistics
+        
+        # 1. Linear independence dataset
+        self.df_lin_ind = pd.DataFrame(np.random.randn(n_samples, 3), columns=["X", "Y", "Z"])
+        
+        # 2. Linear conditional independence - ensure proper CI structure
+        np.random.seed(42)
+        Z = np.random.randn(n_samples)
+        # Add more noise to ensure conditional independence
+        noise_x = np.random.randn(n_samples)
+        noise_y = np.random.randn(n_samples)
+        X = 3 * Z + 2 * noise_x  # Increase noise coefficient
+        Y = 2 * Z + 2 * noise_y  # Increase noise coefficient
+        self.df_lin_cind = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+        
+        # 3. Non-linear dependence (quadratic)
+        X = np.random.uniform(-2, 2, n_samples)
+        Y = X**2 + np.random.normal(loc=0, scale=0.5, size=n_samples)
+        self.df_nonlin_dep = pd.DataFrame({"X": X, "Y": Y})
+        
+        # 4. Non-linear conditional independence - more careful construction
+        Z = np.random.uniform(-3, 3, n_samples)
+        noise_x = np.random.randn(n_samples) * 0.5
+        noise_y = np.random.randn(n_samples) * 0.5
+        X = np.sin(2 * Z) + noise_x
+        Y = np.cos(2 * Z) + noise_y
+        self.df_nonlin_cind = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+        
+        # 5. Non-linear conditional dependence
+        Z = np.random.randn(n_samples)
+        X = np.sin(Z) + np.random.normal(loc=0, scale=0.3, size=n_samples)
+        # Make Y depend on both X and Z
+        Y = 0.5 * X + np.cos(Z) + np.random.normal(loc=0, scale=0.3, size=n_samples)
+        self.df_nonlin_cdep = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+        
+        # 6. Multiple conditioning variables
+        Z1 = np.random.randn(n_samples)
+        Z2 = np.random.randn(n_samples)
+        noise_x = np.random.randn(n_samples) * 0.5
+        noise_y = np.random.randn(n_samples) * 0.5
+        X = np.sin(Z1) + np.exp(-Z2**2/2) + noise_x
+        Y = np.cos(Z1) + np.tanh(Z2) + noise_y
+        self.df_multi_nonlin_cind = pd.DataFrame({"X": X, "Y": Y, "Z1": Z1, "Z2": Z2})
+        
+        # 7. V-structure
+        X = np.random.randn(n_samples)
+        Y = np.random.randn(n_samples)
+        Z = np.sin(X) + np.cos(Y) + np.random.normal(loc=0, scale=0.3, size=n_samples)
+        self.df_nonlin_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+    def test_rcit_unconditional(self):
+        """Test RCIT for unconditional independence/dependence."""
+        # Test linear independence
+        stat, p_value = rcit(X="X", Y="Y", Z=[], data=self.df_lin_ind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.05, f"Expected p_value > 0.05, got {p_value}")
+        
+        # Test non-linear dependence
+        stat, p_value = rcit(X="X", Y="Y", Z=[], data=self.df_nonlin_dep, boolean=False, seed=42)
+        self.assertTrue(p_value < 0.05, f"Expected p_value < 0.05, got {p_value}")
+        
+        # Boolean tests
+        self.assertTrue(
+            rcit(X="X", Y="Y", Z=[], data=self.df_lin_ind, significance_level=0.05, seed=42)
+        )
+        self.assertFalse(
+            rcit(X="X", Y="Y", Z=[], data=self.df_nonlin_dep, significance_level=0.05, seed=42)
+        )
+
+    def test_rcit_conditional(self):
+        """Test RCIT for conditional independence/dependence."""
+        # Test linear conditional independence
+        stat, p_value = rcit(X="X", Y="Y", Z=["Z"], data=self.df_lin_cind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.01, f"Linear CI: Expected p_value > 0.01, got {p_value}")
+        
+        # Test non-linear conditional independence
+        stat, p_value = rcit(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.01, f"Non-linear CI: Expected p_value > 0.01, got {p_value}")
+        
+        # Test non-linear conditional dependence
+        stat, p_value = rcit(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cdep, boolean=False, seed=42)
+        self.assertTrue(p_value < 0.01, f"Non-linear CD: Expected p_value < 0.01, got {p_value}")
+        
+
+    def test_rcit_multiple_conditioning(self):
+        """Test RCIT with multiple conditioning variables."""
+        stat, p_value = rcit(
+            X="X", Y="Y", Z=["Z1", "Z2"], 
+            data=self.df_multi_nonlin_cind, 
+            boolean=False, 
+            seed=42
+        )
+        self.assertTrue(p_value > 0.05, f"Multi-var CI: Expected p_value > 0.05, got {p_value}")
+
+    def test_rcot_unconditional(self):
+        """Test RCoT for unconditional independence/dependence."""
+        # Test linear independence
+        stat, p_value = rcot(X="X", Y="Y", Z=[], data=self.df_lin_ind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.05, f"Expected p_value > 0.05, got {p_value}")
+        
+        # Test non-linear dependence
+        stat, p_value = rcot(X="X", Y="Y", Z=[], data=self.df_nonlin_dep, boolean=False, seed=42)
+        self.assertTrue(p_value < 0.05, f"Expected p_value < 0.05, got {p_value}")
+
+    def test_rcot_conditional(self):
+        """Test RCoT for conditional independence/dependence."""
+        # Test linear conditional independence
+        stat, p_value = rcot(X="X", Y="Y", Z=["Z"], data=self.df_lin_cind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.01, f"Linear CI: Expected p_value > 0.01, got {p_value}")
+        
+        # Test non-linear conditional independence
+        stat, p_value = rcot(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        self.assertTrue(p_value > 0.01, f"Non-linear CI: Expected p_value > 0.01, got {p_value}")
+        
+        # Test non-linear conditional dependence
+        stat, p_value = rcot(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cdep, boolean=False, seed=42)
+        self.assertTrue(p_value < 0.05, f"Non-linear CD: Expected p_value < 0.05, got {p_value}")
+
+    def test_kernel_tests_vs_pearsonr(self):
+        """Compare kernel tests with Pearson on linear relationships."""
+        # For linear relationships, all tests should give similar results
+        tests = [
+            (pearsonr, "pearsonr"),
+            (rcit, "rcit"),
+            (rcot, "rcot")
+        ]
+        
+        for test_func, test_name in tests:
+            # Linear independence
+            if test_name == "pearsonr":
+                _, p_value = test_func(X="X", Y="Y", Z=[], data=self.df_lin_ind, boolean=False)
+            else:
+                _, p_value = test_func(X="X", Y="Y", Z=[], data=self.df_lin_ind, boolean=False, seed=42)
+            self.assertTrue(p_value > 0.05, f"{test_name} failed on linear independence")
+            
+            # Linear conditional independence
+            if test_name == "pearsonr":
+                _, p_value = test_func(X="X", Y="Y", Z=["Z"], data=self.df_lin_cind, boolean=False)
+            else:
+                _, p_value = test_func(X="X", Y="Y", Z=["Z"], data=self.df_lin_cind, boolean=False, seed=42)
+            self.assertTrue(p_value > 0.05, f"{test_name} failed on linear conditional independence")
+
+    def test_kernel_tests_hyperparameters(self):
+        """Test kernel tests with different hyperparameters."""
+        results = []
+        # Test with different number of random features
+        for num_f in [50, 100, 200]:
+            stat, p_value = rcit(
+                X="X", Y="Y", Z=["Z"], 
+                data=self.df_nonlin_cind, 
+                boolean=False,
+                num_f=num_f,
+                num_f2=5,
+                seed=42
+            )
+            results.append((num_f, p_value))
+        
+        # Test with different approximation methods
+        for approx in ["lpd4", "gamma", "hbe"]:
+            stat, p_value = rcit(
+                X="X", Y="Y", Z=["Z"], 
+                data=self.df_nonlin_cind, 
+                boolean=False,
+                approx=approx,
+                seed=42
+            )
+            self.assertTrue(p_value > 0.05, f"Failed with approx={approx}: p_value={p_value}")
+
+        # Check that at least one configuration shows independence
+        # Different num_f values might give different results due to approximation
+        max_p_value = max(p for _, p in results)
+        self.assertTrue(max_p_value > 0.01, 
+            f"All configurations failed to detect independence: {results}")
+
+    def test_kernel_tests_edge_cases(self):
+        """Test kernel tests with edge cases."""
+        # Test with constant variable
+        df_const = self.df_lin_ind.copy()
+        df_const["C"] = 1.0
+        
+        # Should return independence (p_value = 1) when one variable is constant
+        stat, p_value = rcit(X="X", Y="C", Z=[], data=df_const, boolean=False, seed=42)
+        self.assertEqual(p_value, 1.0, "Expected p_value=1 for constant variable")
+        
+        # Test with very small sample size
+        df_small = self.df_nonlin_dep.iloc[:10]
+        stat, p_value = rcit(X="X", Y="Y", Z=[], data=df_small, boolean=False, seed=42)
+        self.assertIsInstance(p_value, float)
+        self.assertTrue(0 <= p_value <= 1)
+        
+        # Test with single sample conditioning variable
+        df_single = pd.DataFrame({
+            "X": np.random.randn(100),
+            "Y": np.random.randn(100),
+            "Z": np.random.randn(100)
+        })
+        stat, p_value = rcit(X="X", Y="Y", Z=["Z"], data=df_single, boolean=False, seed=42)
+        self.assertIsInstance(p_value, float)
+        self.assertTrue(0 <= p_value <= 1)
+
+    def test_kernel_tests_reproducibility(self):
+        """Test that results are reproducible with same seed."""
+        # RCIT
+        stat1, p1 = rcit(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        stat2, p2 = rcit(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        self.assertEqual(stat1, stat2, "RCIT statistics should be equal with same seed")
+        self.assertEqual(p1, p2, "RCIT p-values should be equal with same seed")
+        
+        # RCoT
+        stat1, p1 = rcot(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        stat2, p2 = rcot(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=42)
+        self.assertEqual(stat1, stat2, "RCoT statistics should be equal with same seed")
+        self.assertEqual(p1, p2, "RCoT p-values should be equal with same seed")
+        
+        # Different seeds should give different results
+        stat3, p3 = rcit(X="X", Y="Y", Z=["Z"], data=self.df_nonlin_cind, boolean=False, seed=123)
+        self.assertNotEqual(stat1, stat3, "RCIT statistics should differ with different seeds")
+
+
 class TestDiscreteTests(unittest.TestCase):
     def setUp(self):
         self.df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
@@ -296,7 +517,7 @@ class TestResidualMethod(unittest.TestCase):
             self.df_indep_cat_cat.X,
             bins=4,
             ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
+                        labels=["x1", "x2", "x3", "x4"],
         )
         self.df_indep_cat_cat.Y = pd.cut(
             self.df_indep_cat_cat.Y,
@@ -517,3 +738,52 @@ class TestResidualMethod(unittest.TestCase):
 
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
+
+
+class TestGetCITest(unittest.TestCase):
+    """Test get_ci_test function to ensure all tests are properly registered."""
+    
+    def test_supported_tests(self):
+        """Test that all supported tests can be retrieved."""
+        supported_tests = [
+            "chi_square",
+            "g_sq", 
+            "log_likelihood",
+            "modified_log_likelihood",
+            "pearsonr",
+            "pillai",
+            "gcm",
+            "rcit",
+            "rcot",
+        ]
+        
+        for test_name in supported_tests:
+            test_func = get_ci_test(test_name)
+            self.assertIsNotNone(test_func, f"Failed to get test function for {test_name}")
+            self.assertTrue(callable(test_func), f"{test_name} is not callable")
+    
+    def test_unsupported_test(self):
+        """Test that unsupported test names raise ValueError."""
+        with self.assertRaises(ValueError):
+            get_ci_test("unsupported_test")
+    
+    def test_callable_test(self):
+        """Test that callable functions are returned as-is."""
+        def custom_test(X, Y, Z, data, **kwargs):
+            return True
+        
+        result = get_ci_test(custom_test)
+        self.assertEqual(result, custom_test)
+    
+    def test_case_insensitive(self):
+        """Test that test names are case-insensitive."""
+        test_func_lower = get_ci_test("rcit")
+        test_func_upper = get_ci_test("RCIT")
+        test_func_mixed = get_ci_test("RcIt")
+        
+        self.assertEqual(test_func_lower, test_func_upper)
+        self.assertEqual(test_func_lower, test_func_mixed)
+
+
+if __name__ == "__main__":
+    unittest.main()

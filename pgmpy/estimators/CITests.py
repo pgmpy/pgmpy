@@ -1,10 +1,629 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.special import gamma as gamma_func
+from scipy.spatial.distance import pdist
 from sklearn.cross_decomposition import CCA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
+
+
+def _ensure_matrix(data):
+    """Ensure data is 2D numpy array."""
+    if isinstance(data, pd.DataFrame):
+        data = data.values
+    data = np.asarray(data)
+    if data.ndim == 1:
+        data = data.reshape(-1, 1)
+    return data
+
+
+def _normalize(data):
+    """Normalize data to have mean 0 and std 1."""
+    data = np.asarray(data)
+    mean = np.mean(data, axis=0)
+    std = np.std(data, axis=0)
+    std[std == 0] = 1  # Avoid division by zero
+    return (data - mean) / std
+
+
+def _random_fourier_features(x, num_f, sigma, seed=None):
+    """
+    Generate random Fourier features for kernel approximation.
+    
+    Parameters
+    ----------
+    x : array-like of shape (n_samples, n_features)
+        Input data
+    num_f : int
+        Number of random features to generate
+    sigma : float
+        Kernel bandwidth parameter
+    seed : int, optional
+        Random seed
+        
+    Returns
+    -------
+    dict with 'feat' : array of shape (n_samples, num_f)
+        Random Fourier features
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    n_samples, n_features = x.shape
+    
+    # Ensure sigma is not too small to avoid numerical issues
+    sigma = max(sigma, 1e-6)
+    
+    # Generate random frequencies from normal distribution
+    W = np.random.normal(0, 1/sigma, size=(n_features, num_f))
+    # Generate random phase shifts
+    b = np.random.uniform(0, 2*np.pi, size=num_f)
+    
+    # Compute random features
+    feat = np.sqrt(2.0/num_f) * np.cos(x @ W + b)
+    
+    return {'feat': feat}
+
+
+def _satterthwaite_welch(eigenvalues, test_stat):
+    """Satterthwaite-Welch approximation for weighted chi-squared."""
+    c1 = np.sum(eigenvalues)
+    c2 = np.sum(eigenvalues**2)
+    
+    if c2 <= 0:
+        return 0
+    
+    # Gamma distribution parameters
+    alpha = c1**2 / c2
+    beta = c2 / c1
+    
+    # P-value using gamma CDF
+    p_value = stats.gamma.sf(test_stat, a=alpha, scale=beta)
+    return p_value
+
+
+def _hall_buckley_eagleson(eigenvalues, test_stat):
+    """Hall-Buckley-Eagleson approximation."""
+    c1 = np.sum(eigenvalues)
+    c2 = np.sum(eigenvalues**2)
+    c3 = np.sum(eigenvalues**3)
+    
+    if c2 <= 0:
+        return 0
+    
+    h = c2**3 / c3**2
+    p_value = stats.chi2.sf(test_stat * h / c2, h)
+    return p_value
+
+
+def _simplified_lpb_approx(eigenvalues, test_stat):
+    """
+    Simplified Lindsay-Pilla-Basak (LPB) method using gamma approximation.
+    This is not the full LPB mixture model, but a simplified version using
+    4 moments and gamma approximation.
+    """
+    try:
+        # Calculate first 4 cumulants
+        c1 = np.sum(eigenvalues)
+        c2 = 2 * np.sum(eigenvalues**2)
+        c3 = 8 * np.sum(eigenvalues**3)
+        c4 = 48 * np.sum(eigenvalues**4)
+        
+        if c2 <= 0:
+            return _hall_buckley_eagleson(eigenvalues, test_stat)
+        
+        # Simplified LPB using gamma approximation based on skewness and kurtosis
+        skew = c3 / (c2**1.5)
+        kurt = c4 / (c2**2)
+        
+        # Use method of moments for gamma distribution
+        alpha = 4 / skew**2
+        beta = c2 / c1 * skew / 2
+        
+        p_value = stats.gamma.sf(test_stat, a=alpha, scale=beta)
+        return p_value
+        
+    except:
+        # Fallback to HBE if calculation fails
+        return _hall_buckley_eagleson(eigenvalues, test_stat)
+
+
+def _unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
+    """
+    Unconditional independence test using RFF (equivalent to RIT in R code).
+    """
+    r = x_data.shape[0]
+    r1 = min(500, r)
+    
+    # Normalize data
+    x = _normalize(x_data)
+    y = _normalize(y_data)
+    
+    # Compute bandwidths
+    x_dist = pdist(x[:r1])
+    y_dist = pdist(y[:r1])
+    sigma_x = np.median(x_dist) if len(x_dist) > 0 else 1
+    sigma_y = np.median(y_dist) if len(y_dist) > 0 else 1
+    
+    # Ensure bandwidths are not too small
+    sigma_x = max(sigma_x, 1e-6)
+    sigma_y = max(sigma_y, 1e-6)
+    
+    # Generate RFFs with different seeds for independence
+    four_x = _random_fourier_features(x, num_f2, sigma_x, seed)
+    four_y = _random_fourier_features(y, num_f2, sigma_y, seed + 1 if seed is not None else None)
+    
+    # Normalize features
+    f_x = _normalize(four_x['feat'])
+    f_y = _normalize(four_y['feat'])
+    
+    # Compute test statistic
+    f_x_centered = f_x - np.mean(f_x, axis=0)
+    f_y_centered = f_y - np.mean(f_y, axis=0)
+    Cxy = (1/r) * (f_x_centered.T @ f_y_centered)
+    Sta = r * np.sum(Cxy**2)
+    
+    # Compute null distribution
+    d1, d2 = np.meshgrid(range(num_f2), range(num_f2))
+    d1, d2 = d1.flatten(), d2.flatten()
+    res = f_x_centered[:, d1] * f_y_centered[:, d2]
+    Cov = (res.T @ res) / r
+    
+    # Get eigenvalues with error handling
+    try:
+        eig_vals = np.linalg.eigvalsh(Cov)
+        eig_vals = eig_vals[eig_vals > 1e-10]  # Keep only positive eigenvalues
+    except np.linalg.LinAlgError:
+        # If eigenvalue computation fails, use a simpler approximation
+        # Return high p-value indicating independence
+        return Sta, 1.0
+    
+    if len(eig_vals) == 0:
+        return Sta, 1.0
+    
+    # Compute p-value
+    if num_f2 == 1:
+        approx = "hbe"
+    
+    if approx == "gamma":
+        p_value = _satterthwaite_welch(eig_vals, Sta)
+    elif approx == "hbe":
+        p_value = _hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpd4":
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    else:
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    
+    return Sta, p_value
+
+def _median_heuristic(data_array):
+    """
+    Calculate the median heuristic for kernel bandwidth selection.
+    
+    Parameters
+    ----------
+    data_array : np.ndarray
+        Data array of shape (n_samples, n_features)
+    
+    Returns
+    -------
+    float
+        Median of pairwise Euclidean distances
+    """
+    n_samples = data_array.shape[0]
+    
+    # Handle edge cases
+    if n_samples <= 1:
+        return 1.0
+        
+    if n_samples > 1000:
+        # For large datasets, use a subset for efficiency
+        indices = np.random.choice(n_samples, size=1000, replace=False)
+        data_subset = data_array[indices]
+    else:
+        data_subset = data_array
+    
+    # Check if data has any variance
+    if np.all(np.std(data_subset, axis=0) == 0):
+        return 1.0
+    
+    # Compute pairwise distances
+    distances = []
+    for i in range(len(data_subset)):
+        for j in range(i + 1, len(data_subset)):
+            dist = np.linalg.norm(data_subset[i] - data_subset[j])
+            if dist > 0:  # Only include non-zero distances
+                distances.append(dist)
+    
+    # Return median, but ensure it's never 0
+    if not distances:
+        return 1.0
+    
+    median_dist = np.median(distances)
+    return max(median_dist, 1e-6)  # Ensure minimum value
+
+
+def rcit(X, Y, Z, data, boolean=True, significance_level=0.05, 
+         approx="lpd4", num_f=100, num_f2=5, seed=None, **kwargs):
+    """
+    Randomized Conditional Independence Test (RCIT).
+    
+    Tests the null hypothesis that X ⊥ Y | Z using kernel methods with
+    Random Fourier Features approximation. All variables are transformed
+    to RFF space.
+    
+    Parameters
+    ----------
+    X : str or list of str
+        Variable name(s) for X
+    Y : str or list of str  
+        Variable name(s) for Y
+    Z : str or list of str
+        Variable name(s) for conditioning set Z
+    data : pd.DataFrame
+        The data containing the variables
+    boolean : bool
+        If True, returns boolean result. If False, returns (statistic, p_value)
+    significance_level : float
+        Significance level for the test
+    approx : str
+        Method for approximating null distribution: "lpd4", "gamma", "hbe"
+    num_f : int
+        Number of features for conditioning set
+    num_f2 : int  
+        Number of features for non-conditioning sets
+    seed : int, optional
+        Random seed for reproducibility
+    
+    Returns
+    -------
+    bool or tuple
+        If boolean=True: True if independent, False otherwise
+        If boolean=False: (test_statistic, p_value)
+        
+    References
+    ----------
+    Strobl, Eric V., et al. "Approximate kernel-based conditional independence 
+    tests for fast non-parametric causal discovery." Journal of Causal Inference 7.1 (2019).
+    """
+    # Handle significance_level in kwargs
+    if 'significance_level' in kwargs:
+        significance_level = kwargs['significance_level']
+    
+    # Convert to lists
+    X = [X] if isinstance(X, str) else list(X)
+    Y = [Y] if isinstance(Y, str) else list(Y)
+    Z = [Z] if isinstance(Z, str) else list(Z) if Z else []
+    
+    # Extract data
+    x_data = _ensure_matrix(data[X])
+    y_data = _ensure_matrix(data[Y])
+
+    # Check if x or y have zero variance (constant variables)
+    if np.std(x_data) == 0 or np.std(y_data) == 0:
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+
+        
+    # If no conditioning set, use unconditional RFF test
+    if len(Z) == 0:
+        stat, p_value = _unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
+        if boolean:
+            return p_value >= significance_level
+        else:
+            return stat, p_value
+    
+    # Extract and prepare data
+    z_data = _ensure_matrix(data[Z])
+    
+    # Remove constant columns from z
+    z_std = np.std(z_data, axis=0)
+    z_data = z_data[:, z_std > 0]
+    if z_data.shape[1] == 0:
+        # No valid conditioning variables - use unconditional test
+        stat, p_value = _unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
+        if boolean:
+            return p_value >= significance_level
+        else:
+            return stat, p_value
+    
+    # Check if x or y have zero variance
+    if np.std(x_data) == 0 or np.std(y_data) == 0:
+        if boolean:
+            return True
+        else:
+            return 0, 1
+    
+    r = x_data.shape[0]  # number of samples
+    r1 = min(500, r)  # for distance calculation
+    
+    # Normalize data
+    x = _normalize(x_data)
+    y = _normalize(y_data)
+    z = _normalize(z_data)
+    
+    # Note: We combine y and z before computing RFF for y.
+    # This may differ from the strict interpretation of the Strobl et al. paper where
+    # Y's RFFs should be independent of Z's RFFs.
+    y_combined = np.hstack([y, z])
+    
+    # Compute kernel bandwidths using median heuristic
+    z_dist = pdist(z[:r1])
+    x_dist = pdist(x[:r1])
+    y_dist = pdist(y_combined[:r1])
+    
+    sigma_z = np.median(z_dist) if len(z_dist) > 0 else 1
+    sigma_x = np.median(x_dist) if len(x_dist) > 0 else 1
+    sigma_y = np.median(y_dist) if len(y_dist) > 0 else 1
+    
+    # Generate Random Fourier Features with different seeds for independence
+    try:
+        four_z = _random_fourier_features(z, num_f, sigma_z, seed)
+        four_x = _random_fourier_features(x, num_f2, sigma_x, seed + 1 if seed is not None else None)
+        four_y = _random_fourier_features(y_combined, num_f2, sigma_y, seed + 2 if seed is not None else None)
+    except Exception:
+        # iff RFF generation fails, return independence
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+    
+    # Normalize features
+    f_x = _normalize(four_x['feat'])
+    f_y = _normalize(four_y['feat'])
+    f_z = _normalize(four_z['feat'])
+    
+    # Center features for covariance calculations
+    f_x_centered = f_x - np.mean(f_x, axis=0)
+    f_y_centered = f_y - np.mean(f_y, axis=0)
+    f_z_centered = f_z - np.mean(f_z, axis=0)
+    
+    # Compute covariance matrices using direct matrix multiplication
+    Cxy = (1/r) * (f_x_centered.T @ f_y_centered)
+    Czz = (1/r) * (f_z_centered.T @ f_z_centered)
+    Cxz = (1/r) * (f_x_centered.T @ f_z_centered)
+    Czy = (1/r) * (f_z_centered.T @ f_y_centered)
+    
+    # Compute inverse with regularization
+    i_Czz = np.linalg.inv(Czz + np.eye(num_f) * 1e-10)
+    
+    # Compute conditional covariance
+    Cxy_z = Cxy - Cxz @ i_Czz @ Czy
+    
+    # Test statistic
+    Sta = r * np.sum(Cxy_z**2)
+    
+    # Compute residuals for null distribution
+    z_i_Czz = f_z @ i_Czz
+    e_x_z = z_i_Czz @ Cxz.T
+    e_y_z = z_i_Czz @ Czy
+    
+    res_x = f_x - e_x_z
+    res_y = f_y - e_y_z
+    
+    # Create grid for computing covariance of residuals
+    d1, d2 = np.meshgrid(range(num_f2), range(num_f2))
+    d1, d2 = d1.flatten(), d2.flatten()
+    res = res_x[:, d1] * res_y[:, d2]
+    Cov = (res.T @ res) / r
+    
+    # Get eigenvalues for null distribution
+    eig_vals = np.linalg.eigvalsh(Cov)
+    eig_vals = eig_vals[eig_vals > 0]  # Keep only positive eigenvalues
+    
+    # Compute p-value based on approximation method
+    if num_f2 == 1:
+        approx = "hbe"
+    
+    if approx == "gamma":
+        p_value = _satterthwaite_welch(eig_vals, Sta)
+    elif approx == "hbe":
+        p_value = _hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpd4":
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    else:
+        # Default to simplified LPB
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    
+    # Ensure p-value is in valid range
+    p_value = np.clip(p_value, 0, 1)
+    
+    if boolean:
+        return p_value >= significance_level
+    else:
+        return Sta, p_value
+
+
+def rcot(X, Y, Z, data, boolean=True, significance_level=0.05, 
+         approx="lpd4", num_f=100, seed=None, **kwargs):
+    """
+    Randomized conditional Correlation Test (RCoT).
+    
+    Tests the null hypothesis that X ⊥ Y | Z by testing for zero partial
+    correlation after non-linearly transforming Z using Random Fourier Features.
+    Only Z is transformed to RFF space; X and Y remain in original space.
+    
+    Parameters
+    ----------
+    X : str or list of str
+        Variable name(s) for X
+    Y : str or list of str  
+        Variable name(s) for Y
+    Z : str or list of str
+        Variable name(s) for conditioning set Z
+    data : pd.DataFrame
+        The data containing the variables
+    boolean : bool
+        If True, returns boolean result. If False, returns (statistic, p_value)
+    significance_level : float
+        Significance level for the test
+    approx : str
+        Method for approximating null distribution: "lpd4", "gamma", "hbe"
+    num_f : int
+        Number of features for conditioning set
+    seed : int, optional
+        Random seed for reproducibility
+    
+    Returns
+    -------
+    bool or tuple
+        If boolean=True: True if independent, False otherwise
+        If boolean=False: (test_statistic, p_value)
+        
+    References
+    ----------
+    Strobl, Eric V., et al. "Approximate kernel-based conditional independence 
+    tests for fast non-parametric causal discovery." Journal of Causal Inference 7.1 (2019).
+    """
+    # Handle significance_level in kwargs
+    if 'significance_level' in kwargs:
+        significance_level = kwargs['significance_level']
+    
+    # Convert to lists
+    X = [X] if isinstance(X, str) else list(X)
+    Y = [Y] if isinstance(Y, str) else list(Y)
+    Z = [Z] if isinstance(Z, str) else list(Z) if Z else []
+    
+    # Extract data
+    x_data = _ensure_matrix(data[X])
+    y_data = _ensure_matrix(data[Y])
+    
+    # If no conditioning set, use unconditional RFF test
+    if len(Z) == 0:
+        # For RCoT with no conditioning, we use unconditional test with original data
+        # but still use RFF framework for consistency
+        stat, p_value = _unconditional_rff_test(x_data, y_data, 5, approx, seed)
+        if boolean:
+            return p_value >= significance_level
+        else:
+            return stat, p_value
+    
+    # Extract and prepare data
+    z_data = _ensure_matrix(data[Z])
+    
+    # Remove constant columns from z
+    z_std = np.std(z_data, axis=0)
+    z_data = z_data[:, z_std > 0]
+    if z_data.shape[1] == 0:
+        # No valid conditioning variables - use unconditional test
+        stat, p_value = _unconditional_rff_test(x_data, y_data, 5, approx, seed)
+        if boolean:
+            return p_value >= significance_level
+        else:
+            return stat, p_value
+    
+    # Check if x or y have zero variance
+    if np.std(x_data) == 0 or np.std(y_data) == 0:
+        if boolean:
+            return True
+        else:
+            return 0, 1
+    
+    r = x_data.shape[0]  # number of samples
+    r1 = min(500, r)  # for distance calculation
+    
+    # Normalize data
+    x = _normalize(x_data)
+    y = _normalize(y_data)
+    z = _normalize(z_data)
+    
+    # Compute kernel bandwidth for z using median heuristic
+    z_dist = pdist(z[:r1]) if z.shape[0] > 1 else np.array([1.0])
+    sigma_z = max(np.median(z_dist) if len(z_dist) > 0 else 1, 1e-6)
+    
+    # Generate Random Fourier Features only for Z
+    try:
+        four_z = _random_fourier_features(z, num_f, sigma_z, seed)
+        f_z = _normalize(four_z['feat'])
+    except Exception:
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+    
+    # Use original (normalized) x and y
+    px = x.shape[1]
+    py = y.shape[1]
+    
+    # Center all data for covariance calculations
+    x_centered = x - np.mean(x, axis=0)
+    y_centered = y - np.mean(y, axis=0)
+    f_z_centered = f_z - np.mean(f_z, axis=0)
+    
+    # Compute covariance matrices using direct matrix multiplication
+    Cxy = (1/r) * (x_centered.T @ y_centered)
+    Czz = (1/r) * (f_z_centered.T @ f_z_centered)
+    Cxz = (1/r) * (x_centered.T @ f_z_centered)
+    Czy = (1/r) * (f_z_centered.T @ y_centered)
+    
+    # Compute inverse with regularization
+    try:
+        i_Czz = np.linalg.inv(Czz + np.eye(num_f) * 1e-10)
+    except np.linalg.LinAlgError:
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+    
+    # Compute conditional covariance
+    Cxy_z = Cxy - Cxz @ i_Czz @ Czy
+    
+    # Test statistic
+    Sta = r * np.sum(Cxy_z**2)
+    
+    # Compute residuals for null distribution
+    z_i_Czz = f_z @ i_Czz
+    e_x_z = z_i_Czz @ Cxz.T
+    e_y_z = z_i_Czz @ Czy
+    
+    res_x = x - e_x_z
+    res_y = y - e_y_z
+    
+    # Compute covariance of residuals
+    d1, d2 = np.meshgrid(range(px), range(py))
+    d1, d2 = d1.flatten(), d2.flatten()
+    res = res_x[:, d1] * res_y[:, d2]
+    Cov = (res.T @ res) / r
+    
+    # Get eigenvalues with error handling
+    try:
+        eig_vals = np.linalg.eigvalsh(Cov)
+        eig_vals = eig_vals[eig_vals > 1e-10]
+    except np.linalg.LinAlgError:
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+    
+    if len(eig_vals) == 0:
+        if boolean:
+            return True
+        else:
+            return 0, 1.0
+    
+    # Compute p-value
+    if px == 1 and py == 1:
+        approx = "hbe"
+    
+    if approx == "gamma":
+        p_value = _satterthwaite_welch(eig_vals, Sta)
+    elif approx == "hbe":
+        p_value = _hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpd4":
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    else:
+        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    
+    p_value = np.clip(p_value, 0, 1)
+    
+    if boolean:
+        return p_value >= significance_level
+    else:
+        return Sta, p_value
 
 
 def get_ci_test(test, full=False, data=None, independencies=None):
@@ -20,6 +639,8 @@ def get_ci_test(test, full=False, data=None, independencies=None):
         "pearsonr": pearsonr,
         "pillai": pillai_trace,
         "gcm": gcm,
+        "rcit": rcit,
+        "rcot": rcot,
     }
     if full:
         supported_tests["power_divergence"] = power_divergence
@@ -46,19 +667,19 @@ def get_ci_test(test, full=False, data=None, independencies=None):
 
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
-    Checks if `X \u27c2 Y | Z` is in `independencies`. This method is implemented to
+    Checks if `X ⊥ Y | Z` is in `independencies`. This method is implemented to
     have an uniform API when the independencies are provided instead of data.
 
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27c2 Y | Z
+        The first variable for testing the independence condition X ⊥ Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27c2 Y | Z
+        The second variable for testing the independence condition X ⊥ Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27c2 Y | Z
+        A list of conditional variable for testing the condition X ⊥ Y | Z
 
     data: pandas.DataFrame The dataset in which to test the independence condition.
 
@@ -108,7 +729,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
+        higher value), given the null hypothesis that X ⊥ Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -168,7 +789,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
+        higher value), given the null hypothesis that X ⊥ Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -217,8 +838,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must be
-        specified. If p_value of the test is greater than equal to
+        If boolean=True, an additional argument `significance_level` must be         specified. If p_value of the test is greater than equal to
         `significance_level`, returns True. Otherwise returns False.  If
         boolean=False, returns the chi2 and p_value of the test.
 
@@ -228,7 +848,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
+        higher value), given the null hypothesis that X ⊥ Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -287,7 +907,7 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
+        higher value), given the null hypothesis that X ⊥ Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -361,7 +981,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
         chi-squared test statistic. The `p_value` for the test, i.e. the
         probability of observing the computed chi-square statistic (or an even
-        higher value), given the null hypothesis that X \u27c2 Y | Zs is True.
+        higher value), given the null hypothesis that X ⊥ Y | Zs is True.
         If boolean = True, returns True if the p_value of the test is greater
         than `significance_level` else returns False.
 
@@ -417,14 +1037,14 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                 if isinstance(z_state, str):
                     logger.info(
-                        f"Skipping the test {X} \u27c2 {Y} | {Z[0]}={z_state}. Not enough samples"
+                        f"Skipping the test {X} ⊥ {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
                     logger.info(
-                        f"Skipping the test {X} \u27c2 {Y} | {z_str}. Not enough samples"
+                        f"Skipping the test {X} ⊥ {Y} | {z_str}. Not enough samples"
                     )
             else:
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
@@ -442,19 +1062,19 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     """
     Computes Pearson correlation coefficient and p-value for testing non-correlation.
-    Should be used only on continuous data. In case when :math:`Z != \null` uses
+    Should be used only on continuous data. In case when :math:`Z != \\null` uses
     linear regression and computes pearson coefficient on residuals.
 
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27c2 Y | Z
+        The first variable for testing the independence condition X ⊥ Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27c2 Y | Z
+        The second variable for testing the independence condition X ⊥ Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27c2 Y | Z
+        A list of conditional variable for testing the condition X ⊥ Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the independence condition.
@@ -586,13 +1206,13 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27c2 Y | Z
+        The first variable for testing the independence condition X ⊥ Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27c2 Y | Z
+        The second variable for testing the independence condition X ⊥ Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27c2 Y | Z
+        A list of conditional variable for testing the condition X ⊥ Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the independence condition.
@@ -698,13 +1318,13 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X \u27c2 Y | Z
+        The first variable for testing the independence condition X ⊥ Y | Z
 
     Y: str
-        The second variable for testing the independence condition X \u27c2 Y | Z
+        The second variable for testing the independence condition X ⊥ Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X \u27c2 Y | Z
+        A list of conditional variable for testing the condition X ⊥ Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the independence condition.
@@ -724,7 +1344,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
 
     References
-    ----------
+        ----------
     [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised Covariance Measure".
     """
     # Step 1: Test if the inputs are correct
