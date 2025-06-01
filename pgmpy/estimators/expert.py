@@ -132,18 +132,6 @@ class ExpertInLoop(StructureEstimator):
         show_progress: bool (default: True)
             If True, prints info of the running status.
 
-        orientations: set
-            Preferred orientations for edges over the output of orientation_fn.
-
-        use_cache: bool
-            If False, calls the orientation_fn directly(the same (u, v) multiple times)
-
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge (default: None)
-            Expert knowledge about the causal structure. This can include:
-            - forbidden_edges: Edges that should not be present in the final model
-            - required_edges: Edges that must be present in the final model (can be removed during pruning)
-            - temporal_order: The temporal ordering of variables
-
         kwargs: kwargs
             Any additional parameters to pass to the `orientation_fn`.
 
