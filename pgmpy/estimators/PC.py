@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
@@ -55,7 +55,7 @@ class PC(StructureEstimator):
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
-        in the dataset are identified by doing statistical independece test. This
+        in the dataset are identified by doing statistical independence test. This
         method returns a DAG/PDAG structure which is faithful to the independencies
         implied by the dataset.
 
@@ -78,7 +78,7 @@ class PC(StructureEstimator):
                         `independencies` must be specified.
                 "chi_square": Uses the Chi-Square independence test. This works
                         only for discrete datasets.
-                "pearsonr": Uses the pertial correlation based on pearson
+                "pearsonr": Uses the partial correlation based on pearson
                         correlation coefficient to test independence. This works
                         only for continuous datasets.
                 "g_sq": G-test. Works only for discrete datasets.
@@ -249,7 +249,7 @@ class PC(StructureEstimator):
 
         If an Independencies-instance is passed, the contained IndependenceAssertions
         have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-seperations of some Bayesian network or
+        they are obtained as a set of d-separations of some Bayesian network or
         if the independence assertions are closed under the semi-graphoid axioms.
         Otherwise, the procedure may fail to identify the correct structure.
 
@@ -263,7 +263,7 @@ class PC(StructureEstimator):
 
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes then
+            separating set ("witnessing set") of variables that makes them
             conditionally independent. (needed for edge orientation procedures)
 
         References
@@ -400,6 +400,7 @@ class PC(StructureEstimator):
                 )
 
         if show_progress and config.SHOW_PROGRESS:
+            pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
         return graph, separating_sets
 
@@ -421,7 +422,7 @@ class PC(StructureEstimator):
             The node along with u whose separating set is being calculated.
 
         temporal_ordering: dict
-            The temporal ordering of variables according to prior knowledgee.
+            The temporal ordering of variables according to prior knowledge.
 
         graph: UndirectedGraph
             The graph where separating sets are being calculated for the edges.
