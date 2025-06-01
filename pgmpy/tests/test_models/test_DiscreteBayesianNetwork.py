@@ -1971,3 +1971,62 @@ class TestSimulation(unittest.TestCase):
         missing_fraction = samples["U"].isnull().mean()
         expected_missing_fraction = 0.8
         self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)
+
+    def test_simulate_virtual_intervention_error_messages(self):
+        """Test error messages for virtual intervention edge cases"""
+        from pgmpy.factors.discrete import TabularCPD
+
+        # Create a simple model: X -> Y
+        model = DiscreteBayesianNetwork([("X", "Y")])
+
+        # Add CPDs
+        cpd_x = TabularCPD("X", 2, [[0.3], [0.7]], state_names={"X": ["0", "1"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.8, 0.2], [0.2, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["0", "1"], "X": ["0", "1"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y)
+
+        # Test Variable not in model
+        virt_intervention_wrong = TabularCPD(
+            "W", 2, [[0.5], [0.5]], state_names={"W": ["0", "1"]}
+        )
+
+        with self.assertRaises(ValueError) as cm:
+            model.simulate(n_samples=10, virtual_intervention=[virt_intervention_wrong])
+        self.assertEqual(
+            str(cm.exception), "Virtual intervention variable W not in model"
+        )
+
+    def test_do_invalid_state(self):
+        """Test that do method raises correct error for invalid state"""
+        from pgmpy.factors.discrete import TabularCPD
+
+        # Create a simple model: X -> Y
+        model = DiscreteBayesianNetwork([("X", "Y")])
+
+        # Add CPDs with states ['0', '1']
+        cpd_x = TabularCPD("X", 2, [[0.3], [0.7]], state_names={"X": ["0", "1"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.8, 0.2], [0.2, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["0", "1"], "X": ["0", "1"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y)
+
+        # Try to do intervention with invalid state
+        with self.assertRaises(ValueError) as cm:
+            model.do({"X": "invalid"})
+        self.assertEqual(
+            str(cm.exception),
+            "State 'invalid' invalid for variable 'X'; allowed states: ['0', '1']",
+        )
