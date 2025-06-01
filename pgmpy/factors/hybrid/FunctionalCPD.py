@@ -100,14 +100,8 @@ class FunctionalCPD(BaseFactor):
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
             if self.vectorized:
                 dists = self.fn(parent_sample)
-                if isinstance(dists, list):
-                    for i in range(n_samples):
-                        sampled_values.append(
-                            pyro.sample(f"{self.variable}_{i}", dists[i]).item()
-                        )
-                else:
-                    samples = pyro.sample(f"{self.variable}_vectorized", dists)
-                    sampled_values = samples.detach().numpy()
+                samples = pyro.sample(f"{self.variable}_vectorized", dists)
+                sampled_values = samples.detach().numpy()
             else:
                 for i in range(n_samples):
                     sampled_values.append(
@@ -119,14 +113,8 @@ class FunctionalCPD(BaseFactor):
         else:
             if self.vectorized:
                 distribution = self.fn(None)
-                if isinstance(distribution, list):
-                    for i in range(n_samples):
-                        sampled_values.append(
-                            pyro.sample(f"{self.variable}_{i}", distribution[i]).item()
-                        )
-                else:
-                    samples = pyro.sample(f"{self.variable}", distribution)
-                    sampled_values = samples.detach().numpy()
+                samples = pyro.sample(f"{self.variable}", distribution)
+                sampled_values = samples.detach().numpy()
             else:
                 for i in range(n_samples):
                     sampled_values.append(
