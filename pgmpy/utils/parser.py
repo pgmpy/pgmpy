@@ -145,7 +145,7 @@ def parse_dagitty(lines):
         )
     except ImportError as e:
         raise ImportError(
-         f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
+            f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
         ) from None
 
     # Step 1: DAGitty Grammar in pyparsing

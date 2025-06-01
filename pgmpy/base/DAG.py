@@ -1168,9 +1168,9 @@ class DAG(nx.DiGraph):
         except ImportError as e:
             raise ImportError(
                 f"{e}. Package `daft` is required for plotting probabilistic graphical models.\n"
-        "Please install it using: pip install daft-pgm\n"
-        "Documentation: https://docs.daft-pgm.org/en/latest/"
-        ) from None
+                "Please install it using: pip install daft-pgm\n"
+                "Documentation: https://docs.daft-pgm.org/en/latest/"
+            ) from None
 
         if isinstance(node_pos, str):
             supported_layouts = {

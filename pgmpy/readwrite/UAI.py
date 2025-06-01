@@ -6,7 +6,7 @@ try:
     from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
 except ImportError as e:
     raise ImportError(
-    f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
