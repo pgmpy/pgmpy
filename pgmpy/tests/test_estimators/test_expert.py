@@ -207,7 +207,6 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
 
-
     def test_combined_expert_knowledge(self):
         """Test combination of forbidden edges, required edges, and temporal order."""
         expert_knowledge = ExpertKnowledge(

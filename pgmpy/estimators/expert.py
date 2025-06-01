@@ -121,7 +121,7 @@ class ExpertInLoop(StructureEstimator):
             Expert knowledge about the causal structure. This can include:
             - forbidden_edges: Edges that should not be present in the final model
             - required_edges: Edges that must be present in the final model (can be removed during pruning)
-            - temporal_order: The temporal ordering of variables. Note that explicit orientations 
+            - temporal_order: The temporal ordering of variables. Note that explicit orientations
               specified in the 'orientations' parameter will override this temporal ordering.
 
         use_cache: bool
@@ -304,7 +304,11 @@ class ExpertInLoop(StructureEstimator):
                 if use_cache is True and edge_direction is not None:
                     self.orientation_cache.add(edge_direction)
 
-                if config.SHOW_PROGRESS and show_progress and edge_direction is not None:
+                if (
+                    config.SHOW_PROGRESS
+                    and show_progress
+                    and edge_direction is not None
+                ):
                     logger.info(
                         f"\rQueried for edge orientation between"
                         "{selected_edge.u} and {selected_edge.v}. Got:"
