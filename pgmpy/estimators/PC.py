@@ -8,7 +8,6 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_ci_test
 from pgmpy.global_vars import logger
@@ -401,6 +400,7 @@ class PC(StructureEstimator):
                 )
 
         if show_progress and config.SHOW_PROGRESS:
+            pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
         return graph, separating_sets
 
