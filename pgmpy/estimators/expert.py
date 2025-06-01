@@ -60,9 +60,9 @@ class ExpertInLoop(StructureEstimator):
         effect_size_threshold=0.05,
         orientation_fn=llm_pairwise_orient,
         orientations=set([]),
+        expert_knowledge: ExpertKnowledge = None,
         use_cache=True,
         show_progress=True,
-        expert_knowledge: ExpertKnowledge = None,
         **kwargs,
     ):
         """
@@ -116,6 +116,13 @@ class ExpertInLoop(StructureEstimator):
         orientations: set
             Users can specify a set of edges which would be used as the
             preferred orientation for edges over the output of orientation_fn.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge (default: None)
+            Expert knowledge about the causal structure. This can include:
+            - forbidden_edges: Edges that should not be present in the final model
+            - required_edges: Edges that must be present in the final model (can be removed during pruning)
+            - temporal_order: The temporal ordering of variables. Note that explicit orientations 
+              specified in the 'orientations' parameter will override this temporal ordering.
 
         use_cache: bool
             If True, the method will cache the results returned by
@@ -257,6 +264,7 @@ class ExpertInLoop(StructureEstimator):
 
             # Step 3.4: Find for the pair of variable with the highest effect size.
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
+            edge_direction = None
 
             # Step 3.5: Find the edge orientation for the selected pair of variables.
             #
@@ -293,10 +301,10 @@ class ExpertInLoop(StructureEstimator):
                 edge_direction = orientation_fn(
                     selected_edge.u, selected_edge.v, **kwargs
                 )
-                if use_cache is True:
+                if use_cache is True and edge_direction is not None:
                     self.orientation_cache.add(edge_direction)
 
-                if config.SHOW_PROGRESS and show_progress:
+                if config.SHOW_PROGRESS and show_progress and edge_direction is not None:
                     logger.info(
                         f"\rQueried for edge orientation between"
                         "{selected_edge.u} and {selected_edge.v}. Got:"
@@ -311,7 +319,6 @@ class ExpertInLoop(StructureEstimator):
                     "Skipping this edge."
                 )
                 blacklisted_edges.append((selected_edge.u, selected_edge.v))
-
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 blacklisted_edges.append(edge_direction)
                 dag.add_edges_from([(edge_direction[1], edge_direction[0])])
