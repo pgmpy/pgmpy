@@ -76,14 +76,10 @@ class ExpectationMaximization(ParameterEstimator):
             )
             model.latents.update(new_latents)
 
-        # Drop rows with any missing values in partially observed columns
-        original_rows_count = data.shape[0]
-        data = data.dropna()
-        dropped_rows_count = original_rows_count - data.shape[0]
-
-        if dropped_rows_count:
-            logger.warning(
-                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
+        # Alarm rows have missing values in partially observed columns and will be treated as mini latents
+        if data.isna().any().any():
+            logger.info(
+                f"Dataset contains missing values. These will be treated as values to be estimated by EM."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
@@ -113,24 +109,36 @@ class ExpectationMaximization(ParameterEstimator):
         return likelihood
 
     def _parallel_compute_weights(
-        self, data_unique, latent_card, n_counts, offset, batch_size
+        self, data_unique, latent_card, unique_cats, n_counts, offset, batch_size
     ):
         cache = []
 
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
-            v = list(product(*[range(card) for card in latent_card.values()]))
-            latent_combinations = np.array(v, dtype=int)
-            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
-                drop=True
+            missing_cols = data_unique.columns[data_unique.iloc[i].isna()]
+            latent_card_copy = latent_card.copy()
+            for col in missing_cols:
+                if col not in latent_card:
+                    latent_card_copy[col] = unique_cats[col]
+            v = list(
+                product(
+                    *[
+                        val if isinstance(val, list) else np.arange(val, dtype=int)
+                        for val in latent_card_copy.values()
+                    ]
+                )
             )
-            for index, latent_var in enumerate(latent_card.keys()):
-                df[latent_var] = latent_combinations[:, index]
+            latent_combinations = list(zip(*v))
+            n_count_ = n_counts[
+                tuple("__NA__" if pd.isna(x) else str(x) for x in data_unique.iloc[i])
+            ]
+            df = data_unique.iloc[[i] * len(v)].reset_index(drop=True)
+
+            for index, latent_var in enumerate(latent_card_copy.keys()):
+                df[latent_var] = list(latent_combinations[index])
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
-            df["_weight"] = (weights / weights.sum()) * n_counts[
-                tuple(data_unique.iloc[i])
-            ]
+            df["_weight"] = (weights / weights.sum()) * n_count_
             cache.append(df)
 
         return pd.concat(cache, copy=False)
@@ -142,13 +150,20 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
-        n_counts = (
-            self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
-        )
+
+        n_counts = {}
+        for _, row in self.data.iterrows():
+            row_key = tuple(["__NA__" if pd.isna(x) else str(x) for x in row])
+            n_counts[row_key] = n_counts.get(row_key, 0) + 1
+
+        unique_cats = {
+            col: data_unique[col].dropna().unique().tolist()
+            for col in data_unique.columns
+        }
 
         cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
-                data_unique, latent_card, n_counts, i, batch_size
+                data_unique, latent_card, unique_cats, n_counts, i, batch_size
             )
             for i in range(0, data_unique.shape[0], batch_size)
         )
