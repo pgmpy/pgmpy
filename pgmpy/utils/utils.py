@@ -313,8 +313,7 @@ def llm_pairwise_orient(
         from litellm import completion
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
+            f"{e}. litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
         ) from None
 
     if system_prompt is None:

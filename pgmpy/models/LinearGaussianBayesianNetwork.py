@@ -140,7 +140,10 @@ class LinearGaussianBayesianNetwork(DAG):
         P(x1) = N(1; 4)
 
         """
-        return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
+        for cpd in cpds:
+            if isinstance(cpd, (str, int)):
+                cpd = self.get_cpds(cpd)
+            self.cpds.remove(cpd)
 
     def get_random_cpds(self, loc=0, scale=1, inplace=False, seed=None):
         """
@@ -244,7 +247,42 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def simulate(self, n_samples=1000, seed=None):
+    def copy(self):
+        """
+        Returns a copy of the model.
+
+        Returns
+        -------
+        Model's copy: pgmpy.models.LinearGaussianBayesianNetwork
+            Copy of the model on which the method was called.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('A', 'B'), ('B', 'C')])
+        >>> cpd_a = LinearGaussianCPD(variable='A', beta=[1], std=4)
+        >>> cpd_b = LinearGaussianCPD(variable='B', beta=[-5, 0.5], std=4, evidence=['A'])
+        >>> cpd_c = LinearGaussianCPD(variable='C', beta=[4, -1], std=3, evidence=["x2"])
+        >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+        >>> copy_model = model.copy()
+        >>> copy_model.nodes()
+        NodeView(('A', 'B', 'C'))
+        >>> copy_model.edges()
+        OutEdgeView([('A', 'B'), ('B', 'C')])
+        >>> len(copy_model.get_cpds())
+        3
+        """
+        model_copy = LinearGaussianBayesianNetwork()
+        model_copy.add_nodes_from(self.nodes())
+        model_copy.add_edges_from(self.edges())
+        if self.cpds:
+            model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+        return model_copy
+
+    def simulate(
+        self, n_samples=1000, do=None, evidence=None, seed=None, missing_prob=None
+    ):
         """
         Simulates data from the given model.
 
@@ -253,8 +291,21 @@ class LinearGaussianBayesianNetwork(DAG):
         n_samples: int
             The number of samples to draw from the model.
 
+        do: dict (default: None)
+            The interventions to apply to the model. dict should be of the form
+            {variable_name: value}
+
+        evidence: dict (default: None)
+            Observed evidence to apply to the model. dict should be of the form
+            {variable_name: value}
+
         seed: int (default: None)
             Seed for the random number generator.
+
+        missing_prob: LinearGaussianCPD, list  (default: None)
+            In case of missing value for more than one variable, provide list of LinearGaussianCPD.
+            The variable name of each LinearGaussianCPD should end with the name of node in LinearGaussianBayesianNetwork with * at the end of the name.
+            The state names of each LinearGaussianCPD should be the same as the state names of the corresponding node in LinearGaussianBayesianNetwork.
 
         Returns
         -------
@@ -270,20 +321,134 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.simulate(n_samples=500, seed=42)
+
+        Simple forward sampling
+        >>> model.simulate(n_samples=3, seed=42)
+
+        Sampling with intervention (do)
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+
+        Sampling with evidence
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+
+        Sampling with both intervention and evidence
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
         """
+        # Step 1: Check if all arguments are specified and valid
+        evidence = {} if evidence is None else evidence
+
+        do = {} if do is None else do
+
+        do_nodes = list(do.keys())
+        evidence_nodes = list(evidence.keys())
+        rng = np.random.default_rng(seed=seed)
+
+        invalid_nodes = set(do_nodes) - set(self.nodes())
+        if not set(do_nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"The following do-nodes are not present in the model: {invalid_nodes}. "
+                f"do argument contains: {do_nodes}"
+            )
+
+        invalid_nodes = set(evidence_nodes) - set(self.nodes())
+        if not set(evidence_nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"The following evidence-nodes are not present in the model: {invalid_nodes}. "
+                f"evidence argument contains: {evidence_nodes}"
+            )
+
         if len(self.cpds) != len(self.nodes()):
             raise ValueError(
                 "Each node in the model should have a CPD associated with it"
             )
 
-        mean, cov = self.to_joint_gaussian()
-        variables = list(nx.topological_sort(self))
-        rng = np.random.default_rng(seed=seed)
-        return pd.DataFrame(
-            rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
-            columns=variables,
-        )
+        if common_vars := set(do.keys()) & set(evidence.keys()):
+            raise ValueError(
+                f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
+            )
+
+        # Step 2: If do is specified, modify the network structure.
+        if do != {}:
+            # Step 2.1: Create a copy of the network
+            model = self.copy()
+            for var, val in do.items():
+                # Step 2.2: Remove incoming edges to the intervened node as well as remove the CPD's of the intervened nodes.
+                for parent in list(model.get_parents(var)):
+                    model.remove_edge(parent, var)
+
+                model.remove_cpds(model.get_cpds(var))
+
+                # Step 2.3 : For each children of an intervened node, change its CPD to remove
+                #  the parent (intervened node) from the evidence and update its intercept accordingly
+                for child in model.get_children(var):
+                    child_cpd = model.get_cpds(child)
+
+                    new_evidence = list(child_cpd.evidence)
+                    new_beta = list(child_cpd.beta)
+
+                    parent_idx = child_cpd.evidence.index(var)
+                    new_beta[0] += new_beta[parent_idx + 1] * val
+
+                    del new_evidence[parent_idx]
+                    del new_beta[parent_idx + 1]
+
+                    new_cpd = LinearGaussianCPD(
+                        variable=child_cpd.variable,
+                        beta=new_beta,
+                        std=child_cpd.std,
+                        evidence=new_evidence,
+                    )
+
+                    model.remove_cpds(child_cpd)
+                    model.add_cpds(new_cpd)
+
+                model.remove_node(var)
+
+        else:
+            model = self
+
+        mean, cov = model.to_joint_gaussian()
+        variables = list(nx.topological_sort(model))
+
+        evidence_var = list(evidence.keys())
+        sample_var = [v for v in variables if v not in evidence_var]
+
+        # Step 4: Sample according to evidence
+        if len(evidence) == 0:
+            df = pd.DataFrame(
+                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+                columns=variables,
+            )
+
+        else:
+            df_evidence = pd.DataFrame([evidence])
+            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+
+            sorted_indices = np.argsort(missing_vars)
+            missing_vars = [missing_vars[i] for i in sorted_indices]
+            mean_cond = mean_cond[:, sorted_indices]
+            cov_cond = cov_cond[sorted_indices][:, sorted_indices]
+
+            samples_missing = rng.multivariate_normal(
+                mean=mean_cond[0], cov=cov_cond, size=n_samples
+            )
+            df_missing = pd.DataFrame(samples_missing, columns=missing_vars)
+
+            df = pd.DataFrame(index=range(n_samples), columns=variables)
+
+            for ev_var, ev_val in evidence.items():
+                df[ev_var] = ev_val
+
+            for mv in missing_vars:
+                df[mv] = df_missing[mv].values
+
+            df = df[variables]
+
+        # Step 5: Add do variables to the final dataframe
+        for do_var, do_val in do.items():
+            df[do_var] = do_val
+
+        return df
 
     def check_model(self):
         """
