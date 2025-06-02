@@ -10,14 +10,13 @@ try:
     import pyparsing as pp
 except ImportError as e:
     raise ImportError(
-        e.msg
-        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        f"{e} . pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
 from pgmpy.factors.discrete import State, TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
-from pgmpy.global_vars import logger
 
 
 class XMLBIFReader(object):
