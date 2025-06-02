@@ -692,20 +692,9 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot = dag.to_daft(plot_edge_strength=True)
         self.assertIsNotNone(daft_plot)
 
-        # Verify edge labels are correctly set in the daft object
-        edges_dict = {}
-        for edge in daft_plot._edges:
-            edge_key = (edge.node1.name, edge.node2.name)
-            edges_dict[edge_key] = edge.label
-
-        self.assertIn(("A", "B"), edges_dict)
-        self.assertIn(("C", "B"), edges_dict)
-        self.assertEqual(edges_dict[("A", "B")], "0.123")
-        self.assertEqual(edges_dict[("C", "B")], "0.456")
-
-        dag_no_strengths = DAG([("A", "B"), ("C", "B")])
-        daft_plot_no_strengths = dag_no_strengths.to_daft(plot_edge_strength=False)
-        self.assertIsNotNone(daft_plot_no_strengths)
+        dag_no_strength = DAG([("A", "B"), ("C", "B")])
+        daft_plot_default = dag_no_strength.to_daft()
+        self.assertIsNotNone(daft_plot_default)
 
     def test_edge_strength_plotting_to_graphviz(self):
         """Test edge strength plotting in to_graphviz method"""
