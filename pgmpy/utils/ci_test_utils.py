@@ -31,7 +31,7 @@ def normalize(data):
     data = np.asarray(data)
     mean = np.mean(data, axis=0)
     std = np.std(data, axis=0)
-    std[std == 0] = 1 
+    std[std == 0] = 1
     return (data - mean) / std
 
 
@@ -118,7 +118,7 @@ def median_heuristic(data_array):
         return 1.0
 
     median_dist = np.median(distances)
-    return max(median_dist, 1e-6) 
+    return max(median_dist, 1e-6)
 
 
 # LPB helper functions
@@ -189,7 +189,7 @@ def get_lambdatilde_p(lambdatilde_1, p, moment_vec, bisect_tol):
             try:
                 root = brentq(
                     f=det_deltaNmat,
-                    a=1e-10,  
+                    a=1e-10,
                     b=lambdatilde_vec[i - 1],
                     args=(moment_vec, i + 1),
                     xtol=bisect_tol,
