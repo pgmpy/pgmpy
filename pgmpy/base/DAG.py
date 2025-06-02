@@ -100,7 +100,7 @@ class DAG(nx.DiGraph):
         else:
             out_str = "Cycles are not allowed in a DAG."
             out_str += "\nEdges indicating the path taken for a loop: "
-            out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
+            out_str += "".join([f"({u}, {v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
     @classmethod
@@ -277,8 +277,7 @@ class DAG(nx.DiGraph):
         """
         Add an edge between u and v.
 
-        The nodes u and v will be automatically added if they are
-        not already in the graph.
+        The nodes u and v will be automatically added if they are not already in the graph.
 
         Parameters
         ----------
@@ -710,7 +709,8 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and Judea Pearl. Finding minimal d-separators. Computer Science Department, University of California, 1998.
+        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and Judea Pearl. Finding minimal d-separators.
+        Computer Science Department, University of California, 1998.
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError(
@@ -723,7 +723,7 @@ class DAG(nx.DiGraph):
 
         if not include_latents:
             # If any of the parents were latents, take the latent's parent
-            while len(separator.intersection(self.latents)) != 0:
+            while separator.intersection(self.latents):
                 separator_copy = separator.copy()
                 for u in separator:
                     if u in self.latents:
@@ -908,7 +908,8 @@ class DAG(nx.DiGraph):
 
     def to_pdag(self):
         """
-        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the
+        given DAG belongs to.
 
         Returns
         -------
@@ -925,7 +926,8 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
+        Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1011,7 +1013,6 @@ class DAG(nx.DiGraph):
         undirected_edges = [
             edge for edge, label in edge_labels.items() if label == "reversible"
         ]
-
         return PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
@@ -1071,7 +1072,7 @@ class DAG(nx.DiGraph):
 
         if not set(nodes).issubset(set(self.nodes())):
             raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
             )
 
         for node in nodes:
@@ -1107,12 +1108,11 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos="circular",
+        node_pos: str | dict[Hashable, tuple[int, int]] = "circular",
         latex=True,
-        pgm_params=None,
-        edge_params=None,
-        node_params=None,
-        plot_edge_strength=False,
+        pgm_params={},
+        edge_params={},
+        node_params={},
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1122,7 +1122,9 @@ class DAG(nx.DiGraph):
         ----------
         node_pos: str or dict (default: circular)
             If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
-                spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
+                spectral, spiral. Please refer:
+                https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout
+                for details on these layouts.
 
             If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
             node.
@@ -1144,10 +1146,6 @@ class DAG(nx.DiGraph):
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
-        plot_edge_strength: bool (default: False)
-            If True, displays edge strength values as labels on edges.
-            Requires edge strengths to be computed using edge_strength() method first.
-
         Returns
         -------
         Daft object: daft.PGM object
@@ -1164,17 +1162,10 @@ class DAG(nx.DiGraph):
         >>> dag.to_daft(node_pos="circular", pgm_params={'observed_style': 'inner'})
         <daft.PGM at 0x7f9bb48b0bb0>
         >>> dag.to_daft(node_pos="circular",
-        ... edge_params={('a', 'b'): {'label': 2}},
-        ... node_params={'a': {'shape': 'rectangle'}})
+        ...             edge_params={('a', 'b'): {'label': 2}},
+        ...             node_params={'a': {'shape': 'rectangle'}})
         <daft.PGM at 0x7f9bb48b0bb0>
         """
-        if pgm_params is None:
-            pgm_params = {}
-        if edge_params is None:
-            edge_params = {}
-        if node_params is None:
-            node_params = {}
-
         try:
             from daft import PGM
         except ImportError as e:
@@ -1184,163 +1175,67 @@ class DAG(nx.DiGraph):
                 "Documentation: https://docs.daft-pgm.org/en/latest/"
             ) from None
 
-        # Validate edge strengths if plotting is requested
-        if plot_edge_strength:
-            missing_strengths = []
-            for u, v in self.edges():
-                if "strength" not in self.edges[(u, v)]:
-                    missing_strengths.append((u, v))
-
-            if missing_strengths:
-                raise ValueError(
-                    f"Edge strength plotting requested but missing edge strengths for: {missing_strengths}. "
-                    f"Compute edge strengths using edge_strength() method first."
-                )
-
-        # Check for valid node_pos
-        valid_str_options = [
-            "circular",
-            "kamada_kawai",
-            "planar",
-            "random",
-            "shell",
-            "spring",
-            "spectral",
-            "spiral",
-        ]
-
         if isinstance(node_pos, str):
-            if node_pos not in valid_str_options:
+            supported_layouts = {
+                "circular": nx.circular_layout,
+                "kamada_kawai": nx.kamada_kawai_layout,
+                "planar": nx.planar_layout,
+                "random": nx.random_layout,
+                "shell": nx.shell_layout,
+                "spring": nx.spring_layout,
+                "spectral": nx.spectral_layout,
+                "spiral": nx.spiral_layout,
+            }
+            if node_pos not in supported_layouts:
                 raise ValueError(
-                    f"Invalid string value for node_pos: {node_pos}. node_pos should be one of: {valid_str_options}"
+                    "Unknown node_pos argument. Please refer docstring "
+                    "for accepted values"
                 )
             else:
-                node_pos = getattr(nx, f"{node_pos}_layout")(self)
-
-        if isinstance(node_pos, dict):
-            if not set(node_pos.keys()).issuperset(set(self.nodes())):
-                raise ValueError(
-                    "node_pos should have the positions defined for all nodes in the graph"
-                )
+                node_pos = supported_layouts[node_pos](self)
+        elif isinstance(node_pos, dict):
+            for node in self.nodes():
+                if node not in node_pos:
+                    raise ValueError(f"No position specified for {node}.")
         else:
             raise ValueError(
-                "node_pos should either be a string from: "
-                + str(valid_str_options)
-                + " or dict of the from: {node: (x coordinate, y coordinate)}"
+                "Argument node_pos not valid. Please refer to the docstring."
             )
 
         daft_pgm = PGM(**pgm_params)
-
-        # Add nodes
         for node in self.nodes():
-            extra_params = node_params.get(node, {}) if node_params else {}
+            try:
+                extra_params = node_params[node]
+            except KeyError:
+                extra_params = dict()
+
             if latex:
-                daft_pgm.add_node(f"${node}$", node, *node_pos[node], **extra_params)
+                daft_pgm.add_node(
+                    node,
+                    rf"${node}$",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
+                )
             else:
-                daft_pgm.add_node(node, node, *node_pos[node], **extra_params)
-
-        # Add edges
-        for u, v in self.edges():
-            extra_params = edge_params.get((u, v), {}) if edge_params else {}
-
-            if plot_edge_strength:
-                strength_value = self.edges[(u, v)]["strength"]
-                strength_label = f"{strength_value:.3f}"
-
-                if "label" in extra_params:
-                    raise ValueError(
-                        f"Cannot set edge strength label for edge ({u}, {v}) as a custom label is already provided."
-                    )
-                extra_params["label"] = strength_label
-
-            # Use consistent node naming for edges - match the display names used for nodes
-            if latex:
-                edge_u = f"${u}$"
-                edge_v = f"${v}$"
-            else:
-                edge_u = u
-                edge_v = v
-
-            if extra_params:
-                daft_pgm.add_edge(edge_u, edge_v, **extra_params)
-            else:
-                daft_pgm.add_edge(edge_u, edge_v)
-
-        return daft_pgm
-
-    def to_graphviz(
-        self,
-        node_color="white",
-        node_shape="ellipse",
-        edge_color="black",
-        plot_edge_strength=False,
-    ):
-        """
-        Returns a pygraphviz object for the DAG. pygraphviz is useful for visualizing
-        the network structure.
-
-        Parameters
-        ----------
-        node_color: str (default: white)
-            The color for nodes.
-
-        node_shape: str (default: ellipse)
-            The shape for nodes.
-
-        edge_color: str (default: black)
-            The color for edges.
-
-        plot_edge_strength: bool (default: False)
-            If True, displays edge strength values as labels on edges.
-            Requires edge strengths to be computed using edge_strength() method first.
-
-        Returns
-        -------
-        pygraphviz.AGraph object
-            The pygraphviz object for the DAG.
-
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('alarm')
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        >>> model.draw('model.png', prog='neato')
-        """
-        try:
-            import pygraphviz as pgv
-        except ImportError:
-            raise ImportError("Package pygraphviz is required for to_graphviz method.")
-
-        # Validate edge strengths if plotting is requested
-        if plot_edge_strength:
-            missing_strengths = []
-            for u, v in self.edges():
-                if "strength" not in self.edges[(u, v)]:
-                    missing_strengths.append((u, v))
-
-            if missing_strengths:
-                raise ValueError(
-                    f"Edge strength plotting requested but missing edge strengths for: {missing_strengths}. "
-                    f"Compute edge strengths using edge_strength() method first."
+                daft_pgm.add_node(
+                    node,
+                    f"{node}",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
                 )
 
-        graph = pgv.AGraph(directed=True)
-
-        # Add nodes
-        for node in self.nodes():
-            graph.add_node(node, shape=node_shape, color=node_color)
-
-        # Add edges
         for u, v in self.edges():
-            if plot_edge_strength:
-                strength_value = self.edges[(u, v)]["strength"]
-                strength_label = f"{strength_value:.3f}"
-                graph.add_edge(u, v, label=strength_label, color=edge_color)
-            else:
-                graph.add_edge(u, v, color=edge_color)
+            try:
+                extra_params = edge_params[(u, v)]
+            except KeyError:
+                extra_params = dict()
+            daft_pgm.add_edge(u, v, **extra_params)
 
-        return graph
+        return daft_pgm
 
     @staticmethod
     def get_random(
@@ -1410,6 +1305,21 @@ class DAG(nx.DiGraph):
                 gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
             )
         return dag
+
+    def to_graphviz(self):
+        """
+        Retuns a pygraphviz object for the DAG. pygraphviz is useful for
+        visualizing the network structure.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> model.to_graphviz()
+        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.draw('model.png', prog='neato')
+        """
+        return nx.nx_agraph.to_agraph(self)
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
@@ -1552,7 +1462,9 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
+        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
+        on Artificial Intelligence.
         """
 
         from pgmpy.estimators.CITests import pillai_trace
@@ -1912,20 +1824,19 @@ class PDAG(nx.DiGraph):
                         changed = True
                         if debug:
                             logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w}; {y}, {z} -> {w} => {x} -> {w}"
+                                f"Applying Rule 3: {x} - {y}, {z}, {w} "
+                                f"{y}, {z} -> {w} => {x} -> {w}"
                             )
                         break
 
             # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
             if apply_r4:
                 for c in pdag.nodes():
-                    directed_graph = pdag._directed_graph()
                     for b in pdag.directed_children(c):
                         for d in pdag.directed_parents(c):
                             if b == d or pdag.is_adjacent(b, d):
-                                continue  # b adjacent d => rule not applicable
+                                continue
 
-                            # find nodes a that are undirected neighbor to b, d, and directed or undirected neighbor to c
                             cand = set(pdag.undirected_neighbors(b)).intersection(
                                 pdag.all_neighbors(c),
                                 pdag.undirected_neighbors(d),
@@ -1957,7 +1868,8 @@ class PDAG(nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a
+        partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
