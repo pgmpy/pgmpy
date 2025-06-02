@@ -100,7 +100,7 @@ class DAG(nx.DiGraph):
         else:
             out_str = "Cycles are not allowed in a DAG."
             out_str += "\nEdges indicating the path taken for a loop: "
-            out_str += "".join([f"({u}, {v}) " for (u, v) in cycles])
+            out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
     @classmethod
@@ -1835,7 +1835,7 @@ class PDAG(nx.DiGraph):
                     for b in pdag.directed_children(c):
                         for d in pdag.directed_parents(c):
                             if b == d or pdag.is_adjacent(b, d):
-                                continue
+                                continue  # b adjacent d => rule not applicable
 
                             cand = set(pdag.undirected_neighbors(b)).intersection(
                                 pdag.all_neighbors(c),
