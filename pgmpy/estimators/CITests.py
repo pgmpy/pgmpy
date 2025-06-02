@@ -135,7 +135,7 @@ def unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
     # Get eigenvalues with error handling
     try:
         eig_vals = np.linalg.eigvalsh(Cov)
-        eig_vals = eig_vals[eig_vals > 1e-10]  
+        eig_vals = eig_vals[eig_vals > 1e-10]
     except np.linalg.LinAlgError:
         return Sta, 1.0
 
@@ -259,8 +259,8 @@ def rcit(
         else:
             return 0, 1
 
-    r = x_data.shape[0] 
-    r1 = min(500, r) 
+    r = x_data.shape[0]
+    r1 = min(500, r)
 
     # Normalize data
     x = normalize(x_data)
@@ -335,7 +335,7 @@ def rcit(
 
     # Get eigenvalues for null distribution
     eig_vals = np.linalg.eigvalsh(Cov)
-    eig_vals = eig_vals[eig_vals > 0]  
+    eig_vals = eig_vals[eig_vals > 0]
 
     # Compute p-value based on approximation method
     if num_f2 == 1:
@@ -451,8 +451,8 @@ def rcot(
         else:
             return 0, 1
 
-    r = x_data.shape[0] 
-    r1 = min(500, r) 
+    r = x_data.shape[0]
+    r1 = min(500, r)
 
     # Normalize data
     x = normalize(x_data)
