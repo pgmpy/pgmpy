@@ -86,7 +86,6 @@ def lpb_approx(eigenvalues, test_stat, p=4):
         return max(0, min(1, p_value))  # Ensure in [0, 1]
 
     except Exception:
-        # If LPB fails, fall back to HBE
         return hall_buckley_eagleson(eigenvalues, test_stat)
 
 
@@ -136,10 +135,8 @@ def unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
     # Get eigenvalues with error handling
     try:
         eig_vals = np.linalg.eigvalsh(Cov)
-        eig_vals = eig_vals[eig_vals > 1e-10]  # Keep only positive eigenvalues
+        eig_vals = eig_vals[eig_vals > 1e-10]  
     except np.linalg.LinAlgError:
-        # If eigenvalue computation fails, use a simpler approximation
-        # Return high p-value indicating independence
         return Sta, 1.0
 
     if len(eig_vals) == 0:
@@ -262,17 +259,15 @@ def rcit(
         else:
             return 0, 1
 
-    r = x_data.shape[0]  # number of samples
-    r1 = min(500, r)  # for distance calculation
+    r = x_data.shape[0] 
+    r1 = min(500, r) 
 
     # Normalize data
     x = normalize(x_data)
     y = normalize(y_data)
     z = normalize(z_data)
 
-    # Note: We combine y and z before computing RFF for y.
-    # This may differ from the strict interpretation of the Strobl et al. paper where
-    # Y's RFFs should be independent of Z's RFFs.
+    # Combine y and z for joint feature generation
     y_combined = np.hstack([y, z])
 
     # Compute kernel bandwidths using median heuristic
@@ -294,7 +289,6 @@ def rcit(
             y_combined, num_f2, sigma_y, seed + 2 if seed is not None else None
         )
     except Exception:
-        # iff RFF generation fails, return independence
         if boolean:
             return True
         else:
@@ -341,7 +335,7 @@ def rcit(
 
     # Get eigenvalues for null distribution
     eig_vals = np.linalg.eigvalsh(Cov)
-    eig_vals = eig_vals[eig_vals > 0]  # Keep only positive eigenvalues
+    eig_vals = eig_vals[eig_vals > 0]  
 
     # Compute p-value based on approximation method
     if num_f2 == 1:
@@ -430,8 +424,6 @@ def rcot(
 
     # If no conditioning set, use unconditional RFF test
     if len(Z) == 0:
-        # For RCoT with no conditioning, we use unconditional test with original data
-        # but still use RFF framework for consistency
         stat, p_value = unconditional_rff_test(x_data, y_data, 5, approx, seed)
         if boolean:
             return p_value >= significance_level
@@ -459,8 +451,8 @@ def rcot(
         else:
             return 0, 1
 
-    r = x_data.shape[0]  # number of samples
-    r1 = min(500, r)  # for distance calculation
+    r = x_data.shape[0] 
+    r1 = min(500, r) 
 
     # Normalize data
     x = normalize(x_data)
