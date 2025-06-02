@@ -1107,11 +1107,11 @@ class DAG(nx.DiGraph):
 
     def to_daft(
         self,
-        node_pos: str | dict[Hashable, tuple[int, int]] = "circular",
+        node_pos="circular",
         latex=True,
-        pgm_params={},
-        edge_params={},
-        node_params={},
+        pgm_params=None,
+        edge_params=None,
+        node_params=None,
         plot_edge_strength=False,
     ):
         """
@@ -1144,9 +1144,9 @@ class DAG(nx.DiGraph):
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
-        plot_edge_strength: boolean (default: False)
-            Whether to plot edge strengths as labels on edges.
-            Requires edge strengths to be computed first using the `edge_strength` method.
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed using edge_strength() method first.
 
         Returns
         -------
@@ -1164,22 +1164,16 @@ class DAG(nx.DiGraph):
         >>> dag.to_daft(node_pos="circular", pgm_params={'observed_style': 'inner'})
         <daft.PGM at 0x7f9bb48b0bb0>
         >>> dag.to_daft(node_pos="circular",
-        ...             edge_params={('a', 'b'): {'label': 2}},
-        ...             node_params={'a': {'shape': 'rectangle'}})
+        ... edge_params={('a', 'b'): {'label': 2}},
+        ... node_params={'a': {'shape': 'rectangle'}})
         <daft.PGM at 0x7f9bb48b0bb0>
         """
-        # Validate edge strengths if plotting is requested
-        if plot_edge_strength:
-            missing_strengths = []
-            for u, v in self.edges():
-                if "strength" not in self.edges[(u, v)]:
-                    missing_strengths.append((u, v))
-
-            if missing_strengths:
-                raise ValueError(
-                    f"Edge strength not found for edges: {missing_strengths}. "
-                    "Use edge_strength() method to compute strengths first."
-                )
+        if pgm_params is None:
+            pgm_params = {}
+        if edge_params is None:
+            edge_params = {}
+        if node_params is None:
+            node_params = {}
 
         try:
             from daft import PGM
@@ -1190,76 +1184,163 @@ class DAG(nx.DiGraph):
                 "Documentation: https://docs.daft-pgm.org/en/latest/"
             ) from None
 
-        if isinstance(node_pos, str):
-            supported_layouts = {
-                "circular": nx.circular_layout,
-                "kamada_kawai": nx.kamada_kawai_layout,
-                "planar": nx.planar_layout,
-                "random": nx.random_layout,
-                "shell": nx.shell_layout,
-                "spring": nx.spring_layout,
-                "spectral": nx.spectral_layout,
-                "spiral": nx.spiral_layout,
-            }
-            if node_pos not in supported_layouts.keys():
+        # Validate edge strengths if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
                 raise ValueError(
-                    "Unknown node_pos argument. Please refer docstring for accepted values"
+                    f"Edge strength plotting requested but missing edge strengths for: {missing_strengths}. "
+                    f"Compute edge strengths using edge_strength() method first."
+                )
+
+        # Check for valid node_pos
+        valid_str_options = [
+            "circular",
+            "kamada_kawai",
+            "planar",
+            "random",
+            "shell",
+            "spring",
+            "spectral",
+            "spiral",
+        ]
+
+        if isinstance(node_pos, str):
+            if node_pos not in valid_str_options:
+                raise ValueError(
+                    f"Invalid string value for node_pos: {node_pos}. node_pos should be one of: {valid_str_options}"
                 )
             else:
-                node_pos = supported_layouts[node_pos](self)
-        elif isinstance(node_pos, dict):
-            for node in self.nodes():
-                if node not in node_pos.keys():
-                    raise ValueError(f"No position specified for {node}.")
+                node_pos = getattr(nx, f"{node_pos}_layout")(self)
+
+        if isinstance(node_pos, dict):
+            if not set(node_pos.keys()).issuperset(set(self.nodes())):
+                raise ValueError(
+                    "node_pos should have the positions defined for all nodes in the graph"
+                )
         else:
             raise ValueError(
-                "Argument node_pos not valid. Please refer to the docstring."
+                "node_pos should either be a string from: "
+                + str(valid_str_options)
+                + " or dict of the from: {node: (x coordinate, y coordinate)}"
             )
 
         daft_pgm = PGM(**pgm_params)
+
+        # Add nodes
         for node in self.nodes():
-            try:
-                extra_params = node_params[node]
-            except KeyError:
-                extra_params = dict()
-
+            extra_params = node_params.get(node, {}) if node_params else {}
             if latex:
-                daft_pgm.add_node(
-                    node,
-                    rf"${node}$",
-                    node_pos[node][0],
-                    node_pos[node][1],
-                    observed=True,
-                    **extra_params,
-                )
+                daft_pgm.add_node(f"${node}$", node, *node_pos[node], **extra_params)
             else:
-                daft_pgm.add_node(
-                    node,
-                    f"{node}",
-                    node_pos[node][0],
-                    node_pos[node][1],
-                    observed=True,
-                    **extra_params,
-                )
+                daft_pgm.add_node(node, node, *node_pos[node], **extra_params)
 
+        # Add edges
         for u, v in self.edges():
-            try:
-                extra_params = edge_params[(u, v)]
-            except KeyError:
-                extra_params = dict()
+            extra_params = edge_params.get((u, v), {}) if edge_params else {}
 
-            # Add edge strength as label if requested
             if plot_edge_strength:
                 strength_value = self.edges[(u, v)]["strength"]
-                # Format the strength value to 3 decimal places
                 strength_label = f"{strength_value:.3f}"
-                # If user didn't provide a custom label, use the strength
-                if "label" not in extra_params:
-                    extra_params["label"] = strength_label
 
-            daft_pgm.add_edge(u, v, **extra_params)
+                if "label" in extra_params:
+                    raise ValueError(
+                        f"Cannot set edge strength label for edge ({u}, {v}) as a custom label is already provided."
+                    )
+                extra_params["label"] = strength_label
+
+            # Use consistent node naming for edges - match the display names used for nodes
+            if latex:
+                edge_u = f"${u}$"
+                edge_v = f"${v}$"
+            else:
+                edge_u = u
+                edge_v = v
+
+            if extra_params:
+                daft_pgm.add_edge(edge_u, edge_v, **extra_params)
+            else:
+                daft_pgm.add_edge(edge_u, edge_v)
 
         return daft_pgm
+
+    def to_graphviz(
+        self,
+        node_color="white",
+        node_shape="ellipse",
+        edge_color="black",
+        plot_edge_strength=False,
+    ):
+        """
+        Returns a pygraphviz object for the DAG. pygraphviz is useful for visualizing
+        the network structure.
+
+        Parameters
+        ----------
+        node_color: str (default: white)
+            The color for nodes.
+
+        node_shape: str (default: ellipse)
+            The shape for nodes.
+
+        edge_color: str (default: black)
+            The color for edges.
+
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed using edge_strength() method first.
+
+        Returns
+        -------
+        pygraphviz.AGraph object
+            The pygraphviz object for the DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> model.to_graphviz()
+        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.draw('model.png', prog='neato')
+        """
+        try:
+            import pygraphviz as pgv
+        except ImportError:
+            raise ImportError("Package pygraphviz is required for to_graphviz method.")
+
+        # Validate edge strengths if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                raise ValueError(
+                    f"Edge strength plotting requested but missing edge strengths for: {missing_strengths}. "
+                    f"Compute edge strengths using edge_strength() method first."
+                )
+
+        graph = pgv.AGraph(directed=True)
+
+        # Add nodes
+        for node in self.nodes():
+            graph.add_node(node, shape=node_shape, color=node_color)
+
+        # Add edges
+        for u, v in self.edges():
+            if plot_edge_strength:
+                strength_value = self.edges[(u, v)]["strength"]
+                strength_label = f"{strength_value:.3f}"
+                graph.add_edge(u, v, label=strength_label, color=edge_color)
+            else:
+                graph.add_edge(u, v, color=edge_color)
+
+        return graph
 
     @staticmethod
     def get_random(
@@ -1329,51 +1410,6 @@ class DAG(nx.DiGraph):
                 gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
             )
         return dag
-
-    def to_graphviz(self, plot_edge_strength=False):
-        """
-        Returns a pygraphviz object for the DAG. pygraphviz is useful for
-        visualizing the network structure.
-
-        Parameters
-        ----------
-        plot_edge_strength: boolean (default: False)
-            Whether to plot edge strengths as labels on edges.
-            Requires edge strengths to be computed first using the `edge_strength` method.
-
-        Returns
-        -------
-        pygraphviz object: pygraphviz.AGraph object
-            pygraphviz object for the DAG.
-
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('alarm')
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        """
-        # Validate edge strengths if plotting is requested
-        if plot_edge_strength:
-            missing_strengths = []
-            for u, v in self.edges():
-                if "strength" not in self.edges[(u, v)]:
-                    missing_strengths.append((u, v))
-
-            if missing_strengths:
-                raise ValueError(
-                    f"Edge strength not found for edges: {missing_strengths}. "
-                    "Use edge_strength() method to compute strengths first."
-                )
-
-        agraph = nx.nx_agraph.to_agraph(self)
-        # Add edge strength labels if requested
-        if plot_edge_strength:
-            for u, v in self.edges():
-                strength_value = self.edges[(u, v)]["strength"]
-                strength_label = f"{strength_value:.3f}"
-                agraph.get_edge(u, v).attr["label"] = strength_label
-        return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
