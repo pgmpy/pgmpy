@@ -7,84 +7,10 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
+from pgmpy.utils.ci_test_utils import *
 
 
-def _ensure_matrix(data):
-    """Ensure data is 2D numpy array."""
-    if isinstance(data, pd.DataFrame):
-        data = data.values
-    data = np.asarray(data)
-    if data.ndim == 1:
-        data = data.reshape(-1, 1)
-    return data
-
-
-def _normalize(data):
-    """Normalize data to have mean 0 and std 1."""
-    data = np.asarray(data)
-    mean = np.mean(data, axis=0)
-    std = np.std(data, axis=0)
-    std[std == 0] = 1  # Avoid division by zero
-    return (data - mean) / std
-
-
-def _random_fourier_features(x, num_f, sigma, seed=None):
-    """
-    Generate random Fourier features for kernel approximation.
-
-    Parameters
-    ----------
-    x : array-like of shape (n_samples, n_features)
-        Input data
-    num_f : int
-        Number of random features to generate
-    sigma : float
-        Kernel bandwidth parameter
-    seed : int, optional
-        Random seed
-
-    Returns
-    -------
-    dict with 'feat' : array of shape (n_samples, num_f)
-        Random Fourier features
-    """
-    if seed is not None:
-        np.random.seed(seed)
-
-    n_samples, n_features = x.shape
-
-    # Ensure sigma is not too small to avoid numerical issues
-    sigma = max(sigma, 1e-6)
-
-    # Generate random frequencies from normal distribution
-    W = np.random.normal(0, 1 / sigma, size=(n_features, num_f))
-    # Generate random phase shifts
-    b = np.random.uniform(0, 2 * np.pi, size=num_f)
-
-    # Compute random features
-    feat = np.sqrt(2.0 / num_f) * np.cos(x @ W + b)
-
-    return {"feat": feat}
-
-
-def _satterthwaite_welch(eigenvalues, test_stat):
-    """Satterthwaite-Welch approximation for weighted chi-squared."""
-    c1 = np.sum(eigenvalues)
-    c2 = np.sum(eigenvalues**2)
-
-    if c2 <= 0:
-        return 0
-
-    # Gamma distribution parameters
-    alpha = c1**2 / c2
-    beta = c2 / c1
-
-    # P-value using gamma CDF
-    p_value = stats.gamma.sf(test_stat, a=alpha, scale=beta)
-    return p_value
-
-
-def _hall_buckley_eagleson(eigenvalues, test_stat):
+def hall_buckley_eagleson(eigenvalues, test_stat):
     """Hall-Buckley-Eagleson approximation."""
     c1 = np.sum(eigenvalues)
     c2 = np.sum(eigenvalues**2)
@@ -98,48 +24,82 @@ def _hall_buckley_eagleson(eigenvalues, test_stat):
     return p_value
 
 
-def _simplified_lpb_approx(eigenvalues, test_stat):
+def lpb_approx(eigenvalues, test_stat, p=4):
     """
-    Simplified Lindsay-Pilla-Basak (LPB) method using gamma approximation.
-    This is not the full LPB mixture model, but a simplified version using
-    4 moments and gamma approximation.
+    Lindsay-Pilla-Basak (LPB) method for approximating weighted chi-squared distribution.
+
+    Uses a mixture of gamma distributions to approximate the null distribution.
+    This is the proper LPB implementation with k=2 and default p=4.
+
+    Parameters
+    ----------
+    eigenvalues : array-like
+        Eigenvalues (weights) of the chi-squared random variables
+    test_stat : float
+        The test statistic value
+    p : int
+        Number of moments to match (default=4)
+
+    Returns
+    -------
+    float
+        P-value (probability of observing test statistic or higher under null)
     """
+    # Ensure eigenvalues are positive and numpy array
+    eigenvalues = np.array(eigenvalues)
+    eigenvalues = eigenvalues[eigenvalues > 1e-10]
+
+    if len(eigenvalues) == 0:
+        return 1.0
+
+    # Check pathological case
+    if len(eigenvalues) < p:
+        # Fall back to HBE for insufficient eigenvalues
+        return hall_buckley_eagleson(eigenvalues, test_stat)
+
     try:
-        # Calculate first 4 cumulants
-        c1 = np.sum(eigenvalues)
-        c2 = 2 * np.sum(eigenvalues**2)
-        c3 = 8 * np.sum(eigenvalues**3)
-        c4 = 48 * np.sum(eigenvalues**4)
+        # Step 1: Compute moments from cumulants
+        moment_vec = get_weighted_sum_of_chi_squared_moments(eigenvalues, p)
 
-        if c2 <= 0:
-            return _hall_buckley_eagleson(eigenvalues, test_stat)
+        # Step 2: Get lambdatilde_1 (exact solution)
+        lambdatilde_1 = get_lambdatilde_1(moment_vec[0], moment_vec[1])
 
-        # Simplified LPB using gamma approximation based on skewness and kurtosis
-        skew = c3 / (c2**1.5)
-        kurt = c4 / (c2**2)
+        # Step 3: Use bisection to find lambdatilde_p
+        bisect_tol = 1e-9
+        lambdatilde_p = get_lambdatilde_p(lambdatilde_1, p, moment_vec, bisect_tol)
 
-        # Use method of moments for gamma distribution
-        alpha = 4 / skew**2
-        beta = c2 / c1 * skew / 2
+        # Step 5: Compute matrix M_p and polynomial coefficients
+        M_p = deltaNmat_applied(lambdatilde_p, moment_vec, p)
+        mu_poly_coeff_vec = get_Stilde_poly_coeff(M_p)
 
-        p_value = stats.gamma.sf(test_stat, a=alpha, scale=beta)
-        return p_value
+        # Step 5.3: Compute real roots of polynomial
+        mu_roots = get_real_poly_roots(mu_poly_coeff_vec)
 
-    except:
-        # Fallback to HBE if calculation fails
-        return _hall_buckley_eagleson(eigenvalues, test_stat)
+        # Step 6: Solve Vandermonde system for mixing weights
+        pi_vec = gen_and_solve_VDM_system(M_p, mu_roots)
+
+        # Step 7: Compute mixture of gamma CDFs
+        # Note: We want P(X > test_stat), so we use survival function
+        cdf_value = get_mixed_cdf_value(test_stat, mu_roots, pi_vec, lambdatilde_p)
+        p_value = 1 - cdf_value  # Convert CDF to survival function
+
+        return max(0, min(1, p_value))  # Ensure in [0, 1]
+
+    except Exception:
+        # If LPB fails, fall back to HBE
+        return hall_buckley_eagleson(eigenvalues, test_stat)
 
 
-def _unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
+def unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
     """
-    Unconditional independence test using RFF (equivalent to RIT in R code).
+    Unconditional independence test using RFF.
     """
     r = x_data.shape[0]
     r1 = min(500, r)
 
     # Normalize data
-    x = _normalize(x_data)
-    y = _normalize(y_data)
+    x = normalize(x_data)
+    y = normalize(y_data)
 
     # Compute bandwidths
     x_dist = pdist(x[:r1])
@@ -152,14 +112,14 @@ def _unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
     sigma_y = max(sigma_y, 1e-6)
 
     # Generate RFFs with different seeds for independence
-    four_x = _random_fourier_features(x, num_f2, sigma_x, seed)
-    four_y = _random_fourier_features(
+    four_x = random_fourier_features(x, num_f2, sigma_x, seed)
+    four_y = random_fourier_features(
         y, num_f2, sigma_y, seed + 1 if seed is not None else None
     )
 
     # Normalize features
-    f_x = _normalize(four_x["feat"])
-    f_y = _normalize(four_y["feat"])
+    f_x = normalize(four_x["feat"])
+    f_y = normalize(four_y["feat"])
 
     # Compute test statistic
     f_x_centered = f_x - np.mean(f_x, axis=0)
@@ -189,63 +149,14 @@ def _unconditional_rff_test(x_data, y_data, num_f2, approx, seed=None):
     if num_f2 == 1:
         approx = "hbe"
 
-    if approx == "gamma":
-        p_value = _satterthwaite_welch(eig_vals, Sta)
-    elif approx == "hbe":
-        p_value = _hall_buckley_eagleson(eig_vals, Sta)
-    elif approx == "lpd4":
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    if approx == "hbe":
+        p_value = hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpb":
+        p_value = lpb_approx(eig_vals, Sta)
     else:
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+        p_value = lpb_approx(eig_vals, Sta)
 
     return Sta, p_value
-
-
-def _median_heuristic(data_array):
-    """
-    Calculate the median heuristic for kernel bandwidth selection.
-
-    Parameters
-    ----------
-    data_array : np.ndarray
-        Data array of shape (n_samples, n_features)
-
-    Returns
-    -------
-    float
-        Median of pairwise Euclidean distances
-    """
-    n_samples = data_array.shape[0]
-
-    # Handle edge cases
-    if n_samples <= 1:
-        return 1.0
-
-    if n_samples > 1000:
-        # For large datasets, use a subset for efficiency
-        indices = np.random.choice(n_samples, size=1000, replace=False)
-        data_subset = data_array[indices]
-    else:
-        data_subset = data_array
-
-    # Check if data has any variance
-    if np.all(np.std(data_subset, axis=0) == 0):
-        return 1.0
-
-    # Compute pairwise distances
-    distances = []
-    for i in range(len(data_subset)):
-        for j in range(i + 1, len(data_subset)):
-            dist = np.linalg.norm(data_subset[i] - data_subset[j])
-            if dist > 0:  # Only include non-zero distances
-                distances.append(dist)
-
-    # Return median, but ensure it's never 0
-    if not distances:
-        return 1.0
-
-    median_dist = np.median(distances)
-    return max(median_dist, 1e-6)  # Ensure minimum value
 
 
 def rcit(
@@ -255,7 +166,7 @@ def rcit(
     data,
     boolean=True,
     significance_level=0.05,
-    approx="lpd4",
+    approx="lpb",
     num_f=100,
     num_f2=5,
     seed=None,
@@ -283,7 +194,7 @@ def rcit(
     significance_level : float
         Significance level for the test
     approx : str
-        Method for approximating null distribution: "lpd4", "gamma", "hbe"
+        Method for approximating null distribution: "lpb","hbe"
     num_f : int
         Number of features for conditioning set
     num_f2 : int
@@ -312,8 +223,8 @@ def rcit(
     Z = [Z] if isinstance(Z, str) else list(Z) if Z else []
 
     # Extract data
-    x_data = _ensure_matrix(data[X])
-    y_data = _ensure_matrix(data[Y])
+    x_data = ensure_matrix(data[X])
+    y_data = ensure_matrix(data[Y])
 
     # Check if x or y have zero variance (constant variables)
     if np.std(x_data) == 0 or np.std(y_data) == 0:
@@ -324,21 +235,21 @@ def rcit(
 
     # If no conditioning set, use unconditional RFF test
     if len(Z) == 0:
-        stat, p_value = _unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
+        stat, p_value = unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
         if boolean:
             return p_value >= significance_level
         else:
             return stat, p_value
 
     # Extract and prepare data
-    z_data = _ensure_matrix(data[Z])
+    z_data = ensure_matrix(data[Z])
 
     # Remove constant columns from z
     z_std = np.std(z_data, axis=0)
     z_data = z_data[:, z_std > 0]
     if z_data.shape[1] == 0:
         # No valid conditioning variables - use unconditional test
-        stat, p_value = _unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
+        stat, p_value = unconditional_rff_test(x_data, y_data, num_f2, approx, seed)
         if boolean:
             return p_value >= significance_level
         else:
@@ -355,9 +266,9 @@ def rcit(
     r1 = min(500, r)  # for distance calculation
 
     # Normalize data
-    x = _normalize(x_data)
-    y = _normalize(y_data)
-    z = _normalize(z_data)
+    x = normalize(x_data)
+    y = normalize(y_data)
+    z = normalize(z_data)
 
     # Note: We combine y and z before computing RFF for y.
     # This may differ from the strict interpretation of the Strobl et al. paper where
@@ -375,11 +286,11 @@ def rcit(
 
     # Generate Random Fourier Features with different seeds for independence
     try:
-        four_z = _random_fourier_features(z, num_f, sigma_z, seed)
-        four_x = _random_fourier_features(
+        four_z = random_fourier_features(z, num_f, sigma_z, seed)
+        four_x = random_fourier_features(
             x, num_f2, sigma_x, seed + 1 if seed is not None else None
         )
-        four_y = _random_fourier_features(
+        four_y = random_fourier_features(
             y_combined, num_f2, sigma_y, seed + 2 if seed is not None else None
         )
     except Exception:
@@ -390,9 +301,9 @@ def rcit(
             return 0, 1.0
 
     # Normalize features
-    f_x = _normalize(four_x["feat"])
-    f_y = _normalize(four_y["feat"])
-    f_z = _normalize(four_z["feat"])
+    f_x = normalize(four_x["feat"])
+    f_y = normalize(four_y["feat"])
+    f_z = normalize(four_z["feat"])
 
     # Center features for covariance calculations
     f_x_centered = f_x - np.mean(f_x, axis=0)
@@ -436,15 +347,13 @@ def rcit(
     if num_f2 == 1:
         approx = "hbe"
 
-    if approx == "gamma":
-        p_value = _satterthwaite_welch(eig_vals, Sta)
-    elif approx == "hbe":
-        p_value = _hall_buckley_eagleson(eig_vals, Sta)
-    elif approx == "lpd4":
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    if approx == "hbe":
+        p_value = hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpb":
+        p_value = lpb_approx(eig_vals, Sta)
     else:
         # Default to simplified LPB
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+        p_value = lpb_approx(eig_vals, Sta)
 
     # Ensure p-value is in valid range
     p_value = np.clip(p_value, 0, 1)
@@ -462,7 +371,7 @@ def rcot(
     data,
     boolean=True,
     significance_level=0.05,
-    approx="lpd4",
+    approx="lpb",
     num_f=100,
     seed=None,
     **kwargs,
@@ -489,7 +398,7 @@ def rcot(
     significance_level : float
         Significance level for the test
     approx : str
-        Method for approximating null distribution: "lpd4", "gamma", "hbe"
+        Method for approximating null distribution: "lpb", "hbe"
     num_f : int
         Number of features for conditioning set
     seed : int, optional
@@ -516,28 +425,28 @@ def rcot(
     Z = [Z] if isinstance(Z, str) else list(Z) if Z else []
 
     # Extract data
-    x_data = _ensure_matrix(data[X])
-    y_data = _ensure_matrix(data[Y])
+    x_data = ensure_matrix(data[X])
+    y_data = ensure_matrix(data[Y])
 
     # If no conditioning set, use unconditional RFF test
     if len(Z) == 0:
         # For RCoT with no conditioning, we use unconditional test with original data
         # but still use RFF framework for consistency
-        stat, p_value = _unconditional_rff_test(x_data, y_data, 5, approx, seed)
+        stat, p_value = unconditional_rff_test(x_data, y_data, 5, approx, seed)
         if boolean:
             return p_value >= significance_level
         else:
             return stat, p_value
 
     # Extract and prepare data
-    z_data = _ensure_matrix(data[Z])
+    z_data = ensure_matrix(data[Z])
 
     # Remove constant columns from z
     z_std = np.std(z_data, axis=0)
     z_data = z_data[:, z_std > 0]
     if z_data.shape[1] == 0:
         # No valid conditioning variables - use unconditional test
-        stat, p_value = _unconditional_rff_test(x_data, y_data, 5, approx, seed)
+        stat, p_value = unconditional_rff_test(x_data, y_data, 5, approx, seed)
         if boolean:
             return p_value >= significance_level
         else:
@@ -554,9 +463,9 @@ def rcot(
     r1 = min(500, r)  # for distance calculation
 
     # Normalize data
-    x = _normalize(x_data)
-    y = _normalize(y_data)
-    z = _normalize(z_data)
+    x = normalize(x_data)
+    y = normalize(y_data)
+    z = normalize(z_data)
 
     # Compute kernel bandwidth for z using median heuristic
     z_dist = pdist(z[:r1]) if z.shape[0] > 1 else np.array([1.0])
@@ -564,8 +473,8 @@ def rcot(
 
     # Generate Random Fourier Features only for Z
     try:
-        four_z = _random_fourier_features(z, num_f, sigma_z, seed)
-        f_z = _normalize(four_z["feat"])
+        four_z = random_fourier_features(z, num_f, sigma_z, seed)
+        f_z = normalize(four_z["feat"])
     except Exception:
         if boolean:
             return True
@@ -636,14 +545,12 @@ def rcot(
     if px == 1 and py == 1:
         approx = "hbe"
 
-    if approx == "gamma":
-        p_value = _satterthwaite_welch(eig_vals, Sta)
-    elif approx == "hbe":
-        p_value = _hall_buckley_eagleson(eig_vals, Sta)
-    elif approx == "lpd4":
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+    if approx == "hbe":
+        p_value = hall_buckley_eagleson(eig_vals, Sta)
+    elif approx == "lpb":
+        p_value = lpb_approx(eig_vals, Sta)
     else:
-        p_value = _simplified_lpb_approx(eig_vals, Sta)
+        p_value = lpb_approx(eig_vals, Sta)
 
     p_value = np.clip(p_value, 0, 1)
 
