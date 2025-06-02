@@ -705,12 +705,6 @@ class TestBayesianNetworkCPD(unittest.TestCase):
         self.assertTrue(self.G.is_dconnected("d", "i", observed="l"))
         self.assertFalse(self.G.is_dconnected("g", "s", observed="i"))
 
-    def test_is_dconnected_moral(self):
-        self.assertFalse(self.G.is_dconnected_moral("d", "s"))
-        self.assertTrue(self.G.is_dconnected_moral("s", "l"))
-        self.assertTrue(self.G.is_dconnected_moral("d", "s", observed="g"))
-        self.assertFalse(self.G.is_dconnected_moral("s", "l", observed="g"))
-
     def test_is_dconnected(self):
         self.assertFalse(self.G.is_dconnected("d", "s"))
         self.assertTrue(self.G.is_dconnected("s", "l"))
