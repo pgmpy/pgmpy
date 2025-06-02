@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pyro
 import pyro.distributions as dist
+import torch
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -103,3 +104,75 @@ class TestFCPD(unittest.TestCase):
 
         self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
         self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
+
+    def test_sample_vectorized(self):
+        """
+        Test FunctionalCPD with vectorized sampling.
+        """
+
+        def vectorized_fn(parent_sample):
+            x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
+            x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
+            mean = 1.0 + 0.5 * x1 + 0.25 * x2
+            return dist.Normal(mean, torch.ones_like(mean))
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=vectorized_fn, parents=["x1", "x2"], vectorized=True
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_sample_iterative(self):
+        """
+        Test FunctionalCPD with iterative sampling (vectorized=False).
+        """
+
+        def row_fn(row):
+            mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
+            return dist.Normal(mean, 1.0)
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=row_fn, parents=["x1", "x2"], vectorized=False
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    # Test parent sample none vectorized
+    def test_vectorized_without_parent(self):
+        """
+        Test FunctionalCPD with vectorized sampling without parents.
+        """
+
+        def vectorized_fn(parent_sample):
+            return dist.Normal(torch.zeros(1000), torch.ones(1000))
+
+        cpd = FunctionalCPD(variable="z", fn=vectorized_fn, parents=[], vectorized=True)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    # Test parent sample none iterative
+    def test_iterative_without_parent(self):
+        """
+        Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
+        """
+
+        def iterative_fn(parent_sample):
+            return dist.Normal(0.0, 1.0)
+
+        cpd = FunctionalCPD(variable="z", fn=iterative_fn, parents=[], vectorized=False)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
