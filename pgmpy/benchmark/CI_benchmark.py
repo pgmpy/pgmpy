@@ -61,9 +61,9 @@ def has_zero_counts(df, x, y, z_cols):
         return False
 
 
-def call_dgm(dgm, dgm_name, my_custom_generator, **kwargs):
+def call_dgm(dgm, dgm_name, pgmpy_custom_generator, **kwargs):
     if dgm_name == "user_defined":
-        return dgm(generator_func=my_custom_generator, **kwargs)
+        return dgm(generator_func=pgmpy_custom_generator, **kwargs)
     else:
         sig = inspect.signature(dgm)
         valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
@@ -156,8 +156,8 @@ for (dgm, n, noise, ci_test), group in df_results.groupby(
     )
 
 df_summary = pd.DataFrame(summary)
-df_results.to_csv("ci_benchmark_raw_results.csv", index=False)
-df_summary.to_csv("ci_benchmark_summary.csv", index=False)
+df_results.to_csv("ci_benchmark_raw_result.csv", index=False)
+df_summary.to_csv("ci_benchmark_summaries.csv", index=False)
 print(df_summary)
 print(
     "\nDetailed results and summary saved to ci_benchmark_raw_results.csv and ci_benchmark_summary.csv"
