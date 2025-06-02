@@ -1113,6 +1113,7 @@ class DAG(nx.DiGraph):
         pgm_params={},
         edge_params={},
         node_params={},
+        plot_edge_strength=False,
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1146,6 +1147,10 @@ class DAG(nx.DiGraph):
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
+        plot_edge_strength: boolean (default: False)
+            Whether to plot edge strengths as labels on the edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
+
         Returns
         -------
         Daft object: daft.PGM object
@@ -1174,6 +1179,18 @@ class DAG(nx.DiGraph):
                 "Please install it using: pip install daft-pgm\n"
                 "Documentation: https://docs.daft-pgm.org/en/latest/"
             ) from None
+
+        # Check if edge strengths are available when plot_edge_strength=True
+        if plot_edge_strength:
+            missing_edges = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_edges.append((u, v))
+            if missing_edges:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_edges}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
 
         if isinstance(node_pos, str):
             supported_layouts = {
@@ -1233,6 +1250,13 @@ class DAG(nx.DiGraph):
                 extra_params = edge_params[(u, v)]
             except KeyError:
                 extra_params = dict()
+
+            # Add edge strength as label if requested and not already provided by user
+            if plot_edge_strength and "label" not in extra_params:
+                if "strength" in self.edges[(u, v)]:
+                    strength_value = self.edges[(u, v)]["strength"]
+                    extra_params["label"] = f"{strength_value: .3f}"
+
             daft_pgm.add_edge(u, v, **extra_params)
 
         return daft_pgm
@@ -1306,10 +1330,16 @@ class DAG(nx.DiGraph):
             )
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self, plot_edge_strength=False):
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
+
+        Parameters
+        ----------
+        plot_edge_strength: boolean (default: False)
+            Whether to plot edge strengths as labels on the edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
 
         Examples
         --------
@@ -1319,7 +1349,28 @@ class DAG(nx.DiGraph):
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         >>> model.draw('model.png', prog='neato')
         """
-        return nx.nx_agraph.to_agraph(self)
+        # Check if edge strengths are available when plot_edge_strength=True
+        if plot_edge_strength:
+            missing_edges = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_edges.append((u, v))
+            if missing_edges:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_edges}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
+
+        agraph = nx.nx_agraph.to_agraph(self)
+
+        # Add edge strength labels if requested
+        if plot_edge_strength:
+            for u, v in self.edges():
+                if "strength" in self.edges[(u, v)]:
+                    strength_value = self.edges[(u, v)]["strength"]
+                    agraph.get_edge(u, v).attr["label"] = f"{strength_value: .3f}"
+
+        return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
