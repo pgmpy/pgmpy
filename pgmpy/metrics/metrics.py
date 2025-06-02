@@ -1,5 +1,5 @@
 import math
-from itertools import combinations
+from itertools import combinations, permutations
 
 import networkx as nx
 import numpy as np
@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -469,6 +469,134 @@ def SHD(true_model, est_model):
     return int(shd)
 
 
+def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
+    """
+    Compute the latent‐projection ADMG L(G, observed_set) of a DAG G onto a subset observed_set ⊂ V.
+    (Helper function for self_compatibility_graphical)
+
+    Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024):
+    Let G be an ADMG with variables V and observed_set ⊂ V . The latent ADMG L(G, observed_set)
+    is the ADMG that contains all nodes in observed_set,
+    all edges between nodes in observed_set and additionally
+    1) a directed_edges edge between X, Y ∈ observed_set if there is a directed_edges path from X to Y where all intermediate
+        nodes are in V \ observed_set
+    2) a bidirected_edges edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ observed_set and there are arrowheads towards
+        X and Y on the incident edges on the path.
+
+    Parameters
+    ----------
+    dag : DAG
+        The full DAG G on variables V (may include latent nodes).
+    observed : list
+        Subset observed_set ⊂ V to project onto (observed variables).
+
+    Returns
+    -------
+    nx.DiGraph
+    An ADMG over the observed nodes, where:
+        - X→Y encodes a latent‐only directed chain X→…→Y
+        - X↔Y is encoded by having both X→Y and Y→X in the grap.
+
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> from pgmpy.metrics.metrics import _latent_admg
+    >>> # Example 1: A → H → B, observe only A,B
+    >>> dag1 = DiscreteBayesianNetwork([('A', 'H'), ('H', 'B')])
+    >>> admg1 = _latent_admg(dag1, observed=['A', 'B'])
+    >>> set(admg1.edges()) == {('A', 'B')}
+    True
+
+    >>> # Example 2: A → H ← B, observe only A,B
+    >>> dag2 = DiscreteBayesianNetwork([('A', 'H'), ('B', 'H')])
+    >>> admg2 = _latent_admg(dag2, observed=['A', 'B'])
+    >>> set(admg2.edges()) == {('A', 'B'), ('B', 'A')}
+    True
+
+    References
+    ----------
+    [1] Faller, P. M., et al. (2024).
+    “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
+    In AISTATS. arXiv:2307.09552
+    """
+    full_directed = dag
+    variables = set(dag.nodes())
+    observed_set = set(observed)
+    latent_set = variables - observed_set
+
+    directed_edges = set()
+    bidirected_edges = set()
+
+    # 1) Preserve original observed→observed
+    for u, v in dag.edges():
+        if u in observed_set and v in observed_set:
+            directed_edges.add((u, v))
+
+    # 2) Rule 1: latent-only directed chains via active_trail_nodes
+    for u, v in combinations(observed_set, 2):
+        # Condition on all other observed nodes so only paths via latents remain
+        conditioning_set = list(observed_set - {u, v})
+
+        # Compute reachable sets via active trails
+        # These include any open path when non‐conditioned nodes are unobserved.
+        reachable_from_u = dag.active_trail_nodes(
+            variables=[u], observed=conditioning_set, include_latents=False
+        )[u]
+        reachable_from_v = dag.active_trail_nodes(
+            variables=[v], observed=conditioning_set, include_latents=False
+        )[v]
+
+        # u→v? Check source (u) → target (v) via latents
+        if v in reachable_from_u:
+            # Confirm it’s purely directed through latents
+            subgraph = full_directed.subgraph(latent_set | {u, v})
+            if nx.has_path(subgraph, u, v):
+                # Only add if v has no other observed parent
+                obs_parents = {p for p in dag.predecessors(v) if p in observed_set}
+                if obs_parents <= {u}:
+                    directed_edges.add((u, v))
+
+        # v→u? Check target (v) → source (u) via latents
+        if u in reachable_from_v:
+            subgraph = full_directed.subgraph(latent_set | {u, v})
+            if nx.has_path(subgraph, v, u):
+                obs_parents = {p for p in dag.predecessors(u) if p in observed_set}
+                if obs_parents <= {v}:
+                    directed_edges.add((v, u))
+
+    # 3) Rule 2: bidirected_edges for true colliders
+    for u, v in combinations(observed_set, 2):
+        # Skip only if we've already got both directions
+        if (u, v) in directed_edges and (v, u) in directed_edges:
+            continue
+
+        # (a) single-latent collider? u→ℓ←v
+        for latent in latent_set:
+            if dag.has_edge(u, latent) and dag.has_edge(v, latent):
+                bidirected_edges.add((u, v))
+                bidirected_edges.add((v, u))
+                break  # only one such latent needed
+        else:
+            # (b) “mixed”: share an observed child via latent-only chains
+            # Look for any observed child w ≠ u,v such that both u → ... → w and v → ... → w
+            for child in observed_set - {u, v}:
+                # Induced subgraphs on latents ∪ {u, w} and latents ∪ {v, w}:
+                sub_u_child = full_directed.subgraph(latent_set | {u, child})
+                sub_v_child = full_directed.subgraph(latent_set | {v, child})
+                # If both directed latent‐only paths exist, we add u↔v.
+                if nx.has_path(sub_u_child, u, child) and nx.has_path(
+                    sub_v_child, v, child
+                ):
+                    bidirected_edges.add((u, v))
+                    bidirected_edges.add((v, u))
+                    break
+
+    # 4) Build and return the ADMG
+    admg = nx.DiGraph()
+    admg.add_nodes_from(observed_set)
+    admg.add_edges_from(directed_edges)
+    admg.add_edges_from(bidirected_edges)
+    return admg
+
+
 def self_compatibility_graphical(
     estimator_class,
     data: pd.DataFrame,
@@ -543,111 +671,36 @@ def self_compatibility_graphical(
         “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
         In AISTATS. arXiv:2307.09552
     """
-    rng = np.random.RandomState(random_state)
-    variables = list(data.columns)
-    p = len(variables)
-    k = max(2, int(np.floor(subset_fraction * p)))
+    if random_state is None:
+        rng = np.random.RandomState()
+    else:
+        rng = np.random.RandomState(random_state)
 
-    def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
-        """
-        Compute the latent‐projection ADMG L(G, S) of a DAG G onto a subset S ⊂ V.
-
-        Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024):
-        Let G be an ADMG with variables V and S ⊂ V . The latent ADMG L(G, S)
-        is the ADMG that contains all nodes in S,
-        all edges between nodes in S and additionally
-        1) a directed edge between X, Y ∈ S if there is a directed path from X to Y where all intermediate
-            nodes are in V \ S
-        2) a bidirected edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ S and there are arrowheads towards
-            X and Y on the incident edges on the path.
-
-        Parameters
-        ----------
-        dag : DAG
-            The full DAG G on variables V (may include latent nodes).
-        observed : list
-            Subset S ⊂ V to project onto (observed variables).
-
-        Returns
-        -------
-        nx.DiGraph
-        An ADMG over the observed nodes S, encoded as a NetworkX DiGraph where:
-          - A single arc u→v indicates a latent‐only directed chain from u to v.
-          - A bidirected link u↔v is encoded by having both arcs u→v and v→u.
-
-        References
-        ----------
-        [1] Faller, P. M., et al. (2024).
-        “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
-        In AISTATS. arXiv:2307.09552
-        """
-        # 1) Prep
-        full_nx = dag.to_directed()
-        V = set(dag.nodes())
-        latent = V - set(observed)
-
-        directed_edges = set()
-        bidirected_edges = set()
-
-        # 2) Preserve any original observed→observed arcs
-        for u, v in dag.edges():
-            if u in observed and v in observed:
-                directed_edges.add((u, v))
-
-        # 3) Detect latent‐only directed chains via induced subgraph
-        for u, v in combinations(observed, 2):
-            sub_nodes = latent | {u, v}
-            subG = full_nx.subgraph(sub_nodes)
-            if nx.has_path(subG, u, v):
-                directed_edges.add((u, v))
-            if nx.has_path(subG, v, u):
-                directed_edges.add((v, u))
-
-        # 4) Detect collider‐mediated connections → bidirected edges
-        #    Use active_trail_nodes to find d-connected partners including latents.
-        #    If v shows up in u’s active set *only* via a collider at some latent,
-        #    then that implies u↔v in the ADMG.
-        atn = dag.active_trail_nodes(
-            variables=list(observed),
-            observed=None,  # no observed conditioning
-            include_latents=True,  # so we see latent colliders too
-        )
-        for u in observed:
-            # every v ≠ u that’s d-connected to u
-            for v in atn[u] & set(observed) - {u}:
-                # skip if we already have a directed link one way or the other
-                if (u, v) in directed_edges or (v, u) in directed_edges:
-                    continue
-                # else this must be a collider‐only connection → bidirected
-                bidirected_edges.add((u, v))
-                bidirected_edges.add((v, u))
-
-        # 5) Build output
-        admg = nx.DiGraph()
-        admg.add_nodes_from(observed)
-        admg.add_edges_from(directed_edges)
-        admg.add_edges_from(bidirected_edges)
-        return admg
+    all_variables = list(data.columns)
+    variable_count = len(all_variables)
+    subset_size = max(2, int(np.floor(subset_fraction * variable_count)))
 
     # 1) Fit joint model on all variables
     joint_learner = estimator_class(data)
     joint = joint_learner.estimate(**estimator_kwargs)
-    if not isinstance(joint, DAG):
-        joint = DiscreteBayesianNetwork(list(joint.edges()))
-
+    if isinstance(joint, PDAG):
+        joint = joint.to_dag()
     shd_values = []
-    # 2) For each random subset...
+
     for i in range(num_subsets):
         # a) sample subset of columns
-        S = rng.choice(variables, size=k, replace=False).tolist()
-        sub_data = data[S]
+        observed_set = rng.choice(
+            all_variables, size=subset_size, replace=False
+        ).tolist()
+        sub_data = data[observed_set]
+        joint_proj = _latent_admg(joint, observed_set)
         # b) fit marginal model
         marg_learner = estimator_class(sub_data)
         marginal = marg_learner.estimate(**estimator_kwargs)
-        # c) project joint onto S
-        joint_proj = _latent_admg(joint, S)
-        # d) project marginal onto S
-        marg_proj = _latent_admg(marginal, S)
+        if isinstance(marginal, PDAG):
+            marginal = marginal.to_dag()
+        # d) project marginal onto observed_set
+        marg_proj = _latent_admg(marginal, observed_set)
         # e) compute SHD
         shd_values.append(SHD(joint_proj, marg_proj))
 

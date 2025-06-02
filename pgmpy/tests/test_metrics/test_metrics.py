@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy.base import DAG
+from pgmpy.estimators import HillClimbSearch
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import (
     SHD,
@@ -17,6 +18,7 @@ from pgmpy.metrics import (
     self_compatibility_graphical,
     structure_score,
 )
+from pgmpy.metrics.metrics import _latent_admg
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
 
@@ -228,6 +230,63 @@ class TestStructuralHammingDistance(unittest.TestCase):
             SHD(dag1, dag2)
 
 
+class TestLatentADMG(unittest.TestCase):
+    """Unit tests for the `_latent_admg` function based on Definition 5 from Faller et al. (2024)."""
+
+    def setUp(self):
+        """Prepare canonical DAGs for latent projection tests."""
+        # DAG 1: A → H → B (H is latent)
+        self.dag_chain = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
+
+        # DAG 2: A → H ← B (collider through latent H)
+        self.dag_collider = DiscreteBayesianNetwork([("A", "H"), ("B", "H")])
+
+        # DAG 3: Mixed structure with both chain and collider
+        self.dag_mixed = DiscreteBayesianNetwork(
+            [
+                ("A", "H1"),
+                ("H1", "B"),  # latent chain A → H1 → B
+                ("A", "C"),
+                ("B", "H2"),
+                ("H2", "C"),  # latent collider B → H2 ← A → C
+            ]
+        )
+
+    def test_latent_chain_projects_to_directed(self):
+        """
+        A → H → B projects to A → B when H is latent.
+        """
+        admg = _latent_admg(self.dag_chain, observed=["A", "B"])
+        self.assertEqual(set(admg.edges()), {("A", "B")})
+
+    def test_latent_collider_projects_to_bidirected(self):
+        """
+        A → H ← B projects to A ↔ B (i.e., both A→B and B→A) when H is latent.
+        """
+        admg = _latent_admg(self.dag_collider, observed=["A", "B"])
+        self.assertEqual(set(admg.edges()), {("A", "B"), ("B", "A")})
+
+    def test_latent_mixed_directed_and_bidirected(self):
+        """
+        Test latent projection from mixed structure:
+            - A → H1 → B ⇒ A → B
+            - B → H2 → C ← A ⇒ A ↔ B
+            - A → C (direct edge remains)
+        """
+        admg = _latent_admg(self.dag_mixed, observed=["A", "B", "C"])
+        edges = set(admg.edges())
+
+        # Directed A → B from chain
+        self.assertIn(("A", "B"), edges)
+        # Bidirected A ↔ B from collider
+        self.assertIn(("B", "A"), edges)
+        # A → C (directly observed)
+        self.assertIn(("A", "C"), edges)
+        # Ensure no B–C spurious edges
+        self.assertNotIn(("B", "C"), edges)
+        self.assertNotIn(("C", "B"), edges)
+
+
 class TestGraphicalSelfCompatibility(unittest.TestCase):
     """
     Tests for pgmpy.metrics.self_compatibility_graphical, verifying:
@@ -346,3 +405,71 @@ class TestGraphicalSelfCompatibility(unittest.TestCase):
         self.assertEqual(seen["alpha"], 0.01)
         self.assertIn("foo", seen)
         self.assertEqual(seen["foo"], "bar")
+
+    def test_perfect_subset_projection(self):
+        """
+        If both joint and marginal estimators always return the exact
+        Definition-5 projection of the true model onto S, then SHD=0.
+        """
+        # 1) True “full” model A→B→C→D
+        true_model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
+
+        # 2) Factory that returns the *latent-projected* subgraph on df.columns
+        def proj_factory(df):
+            def estimate(**kw):
+                S = set(df.columns)
+                # Leverage your _latent_admg implementation on the true model
+                g = _latent_admg(true_model, list(S))
+                # Convert back to a pgmpy BayesianModel for SHD()
+                m = DiscreteBayesianNetwork([])
+                m.add_nodes_from(g.nodes())
+                for u, v in g.edges():
+                    m.add_edge(u, v)
+                return m
+
+            return SimpleNamespace(estimate=estimate)
+
+        # 3) Dummy data (values irrelevant)
+        dummy = pd.DataFrame(
+            {
+                "A": np.zeros(50),
+                "B": np.zeros(50),
+                "C": np.zeros(50),
+                "D": np.zeros(50),
+            }
+        )
+
+        # 4) Compute compatibility over proper subsets
+        score = self_compatibility_graphical(
+            proj_factory,
+            dummy,
+            num_subsets=20,
+            subset_fraction=0.75,
+            random_state=42,
+        )
+
+        # Now joint_proj == marg_proj for every draw ⇒ mean SHD = 0
+        self.assertEqual(score, 0.0)
+
+    def test_child_example_low_score(self):
+        """
+        When fitting the small Child network on its own simulated data,
+        the self-compatibility score should be very low.
+        """
+        # 1) Load the small Child example and simulate
+        model = get_example_model("child")
+        data = model.simulate(n_samples=50, seed=0)
+
+        # 2) Compute graphical self-compatibility
+        score = self_compatibility_graphical(
+            HillClimbSearch,
+            data,
+            num_subsets=10,  # 10 subsets to keep it light on computation
+            subset_fraction=0.8,
+            random_state=1,
+            scoring_method="bic-d",
+        )
+        expected = 4.0
+        tolerance = 3.0  # allow ±3.0 around expected
+        # 3) Since the data was generated by the Child model, SHD should be close to 4.0
+        self.assertAlmostEqual(score, expected, delta=tolerance)
