@@ -62,7 +62,7 @@ def get_scoring_method(
             )
     elif isinstance(scoring_method, type(None)):
         # automatically determine scoring method, pick first one
-        scoring_method = list(available_methods[var_type].values())[0]
+        scoring_method = list(available_methods[var_type].keys())[0]
 
     elif not isinstance(scoring_method, StructureScore):
         raise ValueError(
