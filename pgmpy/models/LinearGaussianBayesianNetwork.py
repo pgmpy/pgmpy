@@ -281,7 +281,7 @@ class LinearGaussianBayesianNetwork(DAG):
         return model_copy
 
     def simulate(
-        self, n_samples=1000, do=None, evidence=None, seed=None, missing_prob=None
+        self, n_samples=1000, do=None, evidence=None, virtual_intervention=None , seed=None, missing_prob=None
     ):
         """
         Simulates data from the given model.
@@ -298,6 +298,11 @@ class LinearGaussianBayesianNetwork(DAG):
         evidence: dict (default: None)
             Observed evidence to apply to the model. dict should be of the form
             {variable_name: value}
+
+        virtual_intervention: list
+            Also known as soft intervention. `virtual_intervention` should be a list
+            of `pgmpy.factors.discrete.LinearGaussianCPD` objects specifying the virtual/soft
+            intervention probabilities.
 
         seed: int (default: None)
             Seed for the random number generator.
@@ -338,6 +343,10 @@ class LinearGaussianBayesianNetwork(DAG):
         evidence = {} if evidence is None else evidence
 
         do = {} if do is None else do
+
+        virtual_intervention = (
+            [] if virtual_intervention is None else virtual_intervention
+        )
 
         do_nodes = list(do.keys())
         evidence_nodes = list(evidence.keys())
@@ -406,6 +415,23 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             model = self
+
+        # Step 3: If virtual_interventions are specified, change the CPD's of intervened variables
+        if virtual_intervention != []:
+            # Step 3.1: Check if CPD's are valid
+            for cpd in virtual_intervention:
+                var = cpd.variable
+                if var not in model.nodes():
+                    raise ValueError(
+                        f"Virtual intervention provided for variable which is not in the model: {var}"
+                        f"The following nodes are present in the model: {model.nodes()}"
+                    )
+
+            for cpd in virtual_intervention:
+                var = cpd.variable
+                old_cpd = model.get_cpds(var)
+                model.remove_cpds(old_cpd)
+                model.add_cpds(cpd)
 
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
