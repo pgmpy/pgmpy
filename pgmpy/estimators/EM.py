@@ -110,16 +110,20 @@ class ExpectationMaximization(ParameterEstimator):
             missing_vars = [
                 var for var in latent_card.keys() if pd.isna(data_unique.iloc[i][var])
             ]
+
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
                 latent_combinations = np.array(v, dtype=int)
+
                 df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
                     drop=True
                 )
+
                 for index, latent_var in enumerate(missing_vars):
                     df[latent_var] = latent_combinations[:, index]
             else:
                 df = data_unique.iloc[[i]].reset_index(drop=True)
+
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
