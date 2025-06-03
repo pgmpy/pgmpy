@@ -1103,7 +1103,8 @@ class DiscreteBayesianNetwork(DAG):
 
     def get_random_cpds(self, n_states=None, inplace=False, seed=None):
         """
-        Given a `model`, generates and adds random `TabularCPD` for each node resulting in a fully parameterized network.
+        Given a `model`, generates and adds random `TabularCPD`
+          for each node resulting in a fully parameterized network.
 
         Parameters
         ----------
@@ -1253,8 +1254,12 @@ class DiscreteBayesianNetwork(DAG):
         missing_prob: TabularCPD, list  (default: None)
             The probability of missing value for the variable of TabularCPD.
             In case of missing value for more than one variable, provide list of TabularCPD.
-            The variable name of each TabularCPD should end with the name of node in DiscreteBayesianNetwork with * at the end of the name.
-            The state names of each TabularCPD should be the same as the state names of the corresponding node in DiscreteBayesianNetwork.
+            The variable name of each TabularCPD should
+              end with the name of node in DiscreteBayesianNetwork
+                with * at the end of the name.
+            The state names of each TabularCPD should be the same
+              as the state names of the corresponding
+                node in DiscreteBayesianNetwork.
 
         return_full: bool (default: False)
             If True, return both full samples and samples with missing values (if performed).
@@ -1283,12 +1288,14 @@ class DiscreteBayesianNetwork(DAG):
         Simulation with virtual/soft evidence: p(MINVOLSET=LOW) = 0.8, p(MINVOLSET=HIGH) = 0.2,
         p(MINVOLSET=NORMAL) = 0:
 
-        >>> virt_evidence = [TabularCPD("MINVOLSET", 3, [[0.8], [0.0], [0.2]], state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})]
+        >>> virt_evidence = [TabularCPD("MINVOLSET", 3, [[0.8], [0.0], [0.2]],
+          state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_evidence=virt_evidence)
 
         Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3:
 
-        >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]], state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
+        >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]],
+          state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
 
         Simulation with missing values:
@@ -1346,11 +1353,13 @@ class DiscreteBayesianNetwork(DAG):
                     )
                 elif len(cpd.variables) > 1:
                     raise (
-                        "Virtual evidence should be defined on individual variables. Maybe you are looking for soft evidence."
+                        "Virtual evidence should be defined on individual variables."
+                        " Maybe you are looking for soft evidence."
                     )
                 elif self.get_cardinality(var) != cpd.get_cardinality([var])[var]:
                     raise ValueError(
-                        "The number of states/cardinality for the evidence should be same as the number of states/cardinality of the variable in the model"
+                        "The number of states/cardinality for the evidence "
+                        "should be same as the number of states/cardinality of the variable in the model"
                     )
 
             for cpd in virtual_evidence:
@@ -1392,7 +1401,8 @@ class DiscreteBayesianNetwork(DAG):
 
                 if not variable.endswith("*"):
                     raise ValueError(
-                        f"Got {variable}. TabularCPD variable should end with * symbol to represent missingnness variable."
+                        f"Got {variable}. TabularCPD variable should end with *"
+                        " symbol to represent missingnness variable."
                     )
 
                 if variable.split("*")[0] not in model.nodes:
@@ -1402,7 +1412,8 @@ class DiscreteBayesianNetwork(DAG):
 
                 if cpd.cardinality[0] != 2:
                     raise ValueError(
-                        f"Got cardinality of variable = {cpd.cardinality[0]}. Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
+                        f"Got cardinality of variable = {cpd.cardinality[0]}."
+                        " Tabular CPD variable should have 2 possible states : Missing (1) and Not Missing (0)"
                     )
 
                 model.add_node(variable)
