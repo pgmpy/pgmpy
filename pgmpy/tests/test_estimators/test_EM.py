@@ -38,7 +38,7 @@ class TestEM(unittest.TestCase):
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
 
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
@@ -64,7 +64,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
             # The latent variable doesn't converge to the true value when
@@ -96,7 +96,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
             # The latent variable doesn't converge to the true value when
@@ -181,7 +181,7 @@ class TestEMTorch(unittest.TestCase):
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
 
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
@@ -208,7 +208,7 @@ class TestEMTorch(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
             # The latent variable doesn't converge to the true value when
@@ -244,7 +244,7 @@ class TestEMTorch(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            if "Smoker" in orig_cpd.variables and "Smoker" in orig_cpd.state_names:
+            if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
             # The latent variable doesn't converge to the true value when
