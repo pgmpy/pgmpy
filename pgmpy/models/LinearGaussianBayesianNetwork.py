@@ -281,7 +281,13 @@ class LinearGaussianBayesianNetwork(DAG):
         return model_copy
 
     def simulate(
-        self, n_samples=1000, do=None, evidence=None, virtual_intervention=None , seed=None, missing_prob=None
+        self,
+        n_samples=1000,
+        do=None,
+        evidence=None,
+        virtual_intervention=None,
+        seed=None,
+        missing_prob=None,
     ):
         """
         Simulates data from the given model.
