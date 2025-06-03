@@ -15,33 +15,6 @@ def get_callable_ci_test(
     data: Optional[pd.DataFrame] = None,
     independencies=None,
 ) -> Callable:
-    """_summary_
-
-    Parameters
-    ----------
-    test : Union[str, None, Callable]
-        _description_
-    full : bool, optional
-        _description_, by default False
-    data : Optional[pd.DataFrame], optional
-        _description_, by default None
-    independencies : _type_, optional
-        _description_, by default None
-
-    Returns
-    -------
-    Callable
-        _description_
-
-    Raises
-    ------
-    ValueError
-        _description_
-    ValueError
-        _description_
-    ValueError
-        _description_
-    """
     # renamed to specify you are obtaining a Callable
     if callable(test):
         return test

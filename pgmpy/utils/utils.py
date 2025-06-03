@@ -431,6 +431,7 @@ def check_variable_type(data: pd.DataFrame) -> str:
     """
 
     def heuristic_categorical_detection(df):
+        # credit: https://stackoverflow.com/a/35827646
         for var in df.columns:
             if 1.0 * df[var].nunique() / df[var].count() < 0.1:
                 logger.warning(
