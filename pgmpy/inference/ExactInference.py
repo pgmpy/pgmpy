@@ -1506,7 +1506,8 @@ class BeliefPropagationWithMessagePassing(Inference):
             common_vars = set(evidence).intersection(set(ve_names))
             if common_vars:
                 raise ValueError(
-                    f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+                    f"Can't have the same variables in both `evidence` and "
+                    f"`virtual_evidence`. Found in both: {common_vars}"
                 )
 
         query = self._RecursiveMessageSchedulingQuery(
@@ -1559,7 +1560,8 @@ class BeliefPropagationWithMessagePassing(Inference):
 
         assert (
             len(incoming_messages) == cpt.ndim - 1
-        ), f"Error computing factor node message for {target_var}. The number of incoming messages must equal the card(CPT) - 1"
+        ), f"Error computing factor node message for {target_var}. "
+        "The number of incoming messages must equal the card(CPT) - 1"
 
         if len(incoming_messages) == 0:
             return cpt

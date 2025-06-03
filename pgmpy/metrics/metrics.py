@@ -91,7 +91,8 @@ def correlation_score(
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            f"Missing columns in data. Can't find values for the following variables:"
+            f" { set(model.nodes()) - set(data.columns) }"
         )
 
     supported_test = get_ci_test(test)
@@ -161,7 +162,8 @@ def log_likelihood_score(model, data):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            f"Missing columns in data. Can't find values for the following variables:"
+            f" { set(model.nodes()) - set(data.columns) }"
         )
 
     model.check_model()
@@ -246,7 +248,8 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            f"Missing columns in data. Can't find values for the following variables:"
+             f" { set(model.nodes()) - set(data.columns) }"
         )
     elif (scoring_method not in supported_methods.keys()) and (
         not callable(scoring_method)
