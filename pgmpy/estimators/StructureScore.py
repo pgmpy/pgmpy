@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from math import lgamma, log
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -8,22 +9,37 @@ from scipy.special import gammaln
 from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
+from pgmpy.utils.utils import check_variable_type
 
 
-def get_scoring_method(scoring_method, data, use_cache):
-    supported_methods = {
-        "k2": K2,
-        "bdeu": BDeu,
-        "bds": BDs,
-        "bic-d": BIC,
-        "aic-d": AIC,
-        "ll-g": LogLikelihoodGauss,
-        "aic-g": AICGauss,
-        "bic-g": BICGauss,
-        "ll-cg": LogLikelihoodCondGauss,
-        "aic-cg": AICCondGauss,
-        "bic-cg": BICCondGauss,
+def get_scoring_method(
+    scoring_method: Union[str, "StructureScore", None], data, use_cache
+) -> Tuple["StructureScore", "StructureScore"]:
+    available_methods = {
+        "continuous": {
+            "ll-g": LogLikelihoodGauss,
+            "aic-g": AICGauss,
+            "bic-g": BICGauss,
+        },
+        "discrete": {
+            "k2": K2,
+            "bdeu": BDeu,
+            "bds": BDs,
+            "bic-d": BIC,
+            "aic-d": AIC,
+        },
+        "mixed": {
+            "ll-cg": LogLikelihoodCondGauss,
+            "aic-cg": AICCondGauss,
+            "bic-cg": BICCondGauss,
+        },
     }
+    all_available_methods = [
+        key for subdict in available_methods.values() for key in subdict.keys()
+    ]
+
+    var_type = check_variable_type(data)
+    supported_methods = available_methods[var_type] | available_methods["mixed"]
 
     if isinstance(scoring_method, str):
         if scoring_method.lower() in [
@@ -34,18 +50,26 @@ def get_scoring_method(scoring_method, data, use_cache):
             "aicscore",
         ]:
             raise ValueError(
-                f"The scoring method names have been changed. Please refer the documentation."
+                "The scoring method names have been changed. Please refer the documentation."
+            )
+        elif scoring_method.lower() not in list(all_available_methods):
+            raise ValueError(
+                "Unknown scoring method. Please refer documentation for a list of supported score metrics."
             )
         elif scoring_method.lower() not in list(supported_methods.keys()):
             raise ValueError(
-                f"Unknown scoring method. Please refer documentation for a list of supported score metrics."
+                f"Incorrect scoring method for {var_type}, scoring_method should be one of {list(supported_methods.keys())}, received {scoring_method}. {data.dtypes.unique()}"
             )
+    elif isinstance(scoring_method, type(None)):
+        # automatically determine scoring method, pick first one
+        scoring_method = list(available_methods[var_type].keys())[0]
+
     elif not isinstance(scoring_method, StructureScore):
         raise ValueError(
-            "scoring_method should either be one of k2score, bdeuscore, "
-            "bicscore, bdsscore, aicscore, or an instance of StructureScore"
+            f"scoring_method should either be one of {all_available_methods} or an instance of StructureScore"
         )
 
+    score: StructureScore
     if isinstance(scoring_method, str):
         score = supported_methods[scoring_method.lower()](data=data)
     else:

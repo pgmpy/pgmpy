@@ -2,32 +2,61 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-
+from collections.abc import Callable
+from typing import Union, Optional
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
+from pgmpy.utils.utils import check_variable_type
 
 
-def get_ci_test(test, full=False, data=None, independencies=None):
+def get_callable_ci_test(
+    test: Union[str, None, Callable],
+    full=False,
+    data: Optional[pd.DataFrame] = None,
+    independencies=None,
+) -> Callable:
+    # renamed to specify you are obtaining a Callable
     if callable(test):
         return test
 
-    test = test.lower()
     supported_tests = {
-        "chi_square": chi_square,
-        "g_sq": g_sq,
-        "log_likelihood": log_likelihood,
-        "modified_log_likelihood": modified_log_likelihood,
-        "pearsonr": pearsonr,
-        "pillai": pillai_trace,
-        "gcm": gcm,
+        "continuous": {
+            "pearsonr": pearsonr,
+            "gcm": gcm,
+        },
+        "discrete": {
+            "chi_square": chi_square,
+            "g_sq": g_sq,
+            "log_likelihood": log_likelihood,
+            "modified_log_likelihood": modified_log_likelihood,
+        },
+        "mixed": {
+            "pillai": pillai_trace,
+        },
     }
-    if full:
-        supported_tests["power_divergence"] = power_divergence
-        supported_tests["independence_match"] = independence_match
+    flattened_supported_methods = {
+        key: value
+        for subdict in supported_tests.values()
+        for key, value in subdict.items()
+    }
 
-    if test not in supported_tests.keys():
+    if isinstance(test, type(None)):
+        if data is not None:
+            var_type = check_variable_type(data)
+            # Automatically determine method
+            test = list(supported_tests[var_type].keys())[0]
+        else:
+            test = "pillai"
+
+    test = test.lower()
+
+    if full:
+        flattened_supported_methods["power_divergence"] = power_divergence
+        flattened_supported_methods["independence_match"] = independence_match
+
+    if test not in list(flattened_supported_methods.keys()):
         raise ValueError(
-            f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
+            f"ci_test must either be one of {list(flattened_supported_methods.keys())}, or a function. Got: {test}"
         )
 
     if full:
@@ -41,7 +70,7 @@ def get_ci_test(test, full=False, data=None, independencies=None):
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
-    return supported_tests[test]
+    return flattened_supported_methods[test]
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):

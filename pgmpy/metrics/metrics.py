@@ -80,7 +80,7 @@ def correlation_score(
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
     0.911957950065703
     """
-    from pgmpy.estimators.CITests import get_ci_test
+    from pgmpy.estimators.CITests import get_callable_ci_test
 
     # Step 1: Checks for input arguments.
     if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
@@ -95,7 +95,7 @@ def correlation_score(
             f" {set(model.nodes()) - set(data.columns)}"
         )
 
-    supported_test = get_ci_test(test)
+    supported_test = get_callable_ci_test(test)
 
     if not callable(score):
         raise ValueError(

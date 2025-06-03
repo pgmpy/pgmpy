@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from itertools import chain, combinations, permutations
+from typing import Union
+from collections.abc import Callable
 
 import networkx as nx
 from joblib import Parallel, delayed
@@ -9,7 +11,7 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import get_ci_test
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 
 
@@ -43,7 +45,7 @@ class PC(StructureEstimator):
     def estimate(
         self,
         variant="parallel",
-        ci_test="chi_square",
+        ci_test: Union[str, Callable, None] = None,
         return_type="pdag",
         significance_level=0.01,
         max_cond_vars=5,
@@ -174,7 +176,7 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_ci_test(
+        ci_test = get_callable_ci_test(
             ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
@@ -232,7 +234,7 @@ class PC(StructureEstimator):
     def build_skeleton(
         self,
         variant="stable",
-        ci_test="chi_square",
+        ci_test: Union[str, Callable, None] = None,
         significance_level=0.01,
         max_cond_vars=5,
         expert_knowledge=None,
@@ -277,7 +279,9 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_ci_test(ci_test, full=True, data=None)
+        ci_test = get_callable_ci_test(
+            ci_test, full=True, data=None
+        )  # this is called twice, before on PC estimate
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
