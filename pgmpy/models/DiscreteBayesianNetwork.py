@@ -1145,7 +1145,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes, inplace=False):
+    def do(self, interventions, inplace=False):
         """
         Applies the do operation. The do operation removes all incoming edges
         to variables in `nodes` and marginalizes their CPDs to only contain the
@@ -1177,23 +1177,50 @@ class DiscreteBayesianNetwork(DAG):
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
                      ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         """
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
-        else:
-            nodes = list(nodes)
-
-        if not set(nodes).issubset(set(self.nodes())):
+        if not isinstance(interventions, dict):
             raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+                "`do` expects a dict of the form {variable: state}, "
+                f"got {type(interventions)}"
             )
+
+        nodes = list(interventions.keys())
+        states = list(interventions.values())
+
+        missing_nodes = set(nodes) - set(self.nodes())
+        if missing_nodes:
+            raise ValueError(f"Intervention variable(s) not in model: {missing_nodes}")
+
+        for var, forced_state in interventions.items():
+            cpd = self.get_cpds(node=var)
+            if forced_state not in cpd.state_names[var]:
+                raise ValueError(
+                    f"State {forced_state!r} invalid for variable {var!r}; "
+                    f"allowed states: {cpd.state_names[var]}"
+                )
 
         model = self if inplace else self.copy()
         adj_model = DAG.do(model, nodes, inplace=inplace)
 
         if adj_model.cpds:
-            for node in nodes:
-                cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+            for var, forced_state in interventions.items():
+                old_cpd = adj_model.get_cpds(node=var)
+
+                idx = old_cpd.get_state_no(var, forced_state)
+                card = old_cpd.variable_card
+
+                new_vals = [[1.0 if i == idx else 0.0] for i in range(card)]
+
+                # Drop the old CPD
+                adj_model.remove_cpds(cpd)
+                # Create new CPD by setting the values to 1.0 for the state in `states`
+                spike_cpd = TabularCPD(
+                    variable=var,
+                    variable_card=card,
+                    values=new_vals,
+                    state_names={var: old_cpd.state_names[var]},
+                )
+                adj_model.add_cpds(spike_cpd)
+
         return adj_model
 
     def simulate(
@@ -1338,8 +1365,27 @@ class DiscreteBayesianNetwork(DAG):
 
         # Step 1: If do or virtual_intervention is specified, modify the network structure.
         if (do != {}) or (virtual_intervention != []):
-            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
-            model = model.do(list(do.keys()) + virt_nodes)
+            # Create a combined intervention dictionary for hard interventions
+            combined_interventions = do.copy()
+
+            # Handle virtual interventions separately
+            for cpd in virtual_intervention:
+                var = cpd.variables[0]
+                if var not in model.nodes():
+                    raise ValueError(
+                        f"Virtual intervention variable {var} not in model"
+                    )
+
+                # Remove incoming edges to the variable
+                for parent in list(model.predecessors(var)):
+                    model.remove_edge(parent, var)
+
+                # Replace the variable's CPD with the virtual intervention CPD
+                model.remove_cpds(model.get_cpds(var))
+                model.add_cpds(cpd)
+
+            # Apply the combined interventions
+            model = model.do(combined_interventions)
             evidence = {**evidence, **do}
             virtual_evidence = [*virtual_evidence, *virtual_intervention]
 
