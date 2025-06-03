@@ -429,6 +429,7 @@ def check_variable_type(data: pd.DataFrame) -> str:
     str
         `continuous`, `discrete` or `mixed`.
     """
+
     def heuristic_categorical_detection(df):
         for var in df.columns:
             if 1.0 * df[var].nunique() / df[var].count() < 0.1:
