@@ -710,7 +710,9 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and Judea Pearl. Finding minimal d-separators. Computer Science Department, University of California, 1998.
+        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
+          Judea Pearl. Finding minimal d-separators. Computer Science Department,
+            University of California, 1998.
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError(
@@ -908,7 +910,8 @@ class DAG(nx.DiGraph):
 
     def to_pdag(self):
         """
-        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
+        Returns the CPDAG (Completed Partial DAG) of the DAG
+          representing the equivalence class that the given DAG belongs to.
 
         Returns
         -------
@@ -925,7 +928,8 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
+          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1121,7 +1125,9 @@ class DAG(nx.DiGraph):
         ----------
         node_pos: str or dict (default: circular)
             If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
-                spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
+                spectral, spiral. Please refer:
+                  https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout
+                    for details on these layouts.
 
             If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
             node.
@@ -1458,7 +1464,10 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        [1] Ankan, Ankur, and Johannes Textor.
+         "A simple unified approach to testing high-dimensional
+         conditional independences for categorical and ordinal data."
+          Proceedings of the AAAI Conference on Artificial Intelligence.
         """
 
         from pgmpy.estimators.CITests import pillai_trace
@@ -1831,7 +1840,8 @@ class PDAG(nx.DiGraph):
                             if b == d or pdag.is_adjacent(b, d):
                                 continue  # b adjacent d => rule not applicable
 
-                            # find nodes a that are undirected neighbor to b, d, and directed or undirected neighbor to c
+                            # find nodes a that are undirected neighbor to b, d,
+                            #  and directed or undirected neighbor to c
                             cand = set(pdag.undirected_neighbors(b)).intersection(
                                 pdag.all_neighbors(c),
                                 pdag.undirected_neighbors(d),
@@ -1863,7 +1873,9 @@ class PDAG(nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        [1] Dor, Dorit, and Michael Tarsi.
+          "A simple algorithm to construct a consistent extension of a partially oriented graph."
+            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.

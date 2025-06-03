@@ -27,14 +27,16 @@ class TestDiscretization(unittest.TestCase):
 
     def test_rounding_disc(self):
         df_disc = discretize(
-            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding"
+            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3},
+            method="rounding"
         )
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
 
         df_disc = discretize(
-            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="quantile"
+            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3},
+            method="quantile"
         )
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
@@ -48,10 +50,13 @@ class TestPairwiseOrientation(unittest.TestCase):
     def test_llm(self):
         descriptions = {
             "Age": "The age of a person",
-            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
-            "Education": "The highest level of education the person has finished",
+            "Workclass": "The workplace where the person is "
+            "employed such as Private industry, or self employed",
+            "Education": "The highest level of education the "
+            "person has finished",
             "MaritalStatus": "The marital status of the person",
-            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
+            "Occupation": "The kind of job the person does. "
+            "For example, sales, craft repair, clerical",
             "Relationship": "The relationship status of the person",
             "Race": "The ethnicity of the person",
             "Sex": "The sex or gender of the person",
@@ -62,13 +67,15 @@ class TestPairwiseOrientation(unittest.TestCase):
 
         self.assertEqual(
             llm_pairwise_orient(
-                x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"
+                x="Age", y="Income",
+                descriptions=descriptions, domain="Social Sciences"
             ),
             ("Age", "Income"),
         )
         self.assertEqual(
             llm_pairwise_orient(
-                x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"
+                x="Income", y="Age",
+                descriptions=descriptions, domain="Social Sciences"
             ),
             ("Age", "Income"),
         )
@@ -77,7 +84,8 @@ class TestPairwiseOrientation(unittest.TestCase):
 class TestPreprocessData(unittest.TestCase):
     def setUp(self):
         self.data_raw = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv",
+            index_col=0
         )
 
         self.data_proc = self.data_raw.copy()
