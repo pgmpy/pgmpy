@@ -1553,6 +1553,51 @@ class DAG(nx.DiGraph):
         rmsea = np.sqrt(max((fisher_c_stat - df) / (df * (n_samples - 1)), 0))
         return rmsea
 
+    def permutation_test_pvalue(model, data, ci_test, n_permutations=1000, show_progress=True, random_state=None):
+        """
+        Performs a permutation test for model fit using the Fisher C statistic.
+
+        Parameters
+        ----------
+        model : DAG or BayesianNetwork
+            The model to test.
+        data : pd.DataFrame
+            The observed data.
+        ci_test : function
+            Conditional independence test function (e.g., chi_square).
+        n_permutations : int
+            Number of permutations to perform.
+        show_progress : bool
+            Whether to show a progress bar.
+        random_state : int or None
+            Random seed for reproducibility.
+
+        Returns
+        -------
+        float
+            Permutation p-value: proportion of permuted Fisher C >= observed Fisher C.
+        """
+        import numpy as np
+        from pgmpy.metrics import fisher_c
+        from tqdm import tqdm
+
+        rng = np.random.default_rng(random_state)
+        observed_c = fisher_c(model, data, ci_test, show_progress=False)
+        permuted_cs = []
+        columns = data.columns
+        iterator = range(n_permutations)
+        if show_progress:
+            iterator = tqdm(iterator, desc="Permutation test")
+        for _ in iterator:
+            permuted = data.copy()
+            for col in columns:
+                permuted[col] = rng.permutation(permuted[col].values)
+            c = fisher_c(model, permuted, ci_test, show_progress=False)
+            permuted_cs.append(c)
+        permuted_cs = np.array(permuted_cs)
+        p_value = np.mean(permuted_cs >= observed_c)
+        return p_value
+
 
 class PDAG(nx.DiGraph):
     """
