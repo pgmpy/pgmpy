@@ -515,7 +515,9 @@ def _format(val, valtype, floatfmt, missingval=""):
 
     >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430']
     >>> tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]]
-    >>> good_result = '\u0431\u0443\u043a\u0432\u0430      \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437             2\n\u0431\u0443\u043a\u0438           4'
+    >>> good_result = '\u0431\u0443\u043a\u0432\u0430
+                \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437
+                                          2\n\u0431\u0443\u043a\u0438           4'
     >>> tabulate(tbl, headers=hrow) == good_result
     True
 

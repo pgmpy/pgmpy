@@ -346,7 +346,9 @@ class SEMGraph(DAG):
             nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})
         ).copy()
 
-        # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+        # Optimization: Remove all error nodes which don't
+        #  have any correlation as it doesn't add any new path.
+        #  If not removed it can create a lot of
         # extra paths resulting in a much higher runtime.
         err_nodes_to_remove = set(self.err_graph.nodes()) - set(
             [node for edge in self.err_graph.edges() for node in edge]

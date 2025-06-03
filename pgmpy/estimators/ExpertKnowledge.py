@@ -247,7 +247,8 @@ class ExpertKnowledge:
                 pdag.orient_undirected_edge(v, u, inplace=True)
             elif pdag.has_edge(u, v):
                 logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from forbidden edges."
+                    f"Specified expert knowledge conflicts with learned structure. "
+                    f"Ignoring edge {u}->{v} from forbidden edges."
                 )
 
         for edge in self.required_edges:
@@ -257,7 +258,8 @@ class ExpertKnowledge:
                 pdag.orient_undirected_edge(u, v, inplace=True)
             elif pdag.has_edge(u, v) is False:
                 logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. Ignoring edge {u}->{v} from required edges"
+                    f"Specified expert knowledge conflicts with learned structure. "
+                    f"Ignoring edge {u}->{v} from required edges"
                 )
 
         return pdag
