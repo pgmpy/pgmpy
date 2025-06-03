@@ -12,6 +12,8 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
+from pgmpy.metrics import correlation_score, log_likelihood_score, structure_score, implied_cis, fisher_c
+from pgmpy.estimators.CITests import chi_square
 
 
 class DAG(nx.DiGraph):
@@ -1527,6 +1529,29 @@ class DAG(nx.DiGraph):
             )
 
         return strengths
+
+    def compute_rmsea(fisher_c_stat, df, n_samples):
+        """
+        Computes the RMSEA (Root Mean Square Error of Approximation) given Fisher's C statistic, degrees of freedom, and sample size.
+
+        Parameters
+        ----------
+        fisher_c_stat : float
+            The Fisher C statistic (sum of -2*log(p-values)).
+        df : int
+            Degrees of freedom (typically 2 * number of CIs).
+        n_samples : int
+            Number of samples in the data.
+
+        Returns
+        -------
+        float
+            The RMSEA value.
+        """
+        if df == 0 or n_samples <= 1:
+            return np.nan
+        rmsea = np.sqrt(max((fisher_c_stat - df) / (df * (n_samples - 1)), 0))
+        return rmsea
 
 
 class PDAG(nx.DiGraph):
