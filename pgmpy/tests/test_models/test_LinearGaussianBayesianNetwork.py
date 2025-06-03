@@ -189,14 +189,16 @@ class TestLGBNMethods(unittest.TestCase):
 
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
-    
+
     def test_simulate_with_virtual_intervention(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
         new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
         virtual_intervention = [new_cpd]
 
-        df = self.model.simulate(n_samples=10000, seed=42, virtual_intervention=virtual_intervention)
+        df = self.model.simulate(
+            n_samples=10000, seed=42, virtual_intervention=virtual_intervention
+        )
 
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 2, 10000)
