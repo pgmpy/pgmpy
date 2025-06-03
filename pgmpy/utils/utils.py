@@ -430,16 +430,23 @@ def check_variable_type(data: pd.DataFrame) -> str:
     str
         `continuous`, `discrete` or `mixed`.
     """
-    cat_type = 0
-    num_type = 0
-    for key in data.dtypes:
-        if key in ["category", "C"]:
-            cat_type += 1
-        elif key in ["int16", "int32", "int64", "float16", "float32", "float64", "N"]:
-            num_type += 1
+    def heuristic_categorical_detection(df):
+        for var in df.columns:
+            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
+                logger.warning(
+                    "Data is likely categorical, but using numerical values. "
+                    + "Please set the dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+                )
+                break
 
-    if len(data.columns) == cat_type:
-        return "discrete"
-    elif len(data.columns) == num_type:
-        return "continuous"
+    df, dtypes = preprocess_data(data)
+    dtypes_set = set(dtypes.values())
+
+    if len(dtypes_set) == 1:
+        if "N" in dtypes_set:
+            heuristic_categorical_detection(df)
+            return "continuous"
+        elif "C" in dtypes_set:
+            return "discrete"
+    heuristic_categorical_detection(df)
     return "mixed"
