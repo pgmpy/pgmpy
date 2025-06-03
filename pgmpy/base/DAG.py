@@ -1598,6 +1598,89 @@ class DAG(nx.DiGraph):
         p_value = np.mean(permuted_cs >= observed_c)
         return p_value
 
+    def validate(self, data, ci_test=chi_square, n_permutations=1000, significance_level=0.05, show_progress=True, random_state=None):
+        """
+        Summarizes model validation metrics in a tabular format.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The observed data.
+        ci_test : function
+            Conditional independence test function (default: chi_square).
+        n_permutations : int
+            Number of permutations for permutation test p-value.
+        significance_level : float
+            Significance level for CI tests.
+        show_progress : bool
+            Whether to show progress bars for permutation test.
+        random_state : int or None
+            Random seed for permutation test.
+
+        Returns
+        -------
+        pd.DataFrame
+            A one-row DataFrame summarizing all validation metrics.
+        """
+        import pandas as pd
+        from pgmpy.base.DAG import compute_rmsea, permutation_test_pvalue
+        from pgmpy.metrics import correlation_score, log_likelihood_score, structure_score, implied_cis, fisher_c
+
+        # 1. Correlation score
+        corr_score = correlation_score(self, data)
+
+        # 2. Log-likelihood
+        try:
+            ll = log_likelihood_score(self, data)
+        except Exception:
+            ll = None
+
+        # 3. AIC and BIC
+        try:
+            aic = structure_score(self, data, scoring_method="aic-g")
+        except Exception:
+            aic = None
+        try:
+            bic = structure_score(self, data, scoring_method="bic-g")
+        except Exception:
+            bic = None
+
+        # 4. Implied CI tests
+        cis_df = implied_cis(self, data, ci_test=ci_test, show_progress=show_progress)
+        n_failing = (cis_df["p-value"] < significance_level).sum()
+        n_total = len(cis_df)
+
+        # 5. Fisher C p-value and RMSEA
+        fisher_p = fisher_c(self, data, ci_test=ci_test, show_progress=show_progress)
+        # To get Fisher C statistic and df:
+        # Fisher C = -2 * sum(log(p-values)), df = 2 * n_total
+        fisher_c_stat = -2 * np.log(cis_df["p-value"].clip(lower=1e-6)).sum()
+        df = 2 * n_total
+        n_samples = data.shape[0]
+        rmsea = compute_rmsea(fisher_c_stat, df, n_samples)
+
+        # 6. Permutation test p-value
+        perm_p = permutation_test_pvalue(self, data, ci_test=ci_test, n_permutations=n_permutations, show_progress=show_progress, random_state=random_state)
+
+        # Format as a table
+        results = {
+            "Correlation score": corr_score,
+            "Log-likelihood": ll,
+            "AIC": aic,
+            "BIC": bic,
+            "Failing CIs/Total": f"{n_failing}/{n_total}",
+            "Fisher C p-value": fisher_p,
+            "RMSEA": rmsea,
+            "Permutation p-value": perm_p,
+        }
+        df = pd.DataFrame([results])
+        try:
+            from tabulate import tabulate
+            print(tabulate(df, headers="keys", tablefmt="github", showindex=False))
+        except ImportError:
+            print(df)
+        return df
+
 
 class PDAG(nx.DiGraph):
     """
