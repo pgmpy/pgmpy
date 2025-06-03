@@ -65,27 +65,16 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Drop fully missing columns and treat them as latent if not already
         original_cols = set(data.columns)
-        data = data.dropna(axis=1, how="all")
+        data = data.dropna(axis=1, how="any")
         dropped_cols = original_cols - set(data.columns)
         new_latents = [col for col in dropped_cols if col not in model.latents]
 
         if new_latents:
             logger.warning(
-                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                f"Columns {new_latents} have all or partial missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
             model.latents.update(new_latents)
-
-        # Drop rows with any missing values in partially observed columns
-        original_rows_count = data.shape[0]
-        data = data.dropna()
-        dropped_rows_count = original_rows_count - data.shape[0]
-
-        if dropped_rows_count:
-            logger.warning(
-                f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
-            )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
@@ -119,13 +108,19 @@ class ExpectationMaximization(ParameterEstimator):
         cache = []
 
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
-            v = list(product(*[range(card) for card in latent_card.values()]))
-            latent_combinations = np.array(v, dtype=int)
-            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
-                drop=True
-            )
-            for index, latent_var in enumerate(latent_card.keys()):
-                df[latent_var] = latent_combinations[:, index]
+            missing_vars = [
+                var for var in latent_card.keys() if pd.isna(data_unique.iloc[i][var])
+            ]
+            if missing_vars:
+                v = list(product(*[range(latent_card[var]) for var in missing_vars]))
+                latent_combinations = np.array(v, dtype=int)
+                df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
+                    drop=True
+                )
+                for index, latent_var in enumerate(missing_vars):
+                    df[latent_var] = latent_combinations[:, index]
+            else:
+                df = data_unique.iloc[[i]].reset_index(drop=True)
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
