@@ -1071,7 +1071,7 @@ class DAG(nx.DiGraph):
         else:
             nodes = list(nodes)
 
-        if set(nodes) not in set(self.nodes()):
+        if not set(nodes).issubset(set(self.nodes())):
             raise ValueError(
                 f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
             )
