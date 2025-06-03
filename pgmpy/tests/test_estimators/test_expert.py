@@ -4,8 +4,10 @@ import unittest
 import networkx as nx
 import pandas as pd
 import pytest
+import numpy as np
 
-from pgmpy.estimators import ExpertInLoop
+from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
+from pgmpy.utils import get_example_model
 
 
 class TestExpertInLoop(unittest.TestCase):
@@ -204,3 +206,48 @@ class TestExpertInLoop(unittest.TestCase):
         # Check that all edges are oriented from alphabetically higher to lower
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
+
+    def test_combined_expert_knowledge(self):
+        """Test combination of forbidden edges, required edges, and temporal order."""
+        expert_knowledge = ExpertKnowledge(
+            forbidden_edges=[("Age", "Income")],
+            required_edges=[("Education", "Income")],
+            temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]],
+        )
+
+        # Run the algorithm
+        dag = self.estimator.estimate(
+            expert_knowledge=expert_knowledge,
+            effect_size_threshold=0.0001,
+            show_progress=False,
+        )
+
+        # Check forbidden edges
+        assert ("Age", "Income") not in dag.edges()
+
+        # Check temporal order
+        for u, v in dag.edges():
+            u_order = expert_knowledge.temporal_ordering[u]
+            v_order = expert_knowledge.temporal_ordering[v]
+            assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
+
+    def test_edge_orientation_priority(self):
+        """Test that edge orientation follows the correct priority order."""
+        expert_knowledge = ExpertKnowledge(
+            temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]]
+        )
+
+        # Define orientations that should take precedence over temporal order
+        orientations = {("Income", "Education")}  # Opposite of temporal order
+
+        # Run the algorithm
+        dag = self.estimator.estimate(
+            expert_knowledge=expert_knowledge,
+            orientations=orientations,
+            effect_size_threshold=0.0001,
+            show_progress=False,
+        )
+
+        # Check that specified orientations take precedence
+        if ("Income", "Education") in dag.edges():
+            assert ("Education", "Income") not in dag.edges()

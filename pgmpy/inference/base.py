@@ -104,10 +104,29 @@ class Inference(object):
                     self.factors[var].append(factor)
 
         elif isinstance(self.model, DynamicBayesianNetwork):
-            self.start_bayesian_model = DiscreteBayesianNetwork(
-                self.model.get_intra_edges(0)
-            )
+            # Initialize main inference properties for DBN
+            self.state_names_map = {}
+            for node in self.model.nodes():
+                cpd = self.model.get_cpds(node)
+                if isinstance(cpd, TabularCPD):
+                    self.cardinality[node] = cpd.variable_card
+                    cpd_factor = cpd.to_factor()
+                for var in cpd_factor.scope():
+                    self.factors[var].append(cpd_factor)
+                self.state_names_map.update(cpd_factor.no_to_name)
+
+            # Create start_bayesian_model
+            intra_edges_0 = self.model.get_intra_edges(0)
+            self.start_bayesian_model = DiscreteBayesianNetwork(intra_edges_0)
+
+            # Add all nodes from time slice 0 even if there are no intra-edges
+            time_slice_0_nodes = self.model.get_slice_nodes(time_slice=0)
+            for node in time_slice_0_nodes:
+                if node not in self.start_bayesian_model.nodes():
+                    self.start_bayesian_model.add_node(node)
+
             self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
+
             cpd_inter = [
                 self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
             ]
@@ -145,7 +164,9 @@ class Inference(object):
 
         References
         ----------
-        [1] Baker, M., & Boult, T. E. (2013). Pruning Bayesian networks for efficient computation. arXiv preprint arXiv:1304.1112.
+        [1] Baker, M., & Boult, T. E. (2013).
+          Pruning Bayesian networks for efficient computation.
+            arXiv preprint arXiv:1304.1112.
         """
         evidence = {} if evidence is None else evidence
         variables = list(self.model.nodes()) if len(variables) == 0 else list(variables)
@@ -199,7 +220,8 @@ class Inference(object):
             if isinstance(cpd, DiscreteFactor):
                 if len(cpd.variables) > 1:
                     raise ValueError(
-                        f"If cpd is an instance of DiscreteFactor, it should be defined on a single variable. Got: {cpd}"
+                        f"If cpd is an instance of DiscreteFactor,"
+                        f" it should be defined on a single variable. Got: {cpd}"
                     )
             var = cpd.variables[0]
             if var not in self.model.nodes():
@@ -208,12 +230,14 @@ class Inference(object):
                 )
             elif len(cpd.variables) > 1:
                 raise ValueError(
-                    "Virtual evidence should be defined on individual variables. Maybe you are looking for soft evidence."
+                    "Virtual evidence should be defined on individual variables."
+                    " Maybe you are looking for soft evidence."
                 )
 
             elif self.model.get_cardinality(var) != cpd.get_cardinality([var])[var]:
                 raise ValueError(
-                    "The number of states/cardinality for the evidence should be same as the number of states/cardinality of the variable in the model"
+                    "The number of states/cardinality for the evidence should"
+                    " be same as the number of states/cardinality of the variable in the model"
                 )
 
     def _virtual_evidence(self, virtual_evidence):
@@ -234,7 +258,10 @@ class Inference(object):
 
         References
         ----------
-        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks: Presentation and comparison on a simple example." International Conference on Information Processing and Management of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
+        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks:
+          Presentation and comparison on a simple example."
+            International Conference on Information Processing and Management
+              of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
         """
         self._check_virtual_evidence(virtual_evidence)
 
