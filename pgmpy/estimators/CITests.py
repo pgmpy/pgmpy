@@ -1,12 +1,14 @@
+from collections.abc import Callable
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
-from collections.abc import Callable
-from typing import Union, Optional
+
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
-from pgmpy.utils.utils import check_variable_type
+from pgmpy.utils import get_dataset_type
 
 
 def get_callable_ci_test(
@@ -42,11 +44,14 @@ def get_callable_ci_test(
 
     if isinstance(test, type(None)):
         if data is not None:
-            var_type = check_variable_type(data)
             # Automatically determine method
+            var_type = get_dataset_type(data)
             test = list(supported_tests[var_type].keys())[0]
         else:
-            test = "pillai"
+            raise ValueError(
+                "Cannot determine a suitable CI test for the data. "
+                "Please specify CI test to use"
+            )
 
     test = test.lower()
 

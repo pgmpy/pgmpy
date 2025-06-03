@@ -348,7 +348,8 @@ def llm_pairwise_orient(
         1. <A> causes <B>
         2. <B> causes <A>
 
-        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
+        Do not add any formatting in the answer.
         """
     response = completion(
         model=llm_model, messages=[{"role": "user", "content": prompt}]
@@ -443,8 +444,10 @@ def preprocess_data(df):
     return (df, dtypes)
 
 
-def check_variable_type(data: pd.DataFrame) -> str:
-    """Returns continuous, discrete or mixed depending on the type of variable data in the given dataset
+def get_dataset_type(data: pd.DataFrame) -> str:
+    """
+    Returns continuous, discrete or mixed depending on the type of variable
+    data in the given dataset.
 
     Parameters
     ----------
@@ -463,7 +466,8 @@ def check_variable_type(data: pd.DataFrame) -> str:
             if 1.0 * df[var].nunique() / df[var].count() < 0.1:
                 logger.warning(
                     "Data is likely categorical, but using numerical values. "
-                    + "Please set the dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+                    "Please set the dtype as `categorical` in pandas dataframe if "
+                    "that's the case, otherwise ignore this warning."
                 )
                 break
 

@@ -9,7 +9,7 @@ from scipy.special import gammaln
 from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
-from pgmpy.utils.utils import check_variable_type
+from pgmpy.utils import get_dataset_type
 
 
 def get_scoring_method(
@@ -38,7 +38,7 @@ def get_scoring_method(
         key for subdict in available_methods.values() for key in subdict.keys()
     ]
 
-    var_type = check_variable_type(data)
+    var_type = get_dataset_type(data)
     supported_methods = available_methods[var_type] | available_methods["mixed"]
 
     if isinstance(scoring_method, str):
@@ -58,7 +58,8 @@ def get_scoring_method(
             )
         elif scoring_method.lower() not in list(supported_methods.keys()):
             raise ValueError(
-                f"Incorrect scoring method for {var_type}, scoring_method should be one of {list(supported_methods.keys())}, received {scoring_method}. {data.dtypes.unique()}"
+                f"Incorrect scoring method for {var_type}, scoring_method should be one of"
+                f"{list(supported_methods.keys())}, received {scoring_method}. {data.dtypes.unique()}"
             )
     elif isinstance(scoring_method, type(None)):
         # automatically determine scoring method, pick first one
@@ -217,6 +218,8 @@ class K2(StructureScore):
         gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(
             var_cardinality
         )
+        log_gamma_counts += gamma_counts_adj
+        log_gamma_conds += gamma_conds_adj
 
         score = (
             np.sum(log_gamma_counts)
@@ -266,8 +269,6 @@ class BDeu(StructureScore):
         'Computes a score that measures how much a \
         given variable is "influenced" by a given list of potential parents.'
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
         parents = list(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
@@ -365,8 +366,6 @@ class BDs(BDeu):
         'Computes a score that measures how much a \
         given variable is "influenced" by a given list of potential parents.'
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
         parents = list(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
@@ -503,7 +502,6 @@ class AIC(StructureScore):
         var_cardinality = len(var_states)
         parents = list(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
-        sample_size = len(self.data)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
         counts = np.asarray(state_counts)
