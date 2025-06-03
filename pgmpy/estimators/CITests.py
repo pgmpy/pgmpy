@@ -71,7 +71,7 @@ def get_callable_ci_test(
         if data is not None:
             var_type = check_variable_type(data)
             # Automatically determine method
-            test = list(supported_tests[var_type].values())[0]
+            test = list(supported_tests[var_type].keys())[0]
         else:
             test = "pillai"
 
