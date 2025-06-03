@@ -1113,6 +1113,7 @@ class DAG(nx.DiGraph):
         pgm_params={},
         edge_params={},
         node_params={},
+        plot_edge_strength=False,
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1146,6 +1147,10 @@ class DAG(nx.DiGraph):
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
 
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
+
         Returns
         -------
         Daft object: daft.PGM object
@@ -1174,6 +1179,19 @@ class DAG(nx.DiGraph):
                 "Please install it using: pip install daft-pgm\n"
                 "Documentation: https://docs.daft-pgm.org/en/latest/"
             ) from None
+
+        # Check edge strength existence if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
 
         if isinstance(node_pos, str):
             supported_layouts = {
@@ -1233,6 +1251,14 @@ class DAG(nx.DiGraph):
                 extra_params = edge_params[(u, v)]
             except KeyError:
                 extra_params = dict()
+
+            # Add edge strength as label if requested
+            if plot_edge_strength:
+                strength_value = self.edges[(u, v)]["strength"]
+                strength_label = f"{strength_value: .3f}"
+                if "label" not in extra_params:
+                    extra_params["label"] = strength_label
+
             daft_pgm.add_edge(u, v, **extra_params)
 
         return daft_pgm
@@ -1306,10 +1332,21 @@ class DAG(nx.DiGraph):
             )
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self, plot_edge_strength=False):
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
+
+        Parameters
+        ----------
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
+
+        Returns
+        -------
+        AGraph object: pygraphviz.AGraph
+            pygraphviz object for plotting the DAG.
 
         Examples
         --------
@@ -1319,7 +1356,27 @@ class DAG(nx.DiGraph):
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         >>> model.draw('model.png', prog='neato')
         """
-        return nx.nx_agraph.to_agraph(self)
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
+
+        agraph = nx.nx_agraph.to_agraph(self)
+
+        if plot_edge_strength:
+            for u, v in self.edges():
+                strength_value = self.edges[(u, v)]["strength"]
+                strength_label = f"{strength_value: .3f}"
+                agraph.get_edge(u, v).attr["label"] = strength_label
+
+        return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """

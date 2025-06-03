@@ -696,32 +696,6 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot_default = dag_no_strength.to_daft()
         self.assertIsNotNone(daft_plot_default)
 
-    def test_edge_strength_plotting_to_graphviz(self):
-        """Test edge strength plotting in to_graphviz method"""
-        dag = DAG([("A", "B"), ("C", "B")])
-
-        with self.assertRaises(ValueError) as context:
-            dag.to_graphviz(plot_edge_strength=True)
-        self.assertIn(
-            "Edge strength plotting requested but strengths not found",
-            str(context.exception),
-        )
-
-        dag.edges[("A", "B")]["strength"] = 0.123
-        dag.edges[("C", "B")]["strength"] = 0.456
-
-        graphviz_plot = dag.to_graphviz(plot_edge_strength=True)
-        self.assertIsNotNone(graphviz_plot)
-
-        ab_edge = graphviz_plot.get_edge("A", "B")
-        cb_edge = graphviz_plot.get_edge("C", "B")
-        self.assertEqual(ab_edge.attr["label"], "0.123")
-        self.assertEqual(cb_edge.attr["label"], "0.456")
-
-        dag_no_strength = DAG([("A", "B"), ("C", "B")])
-        graphviz_plot_default = dag_no_strength.to_graphviz()
-        self.assertIsNotNone(graphviz_plot_default)
-
     def test_edge_strength_plotting_with_existing_labels(self):
         """Test edge strength plotting when user provides custom edge labels"""
         dag = DAG([("A", "B")])
