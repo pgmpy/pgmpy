@@ -7,6 +7,7 @@ import warnings
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pytest
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
@@ -20,6 +21,7 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+from pgmpy.utils.optional_dependencies import XGBOOST_AVAILABLE
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -466,6 +468,7 @@ class TestDAGCreation(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_edge_strength_basic(self):
         """Test basic functionality and numerical values using simulated data from LinearGaussianBN"""
         # Create a linear Gaussian Bayesian network
@@ -500,8 +503,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr[0] ** 2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr[0] ** 2, places=2)
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_edge_strength_specific_edge(self):
         """Test computing strength for specific edge using simulated data"""
+
         # Create a linear Gaussian Bayesian network
         linear_model = LGBN([("X", "Y"), ("Z", "Y")])
 
@@ -529,8 +534,10 @@ class TestDAGCreation(unittest.TestCase):
         xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
         self.assertAlmostEqual(strength_xy[("X", "Y")], xy_corr**2, places=2)
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_edge_strength_multiple_edges(self):
         """Test computing strength for multiple specific edges using simulated data"""
+
         # Create a linear Gaussian Bayesian network
         linear_model = LGBN([("X", "Y"), ("Z", "Y")])
 
@@ -561,6 +568,7 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr**2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr**2, places=2)
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_edge_strength_stored_in_graph(self):
         """Test that edge strengths are stored in the graph after computation using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -631,6 +639,7 @@ class TestDAGCreation(unittest.TestCase):
             str(context.exception),
         )
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_edge_strength_skip_latent_edges(self):
         """Test that edge_strength skips edges with latent variables and continues with others"""
         # Create DAG with some latent variables

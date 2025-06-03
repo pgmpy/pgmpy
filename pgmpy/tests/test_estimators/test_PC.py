@@ -3,6 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pytest
 from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.base import PDAG
@@ -11,6 +12,7 @@ from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
+from pgmpy.utils.optional_dependencies import XGBOOST_AVAILABLE
 
 
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
@@ -56,6 +58,7 @@ class TestPCFakeCITest(unittest.TestCase):
             return True
         return False
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_build_skeleton_orig(self):
         skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="orig"
@@ -359,6 +362,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                     show_progress=False,
                 )
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_build_dag(self):
         for variant in ["orig", "stable", "parallel"]:
             np.random.seed(42)
@@ -408,6 +412,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_build_skeleton(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
@@ -478,6 +483,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     )
                 self.assertEqual(sep_sets, expected_sepsets)
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_build_dag(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:

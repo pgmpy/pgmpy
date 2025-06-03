@@ -10,6 +10,7 @@ from numpy import testing as np_test
 from pgmpy.estimators.CITests import *
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.utils.optional_dependencies import XGBOOST_AVAILABLE
 
 np.random.seed(42)
 ON_GITHUB_RUNNER = os.getenv("GITHUB_ACTIONS") == "true"
@@ -378,6 +379,7 @@ class TestResidualMethod(unittest.TestCase):
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
+    @pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="Test requires xgboost")
     def test_pillai(self):
         # Non-conditional tests
         dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
