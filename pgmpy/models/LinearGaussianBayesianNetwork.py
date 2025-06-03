@@ -6,7 +6,6 @@ from sklearn.linear_model import LinearRegression
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
-from pgmpy.models import DiscreteBayesianNetwork
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -240,8 +239,8 @@ class LinearGaussianBayesianNetwork(DAG):
             omega[var_to_index[var], var_to_index[var]] = cpd.std
 
         # Step 3: Compute the implied covariance matrix
-        I = np.eye(n_nodes)
-        inv = np.linalg.inv((I - B))
+        identity_matrix = np.eye(n_nodes)
+        inv = np.linalg.inv((identity_matrix - B))
         implied_cov = inv.T @ omega @ inv
 
         # Round because numerical errors can lead to non-symmetric cov matrix.
@@ -286,6 +285,7 @@ class LinearGaussianBayesianNetwork(DAG):
         do=None,
         evidence=None,
         virtual_intervention=None,
+        include_latents=False,
         seed=None,
         missing_prob=None,
     ):
@@ -309,6 +309,9 @@ class LinearGaussianBayesianNetwork(DAG):
             Also known as soft intervention. `virtual_intervention` should be a list
             of `pgmpy.factors.discrete.LinearGaussianCPD` objects specifying the virtual/soft
             intervention probabilities.
+
+        include_latents: boolean
+            Whether to include the latent variable values in the generated samples.
 
         seed: int (default: None)
             Seed for the random number generator.
@@ -376,29 +379,34 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"evidence argument contains: {evidence_nodes}"
             )
 
-        if len(self.cpds) != len(self.nodes()):
-            raise ValueError(
-                "Each node in the model should have a CPD associated with it"
-            )
+        self.check_model()
+        model = self.copy()
 
         if common_vars := set(do.keys()) & set(evidence.keys()):
             raise ValueError(
                 f"Variable(s) can't be in both do and evidence: {', '.join(common_vars)}"
             )
 
+        if virtual_intervention != []:
+            for cpd in virtual_intervention:
+                var = cpd.variable
+                if var not in self.nodes():
+                    raise ValueError(
+                        f"Virtual intervention provided for variable which is not in the model: {var}"
+                        f"The following nodes are present in the model: {self.nodes()}"
+                    )
+
         # Step 2: If do is specified, modify the network structure.
         if do != {}:
-            # Step 2.1: Create a copy of the network
-            model = self.copy()
             for var, val in do.items():
-                # Step 2.2: Remove incoming edges to the intervened
+                # Step 2.1: Remove incoming edges to the intervened
                 #  node as well as remove the CPD's of the intervened nodes.
                 for parent in list(model.get_parents(var)):
                     model.remove_edge(parent, var)
 
                 model.remove_cpds(model.get_cpds(var))
 
-                # Step 2.3 : For each children of an intervened node, change its CPD to remove
+                # Step 2.2 : For each children of an intervened node, change its CPD to remove
                 #  the parent (intervened node) from the evidence and update its intercept accordingly
                 for child in model.get_children(var):
                     child_cpd = model.get_cpds(child)
@@ -424,31 +432,20 @@ class LinearGaussianBayesianNetwork(DAG):
 
                 model.remove_node(var)
 
-        else:
-            model = self
-
         # Step 3: If virtual_interventions are specified, change the CPD's of intervened variables
+        # to specified ones and remove the incoming nodes
         if virtual_intervention != []:
-            # Step 3.1: Check if CPD's are valid
-            for cpd in virtual_intervention:
-                var = cpd.variable
-                if var not in model.nodes():
-                    raise ValueError(
-                        f"Virtual intervention provided for variable which is not in the model: {var}"
-                        f"The following nodes are present in the model: {model.nodes()}"
-                    )
-
             for cpd in virtual_intervention:
                 var = cpd.variable
                 old_cpd = model.get_cpds(var)
                 model.remove_cpds(old_cpd)
                 model.add_cpds(cpd)
 
+                for parent in list(model.get_parents(var)):
+                    model.remove_edge(parent, var)
+
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
-
-        evidence_var = list(evidence.keys())
-        sample_var = [v for v in variables if v not in evidence_var]
 
         # Step 4: Sample according to evidence
         if len(evidence) == 0:
@@ -484,6 +481,10 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 5: Add do variables to the final dataframe
         for do_var, do_val in do.items():
             df[do_var] = do_val
+
+        # Step 6: Remove latent variables if specified
+        if not include_latents:
+            df = df.drop(columns=self.latents, errors="ignore")
 
         return df
 

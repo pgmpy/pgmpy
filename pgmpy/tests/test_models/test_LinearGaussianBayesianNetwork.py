@@ -210,6 +210,30 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df.mean(), df_equiv.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equiv.cov(), decimal=1)
 
+    def test_simulate_latents(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        self.model.latents.add("x2")
+
+        df_with_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=True
+        )
+        df_without_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=False
+        )
+
+        for latent_var in self.model.latents:
+            self.assertIn(latent_var, df_with_latents.columns)
+
+        for latent_var in self.model.latents:
+            self.assertNotIn(latent_var, df_without_latents.columns)
+
+        non_latent_vars = [
+            node for node in self.model.nodes() if node not in self.model.latents
+        ]
+        for var in non_latent_vars:
+            self.assertIn(var, df_with_latents.columns)
+            self.assertIn(var, df_without_latents.columns)
+
     def test_simulate_against_manual_results(self):
         model = LinearGaussianBayesianNetwork(
             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
