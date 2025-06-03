@@ -33,7 +33,8 @@ class PC(StructureEstimator):
     ----------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
         2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
+      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
     """
 
     def __init__(self, data=None, independencies=None, **kwargs):

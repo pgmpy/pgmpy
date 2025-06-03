@@ -48,7 +48,8 @@ class GES(StructureEstimator):
 
     References
     ----------
-    Chickering, David Maxwell. "Optimal structure identification with greedy search." Journal of machine learning research 3.Nov (2002): 507-554.
+    Chickering, David Maxwell. "Optimal structure identification with greedy search."
+      Journal of machine learning research 3.Nov (2002): 507-554.
     """
 
     def __init__(self, data, use_cache=True, **kwargs):

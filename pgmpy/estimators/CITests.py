@@ -367,7 +367,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     References
     ----------
-    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
+    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests."
+      Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
 
     Examples
     --------
@@ -612,9 +613,16 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
-    [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for Covariates. Journal of the American Statistical Association.
-    [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate general linear hypothesis. Computational Statistics & Data Analysis.
+    [1] Ankan, Ankur, and Johannes Textor.
+        "A simple unified approach to testing high-dimensional"
+        "conditional independences for categorical and ordinal data."
+        Proceedings of the AAAI Conference on Artificial Intelligence.
+    [2] Li, C.; and Shepherd, B. E. 2010.
+      Test of Association Between Two Ordinal Variables While Adjusting for Covariates.
+      Journal of the American Statistical Association.
+    [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power
+      in testing the multivariate general linear hypothesis.
+      Computational Statistics & Data Analysis.
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -724,7 +732,9 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised Covariance Measure".
+    [1] Rajen D. Shah, and Jonas Peters.
+      "The Hardness of Conditional Independence
+        Testing and the Generalised Covariance Measure".
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):

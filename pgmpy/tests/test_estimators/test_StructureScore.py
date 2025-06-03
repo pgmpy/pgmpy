@@ -383,7 +383,8 @@ class TestLogLikelihoodCondGauss(unittest.TestCase):
             places=3,
         )
 
-        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
+        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"),
+        #  d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
         self.assertAlmostEqual(
             self.score_fn.local_score(
                 variable="A", parents=["B_cat", "B", "C_cat", "C"]
@@ -481,7 +482,8 @@ class TestAICCondGauss(unittest.TestCase):
             places=3,
         )
 
-        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
+        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"),
+        #  d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
         self.assertAlmostEqual(
             self.score_fn.local_score(
                 variable="A", parents=["B_cat", "B", "C_cat", "C"]
@@ -579,7 +581,8 @@ class TestBICCondGauss(unittest.TestCase):
             places=3,
         )
 
-        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
+        # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"),
+        #  d[c('A', 'B', 'B_cat', 'C', 'C_cat')], type='loglik-cg') -> -Inf
         self.assertAlmostEqual(
             self.score_fn.local_score(
                 variable="A", parents=["B_cat", "B", "C_cat", "C"]

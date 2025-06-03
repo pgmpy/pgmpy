@@ -304,8 +304,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
         missing_prob: LinearGaussianCPD, list  (default: None)
             In case of missing value for more than one variable, provide list of LinearGaussianCPD.
-            The variable name of each LinearGaussianCPD should end with the name of node in LinearGaussianBayesianNetwork with * at the end of the name.
-            The state names of each LinearGaussianCPD should be the same as the state names of the corresponding node in LinearGaussianBayesianNetwork.
+            The variable name of each LinearGaussianCPD should end
+              with the name of node in LinearGaussianBayesianNetwork with
+                * at the end of the name.
+            The state names of each LinearGaussianCPD should
+              be the same as the state names of the corresponding
+                node in LinearGaussianBayesianNetwork.
 
         Returns
         -------
@@ -372,7 +376,8 @@ class LinearGaussianBayesianNetwork(DAG):
             # Step 2.1: Create a copy of the network
             model = self.copy()
             for var, val in do.items():
-                # Step 2.2: Remove incoming edges to the intervened node as well as remove the CPD's of the intervened nodes.
+                # Step 2.2: Remove incoming edges to the intervened
+                #  node as well as remove the CPD's of the intervened nodes.
                 for parent in list(model.get_parents(var)):
                     model.remove_edge(parent, var)
 
@@ -564,7 +569,8 @@ class LinearGaussianBayesianNetwork(DAG):
             The list of variables on which the returned conditional distribution is defined on.
 
         mu: np.array
-            The mean array of the conditional joint distribution over the missing variables corresponding to each row of data.
+            The mean array of the conditional joint distribution over
+              the missing variables corresponding to each row of data.
 
         cov: np.array
             The covariance of the conditional joint distribution over the missing variables.

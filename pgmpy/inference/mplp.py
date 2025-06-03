@@ -108,7 +108,9 @@ class Mplp(Inference):
             This is the set of variables that form the cluster.
 
         intersection_set_variables: set containing frozensets.
-            collection of intersection of all pairs of cluster variables. For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
+            collection of intersection of all pairs of cluster variables.
+              For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \}
+                  for clusters C_1, C_2 & C_3.
 
         cluster_potential: DiscreteFactor
             Each cluster has an initial probability distribution provided beforehand.
@@ -535,7 +537,8 @@ class Mplp(Inference):
 
         prolong: bool
                  If set False: The moment we exhaust of all the triplets the tightening stops.
-                 If set True: The tightening will be performed max_iterations number of times irrespective of the triplets.
+                 If set True: The tightening will be performed max_iterations
+                   number of times irrespective of the triplets.
 
         References
         ----------
