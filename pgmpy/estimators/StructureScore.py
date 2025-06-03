@@ -42,7 +42,8 @@ def get_scoring_method(scoring_method, data, use_cache):
             )
     elif not isinstance(scoring_method, StructureScore):
         raise ValueError(
-            "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
+            "scoring_method should either be one of k2score, bdeuscore, "
+            "bicscore, bdsscore, aicscore, or an instance of StructureScore"
         )
 
     if isinstance(scoring_method, str):
