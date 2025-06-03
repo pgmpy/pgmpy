@@ -1,5 +1,6 @@
 import gzip
 import json
+
 import pandas as pd
 
 try:
@@ -280,8 +281,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     elif method == "quantile":
         for column in data.columns:
             df_copy[column] = pd.qcut(
-                df_copy[column], q=cardinality[column],
-                labels=labels.get(column)
+                df_copy[column], q=cardinality[column], labels=labels.get(column)
             )
 
     return df_copy
@@ -333,8 +333,8 @@ def llm_pairwise_orient(
         raise ImportError(
             f"{e}. litellm is required for using"
             " LLM based pairwise orientation. "
-              "Please install using: pip install litellm"
-              ) from None
+            "Please install using: pip install litellm"
+        ) from None
 
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
@@ -344,16 +344,12 @@ def llm_pairwise_orient(
         <A>: {descriptions[x]}
         <B>: {descriptions[y]}
 
-        Which of the following two options is the
-          most likely causal direction between them:
+        Which of the following two options is the most likely causal direction between them:
         1. <A> causes <B>
         2. <B> causes <A>
 
-        Return a single number (1 or 2) as your answer.
-          I do not need the reasoning behind it.
-            Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
         """
-
     response = completion(
         model=llm_model, messages=[{"role": "user", "content": prompt}]
     )
@@ -441,8 +437,7 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,"
-        "O=Categorical Ordered) "
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
         f"inferred from data: \n {dtypes}"
     )
     return (df, dtypes)

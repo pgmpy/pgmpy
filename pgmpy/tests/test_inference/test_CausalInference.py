@@ -1283,7 +1283,7 @@ class TestDoQuery(unittest.TestCase):
             )
         self.assertIn(
             "Invalid causal query: There is a direct edge from the query"
-             " variable 'R' to the intervention variable 'S'.",
+            " variable 'R' to the intervention variable 'S'.",
             str(cm.exception),
         )
 
