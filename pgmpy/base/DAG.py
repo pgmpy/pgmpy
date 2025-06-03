@@ -909,7 +909,7 @@ class DAG(nx.DiGraph):
 
     def to_pdag(self):
         """
-        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class 
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class
         that the given DAG belongs to.
 
         Returns
@@ -1071,7 +1071,7 @@ class DAG(nx.DiGraph):
         else:
             nodes = list(nodes)
 
-        if not set(nodes).issubset(set(self.nodes())):
+        if set(nodes) not in self.nodes():
             raise ValueError(
                 f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
             )
