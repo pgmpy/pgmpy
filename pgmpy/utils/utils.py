@@ -6,14 +6,14 @@ import pandas as pd
 
 try:
     from importlib.resources import files
-except:
+except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
 from pgmpy.global_vars import logger
 
 
-def get_example_model(model):
+def get_example_model(model: str):
     """
     Fetches the specified model from bnlearn repository and returns a
     pgmpy.model instance.
@@ -303,13 +303,17 @@ def llm_pairwise_orient(
 
     kwargs: kwargs
         Any additional parameters to pass to litellm.completion method.
+
+    Returns
+    -------
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     try:
         from litellm import completion
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
+            f"{e}. litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
         ) from None
 
     if system_prompt is None:
@@ -323,7 +327,7 @@ def llm_pairwise_orient(
         1. <A> causes <B>
         2. <B> causes <A>
 
-        Return a single letter answer between the choices above. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
         """
 
     response = completion(
@@ -352,14 +356,21 @@ def manual_pairwise_orient(x, y):
 
     y: str
         The second variable's name
+
+    Returns
+    -------
+    tuple:
+        Returns a tuple (source, target) representing the edge direction.
     """
     user_input = input(
-        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"
+        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n 3. No edge \n Please enter 1, 2 or 3: "
     )
     if user_input == "1":
         return (x, y)
     elif user_input == "2":
         return (y, x)
+    elif user_input == "3":
+        return None
 
 
 def preprocess_data(df):
@@ -376,7 +387,7 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): Tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}

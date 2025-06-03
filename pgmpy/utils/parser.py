@@ -4,8 +4,7 @@ def parse_lavaan(lines):
         from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
+            f"{e}. pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
         ) from None
 
     # Step 1: Define the grammar for each type of string.
@@ -69,7 +68,6 @@ def parse_lavaan(lines):
 
 
 def parse_dagitty(lines):
-
     def handle_edge_stat(edge_stat, latents, ebunch):
         all_vars = set()
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
@@ -147,8 +145,7 @@ def parse_dagitty(lines):
         )
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
+            f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
         ) from None
 
     # Step 1: DAGitty Grammar in pyparsing

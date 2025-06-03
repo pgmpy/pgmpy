@@ -2,6 +2,7 @@
 import copy
 import itertools
 from functools import reduce
+from typing import Hashable, Optional
 
 import networkx as nx
 import numpy as np
@@ -22,7 +23,9 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
 
@@ -241,9 +244,9 @@ class VariableElimination(Inference):
 
     def query(
         self,
-        variables,
-        evidence=None,
-        virtual_evidence=None,
+        variables: list[Hashable],
+        evidence: Optional[dict[Hashable, int]] = None,
+        virtual_evidence: Optional[list] = None,
         elimination_order="greedy",
         joint=True,
         show_progress=True,
@@ -290,6 +293,14 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
+
+        if isinstance(
+            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
+        ):
+            raise NotImplementedError(
+                f"Variable Elimination is not supported for {self.model.__class__.__name__}."
+                f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
+            )
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
