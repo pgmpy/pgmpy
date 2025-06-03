@@ -1303,3 +1303,33 @@ class TestPDAG(unittest.TestCase):
                 ]
             ),
         )
+
+
+class TestDAGValidate(unittest.TestCase):
+    def test_validate_simple_dag(self):
+        # Create a simple DAG
+        dag = DAG([('A', 'B'), ('B', 'C')])
+        # Simulate some data
+        np.random.seed(42)
+        data = pd.DataFrame({
+            'A': np.random.randint(0, 2, 100),
+            'B': np.random.randint(0, 2, 100),
+            'C': np.random.randint(0, 2, 100),
+        })
+        # Run validate
+        result = dag.validate(data, n_permutations=10, show_progress=False)
+        # Check that all expected columns are present
+        expected_cols = [
+            "Correlation score",
+            "Log-likelihood",
+            "AIC",
+            "BIC",
+            "Failing CIs/Total",
+            "Fisher C p-value",
+            "RMSEA",
+            "Permutation p-value",
+        ]
+        for col in expected_cols:
+            self.assertIn(col, result.columns)
+        # Check that the result is a single-row DataFrame
+        self.assertEqual(result.shape[0], 1)
