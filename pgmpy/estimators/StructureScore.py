@@ -211,15 +211,17 @@ class K2(StructureScore):
         log_gamma_conds = np.sum(counts, axis=0, dtype=float)
         gammaln(log_gamma_conds + var_cardinality, out=log_gamma_conds)
 
+        # TODO: Check why is this needed
+        #
         # Adjustments when using reindex=False as it drops columns of 0 state counts
-        gamma_counts_adj = (
-            (num_parents_states - counts.shape[1]) * var_cardinality * gammaln(1)
-        )
-        gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(
-            var_cardinality
-        )
-        log_gamma_counts += gamma_counts_adj
-        log_gamma_conds += gamma_conds_adj
+        # gamma_counts_adj = (
+        #     (num_parents_states - counts.shape[1]) * var_cardinality * gammaln(1)
+        # )
+        # gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(
+        #     var_cardinality
+        # )
+        # log_gamma_counts += gamma_counts_adj
+        # log_gamma_conds += gamma_conds_adj
 
         score = (
             np.sum(log_gamma_counts)
