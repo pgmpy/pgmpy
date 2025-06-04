@@ -16,6 +16,18 @@ jobs:
           python-version: ${{matrix.python-version}}
           cache: 'pip'
 
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz -y
+
+      - name: Install graphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz -y
+
+      - name: Install graphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: brew install graphviz
+
       - name: Print python info
         run: |
           which python

@@ -2,7 +2,6 @@
 
 import os
 import unittest
-import warnings
 
 import networkx as nx
 import numpy as np
@@ -426,8 +425,6 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
-        dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
-
     def test_dag_fit(self):
         edge_list = [("A", "C"), ("B", "C")]
         for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
@@ -677,6 +674,37 @@ class TestDAGCreation(unittest.TestCase):
         self.assertNotIn(("L", "X"), strengths)
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
+
+    def test_edge_strength_plotting_to_daft(self):
+        """Test edge strength plotting in to_daft method"""
+        dag = DAG([("A", "B"), ("C", "B")])
+
+        with self.assertRaises(ValueError) as context:
+            dag.to_daft(plot_edge_strength=True)
+        self.assertIn(
+            "Edge strength plotting requested but strengths not found",
+            str(context.exception),
+        )
+
+        dag.edges[("A", "B")]["strength"] = 0.123
+        dag.edges[("C", "B")]["strength"] = 0.456
+
+        daft_plot = dag.to_daft(plot_edge_strength=True)
+        self.assertIsNotNone(daft_plot)
+
+        dag_no_strength = DAG([("A", "B"), ("C", "B")])
+        daft_plot_default = dag_no_strength.to_daft()
+        self.assertIsNotNone(daft_plot_default)
+
+    def test_edge_strength_plotting_with_existing_labels(self):
+        """Test edge strength plotting when user provides custom edge labels"""
+        dag = DAG([("A", "B")])
+        dag.edges[("A", "B")]["strength"] = 0.789
+
+        daft_plot = dag.to_daft(
+            plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}}
+        )
+        self.assertIsNotNone(daft_plot)
 
 
 class TestDAGParser(unittest.TestCase):
@@ -1057,8 +1085,6 @@ class TestPDAG(unittest.TestCase):
             ("B", "D"),
             ("D", "B"),
         }
-        expected_dir = [("A", "C"), ("D", "C")]
-        expected_undir = [("B", "A"), ("B", "D")]
         self.assertEqual(set(pdag_copy.edges()), expected_edges)
         self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
@@ -1074,8 +1100,6 @@ class TestPDAG(unittest.TestCase):
             ("B", "D"),
             ("D", "B"),
         }
-        expected_dir = [("A", "C"), ("D", "C")]
-        expected_undir = [("B", "A"), ("B", "D")]
         self.assertEqual(set(pdag_copy.edges()), expected_edges)
         self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
