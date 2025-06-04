@@ -117,18 +117,7 @@ When you run the benchmark, you get two main files:
 
 You can create plots from the summary CSV using pandas, matplotlib, or seaborn.
 
-Example:
-```python
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("ci_benchmark_summaries.csv")
-sns.lineplot(data=df, x="sample_size", y="power", hue="ci_test", style="dgm")
-plt.title("Power of CI tests vs Sample Size")
-plt.show()
-```
-
+For Example : Check out the pgmpy/plots.
 ---
 
 ## Contribution Guidelines
