@@ -11,7 +11,6 @@ import pandas as pd
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.metrics.metrics import correlation_score, fisher_c, structure_score
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
@@ -1587,6 +1586,8 @@ class DAG(nx.DiGraph):
     def validate(self, data, metrics=None, **kwargs):
 
         from sklearn.metrics import f1_score
+
+        from pgmpy.metrics.metrics import correlation_score, fisher_c, structure_score
 
         # all validation metrics
         all_metrics = ["correlation", "aic", "bic", "fisher_c"]
