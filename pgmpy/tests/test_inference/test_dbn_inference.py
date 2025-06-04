@@ -1,11 +1,12 @@
 import unittest
+
 import numpy as np
 import numpy.testing as np_test
 from scipy.special import softmax
 
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import DBNInference
 from pgmpy.models import DynamicBayesianNetwork
-from pgmpy.factors.discrete import TabularCPD
 
 # The sample Dynamic Bayesian Network is taken from the following paper:-
 # Novel recursive inference algorithm for discrete dynamic Bayesian networks
@@ -189,3 +190,45 @@ class TestDBNInference(unittest.TestCase):
         ie = DBNInference(bnet)
 
         # TODO: an assertion to test a complex network
+
+    def test_github_issue_1794(self):
+        """
+        Test DBNInference with Dynamic Bayesian Networks that have only inter-edges.
+        This addresses GitHub issue #1794 where DBNInference() failed with
+        "CPD defined on variable not in the model" error for networks with
+        no intra-edges in time slice 0.
+        """
+        # Create a DBN with only inter-edges (no intra-edges in time slice 0)
+        dbn = DynamicBayesianNetwork()
+        edges = [(("A", 0), ("A", 1)), (("B", 0), ("B", 1)), (("A", 0), ("B", 1))]
+        dbn.add_edges_from(edges)
+
+        # Add CPDs
+        cpd_a0 = TabularCPD(("A", 0), 2, [[0.1], [0.9]])
+        cpd_b0 = TabularCPD(("B", 0), 2, [[0.2], [0.8]])
+        cpd_a1 = TabularCPD(
+            ("A", 1),
+            2,
+            [[0.3, 0.4], [0.7, 0.6]],
+            evidence=[("A", 0)],
+            evidence_card=[2],
+        )
+        cpd_b1 = TabularCPD(
+            ("B", 1),
+            2,
+            [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]],
+            evidence=[("B", 0), ("A", 0)],
+            evidence_card=[2, 2],
+        )
+
+        dbn.add_cpds(cpd_a0, cpd_b0, cpd_a1, cpd_b1)
+        dbn.initialize_initial_state()
+
+        # This should not raise an error
+        inference = DBNInference(dbn)
+
+        # Basic sanity checks
+        self.assertIsNotNone(inference.start_bayesian_model)
+        self.assertIsNotNone(inference.one_and_half_model)
+        self.assertIsNotNone(inference.start_junction_tree)
+        self.assertIsNotNone(inference.one_and_half_junction_tree)

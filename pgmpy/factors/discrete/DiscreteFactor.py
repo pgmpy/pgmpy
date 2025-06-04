@@ -896,9 +896,11 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         )
 
     def __str__(self):
-        return self._str(phi_or_p="phi", tablefmt="grid")
+        return self._str(phi_or_p="phi", tablefmt="fancy_grid")
 
-    def _str(self, phi_or_p="phi", tablefmt="grid", print_state_names=True):
+    def _str(
+        self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True
+    ):  # internal-Helper firedOnCall //betterOverriding
         """
         Generate the string from `__str__` method.
 

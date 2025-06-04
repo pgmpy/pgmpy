@@ -148,7 +148,7 @@ def _mediawiki_row_with_attrs(separator, cell_values, colwidths, colaligns):
 def _latex_line_begin_tabular(colwidths, colaligns):
     alignment = {"left": "l", "right": "r", "center": "c", "decimal": "r"}
     tabular_columns_fmt = "".join([alignment.get(a, "l") for a in colaligns])
-    return "\\begin{tabular}{" + tabular_columns_fmt + "}\n\hline"
+    return r"\begin{tabular}{" + tabular_columns_fmt + r"}\n\hline"
 
 
 _table_formats = {
@@ -179,6 +179,16 @@ _table_formats = {
         linebelow=Line("+", "-", "+", "+"),
         headerrow=DataRow("|", "|", "|"),
         datarow=DataRow("|", "|", "|"),
+        padding=1,
+        with_header_hide=None,
+    ),
+    "fancy_grid": TableFormat(
+        lineabove=Line("╒", "═", "╤", "╕"),
+        linebelowheader=Line("╞", "═", "╪", "╡"),
+        linebetweenrows=Line("├", "─", "┼", "┤"),
+        linebelow=Line("╘", "═", "╧", "╛"),
+        headerrow=DataRow("│", "│", "│"),
+        datarow=DataRow("│", "│", "│"),
         padding=1,
         with_header_hide=None,
     ),
@@ -253,8 +263,8 @@ _table_formats = {
 tabulate_formats = list(sorted(_table_formats.keys()))
 
 
-_invisible_codes = re.compile("\x1b\[\d*m")  # ANSI color codes
-_invisible_codes_bytes = re.compile(b"\x1b\[\d*m")  # ANSI color codes
+_invisible_codes = re.compile(r"\x1b\[\d*m")  # ANSI color codes
+_invisible_codes_bytes = re.compile(rb"\x1b\[\d*m")  # ANSI color codes
 
 
 def simple_separated_format(separator):
@@ -505,7 +515,9 @@ def _format(val, valtype, floatfmt, missingval=""):
 
     >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430']
     >>> tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]]
-    >>> good_result = '\u0431\u0443\u043a\u0432\u0430      \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437             2\n\u0431\u0443\u043a\u0438           4'
+    >>> good_result = '\u0431\u0443\u043a\u0432\u0430
+                \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437
+                                          2\n\u0431\u0443\u043a\u0438           4'
     >>> tabulate(tbl, headers=hrow) == good_result
     True
 

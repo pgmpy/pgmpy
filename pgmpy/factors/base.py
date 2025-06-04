@@ -83,7 +83,8 @@ def factor_sum_product(output_vars, factors):
     Parameters
     ----------
     output_vars: list, iterable
-        List of variable names on which the output factor is to be defined. Variable which are present in any of the factors
+        List of variable names on which the output factor is to be defined.
+          Variable which are present in any of the factors
         but not in output_vars will be marginalized out.
 
     factors: list, iterable
