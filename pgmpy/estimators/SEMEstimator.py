@@ -18,7 +18,8 @@ class SEMEstimator(object):
     def __init__(self, model):
         if config.BACKEND == "numpy":
             raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. Call pgmpy.config.set_backend('torch') to switch"
+                f"SEMEstimator requires torch backend. Currently it's numpy. "
+                "Call pgmpy.config.set_backend('torch') to switch"
             )
 
         if isinstance(model, (SEMGraph, SEM)):
@@ -262,7 +263,8 @@ class SEMEstimator(object):
 
         if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError(
-                f"The column names data do not match the variables in the model. Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
+                f"The column names data do not match the variables in the model. "
+                f"Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
             )
 
         # Initialize the values of parameters as tensors.

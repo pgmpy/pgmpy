@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -7,13 +8,34 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
 
 
+class DuplicateFilter(logging.Filter):
+    """
+    A logging filter that prevents duplicate consecutive log messages.
+    This filter only allows a message to pass through if it differs from the previous message.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.last_msg = None
+
+    def filter(self, record):
+        msg = record.getMessage()
+        is_new = msg != self.last_msg
+        if is_new:
+            self.last_msg = msg
+        return is_new
+
+
+logger.addFilter(DuplicateFilter())
+
+
 class Config:
     def __init__(self):
         """
         Default configuration initilization.
         """
         self.BACKEND = "numpy"
-        self.DTYPE = "float64"
+        self.DTYPE: str | np.dtype | torch.dtype = "float64"
         self.DEVICE = None
         self.SHOW_PROGRESS = True
 
@@ -54,7 +76,12 @@ class Config:
         """
         return self.DEVICE
 
-    def set_backend(self, backend, device=None, dtype=None):
+    def set_backend(
+        self,
+        backend: str,
+        device: Optional[str] = None,
+        dtype: Optional[np.dtype[Any] | torch._C.dtype] = None,
+    ):
         """
         Setup the compute backend.
 
@@ -90,7 +117,7 @@ class Config:
         """
         return self.BACKEND
 
-    def set_show_progress(self, show_progress):
+    def set_show_progress(self, show_progress: bool):
         """
         Sets a global variable to (not) show progress bars.
 
@@ -99,7 +126,7 @@ class Config:
         show_progress: boolean
             If True, shows progress bars, else doesn't.
         """
-        if show_progress not in [True, False]:
+        if not isinstance(show_progress, bool):
             raise ValueError(f"show_progress must be a boolean. Got: {show_progress}")
 
         self.SHOW_PROGRESS = show_progress
@@ -110,13 +137,13 @@ class Config:
         """
         return self.SHOW_PROGRESS
 
-    def set_dtype(self, dtype=None):
+    def set_dtype(self, dtype: Optional[np.dtype[Any] | torch.dtype] = None):
         """
         Sets the dtype for value matrices.
 
         Parameters
         ----------
-        dtype: Instance of numpy.dtype of torch.dtype. (default: None)
+        dtype: Instance of numpy.dtype or torch.dtype. (default: None)
             Sets the dtype to `dtype`. If None set to either numpy.float64 or torch.float64 depending on the backend.
         """
         if self.BACKEND == "numpy":

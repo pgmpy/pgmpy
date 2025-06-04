@@ -2,6 +2,7 @@
 import copy
 import itertools
 from functools import reduce
+from typing import Hashable, Optional
 
 import networkx as nx
 import numpy as np
@@ -22,7 +23,9 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
 
@@ -241,9 +244,9 @@ class VariableElimination(Inference):
 
     def query(
         self,
-        variables,
-        evidence=None,
-        virtual_evidence=None,
+        variables: list[Hashable],
+        evidence: Optional[dict[Hashable, int]] = None,
+        virtual_evidence: Optional[list] = None,
         elimination_order="greedy",
         joint=True,
         show_progress=True,
@@ -291,6 +294,14 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
 
+        if isinstance(
+            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
+        ):
+            raise NotImplementedError(
+                f"Variable Elimination is not supported for {self.model.__class__.__name__}."
+                f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
+            )
+
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
@@ -298,6 +309,11 @@ class VariableElimination(Inference):
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
+        if not variables:
+            raise ValueError(
+                "The `variables` argument to query() must contain at least one variable."
             )
 
         # Step 2: If virtual_evidence is provided, modify the network.
@@ -1490,7 +1506,8 @@ class BeliefPropagationWithMessagePassing(Inference):
             common_vars = set(evidence).intersection(set(ve_names))
             if common_vars:
                 raise ValueError(
-                    f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+                    f"Can't have the same variables in both `evidence` and "
+                    f"`virtual_evidence`. Found in both: {common_vars}"
                 )
 
         query = self._RecursiveMessageSchedulingQuery(
@@ -1543,7 +1560,8 @@ class BeliefPropagationWithMessagePassing(Inference):
 
         assert (
             len(incoming_messages) == cpt.ndim - 1
-        ), f"Error computing factor node message for {target_var}. The number of incoming messages must equal the card(CPT) - 1"
+        ), f"Error computing factor node message for {target_var}. "
+        "The number of incoming messages must equal the card(CPT) - 1"
 
         if len(incoming_messages) == 0:
             return cpt

@@ -42,8 +42,6 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
-            lavaan_str=lavaan_str,
-            dagitty_str=dagitty_str,
         )
 
     def add_cpds(self, *cpds):
