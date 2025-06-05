@@ -346,7 +346,7 @@ class VariableElimination(Inference):
             #           evidence.
             evidence_vars = set(evidence)
             reduce_indexes = []
-            reshape_indexes = []
+            # reshape_indexes = []
             for phi in factors:
                 indexes_to_reduce = [
                     phi.variables.index(var)
@@ -797,11 +797,11 @@ class BeliefPropagation(Inference):
 
         Formally, at convergence or at calibration this condition would be satisfied for
 
-        .. math:: \sum_{C_i - S_{i, j}} \beta_i = \sum_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
+        .. math:: sum_{C_i - S_{i, j}} \beta_i = sum_{C_j - S_{i, j}} \beta_j = mu_{i, j}
 
         and at max calibration this condition would be satisfied
 
-        .. math:: \max_{C_i - S_{i, j}} \beta_i = \max_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
+        .. math:: max_{C_i - S_{i, j}} \beta_i = max_{C_j - S_{i, j}} \beta_j = mu_{i, j}
         """
         # If no clique belief, then the clique tree is not calibrated
         if not self.clique_beliefs:
@@ -1291,7 +1291,6 @@ class BeliefPropagation(Inference):
         """
         from pgmpy.models import FactorGraph
 
-
         factor_graph = FactorGraph()
 
         if not self.cpds:
@@ -1310,6 +1309,7 @@ class BeliefPropagation(Inference):
             factor_graph.add_factors(cpd)
 
         return factor_graph
+
 
 class BeliefPropagationWithMessagePassing(Inference):
     """
