@@ -1488,10 +1488,12 @@ class DiscreteBayesianNetwork(DAG):
             "xdsl": ("pgmpy.readwrite", "XDSLWriter", "write_xdsl"),
             "net": ("pgmpy.readwrite", "NETWriter", "write_net"),
         }
-        filetype = filename.split(".")[-1].lower()
-
-        if filetype not in supported_formats_writer_map:
+        if filetype not in supported_formats_writer_map.keys():
             raise ValueError(f"Unsupported file format: {filetype}")
+
+        parsed_filetype = filename.split(".")[-1].lower()
+        if parsed_filetype in supported_formats_writer_map.keys():
+            filetype = parsed_filetype
 
         module_name, class_name, method_name = supported_formats_writer_map[filetype]
 
@@ -1534,10 +1536,13 @@ class DiscreteBayesianNetwork(DAG):
             "xdsl": ("pgmpy.readwrite", "XDSLReader"),
             "net": ("pgmpy.readwrite", "NETReader"),
         }
-        filetype = filename.split(".")[-1].lower()
 
         if filetype not in supported_formats_reader_map.keys():
             raise ValueError(f"Unsupported file format: {filetype}")
+
+        parsed_filetype = filename.split(".")[-1].lower()
+        if parsed_filetype in supported_formats_reader_map.keys():
+            filetype = parsed_filetype
 
         module_name, class_name = supported_formats_reader_map[filetype]
         module = importlib.import_module(module_name)
