@@ -53,7 +53,9 @@ tests = [
 optional = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm==1.61.15"
+  "litellm==1.61.15",
+  "pyparsing>=3.0",
+  "pygraphviz"
 ]
 all = [
   "networkx>=3.0",
@@ -94,4 +96,3 @@ pgmpy = [
 ]
 [tool.setuptools]
 include-package-data = true
-

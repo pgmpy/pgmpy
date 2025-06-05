@@ -80,7 +80,8 @@ class TestFCPD(unittest.TestCase):
             functional_variance,
             linear_gaussian_variance,
             delta=tolerance,
-            msg=f"Functional variance ({functional_variance}) differs from LinearGaussian variance ({linear_gaussian_variance})",
+            msg=f"Functional variance ({functional_variance})"
+            f" differs from LinearGaussian variance ({linear_gaussian_variance})",
         )
 
     def test_different_distributions(self):
