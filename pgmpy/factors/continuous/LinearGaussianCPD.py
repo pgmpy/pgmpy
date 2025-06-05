@@ -66,19 +66,24 @@ class LinearGaussianCPD(BaseFactor):
     [0.2, -2, 3, 7]
     """
 
-    def __init__(self, variable, beta, std, evidence=[]):
+    def __init__(self, variable, beta, variance, evidence=[]):
         try:
             hash(variable)
         except TypeError:
             raise ValueError(
                 f"`variable` argument must be hashable, Got {type(variable).__name__}"
-            )
-
+            )    
+            
         self.variable = variable
         self.beta = np.array(beta)
-        self.std = std
+        self.variance = variance
         self.evidence = list(evidence)
         self.variables = [variable] + evidence
+
+    @property
+    def std(self):
+        """Standard deviation (derived from variance)"""
+        return np.sqrt(self.variance)
 
     def copy(self):
         """
@@ -101,7 +106,7 @@ class LinearGaussianCPD(BaseFactor):
         copy_cpd = LinearGaussianCPD(
             variable=self.variable,
             beta=self.beta,
-            std=self.std,
+            variance=self.variance,
             evidence=list(self.evidence),
         )
 
@@ -109,7 +114,7 @@ class LinearGaussianCPD(BaseFactor):
 
     def __str__(self):
         mean = self.beta.round(3)
-        std = round(self.std, 3)
+        std = round(np.sqrt(self.variance), 3)
         if self.evidence and list(self.beta):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
@@ -173,12 +178,12 @@ class LinearGaussianCPD(BaseFactor):
         rng = np.random.default_rng(seed=seed)
 
         beta = rng.normal(loc=loc, scale=scale, size=(len(evidence) + 1))
-        std = abs(rng.normal(loc=loc, scale=scale))
+        variance = abs(rng.normal(loc=loc, scale=scale))
 
         node_cpd = LinearGaussianCPD(
             variable=variable,
             beta=beta,
-            std=std,
+            variance=variance,
             evidence=evidence,
         )
 

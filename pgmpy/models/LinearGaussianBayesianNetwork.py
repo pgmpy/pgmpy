@@ -99,14 +99,13 @@ class LinearGaussianBayesianNetwork(DAG):
         """
         if node is not None:
             if node not in self.nodes():
-                raise ValueError("Node not present in the Directed Graph")
-            else:
-                for cpd in self.cpds:
-                    if cpd.variable == node:
-                        return cpd
+               raise ValueError("Node not present in the Directed Graph")
+            for cpd in self.cpds:
+                if cpd.variable == node:
+                   return cpd
+            return None  # <- Important: return None if no CPD is found
         else:
-            return self.cpds
-
+           return self.cpds
     def remove_cpds(self, *cpds):
         """
         Removes the cpds that are provided in the argument.
@@ -400,14 +399,14 @@ class LinearGaussianBayesianNetwork(DAG):
                     new_cpd = LinearGaussianCPD(
                         variable=child_cpd.variable,
                         beta=new_beta,
-                        std=child_cpd.std,
+                        variance=child_cpd.std,
                         evidence=new_evidence,
                     )
 
                     model.remove_cpds(child_cpd)
                     model.add_cpds(new_cpd)
 
-                model.remove_node(var)
+
 
         else:
             model = self
@@ -531,7 +530,7 @@ class LinearGaussianBayesianNetwork(DAG):
                     LinearGaussianCPD(
                         variable=node,
                         beta=[data.loc[:, node].mean()],
-                        std=data.loc[:, node].var(),
+                        variance=data.loc[:, node].var(),
                     )
                 )
 
@@ -544,7 +543,7 @@ class LinearGaussianBayesianNetwork(DAG):
                     LinearGaussianCPD(
                         variable=node,
                         beta=np.append([lm.intercept_], lm.coef_),
-                        std=error_var,
+                        variance=error_var,
                         evidence=parents,
                     )
                 )
