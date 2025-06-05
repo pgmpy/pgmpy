@@ -1,4 +1,3 @@
-import sys
 from itertools import combinations
 
 import networkx as nx
@@ -7,9 +6,9 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import pillai_trace
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
-from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
+from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
@@ -17,7 +16,7 @@ class ExpertInLoop(StructureEstimator):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientation_cache = set([])
 
-    def test_all(self, dag):
+    def test_all(self, dag, ci_test):
         """
         Runs CI tests on all possible combinations of variables in `dag`.
 
@@ -45,7 +44,7 @@ class ExpertInLoop(StructureEstimator):
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            effect, p_value = pillai_trace(
+            effect, p_value = ci_test(
                 X=u, Y=v, Z=cond_set, data=self.data, boolean=False
             )
             cis.append([u, v, cond_set, edge_present, effect, p_value])
@@ -58,6 +57,7 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold=0.05,
         effect_size_threshold=0.05,
+        ci_test=None,
         orientation_fn=llm_pairwise_orient,
         orientations=set([]),
         expert_knowledge: ExpertKnowledge = None,
@@ -88,6 +88,11 @@ class ExpertInLoop(StructureEstimator):
             threshold, the algorithm would suggest to add an edge between them.
             And if the effect size for an edge is less than the threshold,
             would suggest to remove the edge.
+
+        ci_test: str or callable (default: None)
+            The Conditional Independence test to use. When None, the algorithms
+            tries to automatically detect the suitable CI test based on the variable
+            types.
 
         orientation_fn: callable (default: pgmpy.utils.llm_pairwise_orient)
             A function to determine edge orientation. The function should at
@@ -198,6 +203,9 @@ class ExpertInLoop(StructureEstimator):
         dag = DAG()
         dag.add_nodes_from(nodes)
 
+        # Get the CI test.
+        ci_test = get_callable_ci_test(test=ci_test, data=self.data)
+
         # Initialize blacklisted_edges with forbidden_edges from expert knowledge
         blacklisted_edges = []
         if expert_knowledge is not None:
@@ -208,10 +216,10 @@ class ExpertInLoop(StructureEstimator):
 
         while True:
             # Step 1: Compute effects and p-values between every combination of variables.
-            all_effects = self.test_all(dag)
+            all_effects = self.test_all(dag=dag, ci_test=ci_test)
 
             # Step 2: Remove any edges between variables that are not sufficiently associated.
-            edge_effects = all_effects[all_effects.edge_present == True]
+            edge_effects = all_effects[all_effects.edge_present]
             edge_effects = edge_effects[
                 (edge_effects.effect < effect_size_threshold)
                 & (edge_effects.p_val > pval_threshold)
@@ -222,7 +230,7 @@ class ExpertInLoop(StructureEstimator):
 
             # Step 3: Add edge between variables which have significant association.
             # Step 3.1: Find edges that are not present in the DAG but have significant association.
-            nonedge_effects = all_effects[all_effects.edge_present == False]
+            nonedge_effects = all_effects[not all_effects.edge_present]
             nonedge_effects = nonedge_effects[
                 (nonedge_effects.effect >= effect_size_threshold)
                 & (nonedge_effects.p_val <= pval_threshold)
@@ -298,13 +306,14 @@ class ExpertInLoop(StructureEstimator):
                     and edge_direction is not None
                 ):
                     logger.info(
-                        f"\rQueried for edge orientation between"
-                        "{selected_edge.u} and {selected_edge.v}. Got:"
-                        "{edge_direction[0]} -> {edge_direction[1]}"
+                        "\rQueried for edge orientation between"
+                        f"{selected_edge.u} and {selected_edge.v}. Got:"
+                        f"{edge_direction[0]} -> {edge_direction[1]}"
                     )
 
-            # Step 3.6: Try adding the edge to the DAG. If edge creates a
-            #           cycle, add the reversed edge, and blacklist the original edge.
+            # Step 3.6: 1. If orientation function returns None, do not add the edge.
+            #           2. If new edge creates a cycle, try to resolve it.
+            #           3. Otherwise, add the edge.
             if edge_direction is None:
                 logger.info(
                     f"Orientation function returned None for edge {selected_edge.u} - {selected_edge.v}. "
@@ -312,10 +321,51 @@ class ExpertInLoop(StructureEstimator):
                 )
                 blacklisted_edges.append((selected_edge.u, selected_edge.v))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
-                blacklisted_edges.append(edge_direction)
-                dag.add_edges_from([(edge_direction[1], edge_direction[0])])
+                edges_to_remove = self._break_cycle(
+                    dag,
+                    edge_direction[0],
+                    edge_direction[1],
+                    ci_test=ci_test,
+                    effect_size_threshol=effect_size_threshold,
+                    pval_threshold=pval_threshold,
+                )
+                blacklisted_edges.extend(edges_to_remove)
+                dag.remove_edges_from(edges_to_remove)
+                dag.add_edges_from([(edge_direction[0], edge_direction[1])])
             else:
                 dag.add_edges_from([edge_direction])
 
         # Step 4: Return the final DAG.
         return dag
+
+    def _break_cycle(self, dag, u, v, ci_test, effect_size_threshold, pval_threshold):
+        """
+        Subroutine to break any cycles that get created.
+
+        Parameters
+        ----------
+        dag: pgmpy.base.DAG
+            The current DAG that still doesn't have cycles.
+
+        u, v: hashable object
+            The u and v variables that create cycle in `dag` when (u, v) edge is added.
+
+        ci_test: Callable
+            The Conditional Independence test to use.
+        """
+        logger.info(
+            "Returned edge orientation creates a cycle. Trying to identify the incorrect edge."
+        )
+        edges_to_remove = []
+        temp_dag = dag.copy()
+        temp_dag.add_edges_from([(u, v)])
+        for cycle in nx.cycles(temp_dag):
+            for x, y in zip(cycle, cycle[1:]):
+                if not ((x == u) and (y == v)):
+                    Z = set(cycle) - set([x, y])
+                    effect, pvalue = ci_test(x, y, Z=Z, data=self.data, boolean=False)
+                    if (effect < effect_size_threshold) and (pvalue > pval_threshold):
+                        edges_to_remove.append((x, y))
+                        logger.info(f"Removing edge: {x} -> {y} to fix cycle")
+
+        return edges_to_remove
