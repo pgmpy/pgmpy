@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
@@ -610,6 +611,11 @@ class TestBayesianNetworkMethods(unittest.TestCase):
 
                 os.remove("model." + filetype)
                 os.remove("model.model")
+
+            with pytest.raises(ValueError):
+                model.save("model", filetype=".png")
+            with pytest.raises(ValueError):
+                model.load("model", filetype=".png")
 
         # Test for kwarg parameters
         test_model_int_states = DiscreteBayesianNetwork(
