@@ -78,18 +78,7 @@ class DAG(nx.DiGraph):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
-        lavaan_str: Optional[list[str]] = None,
-        dagitty_str: Optional[list[str]] = None,
     ):
-        if lavaan_str:
-            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
-            if err_corr:
-                logger.warning(
-                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
-                )
-        elif dagitty_str:
-            ebunch, latents = parse_dagitty(dagitty_str)
-
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
         cycles = []
@@ -131,13 +120,20 @@ class DAG(nx.DiGraph):
             lavaan_str = string.split("\n")
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
-
-        return cls(lavaan_str=lavaan_str)
+        ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+        if err_corr:
+            logger.warning(
+                f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+            )
+        return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
     def from_dagitty(cls, string=None, filename=None) -> "DAG":
         """
         Initializes a `DAG` instance using DAGitty syntax.
+
+        Creates a `DAG` from the dagitty string. If parameter `beta` is specified in the DAGitty
+        string, the method returns a `LinearGaussianBayesianNetwork` instead of a plain `DAG`.
 
         Parameters
         ----------
@@ -151,6 +147,26 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG.from_dagitty(\"""dag{
+        ...     "carry matches" [latent]
+        ...     cancer [outcome]
+        ...     smoking -> "carry matches" [beta=0.2]
+        ...     smoking -> cancer [beta=0.5]
+        ...     "carry matches" -> cancer
+        ... }\""")
+
+        Creating a linear gaussian bayesian network from dagitty:
+
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+
+        # Specifying beta creates a LinearGaussianBayesianNetwork instance
+        >>> dag = DAG.from_dagitty("dag{X -> Y [beta=0.3] Y -> Z [beta=0.1]}")
+        >>> data = dag.simulate(n_samples=int(1e4))
+
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
         """
         if filename:
             with open(filename, "r") as f:
@@ -160,7 +176,47 @@ class DAG(nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        return cls(dagitty_str=dagitty_str)
+        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        if len(coefs) == 0:
+            dag = cls(ebunch=ebunch, latents=latents)
+            dag.add_nodes_from(nodes)
+            return dag
+        else:
+            from pgmpy.factors.continuous import LinearGaussianCPD
+            from pgmpy.models import LinearGaussianBayesianNetwork
+
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn.add_nodes_from(nodes)
+
+            std = 1
+            intercept = 0
+
+            cpds = []
+            for i, var in enumerate(lgbn.nodes()):
+                parents = lgbn.get_parents(var)
+                if var not in coefs:
+                    coefs[var] = {}
+
+                rng = np.random.default_rng()
+
+                beta = rng.normal(loc=0, scale=1, size=(len(parents) + 1))
+                beta[0] = intercept
+
+                for i, ev in enumerate(parents):
+                    if ev in coefs[var]:
+                        beta[i + 1] = coefs[var][ev]
+
+                cpd = LinearGaussianCPD(
+                    variable=var,
+                    beta=beta,
+                    std=std,
+                    evidence=parents,
+                )
+
+                cpds.append(cpd)
+            lgbn.add_cpds(*cpds)
+
+            return lgbn
 
     def add_node(
         self, node: Hashable, weight: Optional[float] = None, latent: bool = False
@@ -277,8 +333,7 @@ class DAG(nx.DiGraph):
         """
         Add an edge between u and v.
 
-        The nodes u and v will be automatically added if they are
-        not already in the graph.
+        The nodes u and v will be automatically added if they are not already in the graph.
 
         Parameters
         ----------
@@ -710,7 +765,9 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and Judea Pearl. Finding minimal d-separators. Computer Science Department, University of California, 1998.
+        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
+          Judea Pearl. Finding minimal d-separators. Computer Science Department,
+            University of California, 1998.
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError(
@@ -723,7 +780,7 @@ class DAG(nx.DiGraph):
 
         if not include_latents:
             # If any of the parents were latents, take the latent's parent
-            while len(separator.intersection(self.latents)) != 0:
+            while separator.intersection(self.latents):
                 separator_copy = separator.copy()
                 for u in separator:
                     if u in self.latents:
@@ -908,7 +965,8 @@ class DAG(nx.DiGraph):
 
     def to_pdag(self):
         """
-        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class that the given DAG belongs to.
+        Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class
+        that the given DAG belongs to.
 
         Returns
         -------
@@ -925,7 +983,8 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures." Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
+          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1011,7 +1070,6 @@ class DAG(nx.DiGraph):
         undirected_edges = [
             edge for edge, label in edge_labels.items() if label == "reversible"
         ]
-
         return PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
@@ -1071,7 +1129,7 @@ class DAG(nx.DiGraph):
 
         if not set(nodes).issubset(set(self.nodes())):
             raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
             )
 
         for node in nodes:
@@ -1112,6 +1170,7 @@ class DAG(nx.DiGraph):
         pgm_params={},
         edge_params={},
         node_params={},
+        plot_edge_strength=False,
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -1121,7 +1180,9 @@ class DAG(nx.DiGraph):
         ----------
         node_pos: str or dict (default: circular)
             If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
-                spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
+                spectral, spiral. Please refer:
+                  https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout
+                    for details on these layouts.
 
             If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
             node.
@@ -1142,6 +1203,10 @@ class DAG(nx.DiGraph):
         node_params: dict (optional)
             Any additional node parameters that need to be passed to `daft.add_node` method.
             Should be of the form: {node1: {param_name: param_value}, node2: {...} }
+
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
 
         Returns
         -------
@@ -1167,9 +1232,23 @@ class DAG(nx.DiGraph):
             from daft import PGM
         except ImportError as e:
             raise ImportError(
-                e.msg
-                + ". Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+                f"{e}. Package `daft` is required for plotting probabilistic graphical models.\n"
+                "Please install it using: pip install daft-pgm\n"
+                "Documentation: https://docs.daft-pgm.org/en/latest/"
             ) from None
+
+        # Check edge strength existence if plotting is requested
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
 
         if isinstance(node_pos, str):
             supported_layouts = {
@@ -1182,15 +1261,16 @@ class DAG(nx.DiGraph):
                 "spectral": nx.spectral_layout,
                 "spiral": nx.spiral_layout,
             }
-            if node_pos not in supported_layouts.keys():
+            if node_pos not in supported_layouts:
                 raise ValueError(
-                    "Unknown node_pos argument. Please refer docstring for accepted values"
+                    "Unknown node_pos argument. Please refer docstring "
+                    "for accepted values"
                 )
             else:
                 node_pos = supported_layouts[node_pos](self)
         elif isinstance(node_pos, dict):
             for node in self.nodes():
-                if node not in node_pos.keys():
+                if node not in node_pos:
                     raise ValueError(f"No position specified for {node}.")
         else:
             raise ValueError(
@@ -1228,6 +1308,14 @@ class DAG(nx.DiGraph):
                 extra_params = edge_params[(u, v)]
             except KeyError:
                 extra_params = dict()
+
+            # Add edge strength as label if requested
+            if plot_edge_strength:
+                strength_value = self.edges[(u, v)]["strength"]
+                strength_label = f"{strength_value: .3f}"
+                if "label" not in extra_params:
+                    extra_params["label"] = strength_label
+
             daft_pgm.add_edge(u, v, **extra_params)
 
         return daft_pgm
@@ -1301,10 +1389,21 @@ class DAG(nx.DiGraph):
             )
         return dag
 
-    def to_graphviz(self):
+    def to_graphviz(self, plot_edge_strength=False):
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
         visualizing the network structure.
+
+        Parameters
+        ----------
+        plot_edge_strength: bool (default: False)
+            If True, displays edge strength values as labels on edges.
+            Requires edge strengths to be computed first using the edge_strength() method.
+
+        Returns
+        -------
+        AGraph object: pygraphviz.AGraph
+            pygraphviz object for plotting the DAG.
 
         Examples
         --------
@@ -1314,7 +1413,27 @@ class DAG(nx.DiGraph):
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         >>> model.draw('model.png', prog='neato')
         """
-        return nx.nx_agraph.to_agraph(self)
+        if plot_edge_strength:
+            missing_strengths = []
+            for u, v in self.edges():
+                if "strength" not in self.edges[(u, v)]:
+                    missing_strengths.append((u, v))
+
+            if missing_strengths:
+                raise ValueError(
+                    f"Edge strength plotting requested but strengths not found for edges: {missing_strengths}. "
+                    "Use edge_strength() method to compute strengths first."
+                )
+
+        agraph = nx.nx_agraph.to_agraph(self)
+
+        if plot_edge_strength:
+            for u, v in self.edges():
+                strength_value = self.edges[(u, v)]["strength"]
+                strength_label = f"{strength_value: .3f}"
+                agraph.get_edge(u, v).attr["label"] = strength_label
+
+        return agraph
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
@@ -1457,7 +1576,9 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
+        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
+        on Artificial Intelligence.
         """
 
         from pgmpy.estimators.CITests import pillai_trace
@@ -1817,20 +1938,21 @@ class PDAG(nx.DiGraph):
                         changed = True
                         if debug:
                             logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w}; {y}, {z} -> {w} => {x} -> {w}"
+                                f"Applying Rule 3: {x} - {y}, {z}, {w} "
+                                f"{y}, {z} -> {w} => {x} -> {w}"
                             )
                         break
 
             # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
             if apply_r4:
                 for c in pdag.nodes():
-                    directed_graph = pdag._directed_graph()
                     for b in pdag.directed_children(c):
                         for d in pdag.directed_parents(c):
                             if b == d or pdag.is_adjacent(b, d):
                                 continue  # b adjacent d => rule not applicable
 
-                            # find nodes a that are undirected neighbor to b, d, and directed or undirected neighbor to c
+                            # find nodes a that are undirected neighbor to b, d,
+                            #  and directed or undirected neighbor to c
                             cand = set(pdag.undirected_neighbors(b)).intersection(
                                 pdag.all_neighbors(c),
                                 pdag.undirected_neighbors(d),
@@ -1862,7 +1984,9 @@ class PDAG(nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        [1] Dor, Dorit, and Michael Tarsi.
+          "A simple algorithm to construct a consistent extension of a partially oriented graph."
+            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.

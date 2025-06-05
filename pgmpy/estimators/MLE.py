@@ -51,19 +51,22 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         if isinstance(model, (DAG, DiscreteBayesianNetwork)):
             if len(model.latents) > 0:
                 raise ValueError(
-                    f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization."
+                    f"Found latent variables: {model.latents}. "
+                    "Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization."
                 )
 
             elif set(model.nodes()) > set(data.columns):
                 raise ValueError(
-                    f"Nodes detected in the model that are not present in the dataset: {set(model.nodes) - set(data.columns)}. "
+                    f"Nodes detected in the model that are not present "
+                    f"in the dataset: {set(model.nodes) - set(data.columns)}. "
                     "Refine the model so that all parameters can be estimated from the data."
                 )
 
             if isinstance(model, JunctionTree):
                 if len(set(data.columns) - set(chain(*model.nodes()))) != 0:
                     raise ValueError(
-                        f"Nodes detected in the JunctionTree that are not present in the dataset: {set(data.columns) - set(chain(*model.nodes()))} "
+                        f"Nodes detected in the JunctionTree that are not present "
+                        f"in the dataset: {set(data.columns) - set(chain(*model.nodes()))} "
                         "Refine the model to ensure all parameters can be estimated."
                     )
 
@@ -209,7 +212,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         References
         ---------
         [1] Kevin P. Murphy, ML Machine Learning - A Probabilistic Perspective
-            Algorithm 19.2 Iterative Proportional Fitting algorithm for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
+            Algorithm 19.2 Iterative Proportional Fitting algorithm
+              for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
         [2] Eric P. Xing, Meng Song, Li Zhou, Probabilistic Graphical Models 10-708, Spring 2014.
             https://www.cs.cmu.edu/~epxing/Class/10708-14/scribe_notes/scribe_note_lecture8.pdf.
 

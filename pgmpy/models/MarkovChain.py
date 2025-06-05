@@ -225,7 +225,8 @@ class MarkovChain(object):
         tm_states = set(transition_model.keys())
         if not exp_states == tm_states:
             raise ValueError(
-                f"Transitions must be defined for all states of variable {variable}. Expected states: {exp_states}, Got: {tm_states}."
+                f"Transitions must be defined for all states of variable "
+                f"{variable}. Expected states: {exp_states}, Got: {tm_states}."
             )
 
         for _, transition in transition_model.items():

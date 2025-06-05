@@ -28,7 +28,8 @@ class BayesianEstimator(ParameterEstimator):
         else:
             if len(model.latents) != 0:
                 raise ValueError(
-                    f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+                    f"Bayesian Parameter Estimation works only "
+                    f"on models with all observed variables. Found latent variables: {model.latents}"
                 )
 
             elif isinstance(model, DAG):
@@ -211,7 +212,8 @@ class BayesianEstimator(ParameterEstimator):
             and (prior_type != "dirichlet")
         ):
             logger.warning(
-                f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
+                f"pseudo count specified with {prior_type} prior. It will be ignored, "
+                "use dirichlet prior for specifying pseudo_counts"
             )
 
         if prior_type == "k2":
