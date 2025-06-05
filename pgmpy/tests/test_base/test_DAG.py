@@ -803,6 +803,22 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_str.latents), expected_latents)
         self.assertEqual(set(model_from_file.latents), expected_latents)
 
+    def test_from_dagitty_isolated_nodes(self):
+        dag1 = DAG.from_dagitty("dag { A -> B C D -> E F G H} ")
+        dag2 = DAG.from_dagitty("dag { A }")
+        self.assertEqual(
+            set(dag1.nodes()), set(["A", "B", "C", "D", "E", "F", "G", "H"])
+        )
+        self.assertEqual(set(dag2.nodes()), set(["A"]))
+        self.assertEqual(
+            set(dag1.edges()),
+            set([("A", "B"), ("D", "E")]),
+        )
+        self.assertEqual(
+            set(dag2.edges()),
+            set([]),
+        )
+
     def test_from_daggitty_single_line_with_group_of_vars(self):
         dag = DAG.from_dagitty(
             'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}'
