@@ -703,42 +703,82 @@ class DAG(nx.DiGraph):
         include_latents=False,
     ):
         """
-        Returns True if there is an active trail (i.e. d-connection) between
-        `start` and `end` node given that `observed` is observed.
+        Returns True if `start` and `end` are d-connected when conditioned on
+        `observed` variables.
 
         Parameters
         ----------
-        start, end : int, str, any hashable python object.
-            The nodes in the DAG between which to check the d-connection/active trail.
+        start, end : hashable
+            The two nodes X, Y whose d-connection we want to test.
+        observed : iterable (optional)
+            The conditioning set Z.
 
-        observed : list, array-like (optional)
-            If given the active trail would be computed assuming these nodes to
-            be observed.
+        Returns
+        -------
+        bool
+            True if there's an active trail between start and end, False otherwise.
 
-        include_latents: boolean (default: False)
-            If true, latent variables are return as part of the active trail.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> student = DAG()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_dconnected('diff', 'intel')
-        False
-        >>> student.is_dconnected('grades', 'sat')
-        True
+        References
+        ----------
+        [1] Theorem 4.1 from 2009 Modeling and Reasoning with Bayesian Networks (562s,Adnan Darwiche).
+        Please refer: https://shorturl.at/UgQ6F
         """
-        if (
-            end
-            in self.active_trail_nodes(
-                variables=start, observed=observed, include_latents=include_latents
-            )[start]
-        ):
-            return True
+        # 1. Build the observed set Z
+        if observed is None:
+            Z = set()
         else:
+            Z = set(observed)
+
+        # 2. Compute A = Ancestors({start, end} ∪ Z)
+        to_visit = [start, end] + list(Z)
+        ancestors = set()
+        while to_visit:
+            node = to_visit.pop()
+            if node not in ancestors:
+                ancestors.add(node)
+                for p in self.predecessors(node):
+                    to_visit.append(p)
+
+        # 3. Create subgraph induced by ancestors
+        subgraph = self.__class__()  # Create instance of same class as self
+        subgraph.add_nodes_from(ancestors)
+
+        # Add edges between ancestors that exist in the original DAG
+        for node in ancestors:
+            for neighbor in self.successors(node):
+                if neighbor in ancestors:
+                    subgraph.add_edge(node, neighbor)
+
+        # 4. Moralize the subgraph using the existing moralize function
+        moral_graph = subgraph.moralize()
+
+        # 5. Convert moralized graph to adjacency dictionary and remove observed nodes
+        U = {}
+        for node in moral_graph.nodes():
+            if node not in Z:
+                U[node] = set()
+
+        for edge in moral_graph.edges():
+            u, v = edge
+            if u not in Z and v not in Z:
+                U[u].add(v)
+                U[v].add(u)
+
+        # 6. Check undirected connectivity from start to end
+        if start not in U or end not in U:
             return False
+
+        seen = {start}
+        stack = [start]
+        while stack:
+            v = stack.pop()
+            if v == end:
+                return True
+            for w in U[v]:
+                if w not in seen:
+                    seen.add(w)
+                    stack.append(w)
+        return False
 
     def minimal_dseparator(
         self, start: Hashable, end: Hashable, include_latents=False
