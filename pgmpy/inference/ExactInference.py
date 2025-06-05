@@ -1265,6 +1265,51 @@ class BeliefPropagation(Inference):
 
         return map_query_results
 
+    def to_factor_graph(self):
+        """
+        Converts the Bayesian Network into a Factor Graph.
+
+        A Factor Graph contains two types of nodes: variable nodes and factor nodes.
+        The graph only contains edges between variables and factor nodes. Each factor
+        node is associated with one factor whose scope is the set of variables that
+        are its neighbors.
+
+        Returns
+        -------
+        FactorGraph: A factor graph representation of the Bayesian Network
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> factor_graph = model.to_factor_graph()
+        """
+        from pgmpy.models import FactorGraph
+
+
+        factor_graph = FactorGraph()
+
+        if not self.cpds:
+            raise ValueError("CPDs not associated with the Bayesian Network.")
+
+        factor_graph.add_nodes_from(self.nodes())
+
+        for cpd in self.cpds:
+            scope = cpd.variables
+
+            factor_node = f"phi_{'_'.join(scope)}"
+
+            factor_graph.add_node(factor_node)
+            factor_graph.add_edges_from([(var, factor_node) for var in scope])
+
+            factor_graph.add_factors(cpd)
+
+        return factor_graph
 
 class BeliefPropagationWithMessagePassing(Inference):
     """
