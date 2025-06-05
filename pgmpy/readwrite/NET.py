@@ -139,20 +139,15 @@ class NETWriter(object):
         -------
         string: CPT format of .net files
         """
-        import json
-
         cpt = self.tables[var_name]
         cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=8), 0, -1)
-        # using json dumps to avoid truncated output when serializing to str
-        cpt_string = json.dumps(cpt_array.tolist())
+        # avoid truncated output when serializing to str
+        cpt_string = np.array2string(cpt_array, threshold=np.inf, max_line_width=np.inf)
         net_cpt_string = (
             cpt_string.replace("[", "(")
             .replace("]", ")")
             .replace(". ", ".0 ")
             .replace(".)", ".0)")
-            .replace(
-                ",", ""
-            )  # remove commas with spaces to match parseString functionality
         )
         # Genie does not read potentials such as 1. therefore last line adds .0 to those
         return net_cpt_string
