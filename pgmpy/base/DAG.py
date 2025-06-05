@@ -636,9 +636,21 @@ class DAG(nx.DiGraph):
         bool
             True if there's an active trail between start and end, False otherwise.
 
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_dconnected('diff', 'intel')
+        False
+        >>> student.is_dconnected('grades', 'sat')
+        True
+
         References
         ----------
-        [1] Theorem 4.1 from 2009 Modeling and Reasoning with Bayesian Networks (562s,Adnan Darwiche).
+        [1] Theorem 4.1 from 2009 Modeling and Reasoning with Bayesian Networks (562s, Adnan Darwiche).
         Please refer: https://shorturl.at/UgQ6F
         """
         # 1. Build the observed set Z
@@ -647,30 +659,13 @@ class DAG(nx.DiGraph):
         else:
             Z = set(observed)
 
-        # 2. Compute A = Ancestors({start, end} ∪ Z)
-        to_visit = [start, end] + list(Z)
-        ancestors = set()
-        while to_visit:
-            node = to_visit.pop()
-            if node not in ancestors:
-                ancestors.add(node)
-                for p in self.predecessors(node):
-                    to_visit.append(p)
+        # 2. Get the ancestral graph using get_ancestral_graph
+        ancestral_graph = self.get_ancestral_graph([start, end] + list(Z))
 
-        # 3. Create subgraph induced by ancestors
-        subgraph = self.__class__()  # Create instance of same class as self
-        subgraph.add_nodes_from(ancestors)
+        # 3. Moralize the ancestral graph
+        moral_graph = ancestral_graph.moralize()
 
-        # Add edges between ancestors that exist in the original DAG
-        for node in ancestors:
-            for neighbor in self.successors(node):
-                if neighbor in ancestors:
-                    subgraph.add_edge(node, neighbor)
-
-        # 4. Moralize the subgraph using the existing moralize function
-        moral_graph = subgraph.moralize()
-
-        # 5. Convert moralized graph to adjacency dictionary and remove observed nodes
+        # 4. Convert moralized graph to adjacency dictionary and remove observed nodes
         U = {}
         for node in moral_graph.nodes():
             if node not in Z:
@@ -682,7 +677,7 @@ class DAG(nx.DiGraph):
                 U[u].add(v)
                 U[v].add(u)
 
-        # 6. Check undirected connectivity from start to end
+        # 5. Check undirected connectivity from start to end
         if start not in U or end not in U:
             return False
 
