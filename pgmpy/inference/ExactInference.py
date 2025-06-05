@@ -594,7 +594,7 @@ class VariableElimination(Inference):
 
         final_distribution = reduced_ve._variable_elimination(
             variables=variables,
-            operation="maximize",
+            operation="marginalize",
             evidence=evidence,
             elimination_order=elimination_order,
             joint=True,

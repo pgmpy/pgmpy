@@ -531,7 +531,7 @@ class TestSnowNetwork(unittest.TestCase):
                 map1 = infer.map_query(
                     ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
                 )
-                self.assertEqual(map1, {"Snow": "yes"})
+                self.assertEqual(map1, {"Snow": "no"})
 
                 query2 = infer.query(
                     ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
