@@ -1587,10 +1587,16 @@ class DAG(nx.DiGraph):
 
         from sklearn.metrics import f1_score
 
-        from pgmpy.metrics.metrics import correlation_score, fisher_c, structure_score
+        from pgmpy.estimators.CITests import chi_square
+        from pgmpy.metrics.metrics import (
+            correlation_score,
+            fisher_c,
+            implied_cis,
+            structure_score,
+        )
 
         # all validation metrics
-        all_metrics = ["correlation", "aic", "bic", "fisher_c"]
+        all_metrics = ["correlation", "aic", "bic", "fisher_c", "implied_cis"]
 
         # a normal validate call would provide all metric results
         if metrics is None:
@@ -1601,6 +1607,9 @@ class DAG(nx.DiGraph):
             "correlation_test": "chi_square",
             "correlation_significance": 0.05,
             "correlation_score_func": f1_score,
+            "ci_test_fischer": chi_square,
+            "ci_test_cis": chi_square,
+            "ci_tests_significance": 0.5,
             "show_progress": True,
         }
 
@@ -1621,22 +1630,22 @@ class DAG(nx.DiGraph):
         # AIC-score with fail checks
         if "aic" in metrics:
             try:
-                results["aic"] = structure_score(self, data, scoring_method="aic-d")
+                results["AIC"] = structure_score(self, data, scoring_method="aic-d")
             except ValueError:
                 try:
-                    results["aic"] = structure_score(self, data, scoring_method="aic-g")
+                    results["AIC"] = structure_score(self, data, scoring_method="aic-g")
                 except ValueError as e:
-                    results["aic"] = f"Error: {str(e)}"
+                    results["AIC"] = f"Error: {str(e)}"
 
         # BIC-score with fail-checks
         if "bic" in metrics:
             try:
-                results["bic"] = structure_score(self, data, scoring_method="bic-d")
+                results["BIC"] = structure_score(self, data, scoring_method="bic-d")
             except ValueError:
                 try:
-                    results["bic"] = structure_score(self, data, scoring_method="bic-g")
+                    results["BIC"] = structure_score(self, data, scoring_method="bic-g")
                 except ValueError as e:
-                    results["bic"] = f"Error: {str(e)}"
+                    results["BIC"] = f"Error: {str(e)}"
 
         # Fisher_C test with fail checks
         if "fisher_c" in metrics:
@@ -1644,14 +1653,33 @@ class DAG(nx.DiGraph):
                 results["fisher_c_pvalue"] = fisher_c(
                     model=self,
                     data=data,
-                    ci_test=params["ci_test"],
+                    ci_test=params["ci_test_fischer"],
                     show_progress=params["show_progress"],
                 )
             except ValueError as e:
                 results["fisher_c_pvalue"] = f"Error: {str(e)}"
 
-        df_results = pd.DataFrame(results)
-        return df_results
+        # Implied CI tests
+        if "implied_cis" in metrics:
+            try:
+                df_cis = implied_cis(
+                    model=self,
+                    data=data,
+                    ci_test=params["ci_test_cis"],
+                    show_progress=params["show_progress"],
+                )
+                results["failing_cis"] = (
+                    df_cis["p-value"] < params["ci_tests_significance"]
+                ).sum()
+                results["passing_cis"] = (
+                    df_cis["p-value"] < params["ci_tests_significance"]
+                ).sum()
+                results["total_cis"] = len(df_cis)
+            except ValueError as e:
+                results["cis_tests"] = f"Error: {str(e)}"
+
+        df_scores = pd.DataFrame(results)
+        return df_scores
 
 
 class PDAG(nx.DiGraph):
