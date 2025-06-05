@@ -333,7 +333,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     return cis
 
 
-def fisher_c(model, data, ci_test, show_progress=True):
+def fisher_c(model, data, ci_test, calculate_rmsea=False, show_progress=True):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.
@@ -354,6 +354,11 @@ def fisher_c(model, data, ci_test, show_progress=True):
     ci_test: function
         The function for statistical test. Can be either any of the tests in
         pgmpy.estimators.CITests or any custom function of the same form.
+
+    calculate_rmsea: bool (default: False)
+        While calculating Fisher C statistic if RMSEA value required should be
+        included in method call as True. Returns a tuple of (p-value, rmsea) if
+        True otherwise only the p-value.
 
     show_progress: bool (default: True)
         Whether to show the progress of testing.
@@ -403,6 +408,16 @@ def fisher_c(model, data, ci_test, show_progress=True):
 
     C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
+
+    rmsea = np.nan
+
+    if calculate_rmsea:
+        if len(data) != 1 and len(cis) != 0:
+            rmsea = np.sqrt(
+                max((C - 2 * len(cis)) / (2 * len(cis) * (len(data) - 1)), 0)
+            )
+        return (p_value, rmsea)
+
     return p_value
 
 

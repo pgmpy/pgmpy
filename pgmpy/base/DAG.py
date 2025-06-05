@@ -1610,6 +1610,7 @@ class DAG(nx.DiGraph):
             "ci_test_fischer": chi_square,
             "ci_test_cis": chi_square,
             "ci_tests_significance": 0.5,
+            "calculate_rmsea": True,
             "show_progress": True,
         }
 
@@ -1619,7 +1620,7 @@ class DAG(nx.DiGraph):
         # to store the results of different tests
         results = {}
         if "correlation" in metrics:
-            results["correlation_score"] = correlation_score(
+            results["Correlation Score"] = correlation_score(
                 model=self,
                 data=data,
                 test=params["correlation_test"],
@@ -1647,17 +1648,27 @@ class DAG(nx.DiGraph):
                 except ValueError as e:
                     results["BIC"] = f"Error: {str(e)}"
 
-        # Fisher_C test with fail checks
+        # Fisher_C and RMSEA test values with fail checks
         if "fisher_c" in metrics:
             try:
-                results["fisher_c_pvalue"] = fisher_c(
+                fisher_c_val = fisher_c(
                     model=self,
                     data=data,
                     ci_test=params["ci_test_fischer"],
+                    calculate_rmsea=params["calculate_rmsea"],
                     show_progress=params["show_progress"],
                 )
+                if isinstance(fisher_c_val, tuple):
+                    results["Fisher-C p-value"], results["Fisher-C RMSEA"] = (
+                        fisher_c_val
+                    )
+                else:
+                    results["Fisher-C p-value"] = fisher_c_val
+
             except ValueError as e:
-                results["fisher_c_pvalue"] = f"Error: {str(e)}"
+                results["Fisher-C p-value"] = f"Error: {str(e)}"
+                if params["calculate_rmsea"]:
+                    results["Fisher-C RMSEA"] = f"Error: {str(e)}"
 
         # Implied CI tests
         if "implied_cis" in metrics:
