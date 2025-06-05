@@ -143,7 +143,7 @@ class NETWriter(object):
         import json
 
         cpt = self.tables[var_name]
-        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=4), 0, -1)
+        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=8), 0, -1)
         # using json dumps to avoid truncated output when serializing to str
         cpt_string = json.dumps(cpt_array.tolist())
         net_cpt_string = (
