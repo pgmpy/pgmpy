@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import importlib
 import itertools
 from collections import defaultdict
 from functools import reduce
@@ -1472,7 +1473,7 @@ class DiscreteBayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif, xdsl.
+            the following: bif, uai, xmlbif, xdsl, net.
 
         Examples
         --------
@@ -1480,33 +1481,26 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm = get_example_model('alarm')
         >>> alarm.save('alarm.bif', filetype='bif')
         """
-        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
-        if filename.split(".")[-1].lower() in supported_formats:
-            filetype = filename.split(".")[-1].lower()
+        supported_formats_writer_map = {
+            "bif": ("pgmpy.readwrite", "BIFWriter", "write_bif"),
+            "uai": ("pgmpy.readwrite", "UAIWriter", "write_uai"),
+            "xmlbif": ("pgmpy.readwrite", "XMLBIFWriter", "write_xmlbif"),
+            "xdsl": ("pgmpy.readwrite", "XDSLWriter", "write_xdsl"),
+            "net": ("pgmpy.readwrite", "NETWriter", "write_net"),
+        }
+        filetype = filename.split(".")[-1].lower()
 
-        if filetype == "bif":
-            from pgmpy.readwrite import BIFWriter
+        if filetype not in supported_formats_writer_map:
+            raise ValueError(f"Unsupported file format: {filetype}")
 
-            writer = BIFWriter(self)
-            writer.write_bif(filename=filename)
+        module_name, class_name, method_name = supported_formats_writer_map[filetype]
 
-        elif filetype == "uai":
-            from pgmpy.readwrite import UAIWriter
+        module = importlib.import_module(module_name)
+        WriterClass = getattr(module, class_name)
 
-            writer = UAIWriter(self)
-            writer.write_uai(filename=filename)
-
-        elif filetype == "xmlbif":
-            from pgmpy.readwrite import XMLBIFWriter
-
-            writer = XMLBIFWriter(self)
-            writer.write_xmlbif(filename=filename)
-
-        elif filetype == "xdsl":
-            from pgmpy.readwrite import XDSLWriter
-
-            writer = XDSLWriter(self)
-            writer.write_xdsl(filename=filename)
+        writer = WriterClass(self)
+        write_method = getattr(writer, method_name)
+        write_method(filename=filename)
 
     @staticmethod
     def load(filename, filetype="bif", **kwargs):
@@ -1520,7 +1514,7 @@ class DiscreteBayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format of the model file. Can be one of
-            the following: bif, uai, xmlbif, xdsl.
+            the following: bif, uai, xmlbif, xdsl, net.
 
         kwargs: kwargs
             Any additional arguments for the reader class or get_model method.
@@ -1533,40 +1527,28 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm.save('alarm.bif', filetype='bif')
         >>> alarm_model = DiscreteBayesianNetwork.load('alarm.bif', filetype='bif')
         """
-        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
-        if filename.split(".")[-1].lower() in supported_formats:
-            filetype = filename.split(".")[-1].lower()
+        supported_formats_reader_map = {
+            "bif": ("pgmpy.readwrite", "BIFReader"),
+            "uai": ("pgmpy.readwrite", "UAIReader"),
+            "xmlbif": ("pgmpy.readwrite", "XMLBIFReader"),
+            "xdsl": ("pgmpy.readwrite", "XDSLReader"),
+            "net": ("pgmpy.readwrite", "NETReader"),
+        }
+        filetype = filename.split(".")[-1].lower()
+
+        if filetype not in supported_formats_reader_map.keys():
+            raise ValueError(f"Unsupported file format: {filetype}")
+
+        module_name, class_name = supported_formats_reader_map[filetype]
+        module = importlib.import_module(module_name)
+        ReaderClass = getattr(module, class_name)
 
         if filetype == "bif":
-            from pgmpy.readwrite import BIFReader
-
-            if "n_jobs" in kwargs:
-                n_jobs = kwargs["n_jobs"]
-            else:
-                n_jobs = -1
-
-            if "state_name_type" in kwargs:
-                state_name_type = kwargs["state_name_type"]
-            else:
-                state_name_type = str
-
-            reader = BIFReader(path=filename, n_jobs=n_jobs)
+            n_jobs = kwargs.get("n_jobs", -1)
+            state_name_type = kwargs.get("state_name_type", str)
+            reader = ReaderClass(path=filename, n_jobs=n_jobs)
             return reader.get_model(state_name_type=state_name_type)
 
-        elif filetype == "uai":
-            from pgmpy.readwrite import UAIReader
-
-            reader = UAIReader(path=filename)
-            return reader.get_model()
-
-        elif filetype == "xmlbif":
-            from pgmpy.readwrite import XMLBIFReader
-
-            reader = XMLBIFReader(path=filename)
-            return reader.get_model()
-
-        elif filetype == "xdsl":
-            from pgmpy.readwrite import XDSLReader
-
-            reader = XDSLReader(path=filename)
+        else:
+            reader = ReaderClass(path=filename)
             return reader.get_model()
