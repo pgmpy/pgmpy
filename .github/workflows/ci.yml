@@ -37,6 +37,7 @@ jobs:
         run: |
           pip install pip -U
           pip install black -U
+          pip install flake8 -U
           pip install pytest-split
           pip install .[all,tests] --no-cache-dir
 
@@ -44,6 +45,10 @@ jobs:
         run: |
           black --diff .
           black --check .
+
+      - name: Run flake8 linting
+        run: |
+          flake8 . --max-line-length=120
 
       - name: Print package versions
         run: |
