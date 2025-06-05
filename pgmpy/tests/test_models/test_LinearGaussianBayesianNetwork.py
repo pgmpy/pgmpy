@@ -234,25 +234,6 @@ class TestLGBNMethods(unittest.TestCase):
             self.assertIn(var, df_with_latents.columns)
             self.assertIn(var, df_without_latents.columns)
 
-    def test_simulate_with_missing_prob_linear_gaussian(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-
-        missing_cpd = LinearGaussianCPD(
-            variable="x2*", beta=[-1, 0.5], std=1, evidence=["x1"]
-        )
-
-        df = self.model.simulate(n_samples=10000, seed=42, missing_prob=[missing_cpd])
-
-        assert "x2*" not in df.columns
-
-        assert "x2_full" in df.columns
-        assert df["x2_full"].isna().sum() == 0
-
-        num_missing = df["x2"].isna().sum()
-        assert num_missing > 0, "No missing values were introduced in x2"
-
-        assert abs(df["x2_full"].mean() - df["x2"].mean()) < 0.5
-
     def test_simulate_against_manual_results(self):
         model = LinearGaussianBayesianNetwork(
             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
@@ -296,39 +277,6 @@ class TestLGBNMethods(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
-
-    def test_missing_prob_validation(self):
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-
-        with self.assertRaisesRegex(
-            ValueError, "missing_prob should be LinearGaussianCPD"
-        ):
-            self.model.simulate(n_samples=10, missing_prob="not_a_cpd")
-
-        with self.assertRaisesRegex(
-            ValueError, "missing_prob must be a list of LinearGaussianCPD"
-        ):
-            self.model.simulate(n_samples=10, missing_prob=[self.cpd1, "not_a_cpd"])
-
-        bad_cpd = LinearGaussianCPD(variable="x2_missing", beta=[-1], std=1)
-        with self.assertRaisesRegex(
-            ValueError, "LinearGaussianCPD variable should end with \\*"
-        ):
-            self.model.simulate(n_samples=10, missing_prob=bad_cpd)
-
-        bad_cpd = LinearGaussianCPD(variable="x5*", beta=[-1], std=1)
-        with self.assertRaisesRegex(
-            ValueError, "LinearGaussianCPD variable not in model nodes"
-        ):
-            self.model.simulate(n_samples=10, missing_prob=bad_cpd)
-
-        bad_cpd = LinearGaussianCPD(
-            variable="x2*", beta=[-1, 0.5], std=1, evidence=["x5"]
-        )
-        with self.assertRaisesRegex(
-            ValueError, "evidence which is not present in the model"
-        ):
-            self.model.simulate(n_samples=10, missing_prob=bad_cpd)
 
     def test_fit(self):
         # Test fit on a simple model

@@ -285,7 +285,6 @@ class LinearGaussianBayesianNetwork(DAG):
         virtual_intervention=None,
         include_latents=False,
         seed=None,
-        missing_prob=None,
     ):
         """
         Simulates data from the given model.
@@ -313,12 +312,6 @@ class LinearGaussianBayesianNetwork(DAG):
 
         seed: int (default: None)
             Seed for the random number generator.
-
-        missing_prob: LinearGaussianCPD, list  (default: None)
-            In case of missing value for more than one variable, provide list of LinearGaussianCPD.
-            The variable name of each LinearGaussianCPD should end
-              with the name of node in LinearGaussianBayesianNetwork with
-                * at the end of the name.
 
         Returns
         -------
@@ -391,42 +384,6 @@ class LinearGaussianBayesianNetwork(DAG):
                         f"The following nodes are present in the model: {self.nodes()}"
                     )
 
-        if missing_prob is not None:
-            if isinstance(missing_prob, list):
-                for cpd in missing_prob:
-                    if not isinstance(cpd, LinearGaussianCPD):
-                        raise ValueError(
-                            f"missing_prob must be a list of LinearGaussianCPD objects. Got {type(cpd)}"
-                        )
-            else:
-                if isinstance(missing_prob, LinearGaussianCPD):
-                    missing_prob = [missing_prob]
-                else:
-                    raise ValueError(
-                        f"missing_prob should be LinearGaussianCPD. Got {type(missing_prob)}"
-                    )
-
-            for cpd in missing_prob:
-                variable = cpd.variable
-
-                if not variable.endswith("*"):
-                    raise ValueError(
-                        f"Got {variable}. LinearGaussianCPD variable should end with *"
-                        " symbol to represent missingnness variable."
-                    )
-
-                if variable.split("*")[0] not in model.nodes:
-                    raise ValueError(
-                        f"Got {variable}. LinearGaussianCPD variable not in model nodes."
-                    )
-
-                for evidence_node in cpd.evidence:
-                    if evidence_node not in model.nodes:
-                        raise ValueError(
-                            f"LinearGaussianCPD has {evidence_node} as evidence which is not present in the model."
-                            f"CPD: {cpd}"
-                        )
-
         # Step 2: If do is specified, modify the network structure.
         if do != {}:
             for var, val in do.items():
@@ -474,19 +431,10 @@ class LinearGaussianBayesianNetwork(DAG):
             for parent in list(model.get_parents(var)):
                 model.remove_edge(parent, var)
 
-        # Step 4: If missing_prob is not empty, modify the network accordingly
-        if missing_prob is not None:
-            for cpd in missing_prob:
-                var = cpd.variable
-                model.add_node(var)
-                for evidence_node in cpd.evidence:
-                    model.add_edge(evidence_node, var)
-                model.add_cpds(cpd)
-
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
 
-        # Step 5: Sample according to evidence
+        # Step 4: Sample according to evidence
         if len(evidence) == 0:
             df = pd.DataFrame(
                 rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
@@ -517,34 +465,11 @@ class LinearGaussianBayesianNetwork(DAG):
 
             df = df[variables]
 
-        # Step 6: Add do variables to the final dataframe
+        # Step 5: Add do variables to the final dataframe
         for do_var, do_val in do.items():
             df[do_var] = do_val
 
-        # Step 7: Apply probabilistic missingness masking based on missing_prob CPDs.
-        if missing_prob:
-            for cpd in missing_prob:
-                var_star = cpd.variable
-                var = var_star.rstrip("*")
-
-                # Step 7.1: Use sampled value from the synthetic node as the logit (log-odds) of missingness
-                logits = df[var_star]
-                # Step 7.2: Convert logits to probabilities via sigmoid to get P(var is missing)
-                p_missing = 1 / (1 + np.exp(-logits))
-
-                # Step 7.3: For each row, draw 1 with prob=p_missing → 1 means "missing"
-                is_missing = np.random.binomial(1, p_missing)
-
-                # Step 7.4: Store the unmasked/original value in a new column for reference
-                df[f"{var}_full"] = df[var]
-
-                # Step 7.5: If missing mask the original variable with NaN
-                df.loc[is_missing == 1, var] = np.nan
-
-                # Step 7.6: Drop the synthetic "var*" node used for computing missingness
-                df.drop(columns=[var_star], inplace=True)
-
-        # Step 8: Remove latent variables if specified
+        # Step 6: Remove latent variables if specified
         if not include_latents:
             df = df.drop(columns=self.latents)
 
