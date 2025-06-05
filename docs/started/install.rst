@@ -31,6 +31,5 @@ If installing manually, the following non-optional dependencies needs to be inst
 * pandas
 * pyparsing
 * pytorch
-* statsmodels
 * tqdm
 * joblib

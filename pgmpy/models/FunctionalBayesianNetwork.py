@@ -1,7 +1,5 @@
 import networkx as nx
-import numpy as np
 import pandas as pd
-import pyro
 import torch
 
 from pgmpy import config
@@ -199,6 +197,14 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=1000)
         """
+        try:
+            import pyro
+        except ImportError as e:
+            raise ImportError(
+                "Pyro (pyro-ppl) is required for simulation. "
+                "Install it with: pip install pyro-ppl"
+            ) from e
+
         if seed is not None:
             pyro.set_rng_seed(seed)
 
@@ -218,7 +224,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         self,
         data,
         method="SVI",
-        optimizer=pyro.optim.Adam({"lr": 1e-2}),
+        optimizer=None,
         prior_fn=None,
         num_steps=1000,
         seed=None,
@@ -309,6 +315,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
+        try:
+            import pyro
+            from pyro.infer import MCMC, NUTS, SVI, Trace_ELBO
+        except ImportError as e:
+            raise ImportError(
+                "Pyro (pyro-ppl) is required for fitting. "
+                "Install it with: pip install pyro-ppl"
+            ) from e
+
         # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
             raise ValueError(
@@ -322,6 +337,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             raise ValueError(
                 "Currently only SVI and MCMC methods are supported. method argument needs to be either 'SVI' or 'MCMC'."
             )
+
+        if optimizer is None and method.lower() == "svi":
+            optimizer = pyro.optim.Adam({"lr": 1e-2})
 
         # Step 1: Preprocess the data and initialize data structures.
         if seed is not None:
@@ -364,11 +382,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                         )
 
             # Step 2.2: Fit the model using SVI.
-            svi = pyro.infer.SVI(
+            svi = SVI(
                 model=combined_model_svi,
                 guide=guide,
                 optim=optimizer,
-                loss=pyro.infer.Trace_ELBO(),
+                loss=Trace_ELBO(),
             )
 
             for step in range(num_steps):
@@ -376,8 +394,14 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        # Step 3: Fit the model using specified method
+            # Step 2.3: Return the fitted parameter values.
+            return dict(pyro.get_param_store().items())
+
+        # Step 3: Fit the model using MCMC
         elif method.lower() == "mcmc":
+            if prior_fn is None:
+                raise ValueError("prior_fn must be provided for MCMC method")
+
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
                 priors = prior_fn()
@@ -393,12 +417,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                         )
 
             # Step 3.2: Fit the model using MCMC.
-            nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
-            mcmc = pyro.infer.MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
+            nuts_kernel = NUTS(combined_model_mcmc, **nuts_kwargs)
+            mcmc = MCMC(nuts_kernel, num_samples=num_steps, **mcmc_kwargs)
             mcmc.run(tensor_data)
 
-        # Step 4: Return the fitted parameter values.
-        if method.lower() == "svi":
-            return dict(pyro.get_param_store().items())
-        else:
+            # Step 3.3: Return the posterior samples.
             return mcmc.get_samples()

@@ -4,7 +4,6 @@ from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
 from scipy.special import gammaln
 from scipy.stats import multivariate_normal
 
@@ -531,14 +530,54 @@ class LogLikelihoodGauss(StructureScore):
         super(LogLikelihoodGauss, self).__init__(data, **kwargs)
 
     def _log_likelihood(self, variable, parents):
-        if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
-        else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+        """
+        Calculate the Gaussian log-likelihood for a variable given its parents.
 
-        return (glm_model.llf, glm_model.df_model)
+        Parameters
+        ----------
+        variable: str
+            The child variable name
+        parents: list
+            List of parent variable names
+
+        Returns
+        -------
+        tuple: (log_likelihood, degrees_of_freedom)
+        """
+        y = self.data[variable].values
+        n = len(y)
+
+        if len(parents) == 0:
+            # Intercept-only model
+            X = np.ones((n, 1))
+            df = 0  # Only intercept, no predictors
+        else:
+            # Model with parents as predictors
+            X = np.column_stack([np.ones(n), self.data[parents].values])
+            df = len(parents)  # Degrees of freedom = number of predictors
+
+        # Calculate OLS coefficients: (X'X)^-1 X'y
+        try:
+            beta = np.linalg.inv(X.T @ X) @ X.T @ y
+        except np.linalg.LinAlgError:
+            # Handle singular matrix case
+            beta = np.linalg.pinv(X.T @ X) @ X.T @ y
+
+        # Calculate predicted values
+        y_pred = X @ beta
+
+        # Calculate residuals
+        residuals = y - y_pred
+
+        # Calculate MLE of variance
+        sigma_sq = np.sum(residuals**2) / n
+
+        # Calculate log-likelihood
+        log_likelihood = -n / 2 * np.log(2 * np.pi * sigma_sq) - 1 / (
+            2 * sigma_sq
+        ) * np.sum(residuals**2)
+
+        return (log_likelihood, df)
 
     def local_score(self, variable, parents):
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)

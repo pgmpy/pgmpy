@@ -1,21 +1,96 @@
 #!/usr/bin/env python
 
+from collections import defaultdict
 from itertools import combinations
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from sklearn.metrics import (
-    adjusted_mutual_info_score,
-    mutual_info_score,
-    normalized_mutual_info_score,
-)
 from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
+
+
+def _compute_contingency(labels_true, labels_pred):
+    """Compute contingency matrix between two label vectors."""
+    contingency = defaultdict(lambda: defaultdict(int))
+    for true, pred in zip(labels_true, labels_pred):
+        contingency[true][pred] += 1
+    return contingency
+
+
+def _entropy(labels):
+    """Compute entropy of a label distribution."""
+    _, counts = np.unique(labels, return_counts=True)
+    probs = counts / len(labels)
+    return -np.sum(
+        probs * np.log2(probs + 1e-10)
+    )  # Added small constant to avoid log(0)
+
+
+def mutual_info_score(labels_true, labels_pred):
+    """Compute mutual information between two label vectors."""
+    contingency = _compute_contingency(labels_true, labels_pred)
+    total = len(labels_true)
+
+    # Compute marginal probabilities
+    px = defaultdict(int)
+    py = defaultdict(int)
+    for x in contingency:
+        for y in contingency[x]:
+            px[x] += contingency[x][y]
+            py[y] += contingency[x][y]
+
+    # Compute mutual information
+    mi = 0.0
+    for x in contingency:
+        for y in contingency[x]:
+            p_xy = contingency[x][y] / total
+            p_x = px[x] / total
+            p_y = py[y] / total
+            if p_xy > 0:
+                mi += p_xy * np.log2(p_xy / (p_x * p_y + 1e-10))  # Added small constant
+
+    return max(0.0, mi)
+
+
+def normalized_mutual_info_score(labels_true, labels_pred):
+    """Compute normalized mutual information."""
+    mi = mutual_info_score(labels_true, labels_pred)
+    h_true = _entropy(labels_true)
+    h_pred = _entropy(labels_pred)
+
+    if h_true == 0 and h_pred == 0:
+        return 1.0
+    elif h_true == 0 or h_pred == 0:
+        return 0.0
+    else:
+        return mi / np.sqrt(h_true * h_pred)
+
+
+def adjusted_mutual_info_score(labels_true, labels_pred):
+    """Compute adjusted mutual information."""
+    mi = mutual_info_score(labels_true, labels_pred)
+    h_true = _entropy(labels_true)
+    h_pred = _entropy(labels_pred)
+
+    # Compute expected MI (simplified version)
+    emi = 0.0
+    if h_true == 0 and h_pred == 0:
+        return 1.0
+    elif h_true == 0 or h_pred == 0:
+        return 0.0
+    else:
+        emi = mi / max(h_true, h_pred)
+
+    denominator = (h_true + h_pred) / 2 - emi
+    if denominator < 1e-15:
+        return 1.0
+    else:
+        return (mi - emi) / denominator
 
 
 class TreeSearch(StructureEstimator):
@@ -133,10 +208,10 @@ class TreeSearch(StructureEstimator):
         # Step 1.2: If estimator_type=tan, class_node must be specified
         if estimator_type == "tan" and class_node is None:
             raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
+                "class_node argument must be specified for estimator_type='tan'"
             )
         if estimator_type == "tan" and class_node not in self.data.columns:
-            raise ValueError(f"Class node: {class_node} not found in data columns")
+            raise ValueError("Class node: {class_node} not found in data columns")
 
         # Step 1.3: If root_node isn't specified, get the node with the highest score.
         weights_computed = False

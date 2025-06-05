@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 import torch
 
 from pgmpy import config
+from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
-
-from pgmpy.inference import CausalInference
 
 
 class SEMEstimator(object):
@@ -18,7 +16,7 @@ class SEMEstimator(object):
     def __init__(self, model):
         if config.BACKEND == "numpy":
             raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. "
+                "SEMEstimator requires torch backend. Currently it's numpy. "
                 "Call pgmpy.config.set_backend('torch') to switch"
             )
 
@@ -397,6 +395,33 @@ class IVEstimator:
     def __init__(self, model):
         self.model = model
 
+    def _ols_regression(self, y, X, add_constant=True):
+        """
+        Custom OLS regression implementation.
+
+        Parameters
+        ----------
+        y: array-like
+            Dependent variable
+        X: array-like
+            Independent variables
+        add_constant: bool
+            Whether to add a constant term to the regression
+
+        Returns
+        -------
+        params: array
+            Estimated coefficients
+        """
+        if config.BACKEND == "numpy":
+            if add_constant:
+                X = np.column_stack([np.ones(X.shape[0]), X])
+            return np.linalg.inv(X.T @ X) @ X.T @ y
+        else:
+            if add_constant:
+                X = torch.cat([torch.ones(X.shape[0], 1), X], dim=1)
+            return torch.inverse(X.T @ X) @ X.T @ y
+
     def fit(self, X, Y, data, ivs=None, civs=None):
         """
         Estimates the parameter X -> Y.
@@ -443,18 +468,73 @@ class IVEstimator:
         for civ in civs:
             civ_conditionals.extend(civ[1])
 
-        # First stage regression.
-        params = (
-            sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals])
-            .fit()
-            .params
-        )
+        # Convert data to numpy/torch based on backend
+        if config.BACKEND == "numpy":
+            X_data = data[reg_covars + civ_conditionals].values
+            y_data = data[X].values
+        else:
+            X_data = torch.tensor(
+                data[reg_covars + civ_conditionals].values,
+                dtype=config.DTYPE,
+                device=config.DEVICE,
+            )
+            y_data = torch.tensor(
+                data[X].values, dtype=config.DTYPE, device=config.DEVICE
+            )
 
-        data["X_pred"] = np.zeros(data.shape[0])
-        for var in reg_covars:
-            data.X_pred += params[var] * data.loc[:, var]
+        # First stage regression
+        params = self._ols_regression(y_data, X_data, add_constant=True)
 
-        summary = sm.OLS(
-            data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]
-        ).fit()
-        return summary.params["X_pred"], summary
+        # Create predicted X values
+        if config.BACKEND == "numpy":
+            X_pred = np.zeros(data.shape[0])
+            for i, var in enumerate(reg_covars + civ_conditionals):
+                X_pred += params[i + 1] * data[var].values  # i+1 to skip constant
+        else:
+            X_pred = torch.zeros(
+                data.shape[0], dtype=config.DTYPE, device=config.DEVICE
+            )
+            for i, var in enumerate(reg_covars + civ_conditionals):
+                X_pred += params[i + 1] * torch.tensor(
+                    data[var].values, dtype=config.DTYPE, device=config.DEVICE
+                )
+
+        # Second stage regression
+        if civ_conditionals:
+            if config.BACKEND == "numpy":
+                X_second = np.column_stack([X_pred, data[civ_conditionals].values])
+            else:
+                X_second = torch.cat(
+                    [
+                        X_pred.unsqueeze(1),
+                        torch.tensor(
+                            data[civ_conditionals].values,
+                            dtype=config.DTYPE,
+                            device=config.DEVICE,
+                        ),
+                    ],
+                    dim=1,
+                )
+        else:
+            X_second = X_pred.reshape(-1, 1)
+
+        y_second = data[Y].values
+        if config.BACKEND == "torch":
+            y_second = torch.tensor(y_second, dtype=config.DTYPE, device=config.DEVICE)
+
+        second_params = self._ols_regression(y_second, X_second, add_constant=True)
+
+        # Create simple summary dictionary
+        if civ_conditionals:
+            param_value = second_params[1]  # First param is X_pred coefficient
+        else:
+            param_value = second_params[0]  # Only one param when no conditionals
+
+        summary = {
+            "params": {"X_pred": param_value},
+            "rsquared": None,  # Could calculate if needed
+            "tvalues": None,  # Could calculate if needed
+            "pvalues": None,  # Could calculate if needed
+        }
+
+        return param_value, summary

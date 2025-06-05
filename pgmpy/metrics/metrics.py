@@ -5,12 +5,45 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork
+
+
+def f1_score(y_true, y_pred):
+    """
+    Custom implementation of F1 score (harmonic mean of precision and recall)
+
+    Parameters
+    ----------
+    y_true: array-like
+        Ground truth (correct) target values
+    y_pred: array-like
+        Estimated targets as returned by a classifier
+
+    Returns
+    -------
+    f1: float
+        F1 score of the positive class
+    """
+    # Calculate true positives, false positives, false negatives
+    tp = sum((y_true == 1) & (y_pred == 1))
+    fp = sum((y_true == 0) & (y_pred == 1))
+    fn = sum((y_true == 1) & (y_pred == 0))
+
+    # Calculate precision and recall
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+
+    # Calculate F1 score
+    f1 = (
+        2 * (precision * recall) / (precision + recall)
+        if (precision + recall) > 0
+        else 0
+    )
+    return f1
 
 
 def correlation_score(

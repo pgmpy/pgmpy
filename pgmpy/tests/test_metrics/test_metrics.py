@@ -3,7 +3,6 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import chi_square
@@ -17,6 +16,24 @@ from pgmpy.metrics import (
 )
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
+
+
+def accuracy_score(y_true, y_pred):
+    correct = sum(yt == yp for yt, yp in zip(y_true, y_pred))
+    return correct / len(y_true)
+
+
+def f1_score(y_true, y_pred):
+    tp = sum((yt == 1 and yp == 1) for yt, yp in zip(y_true, y_pred))
+    fp = sum((yt == 0 and yp == 1) for yt, yp in zip(y_true, y_pred))
+    fn = sum((yt == 1 and yp == 0) for yt, yp in zip(y_true, y_pred))
+
+    if tp == 0:
+        return 0.0
+
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    return 2 * (precision * recall) / (precision + recall)
 
 
 class TestCorrelationScore(unittest.TestCase):

@@ -4,7 +4,6 @@ from typing import Optional, Union
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.cross_decomposition import CCA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
@@ -610,6 +609,33 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     return (pred_x, pred_y, x_cat_index, y_cat_index)
 
 
+def _compute_cancor(X, Y):
+    # Center the matrices
+    X -= X.mean(axis=0)
+    Y -= Y.mean(axis=0)
+
+    # Compute covariance matrices
+    Sxx = X.T @ X
+    Syy = Y.T @ Y
+    Sxy = X.T @ Y
+
+    # Regularize to avoid numerical instability (optional)
+    Sxx += np.eye(Sxx.shape[0]) * 1e-10
+    Syy += np.eye(Syy.shape[0]) * 1e-10
+
+    # Compute inverse square root of Sxx and Syy
+    Sxx_inv_sqrt = np.linalg.inv(np.linalg.cholesky(Sxx)).T
+    Syy_inv_sqrt = np.linalg.inv(np.linalg.cholesky(Syy)).T
+
+    # Canonical correlation matrix
+    M = Sxx_inv_sqrt @ Sxy @ Syy_inv_sqrt
+
+    # Singular values = canonical correlations
+    cancor = np.linalg.svd(M, compute_uv=False)
+
+    return cancor
+
+
 def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     """
     A mixed-data residualization based conditional independence test[1].
@@ -658,7 +684,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
       in testing the multivariate general linear hypothesis.
       Computational Statistics & Data Analysis.
     """
-    # Step 1: Test if the inputs are correct
+    # Step 1: Input validation
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
     else:
@@ -669,7 +695,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
-    # Step 1.1: If no conditional variables are specified, use a constant value.
+    # Step 1.1: Handle no conditional variables case
     if len(Z) == 0:
         Z = ["cont_Z"]
         data = data.assign(cont_Z=np.ones(data.shape[0]))
@@ -682,50 +708,35 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         x = pd.get_dummies(data.loc[:, X]).loc[
             :, x_cat_index.categories[x_cat_index.codes]
         ]
-        # Drop last column to avoid multicollinearity
-        res_x = (x - pred_x).iloc[:, :-1]
+        res_x = (x - pred_x).iloc[:, :-1]  # Drop last column
     else:
         res_x = data.loc[:, X] - pred_x
+        res_x = res_x.to_frame() if isinstance(res_x, pd.Series) else res_x
 
     if data.loc[:, Y].dtype == "category":
         y = pd.get_dummies(data.loc[:, Y]).loc[
             :, y_cat_index.categories[y_cat_index.codes]
         ]
-        # Drop last column to avoid multicollinearity
-        res_y = (y - pred_y).iloc[:, :-1]
+        res_y = (y - pred_y).iloc[:, :-1]  # Drop last column
     else:
         res_y = data.loc[:, Y] - pred_y
+        res_y = res_y.to_frame() if isinstance(res_y, pd.Series) else res_y
 
-    # Step 4: Compute Pillai's trace.
-    if isinstance(res_x, pd.Series):
-        res_x = res_x.to_frame()
-    if isinstance(res_y, pd.Series):
-        res_y = res_y.to_frame()
+    # Step 4: Compute Pillai's trace
+    cancor = _compute_cancor(res_x.values, res_y.values)
+    coef = (cancor**2).sum()
 
-    cca = CCA(scale=False, n_components=min(res_x.shape[1], res_y.shape[1]))
-    res_x_c, res_y_c = cca.fit_transform(res_x, res_y)
-
-    cancor = []
-    for i in range(min(res_x.shape[1], res_y.shape[1])):
-        cancor.append(np.corrcoef(res_x_c[:, [i]].T, res_y_c[:, [i]].T)[0, 1])
-
-    coef = (np.array(cancor) ** 2).sum()
-
-    # Step 5: Compute p-value using f-approximation [3].
+    # Step 5: Compute p-value using f-approximation
     s = min(res_x.shape[1], res_y.shape[1])
     df1 = res_x.shape[1] * res_y.shape[1]
     df2 = s * (data.shape[0] - 1 + s - res_x.shape[1] - res_y.shape[1])
     f_stat = (coef / df1) * (df2 / (s - coef))
     p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
-    # Step 6: Return
+    # Step 6: Return results
     if boolean:
-        if p_value >= kwargs["significance_level"]:
-            return True
-        else:
-            return False
-    else:
-        return coef, p_value
+        return p_value >= kwargs["significance_level"]
+    return coef, p_value
 
 
 def gcm(X, Y, Z, data, boolean=True, **kwargs):

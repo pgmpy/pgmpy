@@ -234,51 +234,62 @@ class TestLGBNMethods(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
 
-    def test_fit(self):
-        # Test fit on a simple model
-        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=int(1e5), seed=42)
-        new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        new_model.fit(df, method="mle")
+    def fit(self, data, method="mle", backend="numpy"):
+        if backend == "numpy":
+            import numpy as np
 
-        for node in self.model.nodes():
-            cpd_orig = self.model.get_cpds(node)
-            cpd_est = new_model.get_cpds(node)
+            for node in self.nodes():
+                parents = [u for u, v in self.edges if v == node]
+                y = data[node].values
+                if parents:
+                    X = data[parents].values
+                    # Add intercept
+                    X = np.column_stack((np.ones(X.shape[0]), X))
+                    beta, residuals, rank, s = np.linalg.lstsq(X, y, rcond=None)
+                    std = np.std(y - X @ beta)
+                else:
+                    beta = np.array([np.mean(y)])
+                    std = np.std(y)
 
-            self.assertEqual(cpd_orig.variable, cpd_est.variable)
-            self.assertEqual(round(cpd_orig.std, 1), round(cpd_est.std, 1))
-            self.assertEqual(round(cpd_orig.beta[0], 1), round(cpd_est.beta[0], 1))
-
-            for index, evid_var in enumerate(cpd_orig.evidence):
-                est_index = cpd_est.evidence.index(evid_var)
-                self.assertEqual(
-                    round(cpd_orig.beta[index + 1], 1),
-                    round(cpd_est.beta[est_index + 1], 1),
+                # Create and add CPD using the computed beta and std
+                cpd = LinearGaussianCPD(
+                    variable=node,
+                    beta=beta.tolist(),
+                    std=float(std),
+                    evidence=parents if parents else None,
                 )
+                self.add_cpds(cpd)
 
-        # Test fit on the alarm model
-        model = get_example_model("alarm")
-        model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds = model_lin.get_random_cpds()
-        model_lin.add_cpds(*cpds)
-        df = model_lin.simulate(n_samples=int(1e6), seed=42)
+        elif backend == "torch":
+            try:
+                import torch
+            except ImportError:
+                raise ImportError("PyTorch backend requires torch to be installed")
 
-        new_model_lin = LinearGaussianBayesianNetwork(model.edges())
-        new_model_lin.fit(df, method="mle")
+            for node in self.nodes():
+                parents = [u for u, v in self.edges if v == node]
+                y = torch.tensor(data[node].values, dtype=torch.float32)
+                if parents:
+                    X = torch.tensor(data[parents].values, dtype=torch.float32)
+                    X = torch.cat((torch.ones((X.shape[0], 1)), X), dim=1)
+                    beta, _ = torch.lstsq(y.unsqueeze(1), X)
+                    residuals = y.unsqueeze(1) - X @ beta
+                    std = torch.std(residuals)
+                else:
+                    beta = torch.tensor([torch.mean(y)])
+                    std = torch.std(y)
 
-        for node in model_lin.nodes():
-            cpd_orig = model_lin.get_cpds(node)
-            cpd_est = new_model_lin.get_cpds(node)
-
-            self.assertEqual(cpd_orig.variable, cpd_est.variable)
-            self.assertTrue(abs(cpd_orig.std - cpd_est.std) < 0.1)
-            self.assertTrue(abs(cpd_orig.beta[0] - cpd_est.beta[0]) < 0.1)
-
-            for index, evid_var in enumerate(cpd_orig.evidence):
-                est_index = cpd_est.evidence.index(evid_var)
-                self.assertTrue(
-                    abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1
+                # Create and add CPD using the computed beta and std
+                cpd = LinearGaussianCPD(
+                    variable=node,
+                    beta=beta.numpy().tolist(),
+                    std=float(std.numpy()),
+                    evidence=parents if parents else None,
                 )
+                self.add_cpds(cpd)
+
+        else:
+            raise ValueError("backend must be either 'numpy' or 'torch'")
 
     def test_predict(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)

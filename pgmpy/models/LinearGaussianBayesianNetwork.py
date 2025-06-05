@@ -1,12 +1,10 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
-from pgmpy.models import DiscreteBayesianNetwork
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -238,8 +236,8 @@ class LinearGaussianBayesianNetwork(DAG):
             omega[var_to_index[var], var_to_index[var]] = cpd.std
 
         # Step 3: Compute the implied covariance matrix
-        I = np.eye(n_nodes)
-        inv = np.linalg.inv((I - B))
+        identity_matrix = np.eye(n_nodes)
+        inv = np.linalg.inv((identity_matrix - B))
         implied_cov = inv.T @ omega @ inv
 
         # Round because numerical errors can lead to non-symmetric cov matrix.
@@ -413,8 +411,8 @@ class LinearGaussianBayesianNetwork(DAG):
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
 
-        evidence_var = list(evidence.keys())
-        sample_var = [v for v in variables if v not in evidence_var]
+        # evidence_var = list(evidence.keys())
+        # sample_var = [v for v in variables if v not in evidence_var]
 
         # Step 4: Sample according to evidence
         if len(evidence) == 0:
@@ -497,59 +495,52 @@ class LinearGaussianBayesianNetwork(DAG):
         -------
         None: The estimated LinearGaussianCPDs are added to the model. They can
             be accessed using `model.cpds`.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> df = pd.DataFrame(np.random.normal(0, 1, (100, 3)), columns=['x1', 'x2', 'x3'])
-        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        >>> model.fit(df)
-        >>> model.cpds
-        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
-         <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
-         <LinearGaussianCPD: P(x3 | x2) = N(0.006*x2 + -0.1; 0.922) at 0x7eb6abbdba10]
         """
         # Step 1: Check the input
-        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+        missing_vars = set(self.nodes()) - set(data.columns)
+        if len(missing_vars) > 0:
             raise ValueError(
                 f"Following variables are missing in the data: {missing_vars}"
             )
 
-        # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
         for node in self.nodes():
             parents = self.get_parents(node)
 
-            # Step 2.1: If node doesn't have any parents (i.e. root node),
-            #           simply take the mean and variance.
+            # Root node: mean and variance (std = sqrt(variance))
             if len(parents) == 0:
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
                         beta=[data.loc[:, node].mean()],
-                        std=data.loc[:, node].var(),
+                        std=np.sqrt(data.loc[:, node].var()),
                     )
                 )
-
-            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
-            #           Compute error variance using predicted values.
             else:
-                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
-                error_var = (data.loc[:, node] - lm.predict(data.loc[:, parents])).var()
+                X = data.loc[:, parents].values
+                X = np.column_stack([np.ones(X.shape[0]), X])  # intercept term
+                y = data.loc[:, node].values
+
+                XtX = X.T @ X
+                eps = 1e-8  # small ridge term to avoid singularity
+                XtX += eps * np.eye(XtX.shape[0])
+
+                Xty = X.T @ y
+                beta = np.linalg.solve(XtX, Xty)
+
+                y_pred = X @ beta
+                residuals = y - y_pred
+                error_var = np.var(residuals, ddof=X.shape[1])
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        beta=np.append([lm.intercept_], lm.coef_),
-                        std=error_var,
+                        beta=beta,
+                        std=np.sqrt(error_var),
                         evidence=parents,
                     )
                 )
 
-        # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
-
         return self
 
     def predict(self, data, distribution="joint"):
