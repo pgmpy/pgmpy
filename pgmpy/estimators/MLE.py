@@ -1,6 +1,7 @@
 # coding:utf-8
 
 from itertools import chain
+import warnings
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -69,7 +70,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, n_jobs=1, weighted=False):
+    def get_parameters(self, n_jobs=1, weighted=False,smoothing=None,alpha=1.0):
         """
         Method to estimate the model parameters using Maximum Likelihood Estimation.
 
@@ -83,6 +84,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             If weighted=True, the data must contain a `_weight` column specifying the
             weight of each datapoint (row). If False, assigns an equal weight to each
             datapoint.
+
+        smoothing: str or None (default: None)
+            Smoothing technique to handle zero counts. Options:
+            - None: Use uniform smoothing (original behavior) with warning
+            - 'laplace': Add alpha to all counts (Laplace smoothing)
+            - 'dirichlet': Add alpha to all counts (equivalent to Laplace)
+            - 'none': No smoothing, keep zero probabilities
+
+         alpha: float (default: 1.0)
+            Smoothing parameter when using Laplace/Dirichlet smoothing.
 
         Returns
         -------
@@ -100,11 +111,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ...                       columns=['A', 'B', 'C', 'D'])
         >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
+        >>> # Standard MLE with uniform smoothing (with warning)
         >>> estimator.get_parameters()
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
         <TabularCPD representing P(B:2 | C:2, A:2) at 0x7f7b4dfd4da0>,
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
+        >>> # MLE with Laplace smoothing
+        >>> estimator.get_parameters(smoothing='laplace',alpha=1.0)
+        >>> # MLE with no smoothing (keeps zero probabilities)
+        >>> estimator.get_parameters(smoothing='none')
         """
 
         if isinstance(self.model, JunctionTree):
@@ -118,7 +134,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         return parameters
 
-    def estimate_cpd(self, node, weighted=False):
+    def estimate_cpd(self, node, weighted=False,smoothing=None,alpha=1.0):
         """
         Method to estimate the CPD for a given variable.
 
@@ -131,6 +147,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             If weighted=True, the data must contain a `_weight` column specifying the
             weight of each datapoint (row). If False, assigns an equal weight to each
             datapoint.
+
+        smoothing: str or None (default: None)
+            Smoothing technique to handle zero counts. Options:
+            - None: Use uniform smoothing (original behavior) with warning
+            - 'laplace': Add alpha to all counts (Laplace smoothing)
+            - 'dirichlet': Add alpha to all counts (equivalent to Laplace)
+            - 'none': No smoothing, keep zero probabilities
+        
+        alpha: float (default: 1.0)
+            Smoothing parameter when using Laplace/Dirichlet smoothing.
 
         Returns
         -------
@@ -164,11 +190,47 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ╘══════╧══════╧══════╧══════╧══════╛
         """
 
+        """
+        >>> # Original behavior with warning
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A')
+        >>> # With Laplace smoothing
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A', smoothing='laplace')
+        >>> # With no smoothing
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A', smoothing='none')
+        """
+
         state_counts = self.state_counts(node, weighted=weighted)
 
-        # if a column contains only `0`s (no states observed for some configuration
-        # of parents' states) fill that column uniformly instead
-        state_counts.iloc[:, (state_counts.values == 0).all(axis=0)] = 1.0
+        #Handle zero counts based on smoothing strategy
+        zero_columns = (state_counts.values == 0).all(axis=0)
+
+        if zero_columns.any():
+            if smoothing is None:
+                # Original behavior with deprecation warning
+                warnings.warn(
+                    f"Zero counts detected for node '{node}'. Using uniform smoothing (filling with 1.0). "
+                    "This behavior is deprecated. Please specify a smoothing method explicitly using the 'smoothing' parameter. "
+                    "Options: 'laplace', 'dirichlet', or 'none'.",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                state_counts.iloc[:, zero_columns] = 1.0
+                
+            elif smoothing.lower() in ['laplace', 'dirichlet']:
+                # Add alpha to all counts (Laplace/Dirichlet smoothing)
+                if alpha <= 0:
+                    raise ValueError("Alpha must be positive for Laplace/Dirichlet smoothing")
+                state_counts = state_counts + alpha
+                
+            elif smoothing.lower() == 'none':
+                # Keep zero counts as they are - will result in zero probabilities
+                pass
+                
+            else:
+                raise ValueError(
+                    f"Unknown smoothing method: {smoothing}. "
+                    "Supported methods: 'laplace', 'dirichlet', 'none', or None for uniform smoothing."
+                )
 
         parents = sorted(self.model.get_parents(node))
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
@@ -192,6 +254,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             evidence_card=parents_cardinalities,
             state_names={var: self.state_names[var] for var in chain([node], parents)},
         )
+
+        # Check for zero probabilities after normalization if smoothing is 'none'
+        if smoothing == 'none' and zero_columns.any():
+            warnings.warn(
+                f"Zero probabilities detected in CPD for node '{node}' after normalization. "
+                "This may cause issues during inference. Consider using smoothing.",
+                UserWarning,
+                stacklevel=2
+            )
+
         cpd.normalize()
         return cpd
 
