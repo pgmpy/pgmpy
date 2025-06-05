@@ -387,3 +387,68 @@ class TestDAGParser(unittest.TestCase):
         model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
         expected_edges = set([("smoking", "carry matches")])
         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+    def test_from_dagitty_DAG_ctor(self):
+        from pgmpy.base import DAG
+
+        # Adapted from https://www.dagitty.net/manual-3.x.pdf#page=4 section 3.1 with beta modified
+        model_str = """dag{
+        "carry matches" [latent]
+        cancer [outcome]
+        smoking -> "carry matches" [beta=0.2]
+        smoking -> cancer [beta=0.5]
+        "carry matches" -> cancer
+        }"""
+        model_from_str = DAG.from_dagitty(model_str)
+        self.assertIsInstance(model_from_str, LinearGaussianBayesianNetwork)
+        self.assertEqual(
+            sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"]
+        )
+        expected_edges = set(
+            [
+                ("smoking", "carry matches"),
+                ("smoking", "cancer"),
+                ("carry matches", "cancer"),
+            ]
+        )
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(model_from_str.check_model(), True)
+
+        # Test CPDs
+        self.assertEqual(len(model_from_str.cpds), 3)
+
+        # Check if all std dev are set
+        self.assertIsNotNone(model_from_str.get_cpds("cancer").std)
+        self.assertIsNotNone(model_from_str.get_cpds("carry matches").std)
+        self.assertIsNotNone(model_from_str.get_cpds("smoking").std)
+
+        # Check variable names
+        self.assertEqual(model_from_str.get_cpds("cancer").variable, "cancer")
+        self.assertEqual(
+            model_from_str.get_cpds("carry matches").variable, "carry matches"
+        )
+        self.assertEqual(model_from_str.get_cpds("smoking").variable, "smoking")
+
+        # Check evidences
+        self.assertEqual(
+            sorted(model_from_str.get_cpds("cancer").evidence),
+            ["carry matches", "smoking"],
+        )
+        self.assertEqual(
+            sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"]
+        )
+        self.assertEqual(sorted(model_from_str.get_cpds("smoking").evidence), [])
+
+        # Check if the betas specified were correctly set
+        self.assertEqual(model_from_str.get_cpds("cancer").beta[1], 0.5)
+        self.assertEqual(model_from_str.get_cpds("carry matches").beta[1], 0.2)
+
+        # Check if intercepts are 0
+        self.assertEqual(model_from_str.get_cpds("cancer").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("carry matches").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("smoking").beta[0], 0.0)
+
+        # Check if std devs are 1
+        self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
+        self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
+        self.assertEqual(model_from_str.get_cpds("smoking").std, 1)

@@ -77,6 +77,17 @@ class ExpectationMaximization(ParameterEstimator):
             model.latents.update(new_latents)
 
         # Do NOT drop rows with missing values; handle them in E-step
+        # Drop rows with any missing values in partially observed columns
+        original_rows_count = data.shape[0]
+        data = data.dropna()
+        dropped_rows_count = original_rows_count - data.shape[0]
+
+        if dropped_rows_count:
+            logger.warning(
+                f"{dropped_rows_count} rows with missing values in partially "
+                "missing columns were dropped from the dataset."
+            )
+
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 

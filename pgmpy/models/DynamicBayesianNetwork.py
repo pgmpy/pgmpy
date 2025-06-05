@@ -391,7 +391,8 @@ class DynamicBayesianNetwork(DAG):
         """
         if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError(
-                f"The timeslice should be a positive integer greater than or equal to zero: ({type(time_slice)}, value: {time_slice})"
+                f"The timeslice should be a positive integer greater than"
+                f" or equal to zero: ({type(time_slice)}, value: {time_slice})"
             )
 
         return [
