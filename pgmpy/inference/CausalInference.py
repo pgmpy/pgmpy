@@ -987,37 +987,23 @@ class CausalInference(object):
             )
 
         if do:
-
             if do and evidence:
-                from pgmpy.utils import get_example_model
-                from pgmpy.models import BayesianNetwork
-                from pgmpy.base import DAG
-
                 do_vars = set(do.keys())
-                query_vars = set(variables)
-                evidence_vars = set(evidence.keys())
 
-                invalid_evidence_nodes = []
-            for z in evidence_vars:
-                for x in do_vars:
-                    for y in query_vars:
-                        if not self.model.is_dconnected(
-                            x, y, observed=set(evidence_vars - {z})
-                        ):
-                            # conditioning on z changes the d-connection
-                            invalid_evidence_nodes.append(z)
+                if adjustment_set is None:
+                    adjustment_set = set(
+                        chain(*[self.model.predecessors(var) for var in do_vars])
+                    )
+                    if len(adjustment_set.intersection(self.model.latents)) != 0:
+                        raise ValueError(
+                            "Not all parents of do variables are observed. Please specify an adjustment set."
+                        )
 
-            if invalid_evidence_nodes:
-                raise ValueError(
-                    f"Invalid causal query: conditioning on {invalid_evidence_nodes} blocks or opens paths "
-                    f"in a way that violates identifiability. This may lead to incorrect causal effect estimates."
-                )
-
-            for var, do_var in product(variables, do):
-                if do_var in nx.descendants(self.dag, var):
+                overlap = set(evidence).intersection(adjustment_set)
+                if overlap:
                     raise ValueError(
-                        f"Invalid causal query: There is a direct edge from the query variable '{var}' to the intervention variable '{do_var}'. "
-                        f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
+                        f"Evidence variables {overlap} are part of the adjustment set. "
+                        "Please remove them from evidence or specify a different adjustment set."
                     )
 
         from pgmpy.inference import Inference
