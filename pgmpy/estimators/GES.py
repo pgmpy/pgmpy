@@ -1,4 +1,4 @@
-from itertools import combinations, chain
+from itertools import chain, combinations
 
 import networkx as nx
 import numpy as np
@@ -536,12 +536,12 @@ class GES(StructureEstimator):
                 current_model, expert_knowledge
             )
 
-            #print("\nremovals\n", potential_removals)
+            # print("\nremovals\n", potential_removals)
             score_deltas = np.zeros(len(potential_removals))
             deletion_ops = []
 
             for index, (u, v) in enumerate(potential_removals):
-                #print("\nloop-edges\n", current_model.edges)
+                # print("\nloop-edges\n", current_model.edges)
                 deletion_op = self._score_valid_deletions(u, v, current_model, score_fn)
                 if deletion_op == []:
                     score_deltas[index] = 0
@@ -550,7 +550,7 @@ class GES(StructureEstimator):
                     score_deltas[index] = max(deletion_op)[0]
                     deletion_ops.append(max(deletion_op))
 
-            #print("Reached!!!")
+            # print("Reached!!!")
 
             print(score_deltas)
             if (len(potential_removals) == 0) or (

@@ -1641,17 +1641,17 @@ class PDAG(nx.DiGraph):
         {'B'}
         """
         return {var for var in self.successors(node) if self.has_edge(var, node)}
-    
+
     def adjacent_neighbors(self, u):
         adj = set()
         for node in self.nodes:
             if self.is_adjacent(u, node):
                 adj.add(node)
         return adj
-    
+
     def induced_subgraph(self, edge_list):
         subgraph = []
-        for (u, v) in self.edges:
+        for u, v in self.edges:
             if u not in edge_list and v not in edge_list:
                 subgraph.append((u, v))
         return subgraph
@@ -1667,7 +1667,7 @@ class PDAG(nx.DiGraph):
         return visited
 
     def separates(self, U, V, sep_set, graph=None):
-        if graph==None:
+        if graph == None:
             graph = self
         for u in U:
             for v in V:
@@ -1684,13 +1684,12 @@ class PDAG(nx.DiGraph):
             return True
         else:
             return False
-    
+
     def is_clique(self, nodes):
         for node1, node2 in itertools.combinations(nodes, 2):
             if not self.has_undirected_edge(node1, node2):
                 return False
         return True
-
 
     def copy(self):
         """
