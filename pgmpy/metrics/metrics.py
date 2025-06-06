@@ -454,13 +454,13 @@ def permutation_test(
         for col in permuted_data.columns:
             permuted_data[col] = np.random.permutation(permuted_data[col].values)
 
-        # to calculate p-vaue for the permuted data
+        # to calculate p-value for the permuted data
         perm_fisher_p_val = fisher_c(
             model=model, data=permuted_data, ci_test=ci_test, show_progress=False
         )
         p_vals.append(perm_fisher_p_val)
 
-    # converting to numoy array
+    # converting to numpy array
     permutated_vals = np.array(p_vals)
 
     # calculating the final p-value
