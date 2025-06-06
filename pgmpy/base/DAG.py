@@ -1629,6 +1629,8 @@ class DAG(nx.DiGraph):
 
         # to store the results of different tests
         results = {}
+
+        # correlation score
         if "correlation" in metrics:
             results["Correlation Score"] = correlation_score(
                 model=self,
@@ -1680,7 +1682,7 @@ class DAG(nx.DiGraph):
                 if params["calculate_rmsea"]:
                     results["Fisher-C RMSEA"] = f"Error: {str(e)}"
 
-        # Implied CI tests
+        # Implied CIs tests
         if "implied_cis" in metrics:
             try:
                 df_cis = implied_cis(
