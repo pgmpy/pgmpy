@@ -421,6 +421,53 @@ def fisher_c(model, data, ci_test, calculate_rmsea=False, show_progress=True):
     return p_value
 
 
+def permutation_test(
+    model, data, ci_test, n_permutations=None, random_state=None, show_progress=True
+):
+
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of DAG or DiscreteBayesianNetwork. Got {type(model)}"
+        )
+    elif not isinstance(data, pd.DataFrame):
+        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+
+    if random_state is not None:
+        np.random.seed(random_state)
+
+    # Null hypothesis p-value using fischer_c method
+    null_hypothesis_val = fisher_c(
+        model=model, data=data, ci_test=ci_test, show_progress=False
+    )
+
+    if show_progress and config.SHOW_PROGRESS:
+        perm_iter = tqdm(range(n_permutations), desc="Permutation Test")
+    else:
+        perm_iter = range(n_permutations)
+
+    # to store p-values after each permutation
+    p_vals = []
+    for _ in perm_iter:
+        permuted_data = data.copy()
+
+        # randomly permuting all columns to destroy all dependencies
+        for col in permuted_data.columns:
+            permuted_data[col] = np.random.permutation(permuted_data[col].values)
+
+        # to calculate p-vaue for the permuted data
+        perm_fisher_p_val = fisher_c(
+            model=model, data=permuted_data, ci_test=ci_test, show_progress=False
+        )
+        p_vals.append(perm_fisher_p_val)
+
+    # converting to numoy array
+    permutated_vals = np.array(p_vals)
+
+    # calculating the final p-value
+    p_value = np.sum(permutated_vals >= null_hypothesis_val) / n_permutations
+    return p_value
+
+
 def SHD(true_model, est_model):
     """
     Computes the Structural Hamming Distance between `true_model` and `est_model`.
