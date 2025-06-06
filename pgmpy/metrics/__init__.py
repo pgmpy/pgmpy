@@ -4,7 +4,6 @@ from .metrics import (
     fisher_c,
     implied_cis,
     log_likelihood_score,
-    permutation_test,
     structure_score,
 )
 
@@ -15,5 +14,4 @@ __all__ = [
     "implied_cis",
     "fisher_c",
     "SHD",
-    "permutation_test",
 ]
