@@ -1615,6 +1615,8 @@ class PDAG(nx.DiGraph):
         """
         if (u, v) in self.undirected_edges or (v, u) in self.undirected_edges:
             return True
+        elif u in self.undirected_neighbors(v):
+            return True
         else:
             return False
 
@@ -1639,6 +1641,40 @@ class PDAG(nx.DiGraph):
         {'B'}
         """
         return {var for var in self.successors(node) if self.has_edge(var, node)}
+    
+    def adjacent_neighbors(self, u):
+        adj = set()
+        for node in self.nodes:
+            if self.is_adjacent(u, node):
+                adj.add(node)
+        return adj
+    
+    def induced_subgraph(self, edge_list):
+        subgraph = []
+        for (u, v) in self.edges:
+            if u not in edge_list and v not in edge_list:
+                subgraph.append((u, v))
+        return subgraph
+
+    def chain_component(self, node):
+        visited = set()
+        to_visit = {node}
+        # NOTE: Using a breadth-first search
+        while len(to_visit) > 0:
+            for j in to_visit:
+                visited.add(j)
+                to_visit = (to_visit | self.undirected_neighbors(j)) - visited
+        return visited
+
+    def separates(self, U, V, sep_set, graph=None):
+        if graph==None:
+            graph = self
+        for u in U:
+            for v in V:
+                for path in nx.all_simple_paths(graph, u, v):
+                    if set(path) & sep_set == set():
+                        return False
+        return True
 
     def is_adjacent(self, u, v):
         """
@@ -1648,6 +1684,13 @@ class PDAG(nx.DiGraph):
             return True
         else:
             return False
+    
+    def is_clique(self, nodes):
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_undirected_edge(node1, node2):
+                return False
+        return True
+
 
     def copy(self):
         """
