@@ -232,7 +232,7 @@ class ExpectationMaximization(ParameterEstimator):
         ...                       columns=['A', 'C', 'D'])
         >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
         >>> estimator = EM(model, data)
-        >>> estimator.get_parameters(latent_card={'B': 3})
+        >>> estimator.get_parameters(latent_card={'B': 3}) # doctest: +SKIP
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
         <TabularCPD representing P(B:3 | C:2, A:2) at 0x7f7b4dfd4da0>,
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,

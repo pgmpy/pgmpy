@@ -60,7 +60,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     Z: list/array-like
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
-    data: pandas.DataFrame The dataset in which to test the indepenedence condition.
+    data: pandas.DataFrame The dataset in which to test the independence condition.
 
     Returns
     -------
@@ -120,14 +120,15 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs
@@ -180,14 +181,15 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> g_sq(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> g_sq(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> g_sq(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -240,14 +242,15 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -295,14 +298,15 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> modified_log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> modified_log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> modified_log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    np.False_
     """
     return power_divergence(
         X=X,
@@ -373,14 +377,15 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     --------
     >>> import pandas as pd
     >>> import numpy as np
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
+    np.True_
     >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    np.False_
     """
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
@@ -457,7 +462,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
@@ -595,7 +600,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
@@ -707,7 +712,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         A list of conditional variable for testing the condition X \u27c2 Y | Z
 
     data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+        The dataset in which to test the independence condition.
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must

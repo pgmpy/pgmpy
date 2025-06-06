@@ -61,10 +61,11 @@ class ExpertKnowledge:
     >>> data = BayesianModelSampling(asia_model).forward_sample(size=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
-    ...         variant="stable",
-    ...         expert_knowledge=expert_knowledge,
-    ...         show_progress=False,
-    ...     )
+    ...              variant="stable",
+    ...              expert_knowledge=expert_knowledge,
+    ...              show_progress=False,
+    ... )
+    <pgmpy.base.DAG.PDAG object at 0x...>
 
     **Temporal order**
 
@@ -75,10 +76,11 @@ class ExpertKnowledge:
     >>> data = cancer_model.simulate(n_samples=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
-    ...         variant="stable",
-    ...         expert_knowledge=expert_knowledge,
-    ...         show_progress=False,
-    ...     )
+    ...             variant="stable",
+    ...             expert_knowledge=expert_knowledge,
+    ...             show_progress=False,
+    ... )
+    <pgmpy.base.DAG.PDAG object at 0x...>
     """
 
     def __init__(
