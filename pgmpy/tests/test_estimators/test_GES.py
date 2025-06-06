@@ -10,7 +10,9 @@ from pgmpy.models import DiscreteBayesianNetwork
 class TestGESDiscrete(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(
-            np.random.randint(0, 5, size=(int(1e4), 2)), columns=list("AB")
+            np.random.randint(0, 5, size=(int(1e4), 2)),
+            columns=list("AB"),
+            dtype="category",
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = GES(self.rand_data, use_cache=False)
@@ -36,10 +38,13 @@ class TestGESDiscrete(unittest.TestCase):
         ]
         self.est_titanic1 = GES(self.titanic_data1, use_cache=False)
 
-        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
+        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]].astype(
+            "category"
+        )
         self.est_titanic2 = GES(self.titanic_data2, use_cache=False)
 
     def test_estimate(self):
+
         dag = self.est_rand.estimate()
         dag = self.est_titanic1.estimate()
 

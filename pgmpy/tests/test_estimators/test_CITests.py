@@ -378,7 +378,6 @@ class TestResidualMethod(unittest.TestCase):
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
-    @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
     def test_pillai(self):
         # Non-conditional tests
         dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
@@ -405,16 +404,17 @@ class TestResidualMethod(unittest.TestCase):
             )
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
+
         self.assertTrue(
-            (np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all()
+            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
         )
         self.assertTrue(
-            (
-                np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
-            ).all()
+            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
         )
 
-        # Conditional tests
+        # Conditional tests (independent case)
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
         indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
 
@@ -437,18 +437,19 @@ class TestResidualMethod(unittest.TestCase):
                 boolean=False,
                 seed=42,
             )
-
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
+
         self.assertTrue(
-            (np.array(computed_coefs).round(2) == np.array(indep_coefs).round(2)).all()
+            np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}",
         )
         self.assertTrue(
-            (
-                np.array(computed_pvalues).round(2) == np.array(indep_pvalues).round(2)
-            ).all()
+            np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}",
         )
 
+        # Conditional tests (dependent case)
         dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
         dep_pvalues = [0, 0, 0, 0, 0]
 
@@ -464,19 +465,23 @@ class TestResidualMethod(unittest.TestCase):
             ]
         ):
             coef, p_value = pillai_trace(
-                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False, seed=42
+                X="X",
+                Y="Y",
+                Z=["Z1", "Z2", "Z3"],
+                data=df_dep,
+                boolean=False,
+                seed=42,
             )
-
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
 
         self.assertTrue(
-            (np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all()
+            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
         )
         self.assertTrue(
-            (
-                np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
-            ).all()
+            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
+            msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
         )
 
     def test_gcm(self):

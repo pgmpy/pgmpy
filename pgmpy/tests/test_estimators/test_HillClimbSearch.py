@@ -10,7 +10,9 @@ from pgmpy.models import DiscreteBayesianNetwork
 class TestHillClimbEstimatorDiscrete(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(
-            np.random.randint(0, 5, size=(int(1e4), 2)), columns=list("AB")
+            np.random.randint(0, 5, size=(int(1e4), 2)),
+            columns=list("AB"),
+            dtype="category",
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = HillClimbSearch(self.rand_data)
@@ -40,7 +42,9 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         self.est_titanic1 = HillClimbSearch(self.titanic_data1)
         self.score_titanic1 = K2(self.titanic_data1).local_score
 
-        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
+        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]].astype(
+            "category"
+        )
         self.est_titanic2 = HillClimbSearch(self.titanic_data2)
         self.score_titanic2 = K2(self.titanic_data2).local_score
 
@@ -248,6 +252,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
                 [0, 0, 1, 0, 0, 1, 1, 0, 0],
             ],
             columns=list("ABCDEFGHI"),
+            dtype="category",
         )
         est = HillClimbSearch(data)
         expert_knowledge = ExpertKnowledge(
@@ -259,9 +264,14 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         )
 
     def test_estimate(self):
-        for score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
-            dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
-            dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
+        for discrete_var_score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
+            dag = self.est_rand.estimate(
+                scoring_method=discrete_var_score, show_progress=False
+            )
+        for mixed_var_score in ["ll-cg", "aic-cg", "bic-cg"]:
+            dag = self.est_titanic1.estimate(
+                scoring_method=mixed_var_score, show_progress=False
+            )
 
     def test_search_space(self):
         adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")

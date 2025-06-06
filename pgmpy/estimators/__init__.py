@@ -2,7 +2,6 @@ from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEs
 from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.StructureScore import (
-    get_scoring_method,
     StructureScore,
     K2,
     BDeu,
@@ -47,7 +46,6 @@ __all__ = [
     "BICGauss",
     "AIC",
     "AICGauss",
-    "ScoreCache",
     "SEMEstimator",
     "IVEstimator",
     "MmhcEstimator",
