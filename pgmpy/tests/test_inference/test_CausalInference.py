@@ -1300,7 +1300,12 @@ class TestDoQuery(unittest.TestCase):
             inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
 
         self.assertIn(
+
             "Invalid causal query: conditioning on ['Z']",
+
+            "Invalid causal query: There is a direct edge from the query"
+            " variable 'R' to the intervention variable 'S'.",
+
             str(cm.exception),
         )"""
 
