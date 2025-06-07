@@ -103,11 +103,8 @@ class BayesianModelInference(Inference):
         equation = f"{input_axes}->{output_axes}"
 
         # Perform marginalization using einsum
-        if config.get_backend() == "torch":
-            reduced_values = torch.tensor(
-                reduced_values, dtype=config.get_dtype(), device=config.get_device()
-            )
         marg_values = compat_fns.einsum(equation, reduced_values)
+
         return marg_values / marg_values.sum()
 
     def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):

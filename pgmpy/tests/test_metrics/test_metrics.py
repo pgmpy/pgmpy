@@ -118,14 +118,21 @@ class TestLogLikelihoodScore(unittest.TestCase):
             ValueError, log_likelihood_score, self.model, df_wrong_columns
         )
 
-    def test_torch_backend(self):
-        original_backend = config.get_backend()
-        try:
-            config.set_backend("torch")
-            metric = log_likelihood_score(self.model, self.data)
-            self.assertTrue(isinstance(metric, float))
-        finally:
-            config.set_backend(original_backend)
+
+class TestLogLikelihoodScoreTorch(TestLogLikelihoodScore):
+    def setUp(self):
+        self.original_backend = config.get_backend()
+        config.set_backend("torch")
+        super().setUp()
+
+    def tearDown(self):
+        config.set_backend(self.original_backend)
+
+    def test_discrete_network(self):
+        super().test_discrete_network()
+
+    def test_input(self):
+        super().test_input()
 
 
 class TestImpliedCI(unittest.TestCase):
