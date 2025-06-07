@@ -98,9 +98,9 @@ class BayesianModelInference(Inference):
 
         # Generate einsum string
         ndim = reduced_values.ndim
-        input_axes = string.ascii_lowercase[:ndim]     
-        output_axes = input_axes[0]                    
-        equation = f"{input_axes}->{output_axes}"      
+        input_axes = string.ascii_lowercase[:ndim]
+        output_axes = input_axes[0]
+        equation = f"{input_axes}->{output_axes}"
 
         # Perform marginalization using einsum
         if config.get_backend() == "torch":
