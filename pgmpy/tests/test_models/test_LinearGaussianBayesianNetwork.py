@@ -190,6 +190,50 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
 
+    def test_simulate_with_virtual_intervention(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
+        virtual_intervention = [new_cpd]
+
+        df = self.model.simulate(
+            n_samples=10000, seed=42, virtual_intervention=virtual_intervention
+        )
+
+        rng = np.random.default_rng(seed=42)
+        x1 = 1 + rng.normal(0, 2, 10000)
+        x2 = 1 + rng.normal(0, np.sqrt(2), 10000)
+        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+
+        df_equiv = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+        np_test.assert_array_almost_equal(df.mean(), df_equiv.mean(), decimal=1)
+        np_test.assert_array_almost_equal(df.cov(), df_equiv.cov(), decimal=1)
+
+    def test_simulate_latents(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        self.model.latents.add("x2")
+
+        df_with_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=True
+        )
+        df_without_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=False
+        )
+
+        for latent_var in self.model.latents:
+            self.assertIn(latent_var, df_with_latents.columns)
+
+        for latent_var in self.model.latents:
+            self.assertNotIn(latent_var, df_without_latents.columns)
+
+        non_latent_vars = [
+            node for node in self.model.nodes() if node not in self.model.latents
+        ]
+        for var in non_latent_vars:
+            self.assertIn(var, df_with_latents.columns)
+            self.assertIn(var, df_without_latents.columns)
+
     def test_simulate_against_manual_results(self):
         model = LinearGaussianBayesianNetwork(
             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
