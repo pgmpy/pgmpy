@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
-import pyro
+from pgmpy.utils.optional_dependencies import _safe_import, _check_soft_dependencies
+
+
+pyro = _safe_import("pyro")
 
 from pgmpy.factors.base import BaseFactor
 
@@ -43,6 +46,8 @@ class FunctionalCPD(BaseFactor):
     """
 
     def __init__(self, variable, fn, parents=[], vectorized=False):
+        # Check if pyro is available
+        _check_soft_dependencies("pyro", severity="error", obj=self)
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")
