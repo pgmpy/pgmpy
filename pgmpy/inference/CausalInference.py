@@ -69,7 +69,10 @@ class CausalInference(object):
         bad_variable = model._variable_name_contains_non_string()
         if bad_variable != False:
             raise NotImplementedError(
-                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
+                f"Causal Inference is only implemented for a model with "
+                "variable names with string type. "
+                f"Found {bad_variable[0]} with type {bad_variable[1]}. "
+                "Convert them to string to proceed."
             )
 
         # Initialize data structures.
@@ -142,7 +145,8 @@ class CausalInference(object):
         """
         Returns a list of all adjustment sets per the back-door criterion.
 
-        A set of variables Z satisfies the back-door criterion relative to an ordered pair of variabies (Xi, Xj) in a DAG G if:
+        A set of variables Z satisfies the back-door criterion relative
+          to an ordered pair of variabies (Xi, Xj) in a DAG G if:
             (i) no node in Z is a descendant of Xi; and
             (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
 
@@ -623,7 +627,9 @@ class CausalInference(object):
         ).copy()
 
         if isinstance(self.model, SEMGraph):
-            # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+            # Optimization: Remove all error nodes which don't have
+            #  any correlation as it doesn't add any new path.
+            #  If not removed it can create a lot of
             # extra paths resulting in a much higher runtime.
             err_nodes_to_remove = set(self.model.err_graph.nodes()) - set(
                 [node for edge in self.model.err_graph.edges() for node in edge]
@@ -802,7 +808,10 @@ class CausalInference(object):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+         "Complete graphical characterization and construction of
+         adjustment sets in Markov equivalence classes of ancestral graphs."
+           The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         if isinstance(X, str):
             X = [X]
@@ -857,7 +866,10 @@ class CausalInference(object):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+          "Complete graphical characterization and construction of
+            adjustment sets in Markov equivalence classes of ancestral graphs."
+              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         if isinstance(X, str):
             X = [X]
@@ -900,7 +912,10 @@ class CausalInference(object):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+          "Complete graphical characterization and construction of
+            adjustment sets in Markov equivalence classes of ancestral graphs."
+              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)
@@ -990,8 +1005,10 @@ class CausalInference(object):
             for var, do_var in product(variables, do):
                 if do_var in nx.descendants(self.dag, var):
                     raise ValueError(
-                        f"Invalid causal query: There is a direct edge from the query variable '{var}' to the intervention variable '{do_var}'. "
-                        f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
+                        f"Invalid causal query: There is a direct edge from the query variable"
+                        f" '{var}' to the intervention variable '{do_var}'. "
+                        f"In causal inference, you can typically only query the effect on variables"
+                        f" that are descendants of the intervention."
                     )
 
         from pgmpy.inference import Inference
@@ -1006,7 +1023,8 @@ class CausalInference(object):
             inference_algo = BeliefPropagation
         elif not isinstance(inference_algo, Inference):
             raise ValueError(
-                f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
+                f"inference_algo must be one of: 've', 'bp', or an "
+                f"instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.

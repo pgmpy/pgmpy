@@ -10,7 +10,9 @@ class TestBaseEstimator(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
         self.rand_data = pd.DataFrame(
-            np.random.randint(0, 5, size=(5000, 2)), columns=list("AB")
+            np.random.randint(0, 5, size=(5000, 2)),
+            columns=list("AB"),
+            dtype="category",
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = ExhaustiveSearch(self.rand_data)
@@ -25,7 +27,9 @@ class TestBaseEstimator(unittest.TestCase):
         self.titanic_data = pd.read_csv(
             "pgmpy/tests/test_estimators/testdata/titanic_train.csv"
         )
-        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
+        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]].astype(
+            "category"
+        )
         self.est_titanic = ExhaustiveSearch(self.titanic_data2)
 
     def test_all_dags(self):

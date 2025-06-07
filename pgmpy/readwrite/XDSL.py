@@ -69,7 +69,8 @@ class XDSLReader(object):
         for var in variables:
             if isinstance(var, str) and (" " in var):
                 raise ValueError(
-                    f"XDSLReader does not support models with node names that contain whitespaces. Failed to process node: {var}"
+                    f"XDSLReader does not support models with node names"
+                    f" that contain whitespaces. Failed to process node: {var}"
                 )
 
         return variables
@@ -172,7 +173,6 @@ class XDSLReader(object):
         """
         variable_CPD = {}
         for cpt in self.cpt_elements:
-
             combined_prob = cpt.find("probabilities")
             num_states = len([state for state in cpt.findall("state")])
             cpd_arr = [[] for k in range(num_states)]
@@ -322,7 +322,8 @@ class XDSLWriter(object):
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
                 logger.warning(
-                    f" Node '{var}' contains whitespaces. This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
+                    f" Node '{var}' contains whitespaces. "
+                    f"This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
                 )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
@@ -372,7 +373,8 @@ class XDSLWriter(object):
             probs_elem = etree.SubElement(cpt_elem, "probabilities")
             values = cpd.get_values()
 
-            # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
+            # Flatten in column-major order so that for each parent
+            #  configuration the probabilities for all states are listed.
             flat_values = compat_fns.ravel_f(values)
             probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
 

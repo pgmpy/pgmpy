@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
 from itertools import chain, combinations, permutations
+from typing import Union
+from collections.abc import Callable
 
 import networkx as nx
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import get_ci_test
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 
 
@@ -33,7 +35,8 @@ class PC(StructureEstimator):
     ----------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
         2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
+      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
     """
 
     def __init__(self, data=None, independencies=None, **kwargs):
@@ -42,7 +45,7 @@ class PC(StructureEstimator):
     def estimate(
         self,
         variant="parallel",
-        ci_test="chi_square",
+        ci_test: Union[str, Callable, None] = None,
         return_type="pdag",
         significance_level=0.01,
         max_cond_vars=5,
@@ -55,7 +58,7 @@ class PC(StructureEstimator):
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
-        in the dataset are identified by doing statistical independece test. This
+        in the dataset are identified by doing statistical independence test. This
         method returns a DAG/PDAG structure which is faithful to the independencies
         implied by the dataset.
 
@@ -78,7 +81,7 @@ class PC(StructureEstimator):
                         `independencies` must be specified.
                 "chi_square": Uses the Chi-Square independence test. This works
                         only for discrete datasets.
-                "pearsonr": Uses the pertial correlation based on pearson
+                "pearsonr": Uses the partial correlation based on pearson
                         correlation coefficient to test independence. This works
                         only for continuous datasets.
                 "g_sq": G-test. Works only for discrete datasets.
@@ -173,7 +176,7 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_ci_test(
+        ci_test = get_callable_ci_test(
             ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
@@ -231,7 +234,7 @@ class PC(StructureEstimator):
     def build_skeleton(
         self,
         variant="stable",
-        ci_test="chi_square",
+        ci_test: Union[str, Callable, None] = None,
         significance_level=0.01,
         max_cond_vars=5,
         expert_knowledge=None,
@@ -249,7 +252,7 @@ class PC(StructureEstimator):
 
         If an Independencies-instance is passed, the contained IndependenceAssertions
         have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-seperations of some Bayesian network or
+        they are obtained as a set of d-separations of some Bayesian network or
         if the independence assertions are closed under the semi-graphoid axioms.
         Otherwise, the procedure may fail to identify the correct structure.
 
@@ -263,7 +266,7 @@ class PC(StructureEstimator):
 
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes then
+            separating set ("witnessing set") of variables that makes them
             conditionally independent. (needed for edge orientation procedures)
 
         References
@@ -276,7 +279,9 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_ci_test(ci_test, full=True, data=None)
+        ci_test = get_callable_ci_test(
+            ci_test, full=True, data=None
+        )  # this is called twice, before on PC estimate
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -400,6 +405,7 @@ class PC(StructureEstimator):
                 )
 
         if show_progress and config.SHOW_PROGRESS:
+            pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
         return graph, separating_sets
 
@@ -421,7 +427,7 @@ class PC(StructureEstimator):
             The node along with u whose separating set is being calculated.
 
         temporal_ordering: dict
-            The temporal ordering of variables according to prior knowledgee.
+            The temporal ordering of variables according to prior knowledge.
 
         graph: UndirectedGraph
             The graph where separating sets are being calculated for the edges.
