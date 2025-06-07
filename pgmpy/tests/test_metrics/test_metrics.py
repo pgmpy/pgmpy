@@ -17,7 +17,7 @@ from pgmpy.metrics import (
 )
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
-
+from pgmpy import config
 
 class TestCorrelationScore(unittest.TestCase):
     def setUp(self):
@@ -116,7 +116,15 @@ class TestLogLikelihoodScore(unittest.TestCase):
         self.assertRaises(
             ValueError, log_likelihood_score, self.model, df_wrong_columns
         )
-
+    
+    def test_torch_backend(self):
+        original_backend = config.get_backend()
+        try:
+            config.set_backend("torch")
+            metric = log_likelihood_score(self.model, self.data)
+            self.assertTrue(isinstance(metric, float))
+        finally:
+            config.set_backend(original_backend)
 
 class TestImpliedCI(unittest.TestCase):
     def setUp(self):

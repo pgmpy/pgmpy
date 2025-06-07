@@ -1,12 +1,15 @@
 import itertools
 import math
+import string
 import os
 
 import networkx as nx
 import numpy as np
 import pandas as pd
+import torch
 from joblib import Parallel, delayed
 
+from pgmpy import config
 from pgmpy.inference import Inference
 from pgmpy.utils import _check_1d_array_object, _check_length_equal, compat_fns
 
@@ -92,7 +95,19 @@ class BayesianModelInference(Inference):
             slice_[index] = sc[i]
 
         reduced_values = variable_cpd.values[tuple(slice_)]
-        marg_values = compat_fns.einsum(reduced_values, range(reduced_values.ndim), [0])
+
+        # Generate einsum string
+        ndim = reduced_values.ndim
+        input_axes = string.ascii_lowercase[:ndim]     
+        output_axes = input_axes[0]                    
+        equation = f"{input_axes}->{output_axes}"      
+
+        # Perform marginalization using einsum
+        if config.get_backend() == "torch":
+            reduced_values = torch.tensor(
+                reduced_values, dtype=config.get_dtype(), device=config.get_device()
+            )
+        marg_values = compat_fns.einsum(equation, reduced_values)
         return marg_values / marg_values.sum()
 
     def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):
