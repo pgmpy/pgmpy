@@ -91,6 +91,18 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
             )
 
+        # Validation for Issue #2098
+        if config.BACKEND == "numpy":
+            if np.any(values < 0):
+                raise ValueError("Probabilities cannot be negative")
+            if not np.isclose(np.sum(values), 1.0, rtol=1e-5):
+                raise ValueError("Probabilities must sum to 1 within tolerance")
+        else:
+            if torch.any(values < 0):
+                raise ValueError("Probabilities cannot be negative")
+            if not torch.isclose(torch.sum(values), torch.tensor(1.0), rtol=1e-5):
+                raise ValueError("Probabilities must sum to 1 within tolerance")
+
         if len(cardinality) != len(variables):
             raise ValueError(
                 "Number of elements in cardinality must be equal to number of variables"
@@ -1006,10 +1018,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                     slice_ = [slice(None)] * len(self.variables)
                     slice_[axis] = ref_index
                     phi.values = phi.values[tuple(slice_)]
-
             if phi.values.shape != self.values.shape:
                 return False
-            elif not compat_fns.allclose(phi.values, self.values, atol=atol):
+            elif not compat_fns.allclose(phi.values, self.values, atol=0):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False
@@ -1025,10 +1036,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         state_names_hash = hash(frozenset(self.state_names))
         phi = self.copy()
         for axis in range(phi.values.ndim):
-            exchange_index = variable_hashes.index(sorted_var_hashes[axis])
-            variable_hashes[axis], variable_hashes[exchange_index] = (
-                variable_hashes[exchange_index],
-                variable_hashes[axis],
+            exchange_index = phi.variables.index(sorted_var_hashes[axis])
+            phi.variables[axis], phi.variables[exchange_index] = (
+                phi.variables[exchange_index],
+                phi.variables[axis],
             )
             phi.cardinality[axis], phi.cardinality[exchange_index] = (
                 phi.cardinality[exchange_index],
@@ -1036,8 +1047,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             )
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(
-            str(sorted_var_hashes)
-            + str(hash(compat_fns.tobytes(phi.values)))
-            + str(hash(compat_fns.tobytes(phi.cardinality)))
-            + str(state_names_hash)
+            (
+                str(tuple(sorted_var_hashes))
+                + str(hash(compat_fns.tobytes(phi.values)))
+                + str(hash(compat_fns.tobytes(phi.cardinality)))
+                + str(state_names_hash)
+            )
         )
