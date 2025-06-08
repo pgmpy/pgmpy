@@ -29,11 +29,11 @@ jobs:
           FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' | paste -sd' ' -)
           echo "files=$FILES" >> "$GITHUB_OUTPUT"
 
-      - name: Run flake8 on modified files
+      - name: Run flake8 on modified files using config file
         run: |
           if [ -n "${{ steps.files.outputs.files }}" ]; then
             echo "Running flake8 on: ${{ steps.files.outputs.files }}"
-            flake8 ${{ steps.files.outputs.files }}
+            flake8 --config=.flake8 ${{ steps.files.outputs.files }}
           else
             echo "No Python files changed."
           fi
