@@ -481,14 +481,7 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     Compute the latent‐projection ADMG L(G, observed_set) of a DAG G onto a subset observed_set ⊂ V.
     (Helper function for self_compatibility_graphical)
 
-    Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024):
-    Let G be an ADMG with variables V and observed_set ⊂ V . The latent ADMG L(G, observed_set)
-    is the ADMG that contains all nodes in observed_set,
-    all edges between nodes in observed_set and additionally
-    1) a directed_edges edge between X, Y ∈ observed_set if there is a directed_edges path from X to Y where all intermediate
-        nodes are in V \ observed_set
-    2) a bidirected_edges edge between X, Y if there is a (undirected) path such that every non-endpoint is a noncollider in V \ observed_set and there are arrowheads towards
-        X and Y on the incident edges on the path.
+    Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024)
 
     Parameters
     ----------
