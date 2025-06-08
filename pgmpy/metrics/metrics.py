@@ -1,5 +1,5 @@
 import math
-from itertools import combinations, permutations
+from itertools import combinations
 
 import networkx as nx
 import numpy as np
@@ -512,10 +512,22 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     >>> set(admg1.edges()) == {('A', 'B')}
     True
 
-    >>> # Example 2: A → H ← B, observe only A,B
-    >>> dag2 = DiscreteBayesianNetwork([('A', 'H'), ('B', 'H')])
+    >>> # Example 2: Latent confounder H→A and H→B, observe only A,B
+    >>> dag2 = DiscreteBayesianNetwork([('H','A'), ('H','B')])
     >>> admg2 = _latent_admg(dag2, observed=['A', 'B'])
-    >>> set(admg2.edges()) == {('A', 'B'), ('B', 'A')}
+    >>> set(admg2.edges()) == {('A','B'), ('B','A')}
+    True
+
+    >>> # Example 3: Unshielded collider with extension A→B←C→D, observe only A,C
+    >>> dag3 = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
+    >>> admg3 = _latent_admg(dag3, observed=['A', 'C'])
+    >>> set(admg3.edges()) == set()
+    True
+
+    >>> # Example 4: Pure confounding A→B and A→C, observe only B,C
+    >>> dag4 = DiscreteBayesianNetwork([('A','B'), ('A','C')])
+    >>> admg4 = _latent_admg(dag4, observed=['B', 'C'])
+    >>> set(admg4.edges()) == {('B','C'), ('C','B')}
     True
 
     References
@@ -525,78 +537,67 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     In AISTATS. arXiv:2307.09552
     """
     full_directed = dag
-    variables = set(dag.nodes())
     observed_set = set(observed)
-    latent_set = variables - observed_set
+    latent_set = set(dag.nodes()) - observed_set
 
     directed_edges = set()
     bidirected_edges = set()
 
-    # 1) Preserve original observed→observed
+    # 1) Preserve original observed→observed edges
     for u, v in dag.edges():
         if u in observed_set and v in observed_set:
             directed_edges.add((u, v))
 
-    # 2) Rule 1: latent-only directed chains via active_trail_nodes
+    # 2) Add latent‐only directed chains via active trail + directed‐path check
     for u, v in combinations(observed_set, 2):
-        # Condition on all other observed nodes so only paths via latents remain
-        conditioning_set = list(observed_set - {u, v})
-
-        # Compute reachable sets via active trails
-        # These include any open path when non‐conditioned nodes are unobserved.
-        reachable_from_u = dag.active_trail_nodes(
-            variables=[u], observed=conditioning_set, include_latents=False
+        #  take all the observed nodes except u and v
+        observed_excluding_pair = list(observed_set - {u, v})
+        reach_u = dag.active_trail_nodes(
+            [u], observed=observed_excluding_pair, include_latents=False
         )[u]
-        reachable_from_v = dag.active_trail_nodes(
-            variables=[v], observed=conditioning_set, include_latents=False
+        reach_v = dag.active_trail_nodes(
+            [v], observed=observed_excluding_pair, include_latents=False
         )[v]
 
-        # u→v? Check source (u) → target (v) via latents
-        if v in reachable_from_u:
-            # Confirm it’s purely directed through latents
-            subgraph = full_directed.subgraph(latent_set | {u, v})
-            if nx.has_path(subgraph, u, v):
-                # Only add if v has no other observed parent
-                obs_parents = {p for p in dag.predecessors(v) if p in observed_set}
-                if obs_parents <= {u}:
+        # u→v?
+        if v in reach_u:
+            sub = full_directed.subgraph(latent_set | {u, v})
+            if nx.has_path(sub, u, v):
+                parents_v = {p for p in dag.predecessors(v) if p in observed_set}
+                if parents_v <= {u}:
                     directed_edges.add((u, v))
-
-        # v→u? Check target (v) → source (u) via latents
-        if u in reachable_from_v:
-            subgraph = full_directed.subgraph(latent_set | {u, v})
-            if nx.has_path(subgraph, v, u):
-                obs_parents = {p for p in dag.predecessors(u) if p in observed_set}
-                if obs_parents <= {v}:
+        # v→u?
+        if u in reach_v:
+            sub = full_directed.subgraph(latent_set | {u, v})
+            if nx.has_path(sub, v, u):
+                parents_u = {p for p in dag.predecessors(u) if p in observed_set}
+                if parents_u <= {v}:
                     directed_edges.add((v, u))
 
-    # 3) Rule 2: bidirected_edges for true colliders
+    # 3) Add bidirected edges only for *common‐parent* confounders, not colliders
     for u, v in combinations(observed_set, 2):
-        # Skip only if we've already got both directions
+        # skip if already a two‐way directed link
         if (u, v) in directed_edges and (v, u) in directed_edges:
             continue
 
-        # (a) single-latent collider? u→ℓ←v
+        # common‐parent latent l → u and l → v?
         for latent in latent_set:
-            if dag.has_edge(u, latent) and dag.has_edge(v, latent):
+            if dag.has_edge(latent, u) and dag.has_edge(latent, v):
                 bidirected_edges.add((u, v))
                 bidirected_edges.add((v, u))
-                break  # only one such latent needed
+                break
         else:
-            # (b) “mixed”: share an observed child via latent-only chains
-            # Look for any observed child w ≠ u,v such that both u → ... → w and v → ... → w
-            for child in observed_set - {u, v}:
-                # Induced subgraphs on latents ∪ {u, w} and latents ∪ {v, w}:
-                sub_u_child = full_directed.subgraph(latent_set | {u, child})
-                sub_v_child = full_directed.subgraph(latent_set | {v, child})
-                # If both directed latent‐only paths exist, we add u↔v.
-                if nx.has_path(sub_u_child, u, child) and nx.has_path(
-                    sub_v_child, v, child
-                ):
+            # mixed non‐collider via observed child w:
+            for w in observed_set - {u, v}:
+                sub_uw = full_directed.subgraph(latent_set | {u, w})
+                sub_vw = full_directed.subgraph(latent_set | {v, w})
+                # here w → … → u and w → … → v through latents
+                if nx.has_path(sub_uw, w, u) and nx.has_path(sub_vw, w, v):
                     bidirected_edges.add((u, v))
                     bidirected_edges.add((v, u))
                     break
 
-    # 4) Build and return the ADMG
+    # 4) Assemble final ADMG
     admg = nx.DiGraph()
     admg.add_nodes_from(observed_set)
     admg.add_edges_from(directed_edges)
