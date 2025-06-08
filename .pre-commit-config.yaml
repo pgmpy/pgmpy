@@ -15,7 +15,7 @@ repos:
     hooks:
       - id: black
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
+    rev: 7.2.0
     hooks:
       - id: flake8
         args: ["--max-line-length=120", "--ignore=E231,E241,E222,E221,W503"]
