@@ -2009,18 +2009,13 @@ class PDAG(nx.DiGraph):
                 undirected_neighbors = set(pdag.successors(X)) & set(
                     pdag.predecessors(X)
                 )
+                all_neighbors = set(pdag.all_neighbors(X))
                 neighbors_are_clique = all(
-                    (
-                        pdag.has_edge(Y, Z)
-                        for Z in pdag.predecessors(X)
-                        for Y in undirected_neighbors
-                        if not Y == Z
-                    )
+                    (all_neighbors-{Y})<=(pdag.all_neighbors(Y))
+                    for Y in undirected_neighbors
                 )
 
-                if not directed_outgoing_edges and (
-                    not undirected_neighbors or neighbors_are_clique
-                ):
+                if not directed_outgoing_edges and neighbors_are_clique:
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.predecessors(X):
