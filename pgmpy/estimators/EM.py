@@ -83,7 +83,8 @@ class ExpectationMaximization(ParameterEstimator):
 
         if dropped_rows_count:
             logger.warning(
-                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
+                f"{dropped_rows_count} rows with missing values in partially "
+                "missing columns were dropped from the dataset."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
