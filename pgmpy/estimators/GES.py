@@ -481,7 +481,7 @@ class GES(StructureEstimator):
             potential_edges = self._legal_edge_additions(
                 current_model, expert_knowledge
             )
-            print("At start of step\n", current_model.edges)
+            #print("At start of step\n", current_model.edges)
             score_deltas = np.zeros(len(potential_edges))
             insertion_ops = []
             for index, (u, v) in enumerate(potential_edges):
@@ -496,7 +496,7 @@ class GES(StructureEstimator):
                     score_deltas[index] = max(insertion_op)[0]
                     insertion_ops.append(max(insertion_op))
 
-            print("\n", potential_edges, score_deltas, "\n")
+            #print("\n", potential_edges, score_deltas, "\n")
 
             if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
                 break
@@ -508,7 +508,7 @@ class GES(StructureEstimator):
             current_model = self.insert(
                 edge_to_add[0], edge_to_add[1], op_to_add[4], current_model
             )
-            print("after", current_model.edges, "\n")
+            print("after add", current_model.edges, "\n")
 
             # print('\n1 step', current_model.edges)
 
@@ -521,7 +521,7 @@ class GES(StructureEstimator):
                 current_model = DAG(ebunch=current_model.edges).to_pdag()
             current_model.add_nodes_from(all_nodes)
 
-            print("Pdag after 1 step", current_model.edges, "\n")
+            #print("Pdag after 1 step", current_model.edges, "\n")
             if debug:
                 logger.info(
                     f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}"

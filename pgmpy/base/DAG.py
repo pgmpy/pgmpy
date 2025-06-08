@@ -1905,18 +1905,17 @@ class PDAG(nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi. "A simple algorithm to construct a consistent extension of a partially oriented graph." Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        [1] Dor, Dorit, and Michael Tarsi.
+          "A simple algorithm to construct a consistent extension of a partially oriented graph."
+            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
         dag = DAG()
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
-        dir_edges = []
-        for u, v in self.edges:
-            if (v, u) not in self.edges:
-                dir_edges.append((u, v))
-        dag.add_edges_from(dir_edges)
+        directed_edges_ = [(u, v) for (u, v) in self.edges if (v, u) not in self.edges]
+        dag.add_edges_from(directed_edges_)
         dag.latents = self.latents
 
         pdag = self.copy()
@@ -1925,28 +1924,28 @@ class PDAG(nx.DiGraph):
             #                (2) the set of undirected neighbors is either empty or
             #                    undirected neighbors + parents of X are a clique
             found = False
-            for X in pdag.nodes():
+            for X in sorted(pdag.nodes()):
                 directed_outgoing_edges = set(pdag.successors(X)) - set(
                     pdag.predecessors(X)
                 )
                 undirected_neighbors = set(pdag.successors(X)) & set(
                     pdag.predecessors(X)
                 )
-                neighbors_are_clique = all(
+                neighbors_are_adjacent = all(
                     (
-                        pdag.has_edge(Y, Z)
-                        for Z in pdag.predecessors(X)
+                        pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
+                        for Z in pdag.all_neighbors(X)
                         for Y in undirected_neighbors
                         if not Y == Z
                     )
                 )
 
                 if not directed_outgoing_edges and (
-                    not undirected_neighbors or neighbors_are_clique
+                    not undirected_neighbors or neighbors_are_adjacent
                 ):
                     found = True
                     # add all edges of X as outgoing edges to dag
-                    for Y in pdag.predecessors(X):
+                    for Y in pdag.undirected_neighbors(X):
                         dag.add_edge(Y, X)
                     pdag.remove_node(X)
                     break
