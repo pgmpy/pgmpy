@@ -1,12 +1,11 @@
 import itertools
 import math
-import string
 import os
 
 import networkx as nx
+from opt_einsum import contract
 import numpy as np
 import pandas as pd
-import torch
 from joblib import Parallel, delayed
 
 from pgmpy import config
@@ -95,16 +94,7 @@ class BayesianModelInference(Inference):
             slice_[index] = sc[i]
 
         reduced_values = variable_cpd.values[tuple(slice_)]
-
-        # Generate einsum string
-        ndim = reduced_values.ndim
-        input_axes = string.ascii_lowercase[:ndim]
-        output_axes = input_axes[0]
-        equation = f"{input_axes}->{output_axes}"
-
-        # Perform marginalization using einsum
-        marg_values = compat_fns.einsum(equation, reduced_values)
-
+        marg_values = contract(reduced_values, range(reduced_values.ndim), [0])
         return marg_values / marg_values.sum()
 
     def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):

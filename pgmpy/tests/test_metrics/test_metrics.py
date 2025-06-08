@@ -128,12 +128,6 @@ class TestLogLikelihoodScoreTorch(TestLogLikelihoodScore):
     def tearDown(self):
         config.set_backend(self.original_backend)
 
-    def test_discrete_network(self):
-        super().test_discrete_network()
-
-    def test_input(self):
-        super().test_input()
-
 
 class TestImpliedCI(unittest.TestCase):
     def setUp(self):
