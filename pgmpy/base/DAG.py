@@ -1912,7 +1912,11 @@ class PDAG(nx.DiGraph):
         dag = DAG()
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
-        dag.add_edges_from(self.directed_edges)
+        dir_edges = []
+        for u, v in self.edges:
+            if (v, u) not in self.edges:
+                dir_edges.append((u, v))
+        dag.add_edges_from(dir_edges)
         dag.latents = self.latents
 
         pdag = self.copy()

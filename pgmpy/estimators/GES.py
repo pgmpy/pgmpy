@@ -481,7 +481,7 @@ class GES(StructureEstimator):
             potential_edges = self._legal_edge_additions(
                 current_model, expert_knowledge
             )
-            print("At star of step\n", current_model.edges, "\n")
+            print("At start of step\n", current_model.edges)
             score_deltas = np.zeros(len(potential_edges))
             insertion_ops = []
             for index, (u, v) in enumerate(potential_edges):
@@ -505,7 +505,6 @@ class GES(StructureEstimator):
             op_to_add = insertion_ops[np.argmax(score_deltas)]
 
             # print("2.\n", current_model.edges)
-            print("befor", current_model.edges, "\n")
             current_model = self.insert(
                 edge_to_add[0], edge_to_add[1], op_to_add[4], current_model
             )
@@ -516,7 +515,7 @@ class GES(StructureEstimator):
             if not self._is_dag(current_model):
                 new_model = current_model.to_dag()
                 new_model.add_nodes_from(current_model.nodes)
-                # print('\n1 step', new_model.edges, '\n')
+                print("\n1 cycle form", new_model.edges, "\n")
                 current_model = new_model.to_pdag()
             else:
                 current_model = DAG(ebunch=current_model.edges).to_pdag()
@@ -529,7 +528,7 @@ class GES(StructureEstimator):
                 )
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
-        while False:
+        while True:
             # print(current_model.edges)
 
             potential_removals = self._legal_edge_removals(
