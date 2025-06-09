@@ -93,15 +93,13 @@ class BayesianEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
+        >>> np.random.seed(42)
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
         >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = BayesianEstimator(model, values)
-        >>> estimator.get_parameters(prior_type='BDeu', equivalent_sample_size=5) # doctest: +SKIP
-        [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
-        <TabularCPD representing P(B:2 | C:2, A:2) at 0x7f7b4dfd4da0>,
-        <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
-        <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
+        >>> estimator.get_parameters(prior_type='BDeu', equivalent_sample_size=5)
+        [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
 
         def _get_node_param(node):
