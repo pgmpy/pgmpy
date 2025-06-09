@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 from collections import deque
 from itertools import permutations
-from typing import Union
+from typing import Union, Optional, Generator, Tuple, List, Any, Deque, Callable
 
 import networkx as nx
+import pandas as pd
 from tqdm.auto import trange
 
 from pgmpy import config
@@ -55,21 +56,21 @@ class HillClimbSearch(StructureEstimator):
     Section 18.4.3 (page 811ff)
     """
 
-    def __init__(self, data, use_cache=True, **kwargs):
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs: Any):
         self.use_cache = use_cache
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
     def _legal_operations(
         self,
-        model,
-        score,
-        structure_score,
-        tabu_list,
-        max_indegree,
-        forbidden_edges,
-        required_edges,
-    ):
+        model: DAG,
+        score: Callable[[Any, List[Any]], float],
+        structure_score: Callable[[str], float],
+        tabu_list: Deque[Tuple[str, Tuple[Any, Any]]],
+        max_indegree: int,
+        forbidden_edges: List[Tuple[Any, Any]],
+        required_edges: List[Tuple[Any, Any]],
+    ) -> Generator[Tuple[Tuple[str, Tuple[Any, Any]], float], None, None]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -140,14 +141,14 @@ class HillClimbSearch(StructureEstimator):
     def estimate(
         self,
         scoring_method: Union[str, StructureScore, None] = None,
-        start_dag=None,
-        tabu_length=100,
-        max_indegree=None,
-        expert_knowledge=None,
-        epsilon=1e-4,
-        max_iter=1e6,
-        show_progress=True,
-    ):
+        start_dag: Optional[DAG] = None,
+        tabu_length: int = 100,
+        max_indegree: Optional[int] = None,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        epsilon: float = 1e-4,
+        max_iter: int = int(1e6),
+        show_progress: bool = True,
+    ) -> DAG:
         """
         Performs local hill climb search to estimates the `DAG` structure that
         has optimal score, according to the scoring method supplied. Starts at
