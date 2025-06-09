@@ -15,7 +15,7 @@ from typing import (
     Collection,
 )
 from collections.abc import Callable
-
+import pandas as pd
 import networkx as nx
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm

@@ -28,7 +28,6 @@ class LinearGaussianBayesianNetwork(DAG):
         lavaan_str: Optional[str] = None,
         dagitty_str: Optional[str] = None,
     ) -> None:
-
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
@@ -263,7 +262,7 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def to_joint_gaussian(self) -> Tuple[np.ndarray, np.ndarray]:
+    def copy(self) -> "LinearGaussianBayesianNetwork":
         """
         Returns a copy of the model.
 
@@ -303,9 +302,9 @@ class LinearGaussianBayesianNetwork(DAG):
     def simulate(
         self,
         n_samples: int = 1000,
-        do: Optional[Dict] = None,
-        evidence: Optional[Dict] = None,
-        virtual_intervention: Optional[List] = None,
+        do: Optional[Dict[str, float]] = None,
+        evidence: Optional[Dict[str, float]] = None,
+        virtual_intervention: Optional[List[LinearGaussianCPD]] = None,
         include_latents: bool = False,
         seed: Optional[int] = None,
     ) -> pd.DataFrame:
@@ -603,7 +602,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def predict(
         self, data: pd.DataFrame, distribution: str = "joint"
-    ) -> Tuple[List, np.ndarray, np.ndarray]:
+    ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
         Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
 

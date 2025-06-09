@@ -1,0 +1,32 @@
+network unknown {
+}
+variable A {
+    type discrete [ 2 ] { 0, 1 };
+}
+variable B {
+    type discrete [ 3 ] { 0, 1, 2 };
+}
+variable C {
+    type discrete [ 1 ] { 0 };
+}
+variable D {
+    type discrete [ 2 ] { 0, 1 };
+}
+probability ( A ) {
+    table 0.44940478304245607, 0.550595216957544 ;
+}
+probability ( B | A ) {
+    ( 0 ) 0.29141778547948144, 0.005625852069611614, 0.702956362450907;
+    ( 1 ) 0.3885260644811601, 0.09695846693008586, 0.514515468588754;
+
+}
+probability ( C | B ) {
+    ( 0 ) 1.0;
+    ( 1 ) 1.0;
+    ( 2 ) 1.0;
+
+}
+probability ( D | C ) {
+    ( 0 ) 0.04555080495554627, 0.9544491950444537;
+
+}
