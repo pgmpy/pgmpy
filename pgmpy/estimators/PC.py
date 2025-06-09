@@ -2,14 +2,26 @@
 
 from collections.abc import Callable
 from itertools import chain, combinations, permutations
-from typing import Union
+from typing import (
+    Union,
+    Callable,
+    Optional,
+    Dict,
+    Set,
+    Tuple,
+    List,
+    FrozenSet,
+    Any,
+    Collection,
+)
+from collections.abc import Callable
 
 import networkx as nx
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG, UndirectedGraph
+from pgmpy.base import PDAG, UndirectedGraph, DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
@@ -39,22 +51,27 @@ class PC(StructureEstimator):
       http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
     """
 
-    def __init__(self, data=None, independencies=None, **kwargs):
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        independencies: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> None:
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
-        variant="parallel",
+        variant: str = "parallel",
         ci_test: Union[str, Callable, None] = None,
-        return_type="pdag",
-        significance_level=0.01,
-        max_cond_vars=5,
-        expert_knowledge=None,
-        enforce_expert_knowledge=False,
-        n_jobs=-1,
-        show_progress=True,
-        **kwargs,
-    ):
+        return_type: str = "pdag",
+        significance_level: float = 0.01,
+        max_cond_vars: int = 5,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        enforce_expert_knowledge: bool = False,
+        n_jobs: int = -1,
+        show_progress: bool = True,
+        **kwargs: Any,
+    ) -> Union[DAG, PDAG, Tuple[nx.Graph, Dict[Tuple[str, str], Set[str]]]]:
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
@@ -233,16 +250,16 @@ class PC(StructureEstimator):
 
     def build_skeleton(
         self,
-        variant="stable",
+        variant: str = "stable",
         ci_test: Union[str, Callable, None] = None,
-        significance_level=0.01,
-        max_cond_vars=5,
-        expert_knowledge=None,
-        enforce_expert_knowledge=False,
-        n_jobs=-1,
-        show_progress=True,
-        **kwargs,
-    ):
+        significance_level: float = 0.01,
+        max_cond_vars: int = 5,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        enforce_expert_knowledge: bool = False,
+        n_jobs: int = -1,
+        show_progress: bool = True,
+        **kwargs: Any,
+    ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
@@ -410,7 +427,13 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def _get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
+    def _get_potential_sepsets(
+        u: Any,
+        v: Any,
+        temporal_ordering: Dict[Any, int],
+        graph: UndirectedGraph,
+        lim_neighbors: int,
+    ) -> Collection[Tuple]:
         """
         Return the temporally consistent superset of separating set of u, v.
 
@@ -461,7 +484,11 @@ class PC(StructureEstimator):
         )
 
     @staticmethod
-    def orient_colliders(skeleton, separating_sets, temporal_ordering=dict()):
+    def orient_colliders(
+        skeleton: UndirectedGraph,
+        separating_sets: Dict[FrozenSet, Set],
+        temporal_ordering: Dict[Any, int] = dict(),
+    ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
