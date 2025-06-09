@@ -8,6 +8,7 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+
 class LinearGaussianBayesianNetwork(DAG):
     """
     A linear Gaussian Bayesian Network is a Bayesian Network, all
@@ -25,7 +26,8 @@ class LinearGaussianBayesianNetwork(DAG):
         ebunch: Optional[List[Tuple[Any, Any]]] = None,
         latents: Set = set(),
         lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,) -> None:
+        dagitty_str: Optional[str] = None,
+    ) -> None:
 
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
@@ -529,7 +531,6 @@ class LinearGaussianBayesianNetwork(DAG):
     def fit(
         self, data: pd.DataFrame, method: str = "mle"
     ) -> "LinearGaussianBayesianNetwork":
-
         """
         Estimates the parameters of the model using the given `data`.
 
@@ -679,7 +680,6 @@ class LinearGaussianBayesianNetwork(DAG):
         )
 
     def is_imap(self, JPD: Any) -> None:
-
         """
         For now, is_imap method has not been implemented for LinearGaussianBayesianNetwork.
         """
