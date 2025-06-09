@@ -1,8 +1,11 @@
 # coding:utf-8
 
 from itertools import chain
+from typing import List, Union, Optional, Any, Dict, Hashable
 
 import numpy as np
+import pandas as pd
+
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
@@ -46,7 +49,12 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
     >>> estimator = MaximumLikelihoodEstimator(model, data)
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Union[DiscreteBayesianNetwork, JunctionTree, DAG],
+        data: pd.DataFrame,
+        **kwargs: Any,
+    ) -> None:
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for DiscreteBayesianNetwork, JunctionTree, and DAG"
@@ -76,7 +84,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, n_jobs=1, weighted=False):
+    def get_parameters(
+        self, n_jobs: int = 1, weighted: bool = False
+    ) -> Union[List[TabularCPD], FactorDict]:
         """
         Method to estimate the model parameters using Maximum Likelihood Estimation.
 
@@ -125,7 +135,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         return parameters
 
-    def estimate_cpd(self, node, weighted=False):
+    def estimate_cpd(self, node: Hashable, weighted: bool = False) -> TabularCPD:
         """
         Method to estimate the CPD for a given variable.
 
@@ -202,7 +212,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         cpd.normalize()
         return cpd
 
-    def estimate_potentials(self):
+    def estimate_potentials(self) -> FactorDict:
         """
         Implements Iterative Proportional Fitting to estimate potentials specifically
         for a Decomposable Undirected Graphical Model. Decomposability is enforced
