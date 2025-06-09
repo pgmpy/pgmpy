@@ -3,7 +3,9 @@
 import numbers
 from itertools import chain
 
+from typing import List, Union, Dict, Any, Optional, Callable
 import numpy as np
+import pandas as pd
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
@@ -19,7 +21,12 @@ class BayesianEstimator(ParameterEstimator):
     See `MaximumLikelihoodEstimator` for constructor parameters.
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Union[DAG, DiscreteBayesianNetwork],
+        data: pd.DataFrame,
+        **kwargs: Any,
+    ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for DAG or DiscreteBayesianNetwork"
@@ -40,12 +47,12 @@ class BayesianEstimator(ParameterEstimator):
 
     def get_parameters(
         self,
-        prior_type="BDeu",
-        equivalent_sample_size=5,
-        pseudo_counts=None,
-        n_jobs=1,
-        weighted=False,
-    ):
+        prior_type: str = "BDeu",
+        equivalent_sample_size: Union[int, Dict[Any, int]] = 5,
+        pseudo_counts: Optional[Union[int, Dict[Any, np.ndarray]]] = None,
+        n_jobs: int = 1,
+        weighted: bool = False,
+    ) -> List[TabularCPD]:
         """
         Method to estimate the model parameters (CPDs).
 
@@ -104,7 +111,7 @@ class BayesianEstimator(ParameterEstimator):
         [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
 
-        def _get_node_param(node):
+        def _get_node_param(node: Any) -> TabularCPD:
             _equivalent_sample_size = (
                 equivalent_sample_size[node]
                 if isinstance(equivalent_sample_size, dict)
@@ -134,12 +141,12 @@ class BayesianEstimator(ParameterEstimator):
 
     def estimate_cpd(
         self,
-        node,
-        prior_type="BDeu",
-        pseudo_counts=[],
-        equivalent_sample_size=5,
-        weighted=False,
-    ):
+        node: Any,
+        prior_type: str = "BDeu",
+        pseudo_counts: Union[List[List[float]], np.ndarray, float, int] = [],
+        equivalent_sample_size: Union[int, float] = 5,
+        weighted: bool = False,
+    ) -> TabularCPD:
         """
         Method to estimate the CPD for a given variable.
 
