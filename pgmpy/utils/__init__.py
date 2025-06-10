@@ -4,6 +4,7 @@ from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .utils import (
     discretize,
+    get_dataset_type,
     get_example_model,
     llm_pairwise_orient,
     manual_pairwise_orient,
@@ -23,4 +24,5 @@ __all__ = [
     "llm_pairwise_orient",
     "manual_pairwise_orient",
     "preprocess_data",
+    "get_dataset_type",
 ]

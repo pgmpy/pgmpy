@@ -526,7 +526,8 @@ class TestPCRealModels(unittest.TestCase):
         self.assertEqual(
             cm.output,
             [
-                "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
+                "WARNING:pgmpy:Specified expert knowledge conflicts with learned structure."
+                " Ignoring edge xray->either from required edges"
             ],
         )
 
