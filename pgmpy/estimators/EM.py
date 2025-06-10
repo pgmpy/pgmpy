@@ -116,13 +116,17 @@ class ExpectationMaximization(ParameterEstimator):
             if not missing:
                 v = list(product(*[range(card) for card in latent_card.values()]))
                 latent_combinations = np.array(v, dtype=int)
-                df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(drop=True)
+                df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
+                    drop=True
+                )
                 for index, latent_var in enumerate(latent_card.keys()):
                     df[latent_var] = latent_combinations[:, index]
                 weights = np.e ** (
                     df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
                 )
-                df["_weight"] = (weights / weights.sum()) * n_counts[tuple(data_unique.iloc[i])]
+                df["_weight"] = (weights / weights.sum()) * n_counts[
+                    tuple(data_unique.iloc[i])
+                ]
                 cache.append(df)
             else:
                 # For each possible assignment to missing variables
@@ -146,7 +150,11 @@ class ExpectationMaximization(ParameterEstimator):
                 all_df = pd.concat(dfs, ignore_index=True)
                 all_weights = np.concatenate(weights)
                 # Normalize weights for this row
-                all_df["_weight"] = all_weights / all_weights.sum() * n_counts.get(tuple(row.fillna(-1)), 1)
+                all_df["_weight"] = (
+                    all_weights
+                    / all_weights.sum()
+                    * n_counts.get(tuple(row.fillna(-1)), 1)
+                )
                 cache.append(all_df)
 
         return pd.concat(cache, copy=False)
