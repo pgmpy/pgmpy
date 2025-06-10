@@ -171,10 +171,15 @@ class DAG(nx.DiGraph):
         Parameters
         ----------
         node: str, int, or any hashable python object.
-            The node to add to the graph.
+            The node to add to the graph. Can also be a 2-tuple `(node_name, attr_dict)`
+            as in NetworkX 2.0 syntax, where `attr_dict` is a dictionary of attributes.
 
-        weight: int, float
+        weight: int, float, optional (default=None)
             The weight of the node.
+            If `node` is provided in NetworkX 2.0 syntax `(node_name, attr_dict)` and
+            `attr_dict` contains a 'weight' key, the value from `attr_dict['weight']`
+            will be prioritized. If both this parameter and `attr_dict['weight']` are
+            provided, a warning will be logged, and the value from `attr_dict` will be used.
 
         latent: boolean (default: False)
             Specifies whether the variable is latent or not.
@@ -197,20 +202,40 @@ class DAG(nx.DiGraph):
         {'weight': 0.3}
         >>> G.nodes['A']
         {'weight': None}
+
+        Adding a node using NetworkX 2.0 syntax with a weight in attributes,
+        and also providing the `weight` parameter (attribute weight takes precedence):
+        >>> # G.add_node(('C', {'weight': 0.5}), weight=0.8) # This would log a warning
+        >>> # For demonstration without capturing logs, let's assume the warning was logged.
+        >>> G.add_node(('C', {'weight': 0.5}), weight=0.8)
+        >>> G.nodes['C']['weight'] # The weight from the attribute dict is used.
+        0.5
         """
 
         # Check for networkx 2.0 syntax
+        node_name = node
+        final_weight = weight
+
         if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
-            node, attrs = node
-            if attrs.get("weight", None) is not None:
-                attrs["weight"] = weight
-        else:
-            attrs = {"weight": weight}
+            node_name, attrs = node
+            attr_weight = attrs.get("weight")
+
+            if attr_weight is not None:
+                if weight is not None:
+                    logger.warning(
+                        f"Warning: Both 'weight' parameter (value: {weight}) and 'weight' "
+                        f"attribute in node dictionary (value: {attr_weight}) are provided for node {node_name}. "
+                        f"Using value from attribute dictionary: {attr_weight}."
+                    )
+                final_weight = attr_weight
+            # If attr_weight is None, final_weight remains the initially assigned `weight` parameter
+            # No specific handling for attrs if 'weight' not present or is None, beyond not overriding final_weight.
 
         if latent:
-            self.latents.add(node)
+            self.latents.add(node_name)
 
-        super(DAG, self).add_node(node, weight=weight)
+        # Ensure to use node_name if node was a tuple, and the determined final_weight
+        super(DAG, self).add_node(node_name, weight=final_weight)
 
     def add_nodes_from(
         self,
