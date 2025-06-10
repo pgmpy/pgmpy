@@ -1,8 +1,9 @@
 from collections import namedtuple
 from itertools import chain, combinations
-from typing import Any, Optional
+from typing import Any, Optional, Union, Dict
 
 import numpy as np
+import torch
 
 from pgmpy import config
 from pgmpy.global_vars import logger
@@ -148,10 +149,10 @@ def sample_discrete(
 
 
 def sample_discrete_maps(
-    states: np.ndarray,
-    weight_indices: np.ndarray,
-    index_to_weight: np.ndarray,
-    size=1,
+    states: Union[np.ndarray, torch.Tensor],
+    weight_indices: Union[np.ndarray, torch.Tensor],
+    index_to_weight: Union[Dict[Any, np.ndarray], Dict[Any, torch.Tensor]],
+    size: int = 1,
     seed: Optional[int] = None,
 ):
     """
@@ -188,25 +189,44 @@ def sample_discrete_maps(
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    if isinstance(states, torch.Tensor):
+        if seed is not None:
+            torch.manual_seed(seed)
 
-    # TODO: Remove this conversion and find a way to do this natively in torch.
-    states = np.array(states)
-    weight_indices = compat_fns.to_numpy(weight_indices)
-    index_to_weight = {
-        key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()
-    }
-    size = int(size)
+        samples = []
+        for i in range(states.shape[0]):
+            idx = weight_indices[i].item()
+            weights = index_to_weight[idx]
 
-    samples = np.zeros(size, dtype=int)
-    unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
+            # Normalize weights to sum to 1
+            weights = weights / weights.sum()
 
-    for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[(weight_indices == weight_index)] = np.random.choice(
-            states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
-        )
-    return samples
+            # Sample indices
+            sampled_indices = torch.multinomial(weights, num_samples=size, replacement=True)
+
+            # Support for 1D or 2D states
+            sampled_values = states[i][sampled_indices]
+            samples.append(sampled_values)
+
+        return torch.stack(samples)
+
+    elif isinstance(states, np.ndarray):
+        if seed is not None:
+            np.random.seed(seed)
+
+        samples = []
+        for i in range(states.shape[0]):
+            idx = weight_indices[i]
+            weights = _adjusted_weights(index_to_weight[idx])
+
+            sampled_indices = np.random.choice(len(weights), size=size, p=weights)
+            sampled_values = states[i][sampled_indices]
+            samples.append(sampled_values)
+
+        return np.stack(samples)
+
+    else:
+        raise TypeError("Input types not supported. Use either torch.Tensor or np.ndarray for 'states'.")
 
 
 def powerset(l_input: list):
