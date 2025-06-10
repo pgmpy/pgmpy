@@ -86,6 +86,12 @@ class GES(StructureEstimator):
     def _legal_edge_turns(self, current_model, expert_knowledge):
         return list(current_model.edges)
 
+    def _is_dag(self, current_model):
+        for u, v in current_model.edges:
+            if (v, u) in current_model.edges:
+                return False
+        return True
+
     @staticmethod
     def powerset(iterable):
         s = list(iterable)
@@ -156,19 +162,18 @@ class GES(StructureEstimator):
             raise ValueError("Not all nodes in T=%s are neighbors of y=%s" % (T, v))
         elif len(current_model.all_neighbors(u) & set(T)) != 0:
             raise ValueError("Some nodes in T=%s are adjacent to x=%s" % (T, u))
+
         # Apply operator
         new_model = current_model.copy()
-        # print('4.\n', new_model.edges)
+
         # Add edge x -> y
         new_edges = [(u, v)]
         remove_edges = []
-        # Orient edges t - v to t -> v, for t in T
         for node in T:
             remove_edges.append((v, node))
         new_model.add_edges_from(new_edges)
         new_model.remove_edges_from(remove_edges)
-        new_model.add_nodes_from(current_model.nodes)
-        # print(u, v, T)
+
         return new_model
 
     def _score_valid_deletions(self, u, v, current_model, score_fn):
@@ -305,10 +310,7 @@ class GES(StructureEstimator):
             if cond_1 and cond_2:
                 new_model = self.turn(u, v, T, current_model)
                 parents_v = current_model.directed_parents(v)
-                # print(na_vuT)
-                # print(parents_v)
-                # print(na_vuT.union(parents_v).union(u))
-                print(v)
+
                 new_score = score_fn(v, list(C.union(parents_v).union({u}))) + score_fn(
                     u, list(current_model.directed_parents(u) - {v})
                 )
@@ -403,12 +405,6 @@ class GES(StructureEstimator):
 
         return list(edges)
 
-    def _is_dag(self, current_model):
-        for u, v in current_model.edges:
-            if (v, u) in current_model.edges:
-                return False
-        return True
-
     def estimate(
         self,
         scoring_method="bic-d",
@@ -481,11 +477,10 @@ class GES(StructureEstimator):
             potential_edges = self._legal_edge_additions(
                 current_model, expert_knowledge
             )
-            #print("At start of step\n", current_model.edges)
+            # print("At start of step\n", current_model.edges)
             score_deltas = np.zeros(len(potential_edges))
             insertion_ops = []
             for index, (u, v) in enumerate(potential_edges):
-                # current_parents = current_model.get_parents(v)
                 insertion_op = self._score_valid_insertions(
                     u, v, current_model, score_fn
                 )
@@ -493,35 +488,52 @@ class GES(StructureEstimator):
                     score_deltas[index] = 0
                     insertion_ops.append(None)
                 else:
-                    score_deltas[index] = max(insertion_op)[0]
-                    insertion_ops.append(max(insertion_op))
+                    score_deltas[index] = max(insertion_op, key=lambda x: x[0])[0]
+                    insertion_ops.append(max(insertion_op, key=lambda x: x[0]))
 
-            #print("\n", potential_edges, score_deltas, "\n")
+            # print(potential_edges, score_deltas, "\n")
 
             if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
+                if len(potential_edges) == 0:
+                    print("Breaked!!!", current_model.edges, current_model.nodes, "\n")
                 break
 
             edge_to_add = potential_edges[np.argmax(score_deltas)]
             op_to_add = insertion_ops[np.argmax(score_deltas)]
 
-            # print("2.\n", current_model.edges)
             current_model = self.insert(
                 edge_to_add[0], edge_to_add[1], op_to_add[4], current_model
             )
-            print("after add", current_model.edges, "\n")
-
-            # print('\n1 step', current_model.edges)
 
             if not self._is_dag(current_model):
-                new_model = current_model.to_dag()
-                new_model.add_nodes_from(current_model.nodes)
-                print("\n1 cycle form", new_model.edges, "\n")
-                current_model = new_model.to_pdag()
-            else:
-                current_model = DAG(ebunch=current_model.edges).to_pdag()
-            current_model.add_nodes_from(all_nodes)
 
-            #print("Pdag after 1 step", current_model.edges, "\n")
+                # print("If1 - ", current_model.nodes)
+                directed_edges = []
+                for u, v in current_model.edges:
+                    if (v, u) not in current_model.edges:
+                        directed_edges.append((u, v))
+
+                undirected_edges = []
+                for u, v in current_model.edges:
+                    if (v, u) in current_model.edges and u > v:
+                        undirected_edges.append((u, v))
+
+                pdag = PDAG(
+                    undirected_ebunch=undirected_edges, directed_ebunch=directed_edges
+                )
+
+                new_model = current_model.to_dag()
+
+                current_model = new_model.to_pdag()
+                # print("If2 - ", current_model.nodes, current_model.edges)
+            else:
+                dag = DAG()
+                dag.add_nodes_from(all_nodes)
+                dag.add_edges_from(current_model.edges)
+                current_model = dag.to_pdag()
+                # print("Else ", current_model.nodes, current_model.edges)
+
+            # print("Pdag after 1 step", current_model.edges, "\n")
             if debug:
                 logger.info(
                     f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}"
@@ -529,7 +541,6 @@ class GES(StructureEstimator):
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
-            # print(current_model.edges)
 
             potential_removals = self._legal_edge_removals(
                 current_model, expert_knowledge
@@ -546,12 +557,10 @@ class GES(StructureEstimator):
                     score_deltas[index] = 0
                     deletion_ops.append(None)
                 else:
-                    score_deltas[index] = max(deletion_op)[0]
-                    deletion_ops.append(max(deletion_op))
+                    score_deltas[index] = max(deletion_op, key=lambda x: x[0])[0]
+                    deletion_ops.append(max(deletion_op, key=lambda x: x[0]))
 
             # print("Reached!!!")
-
-            print(score_deltas)
             if (len(potential_removals) == 0) or (
                 np.all(score_deltas < min_improvement)
             ):
