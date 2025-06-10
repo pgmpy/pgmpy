@@ -2,11 +2,11 @@ coverage:
   status:
     project:
       default:
-        target: 80%
-        threshold: 2%
+        target: 90%
+        threshold: 1%
     patch:
       default:
-        target: 80%
+        target: 90%
         threshold: 2%
 comment:
   layout: "reach, diff, flags, files"
@@ -14,4 +14,4 @@ comment:
   require_changes: true
 codecov:
   notify:
-    after_n_builds: 3
+    after_n_builds: 8
