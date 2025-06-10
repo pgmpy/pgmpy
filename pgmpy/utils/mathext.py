@@ -202,7 +202,9 @@ def sample_discrete_maps(
             weights = weights / weights.sum()
 
             # Sample indices
-            sampled_indices = torch.multinomial(weights, num_samples=size, replacement=True)
+            sampled_indices = torch.multinomial(
+                weights, num_samples=size, replacement=True
+            )
 
             # Support for 1D or 2D states
             sampled_values = states[i][sampled_indices]
@@ -226,7 +228,9 @@ def sample_discrete_maps(
         return np.stack(samples)
 
     else:
-        raise TypeError("Input types not supported. Use either torch.Tensor or np.ndarray for 'states'.")
+        raise TypeError(
+            "Input types not supported. Use either torch.Tensor or np.ndarray for 'states'."
+        )
 
 
 def powerset(l_input: list):
