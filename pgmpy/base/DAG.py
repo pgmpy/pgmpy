@@ -1604,7 +1604,8 @@ class PDAG(nx.DiGraph):
         """
         Returns a set of parents of node such that there is a directed edge from the parent to `node`.
         """
-        return {x for x in self.predecessors(node) if (x, node) in self.directed_edges}
+        dir_edges = set([(u, v) for (u, v) in self.edges if (v, u) not in self.edges ])
+        return {x for x in self.predecessors(node) if (x, node) in dir_edges}
 
     def has_directed_edge(self, u, v):
         """
@@ -1662,12 +1663,16 @@ class PDAG(nx.DiGraph):
                 adj.add(node)
         return adj
 
-    def induced_subgraph(self, edge_list):
+    def induced_subgraph(self, edge_list, node_list):
         subgraph = []
         for u, v in self.edges:
             if u not in edge_list and v not in edge_list:
                 subgraph.append((u, v))
-        return subgraph
+
+        subg = nx.DiGraph()
+        subg.add_nodes_from(self.nodes())
+        subg.add_edges_from(subgraph)
+        return subg
 
     def chain_component(self, node):
         visited = set()
@@ -1682,6 +1687,7 @@ class PDAG(nx.DiGraph):
     def separates(self, U, V, sep_set, graph=None):
         if graph == None:
             graph = self
+        
         for u in U:
             for v in V:
                 for path in nx.all_simple_paths(graph, u, v):
@@ -1939,7 +1945,6 @@ class PDAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         directed_edges_ = [(u, v) for (u, v) in self.edges if (v, u) not in self.edges]
         dag.add_edges_from(directed_edges_)
-        # print("I am adding - ", directed_edges_, dag.edges)
         dag.latents = self.latents
 
         pdag = self.copy()
@@ -1952,11 +1957,9 @@ class PDAG(nx.DiGraph):
                 directed_outgoing_edges = set(pdag.successors(X)) - set(
                     pdag.predecessors(X)
                 )
-                # print(set(pdag.successors(X)), set( pdag.predecessors(X)), directed_outgoing_edges )
                 undirected_neighbors = set(pdag.successors(X)) & set(
                     pdag.predecessors(X)
                 )
-                # print(set(pdag.successors(X)), set(pdag.predecessors(X)), undirected_neighbors)
                 neighbors_are_adjacent = all(
                     (
                         pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
@@ -1965,7 +1968,6 @@ class PDAG(nx.DiGraph):
                         if not Y == Z
                     )
                 )
-                # print(pdag.all_neighbors(X), neighbors_are_adjacent)
 
                 if not directed_outgoing_edges and (
                     not undirected_neighbors or neighbors_are_adjacent
@@ -1973,10 +1975,8 @@ class PDAG(nx.DiGraph):
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.undirected_neighbors(X):
-                        # print("Adding undirected nei - ", Y, X)
                         dag.add_edge(Y, X)
                     pdag.remove_node(X)
-                    # print(pdag.nodes)
                     break
 
             if not found:

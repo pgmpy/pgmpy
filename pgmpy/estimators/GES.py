@@ -84,7 +84,10 @@ class GES(StructureEstimator):
         return legal_edges
 
     def _legal_edge_turns(self, current_model, expert_knowledge):
-        return list(current_model.edges)
+        legal_turns = []
+        for (u, v) in current_model.edges:
+                legal_turns.append((v, u))
+        return legal_turns
 
     def _is_dag(self, current_model):
         for u, v in current_model.edges:
@@ -138,9 +141,6 @@ class GES(StructureEstimator):
             if cond_1 and cond_2:
                 new_model = self.insert(u, v, T, current_model)
                 parents_v = current_model.directed_parents(v)
-                # print(na_vuT)
-                # print(parents_v)
-                # print(na_vuT.union(parents_v).union(u))
                 score_delta = score_fn(
                     v, list(na_vuT.union(parents_v).union({u}))
                 ) - score_fn(v, list(na_vuT.union(parents_v)))
@@ -151,11 +151,8 @@ class GES(StructureEstimator):
 
     def insert(self, u, v, T, current_model):
         T = sorted(T)
-        # print("\nInsert - ",u,v,T)
-        # print('3.\n', current_model.edges)
         # if current_model[x, y] != 0 or current_model[y, x] != 0:
         #    raise ValueError("x=%d and y=%d are already connected" % (x, y))
-        # print('insert - ', current_model.edges, current_model.undirected_neighbors('Survived'))
         if len(T) == 0:
             pass
         elif not (set(T) <= current_model.undirected_neighbors(v)):
@@ -179,7 +176,6 @@ class GES(StructureEstimator):
     def _score_valid_deletions(self, u, v, current_model, score_fn):
         # Check inputs
         if not current_model.has_edge(u, v):
-            print(current_model.edges)
             raise ValueError(f"There is no (un)directed edge from to delete {u,v}")
         # One-hot encode all subsets of H0, plus one column to mark if
         na_vu = current_model.undirected_neighbors(
@@ -215,7 +211,6 @@ class GES(StructureEstimator):
                 new_model = self.delete(u, v, H, current_model)
                 # Compute the change in score
                 aux = (na_vu - set(H)) | current_model.directed_parents(v)
-                # print(x,y,H,"na_yx:",na_yx,"old:",aux,"new:", aux - {x})
 
                 score_delta = score_fn(
                     v, (na_vu - set(H)).union(current_model.directed_parents(v))
@@ -279,10 +274,22 @@ class GES(StructureEstimator):
             C = current_model.undirected_neighbors(
                 v
             ) & current_model.adjacent_neighbors(u)
-            C = C.union(T)
 
+            parents_u = current_model.directed_parents(u)
+            parents_v = current_model.directed_parents(v)
+
+            pv_minus_u = parents_v - {u}
+            if pv_minus_u != parents_u:
+                # not covered → skip immediately
+                continue
+            if not current_model.is_clique(pv_minus_u):
+                # this shouldn’t happen if your graph is a valid CPDAG,
+                # but it’s the second part of the covered check
+                continue
             # === Condition 1: na_yx ∪ T is a clique
+            C = C.union(T)
             cond_1 = current_model.is_clique(C)
+
             if not cond_1:
                 # Prune supersets of T
                 subsets = [s for s in subsets if not T.issubset(set(s[:-1]))]
@@ -297,7 +304,7 @@ class GES(StructureEstimator):
                     if path == [v, u]:
                         pass
                     elif (
-                        len(C | current_model.undirected_neighbors(u) & set(path)) == 0
+                        set(path).isdisjoint(C | current_model.undirected_neighbors(u))
                     ):
                         cond_2 = False
                         break
@@ -326,15 +333,15 @@ class GES(StructureEstimator):
 
     def _score_valid_turn_undir(self, u, v, current_model, score_fn):
         non_adjacents = list(
-            current_model.undirected_neigbors(v)
-            - current_model.adjacent_neigbors(u)
+            current_model.undirected_neighbors(v)
+            - current_model.adjacent_neighbors(u)
             - {u}
         )
         if len(non_adjacents) == 0:
-            logger.INFO("    turn(%d,%d) : ne(y) \\ adj(x) = Ø => stopping" % (u, v))
+            # logger.info("    turn(%d,%d) : ne(y) \\ adj(x) = Ø => stopping" % (u, v))
             return []
 
-        C0 = sorted(current_model.undirected_neigbors(v) - {u})
+        C0 = sorted(current_model.undirected_neighbors(v) - {u})
         power_set = self.powerset(C0)
         valid_subsets = []
 
@@ -351,14 +358,14 @@ class GES(StructureEstimator):
 
         valid_operators = []
         while len(valid_subsets) > 0:
-            C = subsets.pop(0)
+            C = valid_subsets.pop(0)
             cond_1 = current_model.is_clique(C)
             if not cond_1:
                 # Remove from consideration all other sets C' which
                 # contain C, as the clique condition will also not hold
-                subsets = [S for j, S in enumerate(subsets) if not (C < S or C == S)]
+                valid_subsets = [S for j, S in enumerate(valid_subsets) if not (C < S or C == S)]
 
-            subgraph = current_model.induced_subgraph(current_model.chain_component(v))
+            subgraph = current_model.induced_subgraph(current_model.chain_component(v), current_model.nodes)
             na_vu = current_model.undirected_neighbors(
                 v
             ) & current_model.adjacent_neighbors(u)
@@ -376,20 +383,26 @@ class GES(StructureEstimator):
             )
 
             score_delta = new_score - old_score
-            valid_operators.append((score_delta, current_model, u, v, C))
+            valid_operators.append((score_delta, new_model, u, v, C))
 
         return valid_operators
 
     def turn(self, u, v, C, current_model):
+        
+        if current_model.has_edge(u, v) and not current_model.has_edge(v, u):
+            raise ValueError(f"The edge {u} -> {v} already exists" )
+        
+        new_model = current_model.copy()
+        new_model.remove_edges_from([(v, u)])
+        if not new_model.has_edge(u, v):
+            new_model.add_edges_from([(u, v)])
 
-        if current_model.has_edge(v, u):
-            current_model.remove_edges_from([(v, u)])
-        current_model.add_edges_from([(u, v)])
         for c in C:
-            if current_model.has_edge(v, c):
-                current_model.remove_edges_from([(v, c)])
-            current_model.add_edges_from([(c, v)])
-        return current_model
+            if new_model.has_edge(v, c):
+                new_model.remove_edges_from([(v, c)])
+            new_model.add_edges_from([(c, v)])
+
+        return new_model
 
     def _legal_edge_removals(self, current_model, expert_knowledge):
         """
@@ -477,7 +490,6 @@ class GES(StructureEstimator):
             potential_edges = self._legal_edge_additions(
                 current_model, expert_knowledge
             )
-            # print("At start of step\n", current_model.edges)
             score_deltas = np.zeros(len(potential_edges))
             insertion_ops = []
             for index, (u, v) in enumerate(potential_edges):
@@ -491,11 +503,7 @@ class GES(StructureEstimator):
                     score_deltas[index] = max(insertion_op, key=lambda x: x[0])[0]
                     insertion_ops.append(max(insertion_op, key=lambda x: x[0]))
 
-            # print(potential_edges, score_deltas, "\n")
-
             if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
-                if len(potential_edges) == 0:
-                    print("Breaked!!!", current_model.edges, current_model.nodes, "\n")
                 break
 
             edge_to_add = potential_edges[np.argmax(score_deltas)]
@@ -506,34 +514,15 @@ class GES(StructureEstimator):
             )
 
             if not self._is_dag(current_model):
-
-                # print("If1 - ", current_model.nodes)
-                directed_edges = []
-                for u, v in current_model.edges:
-                    if (v, u) not in current_model.edges:
-                        directed_edges.append((u, v))
-
-                undirected_edges = []
-                for u, v in current_model.edges:
-                    if (v, u) in current_model.edges and u > v:
-                        undirected_edges.append((u, v))
-
-                pdag = PDAG(
-                    undirected_ebunch=undirected_edges, directed_ebunch=directed_edges
-                )
-
                 new_model = current_model.to_dag()
-
                 current_model = new_model.to_pdag()
-                # print("If2 - ", current_model.nodes, current_model.edges)
+
             else:
                 dag = DAG()
                 dag.add_nodes_from(all_nodes)
                 dag.add_edges_from(current_model.edges)
                 current_model = dag.to_pdag()
-                # print("Else ", current_model.nodes, current_model.edges)
 
-            # print("Pdag after 1 step", current_model.edges, "\n")
             if debug:
                 logger.info(
                     f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}"
@@ -546,12 +535,10 @@ class GES(StructureEstimator):
                 current_model, expert_knowledge
             )
 
-            # print("\nremovals\n", potential_removals)
             score_deltas = np.zeros(len(potential_removals))
             deletion_ops = []
 
             for index, (u, v) in enumerate(potential_removals):
-                # print("\nloop-edges\n", current_model.edges)
                 deletion_op = self._score_valid_deletions(u, v, current_model, score_fn)
                 if deletion_op == []:
                     score_deltas[index] = 0
@@ -560,7 +547,6 @@ class GES(StructureEstimator):
                     score_deltas[index] = max(deletion_op, key=lambda x: x[0])[0]
                     deletion_ops.append(max(deletion_op, key=lambda x: x[0]))
 
-            # print("Reached!!!")
             if (len(potential_removals) == 0) or (
                 np.all(score_deltas < min_improvement)
             ):
@@ -574,21 +560,20 @@ class GES(StructureEstimator):
 
             if not self._is_dag(current_model):
                 new_model = current_model.to_dag()
-                new_model.add_nodes_from(current_model.nodes)
-                # print('\n1 step', new_model.edges, '\n')
                 current_model = new_model.to_pdag()
             else:
-                current_model = DAG(ebunch=current_model.edges).to_pdag()
-            current_model.add_nodes_from(all_nodes)
+                dag = DAG()
+                dag.add_nodes_from(all_nodes)
+                dag.add_edges_from(current_model.edges)
+                current_model = dag.to_pdag()
 
-            print("Pdag after 1 step", current_model.edges)
             if debug:
                 logger.info(
                     f"Removing edge {edge_to_remove[0]} -> {edge_to_remove[1]}. Improves score by: {score_deltas.max()}"
                 )
 
         # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
-        while False:
+        while True:
             potential_turns = self._legal_edge_turns(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_turns))
             turn_ops = []
@@ -599,11 +584,12 @@ class GES(StructureEstimator):
                     score_deltas[index] = 0
                     turn_ops.append(None)
                 else:
-                    score_deltas[index] = max(turn_op)[0]
-                    turn_ops.append(max(turn_op))
+                    score_deltas[index] = max(turn_op, key=lambda x: x[0])[0]
+                    turn_ops.append(max(turn_op, key=lambda x: x[0]))
 
             if (len(potential_turns) == 0) or (np.all(score_deltas < min_improvement)):
                 break
+            
 
             edge_to_flip = potential_turns[np.argmax(score_deltas)]
             op_to_turn = turn_ops[np.argmax(score_deltas)]
@@ -611,18 +597,18 @@ class GES(StructureEstimator):
                 edge_to_flip[0], edge_to_flip[1], op_to_turn[4], current_model
             )
 
-            # print(current_model.edges)
             if not self._is_dag(current_model):
                 new_model = current_model.to_dag()
-                new_model.add_nodes_from(current_model.nodes)
-                print("\n3 step", new_model.edges, "\n")
                 current_model = new_model.to_pdag()
             else:
-                current_model = DAG(ebunch=current_model.edges).to_pdag()
+                dag = DAG()
+                dag.add_nodes_from(all_nodes)
+                dag.add_edges_from(current_model.edges)
+                current_model = dag.to_pdag()
 
             if debug:
                 logger.info(
-                    f"Fliping edge {edge_to_flip[1]} -> {edge_to_flip[0]}. Improves score by: {score_deltas.max()}"
+                    f"Flipping edge {edge_to_flip[0]} -> {edge_to_flip[1]}. Improves score by: {score_deltas.max()}"
                 )
 
         # Step 5: Return the model.
