@@ -7,9 +7,12 @@ import pandas as pd
 import statsmodels.formula.api as smf
 from scipy.special import gammaln
 from scipy.stats import multivariate_normal
+import warnings
 
 from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
+from pgmpy.estimators.LogLikelihoodBase import LogLikelihoodBase
+from pgmpy.estimators.LogLikelihoodScore import LogLikelihoodScore
 
 
 def get_scoring_method(
@@ -527,23 +530,20 @@ class AIC(StructureScore):
 
 
 class LogLikelihoodGauss(StructureScore):
+    """
+    Class for computing log-likelihood scores for Gaussian Bayesian networks.
+    
+    This class is now a wrapper around the unified LogLikelihoodScore implementation.
+    It is kept for backward compatibility.
+    """
+    
     def __init__(self, data, **kwargs):
         super(LogLikelihoodGauss, self).__init__(data, **kwargs)
-
-    def _log_likelihood(self, variable, parents):
-        if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
-        else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
-
-        return (glm_model.llf, glm_model.df_model)
-
+        self._log_likelihood_score = LogLikelihoodScore(data)
+        
     def local_score(self, variable, parents):
-        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
-
-        return ll
+        
+        return self._log_likelihood_score.local_score(variable, parents)
 
 
 class BICGauss(LogLikelihoodGauss):
@@ -551,7 +551,7 @@ class BICGauss(LogLikelihoodGauss):
         super(BICGauss, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+        ll, df_model = self._log_likelihood_score.local_score(variable, parents)
 
         # Adding +2 to model df to compute the likelihood df.
         return ll - (((df_model + 2) / 2) * np.log(self.data.shape[0]))
@@ -562,7 +562,7 @@ class AICGauss(LogLikelihoodGauss):
         super(AICGauss, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        ll, df_model = self._log_likelihood(variable=variable, parents=parents)
+        ll, df_model = self._log_likelihood_score.local_score(variable, parents)
 
         # Adding +2 to model df to compute the likelihood df.
         return ll - (df_model + 2)
@@ -570,14 +570,26 @@ class AICGauss(LogLikelihoodGauss):
 
 class LogLikelihoodCondGauss(StructureScore):
     """
+    Class for computing log-likelihood scores for Conditional Gaussian Bayesian networks.
+    
     References
     ----------
     [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
         Networks of Mixed Variables. International journal of data science and
         analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+        
+    .. deprecated:: 0.1.0
+        This class is deprecated and will be removed in a future version.
+        Please use the new LogLikelihoodBase implementation instead.
     """
-
+    
     def __init__(self, data, **kwargs):
+        warnings.warn(
+            "LogLikelihoodCondGauss is deprecated and will be removed in a future version. "
+            "Please use the new LogLikelihoodBase implementation instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
 
     @staticmethod

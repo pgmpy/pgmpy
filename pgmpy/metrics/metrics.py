@@ -170,10 +170,9 @@ def log_likelihood_score(model, data):
 
     model.check_model()
 
-    # Step 2: Compute the log-likelihood
-    from pgmpy.metrics import BayesianModelProbability
-
-    return BayesianModelProbability(model).score(data)
+    
+    from pgmpy.estimators import LogLikelihoodScore
+    return LogLikelihoodScore(data, use_cpd=True).score(model)
 
 
 def structure_score(model, data, scoring_method="bic-g", **kwargs):

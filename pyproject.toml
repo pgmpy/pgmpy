@@ -26,7 +26,7 @@ classifiers = [
 # this set should be kept minimal!
 dependencies = [
   "networkx>=3.0",
-  "numpy>=2.0",
+  "numpy<2.0",
   "scipy>=1.10",
   "scikit-learn>=1.2",
   "pandas>=1.5",
