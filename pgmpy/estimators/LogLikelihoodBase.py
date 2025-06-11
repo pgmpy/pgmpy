@@ -7,39 +7,7 @@ from pgmpy.models import (
 
 
 class LogLikelihoodBase(ABC):
-    """
-    Base class for computing log-likelihood scores in Bayesian networks.
-    
-    This class provides a unified interface for computing log-likelihood scores
-    across different types of Bayesian networks and data types. It serves as the
-    foundation for specialized implementations that handle specific data types
-    or model structures.
-    
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        The dataset against which to score the model.
-        
-    Attributes
-    ----------
-    data : pandas.DataFrame
-        The dataset used for scoring.
-    state_names : dict
-        Dictionary mapping each variable to its possible states.
-    dtypes : dict
-        Dictionary mapping each variable to its data type ('N' for numeric,
-        'C' for categorical).
-    """
-    
     def __init__(self, data):
-        """
-        Initialize the LogLikelihoodBase class.
-        
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            The dataset against which to score the model.
-        """
         if not isinstance(data, pd.DataFrame):
             raise ValueError(
                 "data must be a pandas.DataFrame instance"
@@ -50,14 +18,6 @@ class LogLikelihoodBase(ABC):
         self.dtypes = self._get_dtypes()
         
     def _get_state_names(self):
-        """
-        Get the possible states for each variable in the dataset.
-        
-        Returns
-        -------
-        dict
-            Dictionary mapping each variable to its possible states.
-        """
         state_names = {}
         for column in self.data.columns:
             if self.data[column].dtype.name == 'category':
@@ -71,15 +31,6 @@ class LogLikelihoodBase(ABC):
         return state_names
         
     def _get_dtypes(self):
-        """
-        Get the data type for each variable in the dataset.
-        
-        Returns
-        -------
-        dict
-            Dictionary mapping each variable to its data type ('N' for numeric,
-            'C' for categorical).
-        """
         dtypes = {}
         for column in self.data.columns:
             if pd.api.types.is_numeric_dtype(self.data[column]):
@@ -90,43 +41,9 @@ class LogLikelihoodBase(ABC):
         
     @abstractmethod
     def local_score(self, variable, parents):
-        """
-        Compute the local score for a variable given its parents.
-        
-        Parameters
-        ----------
-        variable : str
-            The variable for which to compute the score.
-        parents : list
-            List of parent variables.
-            
-        Returns
-        -------
-        float
-            The local score for the variable.
-        """
         pass
         
     def score(self, model):
-        """
-        Compute the overall score for a Bayesian network model.
-        
-        Parameters
-        ----------
-        model : pgmpy.models.BayesianNetwork or
-               pgmpy.models.DiscreteBayesianNetwork
-            The Bayesian network model to score.
-            
-        Returns
-        -------
-        float
-            The overall score for the model.
-            
-        Raises
-        ------
-        ValueError
-            If the model is invalid or if there are missing variables in the data.
-        """
         if not isinstance(model, (BayesianNetwork, DiscreteBayesianNetwork)):
             raise ValueError(
                 "model must be a BayesianNetwork or "
@@ -136,7 +53,6 @@ class LogLikelihoodBase(ABC):
             raise ValueError(
                 "Input data is empty."
             )
-        # Check if all variables in the model are present in the data
         missing_vars = set(model.nodes()) - set(self.data.columns)
         if missing_vars:
             raise ValueError(
@@ -150,7 +66,6 @@ class LogLikelihoodBase(ABC):
                     raise ValueError(
                         f"Model is missing CPD for node: {node}"
                     )
-        # Compute the score for each variable
         score = 0
         for node in model.nodes():
             parents = list(model.predecessors(node))
