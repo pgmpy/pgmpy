@@ -1,12 +1,5 @@
-def simulate_intervention(model, intervention: dict):
-    """
-    Simulates a do-intervention using pgmpy.
-
-    Parameters:
-        model: Trained pgmpy BayesianNetwork
-        intervention (dict): Variables and values for do-operation
-
-    Returns:
-        Simulated belief update or inference results (mockup)
-    """
-    return {"intervention": intervention, "result": "Simulated effects"}
+def simulate_intervention(model, intervention):
+    modified_model = model.copy()
+    # In a real case, intervene by modifying CPDs; here we just log.
+    print(f"Simulating intervention: {intervention}")
+    return {"intervened_model": modified_model}

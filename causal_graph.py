@@ -1,6 +1,5 @@
-from pgmpy.estimators import HillClimbSearch, BicScore
+from pgmpy.estimators import HillClimbSearch, BicScore, BayesianEstimator
 from pgmpy.models import BayesianNetwork
-from pgmpy.estimators import BayesianEstimator
 
 class CausalGraphLearner:
     def __init__(self):
@@ -13,7 +12,7 @@ class CausalGraphLearner:
         return self.model
 
     def fit_parameters(self, data):
-        self.model.fit(data, estimator=BayesianEstimator, prior_type="BDeu")
+        self.model.fit(data, estimator=BayesianEstimator)
 
     def get_model(self):
         return self.model
