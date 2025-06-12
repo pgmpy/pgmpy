@@ -532,17 +532,17 @@ class AIC(StructureScore):
 class LogLikelihoodGauss(StructureScore):
     """
     Class for computing log-likelihood scores for Gaussian Bayesian networks.
-    
+
     This class is now a wrapper around the unified LogLikelihoodScore implementation.
     It is kept for backward compatibility.
     """
-    
+
     def __init__(self, data, **kwargs):
         super(LogLikelihoodGauss, self).__init__(data, **kwargs)
         self._log_likelihood_score = LogLikelihoodScore(data)
-        
+
     def local_score(self, variable, parents):
-        
+
         return self._log_likelihood_score.local_score(variable, parents)
 
 
@@ -571,24 +571,24 @@ class AICGauss(LogLikelihoodGauss):
 class LogLikelihoodCondGauss(StructureScore):
     """
     Class for computing log-likelihood scores for Conditional Gaussian Bayesian networks.
-    
+
     References
     ----------
     [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
         Networks of Mixed Variables. International journal of data science and
         analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
-        
+
     .. deprecated:: 0.1.0
         This class is deprecated and will be removed in a future version.
         Please use the new LogLikelihoodBase implementation instead.
     """
-    
+
     def __init__(self, data, **kwargs):
         warnings.warn(
             "LogLikelihoodCondGauss is deprecated and will be removed in a future version. "
             "Please use the new LogLikelihoodBase implementation instead.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
 

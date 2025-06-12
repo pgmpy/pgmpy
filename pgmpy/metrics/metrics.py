@@ -170,8 +170,8 @@ def log_likelihood_score(model, data):
 
     model.check_model()
 
-    
     from pgmpy.estimators import LogLikelihoodScore
+
     return LogLikelihoodScore(data, use_cpd=True).score(model)
 
 
