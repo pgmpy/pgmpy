@@ -779,7 +779,6 @@ class BIC(StructureScore):
         http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
     """
 
-
     def __init__(self, data, **kwargs):
         super(BIC, self).__init__(data, **kwargs)
 
@@ -1052,7 +1051,7 @@ class LogLikelihoodGauss(StructureScore):
         -----
         - This method is intended for internal use.
         - Uses statsmodels.formula.api.glm for model fitting.
-        """       
+        """
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
@@ -1140,6 +1139,7 @@ class BICGauss(LogLikelihoodGauss):
     ValueError
         If the GLM cannot be fitted due to missing or non-numeric data.
     """
+
     def __init__(self, data, **kwargs):
         super(BICGauss, self).__init__(data, **kwargs)
 
@@ -1223,6 +1223,7 @@ class AICGauss(LogLikelihoodGauss):
     ValueError
         If the GLM cannot be fitted due to missing or non-numeric data.
     """
+
     def __init__(self, data, **kwargs):
         super(AICGauss, self).__init__(data, **kwargs)
 
@@ -1728,6 +1729,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
         Networks of Mixed Variables. International journal of data science and
         analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
     """
+
     def __init__(self, data, **kwargs):
         super(BICCondGauss, self).__init__(data, **kwargs)
 
@@ -1821,6 +1823,7 @@ class AICCondGauss(LogLikelihoodCondGauss):
         Networks of Mixed Variables. International journal of data science and
         analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
     """
+
     def __init__(self, data, **kwargs):
         super(AICCondGauss, self).__init__(data, **kwargs)
 
