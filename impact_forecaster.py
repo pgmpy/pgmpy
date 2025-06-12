@@ -9,7 +9,7 @@ class CausalImpactForecaster:
 
     def fit(self, X, y):
         data = X.copy()
-        data['target'] = y
+        data[''target''] = y
         self.model = self.graph_learner.learn_structure(data)
         self.graph_learner.fit_parameters(data)
 
@@ -17,4 +17,4 @@ class CausalImpactForecaster:
         return simulate_intervention(self.graph_learner.get_model(), intervention)
 
     def counterfactual(self, original_data, intervention_data):
-        return estimate_counterfactual(original_data, intervention_data, 'target')
+        return estimate_counterfactual(original_data, intervention_data, ''target'')
