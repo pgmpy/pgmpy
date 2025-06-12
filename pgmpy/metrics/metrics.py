@@ -10,6 +10,8 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -422,8 +424,66 @@ def fisher_c(model, data, ci_test, calculate_rmsea=False, show_progress=True):
 
 
 def permutation_test(
-    model, data, ci_test, n_permutations=None, random_state=None, show_progress=True
+    model,
+    data,
+    ci_test,
+    n_permutations=None,
+    significance_level=0.05,
+    show_progress=True,
 ):
+    def _get_non_descendants(model, node):
+        descendants = set()
+        queue = list(model.succesors(node))
+        visited = set()
+
+        while queue:
+            current = queue.pop(0)
+            if current not in visited:
+                visited.add(current)
+                descendants.add(current)
+                queue.extend(model.successors(current))
+
+        all_nodes = set(model.nodes())
+        non_descendants = all_nodes - descendants - {node}
+        return list(non_descendants)
+
+    def count_lmc_violations(model, data, ci_test_func, significance_level):
+
+        violations = 0
+        nodes = list(model.nodes())
+        for node in nodes:
+            parents = list(model.get_parents(node))
+            non_descendants = _get_non_descendants(model, node)
+            test_nodes = [
+                nd for nd in non_descendants if nd not in parents and nd != node
+            ]
+
+            for test_node in test_nodes:
+                try:
+                    _, p_value = ci_test_func(
+                        node, test_node, parents, significance_level
+                    )
+                    if p_value < significance_level:
+                        violations += 1
+                except Exception as e:
+                    logger.debug(
+                        f"CI test failed for {node} ⊥ {test_node} | {parents}: {e}"
+                    )
+                    continue
+
+        return violations
+
+    def create_permuted_graph(model, perm_mapping):
+
+        new_edges = []
+        for edge in model.edges():
+            new_source = perm_mapping[edge[0]]
+            new_target = perm_mapping[edge[1]]
+            new_edges.append((new_source, new_target))
+
+        permuted_model = DAG()
+        permuted_model.add_edges_from(new_edges)
+        return permuted_model
 
     if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(
@@ -432,40 +492,89 @@ def permutation_test(
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
 
-    if random_state is not None:
-        np.random.seed(random_state)
+    if len(model.latents) > 0:
+        raise ValueError(
+            "This test can not be performed on models with latent variables."
+        )
 
-    # Null hypothesis p-value using fischer_c method
-    null_hypothesis_val = fisher_c(
-        model=model, data=data, ci_test=ci_test, show_progress=False
+    model_nodes = set(model.nodes())
+    cols = set(data.columns)
+
+    if not model_nodes.issubset(cols):
+        missing_variables = model_nodes - cols
+        raise ValueError(f"Data missing variables in model: {missing_variables}")
+
+    if n_permutations is None:
+        n_permutations = 1000
+
+    ci_test_func = get_callable_ci_test(ci_test, data=data)
+
+    # Constructing the Null Hypothesis (LMC = Local Markov Condition)
+    lmc_violations_given = count_lmc_violations(
+        model, data, ci_test_func, significance_level
     )
 
+    # Finding set of d-separated nodes in original model
+    original_dsep_triples = set()
+    nodes = list(model.nodes())
+
+    for node in nodes:
+        non_descendants = _get_non_descendants(model, node)
+        for non_descendant in non_descendants:
+            if non_descendant == node or non_descendant in model.get_parents(node):
+                continue
+            conditioning_set = frozenset(model.get_parents(node))
+            _, p_value = ci_test_func(
+                data, node, non_descendant, list(conditioning_set), significance_level
+            )
+            if p_value >= significance_level:
+                original_dsep_triples.add((node, non_descendant, conditioning_set))
+
+    permutation_violations = []
+    same_mec_count = 0
+
     if show_progress and config.SHOW_PROGRESS:
-        perm_iter = tqdm(range(n_permutations), desc="Permutation Test")
+        pbar = tqdm(total=n_permutations, desc="Permutation Testing")
     else:
-        perm_iter = range(n_permutations)
+        pbar = range(n_permutations)
 
-    # to store p-values after each permutation
-    p_vals = []
-    for _ in perm_iter:
-        permuted_data = data.copy()
+    for i in pbar:
+        perm = np.random.permutation(nodes)
+        perm_mapping = dict(zip(nodes, perm))
 
-        # randomly permuting all columns to destroy all dependencies
-        for col in permuted_data.columns:
-            permuted_data[col] = np.random.permutation(permuted_data[col].values)
-
-        # to calculate p-value for the permuted data
-        perm_fisher_p_val = fisher_c(
-            model=model, data=permuted_data, ci_test=ci_test, show_progress=False
+        permuted_model = create_permuted_graph(model, perm_mapping)
+        lmc_violations_perm = count_lmc_violations(
+            permuted_model, data, ci_test_func, significance_level
         )
-        p_vals.append(perm_fisher_p_val)
+        permutation_violations.append(lmc_violations_perm)
 
-    # converting to numpy array
-    permutated_vals = np.array(p_vals)
+        permuted_dsep_triples = set()
+        for node in nodes:
+            non_descendants = _get_non_descendants(permuted_model, node)
+            for non_descendant in non_descendants:
+                if non_descendant == node or non_descendant in model.get_parents(node):
+                    continue
+                conditioning_set = frozenset(model.get_parents(node))
+                _, p_value = ci_test_func(
+                    data,
+                    node,
+                    non_descendant,
+                    list(conditioning_set),
+                    significance_level,
+                )
+                if p_value >= significance_level:
+                    permuted_dsep_triples.add((node, non_descendant, conditioning_set))
 
-    # calculating the final p-value
-    p_value = np.sum(permutated_vals >= null_hypothesis_val) / n_permutations
-    return p_value
+        if original_dsep_triples == permuted_dsep_triples:
+            same_mec_count += 1
+
+    p_value_falsifiable = same_mec_count / n_permutations
+    p_value_falsified = (
+        sum(1 for v in permutation_violations if v > lmc_violations_given)
+        / n_permutations
+    )
+
+    return (p_value_falsifiable, p_value_falsified)
 
 
 def SHD(true_model, est_model):

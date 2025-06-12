@@ -1592,7 +1592,6 @@ class DAG(nx.DiGraph):
             correlation_score,
             fisher_c,
             implied_cis,
-            permutation_test,
             structure_score,
         )
 
@@ -1603,7 +1602,6 @@ class DAG(nx.DiGraph):
             "bic",
             "fisher_c",
             "implied_cis",
-            "permutation_test",
         ]
 
         # a normal validate call would provide all metric results
@@ -1615,8 +1613,6 @@ class DAG(nx.DiGraph):
             "correlation_test": "chi_square",
             "correlation_significance": 0.05,
             "correlation_score_func": f1_score,
-            "ci_test_permutation": chi_square,
-            "n_permutations": 1000,
             "ci_test_fischer": chi_square,
             "ci_test_cis": chi_square,
             "ci_tests_significance": 0.5,
@@ -1700,18 +1696,6 @@ class DAG(nx.DiGraph):
                 results["total_cis"] = len(df_cis)
             except ValueError as e:
                 results["cis_tests"] = f"Error: {str(e)}"
-
-        if "permutation_test" in metrics:
-            try:
-                results["Permutation Test p-value"] = permutation_test(
-                    model=self,
-                    data=data,
-                    ci_test=params["ci_test_permutation"],
-                    n_permutations=params["n_permutations"],
-                    show_progress=params["show_progress"],
-                )
-            except ValueError as e:
-                results["Permutation Test p-value"] = f"Error: {str(e)}"
 
         df_scores = pd.DataFrame(results)
         return df_scores
