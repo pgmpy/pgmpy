@@ -74,15 +74,15 @@ class TestBnInference(unittest.TestCase):
 
         logp = self.inference.log_probability(x0, ordering)
         p = np.exp(logp)
-        np.testing.assert_almost_equal(p[0], p0)
+        np.testing.assert_almost_equal(p, p0)
 
         logp = self.inference.log_probability(x1, ordering)
         p = np.exp(logp)
-        np.testing.assert_almost_equal(p[0], p1)
+        np.testing.assert_almost_equal(p, p1)
 
         logp = self.inference.log_probability(x2, ordering)
         p = np.exp(logp)
-        np.testing.assert_almost_equal(p[0], p2)
+        np.testing.assert_almost_equal(p, p2)
 
         logp = self.inference.log_probability(X, ordering)
         p = np.exp(logp)
