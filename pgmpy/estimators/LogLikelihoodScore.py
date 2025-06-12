@@ -28,9 +28,13 @@ class LogLikelihoodScore(LogLikelihoodBase):
                 return self._categorical_score(data, variable, parents)
 
     def _cpd_score(self, cpd, data, variable, parents):
-        values = cpd.values
-        log_prob = np.log(values)
-        return np.sum(log_prob)
+        score = 0
+        for _, row in data.iterrows():
+            state = {var: row[var] for var in [variable] + parents}
+            prob = cpd.get_value(**state)
+            if prob > 0:
+                score += np.log(prob)
+        return score
 
     def _numeric_score(self, data, variable, parents):
         if not parents:
