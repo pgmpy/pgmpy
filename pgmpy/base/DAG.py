@@ -2034,13 +2034,47 @@ class PDAG(nx.DiGraph):
                     + "same v-structures as PDAG). Remaining undirected PDAG edges "
                     + "oriented arbitrarily."
                 )
-                for X, Y in pdag.edges():
-                    if not dag.has_edge(Y, X):
+                import networkx as nx
+                import numpy as np
+                adj = nx.to_numpy_array(pdag, nodelist=list(pdag.nodes()))
+                index_to_node = list(pdag.nodes())
+                changed = True
+                while changed:
+                    changed = False
+                    for i in range(len(adj)):
+                        for j in range(len(adj)):
+                            if i == j:
+                                continue
+                            if adj[i, j] == 1 and adj[j, i] == 1:
+                    
+                                adj[i, j] = 1
+                                adj[j, i] = 0
+                                if nx.is_directed_acyclic_graph(nx.DiGraph(adj)):
+                                    changed = True
+                                    continue
+                                adj[i, j] = 0
+                                adj[j, i] = 1
+                                if nx.is_directed_acyclic_graph(nx.DiGraph(adj)):
+                                    changed = True
+                                    continue
+                                adj[i, j] = 1
+                                adj[j, i] = 1
+                g = nx.DiGraph(adj)
+                g = nx.relabel_nodes(g, dict(enumerate(index_to_node)))  
+                for u, v in g.edges():
+                    if not dag.has_edge(v, u):
                         try:
-                            dag.add_edge(X, Y)
+                            dag.add_edge(u, v)
                         except ValueError:
                             pass
-                break
+                break                      
+                # for X, Y in pdag.edges():
+                #     if not dag.has_edge(Y, X):
+                #         try:
+                #             dag.add_edge(X, Y)
+                #         except ValueError:
+                #             pass
+                # break
         return dag
 
     def to_graphviz(self) -> object:
