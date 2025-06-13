@@ -2036,6 +2036,7 @@ class PDAG(nx.DiGraph):
                 )
                 import networkx as nx
                 import numpy as np
+
                 adj = nx.to_numpy_array(pdag, nodelist=list(pdag.nodes()))
                 index_to_node = list(pdag.nodes())
                 changed = True
@@ -2046,7 +2047,7 @@ class PDAG(nx.DiGraph):
                             if i == j:
                                 continue
                             if adj[i, j] == 1 and adj[j, i] == 1:
-                    
+
                                 adj[i, j] = 1
                                 adj[j, i] = 0
                                 if nx.is_directed_acyclic_graph(nx.DiGraph(adj)):
@@ -2060,14 +2061,14 @@ class PDAG(nx.DiGraph):
                                 adj[i, j] = 1
                                 adj[j, i] = 1
                 g = nx.DiGraph(adj)
-                g = nx.relabel_nodes(g, dict(enumerate(index_to_node)))  
+                g = nx.relabel_nodes(g, dict(enumerate(index_to_node)))
                 for u, v in g.edges():
                     if not dag.has_edge(v, u):
                         try:
                             dag.add_edge(u, v)
                         except ValueError:
                             pass
-                break                      
+                break
                 # for X, Y in pdag.edges():
                 #     if not dag.has_edge(Y, X):
                 #         try:

@@ -1343,6 +1343,7 @@ class TestPDAG(unittest.TestCase):
                 ]
             ),
         )
+
     def test_fixed_to_dag_conversion(self):
         from pgmpy.base import PDAG
         from networkx import is_directed_acyclic_graph
@@ -1350,17 +1351,17 @@ class TestPDAG(unittest.TestCase):
         print("🧪 Running test_fixed_to_dag_conversion...")
 
         directed = [
-            ('1', '2'),
-            ('5', '2'),
-            ('5', '1'),
-            ('5', '4'),
-            ('4', '2'),
-            ('3', '4'),
-            ('3', '1'),
-            ('3', '2'),
-            ('0', '2')
+            ("1", "2"),
+            ("5", "2"),
+            ("5", "1"),
+            ("5", "4"),
+            ("4", "2"),
+            ("3", "4"),
+            ("3", "1"),
+            ("3", "2"),
+            ("0", "2"),
         ]
-        undirected = [('1', '4'), ('5', '0')]
+        undirected = [("1", "4"), ("5", "0")]
 
         pdag = PDAG(directed_ebunch=directed, undirected_ebunch=undirected)
         dag = pdag.to_dag()
@@ -1369,5 +1370,6 @@ class TestPDAG(unittest.TestCase):
         for u, v in directed:
             assert dag.has_edge(u, v), f"Edge ({u}, {v}) is missing in DAG!"
 
-        print("test_fixed_to_dag_conversion passed: DAG is valid and edges are correct.")
-
+        print(
+            "test_fixed_to_dag_conversion passed: DAG is valid and edges are correct."
+        )
