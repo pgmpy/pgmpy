@@ -1,0 +1,17 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 90%
+        threshold: 1%
+    patch:
+      default:
+        target: 90%
+        threshold: 2%
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: true
+codecov:
+  notify:
+    after_n_builds: 8
