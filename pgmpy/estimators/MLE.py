@@ -99,15 +99,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
+        >>> np.random.seed(42)
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
         >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
         >>> estimator.get_parameters()
-        [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
-        <TabularCPD representing P(B:2 | C:2, A:2) at 0x7f7b4dfd4da0>,
-        <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
-        <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
+        [<TabularCPD representing P(A:2) at 0x...>, ...]
         """
 
         if isinstance(self.model, JunctionTree):
@@ -147,24 +145,24 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = DiscreteBayesianNetwork([('A', 'C'), ('B', 'C')])
-        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A')
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd(node='A')
         >>> print(cpd_A)
-        ╒══════╤══════════╕
-        │ A(0) │ 0.666667 │
-        ├──────┼──────────┤
-        │ A(1) │ 0.333333 │
-        ╘══════╧══════════╛
+        +------+----------+
+        | A(0) | 0.666667 |
+        +------+----------+
+        | A(1) | 0.333333 |
+        +------+----------+
         >>> cpd_C = MaximumLikelihoodEstimator(model, data).estimate_cpd('C')
         >>> print(cpd_C)
-        ╒══════╤══════╤══════╤══════╤══════╕
-        │ A    │ A(0) │ A(0) │ A(1) │ A(1) │
-        ├──────┼──────┼──────┼──────┼──────┤
-        │ B    │ B(0) │ B(1) │ B(0) │ B(1) │
-        ├──────┼──────┼──────┼──────┼──────┤
-        │ C(0) │ 0.0  │ 0.0  │ 1.0  │ 0.5  │
-        ├──────┼──────┼──────┼──────┼──────┤
-        │ C(1) │ 1.0  │ 1.0  │ 0.0  │ 0.5  │
-        ╘══════╧══════╧══════╧══════╧══════╛
+        +------+------+------+------+------+
+        | A    | A(0) | A(0) | A(1) | A(1) |
+        +------+------+------+------+------+
+        | B    | B(0) | B(1) | B(0) | B(1) |
+        +------+------+------+------+------+
+        | C(0) | 0.0  | 0.0  | 1.0  | 0.5  |
+        +------+------+------+------+------+
+        | C(1) | 1.0  | 1.0  | 0.0  | 0.5  |
+        +------+------+------+------+------+
         """
 
         state_counts = self.state_counts(node, weighted=weighted)
@@ -222,34 +220,38 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import JunctionTree
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = JunctionTree()
-        >>> model.add_edges_from([(("A", "C"), ("B", "C"))])
+        >>> model.add_edges_from(ebunch=[(("A", "C"), ("B", "C"))])
+        >>> factor1 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5])
+        >>> factor2 = DiscreteFactor(variables=["B", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5])
+        >>> model.add_factors(factor1, factor2)
         >>> potentials = MaximumLikelihoodEstimator(model, data).estimate_potentials()
         >>> print(potentials[("A", "C")])
-        +------+------+------------+
-        | A    | C    |   phi(A,C) |
-        +======+======+============+
-        | A(0) | C(0) |     0.0000 |
-        +------+------+------------+
-        | A(0) | C(1) |     0.6667 |
-        +------+------+------------+
-        | A(1) | C(0) |     0.3333 |
-        +------+------+------------+
-        | A(1) | C(1) |     0.0000 |
-        +------+------+------------+
+        ╒══════╤══════╤════════════╕
+        │ A    │ C    │   phi(A,C) │
+        ╞══════╪══════╪════════════╡
+        │ A(0) │ C(0) │     0.0000 │
+        ├──────┼──────┼────────────┤
+        │ A(0) │ C(1) │     0.6667 │
+        ├──────┼──────┼────────────┤
+        │ A(1) │ C(0) │     0.3333 │
+        ├──────┼──────┼────────────┤
+        │ A(1) │ C(1) │     0.0000 │
+        ╘══════╧══════╧════════════╛
         >>> print(potentials[("B", "C")])
-        +------+------+------------+
-        | B    | C    |   phi(B,C) |
-        +======+======+============+
-        | B(0) | C(0) |     1.0000 |
-        +------+------+------------+
-        | B(0) | C(1) |     0.5000 |
-        +------+------+------------+
-        | B(1) | C(0) |     0.0000 |
-        +------+------+------------+
-        | B(1) | C(1) |     0.5000 |
-        +------+------+------------+
+        ╒══════╤══════╤════════════╕
+        │ B    │ C    │   phi(B,C) │
+        ╞══════╪══════╪════════════╡
+        │ B(0) │ C(0) │     1.0000 │
+        ├──────┼──────┼────────────┤
+        │ B(0) │ C(1) │     0.5000 │
+        ├──────┼──────┼────────────┤
+        │ B(1) │ C(0) │     0.0000 │
+        ├──────┼──────┼────────────┤
+        │ B(1) │ C(1) │     0.5000 │
+        ╘══════╧══════╧════════════╛
         """
         if not isinstance(self.model, JunctionTree):
             raise NotImplementedError(

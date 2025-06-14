@@ -138,19 +138,22 @@ class GES(StructureEstimator):
 
         Examples
         --------
+        >>> import numpy as np
         >>> # Simulate some sample data from a known model to learn the model structure from
         >>> from pgmpy.utils import get_example_model
+        >>> np.random.seed(42)
         >>> model = get_example_model('alarm')
+        >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 
         >>> # Learn the model structure using GES algorithm from `df`
         >>> from pgmpy.estimators import GES
-        >>> est = GES(data)
+        >>> est = GES(df)
         >>> dag = est.estimate(scoring_method='bic-d')
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())
-        45
+        48
         """
 
         # Step 0: Initial checks and setup for arguments
