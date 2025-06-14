@@ -390,14 +390,18 @@ class Mplp(Inference):
                     missing_pairs.append(fz)
 
             if len(valid_intersects) < len(triplet_intersections):
-                print(f"Skipping triplet {triplet} due to missing objective keys: {missing_pairs}")
+                print(
+                    f"Skipping triplet {triplet} due to missing objective keys: {missing_pairs}"
+                )
                 continue
 
             # Independent maximization
-            ind_max = sum([
-                np.amax(self.objective[intersect].values)
-                for intersect in valid_intersects
-            ])
+            ind_max = sum(
+                [
+                    np.amax(self.objective[intersect].values)
+                    for intersect in valid_intersects
+                ]
+            )
 
             # Joint maximization
             joint_max = self.objective[valid_intersects[0]]

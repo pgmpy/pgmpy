@@ -1,5 +1,6 @@
 from pgmpy.models import DiscreteMarkovNetwork
 
+
 class MarkovNetwork(DiscreteMarkovNetwork):
     def __init__(self, *args, **kwargs):
         print(
