@@ -38,7 +38,7 @@ class ExhaustiveSearch(StructureEstimator):
         give wrong results in case of custom scoring methods.
     """
 
-    def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
+    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
         _, self.scoring_method = get_scoring_method(
             scoring_method, self.data, use_cache
@@ -65,12 +65,13 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> from pgmpy.estimators import ExhaustiveSearch
-        >>> s = ExhaustiveSearch(pd.DataFrame(data={'Temperature': [23, 19],
+        >>> data = pd.DataFrame(data={'Temperature': [23, 19],
         ...                                         'Weather': ['sunny', 'cloudy'],
-        ...                                         'Humidity': [65, 75]}))
-        >>> list(s.all_dags())
+        ...                                         'Humidity': [65, 75]})
+        >>> est = ExhaustiveSearch(data)
+        >>> list(est.all_dags())
         [<networkx.classes.digraph.DiGraph object at 0x...>, <networkx.classes.digraph.DiGraph object at 0x...>, ...]
-        >>> [list(dag.edges()) for dag in s.all_dags()]
+        >>> [list(dag.edges()) for dag in est.all_dags()]
         [[], [('Humidity', 'Temperature')], [('Humidity', 'Weather')], [('Temperature', 'Weather')], ...
 
         """

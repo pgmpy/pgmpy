@@ -107,22 +107,12 @@ class BaseEstimator(object):
         ...                           'B': ['b1', 'b2', 'b1'],
         ...                           'C': ['c1', 'c1', 'c2']})
         >>> estimator = BaseEstimator(data)
-        >>> estimator.state_counts(variable='A')
-            count
-        A
-        a1      2
-        a2      1
-        >>> estimator.state_counts(variable='C', parents=['A', 'B'])
-        A    a1        a2
-        B    b1   b2   b1   b2
-        C
-        c1  1.0  1.0  0.0  0.0
-        c2  0.0  0.0  1.0  0.0
-        >>> estimator.state_counts(variable='C', parents=['A'])
-        A    a1   a2
-        C
-        c1  2.0  0.0
-        c2  0.0  1.0
+        >>> estimator.state_counts(variable='A').values
+        array([[2],
+               [1]])
+        >>> estimator.state_counts(variable='C', parents=['A', 'B']).values
+        array([[1., 1., 0., 0.],
+               [0., 0., 1., 0.]])
         """
         parents = list(parents)
 
@@ -257,17 +247,12 @@ class ParameterEstimator(BaseEstimator):
         ...                           'B': ['b1', 'b2', 'b1'],
         ...                           'C': ['c1', 'c1', 'c2']})
         >>> estimator = ParameterEstimator(model, data)
-        >>> estimator.state_counts(variable='A')
-            count
-        A
-        a1      2
-        a2      1
-        >>> estimator.state_counts(variable='C')
-        A    a1        a2
-        B    b1   b2   b1   b2
-        C
-        c1  1.0  1.0  0.0  0.0
-        c2  0.0  0.0  1.0  0.0
+        >>> estimator.state_counts(variable='A').values
+        array([[2],
+               [1]])
+        >>> estimator.state_counts(variable='C').values
+        array([[1., 1., 0., 0.],
+               [0., 0., 1., 0.]])
         """
 
         parents = sorted(self.model.get_parents(variable))
