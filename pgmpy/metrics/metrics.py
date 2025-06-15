@@ -1,5 +1,7 @@
+import inspect
 import math
 from itertools import combinations
+from typing import Any, Callable, Union
 
 import networkx as nx
 import numpy as np
@@ -13,6 +15,74 @@ from pgmpy.base import DAG
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils import get_dataset_type
+
+
+def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
+
+    metrics_and_params = {
+        "correlation": {
+            "func": correlation_score,
+            "req_params": ["test", "significance_level", "score"],
+        },
+        "log-likelihood": {"func": log_likelihood_score, "req_params": []},
+        "aic": {"func": structure_score, "req_params": ["scoring-method"]},
+        "bic": {"func": structure_score, "req_params": ["scoring-method"]},
+        "implied-cis": {
+            "func": implied_cis,
+            "req_params": ["ci_test", "show_progress"],
+        },
+        "fisher-c": {
+            "func": fisher_c,
+            "req_params": ["ci_test", "calculate_rmsea", "show_progress"],
+        },
+        "permutation-test": {
+            "func": permutation_test,
+            "req_params": [
+                "ci_test",
+                "n_permutations",
+                "significance_level",
+                "show_progress",
+            ],
+        },
+    }
+    if not isinstance(data, pd.DataFrame) or data is None:
+        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+
+    if isinstance(metric, str):
+        metric = metric.lower()
+        if metric not in metrics_and_params:
+            raise ValueError(
+                f"Unknown metric method. Available metrics are: {list(metrics_and_params.keys())}"
+            )
+
+        metric_info = metrics_and_params[metric]
+        metric_func = metric_info["func"]
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items() if k in metric_info["req_params"]
+        }
+
+        if metric in ["aic", "bic"]:
+            var_type = get_dataset_type(data)
+            if var_type == "continuous":
+                suffix = "g"
+            elif var_type == "discrete":
+                suffix = "d"
+            else:
+                suffix = "cg"
+            filtered_kwargs["scoring-method"] = f"{metric}-" + suffix
+        return metric_func(model=model, data=data, **filtered_kwargs)
+
+    elif callable(metric):
+        sig = inspect.signature(metric)
+        valid_params = sig.parameters.keys()
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+        return metric(model=model, data=data, **filtered_kwargs)
+
+    else:
+        raise ValueError(
+            f"Metric should be one of {list(metrics_and_params.keys())} or of type str or Callable"
+        )
 
 
 def correlation_score(
@@ -160,7 +230,7 @@ def log_likelihood_score(model, data):
     -103818.57516969478
     """
     # Step 1: Check the inputs
-    if not isinstance(model, DiscreteBayesianNetwork):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
@@ -447,7 +517,7 @@ def permutation_test(
         non_descendants = all_nodes - descendants - {node}
         return list(non_descendants)
 
-    def count_lmc_violations(model, data, ci_test_func, significance_level):
+    def count_lmc_violations(model, ci_test_func, significance_level):
 
         violations = 0
         nodes = list(model.nodes())

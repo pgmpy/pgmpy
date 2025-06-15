@@ -2,7 +2,7 @@
 
 import itertools
 from os import PathLike
-from typing import Hashable, Iterable, Optional, Sequence
+from typing import Callable, Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
@@ -1583,122 +1583,68 @@ class DAG(nx.DiGraph):
 
         return strengths
 
-    def validate(self, data, metrics=None, **kwargs):
+    def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
 
         from sklearn.metrics import f1_score
 
         from pgmpy.estimators.CITests import chi_square
-        from pgmpy.metrics.metrics import (
-            correlation_score,
-            fisher_c,
-            implied_cis,
-            structure_score,
-        )
+        from pgmpy.metrics.metrics import get_metrics
 
         # all validation metrics
-        all_metrics = [
+        all_metrics = (
             "correlation",
+            "log-likelihood",
             "aic",
             "bic",
-            "fisher_c",
-            "implied_cis",
-        ]
-
+            "fisher-c",
+            "implied-cis",
+            "permutation-test",
+        )
         # a normal validate call would provide all metric results
         if metrics is None:
             metrics = all_metrics
-
         # Dictionary for holding default parameters
         params = {
-            "correlation_test": "chi_square",
-            "correlation_significance": 0.05,
-            "correlation_score_func": f1_score,
-            "ci_test_fischer": chi_square,
-            "ci_test_cis": chi_square,
-            "ci_tests_significance": 0.5,
+            "test": "chi_square",
+            "significance_level": 0.05,
+            "score": f1_score,
+            "ci_test": chi_square,
+            "n_permutations": 1000,
             "calculate_rmsea": True,
             "show_progress": True,
         }
-
         # For custom parameter updation
         params.update(kwargs)
 
         # to store the results of different tests
-        results = {}
+        test_results = {}
 
-        # correlation score
-        if "correlation" in metrics:
-            results["Correlation Score"] = correlation_score(
-                model=self,
-                data=data,
-                test=params["correlation_test"],
-                significance_level=params["correlation_significance"],
-                score=params["correlation_score_func"],
+        for metric_name in metrics:
+            test_results[metric_name] = get_metrics(
+                metric=metric_name, model=self, data=data, **params
             )
 
-        # AIC-score with fail checks
-        if "aic" in metrics:
-            try:
-                results["AIC"] = structure_score(self, data, scoring_method="aic-d")
-            except ValueError:
-                try:
-                    results["AIC"] = structure_score(self, data, scoring_method="aic-g")
-                except ValueError as e:
-                    results["AIC"] = f"Error: {str(e)}"
-
-        # BIC-score with fail-checks
-        if "bic" in metrics:
-            try:
-                results["BIC"] = structure_score(self, data, scoring_method="bic-d")
-            except ValueError:
-                try:
-                    results["BIC"] = structure_score(self, data, scoring_method="bic-g")
-                except ValueError as e:
-                    results["BIC"] = f"Error: {str(e)}"
-
-        # Fisher_C and RMSEA test values with fail checks
-        if "fisher_c" in metrics:
-            try:
-                fisher_c_val = fisher_c(
-                    model=self,
-                    data=data,
-                    ci_test=params["ci_test_fischer"],
-                    calculate_rmsea=params["calculate_rmsea"],
-                    show_progress=params["show_progress"],
-                )
-                if isinstance(fisher_c_val, tuple):
-                    results["Fisher-C p-value"], results["Fisher-C RMSEA"] = (
-                        fisher_c_val
-                    )
+        metric_vals = {}
+        for t, r in test_results:
+            if t in ["correlation", "log-likelihood", "aic", "bic"]:
+                metric_vals[t + " score"] = r
+            if t == "fisher-c":
+                if isinstance(r, tuple):
+                    (metric_vals["fisher-c p-value"], metric_vals["rmsea"]) = r
                 else:
-                    results["Fisher-C p-value"] = fisher_c_val
-
-            except ValueError as e:
-                results["Fisher-C p-value"] = f"Error: {str(e)}"
-                if params["calculate_rmsea"]:
-                    results["Fisher-C RMSEA"] = f"Error: {str(e)}"
-
-        # Implied CIs tests
-        if "implied_cis" in metrics:
-            try:
-                df_cis = implied_cis(
-                    model=self,
-                    data=data,
-                    ci_test=params["ci_test_cis"],
-                    show_progress=params["show_progress"],
+                    metric_vals["fisher-c p-value"] = r
+            if t == "implied-cis":
+                metric_vals["failing-cis / total"] = (
+                    f"{(r["p-value"] < params["significance_level"]).sum()} / {len(r)}"
                 )
-                results["failing_cis"] = (
-                    df_cis["p-value"] < params["ci_tests_significance"]
-                ).sum()
-                results["passing_cis"] = (
-                    df_cis["p-value"] < params["ci_tests_significance"]
-                ).sum()
-                results["total_cis"] = len(df_cis)
-            except ValueError as e:
-                results["cis_tests"] = f"Error: {str(e)}"
+            if t == "permutation-test":
+                (
+                    metric_vals["p_value_falsifiable"],
+                    metric_vals["p_value_falsified"],
+                ) = r
 
-        df_scores = pd.DataFrame(results)
-        return df_scores
+        df_result = pd.DataFrame(metric_vals)
+        return df_result
 
 
 class PDAG(nx.DiGraph):
