@@ -1245,7 +1245,7 @@ class BeliefPropagation(Inference):
 
         final_distribution = self._query(
             variables=variables,
-            operation="marginalize",
+            operation="maximize",
             evidence=evidence,
             joint=True,
             show_progress=show_progress,
@@ -1253,17 +1253,7 @@ class BeliefPropagation(Inference):
 
         self.__init__(orig_model)
 
-        # To handle the case when no argument is passed then
-        # _variable_elimination returns a dict.
-        argmax = compat_fns.argmax(final_distribution.values)
-        assignment = final_distribution.assignment([argmax])[0]
-
-        map_query_results = {}
-        for var_assignment in assignment:
-            var, value = var_assignment
-            map_query_results[var] = value
-
-        return map_query_results
+        return final_distribution
 
 
 class BeliefPropagationWithMessagePassing(Inference):
