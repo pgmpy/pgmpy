@@ -86,10 +86,13 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_nodes_from([phi1])
         >>> G.add_edge('a', phi1)
         """
-        if u != v:
-            super(FactorGraph, self).add_edge(u, v, **kwargs)
-        else:
+        if u == v:
             raise ValueError("Self loops are not allowed")
+
+        if "weight" not in kwargs:
+            kwargs["weight"] = 0  # Fix for compatibility with NetworkX draw()
+
+        super(FactorGraph, self).add_edge(u, v, **kwargs)
 
     def add_factors(self, *factors, replace=False):
         """
