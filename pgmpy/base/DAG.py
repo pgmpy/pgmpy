@@ -1583,6 +1583,79 @@ class DAG(nx.DiGraph):
 
         return strengths
 
+    def _get_non_descendants(self, node):
+        descendants = set()
+        queue = list(self.succesors(node))
+        visited = set()
+
+        while queue:
+            current = queue.pop(0)
+            if current not in visited:
+                visited.add(current)
+                descendants.add(current)
+                queue.extend(self.successors(current))
+
+        all_nodes = set(self.nodes())
+        non_descendants = all_nodes - descendants - {node}
+        return list(non_descendants)
+
+    def count_lmc_violations(self, ci_test_func: Callable, significance_level=0.05):
+        violations = 0
+        nodes = list(self.nodes())
+        for node in nodes:
+            parents = list(self.get_parents(node))
+            non_descendants = self._get_non_descendants(node)
+            test_nodes = [
+                nd for nd in non_descendants if nd not in parents and nd != node
+            ]
+
+            for test_node in test_nodes:
+                try:
+                    _, p_value = ci_test_func(
+                        node, test_node, parents, significance_level
+                    )
+                    if p_value < significance_level:
+                        violations += 1
+                except Exception as e:
+                    logger.debug(
+                        f"CI test failed for {node} ⊥ {test_node} | {parents}: {e}"
+                    )
+                    continue
+        return violations
+
+    def permuted_graph(self, perm_mapping):
+        new_edges = []
+        for edge in self.edges():
+            new_source = perm_mapping[edge[0]]
+            new_target = perm_mapping[edge[1]]
+            new_edges.append((new_source, new_target))
+
+        permuted_model = DAG()
+        permuted_model.add_edges_from(new_edges)
+        return permuted_model
+
+    def d_separated_triples(
+        self, nodes: list, ci_test_func: Callable, data, significance_level=0.05
+    ):
+        dsep_triples = set()
+        for node in nodes:
+            non_descendants = self._get_non_descendants(node)
+            for non_descendant in non_descendants:
+                if non_descendant == node or non_descendant in self.get_parents(node):
+                    continue
+                conditioning_set = frozenset(self.get_parents(node))
+                _, p_value = ci_test_func(
+                    data,
+                    node,
+                    non_descendant,
+                    list(conditioning_set),
+                    significance_level,
+                )
+                if p_value >= significance_level:
+                    dsep_triples.add((node, non_descendant, conditioning_set))
+
+        return dsep_triples
+
     def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
 
         from sklearn.metrics import f1_score
