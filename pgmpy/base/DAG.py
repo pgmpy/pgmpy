@@ -79,14 +79,14 @@ class DAG(nx.DiGraph):
         lavaan_str=None,
         dagitty_str=None,
     ):
-        if lavaan_str:
-            ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
-            if err_corr:
-                logger.warning(
-                    f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
-                )
-        elif dagitty_str:
-            ebunch, latents = parse_dagitty(dagitty_str)
+        # if lavaan_str:
+        #     ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
+        #     if err_corr:
+        #         logger.warning(
+        #             f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
+        #         )
+        # elif dagitty_str:
+        #     ebunch, latents = parse_dagitty(dagitty_str)
 
         super(DAG, self).__init__(ebunch)
         self.latents = set(latents)
@@ -208,7 +208,7 @@ class DAG(nx.DiGraph):
         """
         Add multiple nodes to the Graph.
 
-        **The behviour of adding weights is different than in networkx.
+        **The behaviour of adding weights is different than in networkx.
 
         Parameters
         ----------
@@ -966,6 +966,7 @@ class DAG(nx.DiGraph):
         """
         return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 
+    # This needs to be understood
     def to_daft(
         self,
         node_pos="circular",
@@ -1155,7 +1156,8 @@ class DAG(nx.DiGraph):
                 gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
             )
         return dag
-
+    
+    
     def to_graphviz(self):
         """
         Retuns a pygraphviz object for the DAG. pygraphviz is useful for
