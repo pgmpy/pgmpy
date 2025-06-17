@@ -2002,28 +2002,28 @@ class PDAG(nx.DiGraph):
             #                (2) the set of undirected neighbors is either empty or
             #                    undirected neighbors + parents of X are a clique
             found = False
-            for X in pdag.nodes():
+            for X in sorted(pdag.nodes()):
                 directed_outgoing_edges = set(pdag.successors(X)) - set(
                     pdag.predecessors(X)
                 )
                 undirected_neighbors = set(pdag.successors(X)) & set(
                     pdag.predecessors(X)
                 )
-                neighbors_are_clique = all(
+                neighbors_are_adjacent = all(
                     (
-                        pdag.has_edge(Y, Z)
-                        for Z in pdag.predecessors(X)
+                        pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
+                        for Z in pdag.all_neighbors(X)
                         for Y in undirected_neighbors
                         if not Y == Z
                     )
                 )
 
                 if not directed_outgoing_edges and (
-                    not undirected_neighbors or neighbors_are_clique
+                    not undirected_neighbors or neighbors_are_adjacent
                 ):
                     found = True
                     # add all edges of X as outgoing edges to dag
-                    for Y in pdag.predecessors(X):
+                    for Y in pdag.undirected_neighbors(X):
                         dag.add_edge(Y, X)
                     pdag.remove_node(X)
                     break
