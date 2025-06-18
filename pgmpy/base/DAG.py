@@ -2000,15 +2000,10 @@ class PDAG(nx.DiGraph):
         while pdag.number_of_nodes() > 0:
             # find node with (1) no directed outgoing edges and
             #                (2) the set of undirected neighbors is either empty or
-            #                    undirected neighbors + parents of X are a clique
+            #                    undirected neighbors + parents of X are adjacent
             found = False
             for X in sorted(pdag.nodes()):
-                directed_outgoing_edges = set(pdag.successors(X)) - set(
-                    pdag.predecessors(X)
-                )
-                undirected_neighbors = set(pdag.successors(X)) & set(
-                    pdag.predecessors(X)
-                )
+                undirected_neighbors = pdag.undirected_neighbors(X)
                 neighbors_are_adjacent = all(
                     (
                         pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
@@ -2018,7 +2013,7 @@ class PDAG(nx.DiGraph):
                     )
                 )
 
-                if not directed_outgoing_edges and (
+                if not pdag.directed_children(X) and (
                     not undirected_neighbors or neighbors_are_adjacent
                 ):
                     found = True
