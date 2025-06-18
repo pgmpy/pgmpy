@@ -1282,7 +1282,8 @@ class TestDoQuery(unittest.TestCase):
                 variables=["R"], evidence=evidence, do=counterfactual_intervention
             )
         self.assertIn(
-            "Invalid causal query: There is a direct edge from the query variable 'R' to the intervention variable 'S'.",
+            "Invalid causal query: There is a direct edge from the query"
+            " variable 'R' to the intervention variable 'S'.",
             str(cm.exception),
         )
 
