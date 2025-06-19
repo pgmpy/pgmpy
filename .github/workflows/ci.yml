@@ -1,5 +1,9 @@
 name: Build and Run Test Suite
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 on: [push, pull_request]
 
 jobs:
