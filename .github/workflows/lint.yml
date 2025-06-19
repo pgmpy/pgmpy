@@ -35,6 +35,9 @@ jobs:
           blackdoc --diff pgmpy
           blackdoc --check pgmpy
 
+      - name: Fetch dev branch
+        run: git fetch origin dev:dev
+
       - name: Get modified Python files
         id: files
         run: |
