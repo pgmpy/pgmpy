@@ -94,11 +94,13 @@ class BayesianEstimator(ParameterEstimator):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
         >>> np.random.seed(42)
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...     columns=["A", "B", "C", "D"],
+        ... )
+        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = BayesianEstimator(model, values)
-        >>> estimator.get_parameters(prior_type='BDeu', equivalent_sample_size=5)
+        >>> estimator.get_parameters(prior_type="BDeu", equivalent_sample_size=5)
         [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
 
@@ -176,12 +178,14 @@ class BayesianEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
-        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([('A', 'C'), ('B', 'C')])
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
         >>> estimator = BayesianEstimator(model, data)
-        >>> cpd_C = estimator.estimate_cpd(node='C', prior_type="dirichlet",
-        ...                                pseudo_counts=[[1, 1, 1, 1],
-        ...                                               [2, 2, 2, 2]])
+        >>> cpd_C = estimator.estimate_cpd(
+        ...     node="C",
+        ...     prior_type="dirichlet",
+        ...     pseudo_counts=[[1, 1, 1, 1], [2, 2, 2, 2]],
+        ... )
         >>> print(cpd_C)
         +------+------+------+------+--------------------+
         | A    | A(0) | A(0) | A(1) | A(1)               |

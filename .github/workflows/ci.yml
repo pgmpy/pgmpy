@@ -37,13 +37,19 @@ jobs:
         run: |
           pip install pip -U
           pip install black -U
+          pip install blackdoc -U
           pip install pytest-split
           pip install .[all,tests] --no-cache-dir
 
-      - name: Check formatting
+      - name: Check code formatting
         run: |
           black --diff .
           black --check .
+
+      - name: Check doctest formatting
+        run: |
+          blackdoc --diff .
+          blackdoc --check .
 
       - name: Print package versions
         run: |

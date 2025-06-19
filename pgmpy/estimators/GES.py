@@ -21,8 +21,8 @@ from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
 )
-from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.estimators.ScoreCache import ScoreCache
+from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
 
 
@@ -142,14 +142,14 @@ class GES(StructureEstimator):
         >>> # Simulate some sample data from a known model to learn the model structure from
         >>> from pgmpy.utils import get_example_model
         >>> np.random.seed(42)
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 
         >>> # Learn the model structure using GES algorithm from `df`
         >>> from pgmpy.estimators import GES
         >>> est = GES(df)
-        >>> dag = est.estimate(scoring_method='bic-d')
+        >>> dag = est.estimate(scoring_method="bic-d")
         >>> len(dag.nodes())
         37
         >>> len(dag.edges())

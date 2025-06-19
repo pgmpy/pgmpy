@@ -141,15 +141,18 @@ class ExpertInLoop(StructureEstimator):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model, llm_pairwise_orient, manual_pairwise_orient
+        >>> from pgmpy.utils import (
+        ...     get_example_model,
+        ...     llm_pairwise_orient,
+        ...     manual_pairwise_orient,
+        ... )
         >>> from pgmpy.estimators import ExpertInLoop
-        >>> model = get_example_model('cancer')
+        >>> model = get_example_model("cancer")
         >>> df = model.simulate(int(1e3))
 
         >>> # Using manual orientation
         >>> dag = ExpertInLoop(df).estimate(
-        ...     effect_size_threshold=0.0001,
-        ...     orientation_fn=manual_pairwise_orient
+        ...     effect_size_threshold=0.0001, orientation_fn=manual_pairwise_orient
         ... )
 
         >>> # Using LLM-based orientation
@@ -158,13 +161,13 @@ class ExpertInLoop(StructureEstimator):
         ...     "Cancer": "A binary variable representing whether a person has cancer.",
         ...     "Xray": "A binary variable representing the result of an X-ray test.",
         ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not.",
-        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath."
+        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath.",
         ... }
         >>> dag = ExpertInLoop(df).estimate(
         ...     effect_size_threshold=0.0001,
         ...     orientation_fn=llm_pairwise_orient,
         ...     variable_descriptions=variable_descriptions,
-        ...     llm_model="gemini/gemini-1.5-flash"
+        ...     llm_model="gemini/gemini-1.5-flash",
         ... )
         >>> dag.edges()
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
@@ -186,9 +189,9 @@ class ExpertInLoop(StructureEstimator):
         ...             return (var1, var2)
         ...     # Default: use alphabetical ordering
         ...     return (var1, var2) if var1 < var2 else (var2, var1)
+        ...
         >>> dag = ExpertInLoop(df).estimate(
-        ...     effect_size_threshold=0.0001,
-        ...     orientation_fn=my_orientation_func
+        ...     effect_size_threshold=0.0001, orientation_fn=my_orientation_func
         ... )
         >>> dag.edges()
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])

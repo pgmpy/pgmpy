@@ -45,9 +45,13 @@ class ExpectationMaximization(ParameterEstimator):
     >>> import pandas as pd
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.estimators import ExpectationMaximization
-    >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-    ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+    ...     columns=["A", "B", "C", "D", "E"],
+    ... )
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+    ... )
     >>> estimator = ExpectationMaximization(model, data)
     """
 
@@ -229,11 +233,15 @@ class ExpectationMaximization(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
-        >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
-        ...                       columns=['A', 'C', 'D'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 3)),
+        ...     columns=["A", "C", "D"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
+        ... )
         >>> estimator = EM(model, data)
-        >>> params = estimator.get_parameters(latent_card={'B': 3})
+        >>> params = estimator.get_parameters(latent_card={"B": 3})
         >>> # Sorting the CPDs by variable name to ensure consistent order for doctest comparison
         >>> sorted(params, key=lambda cpd: cpd.variable)
         [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]

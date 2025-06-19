@@ -65,9 +65,13 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> from pgmpy.estimators import ExhaustiveSearch
-        >>> data = pd.DataFrame(data={'Temperature': [23, 19],
-        ...                                         'Weather': ['sunny', 'cloudy'],
-        ...                                         'Humidity': [65, 75]})
+        >>> data = pd.DataFrame(
+        ...     data={
+        ...         "Temperature": [23, 19],
+        ...         "Weather": ["sunny", "cloudy"],
+        ...         "Humidity": [65, 75],
+        ...     }
+        ... )
         >>> est = ExhaustiveSearch(data)
         >>> list(est.all_dags())
         [<networkx.classes.digraph.DiGraph object at 0x...>, <networkx.classes.digraph.DiGraph object at 0x...>, ...]
@@ -113,11 +117,14 @@ class ExhaustiveSearch(StructureEstimator):
         >>> # Setting the random seed for reproducibility
         >>> np.random.seed(42)
         >>> # create random data sample with 3 variables, where B and C are identical:
-        >>> data = pd.DataFrame(np.random.randint(low=0, high=5, size=(5000, 2)), columns=list('AB'))
-        >>> data['C'] = data['B']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=5, size=(5000, 2)), columns=list("AB")
+        ... )
+        >>> data["C"] = data["B"]
         >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> for score, model in searcher.all_scores():
-        ...   print("{0}\t{1}".format(score, model.edges()))
+        ...     print("{0}\t{1}".format(score, model.edges()))
+        ...
         -24240.048463058432        [('A', 'B'), ('A', 'C')]
         -24240.03793877268        [('A', 'B'), ('C', 'A')]
         -24240.03793877268        [('A', 'C'), ('B', 'A')]
@@ -168,8 +175,10 @@ class ExhaustiveSearch(StructureEstimator):
         >>> import numpy as np
         >>> from pgmpy.estimators import ExhaustiveSearch, K2
         >>> # create random data sample with 3 variables, where B and C are identical:
-        >>> data = pd.DataFrame(np.random.randint(low=0, high=5, size=(5000, 2)), columns=list('AB'))
-        >>> data['C'] = data['B']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=5, size=(5000, 2)), columns=list("AB")
+        ... )
+        >>> data["C"] = data["B"]
         >>> est = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> best_model = est.estimate()
         >>> best_model

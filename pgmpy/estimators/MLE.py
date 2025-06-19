@@ -36,9 +36,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
     >>> import pandas as pd
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.estimators import MaximumLikelihoodEstimator
-    >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-    ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+    ...     columns=["A", "B", "C", "D", "E"],
+    ... )
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+    ... )
     >>> estimator = MaximumLikelihoodEstimator(model, data)
     """
 
@@ -100,9 +104,11 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> np.random.seed(42)
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...     columns=["A", "B", "C", "D"],
+        ... )
+        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
         >>> estimator.get_parameters()
         [<TabularCPD representing P(A:2) at 0x...>, ...]
@@ -143,16 +149,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
-        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([('A', 'C'), ('B', 'C')])
-        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd(node='A')
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd(node="A")
         >>> print(cpd_A)
         +------+----------+
         | A(0) | 0.666667 |
         +------+----------+
         | A(1) | 0.333333 |
         +------+----------+
-        >>> cpd_C = MaximumLikelihoodEstimator(model, data).estimate_cpd('C')
+        >>> cpd_C = MaximumLikelihoodEstimator(model, data).estimate_cpd("C")
         >>> print(cpd_C)
         +------+------+------+------+------+
         | A    | A(0) | A(0) | A(1) | A(1) |
@@ -221,11 +227,15 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> from pgmpy.models import JunctionTree
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         >>> model = JunctionTree()
         >>> model.add_edges_from(ebunch=[(("A", "C"), ("B", "C"))])
-        >>> factor1 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5])
-        >>> factor2 = DiscreteFactor(variables=["B", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5])
+        >>> factor1 = DiscreteFactor(
+        ...     variables=["A", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5]
+        ... )
+        >>> factor2 = DiscreteFactor(
+        ...     variables=["B", "C"], cardinality=[2, 2], values=[0.5, 0.5, 0.5, 0.5]
+        ... )
         >>> model.add_factors(factor1, factor2)
         >>> potentials = MaximumLikelihoodEstimator(model, data).estimate_potentials()
         >>> print(potentials[("A", "C")])

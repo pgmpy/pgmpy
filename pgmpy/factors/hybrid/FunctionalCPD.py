@@ -32,10 +32,12 @@ class FunctionalCPD(BaseFactor):
     >>> from pgmpy.factors.hybrid import FunctionalCPD
     >>> import pyro.distributions as dist
     >>> cpd = FunctionalCPD(
-    ...    variable="x3",
-    ...    fn=lambda parent_sample: dist.Normal(
-    ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
-    ...    parents=["x1", "x2"])
+    ...     variable="x3",
+    ...     fn=lambda parent_sample: dist.Normal(
+    ...         0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1
+    ...     ),
+    ...     parents=["x1", "x2"],
+    ... )
     >>> cpd.variable
     'x3'
     >>> cpd.parents
@@ -76,12 +78,14 @@ class FunctionalCPD(BaseFactor):
         >>> import pyro.distributions as dist
         >>> seed_generator = torch.manual_seed(42)
         >>> cpd = FunctionalCPD(
-        ...    variable="x3",
-        ...    fn=lambda parent_sample: dist.Normal(
-        ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
-        ...    parents=["x1", "x2"])
+        ...     variable="x3",
+        ...     fn=lambda parent_sample: dist.Normal(
+        ...         1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+        ...     ),
+        ...     parents=["x1", "x2"],
+        ... )
 
-        >>> parent_samples = pd.DataFrame({'x1' : [5, 10], 'x2' : [1, -1]})
+        >>> parent_samples = pd.DataFrame({"x1": [5, 10], "x2": [1, -1]})
         >>> cpd.sample(2, parent_samples)
         array([2.63669038, 2.8288095 ])
 
