@@ -90,7 +90,8 @@ class DiscreteBayesianNetwork(DAG):
     >>> len(G)  # number of nodes in graph
     3
     """
-    def plot_edge_strengths(self, data, ci_test='chi_square'):
+
+    def plot_edge_strengths(self, data, ci_test="chi_square"):
         """
         Plot edge strengths based on conditional independence test p-values.
         Strength = 1 - p_value; higher is stronger link.
@@ -102,7 +103,7 @@ class DiscreteBayesianNetwork(DAG):
         ci_test : {'chi_square'}, default='chi_square'
             CI test to apply; currently only `chi_square` supported.
         """
-        assert ci_test == 'chi_square', "Only 'chi_square' is supported currently."
+        assert ci_test == "chi_square", "Only 'chi_square' is supported currently."
 
         edge_strengths = {}
         for u, v in self.edges():
@@ -111,12 +112,12 @@ class DiscreteBayesianNetwork(DAG):
             edge_strengths[(u, v)] = max(0.0, 1.0 - p_value)
 
         pos = nx.spring_layout(self)
-        nx.draw(self, pos, with_labels=True, node_color='lightblue', edge_color='grey')
+        nx.draw(self, pos, with_labels=True, node_color="lightblue", edge_color="grey")
         labels = {edge: f"{strength:.2f}" for edge, strength in edge_strengths.items()}
-        nx.draw_networkx_edge_labels(self, pos, edge_labels=labels, font_color='red')
+        nx.draw_networkx_edge_labels(self, pos, edge_labels=labels, font_color="red")
         plt.title("Edge Strengths (1 - p-value)")
         plt.show()
-        
+
     def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
         super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,
