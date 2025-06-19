@@ -100,27 +100,33 @@ class TreeSearch(StructureEstimator):
         >>> import networkx as nx
         >>> import matplotlib.pyplot as plt
         >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> est = TreeSearch(values, root_node='B')
-        >>> model = est.estimate(estimator_type='chow-liu')
-        >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy',
-        ...                  alpha=0.3)
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> est = TreeSearch(values, root_node="B")
+        >>> model = est.estimate(estimator_type="chow-liu")
+        >>> nx.draw_circular(
+        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
+        ... )
         >>> plt.show()
         >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type='chow-liu')
-        >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy',
-        ...                  alpha=0.3)
+        >>> model = est.estimate(estimator_type="chow-liu")
+        >>> nx.draw_circular(
+        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
+        ... )
         >>> plt.show()
-        >>> est = TreeSearch(values, root_node='B')
-        >>> model = est.estimate(estimator_type='tan', class_node='A')
-        >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy',
-        ...                  alpha=0.3)
+        >>> est = TreeSearch(values, root_node="B")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
+        >>> nx.draw_circular(
+        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
+        ... )
         >>> plt.show()
         >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type='tan')
-        >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy',
-        ...                  alpha=0.3)
+        >>> model = est.estimate(estimator_type="tan")
+        >>> nx.draw_circular(
+        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
+        ... )
         >>> plt.show()
         """
         # Step 1. Argument checks
@@ -223,10 +229,12 @@ class TreeSearch(StructureEstimator):
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> est = TreeSearch(values, root_node='B')
-        >>> model = est.estimate(estimator_type='chow-liu')
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> est = TreeSearch(values, root_node="B")
+        >>> model = est.estimate(estimator_type="chow-liu")
         """
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":
@@ -298,10 +306,12 @@ class TreeSearch(StructureEstimator):
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> est = TreeSearch(values, root_node='B')
-        >>> model = est.estimate(estimator_type='tan')
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> est = TreeSearch(values, root_node="B")
+        >>> model = est.estimate(estimator_type="tan")
         """
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":
@@ -372,10 +382,12 @@ class TreeSearch(StructureEstimator):
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> est = TreeSearch(values, root_node='B')
-        >>> model = est.estimate(estimator_type='chow-liu')
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> est = TreeSearch(values, root_node="B")
+        >>> model = est.estimate(estimator_type="chow-liu")
         """
         # Step 2: Compute the maximum spanning tree using the weights.
         T = nx.maximum_spanning_tree(

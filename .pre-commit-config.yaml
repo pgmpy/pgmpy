@@ -18,3 +18,8 @@ repos:
     rev: 7.2.0
     hooks:
       - id: flake8
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.4.0
+    hooks:
+    - id: blackdoc
+      additional_dependencies: ["black==24.8.0"]

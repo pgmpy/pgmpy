@@ -13,13 +13,17 @@ class StateNameMixin:
         -------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> sn = {'speed': ['low', 'medium', 'high'],
-        ...       'switch': ['on', 'off'],
-        ...       'time': ['day', 'night']}
-        >>> phi = DiscreteFactor(variables=['speed', 'switch', 'time'],
-        ...                      cardinality=[3, 2, 2],
-        ...                      values=np.ones(12),
-        ...                      state_names=sn)
+        >>> sn = {
+        ...     "speed": ["low", "medium", "high"],
+        ...     "switch": ["on", "off"],
+        ...     "time": ["day", "night"],
+        ... }
+        >>> phi = DiscreteFactor(
+        ...     variables=["speed", "switch", "time"],
+        ...     cardinality=[3, 2, 2],
+        ...     values=np.ones(12),
+        ...     state_names=sn,
+        ... )
         >>> print(phi.state_names)
         """
         if state_names:

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from functools import reduce
 
 from pgmpy.factors.base import BaseFactor
@@ -29,14 +27,18 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set = FactorSet(phi1, phi2)
         >>> factor_set
-        <pgmpy.factors.FactorSet.FactorSet at 0x7f8e32af6d50>
-        >>> print(factor_set)
-        set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4c2d0>,
-             <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4c710>])
+        <pgmpy.factors.FactorSet.FactorSet object at 0x...>
+        >>> print(factor_set)  # doctest: +SKIP
+        {<DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x...>,
+         <DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x...>}
         """
         if not all(isinstance(phi, BaseFactor) for phi in factors_list):
             raise TypeError("Input parameters must be child classes of BaseFactor")
@@ -55,13 +57,21 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-        >>> phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        >>> phi3 = DiscreteFactor(
+        ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+        ... )
+        >>> phi4 = DiscreteFactor(
+        ...     variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1.add_factors(phi3, phi4)
-        >>> print(factor_set1)
+        >>> print(factor_set1)  # doctest: +SKIP
         set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4ca10>,
              <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x7f8e4c393690>,
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b4c750>,
@@ -82,18 +92,24 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> phi3 = DiscreteFactor(
+        ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1.add_factors(phi3)
-        >>> print(factor_set1)
+        >>> print(factor_set1)  # doctest: +SKIP
         set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b5b050>,
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b250>,
              <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5b150>])
         >>> factor_set1.remove_factors(phi1, phi2)
         >>> print(factor_set1)
-        set([<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b4cb10>])
+        {<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x...>}
         """
         for factor in factors:
             self.factors.remove(factor)
@@ -106,12 +122,18 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> phi3 = DiscreteFactor(
+        ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1.add_factors(phi3)
-        >>> factor_set1.get_factors()
+        >>> factor_set1.get_factors()  # doctest: +SKIP
         {<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f827c0a23c8>,
          <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f827c0a2358>,
          <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f825243f9e8>}
@@ -142,26 +164,34 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-        >>> phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        >>> phi3 = DiscreteFactor(
+        ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+        ... )
+        >>> phi4 = DiscreteFactor(
+        ...     variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set2 = FactorSet(phi3, phi4)
-        >>> print(factor_set2)
-        set([<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b050>,
-             <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b690>])
-        >>> factor_set2.product(factor_set1)
-        >>> print(factor_set2)
+        >>> print(factor_set2)  # doctest: +SKIP
+        {<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x...>,
+        ... <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x...>}
+        >>> factor_set2.product(factorset=factor_set1)
+        >>> print(factor_set2)  # doctest: +SKIP
         set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4c910>,
              <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4cc50>,
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b050>,
              <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b690>])
         >>> factor_set2 = FactorSet(phi3, phi4)
-        >>> factor_set3 = factor_set2.product(factor_set1, inplace=False)
-        >>> print(factor_set2)
-        set([<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b060>,
-             <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b790>])
+        >>> factor_set3 = factor_set2.product(factorset=factor_set1, inplace=False)
+        >>> print(factor_set2)  # doctest: +SKIP
+        {<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x20d4b0f49d0>,
+        ... <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x20d4b0f51d0>}
         """
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
@@ -197,14 +227,22 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-        >>> phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        >>> phi3 = DiscreteFactor(
+        ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+        ... )
+        >>> phi4 = DiscreteFactor(
+        ...     variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set2 = FactorSet(phi3, phi4)
-        >>> factor_set3 = factor_set2.divide(factor_set1)
-        >>> print(factor_set3)
+        >>> factor_set3 = factor_set2.divide(factorset=factor_set1, inplace=False)
+        >>> print(factor_set3)  # doctest: +SKIP
         set([<DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5ba10>,
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b650>,
              <DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b5b050>,
@@ -240,11 +278,15 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set1 = FactorSet(phi1, phi2)
-        >>> factor_set1.marginalize('x1')
-        >>> print(factor_set1)
+        >>> factor_set1.marginalize(variables=["x1"])
+        >>> print(factor_set1)  # doctest: +SKIP
         set([<DiscreteFactor representing phi(x2:3, x3:2) at 0x7f8e32b4cc10>,
              <DiscreteFactor representing phi(x3:2, x4:2) at 0x7f8e32b4cf90>])
         """
@@ -289,14 +331,18 @@ class FactorSet(object):
         --------
         >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> factor_set = FactorSet(phi1, phi2)
         >>> factor_set
-        <pgmpy.factors.FactorSet.FactorSet at 0x7fa68f390320>
+        <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         >>> factor_set_copy = factor_set.copy()
         >>> factor_set_copy
-        <pgmpy.factors.FactorSet.FactorSet at 0x7f91a0031160>
+        <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         """
         # No need to have copies of factors as argument because __init__ method creates copies.
         return FactorSet(*self.factors)
@@ -323,14 +369,22 @@ def factorset_product(*factorsets_list):
     >>> from pgmpy.factors import FactorSet
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factorset_product
-    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> phi1 = DiscreteFactor(
+    ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+    ... )
+    >>> phi2 = DiscreteFactor(
+    ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> factor_set1 = FactorSet(phi1, phi2)
-    >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-    >>> phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+    >>> phi3 = DiscreteFactor(
+    ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+    ... )
+    >>> phi4 = DiscreteFactor(
+    ...     variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> factor_set2 = FactorSet(phi3, phi4)
     >>> factor_set3 = factorset_product(factor_set1, factor_set2)
-    >>> print(factor_set3)
+    >>> print(factor_set3)  # doctest: +SKIP
     set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7fb3a1933e90>,
          <DiscreteFactor representing phi(x5:2, x7:2, x8:2) at 0x7fb3a1933f10>,
          <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7fb3a1933f90>,
@@ -366,14 +420,22 @@ def factorset_divide(factorset1, factorset2):
     >>> from pgmpy.factors import FactorSet
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factorset_divide
-    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> phi1 = DiscreteFactor(
+    ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+    ... )
+    >>> phi2 = DiscreteFactor(
+    ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> factor_set1 = FactorSet(phi1, phi2)
-    >>> phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-    >>> phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+    >>> phi3 = DiscreteFactor(
+    ...     variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=range(8)
+    ... )
+    >>> phi4 = DiscreteFactor(
+    ...     variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> factor_set2 = FactorSet(phi3, phi4)
     >>> factor_set3 = factorset_divide(factor_set2, factor_set1)
-    >>> print(factor_set3)
+    >>> print(factor_set3)  # doctest: +SKIP
     set([<DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f119ad78f90>,
          <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f119ad78e50>,
          <DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f119ad78ed0>,

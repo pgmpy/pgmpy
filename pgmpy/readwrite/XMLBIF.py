@@ -271,9 +271,9 @@ class XMLBIFWriter(object):
     --------
     >>> from pgmpy.readwrite import XMLBIFWriter
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model('asia')
+    >>> model = get_example_model("asia")
     >>> writer = XMLBIFWriter(model)
-    >>> writer.write_xmlbif('asia.xml')
+    >>> writer.write_xmlbif("asia.xml")
 
     Reference
     ---------
@@ -511,9 +511,9 @@ class XMLBIFWriter(object):
         --------
         >>> from pgmpy.readwrite import XMLBIFWriter
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> writer = XMLBIFWriter(model)
-        >>> writer.write_xmlbif('asia.xml')
+        >>> writer.write_xmlbif("asia.xml")
         """
         with open(filename, "w") as fout:
             fout.write(self.__str__())

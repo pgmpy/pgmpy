@@ -22,7 +22,7 @@ class XBNReader(object):
 
     Examples
     --------
-    >>> reader = XBNReader('test_XBN.xml')
+    >>> reader = XBNReader("test_XBN.xml")
 
     Reference
     ---------
@@ -52,7 +52,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_analysisnotebook_values()
         {'NAME': "Notebook.Cancer Example From Neapolitan",
          'ROOT': "Cancer"}
@@ -65,7 +65,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_bnmodel_name()
         'Cancer'
         """
@@ -77,7 +77,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_static_properties()
         {'FORMAT': 'MSR DTAS XML', 'VERSION': '0.2', 'CREATOR': 'Microsoft Research DTAS'}
         """
@@ -95,7 +95,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_variables()
         {'a': {'TYPE': 'discrete', 'XPOS': '13495',
                'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
@@ -125,7 +125,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_edges()
         [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')]
         """
@@ -154,7 +154,7 @@ class XBNReader(object):
 
         Examples
         --------
-        >>> reader = XBNReader('xbn_test.xml')
+        >>> reader = XBNReader("xbn_test.xml")
         >>> reader.get_distributions()
         {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
          'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
@@ -302,8 +302,9 @@ class XBNWriter(object):
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
-        >>> writer.set_analysisnotebook(NAME="Notebook.Cancer Example From Neapolitan",
-        ...                             ROOT='Cancer')
+        >>> writer.set_analysisnotebook(
+        ...     NAME="Notebook.Cancer Example From Neapolitan", ROOT="Cancer"
+        ... )
         """
         for key, value in data.items():
             self.network.set(str(key), str(value))
@@ -338,7 +339,9 @@ class XBNWriter(object):
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
-        >>> writer.set_static_properties(FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS")
+        >>> writer.set_static_properties(
+        ...     FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS"
+        ... )
         """
         static_prop = etree.SubElement(self.bnmodel, "STATICPROPERTIES")
         for key, value in data.items():
@@ -357,12 +360,24 @@ class XBNWriter(object):
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
-        >>> writer.set_variables({'a': {'TYPE': 'discrete', 'XPOS': '13495',
-        ...                             'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-        ...                             'STATES': ['Present', 'Absent']},
-        ...                       'b': {'TYPE': 'discrete', 'XPOS': '11290',
-        ...                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
-        ...                             'STATES': ['Present', 'Absent']}})
+        >>> writer.set_variables(
+        ...     {
+        ...         "a": {
+        ...             "TYPE": "discrete",
+        ...             "XPOS": "13495",
+        ...             "YPOS": "10465",
+        ...             "DESCRIPTION": "(a) Metastatic Cancer",
+        ...             "STATES": ["Present", "Absent"],
+        ...         },
+        ...         "b": {
+        ...             "TYPE": "discrete",
+        ...             "XPOS": "11290",
+        ...             "YPOS": "11965",
+        ...             "DESCRIPTION": "(b) Serum Calcium Increase",
+        ...             "STATES": ["Present", "Absent"],
+        ...         },
+        ...     }
+        ... )
         """
         variables = etree.SubElement(self.bnmodel, "VARIABLES")
         for var in sorted(data):
@@ -397,7 +412,9 @@ class XBNWriter(object):
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
-        >>> writer.set_edges([('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
+        >>> writer.set_edges(
+        ...     [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")]
+        ... )
         """
         structure = etree.SubElement(self.bnmodel, "STRUCTURE")
         for edge in edge_list:
@@ -412,7 +429,7 @@ class XBNWriter(object):
         Examples
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer =XBNWriter()
+        >>> writer = XBNWriter()
         >>> writer.set_distributions()
         """
         distributions = etree.SubElement(self.bnmodel, "DISTRIBUTIONS")
@@ -460,9 +477,9 @@ class XBNWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import XBNReader, XBNWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = XBNWriter(asia)
-        >>> writer.write_xbn(filename='asia.xbn')
+        >>> writer.write_xbn(filename="asia.xbn")
         """
         writer = self.__str__()
         with open(filename, "wb") as fout:

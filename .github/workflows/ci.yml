@@ -1,5 +1,7 @@
-name: pgmpy
+name: Build and Run Test Suite
+
 on: [push, pull_request]
+
 jobs:
   build:
     name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
@@ -9,55 +11,53 @@ jobs:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         group: [1, 2, 3]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{matrix.python-version}}
-          cache: 'pip'
+      fail-fast: true
 
-      - name: Install graphviz (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install graphviz -y
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Print Python info
+        run: |
+          which python
+          python --version
 
       - name: Install graphviz (Windows)
         if: matrix.os == 'windows-latest'
         run: choco install graphviz -y
 
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz -y
+
       - name: Install graphviz (macOS)
         if: matrix.os == 'macOS-latest'
         run: brew install graphviz
 
-      - name: Print python info
-        run: |
-          which python
-          python --version
-
       - name: Install dependencies
         run: |
-          pip install pip -U
-          pip install black -U
+          pip install --upgrade pip
           pip install pytest-split
           pip install .[all,tests] --no-cache-dir
 
-      - name: Check formatting
-        run: |
-          black --diff .
-          black --check .
-
-      - name: Print package versions
-        run: |
-          pip freeze
+      - name: Print installed packages
+        run: pip freeze
 
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 3 --group ${{ matrix.group }} --verbose --junitxml=test-results.xml
 
-      - name: Upload coverage reports to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Upload test results to Codecov
+      - name: Upload test results
         uses: codecov/test-results-action@v1
         with:
           files: test-results.xml
