@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import torch
-
 from pgmpy import config
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse

@@ -10,11 +10,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         group: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
       - uses: actions/setup-python@v5
         with:
           python-version: ${{matrix.python-version}}
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install graphviz (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
