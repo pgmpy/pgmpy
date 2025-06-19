@@ -2,8 +2,10 @@
 """Contains the different formats of CPDs used in PGM"""
 import csv
 import numbers
+import os
 from itertools import chain, product
 from shutil import get_terminal_size
+from typing import Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -66,16 +68,22 @@ class TabularCPD(DiscreteFactor):
      [0.1,0.1,0.1,0.1,0.1,0.1],
      [0.8,0.8,0.8,0.8,0.8,0.8]]
 
-    >>> cpd = TabularCPD(variable='grade',
-    ...                  variable_card=3,
-    ...                  values=[[0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                          [0.1,0.1,0.1,0.1,0.1,0.1],
-    ...                          [0.8,0.8,0.8,0.8,0.8,0.8]],
-    ...                  evidence=['diff', 'intel'],
-    ...                  evidence_card=[2, 3],
-    ...                  state_names={'diff': ['easy', 'hard'],
-    ...                               'intel': ['low', 'mid', 'high'],
-    ...                               'grade': ['A', 'B', 'C']})
+    >>> cpd = TabularCPD(
+    ...     variable="grade",
+    ...     variable_card=3,
+    ...     values=[
+    ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+    ...     ],
+    ...     evidence=["diff", "intel"],
+    ...     evidence_card=[2, 3],
+    ...     state_names={
+    ...         "diff": ["easy", "hard"],
+    ...         "intel": ["low", "mid", "high"],
+    ...         "grade": ["A", "B", "C"],
+    ...     },
+    ... )
     >>> print(cpd)
     +----------+------------+-----+------------+-------------+
     | diff     | diff(easy) | ... | diff(hard) | diff(hard)  |
@@ -109,11 +117,11 @@ class TabularCPD(DiscreteFactor):
 
     def __init__(
         self,
-        variable,
-        variable_card,
-        values,
-        evidence=None,
-        evidence_card=None,
+        variable: Hashable,
+        variable_card: int,
+        values: list | np.typing.ArrayLike,
+        evidence: Optional[list | tuple] = None,
+        evidence_card: Optional[list | tuple] = None,
         state_names={},
     ):
         self.variable = variable
@@ -190,10 +198,13 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd = TabularCPD(variable='grade', variable_card=3, values=[[0.1, 0.1],
-        ...                               [0.1, 0.1],
-        ...                               [0.8, 0.8]],
-        ...                  evidence=['evi1'], evidence_card=[2])
+        >>> cpd = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=3,
+        ...     values=[[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]],
+        ...     evidence=["evi1"],
+        ...     evidence_card=[2],
+        ... )
         >>> cpd.get_values()
         array([[0.1, 0.1],
                [0.1, 0.1],
@@ -302,7 +313,7 @@ class TabularCPD(DiscreteFactor):
 
         return cdf_str
 
-    def to_csv(self, filename):
+    def to_csv(self, filename: str | os.PathLike):
         """
         Exports the CPD to a CSV file.
 
@@ -327,7 +338,9 @@ class TabularCPD(DiscreteFactor):
         >>> model = get_example_model(model="insurance")
         >>> cpd = model.get_cpds(node="ThisCarCost")
         >>> df = cpd.to_dataframe()
-        >>> df.query("CarValue=='FiftyThou' and Theft == 'True'") # doctest: +NORMALIZE_WHITESPACE
+        >>> df.query(
+        ...     "CarValue=='FiftyThou' and Theft == 'True'"
+        ... )  # doctest: +NORMALIZE_WHITESPACE
         ThisCarCost                 HundredThou  Million   TenThou  Thousand
         ThisCarDam CarValue  Theft
         Mild       FiftyThou True      0.950000      0.0  0.020000  0.030000
@@ -398,9 +411,13 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd = TabularCPD(variable='grade', variable_card=2,
-        ...                  values=[[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-        ...                  evidence=['intel', 'diff'], evidence_card=[2, 2])
+        >>> cpd = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=2,
+        ...     values=[[0.7, 0.6, 0.6, 0.2], [0.3, 0.4, 0.4, 0.8]],
+        ...     evidence=["intel", "diff"],
+        ...     evidence_card=[2, 2],
+        ... )
         >>> copy = cpd.copy()
         >>> copy.variable
         'grade'
@@ -438,9 +455,13 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd_table = TabularCPD(variable='grade', variable_card=2,
-        ...                        values=[[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
-        ...                        evidence=['intel', 'diff'], evidence_card=[2, 2])
+        >>> cpd_table = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=2,
+        ...     values=[[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
+        ...     evidence=["intel", "diff"],
+        ...     evidence_card=[2, 2],
+        ... )
         >>> cpd_table.normalize()
         >>> cpd_table.get_values()
         array([[0.63636364, 0.33333333, 0.6       , 0.2       ],
@@ -472,10 +493,14 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd_table = TabularCPD(variable='grade', variable_card=2,
-        ...                        values=[[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-        ...                        evidence=['intel', 'diff'], evidence_card=[2, 2])
-        >>> cpd_table.marginalize(variables=['diff'])
+        >>> cpd_table = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=2,
+        ...     values=[[0.7, 0.6, 0.6, 0.2], [0.3, 0.4, 0.4, 0.8]],
+        ...     evidence=["intel", "diff"],
+        ...     evidence_card=[2, 2],
+        ... )
+        >>> cpd_table.marginalize(variables=["diff"])
         >>> cpd_table.get_values()
         array([[0.65, 0.4 ],
                [0.35, 0.6 ]])
@@ -511,10 +536,14 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd_table = TabularCPD(variable='grade', variable_card=2,
-        ...                        values=[[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-        ...                        evidence=['intel', 'diff'], evidence_card=[2, 2])
-        >>> cpd_table.reduce(values=[('diff', 0)])
+        >>> cpd_table = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=2,
+        ...     values=[[0.7, 0.6, 0.6, 0.2], [0.3, 0.4, 0.4, 0.8]],
+        ...     evidence=["intel", "diff"],
+        ...     evidence_card=[2, 2],
+        ... )
+        >>> cpd_table.reduce(values=[("diff", 0)])
         >>> cpd_table.get_values()
         array([[0.7, 0.6],
                [0.3, 0.4]])
@@ -541,10 +570,13 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> cpd = TabularCPD(variable='grade', variable_card=3, values=[[0.1, 0.1],
-        ...                               [0.1, 0.1],
-        ...                               [0.8, 0.8]],
-        ...                  evidence=['evi1'], evidence_card=[2])
+        >>> cpd = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=3,
+        ...     values=[[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]],
+        ...     evidence=["evi1"],
+        ...     evidence_card=[2],
+        ... )
         >>> factor = cpd.to_factor()
         >>> factor
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x...>
@@ -576,10 +608,17 @@ class TabularCPD(DiscreteFactor):
 
         Consider a CPD P(grade| diff, intel)
 
-        >>> cpd = TabularCPD(variable='grade',variable_card=3,values=[[0.1,0.1,0.0,0.4,0.2,0.1],
-        ...                             [0.3,0.2,0.1,0.4,0.3,0.2],
-        ...                             [0.6,0.7,0.9,0.2,0.5,0.7]],
-        ...                  evidence=['diff', 'intel'], evidence_card=[2,3])
+        >>> cpd = TabularCPD(
+        ...     variable="grade",
+        ...     variable_card=3,
+        ...     values=[
+        ...         [0.1, 0.1, 0.0, 0.4, 0.2, 0.1],
+        ...         [0.3, 0.2, 0.1, 0.4, 0.3, 0.2],
+        ...         [0.6, 0.7, 0.9, 0.2, 0.5, 0.7],
+        ...     ],
+        ...     evidence=["diff", "intel"],
+        ...     evidence_card=[2, 3],
+        ... )
         >>> print(cpd)
         +----------+----------+----------+----------+----------+----------+----------+
         | diff     | diff(0)  | diff(0)  | diff(0)  | diff(1)  | diff(1)  | diff(1)  |
@@ -609,7 +648,7 @@ class TabularCPD(DiscreteFactor):
         'grade'
         >>> cpd.variable_card
         3
-        >>> cpd.reorder_parents(new_order=['intel', 'diff'])
+        >>> cpd.reorder_parents(new_order=["intel", "diff"])
         array([[0.1, 0.4, 0.1, 0.2, 0. , 0.1],
                [0.3, 0.4, 0.2, 0.3, 0.1, 0.2],
                [0.6, 0.2, 0.7, 0.5, 0.9, 0.7]])
@@ -724,14 +763,16 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> TabularCPD.get_random(variable='A', evidence=['B', 'C'],
-        ...                       cardinality={'A': 3, 'B': 2, 'C': 4})
+        >>> TabularCPD.get_random(
+        ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
+        ... )
         <TabularCPD representing P(A:3 | ...) at 0x...>
-        >>> TabularCPD.get_random(variable='A', evidence=['B', 'C'],
-        ...                       cardinality={'A': 2, 'B': 2, 'C': 2},
-        ...                       state_names={'A': ['a1', 'a2'],
-        ...                                    'B': ['b1', 'b2'],
-        ...                                    'C': ['c1', 'c2']})
+        >>> TabularCPD.get_random(
+        ...     variable="A",
+        ...     evidence=["B", "C"],
+        ...     cardinality={"A": 2, "B": 2, "C": 2},
+        ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
+        ... )
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         generator = np.random.default_rng(seed=seed)
@@ -806,14 +847,16 @@ class TabularCPD(DiscreteFactor):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> TabularCPD.get_uniform(variable='A', evidence=['B', 'C'],
-        ...                        cardinality={'A': 3, 'B': 2, 'C': 4})
+        >>> TabularCPD.get_uniform(
+        ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
+        ... )
         <TabularCPD representing P(A:3 | ...) at 0x...>
-        >>> TabularCPD.get_uniform(variable='A', evidence=['B', 'C'],
-        ...                        cardinality={'A': 2, 'B': 2, 'C': 2},
-        ...                        state_names={'A': ['a1', 'a2'],
-        ...                                     'B': ['b1', 'b2'],
-        ...                                     'C': ['c1', 'c2']})
+        >>> TabularCPD.get_uniform(
+        ...     variable="A",
+        ...     evidence=["B", "C"],
+        ...     cardinality={"A": 2, "B": 2, "C": 2},
+        ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
+        ... )
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         # generator = np.random.default_rng(seed=seed)
