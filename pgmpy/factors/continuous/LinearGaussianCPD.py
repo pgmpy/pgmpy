@@ -54,7 +54,9 @@ class LinearGaussianCPD(BaseFactor):
     # To represent the conditional distribution, P(Y| X1, X2, X3) = N(0.2 - 2*x1 + 3*x2 + 7*x3 ; 9.6), we can write:
 
     >>> from pgmpy.factors.continuous import LinearGaussianCPD
-    >>> cpd = LinearGaussianCPD(variable='Y',  beta=[0.2, -2, 3, 7], std=9.6, evidence=['X1', 'X2', 'X3'])
+    >>> cpd = LinearGaussianCPD(
+    ...     variable="Y", beta=[0.2, -2, 3, 7], std=9.6, evidence=["X1", "X2", "X3"]
+    ... )
     >>> cpd.variable
     'Y'
     >>> cpd.evidence
@@ -81,7 +83,9 @@ class LinearGaussianCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
-        >>> cpd = LinearGaussianCPD(variable='Y',  beta=[0.2, -2, 3, 7], std=9.6, evidence=['X1', 'X2', 'X3'])
+        >>> cpd = LinearGaussianCPD(
+        ...     variable="Y", beta=[0.2, -2, 3, 7], std=9.6, evidence=["X1", "X2", "X3"]
+        ... )
         >>> copy_cpd = cpd.copy()
         >>> copy_cpd.variable
         'Y'
@@ -156,8 +160,13 @@ class LinearGaussianCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
-        >>> LinearGaussianCPD.get_random(variable='Income', evidence=['Age', 'Experience'],
-        ...            loc=2.0, scale=0.5, seed=5)
+        >>> LinearGaussianCPD.get_random(
+        ...     variable="Income",
+        ...     evidence=["Age", "Experience"],
+        ...     loc=2.0,
+        ...     scale=0.5,
+        ...     seed=5,
+        ... )
         <LinearGaussianCPD: P(Income | Age, Experience) = N(1.338*Age + 1.876*Experience + 1.599; 2.21) at 0x...
         """
         rng = np.random.default_rng(seed=seed)
