@@ -23,7 +23,7 @@ jobs:
       - name: Install linting tools
         run: |
           pip install --upgrade pip
-          pip install black blackdoc
+          pip install black blackdoc flake8
 
       - name: Check code formatting
         run: |
@@ -34,3 +34,18 @@ jobs:
         run: |
           blackdoc --diff pgmpy
           blackdoc --check pgmpy
+
+      - name: Get modified Python files
+        id: files
+        run: |
+          FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' | paste -sd' ' -)
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Flake8
+        run: |
+          if [ -n "${{ steps.files.outputs.files }}" ]; then
+            echo "Running flake8 on: ${{ steps.files.outputs.files }}"
+            flake8 --config=.flake8 ${{ steps.files.outputs.files }}
+          else
+            echo "No Python files changed."
+          fi
