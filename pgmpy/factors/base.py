@@ -35,19 +35,22 @@ def factor_product(*args):
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factor_product
     >>> import numpy as np
-    >>> phi1 = DiscreteFactor(variables=['x1', 'x2', 'x3'],
-    ...                       cardinality=[2, 3, 2],
-    ...                       values=range(12))
-    >>> phi2 = DiscreteFactor(variables=['x3', 'x4', 'x1'],
-    ...                       cardinality=[2, 2, 2],
-    ...                       values=range(8))
+    >>> phi1 = DiscreteFactor(
+    ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+    ... )
+    >>> phi2 = DiscreteFactor(
+    ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> phi = factor_product(phi1, phi2)
-    >>> sorted(phi.variables) # Sorting the variable names for consistent ordering
+    >>> sorted(phi.variables)
     ['x1', 'x2', 'x3', 'x4']
-    >>> cardinalities = [phi.get_cardinality([var])[var] for var in sorted(phi.variables)]
-    >>> # Getting the cardinality for each variable in sorted order
+    >>> cardinalities = [
+    ...     phi.get_cardinality([var])[var] for var in sorted(phi.variables)
+    ... ]
     >>> np.array(cardinalities)
     array([2, 3, 2, 2])
+    >>> phi.values.shape
+    (2, 3, 2, 2)
     """
     if not all(isinstance(phi, BaseFactor) for phi in args):
         raise TypeError("Arguments must be factors")
@@ -86,9 +89,9 @@ def factor_sum_product(output_vars, factors):
     --------
     >>> from pgmpy.factors import factor_sum_product
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model('asia')
+    >>> model = get_example_model("asia")
     >>> factors = [cpd.to_factor() for cpd in model.cpds]
-    >>> factor_sum_product(output_vars=['lung'], factors=factors)
+    >>> factor_sum_product(output_vars=["lung"], factors=factors)
     <DiscreteFactor representing phi(lung:2) at 0x...>
 
     """
@@ -132,8 +135,8 @@ def factor_divide(phi1, phi2):
     --------
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factor_product
-    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5))
+    >>> phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+    >>> phi2 = DiscreteFactor(["x3", "x1"], [2, 2], range(1, 5))
     >>> phi = factor_divide(phi1, phi2)
     >>> phi.variables
     ['x1', 'x2', 'x3']
