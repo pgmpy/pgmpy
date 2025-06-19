@@ -11,7 +11,7 @@ jobs:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         group: [1, 2, 3]
-      fail-fast: false
+      fail-fast: true
 
     steps:
       - name: Checkout code
@@ -23,20 +23,22 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install Graphviz
-        run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            sudo apt-get update && sudo apt-get install -y graphviz
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            choco install graphviz -y
-          else
-            brew install graphviz
-          fi
-
       - name: Print Python info
         run: |
           which python
           python --version
+
+      - name: Install graphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz -y
+
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz -y
+
+      - name: Install graphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: brew install graphviz
 
       - name: Install dependencies
         run: |
