@@ -1,0 +1,36 @@
+name: Linting Checks
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install linting tools
+        run: |
+          pip install --upgrade pip
+          pip install black blackdoc
+
+      - name: Check code formatting
+        run: |
+          black --diff .
+          black --check .
+
+      - name: Check doctest formatting
+        run: |
+          blackdoc --diff pgmpy
+          blackdoc --check pgmpy
