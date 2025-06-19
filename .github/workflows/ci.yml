@@ -48,8 +48,8 @@ jobs:
 
       - name: Check doctest formatting
         run: |
-          blackdoc --diff .
-          blackdoc --check .
+          blackdoc --diff pgmpy
+          blackdoc --check pgmpy
 
       - name: Print package versions
         run: |
