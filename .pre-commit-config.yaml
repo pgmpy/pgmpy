@@ -14,6 +14,11 @@ repos:
     rev: 24.8.0
     hooks:
       - id: black
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.4.0
+    hooks:
+    - id: blackdoc
+      additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/PyCQA/flake8
     rev: 7.2.0
     hooks:
