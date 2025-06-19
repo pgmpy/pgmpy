@@ -38,7 +38,7 @@ jobs:
       - name: Get modified Python files
         id: files
         run: |
-          FILES=$(git diff --name-only origin/dev...HEAD | grep '\.py$' | paste -sd' ' -)
+          FILES=$(git diff --name-only dev...HEAD | grep '\.py$' | paste -sd' ' -)
           echo "files=$FILES" >> "$GITHUB_OUTPUT"
 
       - name: Flake8
