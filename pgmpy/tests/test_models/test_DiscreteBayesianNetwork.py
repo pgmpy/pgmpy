@@ -26,6 +26,17 @@ from pgmpy.utils import get_example_model
 
 
 class TestBaseModelCreation(unittest.TestCase):
+    def test_plot_edge_strengths_discrete_runs():
+    from pgmpy.models import DiscreteBayesianNetwork
+
+    data = pd.DataFrame({
+        'X': [0,1,0,1,0,1],
+        'Y': [1,0,1,0,1,0],
+        'Z': [1,1,0,0,1,0],
+    })
+    model = DiscreteBayesianNetwork([('X','Y'), ('Y','Z')])
+    model.plot_edge_strengths(data)
+    
     def setUp(self):
         self.G = DiscreteBayesianNetwork()
 
