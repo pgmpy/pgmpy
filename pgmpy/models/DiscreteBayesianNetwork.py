@@ -54,12 +54,12 @@ class DiscreteBayesianNetwork(DAG):
 
     Add one node at a time:
 
-    >>> G.add_node('a')
+    >>> G.add_node("a")
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(['a', 'b'])
+    >>> G.add_nodes_from(["a", "b"])
 
     **Edges:**
 
@@ -67,11 +67,11 @@ class DiscreteBayesianNetwork(DAG):
 
     Add one edge,
 
-    >>> G.add_edge('a', 'b')
+    >>> G.add_edge("a", "b")
 
     a list of edges,
 
-    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+    >>> G.add_edges_from([("a", "b"), ("b", "c")])
 
     If some edges connect nodes not yet in the model, the nodes
     are added automatically.  There are no errors when adding
@@ -81,7 +81,7 @@ class DiscreteBayesianNetwork(DAG):
 
     Many common graph features allow python syntax for speed reporting.
 
-    >>> 'a' in G     # check if node in graph
+    >>> "a" in G  # check if node in graph
     True
     >>> len(G)  # number of nodes in graph
     3
@@ -111,8 +111,8 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> G = DiscreteBayesianNetwork()
-        >>> G.add_nodes_from(['grade', 'intel'])
-        >>> G.add_edge('grade', 'intel')
+        >>> G.add_nodes_from(["grade", "intel"])
+        >>> G.add_edge("grade", "intel")
         """
         if u == v:
             raise ValueError("Self loops are not allowed.")
@@ -148,17 +148,20 @@ class DiscreteBayesianNetwork(DAG):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C'),
-        ...                        ('A', 'D'), ('D', 'C')])
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...                       columns=['A', 'B', 'C', 'D'])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("B", "C"), ("A", "D"), ("D", "C")]
+        ... )
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...     columns=["A", "B", "C", "D"],
+        ... )
         >>> model.fit(values)
         >>> model.get_cpds()
         [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
          <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
          <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
          <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
-        >>> model.remove_node('A')
+        >>> model.remove_node("A")
         >>> model.get_cpds()
         [<TabularCPD representing P(B:2) at 0x7f28248e23c8>,
          <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
@@ -199,17 +202,20 @@ class DiscreteBayesianNetwork(DAG):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C'),
-        ...                        ('A', 'D'), ('D', 'C')])
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...                       columns=['A', 'B', 'C', 'D'])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("B", "C"), ("A", "D"), ("D", "C")]
+        ... )
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...     columns=["A", "B", "C", "D"],
+        ... )
         >>> model.fit(values)
         >>> model.get_cpds()
         [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
          <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
          <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
          <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
-        >>> model.remove_nodes_from(['A', 'B'])
+        >>> model.remove_nodes_from(["A", "B"])
         >>> model.get_cpds()
         [<TabularCPD representing P(C:2 | D:2) at 0x7f28248e2a58>,
          <TabularCPD representing P(D:2) at 0x7f28248e26d8>]
@@ -230,14 +236,25 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> student = DiscreteBayesianNetwork([('diff', 'grades'), ('aptitude', 'grades')])
-        >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                                       [0.8,0.8,0.8,0.8,0.8,0.8]],
-        ...                         evidence=['diff', 'aptitude'], evidence_card=[2, 3],
-        ...                         state_names={'grades': ['gradeA', 'gradeB', 'gradeC'],
-        ...                                      'diff': ['easy', 'hard'],
-        ...                                      'aptitude': ['low', 'medium', 'high']})
+        >>> student = DiscreteBayesianNetwork(
+        ...     [("diff", "grades"), ("aptitude", "grades")]
+        ... )
+        >>> grades_cpd = TabularCPD(
+        ...     "grades",
+        ...     3,
+        ...     [
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        ...     ],
+        ...     evidence=["diff", "aptitude"],
+        ...     evidence_card=[2, 3],
+        ...     state_names={
+        ...         "grades": ["gradeA", "gradeB", "gradeC"],
+        ...         "diff": ["easy", "hard"],
+        ...         "aptitude": ["low", "medium", "high"],
+        ...     },
+        ... )
         >>> student.add_cpds(grades_cpd)
 
         +---------+-------------------------+------------------------+
@@ -292,7 +309,7 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> cpds = model.get_cpds()
         >>> cpds
         [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
@@ -303,7 +320,7 @@ class DiscreteBayesianNetwork(DAG):
         <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
         <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
         <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
-        >>> cpd = model.get_cpds('bronc')
+        >>> cpd = model.get_cpds("bronc")
         >>> cpd
         <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
         """
@@ -331,10 +348,14 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
-        ...                               [0.9, 0.1, 0.8, 0.3]],
-        ...                  ['intel', 'diff'], [2, 2])
+        >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> cpd = TabularCPD(
+        ...     "grade",
+        ...     2,
+        ...     [[0.1, 0.9, 0.2, 0.7], [0.9, 0.1, 0.8, 0.3]],
+        ...     ["intel", "diff"],
+        ...     [2, 2],
+        ... )
         >>> student.add_cpds(cpd)
         >>> student.remove_cpds(cpd)
         """
@@ -365,17 +386,21 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd_diff = TabularCPD('diff', 2, [[0.6], [0.4]]);
-        >>> cpd_intel = TabularCPD('intel', 2, [[0.7], [0.3]]);
-        >>> cpd_grade = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
-        ...                                     [0.9, 0.1, 0.8, 0.3]],
-        ...                                 ['intel', 'diff'], [2, 2])
-        >>> student.add_cpds(cpd_diff,cpd_intel,cpd_grade)
+        >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> cpd_diff = TabularCPD("diff", 2, [[0.6], [0.4]])
+        >>> cpd_intel = TabularCPD("intel", 2, [[0.7], [0.3]])
+        >>> cpd_grade = TabularCPD(
+        ...     "grade",
+        ...     2,
+        ...     [[0.1, 0.9, 0.2, 0.7], [0.9, 0.1, 0.8, 0.3]],
+        ...     ["intel", "diff"],
+        ...     [2, 2],
+        ... )
+        >>> student.add_cpds(cpd_diff, cpd_intel, cpd_grade)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'diff': 2, 'intel': 2, 'grade': 2})
 
-        >>> student.get_cardinality('intel')
+        >>> student.get_cardinality("intel")
         2
         """
 
@@ -470,8 +495,14 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
-        ...                    ('intel', 'SAT'), ('grade', 'letter')])
+        >>> G = DiscreteBayesianNetwork(
+        ...     [
+        ...         ("diff", "grade"),
+        ...         ("intel", "grade"),
+        ...         ("intel", "SAT"),
+        ...         ("grade", "letter"),
+        ...     ]
+        ... )
         >>> mm = G.to_markov_model()
         >>> mm.nodes()
         NodeView(('diff', 'grade', 'intel', 'letter', 'SAT'))
@@ -501,24 +532,41 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
-        ...                    ('intel', 'SAT'), ('grade', 'letter')])
-        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        >>> grade_cpd = TabularCPD('grade', 3,
-        ...                        [[0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                         [0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                         [0.8,0.8,0.8,0.8,0.8,0.8]],
-        ...                        evidence=['diff', 'intel'],
-        ...                        evidence_card=[2, 3])
-        >>> sat_cpd = TabularCPD('SAT', 2,
-        ...                      [[0.1, 0.2, 0.7],
-        ...                       [0.9, 0.8, 0.3]],
-        ...                      evidence=['intel'], evidence_card=[3])
-        >>> letter_cpd = TabularCPD('letter', 2,
-        ...                         [[0.1, 0.4, 0.8],
-        ...                          [0.9, 0.6, 0.2]],
-        ...                         evidence=['grade'], evidence_card=[3])
+        >>> G = DiscreteBayesianNetwork(
+        ...     [
+        ...         ("diff", "grade"),
+        ...         ("intel", "grade"),
+        ...         ("intel", "SAT"),
+        ...         ("grade", "letter"),
+        ...     ]
+        ... )
+        >>> diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        ...     ],
+        ...     evidence=["diff", "intel"],
+        ...     evidence_card=[2, 3],
+        ... )
+        >>> sat_cpd = TabularCPD(
+        ...     "SAT",
+        ...     2,
+        ...     [[0.1, 0.2, 0.7], [0.9, 0.8, 0.3]],
+        ...     evidence=["intel"],
+        ...     evidence_card=[3],
+        ... )
+        >>> letter_cpd = TabularCPD(
+        ...     "letter",
+        ...     2,
+        ...     [[0.1, 0.4, 0.8], [0.9, 0.6, 0.2]],
+        ...     evidence=["grade"],
+        ...     evidence_card=[3],
+        ... )
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
         >>> jt = G.to_junction_tree()
         """
@@ -554,7 +602,7 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
@@ -663,17 +711,23 @@ class DiscreteBayesianNetwork(DAG):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import ApproxInference
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
         >>> train_data = values[:800]
         >>> predict_data = values[800:]
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop('E', axis=1, inplace=True)
-        >>> approx_inf_parameters = {'n_samples':int(1e3),'seed':42}
-        >>> y_pred = model.predict(predict_data,algo=ApproxInference,**approx_inf_parameters)
-        >>> y_pred['E']
+        >>> predict_data.drop("E", axis=1, inplace=True)
+        >>> approx_inf_parameters = {"n_samples": int(1e3), "seed": 42}
+        >>> y_pred = model.predict(
+        ...     predict_data, algo=ApproxInference, **approx_inf_parameters
+        ... )
+        >>> y_pred["E"]
             E
         800 1
         801 0
@@ -770,14 +824,18 @@ class DiscreteBayesianNetwork(DAG):
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(100, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(100, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
         >>> train_data = values[:80]
         >>> predict_data = values[80:]
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop('B', axis=1, inplace=True)
+        >>> predict_data.drop("B", axis=1, inplace=True)
         >>> y_prob = model.predict_probability(predict_data)
         >>> y_prob
             B_0         B_1
@@ -848,8 +906,10 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
-        >>> model.get_state_probability({'either': 'no', 'tub': 'no', 'xray': 'yes', 'bronc': 'no'})
+        >>> model = get_example_model("asia")
+        >>> model.get_state_probability(
+        ...     {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
+        ... )
         0.02605122
         """
         # Step 1: Check that all variables and states are in the model.
@@ -903,19 +963,44 @@ class DiscreteBayesianNetwork(DAG):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
-        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        >>> grade_cpd = TabularCPD('grade', 3,
-        ...                        [[0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                         [0.1,0.1,0.1,0.1,0.1,0.1],
-        ...                         [0.8,0.8,0.8,0.8,0.8,0.8]],
-        ...                        evidence=['diff', 'intel'],
-        ...                        evidence_card=[2, 3])
+        >>> G = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        ...     ],
+        ...     evidence=["diff", "intel"],
+        ...     evidence_card=[2, 3],
+        ... )
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd)
-        >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
-                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
-        >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        >>> val = [
+        ...     0.01,
+        ...     0.01,
+        ...     0.08,
+        ...     0.006,
+        ...     0.006,
+        ...     0.048,
+        ...     0.004,
+        ...     0.004,
+        ...     0.032,
+        ...     0.04,
+        ...     0.04,
+        ...     0.32,
+        ...     0.024,
+        ...     0.024,
+        ...     0.192,
+        ...     0.016,
+        ...     0.016,
+        ...     0.128,
+        ... ]
+        >>> JPD = JointProbabilityDistribution(
+        ...     ["diff", "intel", "grade"], [2, 3, 3], val
+        ... )
         >>> G.is_imap(JPD)
         True
         """
@@ -942,14 +1027,14 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('B', 'C')])
-        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
-        >>> cpd_b = TabularCPD('B', 2, [[0.3, 0.7], [0.7, 0.3]],
-        ...                    evidence=['A'],
-        ...                    evidence_card=[2])
-        >>> cpd_c = TabularCPD('C', 2, [[0.1, 0.9], [0.9, 0.1]],
-        ...                    evidence=['B'],
-        ...                    evidence_card=[2])
+        >>> model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+        >>> cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
+        >>> cpd_b = TabularCPD(
+        ...     "B", 2, [[0.3, 0.7], [0.7, 0.3]], evidence=["A"], evidence_card=[2]
+        ... )
+        >>> cpd_c = TabularCPD(
+        ...     "C", 2, [[0.1, 0.9], [0.9, 0.1]], evidence=["B"], evidence_card=[2]
+        ... )
         >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
         >>> copy_model = model.copy()
         >>> copy_model.nodes()
@@ -987,9 +1072,21 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = DiscreteBayesianNetwork([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
-        ...                    ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> G.get_markov_blanket('y')
+        >>> G = DiscreteBayesianNetwork(
+        ...     [
+        ...         ("x", "y"),
+        ...         ("z", "y"),
+        ...         ("y", "w"),
+        ...         ("y", "v"),
+        ...         ("u", "w"),
+        ...         ("s", "v"),
+        ...         ("w", "t"),
+        ...         ("w", "m"),
+        ...         ("v", "n"),
+        ...         ("v", "q"),
+        ...     ]
+        ... )
+        >>> G.get_markov_blanket("y")
         ['s', 'u', 'w', 'v', 'z', 'x']
         """
         children = self.get_children(node)
@@ -1167,11 +1264,11 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> asia.edges()
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
-        >>> do_bronc = asia.do(['bronc'])
+        >>> do_bronc = asia.do(["bronc"])
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
                      ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         """
@@ -1272,7 +1369,7 @@ class DiscreteBayesianNetwork(DAG):
 
         Simulation without any evidence or intervention:
 
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> model.simulate(n_samples=10)
 
         Simulation with the hard evidence: MINVOLSET = HIGH:
@@ -1286,14 +1383,26 @@ class DiscreteBayesianNetwork(DAG):
         Simulation with virtual/soft evidence: p(MINVOLSET=LOW) = 0.8, p(MINVOLSET=HIGH) = 0.2,
         p(MINVOLSET=NORMAL) = 0:
 
-        >>> virt_evidence = [TabularCPD("MINVOLSET", 3, [[0.8], [0.0], [0.2]],
-          state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})]
+        >>> virt_evidence = [
+        ...     TabularCPD(
+        ...         "MINVOLSET",
+        ...         3,
+        ...         [[0.8], [0.0], [0.2]],
+        ...         state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]},
+        ...     )
+        ... ]
         >>> model.simulate(n_samples, virtual_evidence=virt_evidence)
 
         Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3:
 
-        >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]],
-          state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
+        >>> virt_intervention = [
+        ...     TabularCPD(
+        ...         "CVP",
+        ...         3,
+        ...         [[0.2], [0.5], [0.3]],
+        ...         state_names={"CVP": ["LOW", "NORMAL", "HIGH"]},
+        ...     )
+        ... ]
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
 
         Simulation with missing values:
@@ -1301,13 +1410,28 @@ class DiscreteBayesianNetwork(DAG):
         >>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
         >>> model.simulate(n_samples, missing_prob=cpd)
 
-        >>> cpd = TabularCPD("HISTORY*", 2, [[0.5, 0.5], [0.5, 0.5]],["HISTORY"], [2], state_names={"HISTORY*" : [0,1],
-                        "HISTORY" : ['TRUE', 'FALSE']})
+        >>> cpd = TabularCPD(
+        ...     "HISTORY*",
+        ...     2,
+        ...     [[0.5, 0.5], [0.5, 0.5]],
+        ...     ["HISTORY"],
+        ...     [2],
+        ...     state_names={"HISTORY*": [0, 1], "HISTORY": ["TRUE", "FALSE"]},
+        ... )
         >>> model.simulate(n_samples, missing_prob=cpd)
 
-        >>> cpd = TabularCPD("HISTORY*", 2, [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
-                            ["HYPOVOLEMIA", "LVEDVOLUME"], [2, 3], state_names={"HISTORY*" : [0,1],
-                        "HYPOVOLEMIA" : ['TRUE', 'FALSE'], 'LVEDVOLUME': ['LOW', 'NORMAL', 'HIGH']})
+        >>> cpd = TabularCPD(
+        ...     "HISTORY*",
+        ...     2,
+        ...     [[0.2, 0.1, 0.6, 0.4, 0.7, 0.2], [0.8, 0.9, 0.4, 0.6, 0.3, 0.8]],
+        ...     ["HYPOVOLEMIA", "LVEDVOLUME"],
+        ...     [2, 3],
+        ...     state_names={
+        ...         "HISTORY*": [0, 1],
+        ...         "HYPOVOLEMIA": ["TRUE", "FALSE"],
+        ...         "LVEDVOLUME": ["LOW", "NORMAL", "HIGH"],
+        ...     },
+        ... )
         >>> model.simulate(n_samples=10, missing_prob=cpd)
         """
         from pgmpy.sampling import BayesianModelSampling
@@ -1486,8 +1610,8 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> alarm = get_example_model('alarm')
-        >>> alarm.save('alarm.bif', filetype='bif')
+        >>> alarm = get_example_model("alarm")
+        >>> alarm.save("alarm.bif", filetype="bif")
         """
         supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
         if filename.split(".")[-1].lower() in supported_formats:
@@ -1538,9 +1662,9 @@ class DiscreteBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> alarm = get_example_model('alarm')
-        >>> alarm.save('alarm.bif', filetype='bif')
-        >>> alarm_model = DiscreteBayesianNetwork.load('alarm.bif', filetype='bif')
+        >>> alarm = get_example_model("alarm")
+        >>> alarm.save("alarm.bif", filetype="bif")
+        >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
         """
         supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
         if filename.split(".")[-1].lower() in supported_formats:

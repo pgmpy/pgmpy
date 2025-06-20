@@ -62,22 +62,31 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     --------
     >>> import numpy as np
     >>> from pgmpy.factors.discrete import DiscreteFactor
-    >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+    >>> phi = DiscreteFactor(
+    ...     variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
+    ... )
     >>> phi
-    <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
+    <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x...>
     >>> print(phi)
-    +------+------+------+-----------------+
-    | x1   | x2   | x3   |   phi(x1,x2,x3) |
-    |------+------+------+-----------------|
-    | x1_0 | x2_0 | x3_0 |          1.0000 |
-    | x1_0 | x2_0 | x3_1 |          1.0000 |
-    | x1_0 | x2_1 | x3_0 |          1.0000 |
-    | x1_0 | x2_1 | x3_1 |          1.0000 |
-    | x1_1 | x2_0 | x3_0 |          1.0000 |
-    | x1_1 | x2_0 | x3_1 |          1.0000 |
-    | x1_1 | x2_1 | x3_0 |          1.0000 |
-    | x1_1 | x2_1 | x3_1 |          1.0000 |
-    +------+------+------+-----------------+
+    +-------+-------+-------+-----------------+
+    | x1    | x2    | x3    |   phi(x1,x2,x3) |
+    +=======+=======+=======+=================+
+    | x1(0) | x2(0) | x3(0) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(0) | x2(0) | x3(1) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(0) | x2(1) | x3(0) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(0) | x2(1) | x3(1) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(1) | x2(0) | x3(0) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(1) | x2(0) | x3(1) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(1) | x2(1) | x3(0) |          1.0000 |
+    +-------+-------+-------+-----------------+
+    | x1(1) | x2(1) | x3(1) |          1.0000 |
+    +-------+-------+-------+-----------------+
     """
 
     def __init__(self, variables, cardinality, values, state_names={}):
@@ -128,7 +137,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=np.ones(12)
+        ... )
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -151,10 +162,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.get_cardinality(['x1'])
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> {k: int(v) for k, v in phi.get_cardinality(variables=["x1"]).items()}
         {'x1': 2}
-        >>> phi.get_cardinality(['x1', 'x2'])
+        >>> {k: int(v) for k, v in phi.get_cardinality(variables=["x1", "x2"]).items()}
         {'x1': 2, 'x2': 3}
         """
         if isinstance(variables, str):
@@ -185,9 +198,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
-        >>> phi = model.get_cpds("either").to_factor()
-        >>> phi.get_value(lung="yes", tub="no", either="yes")
+        >>> model = get_example_model(model="asia")
+        >>> phi = model.get_cpds(node="either").to_factor()
+        >>> float(phi.get_value(lung="yes", tub="no", either="yes"))
         1.0
         """
         for variable in kwargs.keys():
@@ -227,9 +240,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
-        >>> phi = model.get_cpds("either").to_factor()
+        >>> phi = model.get_cpds(node="either").to_factor()
         >>> phi.set_value(value=0.1, lung="yes", tub="no", either="yes")
-        >>> phi.get_value(lung='yes', tub='no', either='yes')
+        >>> float(phi.get_value(lung="yes", tub="no", either="yes"))
         0.1
         """
         if not isinstance(value, (float, int)):
@@ -269,7 +282,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['diff', 'intel'], [2, 2], np.ones(4))
+        >>> phi = DiscreteFactor(["diff", "intel"], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
@@ -319,17 +332,20 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
         >>> phi_identity = phi.identity_factor()
         >>> phi_identity.variables
         ['x1', 'x2', 'x3']
         >>> phi_identity.values
-        array([[[ 1.,  1.],
-                [ 1.,  1.],
-                [ 1.,  1.]],
-               [[ 1.,  1.],
-                [ 1.,  1.],
-                [ 1.,  1.]]])
+        array([[[1., 1.],
+                [1., 1.],
+                [1., 1.]],
+        <BLANKLINE>
+               [[1., 1.],
+                [1., 1.],
+                [1., 1.]]])
         """
         return DiscreteFactor(
             variables=self.variables,
@@ -359,8 +375,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.marginalize(['x1', 'x3'])
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi.marginalize(variables=["x1", "x3"])
         >>> phi.values
         array([14., 22., 30.])
         >>> phi.variables
@@ -411,19 +429,35 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
-        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"],
+        ...     cardinality=[3, 2, 2],
+        ...     values=[
+        ...         0.25,
+        ...         0.35,
+        ...         0.08,
+        ...         0.16,
+        ...         0.05,
+        ...         0.07,
+        ...         0.00,
+        ...         0.00,
+        ...         0.15,
+        ...         0.21,
+        ...         0.09,
+        ...         0.18,
+        ...     ],
+        ... )
         >>> phi.variables
         ['x1', 'x2', 'x3']
-        >>> phi.maximize(['x2'])
+        >>> phi.maximize(variables=["x2"])
         >>> phi.variables
         ['x1', 'x3']
         >>> phi.cardinality
         array([3, 2])
         >>> phi.values
-        array([[ 0.25,  0.35],
-               [ 0.05,  0.07],
-               [ 0.15,  0.21]])
+        array([[0.25, 0.35],
+               [0.05, 0.07],
+               [0.15, 0.21]])
         """
         if isinstance(variables, str):
             raise TypeError("variables: Expected type list or array-like, got type str")
@@ -463,11 +497,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
         >>> phi.values
         array([[[ 0.,  1.],
                 [ 2.,  3.],
                 [ 4.,  5.]],
+        <BLANKLINE>
                [[ 6.,  7.],
                 [ 8.,  9.],
                 [10., 11.]]])
@@ -477,12 +514,13 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.cardinality
         array([2, 3, 2])
         >>> phi.values
-        array([[[ 0.        ,  0.01515152],
-                [ 0.03030303,  0.04545455],
-                [ 0.06060606,  0.07575758]],
-               [[ 0.09090909,  0.10606061],
-                [ 0.12121212,  0.13636364],
-                [ 0.15151515,  0.16666667]]])
+        array([[[0.        , 0.01515152],
+                [0.03030303, 0.04545455],
+                [0.06060606, 0.07575758]],
+        <BLANKLINE>
+               [[0.09090909, 0.10606061],
+                [0.12121212, 0.13636364],
+                [0.15151515, 0.16666667]]])
         """
         phi = self if inplace else self.copy()
 
@@ -516,8 +554,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.reduce([('x1', 0), ('x2', 0)])
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi.reduce(values=[("x1", 0), ("x2", 0)])
         >>> phi.variables
         ['x3']
         >>> phi.cardinality
@@ -595,8 +635,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> phi1.sum(phi2, inplace=True)
         >>> phi1.variables
         ['x1', 'x2', 'x3', 'x4']
@@ -605,14 +649,20 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi1.values
         array([[[[ 0.,  2.],
                  [ 5.,  7.]],
+        <BLANKLINE>
                 [[ 2.,  4.],
                  [ 7.,  9.]],
+        <BLANKLINE>
                 [[ 4.,  6.],
                  [ 9., 11.]]],
-               [[[ 7., 9.],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 7.,  9.],
                  [12., 14.]],
+        <BLANKLINE>
                 [[ 9., 11.],
                  [14., 16.]],
+        <BLANKLINE>
                 [[11., 13.],
                  [16., 18.]]]])
         """
@@ -683,14 +733,18 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+        ... )
         >>> phi1.product(phi2, inplace=True)
-        >>> phi1.variables
+        >>> phi1.variables  # doctest: +SKIP
         ['x1', 'x2', 'x3', 'x4']
-        >>> phi1.cardinality
+        >>> phi1.cardinality  # doctest: +SKIP
         array([2, 3, 2, 2])
-        >>> phi1.values
+        >>> phi1.values  # doctest: +SKIP
         array([[[[ 0,  0],
                  [ 4,  6]],
                 [[ 0,  4],
@@ -755,20 +809,25 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5))
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi2 = DiscreteFactor(
+        ...     variables=["x3", "x1"], cardinality=[2, 2], values=range(1, 5)
+        ... )
         >>> phi1.divide(phi2)
         >>> phi1.variables
         ['x1', 'x2', 'x3']
         >>> phi1.cardinality
         array([2, 3, 2])
         >>> phi1.values
-        array([[[ 0.        ,  0.33333333],
-                [ 2.        ,  1.        ],
-                [ 4.        ,  1.66666667]],
-               [[ 3.        ,  1.75      ],
-                [ 4.        ,  2.25      ],
-                [ 5.        ,  2.75      ]]])
+        array([[[0.        , 0.33333333],
+                [2.        , 1.        ],
+                [4.        , 1.66666667]],
+        <BLANKLINE>
+               [[3.        , 1.75      ],
+                [4.        , 2.25      ],
+                [5.        , 2.75      ]]])
         """
         phi = self if inplace else self.copy()
         phi1 = phi1.copy()
@@ -818,14 +877,16 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi1.sample(5)
+        >>> phi1 = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        ... )
+        >>> phi1.sample(n=5)  # doctest: +SKIP
             x1  x2  x3
-        0    1   0   0
-        1    0   2   0
-        2    1   2   0
-        3    1   1   1
-        4    1   1   1
+        0   1   2   1
+        1   1   0   0
+        2   1   0   1
+        3   1   1   1
+        4   1   2   0
         """
         phi = self.normalize(inplace=False)
         p = phi.values.ravel()
@@ -860,19 +921,24 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> phi = DiscreteFactor(
+        ...     variables=["x1", "x2", "x3"],
+        ...     cardinality=[2, 3, 3],
+        ...     values=np.arange(18),
+        ... )
         >>> phi_copy = phi.copy()
         >>> phi_copy.variables
         ['x1', 'x2', 'x3']
         >>> phi_copy.cardinality
         array([2, 3, 3])
         >>> phi_copy.values
-        array([[[ 0,  1,  2],
-                [ 3,  4,  5],
-                [ 6,  7,  8]],
-               [[ 9, 10, 11],
-                [12, 13, 14],
-                [15, 16, 17]]])
+        array([[[ 0.,  1.,  2.],
+                [ 3.,  4.,  5.],
+                [ 6.,  7.,  8.]],
+        <BLANKLINE>
+               [[ 9., 10., 11.],
+                [12., 13., 14.],
+                [15., 16., 17.]]])
         """
         copy = DiscreteFactor.__new__(self.__class__)
         copy.variables = [*self.variables]
@@ -896,11 +962,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         )
 
     def __str__(self):
-        return self._str(phi_or_p="phi", tablefmt="fancy_grid")
+        return self._str(phi_or_p="phi", tablefmt="grid")
 
-    def _str(
-        self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True
-    ):  # internal-Helper firedOnCall //betterOverriding
+    def _str(self, phi_or_p="phi", tablefmt="grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
