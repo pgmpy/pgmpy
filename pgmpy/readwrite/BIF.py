@@ -1,6 +1,6 @@
 import collections
 import re
-from copy import copy
+
 from itertools import product
 from string import Template
 
@@ -17,7 +17,6 @@ try:
         Suppress,
         Word,
         ZeroOrMore,
-        alphanums,
         cppStyleComment,
         nums,
         printables,
@@ -611,14 +610,16 @@ $values
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
                 state_str = str(state)
-                if ',' in state_str:
+                if "," in state_str:
                     import warnings
+
                     warnings.warn(
                         f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "These will be replaced with underscores when saving to a BIF file to prevent file format issues.",
-                        UserWarning
+                        "These will be replaced with underscores when saving to a BIF file "
+                        "to prevent file format issues.",
+                        UserWarning,
                     )
-                    state_str = state_str.replace(',', '_')
+                    state_str = state_str.replace(",", "_")
                 variable_states[variable].append(state_str)
         return variable_states
 
