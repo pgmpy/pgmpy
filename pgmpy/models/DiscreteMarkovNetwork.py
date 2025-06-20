@@ -590,7 +590,9 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
         if set(all_vars) != set(self.nodes()):
-            raise ValueError("DiscreteFactor for all the random variables not specified")
+            raise ValueError(
+                "DiscreteFactor for all the random variables not specified"
+            )
 
         # Dictionary stating whether the factor is used to create clique
         # potential or not
@@ -664,7 +666,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         return self.neighbors(node)
 
     def get_local_independencies(self, latex=False):
-        """
+        r"""
         Returns all the local independencies present in the markov model.
 
         Local independencies are the independence assertion in the form of
@@ -798,7 +800,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         return final_bm
 
     def get_partition_function(self):
-        """
+        r"""
         Returns the partition function for a given undirected graph.
 
         A partition function is defined as
