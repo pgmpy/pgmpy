@@ -590,7 +590,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
         if set(all_vars) != set(self.nodes()):
-            ValueError("DiscreteFactor for all the random variables not specified")
+            raise ValueError("DiscreteFactor for all the random variables not specified")
 
         # Dictionary stating whether the factor is used to create clique
         # potential or not
@@ -674,7 +674,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         Parameters
         ----------
         latex: boolean
-            If latex=True then latex string of the indepedence assertion would
+            If latex=True then latex string of the independence assertion would
             be created
 
         Examples
