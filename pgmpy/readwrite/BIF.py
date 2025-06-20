@@ -539,8 +539,9 @@ $values
                 cpd = self.model.get_cpds(var)
                 cpd_values_transpose = cpd.get_values().T
 
+                # Get the sanitized state names for parents from self.variable_states
                 parent_states = product(
-                    *[cpd.state_names[var] for var in cpd.variables[1:]]
+                    *[self.variable_states[var] for var in cpd.variables[1:]]
                 )
                 all_cpd = ""
                 for index, state in enumerate(parent_states):
@@ -585,7 +586,7 @@ $values
 
     def get_states(self):
         """
-        Add states to variable of BIF
+        Add states to variable of BIF, handling commas in state names by replacing them with underscores.
 
         Returns
         -------
@@ -609,7 +610,16 @@ $values
             variable = cpd.variable
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
-                variable_states[variable].append(str(state))
+                state_str = str(state)
+                if ',' in state_str:
+                    import warnings
+                    warnings.warn(
+                        f"State name '{state_str}' for variable '{variable}' contains commas. "
+                        "These will be replaced with underscores when saving to a BIF file to prevent file format issues.",
+                        UserWarning
+                    )
+                    state_str = state_str.replace(',', '_')
+                variable_states[variable].append(state_str)
         return variable_states
 
     def get_properties(self):
