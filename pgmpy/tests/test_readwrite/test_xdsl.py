@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 import warnings
 import xml.etree.ElementTree as etree
@@ -452,5 +453,59 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         del self.alarm_model_bn
         del self.dummy_model
         del self.writer_dummy
-
         config.set_backend("numpy")
+
+
+class TestXDSLCommaWarning(unittest.TestCase):
+    def test_comma_state_name_warning(self):
+        # Create a model with state names containing commas
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": ["state,1", "state,2"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["yes", "no"], "A": ["state,1", "state,2"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
+        # Test that warning is raised when writing
+        with tempfile.NamedTemporaryFile(suffix=".xdsl", delete=False) as tmp:
+            tmp_path = tmp.name
+        
+        try:
+            with self.assertLogs("pgmpy", level="WARNING") as cm:
+                writer = XDSLWriter(model)
+                writer.write_xdsl(tmp_path)
+
+                # Verify the warning was logged
+                self.assertIn(
+                    "State name 'state,1' for variable 'A' contains commas. "
+                    "This may cause issues when loading the file. Consider using a different delimiter.",
+                    cm.output[0],
+                )
+
+            # Verify that the file can be loaded back with the same state names
+            reader = XDSLReader(tmp_path)
+            loaded_model = reader.get_model()
+
+            # Check that the state names were preserved
+            self.assertEqual(
+                loaded_model.get_cpds("A").state_names["A"], ["state,1", "state,2"]
+            )
+            self.assertEqual(
+                loaded_model.get_cpds("B").state_names["A"], ["state,1", "state,2"]
+            )
+            self.assertEqual(
+                loaded_model.get_cpds("B").state_names["B"], ["yes", "no"]
+            )
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)

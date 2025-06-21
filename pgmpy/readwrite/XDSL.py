@@ -360,8 +360,15 @@ class XDSLWriter(object):
             cpt_elem = self.variables[var]
             states = cpd.state_names[cpd.variable]
 
+            # Check for commas in state names and warn if found
             for st in states:
-                etree.SubElement(cpt_elem, "state", {"id": str(st)})
+                st_str = str(st)
+                if "," in st_str:
+                    logger.warning(
+                        f"State name '{st_str}' for variable '{var}' contains commas. "
+                        "This may cause issues when loading the file. Consider using a different delimiter."
+                    )
+                etree.SubElement(cpt_elem, "state", {"id": st_str})
 
             evidence = cpd.variables
             if len(evidence) > 1:

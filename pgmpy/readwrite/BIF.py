@@ -611,15 +611,13 @@ $values
             for state in cpd.state_names[variable]:
                 state_str = str(state)
                 if "," in state_str:
-                    import warnings
+                    from pgmpy.global_vars import logger
 
-                    warnings.warn(
+                    logger.warning(
                         f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "These will be replaced with underscores when saving to a BIF file "
-                        "to prevent file format issues.",
-                        UserWarning,
+                        "This may cause issues when loading the file. Consider using a different delimiter."
                     )
-                    state_str = state_str.replace(",", "_")
+                    # Don't modify the state name, just warn the user
                 variable_states[variable].append(state_str)
         return variable_states
 
