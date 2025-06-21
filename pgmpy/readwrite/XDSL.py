@@ -425,7 +425,7 @@ class XDSLWriter(object):
             # Provide random position to each node.
             pos_x, pos_y = random.randint(0, 100), random.randint(0, 100)
             pos_elem = etree.SubElement(node_elem, "position")
-            pos_elem.text = f"{pos_x} {pos_y} {pos_x+72} {pos_y+48}"
+            pos_elem.text = f"{pos_x} {pos_y} {pos_x + 72} {pos_y + 48}"
 
             etree.SubElement(
                 node_elem,
