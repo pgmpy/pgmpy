@@ -507,7 +507,7 @@ probability ( light-on | family-out ) {
         # Test that warning is raised when writing
         with tempfile.NamedTemporaryFile(suffix=".bif", delete=False) as tmp:
             tmp_path = tmp.name
-        
+
         try:
             with self.assertLogs("pgmpy", level="WARNING") as cm:
                 writer = BIFWriter(model)

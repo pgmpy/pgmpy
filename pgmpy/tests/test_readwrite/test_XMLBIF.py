@@ -664,7 +664,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         # Test that warning is raised when writing
         with tempfile.NamedTemporaryFile(suffix=".xmlbif", delete=False) as tmp:
             tmp_path = tmp.name
-        
+
         try:
             with self.assertLogs("pgmpy", level="WARNING") as cm:
                 writer = XMLBIFWriter(model)
@@ -691,9 +691,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             self.assertEqual(
                 loaded_model.get_cpds("B").state_names["A"], ["state_1", "state_2"]
             )
-            self.assertEqual(
-                loaded_model.get_cpds("B").state_names["B"], ["yes", "no"]
-            )
+            self.assertEqual(loaded_model.get_cpds("B").state_names["B"], ["yes", "no"])
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)

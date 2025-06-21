@@ -400,7 +400,9 @@ class XMLBIFWriter(object):
 
         # Warn about commas in state names as they can cause issues when loading
         if "," in s:
-            var_name = self.variable_name if hasattr(self, 'variable_name') else 'unknown'
+            var_name = (
+                self.variable_name if hasattr(self, "variable_name") else "unknown"
+            )
             logger.warning(
                 f"State name '{s}' for variable '{var_name}' contains commas. "
                 "This may cause issues when loading the file. Consider using a different delimiter."
