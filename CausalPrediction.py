@@ -1,6 +1,6 @@
 import statsmodels.api as sm
-
-# from doubleml import DoubleMLData, DoubleMLPLR
+from doubleml import DoubleMLData, DoubleMLPLR
+from sklearn.ensemble import RandomForestRegressor
 from statsmodels.sandbox.regression.gmm import IV2SLS
 
 from pgmpy.base import DAG, PDAG
@@ -59,9 +59,22 @@ class AdjustmentRegressor:
         self.estimator = estimator
 
     def fit(self, X, y):
-        self.est = self.estimator(
-            y, X.loc[:, [model.exposure] + self.adjustment_set]
-        ).fit()
+        if self.estimator == "ols":
+            self.est = sm.OLS(y, X.loc[:, [model.exposure] + self.adjustment_set]).fit()
+        elif self.estimator == "dml":
+            df = X.copy()
+            df["outcome"] = y
+            dml_data = DoubleMLData(
+                df,
+                y_col="outcome",
+                d_cols=model.exposure,
+                x_cols=list(set(df.columns) - {"outcome", model.exposure}),
+            )
+            ml_g = RandomForestRegressor()
+            ml_m = RandomForestRegressor()
+
+            self.est = DoubleMLPLR(dml_data, ml_g, ml_m, n_folds=5)
+            self.est.fit()
 
     def predict(self, X):
         return self.est.predict(X.loc[:, [model.exposure] + self.adjustment_set])
@@ -69,6 +82,9 @@ class AdjustmentRegressor:
 
 class IVRegressor:
     def __init__(self, model, estimator):
+        import ipdb
+
+        ipdb.set_trace()
         self.ivs = list(model.get_ivs())
         if len(self.ivs) == 0:
             raise ValueError("No IVs, use another estimator")
@@ -98,7 +114,11 @@ if __name__ == "__main__":
     model = RCT(treatment="A", covariates={"U"}, randomization_var="I")
 
     ### Using adjustment variables
-    causal_regressor = AdjustmentRegressor(model, estimator=sm.OLS)
+    causal_regressor = AdjustmentRegressor(model, estimator="ols")
+    causal_regressor.fit(X=df_train.drop(["B"], axis=1), y=df_train["B"])
+    pred1_adj = causal_regressor.predict(df_test.drop(["B"], axis=1))
+
+    causal_regressor = AdjustmentRegressor(model, estimator="dml")
     causal_regressor.fit(X=df_train.drop(["B"], axis=1), y=df_train["B"])
     pred1_adj = causal_regressor.predict(df_test.drop(["B"], axis=1))
 
@@ -115,7 +135,7 @@ if __name__ == "__main__":
     )
 
     ### Using adjustment variables
-    causal_regressor = AdjustmentRegressor(model, estimator=sm.OLS)
+    causal_regressor = AdjustmentRegressor(model, estimator="ols")
     causal_regressor.fit(X=df_train.drop(["B"], axis=1), y=df_train["B"])
     pred2_adj = causal_regressor.predict(df_test.drop(["B"], axis=1))
 
@@ -128,7 +148,7 @@ if __name__ == "__main__":
     model = CausalGraphWithVariableRoles(graph=PC(df_train), exposure="A", outcome="B")
 
     ### Using adjustment variables
-    causal_regressor = AdjustmentRegressor(model, estimator=sm.OLS)
+    causal_regressor = AdjustmentRegressor(model, estimator="ols")
     causal_regressor.fit(X=df_train.drop(["B"], axis=1), y=df_train["B"])
     pred3_adj = causal_regressor.predict(df_test.drop(["B"], axis=1))
 
