@@ -1,5 +1,6 @@
 import statsmodels.api as sm
-from doubleml import DoubleMLData, DoubleMLPLR
+
+# from doubleml import DoubleMLData, DoubleMLPLR
 from statsmodels.sandbox.regression.gmm import IV2SLS
 
 from pgmpy.base import DAG, PDAG
@@ -53,17 +54,14 @@ class RCT:
 
 
 class AdjustmentRegressor:
-    def __init__(self, model, estimator="ols"):
+    def __init__(self, model, estimator):
         self.adjustment_set = list(model.get_adjustment_set())
         self.estimator = estimator
 
     def fit(self, X, y):
-        if self.estimator == "ols":
-            self.est = sm.OLS(y, X.loc[:, [model.exposure] + self.adjustment_set]).fit()
-        elif self.estimator == "doubleml":
-            # df = X.append(
-            # dml_data = DoubleMLData(
-            pass
+        self.est = self.estimator(
+            y, X.loc[:, [model.exposure] + self.adjustment_set]
+        ).fit()
 
     def predict(self, X):
         return self.est.predict(X.loc[:, [model.exposure] + self.adjustment_set])
