@@ -943,7 +943,7 @@ class DiscreteBayesianNetwork(DAG):
         ...                        evidence_card=[2, 3])
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd)
         >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
-                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+                   ... 0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
         >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
         >>> G.is_imap(JPD)
         True
