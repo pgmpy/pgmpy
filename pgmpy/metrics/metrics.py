@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_dataset_type
 
@@ -34,15 +33,6 @@ def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
         "fisher-c": {
             "func": fisher_c,
             "req_params": ["ci_test", "calculate_rmsea", "show_progress"],
-        },
-        "permutation-test": {
-            "func": permutation_test,
-            "req_params": [
-                "ci_test",
-                "n_permutations",
-                "significance_level",
-                "show_progress",
-            ],
         },
     }
     if not isinstance(data, pd.DataFrame) or data is None:
@@ -490,85 +480,6 @@ def fisher_c(model, data, ci_test, calculate_rmsea=False, show_progress=True):
         return (p_value, rmsea)
 
     return p_value
-
-
-def permutation_test(
-    model,
-    data,
-    ci_test,
-    n_permutations=None,
-    significance_level=0.05,
-    show_progress=True,
-):
-
-    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
-        raise ValueError(
-            f"model must be an instance of DAG or DiscreteBayesianNetwork. Got {type(model)}"
-        )
-    elif not isinstance(data, pd.DataFrame):
-        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
-
-    if len(model.latents) > 0:
-        raise ValueError(
-            "This test can not be performed on models with latent variables."
-        )
-
-    model_nodes = set(model.nodes())
-    cols = set(data.columns)
-
-    if not model_nodes.issubset(cols):
-        missing_variables = model_nodes - cols
-        raise ValueError(f"Data missing variables in model: {missing_variables}")
-
-    if n_permutations is None:
-        n_permutations = 1000
-
-    ci_test_func = get_callable_ci_test(ci_test, data=data)
-
-    # Constructing the Null Hypothesis (LMC = Local Markov Condition)
-    lmc_violations_given = model.count_lmc_violations(ci_test_func, significance_level)
-    # Finding set of d-separated nodes in original model
-    nodes = list(model.nodes())
-    original_dsep_triples = model.d_separated_triples(
-        nodes, ci_test_func, data, significance_level
-    )
-
-    permutation_violations = []
-    same_mec_count = 0
-
-    if show_progress and config.SHOW_PROGRESS:
-        pbar = tqdm(total=n_permutations, desc="Permutation Testing")
-    else:
-        pbar = range(n_permutations)
-
-    # Running permutations
-    for i in pbar:
-        perm = np.random.permutation(nodes)
-        perm_mapping = dict(zip(nodes, perm))
-
-        # Creating the permuted model while maintaining causal structure
-        permuted_model = model.create_permuted_graph(perm_mapping)
-
-        # Counting lmc violations in permuted model
-        lmc_violations_perm = permuted_model.count_lmc_violations(
-            ci_test_func, significance_level
-        )
-        permutation_violations.append(lmc_violations_perm)
-
-        # Creating a set of d-separated triples in the permuted_model
-        permuted_dsep_triples = permuted_model.d_separated_triples(
-            nodes, ci_test_func, data, significance_level
-        )
-
-        if original_dsep_triples == permuted_dsep_triples:
-            same_mec_count += 1
-
-    p_value_falsifiable = same_mec_count / n_permutations
-    p_value_falsified = (
-        sum(1 for v in permutation_violations if v > lmc_violations_given)
-        / n_permutations
-    )
-    return (p_value_falsifiable, p_value_falsified)
 
 
 def SHD(true_model, est_model):
