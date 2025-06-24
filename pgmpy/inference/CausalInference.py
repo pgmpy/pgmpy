@@ -34,9 +34,7 @@ class CausalInference(object):
     Create a small Bayesian Network.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> game = DiscreteBayesianNetwork([('X', 'A'),
-    ...                                 ('A', 'Y'),
-    ...                                 ('A', 'B')])
+    >>> game = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
 
     Load the graph into the CausalInference object to make causal queries.
 
@@ -126,9 +124,7 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> inference = CausalInference(game1)
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
@@ -167,9 +163,7 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
@@ -301,9 +295,16 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
-        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
-        ...                  latents=['xi1', 'eta1'])
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("xi1", "eta1"),
+        ...         ("xi1", "x1"),
+        ...         ("xi1", "x2"),
+        ...         ("eta1", "y1"),
+        ...         ("eta1", "y2"),
+        ...     ],
+        ...     latents=["xi1", "eta1"],
+        ... )
         >>> model.get_scaling_indicators()
         {'xi1': 'x1', 'eta1': 'y1'}
 
@@ -345,11 +346,19 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
-        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
-        ...                  latents=['xi1', 'eta1'])
-        >>> model._iv_transformations('xi1', 'eta1',
-        ...                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("xi1", "eta1"),
+        ...         ("xi1", "x1"),
+        ...         ("xi1", "x2"),
+        ...         ("eta1", "y1"),
+        ...         ("eta1", "y2"),
+        ...     ],
+        ...     latents=["xi1", "eta1"],
+        ... )
+        >>> model._iv_transformations(
+        ...     "xi1", "eta1", scaling_indicators={"xi1": "x1", "eta1": "y1"}
+        ... )
         """
         full_graph = self.dag.copy()
 
@@ -404,10 +413,10 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y')],
-        ...                  latents=[],
-        ...                  err_corr=[('X', 'Y')])
-        >>> model.get_ivs('X', 'Y')
+        >>> model = SEMGraph(
+        ...     ebunch=[("I", "X"), ("X", "Y")], latents=[], err_corr=[("X", "Y")]
+        ... )
+        >>> model.get_ivs("X", "Y")
         {'I'}
         """
         if not scaling_indicators:
@@ -474,10 +483,12 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y'), ('W', 'I')],
-        ...                  latents=[],
-        ...                  err_corr=[('W', 'Y')])
-        >>> model.get_ivs('X', 'Y')
+        >>> model = SEMGraph(
+        ...     ebunch=[("I", "X"), ("X", "Y"), ("W", "I")],
+        ...     latents=[],
+        ...     err_corr=[("W", "Y")],
+        ... )
+        >>> model.get_ivs("X", "Y")
         [('I', {'W'})]
         """
         if not scaling_indicators:
@@ -736,10 +747,10 @@ class CausalInference(object):
         Examples
         --------
         >>> import pandas as pd
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
-        >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"]
+        ... )
         >>> inference = CausalInference(model=game1)
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         """
@@ -800,8 +811,9 @@ class CausalInference(object):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
-        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        ... )
         >>> c_infer = CausalInference(model)
         >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7fba501ad940>
@@ -858,10 +870,13 @@ class CausalInference(object):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
-        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        ... )
         >>> c_infer = CausalInference(model)
-        >>> c_infer.is_valid_adjustment_set(X=['x1', 'x2'], Y=['y1', 'y2'], adjustment_set=['z1', 'z2'])
+        >>> c_infer.is_valid_adjustment_set(
+        ...     X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
+        ... )
         True
 
         References
@@ -971,9 +986,9 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> infer = CausalInference(model)
-        >>> infer.query(['HISTORY'], do={'CVP': 'LOW'}, evidence={'HR': 'LOW'})
+        >>> infer.query(["HISTORY"], do={"CVP": "LOW"}, evidence={"HR": "LOW"})
         <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.

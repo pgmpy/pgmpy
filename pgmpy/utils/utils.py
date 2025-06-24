@@ -39,7 +39,7 @@ def get_example_model(model: str):
     Example
     -------
     >>> from pgmpy.data import get_example_model
-    >>> model = get_example_model(model='asia')
+    >>> model = get_example_model(model="asia")
     >>> model
 
     Returns
@@ -254,9 +254,15 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     >>> Y = 0.2 * X + rng.standard_normal(1000)
     >>> Z = 0.4 * X + 0.5 * Y + rng.standard_normal(1000)
     >>> df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    >>> df_disc = discretize(df, cardinality={'X': 3, 'Y': 3, 'Z': 3},
-      labels={'X': ['low', 'mid', 'high'], 'Y': ['low', 'mid', 'high'],
-        'Z': ['low', 'mid', 'high']})
+    >>> df_disc = discretize(
+    ...     df,
+    ...     cardinality={"X": 3, "Y": 3, "Z": 3},
+    ...     labels={
+    ...         "X": ["low", "mid", "high"],
+    ...         "Y": ["low", "mid", "high"],
+    ...         "Z": ["low", "mid", "high"],
+    ...     },
+    ... )
     >>> df_disc.head()
         X    Y    Z
     0   mid  mid  mid

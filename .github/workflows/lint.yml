@@ -1,0 +1,56 @@
+name: Linting Checks
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install linting tools
+        run: |
+          pip install --upgrade pip
+          pip install black blackdoc flake8
+
+      - name: Check code formatting
+        run: |
+          black --diff .
+          black --check .
+
+      - name: Check doctest formatting
+        run: |
+          blackdoc --diff pgmpy
+          blackdoc --check pgmpy
+
+      - name: Fetch dev branch
+        run: git fetch origin dev:dev
+
+      - name: Get modified Python files
+        id: files
+        run: |
+          FILES=$(git diff --name-only dev...HEAD | grep '\.py$' | paste -sd' ' -)
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Flake8
+        run: |
+          if [ -n "${{ steps.files.outputs.files }}" ]; then
+            echo "Running flake8 on: ${{ steps.files.outputs.files }}"
+            flake8 --config=.flake8 ${{ steps.files.outputs.files }}
+          else
+            echo "No Python files changed."
+          fi

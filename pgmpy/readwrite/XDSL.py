@@ -258,9 +258,9 @@ class XDSLWriter(object):
     ---------
     >>> from pgmpy.readwrite import XDSLWriter
     >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model('asia')
+    >>> asia = get_example_model("asia")
     >>> writer = XDSLWriter(asia)
-    >>> writer.write_xdsl('asia.xdsl')
+    >>> writer.write_xdsl("asia.xdsl")
 
     Reference
     ---------
@@ -438,9 +438,9 @@ class XDSLWriter(object):
         --------
         >>> from pgmpy.readwrite import XDSLWriter
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.write_xdsl('asia.xdsl')
+        >>> writer.write_xdsl("asia.xdsl")
         """
         xml_str = etree.tostring(self.root, encoding=self.encoding)
         parsed = md.parseString(xml_str)

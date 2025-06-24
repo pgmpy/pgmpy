@@ -1187,6 +1187,37 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(expected_edges, set(dag.edges()))
         self.assertEqual(dag.latents, set(["A"]))
 
+        undirected_edges = [(1, 4), (5, 0)]
+        directed_edges = [
+            (0, 2),
+            (1, 2),
+            (3, 1),
+            (3, 2),
+            (3, 4),
+            (4, 2),
+            (5, 1),
+            (5, 2),
+            (5, 4),
+        ]
+        pdag = PDAG(undirected_ebunch=undirected_edges, directed_ebunch=directed_edges)
+        dag = pdag.to_dag()
+        dag_actual = set(
+            [
+                (0, 2),
+                (1, 2),
+                (3, 1),
+                (3, 2),
+                (3, 4),
+                (4, 1),
+                (4, 2),
+                (5, 0),
+                (5, 1),
+                (5, 2),
+                (5, 4),
+            ]
+        )
+        self.assertSetEqual(set(dag.edges), dag_actual)
+
     def test_pdag_to_cpdag(self):
         pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
         cpdag = pdag.apply_meeks_rules(apply_r4=True)

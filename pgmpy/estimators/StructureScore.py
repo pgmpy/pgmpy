@@ -138,11 +138,13 @@ class StructureScore(BaseEstimator):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import K2
         >>> # create random data sample with 3 variables, where B and C are identical:
-        >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
-        >>> data['C'] = data['B']
-        >>> K2(data).score(DiscreteBayesianNetwork([['A','B'], ['A','C']]))
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 5, size=(5000, 2)), columns=list("AB")
+        ... )
+        >>> data["C"] = data["B"]
+        >>> K2(data).score(DiscreteBayesianNetwork([["A", "B"], ["A", "C"]]))
         -24242.367348745247
-        >>> K2(data).score(DiscreteBayesianNetwork([['A','B'], ['B','C']]))
+        >>> K2(data).score(DiscreteBayesianNetwork([["A", "B"], ["B", "C"]]))
         -16273.793897051042
         """
 

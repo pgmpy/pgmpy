@@ -29,7 +29,7 @@ class UAIReader(object):
     Examples
     --------
     >>> from pgmpy.readwrite import UAIReader
-    >>> reader = UAIReader('TestUai.uai')
+    >>> reader = UAIReader("TestUai.uai")
     >>> model = reader.get_model()
 
     Reference
@@ -115,7 +115,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_network_type()
         'MARKOV'
         """
@@ -136,7 +136,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_variables()
         ['var_0', 'var_1', 'var_2']
         """
@@ -158,7 +158,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_domain()
         {'var_0': '2', 'var_1': '2', 'var_2': '3'}
         """
@@ -179,7 +179,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_edges()
         {('var_0', 'var_1'), ('var_0', 'var_2'), ('var_1', 'var_2')}
         """
@@ -213,7 +213,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_tables()
         [(['var_0', 'var_1'], ['4.000', '2.400', '1.000', '0.000']),
          (['var_0', 'var_1', 'var_2'],
@@ -254,7 +254,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_model()
         """
         if self.network_type == "BAYES":
@@ -317,9 +317,9 @@ class UAIWriter(object):
     --------
     >>> from pgmpy.readwrite import UAIWriter
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model('asia')
+    >>> model = get_example_model("asia")
     >>> writer = UAIWriter(asia)
-    >>> writer.write_uai('asia.uai')
+    >>> writer.write_uai("asia.uai")
     """
 
     def __init__(self, model, round_values=None):
@@ -490,9 +490,9 @@ class UAIWriter(object):
         --------
         >>> from pgmpy.readwrite import UAIWriter
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> writer = UAIWriter(asia)
-        >>> writer.write_uai('asia.uai')
+        >>> writer.write_uai("asia.uai")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
