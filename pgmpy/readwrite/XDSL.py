@@ -322,8 +322,7 @@ class XDSLWriter(object):
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
                 logger.warning(
-                    f" Node '{var}' contains whitespaces. "
-                    f"This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
+                    f" Node '{var}' contains whitespaces. This can create issues when loading the model. "
                 )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
@@ -366,7 +365,7 @@ class XDSLWriter(object):
                 if "," in st_str:
                     logger.warning(
                         f"State name '{st_str}' for variable '{var}' contains commas. "
-                        "This may cause issues when loading the file. Consider using a different delimiter."
+                        "This may cause issues when loading the file. Consider removing any special characters."
                     )
                 etree.SubElement(cpt_elem, "state", {"id": st_str})
 

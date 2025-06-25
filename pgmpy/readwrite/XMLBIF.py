@@ -5,8 +5,9 @@ from io import BytesIO
 from itertools import chain
 
 import numpy as np
-from pgmpy.global_vars import logger
+
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -405,7 +406,7 @@ class XMLBIFWriter(object):
             )
             logger.warning(
                 f"State name '{s}' for variable '{var_name}' contains commas. "
-                "This may cause issues when loading the file. Consider using a different delimiter."
+                "This may cause issues when loading the file. Consider removing any special characters."
             )
 
         # Keep existing transformation logic

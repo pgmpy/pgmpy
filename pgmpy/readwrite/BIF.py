@@ -1,6 +1,5 @@
 import collections
 import re
-
 from itertools import product
 from string import Template
 
@@ -27,6 +26,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -610,14 +610,13 @@ $values
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
                 state_str = str(state)
-                if "," in state_str:
-                    from pgmpy.global_vars import logger
 
+                # Warn users if any commas in state names
+                if "," in state_str:
                     logger.warning(
                         f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider using a different delimiter."
+                        "This may cause issues when loading the file. Consider removing any special characters."
                     )
-                    # Don't modify the state name, just warn the user
                 variable_states[variable].append(state_str)
         return variable_states
 

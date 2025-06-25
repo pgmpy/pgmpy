@@ -277,7 +277,7 @@ class NETWriter(object):
                 if "," in state_str:
                     logger.warning(
                         f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider using a different delimiter."
+                        "This may cause issues when loading the file. Consider removing any special characters."
                     )
                 variable_states[variable].append(state_str)
         return variable_states
