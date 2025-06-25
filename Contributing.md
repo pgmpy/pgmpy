@@ -23,8 +23,14 @@ git checkout -b feature/your-descriptive-name
 ## Installing from Source
 
 Install pgmpy (plus testing dependencies) in editable mode:
+
+For `bash` users:
 ```
 pip install -e .[tests]
+```
+For `zsh` users:
+```
+pip install -e ".[tests]"
 ```
 This lets you tweak code and immediately see your changes without re-installing.
 
