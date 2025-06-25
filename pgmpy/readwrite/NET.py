@@ -41,11 +41,11 @@ class NETWriter(object):
     ----------
     >>> from pgmpy.readwrite import NETWriter
     >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model('asia')
+    >>> asia = get_example_model("asia")
     >>> writer = NETWriter(asia)
     >>> writer
     <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
-    >>> writer.write_net('asia.net')
+    >>> writer.write_net("asia.net")
 
     Reference
     ---------
@@ -163,7 +163,7 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_variables()
         ['asia', 'tub', 'smoke', 'lung', 'bronc', 'either', 'xray', 'dysp']
@@ -183,7 +183,7 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_cpds()
         {'asia': array([0.01, 0.99]),
@@ -225,7 +225,7 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_properties()
         """
@@ -252,7 +252,7 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_states()
         {'asia': ['yes', 'no'],
@@ -286,7 +286,7 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_parents()
         {'asia': [],
@@ -316,9 +316,9 @@ class NETWriter(object):
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
-        >>> writer.write_net(filename='asia.net')
+        >>> writer.write_net(filename="asia.net")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:

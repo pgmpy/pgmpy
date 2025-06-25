@@ -4,10 +4,9 @@ import statsmodels.api as sm
 import torch
 
 from pgmpy import config
+from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
-
-from pgmpy.inference import CausalInference
 
 
 class SEMEstimator(object):
@@ -424,7 +423,7 @@ class IVEstimator:
 
         Examples
         --------
-        >>> from pgmpy.estimators import IVEstimator # TODO: Finish example.
+        >>> from pgmpy.estimators import IVEstimator  # TODO: Finish example.
         """
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)
