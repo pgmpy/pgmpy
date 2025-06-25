@@ -10,8 +10,8 @@ coverage:
         threshold: 2%
 comment:
   layout: "reach, diff, flags, files"
-  behavior: default
+  behavior: new
   require_changes: true
 codecov:
   notify:
-    after_n_builds: 8
+    after_n_builds: 18
