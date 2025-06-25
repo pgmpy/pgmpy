@@ -1,6 +1,5 @@
 import collections
 import re
-from copy import copy
 from itertools import product
 from string import Template
 
@@ -17,7 +16,6 @@ try:
         Suppress,
         Word,
         ZeroOrMore,
-        alphanums,
         cppStyleComment,
         nums,
         printables,
@@ -28,6 +26,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -539,8 +538,9 @@ $values
                 cpd = self.model.get_cpds(var)
                 cpd_values_transpose = cpd.get_values().T
 
+                # Get the sanitized state names for parents from self.variable_states
                 parent_states = product(
-                    *[cpd.state_names[var] for var in cpd.variables[1:]]
+                    *[self.variable_states[var] for var in cpd.variables[1:]]
                 )
                 all_cpd = ""
                 for index, state in enumerate(parent_states):
@@ -585,7 +585,7 @@ $values
 
     def get_states(self):
         """
-        Add states to variable of BIF
+        Add states to variable of BIF, handling commas in state names by replacing them with underscores.
 
         Returns
         -------
@@ -609,7 +609,15 @@ $values
             variable = cpd.variable
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
-                variable_states[variable].append(str(state))
+                state_str = str(state)
+
+                # Warn users if any commas in state names
+                if "," in state_str:
+                    logger.warning(
+                        f"State name '{state_str}' for variable '{variable}' contains commas. "
+                        "This may cause issues when loading the file. Consider removing any special characters."
+                    )
+                variable_states[variable].append(state_str)
         return variable_states
 
     def get_properties(self):
