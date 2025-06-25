@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 
-import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 
@@ -516,7 +515,7 @@ probability ( light-on | family-out ) {
                 # Verify the warning was logged
                 self.assertIn(
                     "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider using a different delimiter.",
+                    "This may cause issues when loading the file. Consider removing any special characters.",
                     cm.output[0],
                 )
 

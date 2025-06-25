@@ -214,7 +214,7 @@ potential (xray | either){
                 # Verify the warning was logged
                 self.assertIn(
                     "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider using a different delimiter.",
+                    "This may cause issues when loading the file. Consider removing any special characters.",
                     cm.output[0],
                 )
 
@@ -599,7 +599,7 @@ potential (xray | either){
         config.set_backend("numpy")
 
 
-class TestNETReader(unittest.TestCase):
+class TestNETReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 

@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 import warnings
-import xml.etree.ElementTree as etree
 
 import numpy as np
 import numpy.testing as np_test
@@ -16,72 +15,72 @@ from pgmpy.utils import get_example_model
 TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
 <smile version="1.0" id="Asia" numsamples="10000" discsamples="10000">
-	<nodes>
-		<cpt id="asia" diagtype="observation" ranked="true">
-			<state id="no" />
-			<state id="yes" />
-			<probabilities>0.99 0.01</probabilities>
-		</cpt>
-		<cpt id="tub" diagtype="target">
-			<state id="no" label="F5" />
-			<state id="yes" label="F6" fault="true" />
-			<parents>asia</parents>
-			<probabilities>0.99 0.01 0.95 0.05</probabilities>
-		</cpt>
-		<cpt id="smoke" diagtype="observation" ranked="true">
-			<state id="no" />
-			<state id="yes" />
-			<probabilities>0.5 0.5</probabilities>
-		</cpt>
-		<cpt id="lung" diagtype="target">
-			<state id="no" label="F9" />
-			<state id="yes" label="F10" fault="true" />
-			<parents>smoke</parents>
-			<probabilities>0.99 0.01 0.9 0.1</probabilities>
-		</cpt>
-		<cpt id="either">
-			<state id="Nothing" />
-			<state id="CancerORTuberculosis" />
-			<parents>tub lung</parents>
-			<probabilities>1.00 0.0 1.00 0.0 1.00 0.0 0.0 1.0</probabilities>
-		</cpt>
-		<cpt id="xray" diagtype="observation" ranked="true">
-			<state id="Normal" />
-			<state id="Abnormal" />
-			<parents>either</parents>
-			<probabilities>0.95 0.05 0.02 0.98</probabilities>
-		</cpt>
-		<cpt id="bronc" diagtype="target">
-			<state id="Absent" label="F15" />
-			<state id="Present" label="F16" fault="true" />
-			<parents>smoke</parents>
-			<probabilities>0.7 0.3 0.4 0.6</probabilities>
-		</cpt>
-		<cpt id="dysp" diagtype="observation" ranked="true">
-			<state id="Absent" />
-			<state id="Present" />
-			<parents>either bronc</parents>
-			<probabilities>0.9 0.1 0.2 0.8 0.3 0.7 0.1 0.9</probabilities>
-		</cpt>
-	</nodes>
+    <nodes>
+        <cpt id="asia" diagtype="observation" ranked="true">
+            <state id="no" />
+            <state id="yes" />
+            <probabilities>0.99 0.01</probabilities>
+        </cpt>
+        <cpt id="tub" diagtype="target">
+            <state id="no" label="F5" />
+            <state id="yes" label="F6" fault="true" />
+            <parents>asia</parents>
+            <probabilities>0.99 0.01 0.95 0.05</probabilities>
+        </cpt>
+        <cpt id="smoke" diagtype="observation" ranked="true">
+            <state id="no" />
+            <state id="yes" />
+            <probabilities>0.5 0.5</probabilities>
+        </cpt>
+        <cpt id="lung" diagtype="target">
+            <state id="no" label="F9" />
+            <state id="yes" label="F10" fault="true" />
+            <parents>smoke</parents>
+            <probabilities>0.99 0.01 0.9 0.1</probabilities>
+        </cpt>
+        <cpt id="either">
+            <state id="Nothing" />
+            <state id="CancerORTuberculosis" />
+            <parents>tub lung</parents>
+            <probabilities>1.00 0.0 1.00 0.0 1.00 0.0 0.0 1.0</probabilities>
+        </cpt>
+        <cpt id="xray" diagtype="observation" ranked="true">
+            <state id="Normal" />
+            <state id="Abnormal" />
+            <parents>either</parents>
+            <probabilities>0.95 0.05 0.02 0.98</probabilities>
+        </cpt>
+        <cpt id="bronc" diagtype="target">
+            <state id="Absent" label="F15" />
+            <state id="Present" label="F16" fault="true" />
+            <parents>smoke</parents>
+            <probabilities>0.7 0.3 0.4 0.6</probabilities>
+        </cpt>
+        <cpt id="dysp" diagtype="observation" ranked="true">
+            <state id="Absent" />
+            <state id="Present" />
+            <parents>either bronc</parents>
+            <probabilities>0.9 0.1 0.2 0.8 0.3 0.7 0.1 0.9</probabilities>
+        </cpt>
+    </nodes>
 </smile>"""
 
 TEST_WHITESPACE_MODEL = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
 <smile version="1.0" id="Asia" numsamples="10000" discsamples="10000">
-	<nodes>
-		<cpt id="node 1" diagtype="observation" ranked="true">
-			<state id="no" />
-			<state id="yes" />
-			<probabilities>0.5 0.5</probabilities>
-		</cpt>
-		<cpt id="node 2" diagtype="target">
-			<state id="no" label="F5" />
-			<state id="yes" label="F6" fault="true" />
-			<parents>node 1</parents>
-			<probabilities>0.5 0.5 0.5 0.5</probabilities>
-		</cpt>
-	</nodes>
+    <nodes>
+        <cpt id="node 1" diagtype="observation" ranked="true">
+            <state id="no" />
+            <state id="yes" />
+            <probabilities>0.5 0.5</probabilities>
+        </cpt>
+        <cpt id="node 2" diagtype="target">
+            <state id="no" label="F5" />
+            <state id="yes" label="F6" fault="true" />
+            <parents>node 1</parents>
+            <probabilities>0.5 0.5 0.5 0.5</probabilities>
+        </cpt>
+    </nodes>
 </smile>"""
 
 
@@ -173,31 +172,31 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
 
 DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 <smile version="1.0" id="dummy" numsamples="10000" discsamples="10000">
-	<nodes>
-		<cpt id="A" >
-			<state id="yes" />
-			<state id="no" />
-			<probabilities>0.92 0.08</probabilities>
-		</cpt>
-		<cpt id="B" >
-			<state id="high" />
-			<state id="low" />
-			<probabilities>0.99 0.01</probabilities>
-		</cpt>
-		<cpt id="C" >
-			<state id="true" />
-			<state id="false" />
+    <nodes>
+        <cpt id="A" >
+            <state id="yes" />
+            <state id="no" />
+            <probabilities>0.92 0.08</probabilities>
+        </cpt>
+        <cpt id="B" >
+            <state id="high" />
+            <state id="low" />
+            <probabilities>0.99 0.01</probabilities>
+        </cpt>
+        <cpt id="C" >
+            <state id="true" />
+            <state id="false" />
             <parents>A B</parents>
-			<probabilities>0.8 0.2 0.75 0.25 0.33 0.67 0.99 0.01</probabilities>
-		</cpt>
-		<cpt id="D" >
-			<state id="big" />
+            <probabilities>0.8 0.2 0.75 0.25 0.33 0.67 0.99 0.01</probabilities>
+        </cpt>
+        <cpt id="D" >
+            <state id="big" />
             <state id="medium" />
-			<state id="small" />
-			<parents>C</parents>
-			<probabilities>0.6 0.3 0.1 0.4 0.4 0.2</probabilities>
-		</cpt>
-	</nodes>
+            <state id="small" />
+            <parents>C</parents>
+            <probabilities>0.6 0.3 0.1 0.4 0.4 0.2</probabilities>
+        </cpt>
+    </nodes>
 </smile>"""
 
 
@@ -247,7 +246,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
         self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
 
     def test_whitespace_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
@@ -270,11 +269,13 @@ class TestXDSLWriterMethods(unittest.TestCase):
         os.remove("dummy_model.xdsl")
 
     def test_alarm_model(self):
-        alarm_xdsl = XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+        XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+
         with open("alarm_model.xdsl", "r") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
+
         os.remove("alarm_model.xdsl")
 
     def tearDown(self):
@@ -419,7 +420,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
 
     def test_whitespace_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
@@ -442,7 +443,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         os.remove("dummy_model.xdsl")
 
     def test_alarm_model(self):
-        alarm_xdsl = XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+        XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
         with open("alarm_model.xdsl", "r") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
@@ -488,7 +489,7 @@ class TestXDSLCommaWarning(unittest.TestCase):
                 # Verify the warning was logged
                 self.assertIn(
                     "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider using a different delimiter.",
+                    "This may cause issues when loading the file. Consider removing any special characters.",
                     cm.output[0],
                 )
 
