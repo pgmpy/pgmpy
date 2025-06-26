@@ -3,6 +3,7 @@ from typing import Any, Dict, Hashable, List, Optional, Set, Tuple, Union
 import networkx as nx
 import numpy as np
 import pandas as pd
+from scipy.stats import multivariate_normal
 from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
@@ -262,6 +263,47 @@ class LinearGaussianBayesianNetwork(DAG):
 
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
+
+    def log_likelihood(self, data: pd.DataFrame) -> float:
+        """
+        Computes the log-likelihood of the given dataset under the current
+        Linear Gaussian Bayesian Network model.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            The dataset containing observations for all variables in the model.
+            The columns must match the model's variable names.
+
+        Returns
+        -------
+        float
+            The total log-likelihood of the data under the current model.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = LinearGaussianCPD("x1", [1], 4)
+        >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+        >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> df = pd.DataFrame(
+        ...     np.random.normal(0, 1, size=(100, 3)), columns=["x1", "x2", "x3"]
+        ... )
+        >>> model.log_likelihood(df)
+        -1128.66
+        """
+        ordering = list(nx.topological_sort(self))
+        missing = set(ordering) - set(data.columns)
+        if missing:
+            raise ValueError(f"Missing required columns in DataFrame: {missing}")
+        data = data[ordering].values
+        mean, cov = self.to_joint_gaussian()
+        return np.sum(multivariate_normal.logpdf(data, mean=mean, cov=cov))
 
     def copy(self):
         """
