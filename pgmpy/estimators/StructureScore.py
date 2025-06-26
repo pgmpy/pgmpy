@@ -221,11 +221,6 @@ class StructureScore(BaseEstimator):
         >>> prior = score.structure_prior(model)
         >>> print(prior)
         0
-
-        Notes
-        -----
-        - By default, this method returns 0, implying a uniform prior over all structures.
-        - To use informative priors, override this method in a subclass.
         """
         return 0
 
@@ -256,11 +251,6 @@ class StructureScore(BaseEstimator):
         >>> ratio = score.structure_prior_ratio(op)
         >>> print(ratio)
         0
-
-        Notes
-        -----
-        - By default, this method returns 0, corresponding to a uniform prior over structures.
-        - Subclasses may override this to implement non-uniform structural priors.
         """
         return 0
 
@@ -294,12 +284,6 @@ class K2(StructureScore):
     >>> k2_score = K2(data)
     >>> print(k2_score.score(model))
     -356.1785
-
-    Notes
-    -----
-    - Use K2 when your data is fully discrete and you have no prior parameter preferences.
-    - All Dirichlet hyperparameters are set to 1 by default, as described in [1].
-    - Incompatible input (e.g., continuous variables or mismatched state_names) will raise a ValueError.
 
     Raises
     ------
@@ -351,13 +335,6 @@ class K2(StructureScore):
         ValueError
             If `variable` or any parent is not present in `state_names` or data, or if the data
             is not fully discrete.
-
-        Notes
-        -----
-        - The K2 score is computed as described in Koller & Friedman [1], section 18.3.4–18.3.6.
-        - Suitable only for categorical/discrete data and parent variables.
-        - The uniform prior (all Dirichlet pseudo-counts = 1) is assumed by design.
-        - Columns with zero state counts may be dropped with `reindex=False`; see TODO comments in code.
 
         References
         ----------
@@ -435,12 +412,6 @@ class BDeu(StructureScore):
     >>> bdeu_score = BDeu(data, equivalent_sample_size=5)
     >>> print(bdeu_score.score(model))
     -241.872
-
-    Notes
-    -----
-    - The equivalent sample size controls the strength of the prior. Smaller values make the score more data-driven.
-    - Use BDeu for fully discrete datasets when you want to encode uncertainty about the parameters.
-    - Incompatible input (e.g., continuous variables or mismatched state_names) will raise a ValueError.
 
     Raises
     ------
@@ -556,12 +527,6 @@ class BDs(BDeu):
     >>> print(bds_score.score(model))
     -210.314
 
-    Notes
-    -----
-    - BDs is recommended for discrete Bayesian network structure learning on sparse datasets.
-    - The prior is marginal uniform; see [1] for mathematical details.
-    - Incompatible input (e.g., continuous variables or mismatched state_names) will raise a ValueError.
-
     Raises
     ------
     ValueError
@@ -605,12 +570,6 @@ class BDs(BDeu):
         0.6931471805599453
         >>> score.structure_prior_ratio("noop")
         0
-
-        Notes
-        -----
-        - For an addition ("+"), returns -log(2).
-        - For a removal ("-"), returns log(2).
-        - For other operations, returns 0.
         """
         if operation == "+":
             return -log(2.0)
@@ -646,12 +605,6 @@ class BDs(BDeu):
         >>> prior = score.structure_prior(model)
         >>> print(prior)
         -4.1588830833596715
-
-        Notes
-        -----
-        - Each possible arc is considered independent.
-        - Probability of an arc: 1/4. Probability of no arc: 1/2.
-        - The result is a log probability (base e).
         """
         nedges = float(len(model.edges()))
         nnodes = float(len(model.nodes()))
@@ -693,11 +646,6 @@ class BDs(BDeu):
         ValueError
             If `variable` or any parent is not present in `state_names` or data, or if
             the data contains unsupported types (e.g., continuous values).
-
-        Notes
-        -----
-        - The local score is robust to sparse parent configurations due to its prior.
-        - For mathematical details, see Scutari (2016).
         """
 
         parents = list(parents)
@@ -765,12 +713,6 @@ class BIC(StructureScore):
     >>> print(bic_score.score(model))
     -151.47
 
-    Notes
-    -----
-    - The BIC score penalizes complex networks to avoid overfitting.
-    - Suitable for discrete Bayesian network structure learning.
-    - Incompatible input (e.g., continuous variables or mismatched state_names) will raise a ValueError.
-
     Raises
     ------
     ValueError
@@ -819,11 +761,6 @@ class BIC(StructureScore):
         ValueError
             If `variable` or any parent is not present in `state_names` or data, or if
             the data contains unsupported types (e.g., continuous values).
-
-        Notes
-        -----
-        - The penalty term is proportional to the number of parameters in the conditional distribution.
-        - Useful for model selection in discrete Bayesian networks.
         """
 
         var_states = self.state_names[variable]
@@ -887,12 +824,6 @@ class AIC(StructureScore):
     >>> print(aic_score.score(model))
     -140.12
 
-    Notes
-    -----
-    - AIC is more sensitive to model fit than BIC for smaller datasets.
-    - The complexity penalty is proportional to the number of model parameters.
-    - Incompatible input (e.g., continuous variables or mismatched state_names) will raise a ValueError.
-
     Raises
     ------
     ValueError
@@ -941,11 +872,6 @@ class AIC(StructureScore):
         ValueError
             If `variable` or any parent is not present in `state_names` or data, or if
             the data contains unsupported types (e.g., continuous values).
-
-        Notes
-        -----
-        - The penalty term is proportional to the number of model parameters.
-        - Useful for model selection in discrete Bayesian networks.
         """
 
         var_states = self.state_names[variable]
@@ -1007,11 +933,6 @@ class LogLikelihoodGauss(StructureScore):
     >>> print(ll)
     -142.125
 
-    Notes
-    -----
-    - This score uses GLM (Generalized Linear Models) from the statsmodels library.
-    - Use this score only with fully continuous datasets.
-
     Raises
     ------
     ValueError
@@ -1053,11 +974,6 @@ class LogLikelihoodGauss(StructureScore):
         ------
         ValueError
             If the GLM cannot be fitted due to missing or non-numeric data.
-
-        Notes
-        -----
-        - This method is intended for internal use.
-        - Uses statsmodels.formula.api.glm for model fitting.
         """
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
@@ -1097,10 +1013,6 @@ class LogLikelihoodGauss(StructureScore):
         ------
         ValueError
             If the GLM cannot be fitted due to non-numeric data or missing columns.
-
-        Notes
-        -----
-        - The result is unpenalized log-likelihood; for model selection, consider using an information criterion.
         """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
@@ -1137,11 +1049,6 @@ class BICGauss(LogLikelihoodGauss):
     >>> s = score.local_score("B", ["A", "C"])
     >>> print(s)
     -111.42
-
-    Notes
-    -----
-    - The penalty term discourages overfitting by favoring simpler models.
-    - Use only with fully continuous (Gaussian) data.
 
     Raises
     ------
@@ -1182,10 +1089,6 @@ class BICGauss(LogLikelihoodGauss):
         ------
         ValueError
             If the GLM cannot be fitted due to missing or non-numeric data.
-
-        Notes
-        -----
-        - The penalty term is proportional to the number of parameters.
         """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
@@ -1223,11 +1126,6 @@ class AICGauss(LogLikelihoodGauss):
     >>> s = score.local_score("B", ["A", "C"])
     >>> print(s)
     -97.53
-
-    Notes
-    -----
-    - The penalty term encourages simpler models, but is less strict than BIC.
-    - Use only with fully continuous (Gaussian) data.
 
     Raises
     ------
@@ -1268,10 +1166,6 @@ class AICGauss(LogLikelihoodGauss):
         ------
         ValueError
             If the GLM cannot be fitted due to missing or non-numeric data.
-
-        Notes
-        -----
-        - The penalty term is proportional to the number of parameters only.
         """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
@@ -1313,12 +1207,6 @@ class LogLikelihoodCondGauss(StructureScore):
     >>> ll = score.local_score("A", ["B", "C"])
     >>> print(ll)
     -98.452
-
-    Notes
-    -----
-    - This method is suitable for Bayesian networks containing both discrete and continuous variables.
-    - Covariance matrices are adjusted to be positive semi-definite if needed.
-    - For mathematical details and algorithms, see [1].
 
     Raises
     ------
@@ -1366,12 +1254,6 @@ class LogLikelihoodCondGauss(StructureScore):
         A  0.802359  0.100722 -0.006956
         B  0.100722  0.818795  0.154614
         C -0.006956  0.154614  0.540758
-
-        Notes
-        -----
-        - Ensures the covariance matrix is always positive semi-definite for use in multivariate normal computations.
-        - If the number of rows is less than the number of columns, returns the identity matrix.
-        - If eigenvalues are close to zero, adds a small value to the diagonal to stabilize.
         """
         # If a number of rows less than number of variables, return variance 1 with no covariance.
         if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
@@ -1407,12 +1289,6 @@ class LogLikelihoodCondGauss(StructureScore):
         --------
         >>> score._cat_parents_product(["A", "B", "C"])
         6
-
-        Notes
-        -----
-        - Only discrete (non-continuous) parents are counted.
-        - Parents with a single unique value do not affect the result.
-        - Used internally to compute the number of parent configurations for parameter counting.
         """
         k = 1
         for pa in parents:
@@ -1448,12 +1324,6 @@ class LogLikelihoodCondGauss(StructureScore):
         --------
         >>> score._get_num_parameters("A", ["B", "C"])
         12
-
-        Notes
-        -----
-        - For continuous variables, parameters include means, variances, and regression coefficients.
-        - For discrete variables, parameters depend on the number of unique categories and parent configurations.
-        - Used for penalization in information criteria (e.g., BIC, AIC).
         """
         parent_dtypes = [self.dtypes[pa] for pa in parents]
         n_cont_parents = parent_dtypes.count("N")
@@ -1501,13 +1371,6 @@ class LogLikelihoodCondGauss(StructureScore):
         >>> ll = score._log_likelihood("A", ["B", "C"])
         >>> print(ll)
         -99.242
-
-        Notes
-        -----
-        - For continuous variables, probabilities are computed using multivariate normal densities.
-        - For discrete variables, the method iterates over joint configurations and uses
-        marginalization as needed.
-        - If the covariance matrix is not positive semi-definite, it is regularized for stability.
 
         Raises
         ------
@@ -1684,10 +1547,6 @@ class LogLikelihoodCondGauss(StructureScore):
         ------
         ValueError
             If the log-likelihood cannot be computed due to incompatible data or variable types.
-
-        Notes
-        -----
-        - This method automatically handles both discrete and continuous parent sets.
         """
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll
@@ -1726,12 +1585,6 @@ class BICCondGauss(LogLikelihoodCondGauss):
     >>> s = score.local_score("A", ["B", "C"])
     >>> print(s)
     -115.37
-
-    Notes
-    -----
-    - This criterion is suitable for Bayesian networks with both discrete and continuous nodes.
-    - The penalty term increases with the number of parameters and sample size, discouraging overfitting.
-    - For details and theory, see [1].
 
     Raises
     ------
@@ -1777,11 +1630,6 @@ class BICCondGauss(LogLikelihoodCondGauss):
         ------
         ValueError
             If the log-likelihood or parameter count cannot be computed for the given configuration.
-
-        Notes
-        -----
-        - Suitable for mixed-variable Bayesian networks.
-        - Penalizes complex models to avoid overfitting.
         """
 
         ll = self._log_likelihood(variable=variable, parents=parents)
@@ -1822,12 +1670,6 @@ class AICCondGauss(LogLikelihoodCondGauss):
     >>> s = score.local_score("A", ["B", "C"])
     >>> print(s)
     -99.75
-
-    Notes
-    -----
-    - Suitable for Bayesian networks containing both discrete and continuous nodes.
-    - The penalty term encourages simpler models and is independent of sample size.
-    - For details and theory, see [1].
 
     Raises
     ------
@@ -1872,10 +1714,6 @@ class AICCondGauss(LogLikelihoodCondGauss):
         ------
         ValueError
             If the log-likelihood or parameter count cannot be computed for the given configuration.
-
-        Notes
-        -----
-        - Encourages parsimonious models and can be used for mixed-variable networks.
         """
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)
