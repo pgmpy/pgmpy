@@ -2,8 +2,8 @@
 
 import numbers
 from itertools import chain
+from typing import Any, Dict, Hashable, List, Optional, Union
 
-from typing import List, Union, Dict, Any, Optional, Callable
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -25,7 +25,7 @@ class BayesianEstimator(ParameterEstimator):
         self,
         model: Union[DAG, DiscreteBayesianNetwork],
         data: pd.DataFrame,
-        **kwargs: Any,
+        **kwargs,
     ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
@@ -108,10 +108,13 @@ class BayesianEstimator(ParameterEstimator):
         >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = BayesianEstimator(model, values)
         >>> estimator.get_parameters(prior_type="BDeu", equivalent_sample_size=5)
-        [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
+         <TabularCPD representing P(C:2) at 0x...>,
+         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
 
-        def _get_node_param(node: Any) -> TabularCPD:
+        def _get_node_param(node: Hashable) -> TabularCPD:
             _equivalent_sample_size = (
                 equivalent_sample_size[node]
                 if isinstance(equivalent_sample_size, dict)
@@ -141,7 +144,7 @@ class BayesianEstimator(ParameterEstimator):
 
     def estimate_cpd(
         self,
-        node: Any,
+        node: Hashable,
         prior_type: str = "BDeu",
         pseudo_counts: Union[List[List[float]], np.ndarray, float, int] = [],
         equivalent_sample_size: Union[int, float] = 5,

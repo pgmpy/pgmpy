@@ -1,31 +1,29 @@
 #!/usr/bin/env python
 
-from collections.abc import Callable
 from itertools import chain, combinations, permutations
 from typing import (
-    Union,
     Callable,
-    Optional,
+    Collection,
     Dict,
+    FrozenSet,
+    Hashable,
+    Optional,
     Set,
     Tuple,
-    List,
-    FrozenSet,
-    Any,
-    Collection,
+    Union,
 )
-from collections.abc import Callable
-import pandas as pd
 
 import networkx as nx
+import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG, UndirectedGraph, DAG
+from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
+from pgmpy.independencies import Independencies
 
 
 class PC(StructureEstimator):
@@ -55,15 +53,15 @@ class PC(StructureEstimator):
     def __init__(
         self,
         data: Optional[pd.DataFrame] = None,
-        independencies: Optional[Any] = None,
-        **kwargs: Any,
+        independencies: Optional[Independencies] = None,
+        **kwargs,
     ) -> None:
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
         variant: str = "parallel",
-        ci_test: Union[str, Callable, None] = None,
+        ci_test: Optional[Union[str, Callable]] = None,
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
@@ -71,7 +69,7 @@ class PC(StructureEstimator):
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
-        **kwargs: Any,
+        **kwargs,
     ) -> Union[DAG, PDAG, Tuple[nx.Graph, Dict[Tuple[str, str], Set[str]]]]:
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
@@ -259,7 +257,7 @@ class PC(StructureEstimator):
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
-        **kwargs: Any,
+        **kwargs,
     ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
@@ -349,7 +347,6 @@ class PC(StructureEstimator):
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
@@ -373,7 +370,6 @@ class PC(StructureEstimator):
                                 break
 
             elif variant == "parallel":
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
                     for separating_set in PC._get_potential_sepsets(
@@ -429,9 +425,9 @@ class PC(StructureEstimator):
 
     @staticmethod
     def _get_potential_sepsets(
-        u: Any,
-        v: Any,
-        temporal_ordering: Dict[Any, int],
+        u: Hashable,
+        v: Hashable,
+        temporal_ordering: Dict[Hashable, int],
         graph: UndirectedGraph,
         lim_neighbors: int,
     ) -> Collection[Tuple]:
@@ -488,7 +484,7 @@ class PC(StructureEstimator):
     def orient_colliders(
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Any, int] = dict(),
+        temporal_ordering: Dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton

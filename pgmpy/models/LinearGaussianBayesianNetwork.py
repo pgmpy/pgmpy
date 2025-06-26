@@ -1,3 +1,5 @@
+from typing import Any, Dict, Hashable, List, Optional, Set, Tuple, Union
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -6,7 +8,6 @@ from sklearn.linear_model import LinearRegression
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import logger
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -23,8 +24,8 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Any, Any]]] = None,
-        latents: Set = set(),
+        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
+        latents: Set[Hashable] = set(),
         lavaan_str: Optional[str] = None,
         dagitty_str: Optional[str] = None,
     ) -> None:
@@ -77,7 +78,7 @@ class LinearGaussianBayesianNetwork(DAG):
                 self.cpds.append(cpd)
 
     def get_cpds(
-        self, node: Optional[Any] = None
+        self, node: Optional[Hashable] = None
     ) -> Union[LinearGaussianCPD, List[LinearGaussianCPD]]:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
@@ -262,7 +263,7 @@ class LinearGaussianBayesianNetwork(DAG):
         # Round because numerical errors can lead to non-symmetric cov matrix.
         return mean.round(decimals=8), implied_cov.round(decimals=8)
 
-    def copy(self) -> "LinearGaussianBayesianNetwork":
+    def copy(self):
         """
         Returns a copy of the model.
 

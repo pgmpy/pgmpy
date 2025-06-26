@@ -1,11 +1,10 @@
 # coding:utf-8
 
 from itertools import chain
-from typing import List, Union, Optional, Any, Dict, Hashable
+from typing import Hashable, List, Union
 
 import numpy as np
 import pandas as pd
-
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
@@ -53,7 +52,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         self,
         model: Union[DiscreteBayesianNetwork, JunctionTree, DAG],
         data: pd.DataFrame,
-        **kwargs: Any,
+        **kwargs,
     ) -> None:
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(

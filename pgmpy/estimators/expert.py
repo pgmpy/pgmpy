@@ -1,6 +1,5 @@
-import sys
 from itertools import combinations
-from typing import Callable, Optional, Set, Tuple
+from typing import Callable, Hashable, Optional, Set, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -10,7 +9,7 @@ from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.global_vars import logger
-from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
+from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
@@ -59,7 +58,9 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold: float = 0.05,
         effect_size_threshold: float = 0.05,
-        orientation_fn: Callable[..., Optional[Tuple[str, str]]] = llm_pairwise_orient,
+        orientation_fn: Callable[
+            ..., Optional[Tuple[Hashable, Hashable]]
+        ] = llm_pairwise_orient,
         orientations: Set[Tuple[str, str]] = set(),
         expert_knowledge: Optional[ExpertKnowledge] = None,
         use_cache: bool = True,
@@ -303,8 +304,8 @@ class ExpertInLoop(StructureEstimator):
                 ):
                     logger.info(
                         f"\rQueried for edge orientation between"
-                        "{selected_edge.u} and {selected_edge.v}. Got:"
-                        "{edge_direction[0]} -> {edge_direction[1]}"
+                        f"{selected_edge.u} and {selected_edge.v}. Got:"
+                        f"{edge_direction[0]} -> {edge_direction[1]}"
                     )
 
             # Step 3.6: Try adding the edge to the DAG. If edge creates a

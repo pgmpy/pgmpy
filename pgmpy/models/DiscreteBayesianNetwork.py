@@ -7,6 +7,7 @@ from operator import mul
 from typing import (
     Any,
     Dict,
+    Hashable,
     Iterable,
     List,
     Optional,
@@ -31,8 +32,6 @@ from pgmpy.factors.discrete import (
 from pgmpy.global_vars import logger
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
-
-Node = Union[str, int]
 
 
 class DiscreteBayesianNetwork(DAG):
@@ -917,7 +916,7 @@ class DiscreteBayesianNetwork(DAG):
                     pred_values[k + "_" + str(state)].append(v.values[index])
         return pd.DataFrame(pred_values, index=data.index)
 
-    def get_state_probability(self, states: Dict[Node, str]) -> float:
+    def get_state_probability(self, states: Dict[Hashable, Hashable]) -> float:
         """
         Given a fully specified Bayesian Network, returns the probability of the given set
         of states.
@@ -1080,7 +1079,7 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.latents = self.latents
         return model_copy
 
-    def get_markov_blanket(self, node: Node) -> List[Node]:
+    def get_markov_blanket(self, node: Hashable) -> List[Hashable]:
         """
         Returns a markov blanket for a random variable. In the case
         of Bayesian Networks, the markov blanket is the set of
@@ -1130,8 +1129,8 @@ class DiscreteBayesianNetwork(DAG):
     def get_random(
         n_nodes: int = 5,
         edge_prob: float = 0.5,
-        node_names: Optional[List[Node]] = None,
-        n_states: Optional[Union[int, Dict[Node, int]]] = None,
+        node_names: Optional[List[Hashable]] = None,
+        n_states: Optional[Union[int, Dict[Hashable, int]]] = None,
         latents: bool = False,
         seed: Optional[int] = None,
     ) -> "DiscreteBayesianNetwork":
@@ -1226,7 +1225,7 @@ class DiscreteBayesianNetwork(DAG):
 
     def get_random_cpds(
         self,
-        n_states: Optional[Union[int, Dict[Node, int]]] = None,
+        n_states: Optional[Union[int, Dict[Hashable, int]]] = None,
         inplace: bool = False,
         seed: Optional[int] = None,
     ) -> Optional[Union[List[TabularCPD], "DiscreteBayesianNetwork"]]:
@@ -1274,7 +1273,7 @@ class DiscreteBayesianNetwork(DAG):
             return cpds
 
     def do(
-        self, nodes: Union[Node, List[Node]], inplace: bool = False
+        self, nodes: Union[Hashable, List[Hashable]], inplace: bool = False
     ) -> Optional["DiscreteBayesianNetwork"]:
         """
         Applies the do operation. The do operation removes all incoming edges
@@ -1329,8 +1328,8 @@ class DiscreteBayesianNetwork(DAG):
     def simulate(
         self,
         n_samples: int = 10,
-        do: Optional[Dict[Node, Any]] = None,
-        evidence: Optional[Dict[Node, Any]] = None,
+        do: Optional[Dict[Hashable, Hashable]] = None,
+        evidence: Optional[Dict[Hashable, Hashable]] = None,
         virtual_evidence: Optional[List[TabularCPD]] = None,
         virtual_intervention: Optional[List[TabularCPD]] = None,
         include_latents: bool = False,

@@ -1,9 +1,9 @@
+from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Union
+
 import networkx as nx
-import numpy as np
 import pandas as pd
 import pyro
 import torch
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -23,8 +23,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Any, Any]]] = None,
-        latents: Set[Any] = set(),
+        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
+        latents: Set[Hashable] = set(),
         lavaan_str: Optional[str] = None,
         dagitty_str: Optional[str] = None,
     ):

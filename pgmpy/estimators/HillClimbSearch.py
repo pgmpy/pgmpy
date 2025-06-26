@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 from collections import deque
 from itertools import permutations
-from typing import Union, Optional, Generator, Tuple, List, Any, Deque, Callable
+from typing import (
+    Any,
+    Callable,
+    Deque,
+    Generator,
+    Hashable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import networkx as nx
 import pandas as pd
@@ -10,18 +20,7 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    AIC,
-    BIC,
-    K2,
-    AICCondGauss,
-    AICGauss,
-    BDeu,
-    BDs,
-    BICCondGauss,
-    BICGauss,
     ExpertKnowledge,
-    LogLikelihoodCondGauss,
-    LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
 )
@@ -56,7 +55,7 @@ class HillClimbSearch(StructureEstimator):
     Section 18.4.3 (page 811ff)
     """
 
-    def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs: Any):
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
         self.use_cache = use_cache
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
@@ -66,11 +65,11 @@ class HillClimbSearch(StructureEstimator):
         model: DAG,
         score: Callable[[Any, List[Any]], float],
         structure_score: Callable[[str], float],
-        tabu_list: Deque[Tuple[str, Tuple[Any, Any]]],
+        tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]],
         max_indegree: int,
-        forbidden_edges: List[Tuple[Any, Any]],
-        required_edges: List[Tuple[Any, Any]],
-    ) -> Generator[Tuple[Tuple[str, Tuple[Any, Any]], float], None, None]:
+        forbidden_edges: List[Tuple[Hashable, Hashable]],
+        required_edges: List[Tuple[Hashable, Hashable]],
+    ) -> Generator[Tuple[Tuple[str, Tuple[Hashable, Hashable]], float], None, None]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -140,7 +139,7 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method: Union[str, StructureScore, None] = None,
+        scoring_method: Optional[Union[str, StructureScore]] = None,
         start_dag: Optional[DAG] = None,
         tabu_length: int = 100,
         max_indegree: Optional[int] = None,
