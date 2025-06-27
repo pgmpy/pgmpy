@@ -2,6 +2,7 @@ import collections
 import networkx as nx
 from networkx import MultiDiGraph
 
+
 class ADMG(MultiDiGraph):
     """
     Abstract class for an ADMG (Acyclic Directed Mixed Graph).
@@ -9,10 +10,11 @@ class ADMG(MultiDiGraph):
     It is used to represent causal relationships in a system where some relationships are known to be directed,
     while others are not specified as directed or undirected.
     """
+
     def __init__(self, directed_ebunch, bidirected_ebunch, latents=None):
         """
         Initialize an ADMG with directed and bidirected edges.
-        
+
         Parameters
         ----------
         directed_ebunch : list of tuples
@@ -30,10 +32,10 @@ class ADMG(MultiDiGraph):
             self.add_directed_edges(directed_ebunch)
         if bidirected_ebunch:
             self.add_bidirected_edges(bidirected_ebunch)
-    
+
     def add_node(self, node):
         super().add_node(node)
-    
+
     def add_nodes_from(self, nodes_for_adding, **attr):
         """add multiple nodes to the graph."""
         return super().add_nodes_from(nodes_for_adding, **attr)
@@ -56,17 +58,17 @@ class ADMG(MultiDiGraph):
             raise ValueError("Adding this edge would create a cycle in the graph.")
 
         # If no cycle is detected, then the edge has been added
-    
+
     def add_directed_edges(self, u, v):
         """
         Adds a bidirected edge between nodes u and v.
         """
         if u not in self.nodes or v not in self.nodes:
             raise ValueError("Both nodes must be present in the graph.")
-        
+
         if u == v:
             raise ValueError("Cannot add a bidirected edge from a node to itself.")
-        
+
         # add the bidirected edge in symmetry
         self.bi_directed_edges[u].add(v)
         self.bi_directed_edges[v].add(u)
@@ -74,11 +76,11 @@ class ADMG(MultiDiGraph):
     def add_directed_edges(self, ebunch):
         for u, v in ebunch:
             self.add_directed_edge(u, v)
-    
+
     def add_bidirected_edges(self, ebunch):
         for u, v in ebunch:
             self.add_bidirected_edge(u, v)
-    
+
     def add_edge(self, u, v, **attr):
         """
         Overrides the networkx add_edge method.
@@ -98,7 +100,7 @@ class ADMG(MultiDiGraph):
                 raise ValueError(f"Node {node} is not in the graph.")
             parents.update(super().predecessors(node))
         return parents
-    
+
     def get_children(self, nodes):
         """
         Returns the children of a given node or a set of nodes.
@@ -124,7 +126,7 @@ class ADMG(MultiDiGraph):
                 raise ValueError(f"Node {node} is not in the graph.")
             spouses.update(self.bi_directed_edges.get(node, set()))
         return spouses
-    
+
     def get_ancestors(self, nodes):
         """
         Returns the ancestors of a given node or a set of nodes.
@@ -174,7 +176,7 @@ class ADMG(MultiDiGraph):
             all_districts.update(district_components)
         return all_districts
 
-# We will define the m-separation algorithm later, skipping it for now
+    # We will define the m-separation algorithm later, skipping it for now
 
     def to_dag(self):
         """
@@ -190,20 +192,23 @@ class ADMG(MultiDiGraph):
         for u, v, _ in self.edges(key=True):
             if not self.has_edge(u, v):
                 new_dag.add_edge(u, v)
-        
+
         # Replace the bidirected edges with latent nodes
         processed_bidirected_pairs = set()
         for u, neighbors in self.bi_directed_edges.items():
             for v in neighbors:
-                if (u, v) not in processed_bidirected_pairs and (v, u) not in processed_bidirected_pairs:
+                if (u, v) not in processed_bidirected_pairs and (
+                    v,
+                    u,
+                ) not in processed_bidirected_pairs:
                     latent_node = f"L_{u}_{v}"
                     new_dag.add_node(latent_node)
                     new_dag.add_edge(u, latent_node)
                     new_dag.add_edge(latent_node, v)
                     processed_bidirected_pairs.add((u, v))
-        
+
         return new_dag
-    
+
     def get_ancestral_graph(self, nodes):
         """
         Returns an ADMG graph which would represent the ancestral structure of the given nodes.
@@ -214,30 +219,22 @@ class ADMG(MultiDiGraph):
 
         if not nodes_set.issubset(self.nodes):
             raise ValueError("Input nodes must be subset of graph's nodes.")
-        
+
         # An ancestral graph usually means it contains all the ancestors of the given nodes_set
         # But, the paper's definition of H_A is simply the graph induced by the nodes in A
         # So we take A -> nodes_set
-        new_admg= ADMG(nodes = list(nodes_set))
+        new_admg = ADMG(nodes=list(nodes_set))
 
         # add directed edges from the original graph
         for u, v in self.edges():
             if u in nodes_set and v in nodes_set:
                 new_admg.add_directed_edge(u, v)
                 # If the originagit l graph is ADMG, its subgraph will also be ADMG
-        
+
         # add bidirected edges from the original graph
         for u in nodes_set:
             for v in self.bi_directed_edges.get(u, set()):
-                if v in nodes_set and (u,v) not in new_admg.bi_directed_edges:
+                if v in nodes_set and (u, v) not in new_admg.bi_directed_edges:
                     new_admg.add_bidirected_edges([(u, v)])
-        
+
         return new_admg
-
-        
-
-            
-
-        
-
-
