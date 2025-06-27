@@ -1,6 +1,6 @@
 name: Linting Checks
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   lint:
@@ -38,7 +38,7 @@ jobs:
           blackdoc --check pgmpy
 
       - name: Fetch dev branch
-        run: git fetch origin dev:dev
+        run: git fetch origin
 
       - name: Get modified Python files
         id: files
