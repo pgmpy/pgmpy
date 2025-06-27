@@ -48,10 +48,12 @@ class TestPairwiseOrientation(unittest.TestCase):
     def test_llm(self):
         descriptions = {
             "Age": "The age of a person",
-            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
-            "Education": "The highest level of education the person has finished",
+            "Workclass": "The workplace where the person is "
+            "employed such as Private industry, or self employed",
+            "Education": "The highest level of education the " "person has finished",
             "MaritalStatus": "The marital status of the person",
-            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
+            "Occupation": "The kind of job the person does. "
+            "For example, sales, craft repair, clerical",
             "Relationship": "The relationship status of the person",
             "Race": "The ethnicity of the person",
             "Sex": "The sex or gender of the person",
@@ -178,16 +180,6 @@ class TestGetExampleModel(unittest.TestCase):
             del m
 
     def test_get_continuous_models(self):
-        """Test loading of continuous Bayesian network models."""
-        cont_models = {
-            "ecoli70",
-            "magic-niab",
-            "magic-irri",
-            "arth150",
-            "sangiovese",
-            "mehra",
-        }
-
         # Test ecoli70 model specifically as we have its structure
         model = get_example_model("ecoli70")
         self.assertIsInstance(model, LinearGaussianBayesianNetwork)

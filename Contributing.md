@@ -1,123 +1,117 @@
 # Contributing to pgmpy
 
-Hi! Thanks for your interest in contributing to [pgmpy](https://pgmpy.org). This
-document summarizes everything that you need to know to get started.
+Welcome and thank you for your interest in making pgmpy even better! This guide
+walks you through everything you need to know to get started, from setting up
+your development environment to submitting pull requests and getting feedback.
 
-## Development
+## Getting Started
+Before you write any code, please:
 
-### Code
-The latest codebase is available in the `dev` branch of the repository.
-
-### Building from Source
-To install pgmpy from the source code:
+1. **Fork the repository** on GitHub: https://github.com/pgmpy/pgmpy
+2. **Clone your fork** locally:
 ```
-$ git clone https://github.com/pgmpy/pgmpy
-$ cd pgmpy/
-$ pip install -r requirements.txt
-$ python setup.py install
+git clone git@github.com:<your-username>/pgmpy.git
+cd pgmpy
 ```
-
-To run the tests, you can use pytest:
+3. **Create and switch** to a feature branch based on `dev`:
 ```
-$ pytest -v pgmpy
+git checkout dev
+git pull origin dev
+git checkout -b feature/your-descriptive-name
 ```
 
-If you face any problems during installation let us know, via issues, mail or at our discord channel.
+## Installing from Source
 
-### Building Documentation
-We use sphinx to build the documentation. Please refer: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs for steps to build docs locally.
+Install pgmpy (plus testing dependencies) in editable mode:
+
+For `bash` users:
+```
+pip install -e .[tests]
+```
+For `zsh` users:
+```
+pip install -e ".[tests]"
+```
+This lets you tweak code and immediately see your changes without re-installing.
+
+## Running Tests
+
+We use **pytest** for testing and GitHub Actions for Continuous Integration (CI).
+
+* To **run tests** locally:
+```
+pytest -v pgmpy
+```
+* **Tip:** Use test-driven development—write your tests first, then implement functionality.
+
+## Pre-commit Hooks
+
+To ensure consistent formatting, we use **pre-commit** with Black, Flake8, etc.
+
+1. Install hooks:
+```
+pip install pre-commit
+pre-commit install
+```
+2. On each commit, code will be automatically formatted and linted.
+
+## Documentation
+
+Documentation is built with Sphinx. Please follow the steps in our Maintenance Guide to build docs locally: https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs
+
+## Reporting Issues
+
+Use GitHub issues to report:
+
+* Bugs: include a minimal reproducible example and environment details.
+* Questions: describe what you’re trying to achieve and any roadblocks.
+* Suggestions: propose new features or enhancements.
+
+Try to fill out the issue template as much as possible so maintainers have all the information they need.
+
+## Proposing New Features
+
+If you plan to add a model, algorithm, or major feature:
+
+1. Open an issue first, describing:
+* The feature or algorithm you want to add
+* Why it’s useful for pgmpy
+* A rough implementation plan or API sketch
+
+2. Wait for feedback and approval from maintainers. This prevents duplicated effort and ensures alignment with project goals.
+
+## Branching & Pull Requests
+
+We follow a lightweight GitFlow on top of our dev branch:
+1. Work in your feature branch (e.g., feature/infer-optimization).
+2. Commit early and often—ensure tests pass before each commit.
+3. Push your branch to your fork:
+```
+git push origin feature/your-descriptive-name
+```
+4. Open a pull request against the `dev` branch via GitHub’s web interface.
+5. Respond to review comments and make any requested changes.
+
+## Code Style & Best Practices
+
+* **Formatting:** Black is our standard—let pre-commit handle this.
+* **Naming:** Choose clear, descriptive names (avoid single-letter variables).
+* **Strings:** Use f-strings (f"{var} = {value}").
+* **File I/O:** Use context managers (with open(...) as f:).
+* **Remove dead code:** Turn all # TODO comments into GitHub issues.
+* **Commit messages:** Write concise, informative messages (see Thoughtbot’s guide).
+
+## Writing Tests
+
+Every new function or bug fix must include tests:
+* Unit tests for individual methods and edge cases.
+* Integration tests if your change spans multiple modules.
+* Aim for meaningful coverage rather than 100% lines.
+
+## Seeking Help & Discussion
+If you have questions or want to brainstorm:
+* Discord channel: invite link in the repo’s README.
+* Mailing list: check the README for subscription info.
 
 
-## Code and Issues
-
-We use [Github](https://github.com/pgmpy/pgmpy) to host all our code. We also use github
-as our [issue tracker](https://github.com/pgmpy/pgmpy/issues). Please feel free to
-create a new issue for any bugs, questions etc. It is very helpful if you follow the
-issue template while creating new issues as it gives us enough information to reproduce
-the problem. You can also refer to github's
-[guide](https://guides.github.com/features/issues/) on how to efficiently use github
-issues.
-
-### Git and our Branching model
-
-#### Git
-
-We use [Git](http://git-scm.com/) as our [version control
-system](http://en.wikipedia.org/wiki/Revision_control), so the best way to contribute is
-to learn how to use it and put your changes on a Git repository. There is plenty of
-online resources available to get started with Git:
-- Online tool to try git: [try git
-  tutorial](https://try.github.io/levels/1/challenges/1)
-- Quick intro to opening your first Pull Request:
-  https://www.freecodecamp.org/news/how-to-make-your-first-pull-request-on-github-3/
-- Git reference: [Pro Git book](http://git-scm.com/book/).
-
-#### Forks + GitHub Pull Requests
-
-We use [gitflow](http://nvie.com/posts/a-successful-git-branching-model/) to manage our
-branches.
-
-Summary of our git branching model:
-- Fork the desired repository on GitHub to your account.
-- Clone your forked repository locally: `git clone git@github.com:your-username/repository-name.git`.
-- Create a new branch off of `dev` branch with a descriptive name (for example:
-  `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can
-  do it by switching to `dev` branch: `git checkout dev` and then
-  creating a new branch: `git checkout -b name-of-the-new-branch`.
-- Make changes to the codebase and commit it. <b> [Imp] </b> Make sure that tests pass for each of your commits.
-- Rebase your branch on the current dev and push to your fork on GitHub (with the name as your local branch:
-  `git push origin branch-name`
-- Create a pull request using GitHub's Web interface (asking us to pull the
-  changes from your new branch and add the changes to our `dev` branch).;
-- Wait for reviews and comments.
-
-
-#### Tips
-
-- <b> [Imp] </b>  Write [helpful commit
-  messages](http://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message).
-- Anything in the `dev` branch should be deployable (no failing tests).
-- Never use `git add .`: it can add unwanted files;
-- Avoid using `git commit -a` unless you know what you're doing;
-- Check every change with `git diff` before adding then to the index (stage
-  area) and with `git diff --cached` before committing;
-- If you have push access to the main repository, please do not commit directly
-  to `dev`: your access should be used only to accept pull requests; if you
-  want to make a new feature, you should use the same process as other
-  developers so that your code can be reviewed.
-
-
-### Code Guidelines
-
-- We use `black`(https://black.readthedocs.io/en/stable/) for our code formatting.
-- Write tests for your new features (please see "Tests" topic below);
-- Always remember that [commented code is dead
-  code](http://www.codinghorror.com/blog/2008/07/coding-without-comments.html);
-- Name identifiers (variables, classes, functions, module names) with readable
-  names (`x` is always wrong);
-- When manipulating strings, use [Python's f-Strings](https://realpython.com/python-f-strings/)
-  (`f'{a} = {b}'` instead of `'{} = {}'.format(a, b)`);
-- When working with files use `with open(<filename>, <option>) as f` instead of
-  ` f = open(<filename>, <option>)`;
-- All `#TODO` comments should be turned into issues (use our
-  [GitHub issue system](https://github.com/pgmpy/pgmpy/issues));
-- Run all tests before pushing (just execute `nosetests`) so you will know if your
-  changes broke something;
-
-### Tests
-
-We use GitHub actions for continuous integration for all platforms. We use
-[pytest](https://docs.pytest.org/en/stable/) for writing tests.  You should
-write tests for every feature you add or bug you solve in the code. For a
-better design of your code, we recommend using a technique called [test-driven
-development](https://en.wikipedia.org/wiki/Test-driven_development), where you
-write your tests **before** writing the actual code that implements the desired
-feature.
-
-
-## Discussion
-
-Please feel free to contact us through our discord channel or mailing list if
-you have any questions or suggestions. All contributions are very welcome!
-
-Happy hacking! ;)
+All contributions—big and small—are welcome. Let’s build a better pgmpy together! Happy coding! 🚀

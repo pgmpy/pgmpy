@@ -32,23 +32,26 @@ class FunctionalCPD(BaseFactor):
     >>> from pgmpy.factors.hybrid import FunctionalCPD
     >>> import pyro.distributions as dist
     >>> cpd = FunctionalCPD(
-    ...    variable="x3",
-    ...    fn=lambda parent_sample: dist.Normal(
-    ...        0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1),
-    ...    parents=["x1", "x2"])
+    ...     variable="x3",
+    ...     fn=lambda parent_sample: dist.Normal(
+    ...         0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"] + 1.0, 1
+    ...     ),
+    ...     parents=["x1", "x2"],
+    ... )
     >>> cpd.variable
     'x3'
     >>> cpd.parents
     ['x1', 'x2']
     """
 
-    def __init__(self, variable, fn, parents=[]):
+    def __init__(self, variable, fn, parents=[], vectorized=False):
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")
         self.fn = fn
         self.parents = parents if parents else []
         self.variables = [variable] + self.parents
+        self.vectorized = vectorized
 
     def sample(self, n_samples=100, parent_sample=None):
         """
@@ -70,16 +73,21 @@ class FunctionalCPD(BaseFactor):
 
         Examples
         --------
+        >>> import torch
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> import pyro.distributions as dist
+        >>> seed_generator = torch.manual_seed(42)
         >>> cpd = FunctionalCPD(
-        ...    variable="x3",
-        ...    fn=lambda parent_sample: dist.Normal(
-        ...        1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1),
-        ...    parents=["x1", "x2"])
+        ...     variable="x3",
+        ...     fn=lambda parent_sample: dist.Normal(
+        ...         1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+        ...     ),
+        ...     parents=["x1", "x2"],
+        ... )
 
-        >>> parent_samples = pd.DataFrame({'x1' : [5, 10], 'x2' : [1, -1]})
+        >>> parent_samples = pd.DataFrame({"x1": [5, 10], "x2": [1, -1]})
         >>> cpd.sample(2, parent_samples)
+        array([2.63669038, 2.8288095 ])
 
         """
         sampled_values = []
@@ -97,18 +105,28 @@ class FunctionalCPD(BaseFactor):
                 )
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
+            if self.vectorized:
+                dists = self.fn(parent_sample)
+                samples = pyro.sample(f"{self.variable}_vectorized", dists)
+                sampled_values = samples.detach().numpy()
+            else:
+                for i in range(n_samples):
+                    sampled_values.append(
+                        pyro.sample(
+                            f"{self.variable}", self.fn(parent_sample.iloc[i, :])
+                        ).item()
+                    )
 
-            for i in range(n_samples):
-                sampled_values.append(
-                    pyro.sample(
-                        f"{self.variable}", self.fn(parent_sample.iloc[i, :])
-                    ).item()
-                )
         else:
-            for i in range(n_samples):
-                sampled_values.append(
-                    pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
-                )
+            if self.vectorized:
+                distribution = self.fn(None)
+                samples = pyro.sample(f"{self.variable}", distribution)
+                sampled_values = samples.detach().numpy()
+            else:
+                for i in range(n_samples):
+                    sampled_values.append(
+                        pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
+                    )
 
         sampled_values = np.array(sampled_values)
 

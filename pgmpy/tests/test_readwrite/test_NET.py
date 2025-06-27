@@ -1,8 +1,12 @@
+import os
+import tempfile
 import unittest
 
 import numpy as np
 
 from pgmpy import config
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import NETReader, NETWriter
 from pgmpy.utils import compat_fns, get_example_model
 
@@ -179,6 +183,47 @@ potential (xray | either){
 }
 """
         self.assertEqual(str(self.writer), net)
+
+    def test_comma_state_name_warning(self):
+        # Create a minimal model with state names containing commas
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": ["state,1", "state,2"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["yes", "no"], "A": ["state,1", "state,2"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
+        # Test that warning is raised when writing
+        with self.assertLogs("pgmpy", level="WARNING") as cm:
+            writer = NETWriter(model)
+            with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
+                tmp_path = tmp.name
+            try:
+                writer.write_net(tmp_path)
+
+                # Verify the warning was logged
+                self.assertIn(
+                    "State name 'state,1' for variable 'A' contains commas. "
+                    "This may cause issues when loading the file. Consider removing any special characters.",
+                    cm.output[0],
+                )
+
+                # Verify that loading fails due to commas in state names
+                with self.assertRaises(ValueError):
+                    NETReader(tmp_path).get_model()
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
 
 
 class TestNETReader(unittest.TestCase):
@@ -554,7 +599,7 @@ potential (xray | either){
         config.set_backend("numpy")
 
 
-class TestNETReader(unittest.TestCase):
+class TestNETReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 

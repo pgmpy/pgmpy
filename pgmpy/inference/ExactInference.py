@@ -2,6 +2,7 @@
 import copy
 import itertools
 from functools import reduce
+from typing import Hashable, Optional
 
 import networkx as nx
 import numpy as np
@@ -22,7 +23,9 @@ from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
     FactorGraph,
+    FunctionalBayesianNetwork,
     JunctionTree,
+    LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
 
@@ -241,9 +244,9 @@ class VariableElimination(Inference):
 
     def query(
         self,
-        variables,
-        evidence=None,
-        virtual_evidence=None,
+        variables: list[Hashable],
+        evidence: Optional[dict[Hashable, int]] = None,
+        virtual_evidence: Optional[list] = None,
         elimination_order="greedy",
         joint=True,
         show_progress=True,
@@ -282,14 +285,26 @@ class VariableElimination(Inference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> phi_query = inference.query(['A', 'B'])
+        >>> phi_query = inference.query(["A", "B"])
         """
         evidence = evidence if evidence is not None else dict()
+
+        if isinstance(
+            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
+        ):
+            raise NotImplementedError(
+                f"Variable Elimination is not supported for {self.model.__class__.__name__}."
+                f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
+            )
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -298,6 +313,11 @@ class VariableElimination(Inference):
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
+        if not variables:
+            raise ValueError(
+                "The `variables` argument to query() must contain at least one variable."
             )
 
         # Step 2: If virtual_evidence is provided, modify the network.
@@ -464,12 +484,16 @@ class VariableElimination(Inference):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import VariableElimination
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> phi_query = inference.max_marginal(['A', 'B'])
+        >>> phi_query = inference.max_marginal(["A", "B"])
         """
         if not variables:
             variables = []
@@ -538,12 +562,16 @@ class VariableElimination(Inference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> phi_query = inference.map_query(['A', 'B'])
+        >>> phi_query = inference.map_query(["A", "B"])
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
@@ -609,12 +637,16 @@ class VariableElimination(Inference):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import VariableElimination
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+        >>> inference.induced_graph(["C", "D", "A", "B", "E"])
         """
         self._initialize_structures()
 
@@ -673,12 +705,16 @@ class VariableElimination(Inference):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import VariableElimination
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> inference.induced_width(['C', 'D', 'A', 'B', 'E'])
+        >>> inference.induced_width(["C", "D", "A", "B", "E"])
         3
         """
         induced_graph = self.induced_graph(elimination_order)
@@ -866,24 +902,41 @@ class BeliefPropagation(Inference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
-        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
-        ...                    ('intel', 'SAT'), ('grade', 'letter')])
-        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        >>> grade_cpd = TabularCPD('grade', 3,
-        ...                        [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-        ...                         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-        ...                         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-        ...                        evidence=['diff', 'intel'],
-        ...                        evidence_card=[2, 3])
-        >>> sat_cpd = TabularCPD('SAT', 2,
-        ...                      [[0.1, 0.2, 0.7],
-        ...                       [0.9, 0.8, 0.3]],
-        ...                      evidence=['intel'], evidence_card=[3])
-        >>> letter_cpd = TabularCPD('letter', 2,
-        ...                         [[0.1, 0.4, 0.8],
-        ...                          [0.9, 0.6, 0.2]],
-        ...                         evidence=['grade'], evidence_card=[3])
+        >>> G = DiscreteBayesianNetwork(
+        ...     [
+        ...         ("diff", "grade"),
+        ...         ("intel", "grade"),
+        ...         ("intel", "SAT"),
+        ...         ("grade", "letter"),
+        ...     ]
+        ... )
+        >>> diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        ...     ],
+        ...     evidence=["diff", "intel"],
+        ...     evidence_card=[2, 3],
+        ... )
+        >>> sat_cpd = TabularCPD(
+        ...     "SAT",
+        ...     2,
+        ...     [[0.1, 0.2, 0.7], [0.9, 0.8, 0.3]],
+        ...     evidence=["intel"],
+        ...     evidence_card=[3],
+        ... )
+        >>> letter_cpd = TabularCPD(
+        ...     "letter",
+        ...     2,
+        ...     [[0.1, 0.4, 0.8], [0.9, 0.6, 0.2]],
+        ...     evidence=["grade"],
+        ...     evidence_card=[3],
+        ... )
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
         >>> bp = BeliefPropagation(G)
         >>> bp.calibrate()
@@ -899,24 +952,41 @@ class BeliefPropagation(Inference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
-        >>> G = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
-        ...                    ('intel', 'SAT'), ('grade', 'letter')])
-        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        >>> grade_cpd = TabularCPD('grade', 3,
-        ...                        [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-        ...                         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-        ...                         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-        ...                        evidence=['diff', 'intel'],
-        ...                        evidence_card=[2, 3])
-        >>> sat_cpd = TabularCPD('SAT', 2,
-        ...                      [[0.1, 0.2, 0.7],
-        ...                       [0.9, 0.8, 0.3]],
-        ...                      evidence=['intel'], evidence_card=[3])
-        >>> letter_cpd = TabularCPD('letter', 2,
-        ...                         [[0.1, 0.4, 0.8],
-        ...                          [0.9, 0.6, 0.2]],
-        ...                         evidence=['grade'], evidence_card=[3])
+        >>> G = DiscreteBayesianNetwork(
+        ...     [
+        ...         ("diff", "grade"),
+        ...         ("intel", "grade"),
+        ...         ("intel", "SAT"),
+        ...         ("grade", "letter"),
+        ...     ]
+        ... )
+        >>> diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        ...     ],
+        ...     evidence=["diff", "intel"],
+        ...     evidence_card=[2, 3],
+        ... )
+        >>> sat_cpd = TabularCPD(
+        ...     "SAT",
+        ...     2,
+        ...     [[0.1, 0.2, 0.7], [0.9, 0.8, 0.3]],
+        ...     evidence=["intel"],
+        ...     evidence_card=[3],
+        ... )
+        >>> letter_cpd = TabularCPD(
+        ...     "letter",
+        ...     2,
+        ...     [[0.1, 0.4, 0.8], [0.9, 0.6, 0.2]],
+        ...     evidence=["grade"],
+        ...     evidence_card=[3],
+        ... )
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
         >>> bp = BeliefPropagation(G)
         >>> bp.max_calibrate()
@@ -945,12 +1015,16 @@ class BeliefPropagation(Inference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+        ... )
         >>> model.fit(values)
         >>> inference = BeliefPropagation(model)
-        >>> phi_query = inference.query(['A', 'B'])
+        >>> phi_query = inference.query(["A", "B"])
 
         References
         ----------
@@ -1075,27 +1149,28 @@ class BeliefPropagation(Inference):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import BeliefPropagation
-        >>> bayesian_model = DiscreteBayesianNetwork([('A', 'J'), ('R', 'J'), ('J', 'Q'),
-        ...                                 ('J', 'L'), ('G', 'L')])
-        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
-        >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
-        >>> cpd_j = TabularCPD('J', 2,
-        ...                    [[0.9, 0.6, 0.7, 0.1],
-        ...                     [0.1, 0.4, 0.3, 0.9]],
-        ...                    ['R', 'A'], [2, 2])
-        >>> cpd_q = TabularCPD('Q', 2,
-        ...                    [[0.9, 0.2],
-        ...                     [0.1, 0.8]],
-        ...                    ['J'], [2])
-        >>> cpd_l = TabularCPD('L', 2,
-        ...                    [[0.9, 0.45, 0.8, 0.1],
-        ...                     [0.1, 0.55, 0.2, 0.9]],
-        ...                    ['G', 'J'], [2, 2])
-        >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> bayesian_model = DiscreteBayesianNetwork(
+        ...     [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
+        ... )
+        >>> cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
+        >>> cpd_r = TabularCPD("R", 2, [[0.4], [0.6]])
+        >>> cpd_j = TabularCPD(
+        ...     "J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2]
+        ... )
+        >>> cpd_q = TabularCPD("Q", 2, [[0.9, 0.2], [0.1, 0.8]], ["J"], [2])
+        >>> cpd_l = TabularCPD(
+        ...     "L",
+        ...     2,
+        ...     [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+        ...     ["G", "J"],
+        ...     [2, 2],
+        ... )
+        >>> cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
-        >>> belief_propagation.query(variables=['J', 'Q'],
-        ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
+        >>> belief_propagation.query(
+        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        ... )
         """
         evidence = evidence if evidence is not None else dict()
         orig_model = self.model.copy()
@@ -1171,27 +1246,28 @@ class BeliefPropagation(Inference):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import BeliefPropagation
-        >>> bayesian_model = DiscreteBayesianNetwork([('A', 'J'), ('R', 'J'), ('J', 'Q'),
-        ...                                 ('J', 'L'), ('G', 'L')])
-        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
-        >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
-        >>> cpd_j = TabularCPD('J', 2,
-        ...                    [[0.9, 0.6, 0.7, 0.1],
-        ...                     [0.1, 0.4, 0.3, 0.9]],
-        ...                    ['R', 'A'], [2, 2])
-        >>> cpd_q = TabularCPD('Q', 2,
-        ...                    [[0.9, 0.2],
-        ...                     [0.1, 0.8]],
-        ...                    ['J'], [2])
-        >>> cpd_l = TabularCPD('L', 2,
-        ...                    [[0.9, 0.45, 0.8, 0.1],
-        ...                     [0.1, 0.55, 0.2, 0.9]],
-        ...                    ['G', 'J'], [2, 2])
-        >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> bayesian_model = DiscreteBayesianNetwork(
+        ...     [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
+        ... )
+        >>> cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
+        >>> cpd_r = TabularCPD("R", 2, [[0.4], [0.6]])
+        >>> cpd_j = TabularCPD(
+        ...     "J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2]
+        ... )
+        >>> cpd_q = TabularCPD("Q", 2, [[0.9, 0.2], [0.1, 0.8]], ["J"], [2])
+        >>> cpd_l = TabularCPD(
+        ...     "L",
+        ...     2,
+        ...     [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+        ...     ["G", "J"],
+        ...     [2, 2],
+        ... )
+        >>> cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
-        >>> belief_propagation.map_query(variables=['J', 'Q'],
-        ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
+        >>> belief_propagation.map_query(
+        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        ... )
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
@@ -1229,7 +1305,7 @@ class BeliefPropagation(Inference):
 
         final_distribution = self._query(
             variables=variables,
-            operation="marginalize",
+            operation="maximize",
             evidence=evidence,
             joint=True,
             show_progress=show_progress,
@@ -1237,17 +1313,7 @@ class BeliefPropagation(Inference):
 
         self.__init__(orig_model)
 
-        # To handle the case when no argument is passed then
-        # _variable_elimination returns a dict.
-        argmax = compat_fns.argmax(final_distribution.values)
-        assignment = final_distribution.assignment([argmax])[0]
-
-        map_query_results = {}
-        for var_assignment in assignment:
-            var, value = var_assignment
-            map_query_results[var] = value
-
-        return map_query_results
+        return final_distribution
 
 
 class BeliefPropagationWithMessagePassing(Inference):
@@ -1454,7 +1520,9 @@ class BeliefPropagationWithMessagePassing(Inference):
         >>> phi2 = DiscreteFactor(
         ...     ["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]]
         ... )
-        >>> phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
+        >>> phi3 = DiscreteFactor(
+        ...     ["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]]
+        ... )
         >>> phi4 = DiscreteFactor(
         ...     ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
         ... )
@@ -1471,9 +1539,11 @@ class BeliefPropagationWithMessagePassing(Inference):
         ...     ]
         ... )
         >>> belief_propagation = BeliefPropagation(factor_graph)
-        >>> belief_propagation.query(variables=['B', 'C'],
-        ...                          evidence={'D': 0},
-        ...                          virtual_evidence=[TabularCPD(['A'], 2, [[0.3], [0.7]])])
+        >>> belief_propagation.query(
+        ...     variables=["B", "C"],
+        ...     evidence={"D": 0},
+        ...     virtual_evidence=[TabularCPD(["A"], 2, [[0.3], [0.7]])],
+        ... )
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
@@ -1490,7 +1560,8 @@ class BeliefPropagationWithMessagePassing(Inference):
             common_vars = set(evidence).intersection(set(ve_names))
             if common_vars:
                 raise ValueError(
-                    f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+                    f"Can't have the same variables in both `evidence` and "
+                    f"`virtual_evidence`. Found in both: {common_vars}"
                 )
 
         query = self._RecursiveMessageSchedulingQuery(
@@ -1543,7 +1614,8 @@ class BeliefPropagationWithMessagePassing(Inference):
 
         assert (
             len(incoming_messages) == cpt.ndim - 1
-        ), f"Error computing factor node message for {target_var}. The number of incoming messages must equal the card(CPT) - 1"
+        ), f"Error computing factor node message for {target_var}. "
+        "The number of incoming messages must equal the card(CPT) - 1"
 
         if len(incoming_messages) == 0:
             return cpt
