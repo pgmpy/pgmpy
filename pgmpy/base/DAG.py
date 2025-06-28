@@ -1674,6 +1674,57 @@ class DAG(nx.DiGraph):
 
         return strengths
 
+    def _get_non_descendants(self, node) -> list:
+        """
+        Returns a list of the non_descendants of a given node in the model
+        using BFS.
+
+        Parameters
+        ----------
+        node : (Hashable) the node of the DAG for which we want to find
+                non-descendant nodes
+
+        Returns
+        -------
+        list(non_descendants): A list of all the non-descendant nodes for
+                                the given node in the DAG
+        """
+        descendants = set()
+        queue = list(self.successors(node))
+        visited = set()
+        while queue:
+            current = queue.pop(0)
+            if current not in visited:
+                visited.add(current)
+                descendants.add(current)
+                queue.extend(self.successors(current))
+
+        all_nodes = set(self.nodes())
+        non_descendants = all_nodes - descendants - {node}
+        return list(non_descendants)
+
+    def d_separated_triples(
+        self, nodes: list, ci_test_func: Callable, data, significance_level=0.05
+    ):
+        dsep_triples = set()
+        for node in nodes:
+            non_descendants = self._get_non_descendants(node)
+            for non_descendant in non_descendants:
+                if non_descendant == node or non_descendant in self.get_parents(node):
+                    continue
+                conditioning_set = frozenset(self.get_parents(node))
+                _, p_value = ci_test_func(
+                    data,
+                    node,
+                    non_descendant,
+                    list(conditioning_set),
+                    significance_level,
+                )
+                if p_value >= significance_level:
+                    dsep_triples.add((node, non_descendant, conditioning_set))
+
+        return dsep_triples
+
     def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
 
         from sklearn.metrics import f1_score
