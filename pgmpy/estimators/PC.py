@@ -313,7 +313,10 @@ class PC(StructureEstimator):
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
         temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
+            for u, v in expert_knowledge.forbidden_edges:
+                if graph.has_edge(u, v):
+                    graph.remove_edge(u, v)
+                    separating_sets[frozenset((u, v))] = set()
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
