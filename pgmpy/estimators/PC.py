@@ -1,16 +1,29 @@
 #!/usr/bin/env python
 
 from itertools import chain, combinations, permutations
+from typing import (
+    Callable,
+    Collection,
+    Dict,
+    FrozenSet,
+    Hashable,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import networkx as nx
+import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import PDAG, UndirectedGraph
+from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import get_ci_test
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
+from pgmpy.independencies import Independencies
 
 
 class PC(StructureEstimator):
@@ -72,25 +85,31 @@ class PC(StructureEstimator):
     ----------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
         2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
+      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
     """
 
-    def __init__(self, data=None, independencies=None, **kwargs):
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        independencies: Optional[Independencies] = None,
+        **kwargs,
+    ) -> None:
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
-        variant="parallel",
-        ci_test="chi_square",
-        return_type="pdag",
-        significance_level=0.01,
-        max_cond_vars=5,
-        expert_knowledge=None,
-        enforce_expert_knowledge=False,
-        n_jobs=-1,
-        show_progress=True,
+        variant: str = "parallel",
+        ci_test: Optional[Union[str, Callable]] = None,
+        return_type: str = "pdag",
+        significance_level: float = 0.01,
+        max_cond_vars: int = 5,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        enforce_expert_knowledge: bool = False,
+        n_jobs: int = -1,
+        show_progress: bool = True,
         **kwargs,
-    ):
+    ) -> Union[DAG, PDAG, Tuple[nx.Graph, Dict[Tuple[str, str], Set[str]]]]:
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
@@ -196,13 +215,13 @@ class PC(StructureEstimator):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.estimators import PC
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> data = model.simulate(n_samples=1000)
         >>> est = PC(data)
-        >>> model_chi = est.estimate(ci_test='chi_square')
+        >>> model_chi = est.estimate(ci_test="chi_square")
         >>> print(len(model_chi.edges()))
         28
-        >>> model_gsq, _ = est.estimate(ci_test='g_sq', return_type='skeleton')
+        >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
         >>> print(len(model_gsq.edges()))
         33
         """
@@ -212,7 +231,7 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_ci_test(
+        ci_test = get_callable_ci_test(
             ci_test, full=True, data=self.data, independencies=self.independencies
         )
 
@@ -269,16 +288,16 @@ class PC(StructureEstimator):
 
     def build_skeleton(
         self,
-        variant="stable",
-        ci_test="chi_square",
-        significance_level=0.01,
-        max_cond_vars=5,
-        expert_knowledge=None,
-        enforce_expert_knowledge=False,
-        n_jobs=-1,
-        show_progress=True,
+        variant: str = "stable",
+        ci_test: Union[str, Callable, None] = None,
+        significance_level: float = 0.01,
+        max_cond_vars: int = 5,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        enforce_expert_knowledge: bool = False,
+        n_jobs: int = -1,
+        show_progress: bool = True,
         **kwargs,
-    ):
+    ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
@@ -315,7 +334,9 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_ci_test(ci_test, full=True, data=None)
+        ci_test = get_callable_ci_test(
+            ci_test, full=True, data=None
+        )  # this is called twice, before on PC estimate
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -365,7 +386,6 @@ class PC(StructureEstimator):
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or (
                         (u, v) not in expert_knowledge.required_edges
@@ -389,7 +409,6 @@ class PC(StructureEstimator):
                                 break
 
             elif variant == "parallel":
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
                     for separating_set in PC._get_potential_sepsets(
@@ -439,11 +458,18 @@ class PC(StructureEstimator):
                 )
 
         if show_progress and config.SHOW_PROGRESS:
+            pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
         return graph, separating_sets
 
     @staticmethod
-    def _get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
+    def _get_potential_sepsets(
+        u: Hashable,
+        v: Hashable,
+        temporal_ordering: Dict[Hashable, int],
+        graph: UndirectedGraph,
+        lim_neighbors: int,
+    ) -> Collection[Tuple]:
         """
         Return the temporally consistent superset of separating set of u, v.
 
@@ -494,7 +520,11 @@ class PC(StructureEstimator):
         )
 
     @staticmethod
-    def orient_colliders(skeleton, separating_sets, temporal_ordering=dict()):
+    def orient_colliders(
+        skeleton: UndirectedGraph,
+        separating_sets: Dict[FrozenSet, Set],
+        temporal_ordering: Dict[Hashable, int] = dict(),
+    ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton
         based on information from `separating_sets` to form a DAG pattern (PDAG).
@@ -529,12 +559,14 @@ class PC(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
-        >>> data['C'] = data['A'] - data['B']
-        >>> data['D'] += data['A']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
+        ... )
+        >>> data["C"] = data["A"] - data["B"]
+        >>> data["D"] += data["A"]
         >>> c = PC(data)
         >>> pdag = c.orient_colliders(*c.build_skeleton())
-        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
+        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
         OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
 

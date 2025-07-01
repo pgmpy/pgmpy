@@ -80,7 +80,7 @@ def correlation_score(
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
     0.911957950065703
     """
-    from pgmpy.estimators.CITests import get_ci_test
+    from pgmpy.estimators.CITests import get_callable_ci_test
 
     # Step 1: Checks for input arguments.
     if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
@@ -91,13 +91,16 @@ def correlation_score(
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            "Missing columns in data. Can't find values for the following variables: "
+            f" {set(model.nodes()) - set(data.columns)}"
         )
 
-    supported_test = get_ci_test(test)
+    supported_test = get_callable_ci_test(test)
 
     if not callable(score):
-        raise ValueError(f"score should be scikit-learn classification metric.")
+        raise ValueError(
+            f"score should be scikit-learn classification metric. Got {score}"
+        )
 
     # Step 2: Create a dataframe of every 2 combination of variables
     results = []
@@ -161,7 +164,8 @@ def log_likelihood_score(model, data):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            f"Missing columns in data. Can't find values for the following variables: "
+            f" {set(model.nodes()) - set(data.columns)}"
         )
 
     model.check_model()
@@ -204,7 +208,7 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
     --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import structure_score
-    >>> model = get_example_model('alarm')
+    >>> model = get_example_model("alarm")
     >>> data = model.simulate(int(1e4))
     >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
@@ -246,12 +250,15 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
     elif set(model.nodes()) != set(data.columns):
         raise ValueError(
-            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+            f"Missing columns in data. Can't find values for the following variables: "
+            f" {set(model.nodes()) - set(data.columns)}"
         )
     elif (scoring_method not in supported_methods.keys()) and (
         not callable(scoring_method)
     ):
-        raise ValueError(f"scoring method not supported and not a callable")
+        raise ValueError(
+            f"scoring method not supported and not a callable. Got {scoring_method}"
+        )
 
     # Step 2: Compute the score and return
     return supported_methods[scoring_method](data, **kwargs).score(model)
@@ -292,7 +299,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
            u         v cond_vars   p-value
@@ -362,7 +369,7 @@ def fisher_c(model, data, ci_test, show_progress=True):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
     0.7504
@@ -374,7 +381,7 @@ def fisher_c(model, data, ci_test, show_progress=True):
 
     if len(model.latents) > 0:
         raise ValueError(
-            f"This test can not be performed on models with latent variables."
+            "This test can not be performed on models with latent variables."
         )
 
     cis = []

@@ -98,10 +98,18 @@ class DynamicBayesianNetwork(DAG):
     For example for a network as [image](http://s8.postimg.org/aaybw4x2t/Blank_Flowchart_New_Page_1.png),
     we will need to add all the edges in the 2-TBN as:
 
-    >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
-    ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
-    ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
-    ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+    >>> dbn.add_edges_from(
+    ...     [
+    ...         (("D", 0), ("G", 0)),
+    ...         (("I", 0), ("G", 0)),
+    ...         (("G", 0), ("L", 0)),
+    ...         (("D", 0), ("D", 1)),
+    ...         (("I", 0), ("I", 1)),
+    ...         (("G", 0), ("G", 1)),
+    ...         (("G", 0), ("L", 1)),
+    ...         (("L", 0), ("L", 1)),
+    ...     ]
+    ... )
 
     We can query the edges and nodes in the network as:
 
@@ -121,7 +129,7 @@ class DynamicBayesianNetwork(DAG):
     automatically replicated it all the time slices. For example, for
     adding a new variable `S` in the above network we can simply do:
 
-    >>> dbn.add_node('S')
+    >>> dbn.add_node("S")
     >>> dbn.nodes()
     ['S', 'G', 'D', 'I', 'L']
 
@@ -158,7 +166,7 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_node('A')
+        >>> dbn.add_node("A")
         ['A']
         """
         super(DynamicBayesianNetwork, self).add_node(DynamicNode(node, 0), **attr)
@@ -176,7 +184,7 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['A', 'B', 'C'])
+        >>> dbn.add_nodes_from(["A", "B", "C"])
         """
         for node in nodes:
             self.add_node(node)
@@ -189,7 +197,7 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['A', 'B', 'C'])
+        >>> dbn.add_nodes_from(["A", "B", "C"])
         >>> sorted(dbn._nodes())
         ['B', 'A', 'C']
         """
@@ -236,8 +244,8 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> model = DBN()
-        >>> model.add_nodes_from(['D', 'I'])
-        >>> model.add_edge(('D',0), ('I',0))
+        >>> model.add_nodes_from(["D", "I"])
+        >>> model.add_edge(("D", 0), ("I", 0))
         >>> sorted(model.edges())
         [(('D', 0), ('I', 0)), (('D', 1), ('I', 1))]
         """
@@ -305,7 +313,7 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))])
+        >>> dbn.add_edges_from([(("D", 0), ("G", 0)), (("I", 0), ("G", 0))])
         >>> dbn.nodes()
         ['G', 'I', 'D']
         >>> dbn.edges()
@@ -331,11 +339,19 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
-        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
-        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
-        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+        >>> dbn.add_nodes_from(["D", "G", "I", "S", "L"])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("G", 0), ("L", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...         (("G", 0), ("G", 1)),
+        ...         (("G", 0), ("L", 1)),
+        ...         (("L", 0), ("L", 1)),
+        ...     ]
+        ... )
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))]
         """
@@ -358,10 +374,18 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
-        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
-        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
-        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("G", 0), ("L", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...         (("G", 0), ("G", 1)),
+        ...         (("G", 0), ("L", 1)),
+        ...         (("L", 0), ("L", 1)),
+        ...     ]
+        ... )
         >>> dbn.get_inter_edges()
         [(('D', 0), ('D', 1)),
          (('G', 0), ('G', 1)),
@@ -384,14 +408,22 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+        >>> dbn.add_nodes_from(["D", "G", "I", "S", "L"])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("G", 0), ("L", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...     ]
+        ... )
         >>> dbn.get_interface_nodes()
         [('D', 0)]
         """
         if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError(
-                f"The timeslice should be a positive integer greater than or equal to zero: ({type(time_slice)}, value: {time_slice})"
+                f"The timeslice should be a positive integer greater than"
+                f" or equal to zero: ({type(time_slice)}, value: {time_slice})"
             )
 
         return [
@@ -412,8 +444,15 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('G', 0),('L', 0)),(('D', 0),('D', 1))])
+        >>> dbn.add_nodes_from(["D", "G", "I", "S", "L"])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("G", 0), ("L", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...     ]
+        ... )
         >>> dbn.get_slice_nodes()
         """
         if not isinstance(time_slice, int) or time_slice < 0:
@@ -444,22 +483,37 @@ class DynamicBayesianNetwork(DAG):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
-        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                      [0.4, 0.25, 0.08, 0.3],
-        ...                                      [0.3, 0.7, 0.02, 0.2]],
-        ...                        evidence=[('I', 0),('D', 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(('D',1), 2, [[0.6, 0.3],
-        ...                                   [0.4, 0.7]],
-        ...                      evidence=[('D',0)],
-        ...                      evidence_card=[2])
-        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
-        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
-        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
-        ...                                    [0.5, 0.6]],
-        ...                      evidence=[('I', 0)],
-        ...                      evidence_card=[2])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
+        >>> grade_cpd = TabularCPD(
+        ...     ("G", 0),
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     evidence=[("I", 0), ("D", 0)],
+        ...     evidence_card=[2, 2],
+        ... )
+        >>> d_i_cpd = TabularCPD(
+        ...     ("D", 1),
+        ...     2,
+        ...     [[0.6, 0.3], [0.4, 0.7]],
+        ...     evidence=[("D", 0)],
+        ...     evidence_card=[2],
+        ... )
+        >>> diff_cpd = TabularCPD(("D", 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(("I", 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(
+        ...     ("I", 1),
+        ...     2,
+        ...     [[0.5, 0.4], [0.5, 0.6]],
+        ...     evidence=[("I", 0)],
+        ...     evidence_card=[2],
+        ... )
         >>> dbn.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> dbn.get_cpds()
         [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7ff7f27b0cf8>,
@@ -499,10 +553,21 @@ class DynamicBayesianNetwork(DAG):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                      [0.4,0.25,0.08,0.3],
-        ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
+        >>> grade_cpd = TabularCPD(
+        ...     ("G", 0),
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     [("I", 0), ("D", 0)],
+        ...     [2, 2],
+        ... )
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
@@ -554,10 +619,21 @@ class DynamicBayesianNetwork(DAG):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                      [0.4,0.25,0.08,0.3],
-        ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
+        >>> grade_cpd = TabularCPD(
+        ...     ("G", 0),
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     [("I", 0), ("D", 0)],
+        ...     [2, 2],
+        ... )
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x3348ab0>]
@@ -617,23 +693,38 @@ class DynamicBayesianNetwork(DAG):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = DBN()
-        >>> student.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-        >>> student.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
-        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                      [0.4, 0.25, 0.08, 0.3],
-        ...                                      [0.3, 0.7, 0.02, 0.2]],
-        ...                        evidence=[('I', 0),('D', 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
-        ...                                    [0.4, 0.7]],
-        ...                      evidence=[('D', 0)],
-        ...                      evidence_card=[2])
-        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
-        >>> intel_cpd = TabularCPD(('I',0), 2, [[0.7, 0.3]])
-        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
-        ...                                    [0.5, 0.6]],
-        ...                      evidence=[('I', 0)],
-        ...                      evidence_card=[2])
+        >>> student.add_nodes_from(["D", "G", "I", "S", "L"])
+        >>> student.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
+        >>> grade_cpd = TabularCPD(
+        ...     ("G", 0),
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     evidence=[("I", 0), ("D", 0)],
+        ...     evidence_card=[2, 2],
+        ... )
+        >>> d_i_cpd = TabularCPD(
+        ...     ("D", 1),
+        ...     2,
+        ...     [[0.6, 0.3], [0.4, 0.7]],
+        ...     evidence=[("D", 0)],
+        ...     evidence_card=[2],
+        ... )
+        >>> diff_cpd = TabularCPD(("D", 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(("I", 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(
+        ...     ("I", 1),
+        ...     2,
+        ...     [[0.5, 0.4], [0.5, 0.6]],
+        ...     evidence=[("I", 0)],
+        ...     evidence_card=[2],
+        ... )
         >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> student.initialize_initial_state()
         """
@@ -688,7 +779,7 @@ class DynamicBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> dbn = DBN([(('D',0), ('G',0)), (('I',0), ('G',0))])
+        >>> dbn = DBN([(("D", 0), ("G", 0)), (("I", 0), ("G", 0))])
         >>> moral_graph = dbn.moralize()
         >>> moral_graph.edges()
         EdgeView([(('G', 0), ('I', 0)),
@@ -718,11 +809,21 @@ class DynamicBayesianNetwork(DAG):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3, 0.05, 0.9,  0.5 ],
-        ...                                      [0.4, 0.25, 0.08,  0.3],
-        ...                                      [0.3,  0.7, 0.02, 0.2 ]],
-        ...                         [('I', 0), ('D', 0)],[2,2])
+        >>> dbn.add_edges_from(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
+        >>> grade_cpd = TabularCPD(
+        ...     ("G", 0),
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     [("I", 0), ("D", 0)],
+        ...     [2, 2],
+        ... )
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn_copy = dbn.copy()
         >>> dbn_copy.nodes()
@@ -853,21 +954,22 @@ class DynamicBayesianNetwork(DAG):
         >>> import pandas as pd
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> model = DBN(
-        >>>     [
-        >>>         (("A", 0), ("B", 0)),
-        >>>         (("A", 0), ("C", 0)),
-        >>>         (("B", 0), ("D", 0)),
-        >>>         (("C", 0), ("D", 0)),
-        >>>         (("A", 0), ("A", 1)),
-        >>>         (("B", 0), ("B", 1)),
-        >>>         (("C", 0), ("C", 1)),
-        >>>         (("D", 0), ("D", 1)),
-        >>>     ]
-        >>> )
+        ...     [
+        ...         (("A", 0), ("B", 0)),
+        ...         (("A", 0), ("C", 0)),
+        ...         (("B", 0), ("D", 0)),
+        ...         (("C", 0), ("D", 0)),
+        ...         (("A", 0), ("A", 1)),
+        ...         (("B", 0), ("B", 1)),
+        ...         (("C", 0), ("C", 1)),
+        ...         (("D", 0), ("D", 1)),
+        ...     ]
+        ... )
         >>> data = np.random.randint(low=0, high=2, size=(1000, 20))
         >>> colnames = []
         >>> for t in range(5):
         ...     colnames.extend([("A", t), ("B", t), ("C", t), ("D", t)])
+        ...
         >>> df = pd.DataFrame(data, columns=colnames)
         >>> model.fit(df)
         """
@@ -1029,30 +1131,52 @@ class DynamicBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> dbn = DBN([(("D", 0), ("G", 0)), (("I", 0), ("G", 0)),
-        ...            (("D", 0), ("D", 1)), (("I", 0), ("I", 1)),])
+        >>> dbn = DBN(
+        ...     [
+        ...         (("D", 0), ("G", 0)),
+        ...         (("I", 0), ("G", 0)),
+        ...         (("D", 0), ("D", 1)),
+        ...         (("I", 0), ("I", 1)),
+        ...     ]
+        ... )
         >>> diff_cpd = TabularCPD(("D", 0), 2, [[0.6], [0.4]])
-        >>> grade_cpd = TabularCPD(variable=("G", 0), variable_card=3,
-        ...                        values=[[0.3, 0.05, 0.9, 0.5],
-        ...                                [0.4, 0.25, 0.08, 0.3],
-        ...                                [0.3, 0.7, 0.02, 0.2]],
-        ...                        evidence=[("I", 0), ("D", 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(variable=("D", 1), variable_card=2,
-        ...                      values=[[0.6, 0.3], [0.4, 0.7]],
-        ...                      evidence=[("D", 0)],
-        ...                      evidence_card=[2])
+        >>> grade_cpd = TabularCPD(
+        ...     variable=("G", 0),
+        ...     variable_card=3,
+        ...     values=[
+        ...         [0.3, 0.05, 0.9, 0.5],
+        ...         [0.4, 0.25, 0.08, 0.3],
+        ...         [0.3, 0.7, 0.02, 0.2],
+        ...     ],
+        ...     evidence=[("I", 0), ("D", 0)],
+        ...     evidence_card=[2, 2],
+        ... )
+        >>> d_i_cpd = TabularCPD(
+        ...     variable=("D", 1),
+        ...     variable_card=2,
+        ...     values=[[0.6, 0.3], [0.4, 0.7]],
+        ...     evidence=[("D", 0)],
+        ...     evidence_card=[2],
+        ... )
         >>> intel_cpd = TabularCPD(("I", 0), 2, [[0.7], [0.3]])
-        >>> i_i_cpd = TabularCPD(variable=("I", 1), variable_card=2,
-        ...                      values=[[0.5, 0.4], [0.5, 0.6]],
-        ...                      evidence=[("I", 0)],
-        ...                      evidence_card=[2])
-        >>> g_i_cpd = TabularCPD(variable=("G", 1), variable_card=3,
-        ...                      values=[[0.3, 0.05, 0.9, 0.5],
-        ...                              [0.4, 0.25, 0.08, 0.3],
-        ...                              [0.3, 0.7, 0.02, 0.2]],
-        ...                      evidence=[("I", 1), ("D", 1)],
-        ...                      evidence_card=[2, 2])
+        >>> i_i_cpd = TabularCPD(
+        ...     variable=("I", 1),
+        ...     variable_card=2,
+        ...     values=[[0.5, 0.4], [0.5, 0.6]],
+        ...     evidence=[("I", 0)],
+        ...     evidence_card=[2],
+        ... )
+        >>> g_i_cpd = TabularCPD(
+        ...     variable=("G", 1),
+        ...     variable_card=3,
+        ...     values=[
+        ...         [0.3, 0.05, 0.9, 0.5],
+        ...         [0.4, 0.25, 0.08, 0.3],
+        ...         [0.3, 0.7, 0.02, 0.2],
+        ...     ],
+        ...     evidence=[("I", 1), ("D", 1)],
+        ...     evidence_card=[2, 2],
+        ... )
         >>> dbn.add_cpds(diff_cpd, grade_cpd, d_i_cpd, intel_cpd, i_i_cpd, g_i_cpd)
 
         Normal simulation from the model.
@@ -1064,28 +1188,38 @@ class DynamicBayesianNetwork(DAG):
 
         Simulation with evidence.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, evidence={('D', 0): 1, ('D', 2): 0})
+        >>> dbn.simulate(
+        ...     n_time_slices=4, n_samples=2, evidence={("D", 0): 1, ("D", 2): 0}
+        ... )
            (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
         0       1       1       1       1       2       0       0       2       1       1       0       1
         1       1       2       1       1       2       0       0       1       1       0       0       1
 
         Simulation with virtual/soft evidence.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_evidence=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+        >>> dbn.simulate(
+        ...     n_time_slices=4,
+        ...     n_samples=2,
+        ...     virtual_evidence=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
+        ... )
            (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
         0       0       1       0       0       1       0       0       0       1       0       1       1
         1       0       1       0       0       0       1       0       0       0       0       1       1
 
         Simulation with intervention.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, do={('D', 0): 1, ('D', 2): 0})
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, do={("D", 0): 1, ("D", 2): 0})
            (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
         0       1       0       1       1       0       1       0       2       0       0       0       1
         1       1       1       0       1       2       1       0       0       1       1       1       1
 
         Simulation with virtual/soft intervention.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_intervention=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+        >>> dbn.simulate(
+        ...     n_time_slices=4,
+        ...     n_samples=2,
+        ...     virtual_intervention=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
+        ... )
            (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0

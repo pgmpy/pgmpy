@@ -4,10 +4,9 @@ import statsmodels.api as sm
 import torch
 
 from pgmpy import config
+from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
-
-from pgmpy.inference import CausalInference
 
 
 class SEMEstimator(object):
@@ -18,7 +17,8 @@ class SEMEstimator(object):
     def __init__(self, model):
         if config.BACKEND == "numpy":
             raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. Call pgmpy.config.set_backend('torch') to switch"
+                f"SEMEstimator requires torch backend. Currently it's numpy. "
+                "Call pgmpy.config.set_backend('torch') to switch"
             )
 
         if isinstance(model, (SEMGraph, SEM)):
@@ -262,7 +262,8 @@ class SEMEstimator(object):
 
         if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError(
-                f"The column names data do not match the variables in the model. Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
+                f"The column names data do not match the variables in the model. "
+                f"Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
             )
 
         # Initialize the values of parameters as tensors.
@@ -422,7 +423,7 @@ class IVEstimator:
 
         Examples
         --------
-        >>> from pgmpy.estimators import IVEstimator # TODO: Finish example.
+        >>> from pgmpy.estimators import IVEstimator  # TODO: Finish example.
         """
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)

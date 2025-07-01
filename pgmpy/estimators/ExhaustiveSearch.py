@@ -5,7 +5,8 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.estimators import StructureEstimator, get_scoring_method
+from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
 
@@ -37,7 +38,7 @@ class ExhaustiveSearch(StructureEstimator):
         give wrong results in case of custom scoring methods.
     """
 
-    def __init__(self, data, scoring_method="k2", use_cache=True, **kwargs):
+    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
         _, self.scoring_method = get_scoring_method(
             scoring_method, self.data, use_cache
@@ -64,18 +65,18 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> from pgmpy.estimators import ExhaustiveSearch
-        >>> s = ExhaustiveSearch(pd.DataFrame(data={'Temperature': [23, 19],
-                                                    'Weather': ['sunny', 'cloudy'],
-                                                    'Humidity': [65, 75]}))
-        >>> list(s.all_dags())
-        [<networkx.classes.digraph.DiGraph object at 0x7f6955216438>,
-         <networkx.classes.digraph.DiGraph object at 0x7f6955216518>,
-        ....
-        >>> [dag.edges() for dag in s.all_dags()]
-        [[], [('Humidity', 'Temperature')], [('Humidity', 'Weather')],
-        [('Temperature', 'Weather')], [('Temperature', 'Humidity')],
-        ....
-        [('Weather', 'Humidity'), ('Weather', 'Temperature'), ('Temperature', 'Humidity')]]
+        >>> data = pd.DataFrame(
+        ...     data={
+        ...         "Temperature": [23, 19],
+        ...         "Weather": ["sunny", "cloudy"],
+        ...         "Humidity": [65, 75],
+        ...     }
+        ... )
+        >>> est = ExhaustiveSearch(data)
+        >>> list(est.all_dags())
+        [<networkx.classes.digraph.DiGraph object at 0x...>, <networkx.classes.digraph.DiGraph object at 0x...>, ...]
+        >>> [list(dag.edges()) for dag in est.all_dags()]
+        [[], [('Humidity', 'Temperature')], [('Humidity', 'Weather')], [('Temperature', 'Weather')], ...
 
         """
         if nodes is None:
@@ -113,37 +114,42 @@ class ExhaustiveSearch(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import ExhaustiveSearch, K2
+        >>> # Setting the random seed for reproducibility
+        >>> np.random.seed(42)
         >>> # create random data sample with 3 variables, where B and C are identical:
-        >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
-        >>> data['C'] = data['B']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=5, size=(5000, 2)), columns=list("AB")
+        ... )
+        >>> data["C"] = data["B"]
         >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> for score, model in searcher.all_scores():
-        ...   print("{0}\t{1}".format(score, model.edges()))
-        -24234.44977974726      [('A', 'B'), ('A', 'C')]
-        -24234.449760691063     [('A', 'B'), ('C', 'A')]
-        -24234.449760691063     [('A', 'C'), ('B', 'A')]
-        -24203.700955937973     [('A', 'B')]
-        -24203.700955937973     [('A', 'C')]
-        -24203.700936881774     [('B', 'A')]
-        -24203.700936881774     [('C', 'A')]
-        -24203.700936881774     [('B', 'A'), ('C', 'A')]
-        -24172.952132128685     []
-        -16597.30920265254      [('A', 'B'), ('A', 'C'), ('B', 'C')]
-        -16597.30920265254      [('A', 'B'), ('A', 'C'), ('C', 'B')]
-        -16597.309183596342     [('A', 'B'), ('C', 'A'), ('C', 'B')]
-        -16597.309183596342     [('A', 'C'), ('B', 'A'), ('B', 'C')]
-        -16566.560378843253     [('A', 'B'), ('C', 'B')]
-        -16566.560378843253     [('A', 'C'), ('B', 'C')]
-        -16268.324549347722     [('A', 'B'), ('B', 'C')]
-        -16268.324549347722     [('A', 'C'), ('C', 'B')]
-        -16268.324530291524     [('B', 'A'), ('B', 'C')]
-        -16268.324530291524     [('B', 'C'), ('C', 'A')]
-        -16268.324530291524     [('B', 'A'), ('C', 'B')]
-        -16268.324530291524     [('C', 'A'), ('C', 'B')]
-        -16268.324530291524     [('B', 'A'), ('B', 'C'), ('C', 'A')]
-        -16268.324530291524     [('B', 'A'), ('C', 'A'), ('C', 'B')]
-        -16237.575725538434     [('B', 'C')]
-        -16237.575725538434     [('C', 'B')]
+        ...     print("{0}\t{1}".format(score, model.edges()))
+        ...
+        -24240.048463058432        [('A', 'B'), ('A', 'C')]
+        -24240.03793877268        [('A', 'B'), ('C', 'A')]
+        -24240.03793877268        [('A', 'C'), ('B', 'A')]
+        -24207.21672011369        [('A', 'B')]
+        -24207.21672011369        [('A', 'C')]
+        -24207.20619582794        [('B', 'A')]
+        -24207.20619582794        [('C', 'A')]
+        -24174.38497716895        []
+        -24143.64511922098        [('B', 'A'), ('C', 'A')]
+        -16601.326068342074        [('A', 'B'), ('A', 'C'), ('C', 'B')]
+        -16601.32606834207        [('A', 'B'), ('A', 'C'), ('B', 'C')]
+        -16601.31554405632        [('A', 'B'), ('C', 'A'), ('C', 'B')]
+        -16601.31554405632        [('A', 'C'), ('B', 'C'), ('B', 'A')]
+        -16568.494325397332        [('A', 'B'), ('C', 'B')]
+        -16568.494325397332        [('A', 'C'), ('B', 'C')]
+        -16272.269477532585        [('A', 'B'), ('B', 'C')]
+        -16272.269477532585        [('A', 'C'), ('C', 'B')]
+        -16272.258953246836        [('B', 'C'), ('B', 'A')]
+        -16272.258953246836        [('B', 'C'), ('C', 'A')]
+        -16272.258953246836        [('B', 'A'), ('C', 'B')]
+        -16272.258953246836        [('C', 'A'), ('C', 'B')]
+        -16239.437734587846        [('B', 'C')]
+        -16239.437734587846        [('C', 'B')]
+        -16208.697876639875        [('B', 'C'), ('B', 'A'), ('C', 'A')]
+        -16208.697876639875        [('B', 'A'), ('C', 'A'), ('C', 'B')]
         """
 
         scored_dags = sorted(
@@ -167,16 +173,18 @@ class ExhaustiveSearch(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ExhaustiveSearch
+        >>> from pgmpy.estimators import ExhaustiveSearch, K2
         >>> # create random data sample with 3 variables, where B and C are identical:
-        >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
-        >>> data['C'] = data['B']
-        >>> est = ExhaustiveSearch(data)
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=5, size=(5000, 2)), columns=list("AB")
+        ... )
+        >>> data["C"] = data["B"]
+        >>> est = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> best_model = est.estimate()
         >>> best_model
-        <pgmpy.base.DAG.DAG object at 0x7f695c535470>
+        <pgmpy.base.DAG.DAG object at 0x...>
         >>> best_model.edges()
-        [('B', 'C')]
+        OutEdgeView([('B', 'A'), ('B', 'C'), ('C', 'A')])
         """
 
         best_dag = max(self.all_dags(), key=self.scoring_method.score)
