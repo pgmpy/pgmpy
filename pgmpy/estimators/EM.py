@@ -1,5 +1,6 @@
 from itertools import chain, product
 from math import log
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -55,7 +56,12 @@ class ExpectationMaximization(ParameterEstimator):
     >>> estimator = ExpectationMaximization(model, data)
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Union[DAG, DiscreteBayesianNetwork],
+        data: pd.DataFrame,
+        **kwargs,
+    ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork"
@@ -94,7 +100,7 @@ class ExpectationMaximization(ParameterEstimator):
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
-    def _get_log_likelihood(self, datapoint):
+    def _get_log_likelihood(self, datapoint: Dict[str, Any]) -> float:
         """
         Computes the likelihood of a given datapoint. Goes through each
         CPD matching the combination of states to get the value and multiplies
@@ -118,10 +124,14 @@ class ExpectationMaximization(ParameterEstimator):
         return likelihood
 
     def _parallel_compute_weights(
-        self, data_unique, latent_card, n_counts, offset, batch_size
-    ):
-        cache = []
-
+        self,
+        data_unique: pd.DataFrame,
+        latent_card: Dict[str, int],
+        n_counts: Dict[Tuple, int],
+        offset: int,
+        batch_size: int,
+    ) -> pd.DataFrame:
+        cache: List[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
@@ -140,7 +150,12 @@ class ExpectationMaximization(ParameterEstimator):
 
         return pd.concat(cache, copy=False)
 
-    def _compute_weights(self, n_jobs, latent_card, batch_size):
+    def _compute_weights(
+        self,
+        n_jobs: int,
+        latent_card: Dict[str, int],
+        batch_size: int,
+    ) -> pd.DataFrame:
         """
         For each data point, creates extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
@@ -160,7 +175,11 @@ class ExpectationMaximization(ParameterEstimator):
 
         return pd.concat(cache, copy=False)
 
-    def _is_converged(self, new_cpds, atol=1e-08):
+    def _is_converged(
+        self,
+        new_cpds: List[TabularCPD],
+        atol: float = 1e-08,
+    ) -> bool:
         """
         Checks if the values of `new_cpds` is within tolerance limits of current
         model cpds.
@@ -172,15 +191,15 @@ class ExpectationMaximization(ParameterEstimator):
 
     def get_parameters(
         self,
-        latent_card=None,
-        max_iter=100,
-        atol=1e-08,
-        n_jobs=1,
-        batch_size=1000,
-        seed=None,
-        init_cpds={},
-        show_progress=True,
-    ):
+        latent_card: Optional[Dict[str, int]] = None,
+        max_iter: int = 100,
+        atol: float = 1e-08,
+        n_jobs: int = 1,
+        batch_size: int = 1000,
+        seed: Optional[int] = None,
+        init_cpds: Union[Dict[str, TabularCPD], str] = {},
+        show_progress: bool = True,
+    ) -> List[TabularCPD]:
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -244,7 +263,10 @@ class ExpectationMaximization(ParameterEstimator):
         >>> params = estimator.get_parameters(latent_card={"B": 3})
         >>> # Sorting the CPDs by variable name to ensure consistent order for doctest comparison
         >>> sorted(params, key=lambda cpd: cpd.variable)
-        [<TabularCPD representing P(A:2) at 0x...>, <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>, <TabularCPD representing P(C:2) at 0x...>, <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
+         <TabularCPD representing P(C:2) at 0x...>,
+         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
         # Step 1: Parameter checks
         if latent_card is None:

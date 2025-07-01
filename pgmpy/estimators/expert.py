@@ -1,5 +1,5 @@
-import sys
 from itertools import combinations
+from typing import Callable, Hashable, Optional, Set, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -9,15 +9,15 @@ from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import pillai_trace
 from pgmpy.global_vars import logger
-from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
+from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data: Optional[pd.DataFrame] = None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientation_cache = set([])
 
-    def test_all(self, dag):
+    def test_all(self, dag: DAG) -> pd.DataFrame:
         """
         Runs CI tests on all possible combinations of variables in `dag`.
 
@@ -56,15 +56,17 @@ class ExpertInLoop(StructureEstimator):
 
     def estimate(
         self,
-        pval_threshold=0.05,
-        effect_size_threshold=0.05,
-        orientation_fn=llm_pairwise_orient,
-        orientations=set([]),
-        expert_knowledge: ExpertKnowledge = None,
-        use_cache=True,
-        show_progress=True,
+        pval_threshold: float = 0.05,
+        effect_size_threshold: float = 0.05,
+        orientation_fn: Callable[
+            ..., Optional[Tuple[Hashable, Hashable]]
+        ] = llm_pairwise_orient,
+        orientations: Set[Tuple[str, str]] = set(),
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        use_cache: bool = True,
+        show_progress: bool = True,
         **kwargs,
-    ):
+    ) -> DAG:
         """
         Estimates a DAG from the data by utilizing expert knowledge.
 
@@ -302,8 +304,8 @@ class ExpertInLoop(StructureEstimator):
                 ):
                     logger.info(
                         f"\rQueried for edge orientation between"
-                        "{selected_edge.u} and {selected_edge.v}. Got:"
-                        "{edge_direction[0]} -> {edge_direction[1]}"
+                        f"{selected_edge.u} and {selected_edge.v}. Got:"
+                        f"{edge_direction[0]} -> {edge_direction[1]}"
                     )
 
             # Step 3.6: Try adding the edge to the DAG. If edge creates a

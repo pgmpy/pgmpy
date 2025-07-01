@@ -1,23 +1,13 @@
 from itertools import combinations
+from typing import Hashable, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 
-from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import (
-    AIC,
-    BIC,
-    K2,
-    AICCondGauss,
-    AICGauss,
-    BDeu,
-    BDs,
-    BICCondGauss,
-    BICGauss,
     ExpertKnowledge,
-    LogLikelihoodCondGauss,
-    LogLikelihoodGauss,
     StructureEstimator,
     StructureScore,
 )
@@ -53,12 +43,14 @@ class GES(StructureEstimator):
       Journal of machine learning research 3.Nov (2002): 507-554.
     """
 
-    def __init__(self, data, use_cache=True, **kwargs):
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
         self.use_cache = use_cache
 
         super(GES, self).__init__(data=data, **kwargs)
 
-    def _legal_edge_additions(self, current_model, expert_knowledge):
+    def _legal_edge_additions(
+        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
+    ) -> List[Tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be added to the graph such that it remains a DAG.
         """
@@ -75,7 +67,9 @@ class GES(StructureEstimator):
                     edges.append((v, u))
         return edges
 
-    def _legal_edge_removals(self, current_model, expert_knowledge):
+    def _legal_edge_removals(
+        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
+    ) -> List[Tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be removed from the graph such that it remains a DAG.
         """
@@ -85,7 +79,9 @@ class GES(StructureEstimator):
                 edges.append((u, v))
         return edges
 
-    def _legal_edge_flips(self, current_model, expert_knowledge):
+    def _legal_edge_flips(
+        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
+    ) -> List[Tuple[Hashable, Hashable]]:
         """
         Returns a list of all the edges in the `current_model` that can be flipped such that the model
         remains a DAG.
@@ -106,11 +102,11 @@ class GES(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method=None,
-        expert_knowledge=None,
-        min_improvement=1e-6,
-        debug=False,
-    ):
+        scoring_method: Optional[Union[str, StructureScore]] = None,
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        min_improvement: float = 1e-6,
+        debug: bool = False,
+    ) -> PDAG:
         """
         Estimates the DAG from the data.
 
