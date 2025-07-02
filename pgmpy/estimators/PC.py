@@ -34,6 +34,45 @@ class PC(StructureEstimator):
     that satisfies the identified dependencies. The DAG pattern can then be
     completed to a faithful DAG, if possible.
 
+    When used with expert knowledge, the following flowchart can help you figure
+    out the expected results based on different choices of parameters and the
+    structure learned from the data.
+
+                                        ┌──────────────────┐    No      ┌─────────────┐
+                                        │ Expert Knowledge ├──────────► │  Normal PC  │
+                                        │    specified?    │            │    run      │
+                                        └────────┬─────────┘            └─────────────┘
+                                                 │
+                                            Yes  │
+                                                 │
+                                                 ▼
+                                        ┌──────────────────┐
+                                        │  Enforce expert  │
+                                        │    knowledge?    │
+                                        └────────┬─────────┘
+                                                 │
+                                                 │
+                                Yes              │                No
+                       ┌─────────────────────────┴───────────────────────┐
+                       │                                                 │
+                       ▼                                                 ▼
+        ┌──────────────────────────────┐                     ┌─────────────────────────┐
+        │                              │                     │                         │
+        │ 1) Forbidden edges are       │                     │ Conflicts with learned  │
+        │    removed from the skeleton │                     │   structure (opposite   │
+        │                              │                     │  edge orientations)?    │
+        │ 2) Required edges will be    │                     │                         │
+        │    present in the final      │                     └───────────┬─────────────┘
+        │    model (but direction is   │                                 │
+        │    not guaranteed)           │                ┌────────────────┴──────────────────┐
+        │                              │            Yes │                                   │ No
+        └──────────────────────────────┘                │                                   │
+                                                        ▼                                   ▼
+                                            ┌───────────────────┐                ┌──────────────────┐
+                                            │ Conflicting edges │                │ Expert knowledge │
+                                            │    are ignored    │                │  applied fully   │
+                                            └───────────────────┘                └──────────────────┘
+
     Parameters
     ----------
     data: pandas DataFrame object
