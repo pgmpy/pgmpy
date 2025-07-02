@@ -1703,28 +1703,6 @@ class DAG(nx.DiGraph):
         non_descendants = all_nodes - descendants - {node}
         return list(non_descendants)
 
-    def d_separated_triples(
-        self, nodes: list, ci_test_func: Callable, data, significance_level=0.05
-    ):
-        dsep_triples = set()
-        for node in nodes:
-            non_descendants = self._get_non_descendants(node)
-            for non_descendant in non_descendants:
-                if non_descendant == node or non_descendant in self.get_parents(node):
-                    continue
-                conditioning_set = frozenset(self.get_parents(node))
-                _, p_value = ci_test_func(
-                    data,
-                    node,
-                    non_descendant,
-                    list(conditioning_set),
-                    significance_level,
-                )
-                if p_value >= significance_level:
-                    dsep_triples.add((node, non_descendant, conditioning_set))
-
-        return dsep_triples
-
     def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
 
         from sklearn.metrics import f1_score

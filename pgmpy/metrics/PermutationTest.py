@@ -11,27 +11,28 @@ from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
-def count_lmc_violations(model, ci_test_func: Callable, data, significance_level=0.05):
+def evaluate(model, ci_test_func: Callable, data, significance_level=0.05):
     violations = 0
+    dsep_triples = set()
     nodes = list(model.nodes())
     for node in nodes:
         parents = list(model.get_parents(node))
         non_descendants = model._get_non_descendants(node)
-        test_nodes = [nd for nd in non_descendants if nd not in parents and nd != node]
+        test_nodes = [
+            nd for nd in non_descendants if (nd not in parents and nd != node)
+        ]
 
-        for test_node in test_nodes:
+        for nd in test_nodes:
             try:
-                _, p_value = ci_test_func(
-                    node, test_node, parents, data, significance_level
-                )
-                if p_value < significance_level:
+                p_value = ci_test_func(node, nd, parents, data, significance_level)
+                if not p_value:
                     violations += 1
+                    dsep_triples.add((node, nd, parents))
             except Exception as e:
-                logger.debug(
-                    f"CI test failed for {node} ⊥ {test_node} | {parents}: {e}"
-                )
+                logger.debug(f"CI test failed for {node} ⊥ {nd} | {parents}: {e}")
                 continue
-    return violations
+
+    return (violations, dsep_triples)
 
 
 def permuted_graph(model, perm_mapping):
@@ -80,14 +81,10 @@ def permutation_test(
     ci_test_func = get_callable_ci_test(test=ci_test, data=data)
 
     # Constructing the Null Hypothesis (LMC = Local Markov Condition)
-    lmc_violations_given = model.count_lmc_violations(
-        ci_test_func, data, significance_level
+    lmc_violations_given, original_dsep_triples = evaluate(
+        model, ci_test_func, data, significance_level
     )
-    # Finding set of d-separated nodes in original model
     nodes = list(model.nodes())
-    original_dsep_triples = model.d_separated_triples(
-        nodes, ci_test_func, data, significance_level
-    )
 
     permutation_violations = []
     same_mec_count = 0
@@ -98,30 +95,25 @@ def permutation_test(
         pbar = range(n_permutations)
 
     # Running permutations
-    for i in pbar:
+    for i in range(pbar):
         perm = np.random.permutation(nodes)
         perm_mapping = dict(zip(nodes, perm))
 
         # Creating the permuted model while maintaining causal structure
         permuted_model = model.create_permuted_graph(perm_mapping)
 
-        # Counting lmc violations in permuted model
-        lmc_violations_perm = permuted_model.count_lmc_violations(
-            ci_test_func, data, significance_level
+        # Counting lmc violations in permuted model and Creating a set of d-separated triples in the permuted_model
+        lmc_violations_perm, permuted_dsep_triples = evaluate(
+            permuted_model, ci_test_func, data, significance_level
         )
         permutation_violations.append(lmc_violations_perm)
-
-        # Creating a set of d-separated triples in the permuted_model
-        permuted_dsep_triples = permuted_model.d_separated_triples(
-            nodes, ci_test_func, data, significance_level
-        )
 
         if original_dsep_triples == permuted_dsep_triples:
             same_mec_count += 1
 
     p_value_falsifiable = same_mec_count / n_permutations
     p_value_falsified = (
-        sum(1 for v in permutation_violations if v > lmc_violations_given)
+        sum(1 for v in permutation_violations if v <= lmc_violations_given)
         / n_permutations
     )
     return (p_value_falsifiable, p_value_falsified)
