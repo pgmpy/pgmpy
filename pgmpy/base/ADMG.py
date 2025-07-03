@@ -1,5 +1,5 @@
 import collections
-from typing import Hashable, Iterable, Optional, Sequence
+from typing import Hashable, Optional, Sequence
 import networkx as nx
 from networkx import MultiDiGraph
 
@@ -77,28 +77,54 @@ class ADMG(MultiDiGraph):
             "Use add_directed_edge or add_bidirected_edge to add edges."
         )
 
+    def _get_parent(self, node):
+        """
+        Internal method to get the parent of a node.
+        This is used to ensure that the parent is always a directed edge.
+        """
+        if node not in self.nodes:
+            raise ValueError(f"Node {node} is not in the graph.")
+
+        parents = set()
+        for pred in self.predecessors(node):
+            data = self.get_edge_data(pred, node)
+            for key in data:
+                if data[key].get("type") == "directed":
+                    parents.add(pred)
+        return parents
+
     def get_parents(self, nodes):
+        """
+        Get the parents of the given nodes in the ADMG.
+        Returns a tuple of two sets: (parents, district_parents).
+        - parents: Direct parents (directed edges).
+        - district_parents: Parents connected by bidirected edges.
+        """
+        nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         parents = set()
         district_parents = set()
-        nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
+
         for node in nodes_set:
             if node not in self.nodes:
                 raise ValueError(f"Node {node} is not in the graph.")
-            for predecessor in super().predecessors(node):
-                # Only consider truly directed edges
-                if self.get_edge_data(predecessor, node, 0)["type"] == "directed":
-                    parents.add(predecessor)
-                # Check for bidirected edges
-                if (
-                    self.has_edge(predecessor, node)
-                    and self.get_edge_data(predecessor, node, 0).get("type")
-                    == "bidirected"
-                ) or (
-                    self.has_edge(node, predecessor)
-                    and self.get_edge_data(node, predecessor, 0).get("type")
-                    == "bidirected"
-                ):
-                    district_parents.add(predecessor)
+            # Get direct parents
+            direct_parents = self._get_parent(node)
+            parents.update(direct_parents)
+
+            # district parents are those which are district as well as parents
+            for parent in direct_parents:
+                # Check if the parent is connected by a bidirected edge
+                for neighbor in super().neighbors(parent):
+                    if (
+                        self.has_edge(parent, neighbor)
+                        and self.get_edge_data(parent, neighbor, 0).get("type")
+                        == "bidirected"
+                    ) or (
+                        self.has_edge(neighbor, parent)
+                        and self.get_edge_data(neighbor, parent, 0).get("type")
+                        == "bidirected"
+                    ):
+                        district_parents.add(parent)
 
         return parents, district_parents
 
@@ -378,3 +404,26 @@ class ADMG(MultiDiGraph):
                     break
 
         return m_connected_set
+
+
+# visualize the graph
+directed_edges = [("A", "B"), ("B", "C"), ("D", "B")]
+bidirected_edges = [("A", "D"), ("B", "E")]
+
+admg = ADMG(directed_ebunch=directed_edges, bidirected_ebunch=bidirected_edges)
+# Print the nodes and edges
+# print("Nodes:", admg.nodes())
+# print("Edges:", admg.edges(data=True))
+# # Visualize the graph using networkx
+# import matplotlib.pyplot as plt
+# pos = nx.spring_layout(admg)
+# nx.draw(admg, pos, with_labels=True, node_color='lightblue', node_size=700, font_size=10, font_color='black', edge_color='gray')
+# edge_labels = nx.get_edge_attributes(admg, 'type')
+# nx.draw_networkx_edge_labels(admg, pos, edge_labels=edge_labels, font_color='red')
+# plt.title("ADMG Visualization")
+# plt.savefig("admg_plot.png")
+# print("Plot saved as admg_plot.png")
+
+# get all the descendants of node B
+children = admg.get_descendants("A")
+print("Descendants of A:", children)

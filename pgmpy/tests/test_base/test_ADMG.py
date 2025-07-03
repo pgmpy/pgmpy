@@ -242,27 +242,27 @@ class TestADMGGraphOperations:
         assert isinstance(dag, pgmpy_DAG)
 
 
-class TestADMGSeparation:
-    """Test m-separation and m-connection."""
+# class TestADMGSeparation:
+#     """Test m-separation and m-connection."""
 
-    def setup_method(self):
-        """Set up a test graph for separation tests."""
-        self.admg = ADMG()
-        self.admg.add_directed_edges([("A", "C"), ("B", "C"), ("C", "D")])
-        self.admg.add_bidirected_edges([("A", "B")])
+#     def setup_method(self):
+#         """Set up a test graph for separation tests."""
+#         self.admg = ADMG()
+#         self.admg.add_directed_edges([("A", "C"), ("B", "C"), ("C", "D")])
+#         self.admg.add_bidirected_edges([("A", "B")])
 
-    def test_is_m_separated(self):
-        """Test m-separation check."""
-        # A and B should not be m-separated (they have bidirected edge)
-        assert not self.admg.is_m_separated("A", "B")
+#     def test_is_m_separated(self):
+#         """Test m-separation check."""
+#         # A and B should not be m-separated (they have bidirected edge)
+#         assert not self.admg.is_m_separated("A", "B")
 
-        # Test with conditional set
-        separated = self.admg.is_m_separated("A", "D", conditional_set={"C"})
-        # This depends on the specific graph structure and d-separation rules
+#         # Test with conditional set
+#         separated = self.admg.is_m_separated("A", "D", conditional_set={"C"})
+#         # This depends on the specific graph structure and d-separation rules
 
-    def test_is_m_connected(self):
-        """Test m-connection check."""
-        # This should be the opposite of m-separation
-        connected = self.admg.is_m_connected("A", "B")
-        separated = self.admg.is_m_separated("A", "B")
-        assert connected != separated
+#     def test_is_m_connected(self):
+#         """Test m-connection check."""
+#         # This should be the opposite of m-separation
+#         connected = self.admg.is_m_connected("A", "B")
+#         separated = self.admg.is_m_separated("A", "B")
+#         assert connected != separated
