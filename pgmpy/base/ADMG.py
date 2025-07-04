@@ -296,29 +296,33 @@ class ADMG(MultiDiGraph):
         and add two edgws x<----{x}_{y}-->y
         """
         dag_edges = []
+        dag_nodes = set()
 
         # Add directed edges
         for u, v, data in self.edges(data=True):
             if data.get("type") == "directed":
                 dag_edges.append((u, v))
+                dag_nodes.update([u, v])
 
         # add latent nodes and edges for bidirected edges
         latent_nodes_map = {}
-
         for u, v, data in self.edges(data=True):
             if data.get("type") == "bidirected":
                 sorted_pair = tuple(sorted((u, v)))
 
                 if sorted_pair not in latent_nodes_map:
-                    # create a unique name for latent variable
                     latent_var = f"L_{sorted_pair[0]}_{sorted_pair[1]}"
                     latent_nodes_map[sorted_pair] = latent_var
-
-                    dag_edges.append((latent_var, u))
-                    dag_edges.append((latent_var, v))
+                    dag_edges.append((latent_var, sorted_pair[0]))
+                    dag_edges.append((latent_var, sorted_pair[1]))
+                    dag_nodes.add(latent_var)
+                    dag_nodes.update(sorted_pair)
 
         # Create a new DAG instance
         dag_instance = pgmpy_DAG()
+        dag_instance.add_nodes_from(dag_nodes)
+        dag_instance.add_edges_from(dag_edges)
+
         return dag_instance
 
     def _is_d_connected_internal(
@@ -374,7 +378,7 @@ class ADMG(MultiDiGraph):
         """
         Checks if two sets of nodes are m_connected given a conditional set.
         """
-        return not self.is_m_separated(nodes_u, conditional_set)
+        return not self.is_m_separated(nodes_u, nodes_v, conditional_set)
 
     def m_connected_nodes(self, nodes_u, nodes_v, conditional_set=None):
         """
@@ -404,26 +408,3 @@ class ADMG(MultiDiGraph):
                     break
 
         return m_connected_set
-
-
-# visualize the graph
-directed_edges = [("A", "B"), ("B", "C"), ("D", "B")]
-bidirected_edges = [("A", "D"), ("B", "E")]
-
-admg = ADMG(directed_ebunch=directed_edges, bidirected_ebunch=bidirected_edges)
-# Print the nodes and edges
-# print("Nodes:", admg.nodes())
-# print("Edges:", admg.edges(data=True))
-# # Visualize the graph using networkx
-# import matplotlib.pyplot as plt
-# pos = nx.spring_layout(admg)
-# nx.draw(admg, pos, with_labels=True, node_color='lightblue', node_size=700, font_size=10, font_color='black', edge_color='gray')
-# edge_labels = nx.get_edge_attributes(admg, 'type')
-# nx.draw_networkx_edge_labels(admg, pos, edge_labels=edge_labels, font_color='red')
-# plt.title("ADMG Visualization")
-# plt.savefig("admg_plot.png")
-# print("Plot saved as admg_plot.png")
-
-# get all the descendants of node B
-children = admg.get_descendants("A")
-print("Descendants of A:", children)
