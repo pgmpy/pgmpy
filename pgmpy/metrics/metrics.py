@@ -12,12 +12,13 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.metrics.PermutationTest import permutation_test
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_dataset_type
 
 
 def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
+
+    from pgmpy.metrics.PermutationTest import permutation_test
 
     metrics_and_params = {
         "correlation": {
