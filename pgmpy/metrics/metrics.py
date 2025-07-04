@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.metrics.PermutationTest import permutation_test
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_dataset_type
 
@@ -33,6 +34,15 @@ def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
         "fisher-c": {
             "func": fisher_c,
             "req_params": ["ci_test", "calculate_rmsea", "show_progress"],
+        },
+        "permutation-test": {
+            "func": permutation_test,
+            "req_params": [
+                "ci_test",
+                "n_permutations",
+                "significance_level",
+                "show_progress",
+            ],
         },
     }
     if not isinstance(data, pd.DataFrame) or data is None:

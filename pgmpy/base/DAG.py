@@ -1718,6 +1718,7 @@ class DAG(nx.DiGraph):
             "bic",
             "fisher-c",
             "implied-cis",
+            "permutation-test",
         )
         # a normal validate call would provide all metric results
         if metrics is None:
@@ -1728,6 +1729,7 @@ class DAG(nx.DiGraph):
             "significance_level": 0.05,
             "score": f1_score,
             "ci_test": chi_square,
+            "n_permutations": 1000,
             "calculate_rmsea": True,
             "show_progress": True,
         }
@@ -1755,6 +1757,11 @@ class DAG(nx.DiGraph):
                 metric_vals["failing-cis / total"] = (
                     f"{(r["p-value"] < params["significance_level"]).sum()} / {len(r)}"
                 )
+            if t == "permutation-test":
+                (
+                    metric_vals["p_value_falsifiable"],
+                    metric_vals["p_value_falsified"],
+                ) = r
 
         df_result = pd.DataFrame(metric_vals)
         return df_result
