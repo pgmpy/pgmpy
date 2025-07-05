@@ -1,4 +1,5 @@
 from itertools import combinations
+from typing import Callable, Hashable, Optional, Set, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -12,11 +13,11 @@ from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data: Optional[pd.DataFrame] = None, **kwargs):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientation_cache = set([])
 
-    def test_all(self, dag, ci_test):
+    def test_all(self, dag: DAG) -> pd.DataFrame:
         """
         Runs CI tests on all possible combinations of variables in `dag`.
 
@@ -55,16 +56,17 @@ class ExpertInLoop(StructureEstimator):
 
     def estimate(
         self,
-        pval_threshold=0.05,
-        effect_size_threshold=0.05,
-        ci_test=None,
-        orientation_fn=llm_pairwise_orient,
-        orientations=set([]),
-        expert_knowledge: ExpertKnowledge = None,
-        use_cache=True,
-        show_progress=True,
+        pval_threshold: float = 0.05,
+        effect_size_threshold: float = 0.05,
+        orientation_fn: Callable[
+            ..., Optional[Tuple[Hashable, Hashable]]
+        ] = llm_pairwise_orient,
+        orientations: Set[Tuple[str, str]] = set(),
+        expert_knowledge: Optional[ExpertKnowledge] = None,
+        use_cache: bool = True,
+        show_progress: bool = True,
         **kwargs,
-    ):
+    ) -> DAG:
         """
         Estimates a DAG from the data by utilizing expert knowledge.
 
@@ -146,15 +148,18 @@ class ExpertInLoop(StructureEstimator):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model, llm_pairwise_orient, manual_pairwise_orient
+        >>> from pgmpy.utils import (
+        ...     get_example_model,
+        ...     llm_pairwise_orient,
+        ...     manual_pairwise_orient,
+        ... )
         >>> from pgmpy.estimators import ExpertInLoop
-        >>> model = get_example_model('cancer')
+        >>> model = get_example_model("cancer")
         >>> df = model.simulate(int(1e3))
 
         >>> # Using manual orientation
         >>> dag = ExpertInLoop(df).estimate(
-        ...     effect_size_threshold=0.0001,
-        ...     orientation_fn=manual_pairwise_orient
+        ...     effect_size_threshold=0.0001, orientation_fn=manual_pairwise_orient
         ... )
 
         >>> # Using LLM-based orientation
@@ -163,13 +168,13 @@ class ExpertInLoop(StructureEstimator):
         ...     "Cancer": "A binary variable representing whether a person has cancer.",
         ...     "Xray": "A binary variable representing the result of an X-ray test.",
         ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not.",
-        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath."
+        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath.",
         ... }
         >>> dag = ExpertInLoop(df).estimate(
         ...     effect_size_threshold=0.0001,
         ...     orientation_fn=llm_pairwise_orient,
         ...     variable_descriptions=variable_descriptions,
-        ...     llm_model="gemini/gemini-1.5-flash"
+        ...     llm_model="gemini/gemini-1.5-flash",
         ... )
         >>> dag.edges()
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
@@ -191,9 +196,9 @@ class ExpertInLoop(StructureEstimator):
         ...             return (var1, var2)
         ...     # Default: use alphabetical ordering
         ...     return (var1, var2) if var1 < var2 else (var2, var1)
+        ...
         >>> dag = ExpertInLoop(df).estimate(
-        ...     effect_size_threshold=0.0001,
-        ...     orientation_fn=my_orientation_func
+        ...     effect_size_threshold=0.0001, orientation_fn=my_orientation_func
         ... )
         >>> dag.edges()
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])

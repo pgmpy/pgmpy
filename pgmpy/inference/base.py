@@ -36,29 +36,42 @@ class Inference(object):
     >>> from pgmpy.inference import Inference
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.factors.discrete import TabularCPD
-    >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-    >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-    >>> intel_cpd = TabularCPD('intel', 2, [[0.3], [0.7]])
-    >>> grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1],
-    ...                                     [0.1, 0.1, 0.1, 0.1],
-    ...                                     [0.8, 0.8, 0.8, 0.8]],
-    ...                        evidence=['diff', 'intel'], evidence_card=[2, 2])
+    >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+    >>> diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+    >>> intel_cpd = TabularCPD("intel", 2, [[0.3], [0.7]])
+    >>> grade_cpd = TabularCPD(
+    ...     "grade",
+    ...     3,
+    ...     [[0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1], [0.8, 0.8, 0.8, 0.8]],
+    ...     evidence=["diff", "intel"],
+    ...     evidence_card=[2, 2],
+    ... )
     >>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
     >>> model = Inference(student)
 
     >>> from pgmpy.models import DiscreteMarkovNetwork
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> import numpy as np
-    >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
-    ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-    >>> factor_a_b = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-    ...                             values=np.random.rand(4))
-    >>> factor_b_c = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 2],
-    ...                             values=np.random.rand(4))
-    >>> factor_c_d = DiscreteFactor(['Charles', 'Debbie'], cardinality=[2, 2],
-    ...                             values=np.random.rand(4))
-    >>> factor_d_a = DiscreteFactor(['Debbie', 'Alice'], cardinality=[2, 2],
-    ...                             values=np.random.rand(4))
+    >>> student = DiscreteMarkovNetwork(
+    ...     [
+    ...         ("Alice", "Bob"),
+    ...         ("Bob", "Charles"),
+    ...         ("Charles", "Debbie"),
+    ...         ("Debbie", "Alice"),
+    ...     ]
+    ... )
+    >>> factor_a_b = DiscreteFactor(
+    ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+    ... )
+    >>> factor_b_c = DiscreteFactor(
+    ...     ["Bob", "Charles"], cardinality=[2, 2], values=np.random.rand(4)
+    ... )
+    >>> factor_c_d = DiscreteFactor(
+    ...     ["Charles", "Debbie"], cardinality=[2, 2], values=np.random.rand(4)
+    ... )
+    >>> factor_d_a = DiscreteFactor(
+    ...     ["Debbie", "Alice"], cardinality=[2, 2], values=np.random.rand(4)
+    ... )
     >>> student.add_factors(factor_a_b, factor_b_c, factor_c_d, factor_d_a)
     >>> model = Inference(student)
     """

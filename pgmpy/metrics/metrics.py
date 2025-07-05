@@ -208,7 +208,7 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
     --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import structure_score
-    >>> model = get_example_model('alarm')
+    >>> model = get_example_model("alarm")
     >>> data = model.simulate(int(1e4))
     >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
@@ -299,7 +299,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
            u         v cond_vars   p-value
@@ -369,7 +369,7 @@ def fisher_c(model, data, ci_test, show_progress=True):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
     0.7504

@@ -40,19 +40,18 @@ class ClusterGraph(UndirectedGraph):
 
     Add a tuple (or list or set) of nodes as single clique node.
 
-    >>> G.add_node(('a', 'b', 'c'))
-    >>> G.add_nodes_from([('a', 'b'), ('a', 'b', 'c')])
+    >>> G.add_node(("a", "b", "c"))
+    >>> G.add_nodes_from([("a", "b"), ("a", "b", "c")])
 
     **Edges:**
 
     G can also be grown by adding edges.
 
-    >>> G.add_edge(('a', 'b', 'c'), ('a', 'b'))
+    >>> G.add_edge(("a", "b", "c"), ("a", "b"))
 
     or a list of edges
 
-    >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-    ...                   (('a', 'b', 'c'), ('a', 'c'))])
+    >>> G.add_edges_from([(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))])
     """
 
     def __init__(self, ebunch=None):
@@ -75,7 +74,7 @@ class ClusterGraph(UndirectedGraph):
         --------
         >>> from pgmpy.models import ClusterGraph
         >>> G = ClusterGraph()
-        >>> G.add_node(('a', 'b', 'c'))
+        >>> G.add_node(("a", "b", "c"))
         """
         if not isinstance(node, (list, set, tuple)):
             raise TypeError(
@@ -98,7 +97,7 @@ class ClusterGraph(UndirectedGraph):
         --------
         >>> from pgmpy.models import ClusterGraph
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b'), ('a', 'b', 'c')])
+        >>> G.add_nodes_from([("a", "b"), ("a", "b", "c")])
         """
         for node in nodes:
             self.add_node(node, **kwargs)
@@ -116,9 +115,10 @@ class ClusterGraph(UndirectedGraph):
         --------
         >>> from pgmpy.models import ClusterGraph
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
+        >>> G.add_nodes_from([("a", "b", "c"), ("a", "b"), ("a", "c")])
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
         """
         set_u = set(u)
         set_v = set(v)
@@ -147,9 +147,10 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
-        >>> student.add_node(('Alice', 'Bob'))
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
-        ...                 values=np.random.rand(6))
+        >>> student.add_node(("Alice", "Bob"))
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[3, 2], values=np.random.rand(6)
+        ... )
         >>> student.add_factors(factor)
         """
         for factor in factors:
@@ -174,15 +175,16 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
-        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([("a", "b", "c"), ("a", "b"), ("a", "c")])
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
+        >>> phi1 = DiscreteFactor(["a", "b", "c"], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
         >>> G.get_factors()
-        >>> G.get_factors(node=('a', 'b', 'c'))
+        >>> G.get_factors(node=("a", "b", "c"))
         """
         if node is None:
             return self.factors
@@ -204,9 +206,10 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                         values=np.random.rand(4))
-        >>> student.add_node(('Alice', 'Bob'))
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+        ... )
+        >>> student.add_node(("Alice", "Bob"))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
@@ -227,12 +230,13 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
-        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([("a", "b", "c"), ("a", "b"), ("a", "c")])
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
+        >>> phi1 = DiscreteFactor(["a", "b", "c"], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
         >>> G.clique_beliefs
         """
         return FactorDict({clique: self.get_factors(clique) for clique in self.nodes()})
@@ -265,14 +269,15 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 values=np.random.rand(4))
-        >>> student.add_node(('Alice', 'Bob'))
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+        ... )
+        >>> student.add_node(("Alice", "Bob"))
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Alice': 2, 'Bob': 2})
 
-        >>> student.get_cardinality(node='Alice')
+        >>> student.get_cardinality(node="Alice")
         2
         """
         if node:
@@ -304,12 +309,13 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
-        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([("a", "b", "c"), ("a", "b"), ("a", "c")])
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
+        >>> phi1 = DiscreteFactor(["a", "b", "c"], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
         >>> G.get_partition_function()
         """
@@ -370,10 +376,10 @@ class ClusterGraph(UndirectedGraph):
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
-        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
-        >>> G.add_edge(('a', 'b'), ('b', 'c'))
-        >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([("a", "b"), ("b", "c")])
+        >>> G.add_edge(("a", "b"), ("b", "c"))
+        >>> phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
+        >>> phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
         >>> graph_copy = G.copy()
         >>> graph_copy.factors

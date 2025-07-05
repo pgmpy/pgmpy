@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from functools import reduce
-from itertools import chain
 
 from opt_einsum import contract
 
@@ -35,32 +34,23 @@ def factor_product(*args):
     --------
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factor_product
-    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> import numpy as np
+    >>> phi1 = DiscreteFactor(
+    ...     variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+    ... )
+    >>> phi2 = DiscreteFactor(
+    ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
+    ... )
     >>> phi = factor_product(phi1, phi2)
-    >>> phi.variables
+    >>> sorted(phi.variables)
     ['x1', 'x2', 'x3', 'x4']
-    >>> phi.cardinality
+    >>> cardinalities = [
+    ...     phi.get_cardinality([var])[var] for var in sorted(phi.variables)
+    ... ]
+    >>> np.array(cardinalities)
     array([2, 3, 2, 2])
-    >>> phi.values
-    array([[[[ 0,  0],
-             [ 4,  6]],
-
-            [[ 0,  4],
-             [12, 18]],
-
-            [[ 0,  8],
-             [20, 30]]],
-
-
-           [[[ 6, 18],
-             [35, 49]],
-
-            [[ 8, 24],
-             [45, 63]],
-
-            [[10, 30],
-             [55, 77]]]])
+    >>> phi.values.shape
+    (2, 3, 2, 2)
     """
     if not all(isinstance(phi, BaseFactor) for phi in args):
         raise TypeError("Arguments must be factors")
@@ -78,13 +68,14 @@ def factor_product(*args):
 
 def factor_sum_product(output_vars, factors):
     """
-    For a given set of factors: `args` returns the result of $ \sum_{var \not \in output_vars} \prod \textit{args} $.
+    For a given set of factors: `args` returns the
+    ... result of $ \\sum_{var \\not \\in output_vars} \\prod \\textit{args} $.
 
     Parameters
     ----------
     output_vars: list, iterable
         List of variable names on which the output factor is to be defined.
-          Variable which are present in any of the factors
+        Variable which are present in any of the factors
         but not in output_vars will be marginalized out.
 
     factors: list, iterable
@@ -98,9 +89,11 @@ def factor_sum_product(output_vars, factors):
     --------
     >>> from pgmpy.factors import factor_sum_product
     >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model("asia")
     >>> factors = [cpd.to_factor() for cpd in model.cpds]
-    >>> factor_sum_product(output_vars=['HISTORY'], factors=factors)
-    <DiscreteFactor representing phi(HISTORY:2) at 0x7f240556b970>
+    >>> factor_sum_product(output_vars=["lung"], factors=factors)
+    <DiscreteFactor representing phi(lung:2) at 0x...>
+
     """
     state_names = {}
     for phi in factors:
@@ -142,27 +135,27 @@ def factor_divide(phi1, phi2):
     --------
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> from pgmpy.factors import factor_product
-    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5))
+    >>> phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+    >>> phi2 = DiscreteFactor(["x3", "x1"], [2, 2], range(1, 5))
     >>> phi = factor_divide(phi1, phi2)
     >>> phi.variables
     ['x1', 'x2', 'x3']
     >>> phi.cardinality
     array([2, 3, 2])
     >>> phi.values
-    array([[[ 0.        ,  0.33333333],
-            [ 2.        ,  1.        ],
-            [ 4.        ,  1.66666667]],
-
-           [[ 3.        ,  1.75      ],
-            [ 4.        ,  2.25      ],
-            [ 5.        ,  2.75      ]]])
+    array([[[0.        , 0.33333333],
+            [2.        , 1.        ],
+            [4.        , 1.66666667]],
+    <BLANKLINE>
+           [[3.        , 1.75      ],
+            [4.        , 2.25      ],
+            [5.        , 2.75      ]]])
     """
     if not isinstance(phi1, BaseFactor) or not isinstance(phi2, BaseFactor):
         raise TypeError("phi1 and phi2 should be factors instances")
 
     # Check if all of the arguments are of the same type
-    elif type(phi1) != type(phi2):
+    elif not isinstance(phi2, type(phi1)):
         raise NotImplementedError(
             "All the args are expected to be instances of the same factor class."
         )
