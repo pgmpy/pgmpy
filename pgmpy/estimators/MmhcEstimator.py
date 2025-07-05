@@ -71,8 +71,10 @@ class MmhcEstimator(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import MmhcEstimator
-        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(2500, 4)), columns=list('XYZW'))
-        >>> data['sum'] = data.sum(axis=1)
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 2, size=(2500, 4)), columns=list("XYZW")
+        ... )
+        >>> data["sum"] = data.sum(axis=1)
         >>> est = MmhcEstimator(data)
         >>> model = est.estimate()
         >>> print(model.edges())
@@ -135,8 +137,10 @@ class MmhcEstimator(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import MmhcEstimator
-        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
-        >>> data['F'] = data['A'] + data['B'] + data ['C']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 2, size=(5000, 5)), columns=list("ABCDE")
+        ... )
+        >>> data["F"] = data["A"] + data["B"] + data["C"]
         >>> est = PC(data)
         >>> skel, sep_sets = est.estimate_skeleton()
         >>> skel.edges()
@@ -146,9 +150,11 @@ class MmhcEstimator(StructureEstimator):
         {('D', 'A'): (), ('C', 'A'): (), ('C', 'E'): (), ('E', 'F'): (), ('B', 'D'): (),
          ('B', 'E'): (), ('D', 'F'): (), ('D', 'E'): (), ('A', 'E'): (), ('B', 'A'): (),
          ('B', 'C'): (), ('C', 'D'): ()}
-        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 3)), columns=list('XYZ'))
-        >>> data['X'] += data['Z']
-        >>> data['Y'] += data['Z']
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 2, size=(5000, 3)), columns=list("XYZ")
+        ... )
+        >>> data["X"] += data["Z"]
+        >>> data["Y"] += data["Z"]
         >>> est = PC(data)
         >>> skel, sep_sets = est.estimate_skeleton()
         >>> skel.edges()

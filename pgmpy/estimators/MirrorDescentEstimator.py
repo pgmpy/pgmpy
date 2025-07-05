@@ -143,7 +143,9 @@ class MirrorDescentEstimator(MarginalEstimator):
         >>> phi1 = DiscreteFactor(["a", "b"], [2, 2], np.zeros(4))
         >>> model.add_factors(phi1)
         >>> model.add_edges_from([("a", phi1), ("b", phi1)])
-        >>> tree1 = MirrorDescentEstimator(model=model, data=data).estimate(marginals=[("a", "b")])
+        >>> tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
+        ...     marginals=[("a", "b")]
+        ... )
         >>> print(tree1.factors[0])
         +------+------+------------+
         | a    | b    |   phi(a,b) |
@@ -156,7 +158,9 @@ class MirrorDescentEstimator(MarginalEstimator):
         +------+------+------------+
         | a(1) | b(1) |     2.0000 |
         +------+------+------------+
-        >>> tree2 = MirrorDescentEstimator(model=model, data=data).estimate(marginals=[("a",)])
+        >>> tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
+        ...     marginals=[("a",)]
+        ... )
         >>> print(tree2.factors[0])
         +------+------+------------+
         | a    | b    |   phi(a,b) |

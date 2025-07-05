@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
   "networkx>=3.0",
   "numpy>=2.0",
-  "scipy>=1.10",
+  "scipy<1.16",
   "scikit-learn>=1.2",
   "pandas>=1.5",
   "torch>=2.5",

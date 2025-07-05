@@ -55,9 +55,9 @@ class NaiveBayes(DiscreteBayesianNetwork):
         --------
         >>> from pgmpy.models import NaiveBayes
         >>> G = NaiveBayes()
-        >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_edge('a', 'b')
-        >>> G.add_edge('a', 'c')
+        >>> G.add_nodes_from(["a", "b", "c"])
+        >>> G.add_edge("a", "b")
+        >>> G.add_edge("a", "c")
         >>> G.edges()
         OutEdgeView([('a', 'b'), ('a', 'c')])
         """
@@ -90,8 +90,8 @@ class NaiveBayes(DiscreteBayesianNetwork):
         --------
         >>> from pgmpy.models import NaiveBayes
         >>> G = NaiveBayes()
-        >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_edges_from([('a', 'b'), ('a', 'c')])
+        >>> G.add_nodes_from(["a", "b", "c"])
+        >>> G.add_edges_from([("a", "b"), ("a", "c")])
         >>> G.edges()
         OutEdgeView([('a', 'b'), ('a', 'c')])
         """
@@ -126,13 +126,13 @@ class NaiveBayes(DiscreteBayesianNetwork):
         --------
         >>> from pgmpy.models import NaiveBayes
         >>> model = NaiveBayes()
-        >>> model.add_nodes_from(['a', 'b', 'c', 'd'])
-        >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
-        >>> model.active_trail_nodes('a')
+        >>> model.add_nodes_from(["a", "b", "c", "d"])
+        >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
+        >>> model.active_trail_nodes("a")
         {'a', 'd', 'c', 'b'}
-        >>> model.active_trail_nodes('a', ['b', 'c'])
+        >>> model.active_trail_nodes("a", ["b", "c"])
         {'a', 'd'}
-        >>> model.active_trail_nodes('b', ['a'])
+        >>> model.active_trail_nodes("b", ["a"])
         {'b'}
         """
 
@@ -156,8 +156,8 @@ class NaiveBayes(DiscreteBayesianNetwork):
         --------
         >>> from pgmpy.models import NaiveBayes
         >>> model = NaiveBayes()
-        >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
-        >>> ind = model.local_independencies('b')
+        >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
+        >>> ind = model.local_independencies("b")
         >>> ind
         (b \u27c2 d, c | a)
         """
@@ -193,9 +193,11 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> import pandas as pd
         >>> from pgmpy.models import NaiveBayes
         >>> model = NaiveBayes()
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model.fit(values, 'A')
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...     columns=["A", "B", "C", "D", "E"],
+        ... )
+        >>> model.fit(values, "A")
         >>> model.get_cpds()
         [<TabularCPD representing P(D:2 | A:2) at 0x4b72870>,
          <TabularCPD representing P(E:2 | A:2) at 0x4bb2150>,
