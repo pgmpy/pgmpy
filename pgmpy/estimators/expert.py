@@ -17,7 +17,7 @@ class ExpertInLoop(StructureEstimator):
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientation_cache = set([])
 
-    def test_all(self, dag: DAG) -> pd.DataFrame:
+    def test_all(self, ci_test, dag: DAG) -> pd.DataFrame:
         """
         Runs CI tests on all possible combinations of variables in `dag`.
 
@@ -58,6 +58,7 @@ class ExpertInLoop(StructureEstimator):
         self,
         pval_threshold: float = 0.05,
         effect_size_threshold: float = 0.05,
+        ci_test: Optional[str] = None,
         orientation_fn: Callable[
             ..., Optional[Tuple[Hashable, Hashable]]
         ] = llm_pairwise_orient,
