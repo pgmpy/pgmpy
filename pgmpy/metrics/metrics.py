@@ -18,8 +18,6 @@ from pgmpy.utils import get_dataset_type
 
 def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
 
-    from pgmpy.metrics.PermutationTest import permutation_test
-
     metrics_and_params = {
         "correlation": {
             "func": correlation_score,
@@ -35,15 +33,6 @@ def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
         "fisher-c": {
             "func": fisher_c,
             "req_params": ["ci_test", "calculate_rmsea", "show_progress"],
-        },
-        "permutation-test": {
-            "func": permutation_test,
-            "req_params": [
-                "ci_test",
-                "n_permutations",
-                "significance_level",
-                "show_progress",
-            ],
         },
     }
     if not isinstance(data, pd.DataFrame) or data is None:
