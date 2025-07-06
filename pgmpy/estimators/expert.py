@@ -236,7 +236,7 @@ class ExpertInLoop(StructureEstimator):
 
             # Step 3: Add edge between variables which have significant association.
             # Step 3.1: Find edges that are not present in the DAG but have significant association.
-            nonedge_effects = all_effects[not all_effects.edge_present]
+            nonedge_effects = all_effects[all_effects.edge_present == False]
             nonedge_effects = nonedge_effects[
                 (nonedge_effects.effect >= effect_size_threshold)
                 & (nonedge_effects.p_val <= pval_threshold)
