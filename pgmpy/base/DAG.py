@@ -1674,35 +1674,6 @@ class DAG(nx.DiGraph):
 
         return strengths
 
-    def _get_non_descendants(self, node) -> list:
-        """
-        Returns a list of the non_descendants of a given node in the model
-        using BFS.
-
-        Parameters
-        ----------
-        node : (Hashable) the node of the DAG for which we want to find
-                non-descendant nodes
-
-        Returns
-        -------
-        list(non_descendants): A list of all the non-descendant nodes for
-                                the given node in the DAG
-        """
-        descendants = set()
-        queue = list(self.successors(node))
-        visited = set()
-        while queue:
-            current = queue.pop(0)
-            if current not in visited:
-                visited.add(current)
-                descendants.add(current)
-                queue.extend(self.successors(current))
-
-        all_nodes = set(self.nodes())
-        non_descendants = all_nodes - descendants - {node}
-        return list(non_descendants)
-
     def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
 
         from sklearn.metrics import f1_score
@@ -1743,17 +1714,19 @@ class DAG(nx.DiGraph):
             )
 
         metric_vals = {}
-        for t, r in test_results:
+        for t in test_results:
             if t in ["correlation", "log-likelihood", "aic", "bic"]:
-                metric_vals[t + " score"] = r
+                metric_vals[t + " score"] = test_results[t]
             if t == "fisher-c":
-                if isinstance(r, tuple):
-                    (metric_vals["fisher-c p-value"], metric_vals["rmsea"]) = r
+                if isinstance(test_results[t], tuple):
+                    (metric_vals["fisher-c p-value"], metric_vals["rmsea"]) = (
+                        test_results[t]
+                    )
                 else:
-                    metric_vals["fisher-c p-value"] = r
+                    metric_vals["fisher-c p-value"] = test_results[t]
             if t == "implied-cis":
                 metric_vals["failing-cis / total"] = (
-                    f"{(r["p-value"] < params["significance_level"]).sum()} / {len(r)}"
+                    f"{(test_results[t]["p-value"] < params["significance_level"]).sum()} / {len(test_results[t])}"
                 )
 
         df_result = pd.DataFrame(metric_vals)
