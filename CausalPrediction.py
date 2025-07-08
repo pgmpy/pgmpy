@@ -192,7 +192,7 @@ class AdjustmentRegressor:
                 df,
                 y_col="outcome",
                 d_cols=model.exposure,
-                x_cols=list(set(df.columns) - {"outcome", model.exposure}),
+                x_cols=list(self.adjustment_set),
             )
             ml_g = RandomForestRegressor()
             ml_m = RandomForestRegressor()
