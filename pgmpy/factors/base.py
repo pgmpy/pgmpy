@@ -67,7 +67,7 @@ def factor_product(*args):
 
 
 def factor_sum_product(output_vars, factors):
-    """
+    r"""
     For a given set of factors: `args` returns the
     ... result of $ \\sum_{var \\not \\in output_vars} \\prod \\textit{args} $.
 
