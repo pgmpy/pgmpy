@@ -8,10 +8,33 @@ from pgmpy.base.DAG import DAG as pgmpy_DAG
 
 class ADMG(MultiDiGraph):
     """
-    Abstract class for an ADMG (Acyclic Directed Mixed Graph).
-    An ADMG is a directed graph that may contain both directed and undirected edges.
-    It is used to represent causal relationships in a system where some relationships are known to be directed,
-    while others are not specified as directed or undirected.
+    A class representing an Acyclic Directed Mixed Graph (ADMG).
+
+    An ADMG is a directed graph that allows for both directed and bidirected edges.
+    This class extends the `networkx.MultiDiGraph` and provides additional functionality
+    for operations involving directed and bidirected edges.
+
+    Parameters
+    ----------
+    directed_ebunch : list of tuple, optional
+        List of directed edges to add, where each tuple is of the form (u, v) for edge u -> v.
+
+    bidirected_ebunch : list of tuple, optional
+        List of bidirected edges to add, where each tuple is of the form (u, v) for edge u <-> v.
+
+    latents : set of str, optional
+        Set of latent variables to include in the graph.
+
+    Examples
+    --------
+    >>> admg = ADMG(
+    ...     directed_ebunch=[('A', 'B')],
+    ...     bidirected_ebunch=[('B', 'C')],
+    ...     latents={'L1'}
+    ... )
+    >>> admg.add_node('D')
+    >>> list(admg.nodes)
+    ['A', 'B', 'C', 'D']
     """
 
     def __init__(self, directed_ebunch=None, bidirected_ebunch=None, latents=None):
@@ -25,110 +48,143 @@ class ADMG(MultiDiGraph):
             self.add_bidirected_edges(bidirected_ebunch)
 
     def add_node(self, node):
+        """
+        Adds a node to the ADMG from the MultiDiGraph class.
+        """
         super().add_node(node)
 
     def add_nodes_from(self, nodes, **attr):
+        """
+        Adds multiple nodes to the graph.
+
+        Parameters
+        ----------
+        nodes : iterable
+            An iterable of nodes to add.
+        """
         return super().add_nodes_from(nodes, **attr)
 
-    def _add_directed_edge(self, u, v):
-        if u is None or v is None:
-            raise ValueError("Can't add since one of nodes is None")
-
-        if u not in self.nodes:
-            self.add_node(u)
-        if v not in self.nodes:
-            self.add_node(v)
-
-        key = super().add_edge(u, v, type="directed")
-
-        if not nx.is_directed_acyclic_graph(self):
-            super().remove_edge(u, v, key=key)
-            raise ValueError("Adding this edge would create a cycle in the graph.")
-
-    def _add_bidirected_edge(self, u, v):
-        if u is None or v is None:
-            raise ValueError("Can't add since one of~ the nodes is None")
-        if u == v:
-            raise ValueError("Cannot add a bidirected edge from a node to itself.")
-
-        if u not in self.nodes:
-            self.add_node(u)
-        if v not in self.nodes:
-            self.add_node(v)
-
-        # Add two directed edges with a 'type' attribute indicating bidirected
-        key_uv = super().add_edge(u, v, type="bidirected")
-        key_vu = super().add_edge(v, u, type="bidirected")
-
-        # To ensure consistency, you might want to store the keys or manage them.
-        # For simplicity in this example, we'll assume the user won't directly
-        # manipulate these keys without going through the ADMG methods.
-
     def add_directed_edges(self, ebunch):
+        """
+        Adds directed edges (u -> v) to the ADMG.
+
+        Parameters
+        ----------
+        ebunch : list of tuple
+            List of directed edges, where each tuple is (u, v).
+        """
         for u, v in ebunch:
-            self._add_directed_edge(u, v)
+            if u is None or v is None:
+                raise ValueError("Can't add since one of nodes is None")
+
+            key = super().add_edge(u, v, type="directed")
+            if not nx.is_directed_acyclic_graph(self):
+                super().remove_edge(u, v, key=key)
+                raise ValueError("Adding this edge would create a cycle in the graph.")
 
     def add_bidirected_edges(self, ebunch):
+        """
+        Adds bidirected edges (u <-> v) to the ADMG.
+
+        Parameters
+        ----------
+        ebunch : list of tuple
+            List of bidirected edges, where each tuple is (u, v).
+        """
         for u, v in ebunch:
-            self._add_bidirected_edge(u, v)
+            if u is None or v is None:
+                raise ValueError("Can't add since one of the nodes is None")
+            if u == v:
+                raise ValueError("Cannot add a bidirected edge from a node to itself.")
+
+            # Add two directed edges with a 'type' attribute indicating bidirected
+            super().add_edge(u, v, type="bidirected")
+            super().add_edge(v, u, type="bidirected")
 
     def add_edge(self, u, v, **attr):
+        """
+        Raises an error if trying to add a regular edge.
+        """
         raise NotImplementedError(
             "Use add_directed_edge or add_bidirected_edge to add edges."
         )
 
-    def _get_parent(self, node):
+    def get_directed_parents(self, nodes):
         """
-        Internal method to get the parent of a node.
-        This is used to ensure that the parent is always a directed edge.
-        """
-        if node not in self.nodes:
-            raise ValueError(f"Node {node} is not in the graph.")
+        Get directed parents of given nodes.
 
-        parents = set()
-        for pred in self.predecessors(node):
-            data = self.get_edge_data(pred, node)
-            for key in data:
-                if data[key].get("type") == "directed":
-                    parents.add(pred)
-        return parents
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes to query.
 
-    def get_parents(self, nodes):
-        """
-        Get the parents of the given nodes in the ADMG.
-        Returns a tuple of two sets: (parents, district_parents).
-        - parents: Direct parents (directed edges).
-        - district_parents: Parents connected by bidirected edges.
+        Returns
+        -------
+        set
+            Set of directed parents.
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
-        parents = set()
-        district_parents = set()
+        directed_parents = set()
 
         for node in nodes_set:
             if node not in self.nodes:
                 raise ValueError(f"Node {node} is not in the graph.")
-            # Get direct parents
-            direct_parents = self._get_parent(node)
-            parents.update(direct_parents)
+            for pred in self.predecessors(node):
+                data = self.get_edge_data(pred, node)
+                for key in data:
+                    if data[key].get("type") == "directed":
+                        directed_parents.add(pred)
+        return directed_parents
 
-            # district parents are those which are district as well as parents
-            for parent in direct_parents:
-                # Check if the parent is connected by a bidirected edge
-                for neighbor in super().neighbors(parent):
-                    if (
-                        self.has_edge(parent, neighbor)
-                        and self.get_edge_data(parent, neighbor, 0).get("type")
-                        == "bidirected"
-                    ) or (
-                        self.has_edge(neighbor, parent)
-                        and self.get_edge_data(neighbor, parent, 0).get("type")
-                        == "bidirected"
-                    ):
-                        district_parents.add(parent)
+    def get_bidirected_parents(self, nodes):
+        """
+        Get bidirected parents (nodes connected via bidirected edge) of the given nodes.
 
-        return parents, district_parents
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes to query.
+
+        Returns
+        -------
+        set
+            Set of bidirected parents.
+        """
+        nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
+        bidirected_parents = set()
+
+        for node in nodes_set:
+            if node not in self.nodes:
+                raise ValueError(f"Node {node} is not in the graph.")
+            # Get neighbors and check for bidirected edges
+            for neighbor in super().neighbors(node):
+                if (
+                    self.has_edge(node, neighbor)
+                    and self.get_edge_data(node, neighbor, 0).get("type")
+                    == "bidirected"
+                ) or (
+                    self.has_edge(neighbor, node)
+                    and self.get_edge_data(neighbor, node, 0).get("type")
+                    == "bidirected"
+                ):
+                    bidirected_parents.add(neighbor)
+
+        return bidirected_parents
 
     def get_children(self, nodes):
+        """
+        Get children of given nodes (i.e., targets of outgoing directed edges).
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Set of children nodes.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         children = set()
         for node in nodes_set:
@@ -141,6 +197,19 @@ class ADMG(MultiDiGraph):
         return children
 
     def get_spouses(self, nodes):
+        """
+        Get spouses of given nodes (i.e., nodes connected via bidirected edges).
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Set of spouses.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         spouses = set()
         for node in nodes_set:
@@ -161,6 +230,19 @@ class ADMG(MultiDiGraph):
         return spouses
 
     def get_ancestors(self, nodes):
+        """
+        Get ancestors of given nodes via directed paths.
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Set of ancestor nodes including the input nodes.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         ancestors = set()
         for node in nodes_set:
@@ -175,6 +257,19 @@ class ADMG(MultiDiGraph):
         return ancestors
 
     def get_descendants(self, nodes):
+        """
+        Get descendants of given nodes via directed paths.
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Set of descendant nodes including the input nodes.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         descendants = set()
         for node in nodes_set:
@@ -189,6 +284,19 @@ class ADMG(MultiDiGraph):
         return descendants
 
     def get_district(self, nodes):
+        """
+        Return district of a node: maximal set connected via bidirected edges.
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Nodes in the same bidirected-connected component.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         all_districts = set()
 
@@ -235,6 +343,24 @@ class ADMG(MultiDiGraph):
         return all_districts
 
     def get_ancestral_graph(self, nodes):
+        """
+        Return the ancestral graph induced by the input nodes.
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes to induce subgraph on.
+
+        Returns
+        -------
+        ADMG
+            Subgraph induced by ancestors of the given nodes.
+
+        Raises
+        ------
+        ValueError
+            If any input node is not in the graph.
+        """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
 
         if not nodes_set.issubset(self.nodes):
@@ -270,6 +396,25 @@ class ADMG(MultiDiGraph):
         return new_admg
 
     def get_markov_blanket(self, nodes):
+        """
+        Compute the Markov blanket for the given node(s).
+
+        Includes:
+        - Parents
+        - Children
+        - Spouses (nodes sharing a child)
+        - Parents of nodes in the district
+
+        Parameters
+        ----------
+        nodes : str or iterable of str
+            Node or list of nodes.
+
+        Returns
+        -------
+        set
+            Set of nodes in the Markov blanket.
+        """
         nodes_set = {nodes} if isinstance(nodes, set) else set(nodes)
         if not nodes_set.issubset(self.nodes):
             raise ValueError("Input nodes must be subset of graph's nodes.")
@@ -291,32 +436,32 @@ class ADMG(MultiDiGraph):
 
     def to_dag(self):
         """
-        Converts the ADMG to a directed acyclic graph (DAG).
-        For each bidirected x<->y in the ADMG, add a latent node {x}_{y}
-        and add two edgws x<----{x}_{y}-->y
+        Project ADMG into a DAG by introducing latent variables for bidirected edges.
+
+        Returns
+        -------
+        pgmpy.base.DAG.DAG
+            DAG with latent variables replacing bidirected edges.
         """
         dag_edges = []
-        dag_nodes = set()
 
         # Add directed edges
         for u, v, data in self.edges(data=True):
             if data.get("type") == "directed":
                 dag_edges.append((u, v))
-                dag_nodes.update([u, v])
 
         # add latent nodes and edges for bidirected edges
         latent_nodes_map = {}
         for u, v, data in self.edges(data=True):
             if data.get("type") == "bidirected":
                 sorted_pair = tuple(sorted((u, v)))
-
                 if sorted_pair not in latent_nodes_map:
                     latent_var = f"L_{sorted_pair[0]}_{sorted_pair[1]}"
                     latent_nodes_map[sorted_pair] = latent_var
                     dag_edges.append((latent_var, sorted_pair[0]))
                     dag_edges.append((latent_var, sorted_pair[1]))
-                    dag_nodes.add(latent_var)
-                    dag_nodes.update(sorted_pair)
+
+        dag_nodes = set(self.nodes()) | set(latent_nodes_map.values())
 
         # Create a new DAG instance
         dag_instance = pgmpy_DAG()
@@ -325,34 +470,30 @@ class ADMG(MultiDiGraph):
 
         return dag_instance
 
-    def _is_d_connected_internal(
-        self,
-        start: "Hashable",
-        end: "Hashable",
-        observed: Optional[Sequence["Hashable"]] = None,
-        include_latents=False,
-    ):
-        """
-        Internal helper to check d-connection on the **transformed** DAG.
-        This method will operate on the DAG obtained by converting the ADMG
-        to a directed acyclic graph (DAG) using the `to_dag` method.
-        """
-        new_dag = self.to_dag()
-
-        if new_dag.is_dconnected(start, end, observed=observed):
-            return True
-        else:
-            return False
-
-    def is_m_separated(
+    def is_mseparated(
         self,
         nodes_u,
         nodes_v,
         conditional_set=None,
     ):
         """
-        Check if nodes_u and nodes_v are m-separated given conditional_set in the ADMG.
-        This method uses the d-connection check on the transformed DAG.
+        Test m-separation between two sets of nodes given a conditioning set.
+
+        Parameters
+        ----------
+        nodes_u : str or iterable of str
+            First set of nodes.
+
+        nodes_v : str or iterable of str
+            Second set of nodes.
+
+        conditional_set : set of str, optional
+            Conditioning set (default is empty set).
+
+        Returns
+        -------
+        bool
+            True if nodes_u and nodes_v are m-separated; False otherwise.
         """
         if conditional_set is None:
             conditional_set = set()
@@ -361,50 +502,77 @@ class ADMG(MultiDiGraph):
         nodes_u_set = {nodes_u} if isinstance(nodes_u, str) else set(nodes_u)
         nodes_v_set = {nodes_v} if isinstance(nodes_v, str) else set(nodes_v)
 
+        new_dag = self.to_dag()
         for u in nodes_u_set:
             for v in nodes_v_set:
-                # if they are d_connected, they must also be m_connected
-                if self._is_d_connected_internal(u, v, observed=conditional_set):
+                # if they are dconnected, they are not mseparated
+                if new_dag.is_dconnected(u, v, observed=conditional_set):
                     return False
-
         return True
 
-    def is_m_connected(
+    def is_mconnected(
         self,
         nodes_u,
         nodes_v,
         conditional_set=None,
     ):
         """
-        Checks if two sets of nodes are m_connected given a conditional set.
-        """
-        return not self.is_m_separated(nodes_u, nodes_v, conditional_set)
+        Test m-connectedness between two node sets given a conditioning set.
 
-    def m_connected_nodes(self, nodes_u, nodes_v, conditional_set=None):
+        Parameters
+        ----------
+        nodes_u : str or iterable of str
+            First set of nodes.
+
+        nodes_v : str or iterable of str
+            Second set of nodes.
+
+        conditional_set : set of str, optional
+            Conditioning set.
+
+        Returns
+        -------
+        bool
+            True if m-connected; False if m-separated.
         """
-        Finds all nodes that are m-connected to any node in `nodes_u`
-        given the `conditional_set`.
+        return not self.is_mseparated(nodes_u, nodes_v, conditional_set)
+
+    def mconnected_nodes(self, nodes_u, nodes_v=None, conditional_set=None):
+        """
+        Find all nodes m-connected to nodes in `nodes_u` given `conditional_set`.
+
+        Parameters
+        ----------
+        nodes_u : str or iterable of str
+            Set of source nodes.
+
+        nodes_v : str or iterable of str, optional
+            If provided, filters the result to this set.
+
+        conditional_set : set of str, optional
+            Conditioning set (default is empty set).
+
+        Returns
+        -------
+        set
+            Nodes m-connected to `nodes_u` (or their intersection with `nodes_v` if provided).
         """
         if conditional_set is None:
             conditional_set = set()
 
-        if not isinstance(nodes_u, list):
+        dag = self.to_dag()
+        if isinstance(nodes_u, str):
             nodes_u = [nodes_u]
 
         m_connected_set = set()
 
-        new_dag = self.to_dag()
+        for node in nodes_u:
+            active_nodes = dag.active_trail_nodes(node, observed=conditional_set)
+            active_nodes = {n for n in active_nodes if not str(n).startswith("L_")}
+            m_connected_set.update(active_nodes)
 
-        # Iterate over all the original ADMG nodes to find their connections
-        for node in self.nodes:
-            # Node always connected to itself
-            if node in nodes_u:
-                m_connected_set.add(node)
-                continue
-
-            for node in nodes_u:
-                if new_dag.is_dconnected(node, node, observed=conditional_set):
-                    m_connected_set.add(node)
-                    break
+        if nodes_v is not None:
+            nodes_v_set = {nodes_v} if isinstance(nodes_v, str) else set(nodes_v)
+            return m_connected_set & nodes_v_set
 
         return m_connected_set

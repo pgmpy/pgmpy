@@ -48,25 +48,25 @@ class TestADMGInitialization:
 class TestADMGEdgeOperations:
     """Test edge addition and validation."""
 
-    def test_add_directed_edge(self):
+    def testadd_directed_edges(self):
         """Test adding directed edges."""
         admg = ADMG()
-        admg._add_directed_edge("A", "B")
+        admg.add_directed_edges("A", "B")
 
         assert admg.has_edge("A", "B")
         assert admg.get_edge_data("A", "B", 0)["type"] == "directed"
 
-    def test_add_bidirected_edge(self):
+    def testadd_bidirected_edges(self):
         """Test adding bidirected edges."""
         admg = ADMG()
-        admg._add_bidirected_edge("X", "Y")
+        admg.add_bidirected_edges("X", "Y")
 
         assert admg.has_edge("X", "Y")
         assert admg.has_edge("Y", "X")
         assert admg.get_edge_data("X", "Y", 0)["type"] == "bidirected"
         assert admg.get_edge_data("Y", "X", 0)["type"] == "bidirected"
 
-    def test_add_directed_edges_batch(self):
+    def testadd_directed_edgess_batch(self):
         """Test adding multiple directed edges at once."""
         admg = ADMG()
         edges = [("A", "B"), ("B", "C"), ("C", "D")]
@@ -76,7 +76,7 @@ class TestADMGEdgeOperations:
             assert admg.has_edge(u, v)
             assert admg.get_edge_data(u, v, 0)["type"] == "directed"
 
-    def test_add_bidirected_edges_batch(self):
+    def testadd_bidirected_edgess_batch(self):
         """Test adding multiple bidirected edges at once."""
         admg = ADMG()
         edges = [("X", "Y"), ("Y", "Z")]
@@ -89,22 +89,22 @@ class TestADMGEdgeOperations:
     def test_cycle_detection(self):
         """Test that cycles are prevented in directed edges."""
         admg = ADMG()
-        admg._add_directed_edge("A", "B")
-        admg._add_directed_edge("B", "C")
+        admg.add_directed_edges("A", "B")
+        admg.add_directed_edges("B", "C")
 
         # This should raise an error as it creates a cycle
         with pytest.raises(ValueError, match="Adding this edge would create a cycle"):
-            admg._add_directed_edge("C", "A")
+            admg.add_directed_edges("C", "A")
 
     def test_none_node_rejection(self):
         """Test that None nodes are rejected."""
         admg = ADMG()
 
         with pytest.raises(ValueError, match="Can't add since one of nodes is None"):
-            admg._add_directed_edge(None, "B")
+            admg.add_directed_edges(None, "B")
 
         with pytest.raises(ValueError, match="Can't add since one of"):
-            admg._add_bidirected_edge("A", None)
+            admg.add_bidirected_edges("A", None)
 
     def test_self_bidirected_edge_rejection(self):
         """Test that self-loops in bidirected edges are rejected."""
@@ -113,7 +113,7 @@ class TestADMGEdgeOperations:
         with pytest.raises(
             ValueError, match="Cannot add a bidirected edge from a node to itself"
         ):
-            admg._add_bidirected_edge("A", "A")
+            admg.add_bidirected_edges("A", "A")
 
     def test_add_edge_not_implemented(self):
         """Test that generic add_edge raises NotImplementedError."""
@@ -134,15 +134,19 @@ class TestADMGRelationships:
         # Bidirected edges: A <-> D, B <-> E
         self.admg.add_bidirected_edges([("A", "D"), ("B", "E")])
 
-    def test_get_parents(self):
+    def test_get_directed_parents(self):
         """Test getting parents of nodes."""
-        parents, district_parents = self.admg.get_parents("B")
+        parents, district_parents = self.admg.get_directed_parents("B")
 
         assert "A" in parents
         assert "D" in parents
-        # A and D are also connected by bidirected edge, so they're district parents too
-        assert "A" in district_parents
-        assert "D" in district_parents
+
+    def test_get_bidirected_parents(self):
+        """Test getting bidirected parents of nodes."""
+        bidirected_parents = self.admg.get_bidirected_parents("B")
+
+        assert "A" in bidirected_parents
+        assert "D" in bidirected_parents
 
     def test_get_children(self):
         """Test getting children of nodes."""
@@ -254,15 +258,15 @@ class TestADMGSeparation:
     def test_is_m_separated(self):
         """Test m-separation check."""
         # A and B should not be m-separated (they have bidirected edge)
-        assert not self.admg.is_m_separated("A", "B")
+        assert not self.admg.is_mseparated("A", "B")
 
         # Test with conditional set
-        separated = self.admg.is_m_separated("A", "D", conditional_set={"C"})
+        separated = self.admg.is_mseparated("A", "D", conditional_set={"C"})
         # This depends on the specific graph structure and d-separation rules
 
     def test_is_m_connected(self):
         """Test m-connection check."""
         # This should be the opposite of m-separation
-        connected = self.admg.is_m_connected("A", "B")
-        separated = self.admg.is_m_separated("A", "B")
+        connected = self.admg.is_mconnected("A", "B")
+        separated = self.admg.is_mseparated("A", "B")
         assert connected != separated
