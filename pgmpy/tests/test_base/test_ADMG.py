@@ -48,15 +48,16 @@ class TestADMGInitialization:
 class TestADMGEdgeOperations:
     """Test edge addition and validation."""
 
-    def testadd_directed_edges(self):
+    def test_add_directed_edges(self):
         """Test adding directed edges."""
         admg = ADMG()
-        admg.add_directed_edges("A", "B")
+        egdes = [("A", "B"), ("B", "C")]
+        admg.add_directed_edges(egdes)
 
         assert admg.has_edge("A", "B")
         assert admg.get_edge_data("A", "B", 0)["type"] == "directed"
 
-    def testadd_bidirected_edges(self):
+    def test_add_bidirected_edges(self):
         """Test adding bidirected edges."""
         admg = ADMG()
         admg.add_bidirected_edges("X", "Y")
@@ -76,7 +77,7 @@ class TestADMGEdgeOperations:
             assert admg.has_edge(u, v)
             assert admg.get_edge_data(u, v, 0)["type"] == "directed"
 
-    def testadd_bidirected_edgess_batch(self):
+    def test_add_bidirected_edgess_batch(self):
         """Test adding multiple bidirected edges at once."""
         admg = ADMG()
         edges = [("X", "Y"), ("Y", "Z")]
@@ -101,10 +102,10 @@ class TestADMGEdgeOperations:
         admg = ADMG()
 
         with pytest.raises(ValueError, match="Can't add since one of nodes is None"):
-            admg.add_directed_edges(None, "B")
+            admg.add_directed_edges([None, "B"])
 
         with pytest.raises(ValueError, match="Can't add since one of"):
-            admg.add_bidirected_edges("A", None)
+            admg.add_bidirected_edges(["A", None])
 
     def test_self_bidirected_edge_rejection(self):
         """Test that self-loops in bidirected edges are rejected."""
@@ -113,7 +114,7 @@ class TestADMGEdgeOperations:
         with pytest.raises(
             ValueError, match="Cannot add a bidirected edge from a node to itself"
         ):
-            admg.add_bidirected_edges("A", "A")
+            admg.add_bidirected_edges(["A", "A"])
 
     def test_add_edge_not_implemented(self):
         """Test that generic add_edge raises NotImplementedError."""
@@ -136,17 +137,19 @@ class TestADMGRelationships:
 
     def test_get_directed_parents(self):
         """Test getting parents of nodes."""
-        parents, district_parents = self.admg.get_directed_parents("B")
+        parents = self.admg.get_directed_parents("B")
 
         assert "A" in parents
         assert "D" in parents
+        assert len(parents) == 2  # A and D are parents of B
 
     def test_get_bidirected_parents(self):
         """Test getting bidirected parents of nodes."""
         bidirected_parents = self.admg.get_bidirected_parents("B")
 
-        assert "A" in bidirected_parents
-        assert "D" in bidirected_parents
+        assert "A" not in bidirected_parents
+        assert "E" in bidirected_parents
+        assert len(bidirected_parents) == 1  # Only E is a bidirected parent of B
 
     def test_get_children(self):
         """Test getting children of nodes."""
@@ -191,7 +194,7 @@ class TestADMGRelationships:
     def test_nonexistent_node_error(self):
         """Test that operations on nonexistent nodes raise errors."""
         with pytest.raises(ValueError, match="Node .* is not in the graph"):
-            self.admg.get_parents("Z")
+            self.admg.get_directed_parents("Z")
 
         with pytest.raises(ValueError, match="Node .* is not in the graph"):
             self.admg.get_children("Z")
