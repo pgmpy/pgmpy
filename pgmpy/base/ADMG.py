@@ -373,9 +373,9 @@ class ADMG(MultiDiGraph):
         # Add directed edges from the original graph that have both endpoints in nodes_set
         for u, v, key, data in self.edges(keys=True, data=True):
             if data.get("type") == "directed" and u in nodes_set and v in nodes_set:
-                new_admg._add_directed_edge(
+                new_admg.add_directed_edges(
                     u, v
-                )  # Use _add_directed_edge to maintain cycle check
+                )  # Use add_directed)edges to maintain cycle check
 
         # Add bidirected edges from the original graph that have both endpoints in nodes_set
         processed_bidirected_pairs = set()
@@ -387,7 +387,7 @@ class ADMG(MultiDiGraph):
                         v,
                         u,
                     ) not in processed_bidirected_pairs:
-                        new_admg._add_bidirected_edge(u, v)
+                        new_admg.add_bidirected_edges(u, v)
                         processed_bidirected_pairs.add((u, v))
                         processed_bidirected_pairs.add(
                             (v, u)
@@ -423,7 +423,8 @@ class ADMG(MultiDiGraph):
             if node not in self.nodes:
                 raise ValueError(f"Node {node} is not in the graph.")
             # Get parents
-            parents, district_parents = self.get_parents(node)
+            parents = self.get_directed_parents(node)
+            district_parents = self.get_bidirected_parents(node)
             markov_blanket.update(parents)
             markov_blanket.update(district_parents)
             # Get children
