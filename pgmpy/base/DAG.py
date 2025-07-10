@@ -1729,7 +1729,7 @@ class DAG(nx.DiGraph):
                     f"{(test_results[t]["p-value"] < params["significance_level"]).sum()} / {len(test_results[t])}"
                 )
 
-        df_result = pd.DataFrame(metric_vals)
+        df_result = pd.DataFrame([metric_vals], index=[0])
         return df_result
 
 

@@ -59,7 +59,7 @@ def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
                 suffix = "d"
             else:
                 suffix = "cg"
-            filtered_kwargs["scoring-method"] = f"{metric}-" + suffix
+            filtered_kwargs["scoring_method"] = f"{metric}-" + suffix
         return metric_func(model=model, data=data, **filtered_kwargs)
 
     elif callable(metric):
