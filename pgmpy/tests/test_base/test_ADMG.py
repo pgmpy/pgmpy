@@ -60,7 +60,7 @@ class TestADMGEdgeOperations:
     def test_add_bidirected_edges(self):
         """Test adding bidirected edges."""
         admg = ADMG()
-        admg.add_bidirected_edges("X", "Y")
+        admg.add_bidirected_edges(["X", "Y"])
 
         assert admg.has_edge("X", "Y")
         assert admg.has_edge("Y", "X")
@@ -102,19 +102,19 @@ class TestADMGEdgeOperations:
         admg = ADMG()
 
         with pytest.raises(ValueError, match="Can't add since one of nodes is None"):
-            admg.add_directed_edges([None, "B"])
+            admg.add_directed_edges([(None, "B")])
 
         with pytest.raises(ValueError, match="Can't add since one of"):
-            admg.add_bidirected_edges(["A", None])
+            admg.add_bidirected_edges([("A", None)])
 
-    # def test_self_bidirected_edge_rejection(self):
-    #     """Test that self-loops in bidirected edges are rejected."""
-    #     admg = ADMG()
+    def test_self_bidirected_edge_rejection(self):
+        """Test that self-loops in bidirected edges are rejected."""
+        admg = ADMG()
 
-    #     with pytest.raises(
-    #         ValueError, match="Cannot add a bidirected edge from a node to itself"
-    #     ):
-    #         admg.add_bidirected_edges(["A", "A"])
+        with pytest.raises(
+            ValueError, match="Cannot add a bidirected edge from a node to itself"
+        ):
+            admg.add_bidirected_edges([("A", "A")])
 
     def test_add_edge_not_implemented(self):
         """Test that generic add_edge raises NotImplementedError."""

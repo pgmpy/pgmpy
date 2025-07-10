@@ -17,24 +17,12 @@ class ADMG(MultiDiGraph):
     Parameters
     ----------
     directed_ebunch : list of tuple, optional
-        List of directed edges to add, where each tuple is of the form (u, v) for edge u -> v.
-
+        List of directed edges to initialize the graph, where each tuple is (u, v).
     bidirected_ebunch : list of tuple, optional
-        List of bidirected edges to add, where each tuple is of the form (u, v) for edge u <-> v.
-
+        List of bidirected edges to initialize the graph, where each tuple is (u, v).
     latents : set of str, optional
-        Set of latent variables to include in the graph.
-
-    Examples
-    --------
-    >>> admg = ADMG(
-    ...     directed_ebunch=[('A', 'B')],
-    ...     bidirected_ebunch=[('B', 'C')],
-    ...     latents={'L1'}
-    ... )
-    >>> admg.add_node('D')
-    >>> list(admg.nodes)
-    ['A', 'B', 'C', 'D']
+        Set of latent variables in the graph. These are not directly represented as nodes
+        but are used to indicate the presence of bidirected edges.
     """
 
     def __init__(self, directed_ebunch=None, bidirected_ebunch=None, latents=None):
@@ -374,7 +362,7 @@ class ADMG(MultiDiGraph):
         for u, v, key, data in self.edges(keys=True, data=True):
             if data.get("type") == "directed" and u in nodes_set and v in nodes_set:
                 new_admg.add_directed_edges(
-                    u, v
+                    [u, v]
                 )  # Use add_directed)edges to maintain cycle check
 
         # Add bidirected edges from the original graph that have both endpoints in nodes_set
