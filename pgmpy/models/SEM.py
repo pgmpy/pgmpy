@@ -422,7 +422,7 @@ class SEMGraph(DAG):
             return None
 
     def to_lisrel(self):
-        """
+        r"""
         Converts the model from a graphical representation to an equivalent algebraic
         representation. This converts the model into a Reticular Action Model (RAM) model
         representation which is implemented by `pgmpy.models.SEMAlg` class.
@@ -487,7 +487,7 @@ class SEMGraph(DAG):
 
     @staticmethod
     def __standard_lisrel_masks(graph, err_graph, weight, var):
-        """
+        r"""
         This method is called by `get_fixed_masks` and `get_masks` methods.
 
         Parameters

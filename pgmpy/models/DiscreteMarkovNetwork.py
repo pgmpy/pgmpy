@@ -664,7 +664,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         return self.neighbors(node)
 
     def get_local_independencies(self, latex=False):
-        """
+        r"""
         Returns all the local independencies present in the markov model.
 
         Local independencies are the independence assertion in the form of
@@ -798,7 +798,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         return final_bm
 
     def get_partition_function(self):
-        """
+        r"""
         Returns the partition function for a given undirected graph.
 
         A partition function is defined as
