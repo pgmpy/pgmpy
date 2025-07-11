@@ -60,7 +60,7 @@ class TestADMGEdgeOperations:
     def test_add_bidirected_edges(self):
         """Test adding bidirected edges."""
         admg = ADMG()
-        admg.add_bidirected_edges(["X", "Y"])
+        admg.add_bidirected_edges([("X", "Y")])
 
         assert admg.has_edge("X", "Y")
         assert admg.has_edge("Y", "X")
@@ -90,12 +90,12 @@ class TestADMGEdgeOperations:
     def test_cycle_detection(self):
         """Test that cycles are prevented in directed edges."""
         admg = ADMG()
-        admg.add_directed_edges(["A", "B"])
-        admg.add_directed_edges(["B", "C"])
+        admg.add_directed_edges([("A", "B")])
+        admg.add_directed_edges([("B", "C")])
 
         # This should raise an error as it creates a cycle
         with pytest.raises(ValueError, match="Adding this edge would create a cycle"):
-            admg.add_directed_edges(["C", "A"])
+            admg.add_directed_edges([("C", "A")])
 
     def test_none_node_rejection(self):
         """Test that None nodes are rejected."""

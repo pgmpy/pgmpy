@@ -362,7 +362,7 @@ class ADMG(MultiDiGraph):
         for u, v, key, data in self.edges(keys=True, data=True):
             if data.get("type") == "directed" and u in nodes_set and v in nodes_set:
                 new_admg.add_directed_edges(
-                    [u, v]
+                    [(u, v)]
                 )  # Use add_directed)edges to maintain cycle check
 
         # Add bidirected edges from the original graph that have both endpoints in nodes_set
@@ -375,7 +375,7 @@ class ADMG(MultiDiGraph):
                         v,
                         u,
                     ) not in processed_bidirected_pairs:
-                        new_admg.add_bidirected_edges(u, v)
+                        new_admg.add_bidirected_edges([(u, v)])
                         processed_bidirected_pairs.add((u, v))
                         processed_bidirected_pairs.add(
                             (v, u)
