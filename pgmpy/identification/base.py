@@ -13,26 +13,31 @@ class BaseIdentification:
     ...         outcome_parents = set(
     ...             causal_graph.predecessors(causal_graph.exposure)
     ...         ) - {causal_graph.exposure}
-    ...         causal_graph.add_roles("adjustment", outcome_parents)
-    ...         return outcome_parents, True
+    ...         causal_graph = causal_graph.add_roles("adjustment", outcome_parents)
+    ...         return casual_graph, True
     ...
     """
 
     def identify(self, causal_graph):
-        """Method to run the identification method.
+        """
+        Run the identification algorithm on a causal graph.
 
-        The method accepts a causal graph and returns a causal
-        graph with the same structure and with defined variable
-        roles based on the identification method.
+        This method applies the identification procedure to the input causal
+        graph, annotating it with variable roles (e.g., adjustment, IVs) while
+        keeping the original graphical structure.
+
+        Parameters
+        ----------
+        causal_graph : CausalGraph
+            The input causal graph on which to perform identification.
 
         Returns
         -------
-        causal_graph: Instance of CausalGraph
-            The causal graph with variable roles assigned.
+        identified_graph : CausalGraph
+            A new causal graph instance with variable roles assigned.
 
-        success: bool
-            Whether the causal graph with given exposure and outcome is
-            identified.
+        success : bool
+            True if the exposure and outcome are successfully identified; False otherwise.
         """
         causal_graph = causal_graph.copy()
         return self._identify(causal_graph)
