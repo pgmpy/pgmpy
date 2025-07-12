@@ -132,7 +132,7 @@ class Mplp(Inference):
         self.integrality_gap_threshold = 0.0002
 
     class Cluster(object):
-        """
+        r"""
         Inner class for representing a cluster.
         A cluster is a subset of variables.
 
@@ -146,8 +146,8 @@ class Mplp(Inference):
               For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \}
                   for clusters C_1, C_2 & C_3.
 
-        cluster_potential: DiscreteFactor
-            Each cluster has an initial probability distribution provided beforehand.
+            cluster_potential: DiscreteFactor
+                Each cluster has an initial probability distribution provided beforehand.
         """
 
         def __init__(self, intersection_set_variables, cluster_potential):
