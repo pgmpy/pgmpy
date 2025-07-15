@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+1. Uniform warning behavior for commas in state names across file writers (BIF, XMLBIF, NET, XDSL).
+   - Writers now issue a warning when state names contain commas, which can cause issues when loading the file.
+   - The warning helps users identify potentially problematic state names.
+   - This affects `BIFWriter`, `XMLBIFWriter`, `NETWriter`, and `XDSLWriter` classes.
+   - Note: While XDSL format can handle commas in state names, a warning is still issued for consistency.
+
+### Changed
+1. `BIFWriter.get_states` no longer silently replaces commas with underscores in state names.
+2. `XMLBIFWriter._make_valid_state_name` now issues a warning when it encounters commas in state names.
+3. `NETWriter.get_states` now issues a warning when it encounters commas in state names.
+4. `XDSLWriter.get_cpds` now issues a warning when it encounters commas in state names.
+
+### Fixed
+1. Improved consistency in how different file writers handle state names with special characters.
+
 ## [1.0.0] - 2024-03-31
 ### Added
 1. Option to specify the node names in random model generation methods.

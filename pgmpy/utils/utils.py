@@ -39,7 +39,7 @@ def get_example_model(model: str):
     Example
     -------
     >>> from pgmpy.data import get_example_model
-    >>> model = get_example_model(model='asia')
+    >>> model = get_example_model(model="asia")
     >>> model
 
     Returns
@@ -254,9 +254,15 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     >>> Y = 0.2 * X + rng.standard_normal(1000)
     >>> Z = 0.4 * X + 0.5 * Y + rng.standard_normal(1000)
     >>> df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    >>> df_disc = discretize(df, cardinality={'X': 3, 'Y': 3, 'Z': 3},
-      labels={'X': ['low', 'mid', 'high'], 'Y': ['low', 'mid', 'high'],
-        'Z': ['low', 'mid', 'high']})
+    >>> df_disc = discretize(
+    ...     df,
+    ...     cardinality={"X": 3, "Y": 3, "Z": 3},
+    ...     labels={
+    ...         "X": ["low", "mid", "high"],
+    ...         "Y": ["low", "mid", "high"],
+    ...         "Z": ["low", "mid", "high"],
+    ...     },
+    ... )
     >>> df_disc.head()
         X    Y    Z
     0   mid  mid  mid
@@ -444,6 +450,23 @@ def preprocess_data(df):
     return (df, dtypes)
 
 
+def _heuristic_categorical_detection(df, dtypes):
+    """
+    Creates a warning if numerical values are detected for a categorical variable.
+    """
+    # credit: https://stackoverflow.com/a/35827646
+    potential_categorical = []
+    for var in df.columns:
+        if dtypes[var] == "N":
+            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
+                potential_categorical.append(var)
+    if len(potential_categorical) > 0:
+        logger.warning(
+            f"Variables: {potential_categorical} are likely categorical, but using numerical values. Please set the"
+            " dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+        )
+
+
 def get_dataset_type(data: pd.DataFrame) -> str:
     """
     Returns continuous, discrete or mixed depending on the type of variable
@@ -460,25 +483,15 @@ def get_dataset_type(data: pd.DataFrame) -> str:
         `continuous`, `discrete` or `mixed`.
     """
 
-    def heuristic_categorical_detection(df):
-        # credit: https://stackoverflow.com/a/35827646
-        for var in df.columns:
-            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
-                logger.warning(
-                    "Data is likely categorical, but using numerical values. "
-                    "Please set the dtype as `categorical` in pandas dataframe if "
-                    "that's the case, otherwise ignore this warning."
-                )
-                break
-
     df, dtypes = preprocess_data(data)
     dtypes_set = set(dtypes.values())
 
+    if "N" in dtypes_set:
+        _heuristic_categorical_detection(df, dtypes)
+
     if len(dtypes_set) == 1:
         if "N" in dtypes_set:
-            heuristic_categorical_detection(df)
             return "continuous"
         elif "C" in dtypes_set:
             return "discrete"
-    heuristic_categorical_detection(df)
     return "mixed"

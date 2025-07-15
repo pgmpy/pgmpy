@@ -393,6 +393,44 @@ class TestLGBNMethods(unittest.TestCase):
             model3, LinearGaussianBayesianNetwork, "Incorrect instance"
         )
 
+    def test_log_likelihood(self):
+        # Test log likelihood with dataframes
+        self.model.add_cpds(self.cpd1)
+        self.model.add_cpds(self.cpd2)
+        self.model.add_cpds(self.cpd3)
+        np.random.seed(42)
+        x1 = np.random.normal(0, 4, 100)
+        x2 = -5 + 0.5 * x1 + np.random.normal(0, 4, 100)
+        x3 = 4 - 1 * x2 + np.random.normal(0, 3, 100)
+        good_fit = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+        bad_fit = pd.DataFrame(
+            np.random.normal(0, 10, (100, 3)), columns=["x1", "x2", "x3"]
+        )
+        ll_good = self.model.log_likelihood(good_fit)
+        ll_bad = self.model.log_likelihood(bad_fit)
+        self.assertIsInstance(
+            ll_good, float, "Expected log_likelihood to return a float."
+        )
+        self.assertIsInstance(
+            ll_bad, float, "Expected log_likelihood to return a float."
+        )
+        self.assertGreater(
+            ll_good,
+            ll_bad,
+            "Expected higher log-likelihood for well-fitting data compared to random data.",
+        )
+
+        # Wrong column names should raise error
+        data_wrong_names = pd.DataFrame(
+            {
+                "a": np.random.normal(0, 1, 100),
+                "b": np.random.normal(0, 1, 100),
+                "c": np.random.normal(0, 1, 100),
+            }
+        )
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(data_wrong_names)
+
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
 

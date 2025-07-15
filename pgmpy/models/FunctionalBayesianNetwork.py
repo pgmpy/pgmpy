@@ -1,5 +1,6 @@
+from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Union
+
 import networkx as nx
-import numpy as np
 import pandas as pd
 import pyro
 import torch
@@ -20,7 +21,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     of any distribution.
     """
 
-    def __init__(self, ebunch=None, latents=set(), lavaan_str=None, dagitty_str=None):
+    def __init__(
+        self,
+        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
+        latents: Set[Hashable] = set(),
+        lavaan_str: Optional[str] = None,
+        dagitty_str: Optional[str] = None,
+    ):
         """
         Initializes a FunctionalBayesianNetwork.
 
@@ -44,7 +51,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             latents=latents,
         )
 
-    def add_cpds(self, *cpds):
+    def add_cpds(self, *cpds: FunctionalCPD) -> None:
         """
         Adds FunctionalCPDs to the Bayesian Network.
 
@@ -62,8 +69,12 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(0, 1))
-        >>> cpd2 = FunctionalCPD("x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"])
-        >>> cpd3 = FunctionalCPD("x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> cpd2 = FunctionalCPD(
+        ...     "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+        ... )
+        >>> cpd3 = FunctionalCPD(
+        ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+        ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         """
@@ -84,7 +95,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             else:
                 self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(
+        self, node: Optional[Any] = None
+    ) -> Union[List[FunctionalCPD], FunctionalCPD]:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
@@ -108,14 +121,18 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(0, 1))
-        >>> cpd2 = FunctionalCPD("x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"])
-        >>> cpd3 = FunctionalCPD("x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> cpd2 = FunctionalCPD(
+        ...     "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+        ... )
+        >>> cpd3 = FunctionalCPD(
+        ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+        ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
         return super(FunctionalBayesianNetwork, self).get_cpds(node)
 
-    def remove_cpds(self, *cpds):
+    def remove_cpds(self, *cpds: FunctionalCPD) -> None:
         """
         Removes the given `cpds` from the model.
 
@@ -133,19 +150,25 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(0, 1))
-        >>> cpd2 = FunctionalCPD("x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"])
-        >>> cpd3 = FunctionalCPD("x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> cpd2 = FunctionalCPD(
+        ...     "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+        ... )
+        >>> cpd3 = FunctionalCPD(
+        ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+        ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
+        ...
 
         >>> model.remove_cpds(cpd2, cpd3)
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
+        ...
         """
         return super(FunctionalBayesianNetwork, self).remove_cpds(*cpds)
 
-    def check_model(self):
+    def check_model(self) -> bool:
         """
         Checks the model for various errors. This method checks for the following
         error -
@@ -168,7 +191,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                     )
         return True
 
-    def simulate(self, n_samples=1000, seed=None):
+    def simulate(
+        self, n_samples: int = 1000, seed: Optional[int] = None
+    ) -> pd.DataFrame:
         """
         Simulate samples from the model.
 
@@ -194,8 +219,12 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(0, 1))
-        >>> cpd2 = FunctionalCPD("x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"])
-        >>> cpd3 = FunctionalCPD("x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"])
+        >>> cpd2 = FunctionalCPD(
+        ...     "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+        ... )
+        >>> cpd3 = FunctionalCPD(
+        ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+        ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=1000)
         """
@@ -216,15 +245,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def fit(
         self,
-        data,
-        method="SVI",
-        optimizer=pyro.optim.Adam({"lr": 1e-2}),
-        prior_fn=None,
-        num_steps=1000,
-        seed=None,
-        nuts_kwargs=None,
-        mcmc_kwargs=None,
-    ):
+        data: pd.DataFrame,
+        method: str = "SVI",
+        optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
+        prior_fn: Optional[Callable] = None,
+        num_steps: int = 1000,
+        seed: Optional[int] = None,
+        nuts_kwargs: Optional[Dict] = None,
+        mcmc_kwargs: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
         """
         Fit the Bayesian network to data using Pyro's stochastic variational inference.
 
@@ -277,33 +306,48 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> data = pd.DataFrame({"x1": x1, "x2": x2})
 
         >>> def x1_fn(parents):
-        ...    mu = pyro.param("x1_mu", torch.tensor(1.0))
-        ...    sigma = pyro.param("x1_sigma", torch.tensor(1.0), constraint=constraints.positive)
-        ...    return dist.Normal(mu, sigma)
+        ...     mu = pyro.param("x1_mu", torch.tensor(1.0))
+        ...     sigma = pyro.param(
+        ...         "x1_sigma", torch.tensor(1.0), constraint=constraints.positive
+        ...     )
+        ...     return dist.Normal(mu, sigma)
+        ...
 
         >>> def x2_fn(parents):
-        ...    intercept = pyro.param("x2_inter", torch.tensor(1.0))
-        ...    sigma = pyro.param("x2_sigma", torch.tensor(1.0), constraint=constraints.positive)
-        ...    return dist.Normal(intercept + parents['x1'], sigma)
+        ...     intercept = pyro.param("x2_inter", torch.tensor(1.0))
+        ...     sigma = pyro.param(
+        ...         "x2_sigma", torch.tensor(1.0), constraint=constraints.positive
+        ...     )
+        ...     return dist.Normal(intercept + parents["x1"], sigma)
+        ...
 
         >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
-        >>> cpd2 = FunctionalCPD('x2', fn=x2_prior, parents=['x1'])
+        >>> cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
         >>> params = model.fit(data, method="SVI", num_steps=100)
         >>> print(params)
 
         >>> def prior_fn():
-        ...    return {"x1_mu": dist.Uniform(0, 1), "x1_sigma": dist.HalfNormal(5),
-        ...            "x2_inter": dist.Normal(1.0), "x2_sigma": dist.HalfNormal(1)}
+        ...     return {
+        ...         "x1_mu": dist.Uniform(0, 1),
+        ...         "x1_sigma": dist.HalfNormal(5),
+        ...         "x2_inter": dist.Normal(1.0),
+        ...         "x2_sigma": dist.HalfNormal(1),
+        ...     }
+        ...
 
         >>> def x1_fn(priors, parents):
-        ...    return dist.Normal(priors["x1_mu"], priors["x1_sigma"])
+        ...     return dist.Normal(priors["x1_mu"], priors["x1_sigma"])
+        ...
 
         >>> def x2_fn(priors, parents):
-        ...    return dist.Normal(priors["x2_inter"] + parent['x1'], priors["x2_sigma"])
+        ...     return dist.Normal(
+        ...         priors["x2_inter"] + parent["x1"], priors["x2_sigma"]
+        ...     )
+        ...
 
         >>> cpd1 = FunctionalCPD("x1", fn=x1_fn)
-        >>> cpd2 = FunctionalCPD('x2', fn=x2_fn, parents=['x1'])
+        >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
 
         >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)

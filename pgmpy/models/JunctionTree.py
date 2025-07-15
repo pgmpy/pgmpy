@@ -33,19 +33,18 @@ class JunctionTree(ClusterGraph):
 
     Add a tuple (or list or set) of nodes as single clique node.
 
-    >>> G.add_node(('a', 'b', 'c'))
-    >>> G.add_nodes_from([('a', 'b'), ('a', 'b', 'c')])
+    >>> G.add_node(("a", "b", "c"))
+    >>> G.add_nodes_from([("a", "b"), ("a", "b", "c")])
 
     **Edges:**
 
     G can also be grown by adding edges.
 
-    >>> G.add_edge(('a', 'b', 'c'), ('a', 'b'))
+    >>> G.add_edge(("a", "b", "c"), ("a", "b"))
 
     or a list of edges
 
-    >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-    ...                   (('a', 'b', 'c'), ('a', 'c'))])
+    >>> G.add_edges_from([(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))])
     """
 
     def __init__(self, ebunch=None):
@@ -66,9 +65,10 @@ class JunctionTree(ClusterGraph):
         --------
         >>> from pgmpy.models import JunctionTree
         >>> G = JunctionTree()
-        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
+        >>> G.add_nodes_from([("a", "b", "c"), ("a", "b"), ("a", "c")])
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
         """
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, u, v):
             raise ValueError(
@@ -127,10 +127,12 @@ class JunctionTree(ClusterGraph):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import JunctionTree
         >>> G = JunctionTree()
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')), (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
-        >>> phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
-        >>> G.add_factors(phi1,phi2)
+        >>> G.add_edges_from(
+        ...     [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
+        ... )
+        >>> phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
+        >>> phi2 = DiscreteFactor(["a", "c"], [1, 2], np.random.rand(2))
+        >>> G.add_factors(phi1, phi2)
         >>> modelCopy = G.copy()
         >>> modelCopy.edges()
         EdgeView([(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))])

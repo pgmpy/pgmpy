@@ -29,13 +29,18 @@ class NoisyORCPD(TabularCPD):
     Examples
     --------
     >>> from pgmpy.factors.discrete import NoisyORCPD
-    >>> cpd = NoisyORCPD(variable='Y', prob_values=[0.3, 0.5], evidence=['X1', 'X2'])
-    # Defining a model containing NoisyORCPD
+    >>> cpd = NoisyORCPD(variable="Y", prob_values=[0.3, 0.5], evidence=["X1", "X2"])
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> model = DiscreteBayesianNetwork(['A', 'B'])
-    # With nodes with no parents, we can not define a NoisyORCPD.
-    >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]], state_names={'A': ['True', 'False']})
-    >>> cpd_b = NoisyORCPD('B', [0.8], evidence=['A'])
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("A", "B")]
+    ... )  # With nodes with no parents, we can not define a NoisyORCPD.
+    >>> cpd_a = TabularCPD(
+    ...     variable="A",
+    ...     variable_card=2,
+    ...     values=[[0.2], [0.8]],
+    ...     state_names={"A": ["True", "False"]},
+    ... )
+    >>> cpd_b = NoisyORCPD(variable="B", prob_values=[0.8], evidence=["A"])
     >>> model.add_cpds(cpd_a, cpd_b)
     """
 
