@@ -494,103 +494,105 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     -------
     nx.DiGraph
     An ADMG over the observed nodes, where:
-        - X→Y encodes a latent‐only directed chain X→…→Y
-        - X↔Y is encoded by having both X→Y and Y→X in the grap.
+        - X -> Y encodes a latent‐only directed chain X ->…-> Y
+        - X <-> Y is encoded by having both X -> Y and Y -> X in the graph.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.metrics.metrics import _latent_admg
-    >>> # Example 1: A → H → B, observe only A,B
-    >>> dag1 = DiscreteBayesianNetwork([('A', 'H'), ('H', 'B')])
-    >>> admg1 = _latent_admg(dag1, observed=['A', 'B'])
-    >>> set(admg1.edges()) == {('A', 'B')}
+    >>> # Example 1: A -> H -> B, observe only A,B
+    >>> dag1 = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
+    >>> admg1 = _latent_admg(dag1, observed=["A", "B"])
+    >>> set(admg1.edges()) == {("A", "B")}
     True
 
-    >>> # Example 2: Latent confounder H→A and H→B, observe only A,B
-    >>> dag2 = DiscreteBayesianNetwork([('H','A'), ('H','B')])
-    >>> admg2 = _latent_admg(dag2, observed=['A', 'B'])
-    >>> set(admg2.edges()) == {('A','B'), ('B','A')}
+    >>> # Example 2: Latent confounder H -> A and H -> B, observe only A,B
+    >>> dag2 = DiscreteBayesianNetwork([("H", "A"), ("H", "B")])
+    >>> admg2 = _latent_admg(dag2, observed=["A", "B"])
+    >>> set(admg2.edges()) == {("A", "B"), ("B", "A")}
     True
 
-    >>> # Example 3: Unshielded collider with extension A→B←C→D, observe only A,C
-    >>> dag3 = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
-    >>> admg3 = _latent_admg(dag3, observed=['A', 'C'])
+    >>> # Example 3: Unshielded collider with extension A -> B <- C -> D, observe only A,C
+    >>> dag3 = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
+    >>> admg3 = _latent_admg(dag3, observed=["A", "C"])
     >>> set(admg3.edges()) == set()
     True
 
-    >>> # Example 4: Pure confounding A→B and A→C, observe only B,C
-    >>> dag4 = DiscreteBayesianNetwork([('A','B'), ('A','C')])
-    >>> admg4 = _latent_admg(dag4, observed=['B', 'C'])
-    >>> set(admg4.edges()) == {('B','C'), ('C','B')}
+    >>> # Example 4: Pure confounding A -> B and A -> C, observe only B,C
+    >>> dag4 = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
+    >>> admg4 = _latent_admg(dag4, observed=["B", "C"])
+    >>> set(admg4.edges()) == {("B", "C"), ("C", "B")}
     True
 
     References
     ----------
     [1] Faller, P. M., et al. (2024).
-    “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
+    “Self-compatibility: Evaluating Causal Discovery without Ground Truth.”
     In AISTATS. arXiv:2307.09552
     """
-    full_directed = dag
     observed_set = set(observed)
     latent_set = set(dag.nodes()) - observed_set
+    full_directed = dag
 
     directed_edges = set()
     bidirected_edges = set()
 
-    # 1) Preserve original observed→observed edges
+    # Building a latent only subgraph H
+    H = nx.DiGraph()
     for u, v in dag.edges():
-        if u in observed_set and v in observed_set:
-            directed_edges.add((u, v))
+        if u in latent_set or v in latent_set:
+            H.add_edge(u, v)
+    # now explicitly add all observed and latent nodes so
+    # that calls to has_path do not crash on missing nodes.
+    H.add_nodes_from(observed_set)  # (add only nodes, no edges)
+    H.add_nodes_from(latent_set)
 
-    # 2) Add latent‐only directed chains via active trail + directed‐path check
-    for u, v in combinations(observed_set, 2):
-        #  take all the observed nodes except u and v
-        observed_excluding_pair = list(observed_set - {u, v})
-        reach_u = dag.active_trail_nodes(
-            [u], observed=observed_excluding_pair, include_latents=False
-        )[u]
-        reach_v = dag.active_trail_nodes(
-            [v], observed=observed_excluding_pair, include_latents=False
-        )[v]
+    # 1) Directed‐chain detection
+    for u in observed_set:
+        # find all observed v reachable via any active trail
+        reachable = dag.active_trail_nodes([u], observed=[], include_latents=True)[u]
+        for v in (reachable & observed_set) - {u}:
+            # check if we already added a u->v?
+            if (u, v) in directed_edges:
+                continue
 
-        # u→v?
-        if v in reach_u:
-            sub = full_directed.subgraph(latent_set | {u, v})
-            if nx.has_path(sub, u, v):
+            # a) look for u->…->v via latents
+            if nx.has_path(H, u, v):
+                # ensure that v does not have any other observed parents
                 parents_v = {p for p in dag.predecessors(v) if p in observed_set}
-                if parents_v <= {u}:
+                if parents_v.issubset({u}):
                     directed_edges.add((u, v))
-        # v→u?
-        if u in reach_v:
-            sub = full_directed.subgraph(latent_set | {u, v})
-            if nx.has_path(sub, v, u):
+                    continue
+
+            # b) similarly, now we look for u->…->v via latents
+            if nx.has_path(H, v, u):
                 parents_u = {p for p in dag.predecessors(u) if p in observed_set}
-                if parents_u <= {v}:
+                if parents_u.issubset({v}):
                     directed_edges.add((v, u))
+                    continue
 
-    # 3) Add bidirected edges only for *common‐parent* confounders, not colliders
-    for u, v in combinations(observed_set, 2):
-        # skip if already a two‐way directed link
-        if (u, v) in directed_edges and (v, u) in directed_edges:
-            continue
-
-        # common‐parent latent l → u and l → v?
-        for latent in latent_set:
-            if dag.has_edge(latent, u) and dag.has_edge(latent, v):
-                bidirected_edges.add((u, v))
-                bidirected_edges.add((v, u))
-                break
-        else:
-            # mixed non‐collider via observed child w:
-            for w in observed_set - {u, v}:
-                sub_uw = full_directed.subgraph(latent_set | {u, w})
-                sub_vw = full_directed.subgraph(latent_set | {v, w})
-                # here w → … → u and w → … → v through latents
-                if nx.has_path(sub_uw, w, u) and nx.has_path(sub_vw, w, v):
+            # c) if neither direction gives a directed chain then try bidirected
+            #  (i) latent common‐parent?
+            for latent in latent_set:
+                if dag.has_edge(latent, u) and dag.has_edge(latent, v):
                     bidirected_edges.add((u, v))
                     bidirected_edges.add((v, u))
                     break
+            else:
+                # (ii) shared observed child w via latent‐only chains?
+                for w in observed_set - {u, v}:
+                    sub_uw = full_directed.subgraph(latent_set | {u, w})
+                    sub_vw = full_directed.subgraph(latent_set | {v, w})
+                    if nx.has_path(sub_uw, u, w) and nx.has_path(sub_vw, v, w):
+                        bidirected_edges.add((u, v))
+                        bidirected_edges.add((v, u))
+                        break
 
-    # 4) Assemble final ADMG
+    # 2) Preserve any original observed -> observed edges
+    for x, y in dag.edges():
+        if x in observed_set and y in observed_set:
+            directed_edges.add((x, y))
+
+    # 3) Assemble final ADMG
     admg = nx.DiGraph()
     admg.add_nodes_from(observed_set)
     admg.add_edges_from(directed_edges)
@@ -648,10 +650,9 @@ def self_compatibility_graphical(
     >>> model = DiscreteBayesianNetwork([("X", "Y")])
     >>> model.add_cpds(
     ...     TabularCPD("X", 2, [[0.5], [0.5]]),
-    ...     TabularCPD("Y", 2,
-    ...                [[0.8, 0.2],
-    ...                 [0.2, 0.8]],
-    ...                evidence=["X"], evidence_card=[2])
+    ...     TabularCPD(
+    ...         "Y", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["X"], evidence_card=[2]
+    ...     ),
     ... )
     >>> # 2) Sample 100 rows
     >>> df = BayesianModelSampling(model).forward_sample(size=100)
@@ -661,7 +662,7 @@ def self_compatibility_graphical(
     ...     df,
     ...     num_subsets=3,
     ...     subset_fraction=0.5,
-    ...     scoring_method="bic-d"
+    ...     scoring_method="bic-d",
     ... )
     >>> isinstance(score, float)
     True
