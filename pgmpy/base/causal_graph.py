@@ -83,20 +83,17 @@ class CausalGraph:
             self._set_role_internal(role_name, role_vars)
 
     def _resolve_role_alias(self, role_name: str) -> str:
-        """Resolve role name aliases to canonical names."""
         return ROLE_ALIASES.get(role_name, role_name)
 
     def _set_role_internal(
         self, role_name: str, variables: Union[Set[Hashable], Hashable]
     ):
-        """Internal method to set a role, handling single variables and sets."""
         if isinstance(variables, (set, list, tuple)):
             self._roles[role_name] = set(variables)
         else:
             self._roles[role_name] = {variables}
 
     def _validate_variables_exist(self, variables: Set[Hashable]):
-        """Validate that all variables exist in the graph."""
         graph_nodes = set(self._graph.nodes())
         invalid_vars = variables - graph_nodes
         if invalid_vars:
