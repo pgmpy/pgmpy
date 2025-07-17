@@ -1,24 +1,10 @@
 #!/usr/bin/env python3
 
-"""
-Causal Graph Implementation for pgmpy.
-
-This module provides the CausalGraph class, which extends the functionality of
-pgmpy's DAG to include variable roles for causal inference. The CausalGraph
-uses composition over inheritance to manage both graph structure and variable
-roles (exposure, outcome, adjustment set, etc.) in an immutable way.
-
-The module also includes factory functions for creating common causal structures
-like Randomized Controlled Trials (RCT), mediation graphs, and confounded graphs.
-"""
-
 from typing import Dict, Hashable, Iterable, Optional, Set, Union
 from copy import deepcopy
 
 from pgmpy.base.DAG import DAG
 
-
-# Role aliases mapping for common alternative names
 ROLE_ALIASES = {
     "treatment": "exposure",
     "target": "outcome",
@@ -80,22 +66,18 @@ class CausalGraph:
         roles: Optional[Dict[str, Union[Set[Hashable], Hashable]]] = None,
         **role_kwargs,
     ):
-        # Initialize the internal DAG
         if isinstance(graph, DAG):
             self._graph = graph.copy()
         else:
             self._graph = DAG(ebunch=graph)
 
-        # Initialize roles dictionary
         self._roles: Dict[str, Set[Hashable]] = {}
 
-        # Process roles from the roles parameter
         if roles is not None:
             for role_name, role_vars in roles.items():
                 role_name = self._resolve_role_alias(role_name)
                 self._set_role_internal(role_name, role_vars)
 
-        # Process individual role keyword arguments
         for role_name, role_vars in role_kwargs.items():
             role_name = self._resolve_role_alias(role_name)
             self._set_role_internal(role_name, role_vars)
@@ -111,7 +93,6 @@ class CausalGraph:
         if isinstance(variables, (set, list, tuple)):
             self._roles[role_name] = set(variables)
         else:
-            # Single variable
             self._roles[role_name] = {variables}
 
     def _validate_variables_exist(self, variables: Set[Hashable]):
@@ -121,7 +102,6 @@ class CausalGraph:
         if invalid_vars:
             raise ValueError(f"Variables {invalid_vars} not found in the graph")
 
-    # Core role management methods
     def get_role(self, role_name: str) -> Set[Hashable]:
         """
         Get the set of variables assigned to a role.
@@ -189,7 +169,6 @@ class CausalGraph:
         """
         role_name = self._resolve_role_alias(role_name)
 
-        # Convert to set for validation
         if isinstance(variables, (set, list, tuple)):
             var_set = set(variables)
         else:
@@ -197,7 +176,6 @@ class CausalGraph:
 
         self._validate_variables_exist(var_set)
 
-        # Create new instance with updated roles
         new_roles = self._roles.copy()
         new_roles[role_name] = var_set
 
@@ -236,7 +214,6 @@ class CausalGraph:
             f"'{type(self).__name__}' object has no attribute '{name}'"
         )
 
-    # Role validation methods
     def validate_roles(self) -> bool:
         """
         Validate that all assigned role variables exist in the graph.
@@ -304,8 +281,8 @@ class CausalGraph:
 
     def __str__(self) -> str:
         """String representation of the CausalGraph."""
-        nodes_str = f"Nodes: {list(self._graph.nodes())}"
-        edges_str = f"Edges: {list(self._graph.edges())}"
+        nodes_str = f"Nodes: {list(self.nodes())}"
+        edges_str = f"Edges: {list(self.edges())}"
         roles_str = f"Roles: {dict(self._roles)}"
         return f"CausalGraph(\n  {nodes_str}\n  {edges_str}\n  {roles_str}\n)"
 
@@ -313,28 +290,23 @@ class CausalGraph:
         """Detailed representation of the CausalGraph."""
         return self.__str__()
 
-    # Equality and comparison methods
     def __eq__(self, other) -> bool:
         """Check equality between CausalGraph instances."""
         if not isinstance(other, CausalGraph):
             return False
 
-        # Compare graph structure
-        if set(self._graph.nodes()) != set(other._graph.nodes()) or set(
-            self._graph.edges()
-        ) != set(other._graph.edges()):
+        if set(self.nodes()) != set(other.nodes()) or set(self.edges()) != set(
+            other.edges()
+        ):
             return False
 
-        # Compare roles
         return self._roles == other._roles
 
     def __hash__(self) -> int:
         """Hash function for CausalGraph instances."""
-        # Create a hash based on nodes, edges, and roles
-        nodes_hash = hash(tuple(sorted(self._graph.nodes(), key=str)))
-        edges_hash = hash(tuple(sorted(self._graph.edges(), key=str)))
+        nodes_hash = hash(tuple(sorted(self.nodes(), key=str)))
+        edges_hash = hash(tuple(sorted(self.edges(), key=str)))
 
-        # Create a stable hash for roles
         roles_items = []
         for role_name in sorted(self._roles.keys()):
             role_vars = tuple(sorted(self._roles[role_name], key=str))
@@ -353,12 +325,8 @@ class CausalGraph:
             Multi-line summary including graph structure and roles.
         """
         lines = ["CausalGraph Summary:"]
-        lines.append(
-            f"  Nodes ({len(self._graph.nodes())}): {list(self._graph.nodes())}"
-        )
-        lines.append(
-            f"  Edges ({len(self._graph.edges())}): {list(self._graph.edges())}"
-        )
+        lines.append(f"  Nodes ({self.number_of_nodes()}): {list(self.nodes())}")
+        lines.append(f"  Edges ({self.number_of_edges()}): {list(self.edges())}")
 
         if self._roles:
             lines.append("  Roles:")
@@ -376,7 +344,6 @@ class CausalGraph:
 
         return "\n".join(lines)
 
-    # Integration methods for working with other pgmpy components
     def to_dag(self) -> DAG:
         """
         Return a copy of the underlying DAG.
@@ -410,10 +377,8 @@ class CausalGraph:
         ValueError
             If validation fails with details about the issue.
         """
-        # Check that all role variables exist
         self.validate_roles()
 
-        # Check that exposure and outcome are single variables
         for role in ["exposure", "outcome"]:
             if self.has_role(role):
                 role_vars = self.get_role(role)
@@ -423,11 +388,8 @@ class CausalGraph:
                         f"but has {len(role_vars)}: {role_vars}"
                     )
 
-        # The DAG constructor already checks for cycles, so if we get here
-        # the graph structure is valid
         return True
 
-    # Graph modification methods (returning new instances)
     def with_nodes(self, nodes: Iterable[Hashable]) -> "CausalGraph":
         """
         Return a new CausalGraph with additional nodes.
@@ -489,12 +451,11 @@ class CausalGraph:
         new_dag = self._graph.copy()
         new_dag.remove_nodes_from(nodes)
 
-        # Remove nodes from roles
         nodes_to_remove = set(nodes)
         new_roles = {}
         for role_name, role_vars in self._roles.items():
             remaining_vars = role_vars - nodes_to_remove
-            if remaining_vars:  # Only keep roles with remaining variables
+            if remaining_vars:
                 new_roles[role_name] = remaining_vars
 
         new_cg = CausalGraph(graph=new_dag)
