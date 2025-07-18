@@ -15,7 +15,7 @@ ROLE_ALIASES = {
 
 class CausalGraph:
     """
-    A causal graphical model combining a directed acyclic graph (DAG) 
+    A causal graphical model combining a directed acyclic graph (DAG)
     structure with metadata about the roles of variables in the causal
     system (e.g., exposure, outcome, adjustment set).
 

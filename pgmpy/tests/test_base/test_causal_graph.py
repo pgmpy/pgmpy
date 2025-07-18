@@ -2,6 +2,7 @@ import unittest
 from pgmpy.base.causal_graph import CausalGraph
 from pgmpy.base.DAG import DAG
 
+
 class TestCausalGraph(unittest.TestCase):
     def setUp(self):
         self.edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
@@ -28,7 +29,9 @@ class TestCausalGraph(unittest.TestCase):
         self.assertTrue(cg.has_role("outcome"))
 
     def test_roles_dict_and_kwargs(self):
-        cg = CausalGraph(graph=self.edges, roles={"adjustment": {"U", "M"}}, exposure="X")
+        cg = CausalGraph(
+            graph=self.edges, roles={"adjustment": {"U", "M"}}, exposure="X"
+        )
         self.assertEqual(cg.get_role("adjustment"), {"U", "M"})
         self.assertEqual(cg.get_role("exposure"), {"X"})
 
@@ -39,18 +42,24 @@ class TestCausalGraph(unittest.TestCase):
         self.assertFalse(cg3.has_role("adjustment"))
 
     def test_get_roles(self):
-        cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"})
+        cg = CausalGraph(
+            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"}
+        )
         roles = cg.get_roles()
         self.assertEqual(roles["exposure"], {"X"})
         self.assertEqual(roles["outcome"], {"Y"})
         self.assertEqual(roles["adjustment"], {"U", "M"})
 
     def test_validate_roles_success(self):
-        cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"})
+        cg = CausalGraph(
+            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"}
+        )
         self.assertTrue(cg.validate_roles())
 
     def test_validate_roles_invalid(self):
-        cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "Z"})
+        cg = CausalGraph(
+            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "Z"}
+        )
         with self.assertRaises(ValueError):
             cg.validate_roles()
 
