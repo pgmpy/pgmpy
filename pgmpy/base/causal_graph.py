@@ -33,7 +33,7 @@ class _GraphRolesMixin:
         List of str
             list of all roles defined in the graph.
         """
-        roles = {d.get("role", None) for n, d in G.nodes(data=True)}
+        roles = {d.get("role", None) for _, d in self.nodes(data=True)}
         roles.discard(None)  # remove "None"
         return list(roles)
 
