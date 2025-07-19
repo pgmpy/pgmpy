@@ -61,7 +61,7 @@ class _GraphRolesMixin:
         """
         return role in self.get_roles()
 
-    def with_role(self, role: str, variables) -> "CausalGraph":
+    def with_role(self, role: str, variables, inplace=False) -> "CausalGraph":
         """Return a new CausalGraph with the specified role assignment.
 
         Parameters
@@ -70,6 +70,8 @@ class _GraphRolesMixin:
             The name of the role to assign, e.g., "exposure", "outcome".
         variables : set, list, or any iterable
             The variables to assign to the role.
+        inplace=False : bool, optional
+            If True, modifies the current graph in place. Defaults to False.
 
         Returns
         -------
@@ -77,20 +79,23 @@ class _GraphRolesMixin:
             A new CausalGraph instance with the specified role assigned,
             to the variables provided.
         """
-        new_graph = self.copy()
+        if not inplace:
+            new_graph = self.copy()
 
         for var in variables:
             new_graph.add_node(var, role=role)
 
         return new_graph
 
-    def without_role(self, role: str) -> "CausalGraph":
+    def without_role(self, role: str, inplace=False) -> "CausalGraph":
         """Return a new CausalGraph with the specified role removed.
 
         Parameters
         ----------
         role : str
             The name of the role to remove, e.g., "exposure", "outcome".
+        inplace=False : bool, optional
+            If True, modifies the current graph in place. Defaults to False.
 
         Returns
         -------
@@ -98,7 +103,8 @@ class _GraphRolesMixin:
             A new CausalGraph instance with the specified role removed
             from all nodes that had it.
         """
-        new_graph = self.copy()
+        if not inplace:
+            new_graph = self.copy()
 
         for _, attr in new_graph.nodes(data=True):
             if attr.get("role") == role:
