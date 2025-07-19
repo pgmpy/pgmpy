@@ -1,18 +1,9 @@
 #!/usr/bin/env python3
 
-from typing import Dict, Hashable, Iterable, Optional, Set, Union
-from copy import deepcopy
+from typing import Hashable
+
 
 import networkx as nx
-
-from pgmpy.base.DAG import DAG
-
-ROLE_ALIASES = {
-    "treatment": "exposure",
-    "target": "outcome",
-    "intervention": "exposure",
-    "response": "outcome",
-}
 
 
 class _GraphRolesMixin:
