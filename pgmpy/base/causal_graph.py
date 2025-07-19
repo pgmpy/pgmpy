@@ -18,7 +18,7 @@ ROLE_ALIASES = {
 class _GraphRolesMixin:
     """Mixin class for handling roles in a causal graph."""
 
-    def get_nodes_with_role(self, role: str):
+    def get_role(self, role: str):
         """Return list of nodes in graph G with a specific role.
 
         Parameters
@@ -126,7 +126,7 @@ class _GraphRolesMixin:
         return True
 
 
-class CausalGraph(_GraphRolesMixin, nx.Digraph):
+class CausalGraph(_GraphRolesMixin, nx.DiGraph):
     """A causal graphical model which manages variable roles explicitly.
 
     Typical roles are exposure, outcome, adjustment set, but this structure
@@ -145,19 +145,53 @@ class CausalGraph(_GraphRolesMixin, nx.Digraph):
         dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
         sparse matrix, or PyGraphviz graph.
 
+    roles : dict, optional (default: None)
+        A dictionary mapping node names to their roles. The keys are node names
+        and the values are role names (strings). If provided, this will
+        automatically assign roles to the nodes in the graph.
+
     attr : keyword arguments, optional (default= no attributes)
         Attributes to add to graph as key=value pairs.
 
     Examples
     --------
+    >>> from pgmpy.base.causal_graph import CausalGraph
+    >>>
     >>> cg = CausalGraph(
     ...     [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-    ...     nodes=[
-                ("X", {"role": "exposure"}),
-                ("Y", {"role": "outcome"}),
-    ...     ]
+    ...     roles={
+                "X": "exposure",
+                "Y": "outcome",
+    ...     }
     ... )
     >>> cg.get_role("exposure")
-    {'X'}
+    ['X']
     """
-    pass
+
+    def __init__(self, incoming_graph_data=None, **attr):
+        """Initialize a graph with edges, name, or graph attributes.
+
+        Parameters
+        ----------
+        incoming_graph_data : input graph (optional, default: None)
+            Data to initialize graph. If None (default) an empty
+            graph is created.  The data can be an edge list, or any
+            NetworkX graph object.  If the corresponding optional Python
+            packages are installed the data can also be a 2D NumPy array, a
+            SciPy sparse array, or a PyGraphviz graph.
+
+        attr : keyword arguments, optional (default= no attributes)
+            Attributes to add to graph as key=value pairs.
+        """
+        if "roles" in attr:
+            roles = attr.pop("roles")
+            if not isinstance(roles, dict):
+                raise TypeError("Roles must be provided as a dictionary.")
+        super().__init__(incoming_graph_data, **attr)
+
+        for node, role in roles.items():
+            if not isinstance(node, Hashable):
+                raise TypeError("Node names must be hashable.")
+            if not isinstance(role, str):
+                raise TypeError("Role names must be strings.")
+            self.add_node(node, role=role)
