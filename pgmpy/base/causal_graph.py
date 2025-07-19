@@ -37,6 +37,22 @@ class _GraphRolesMixin:
         roles.discard(None)  # remove "None"
         return list(roles)
 
+    def get_role_sets(self):
+        """Get dict of sets of roles preset in the graph.
+
+        Returns
+        -------
+        Dict with str keys and values being set of nodes
+            keys are roles present in the graph, and sets are nodes with that role
+        """
+        tpls = [(n, d.get("role", None)) for n, d in self.nodes(data=True)]
+        r_dict = {r: [] for r in self.get_roles()}
+
+        for n, r in tpls:
+            if r is not None:
+                r_dict[r].append(n)
+        return r_dict
+
     def has_role(self, role: str) -> bool:
         """Check if a role is defined and non-empty.
 
