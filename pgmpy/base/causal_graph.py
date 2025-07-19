@@ -88,6 +88,8 @@ class _GraphRolesMixin:
         """
         if not inplace:
             new_graph = self.copy()
+        else:
+            new_graph = self
 
         for var in variables:
             new_graph.add_node(var, role=role)
@@ -112,6 +114,8 @@ class _GraphRolesMixin:
         """
         if not inplace:
             new_graph = self.copy()
+        else:
+            new_graph = self
 
         for _, attr in new_graph.nodes(data=True):
             if attr.get("role") == role:
