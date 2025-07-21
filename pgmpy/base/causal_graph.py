@@ -118,7 +118,7 @@ class _GraphRolesMixin:
             new_graph = self
 
         for _, attr in new_graph.nodes(data=True):
-            if attr.get("role") == role:
+            if attr.get("role", None) == role:
                 attr.pop("role")
         return new_graph
 
