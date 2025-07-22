@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
   "networkx>=3.0",
   "numpy>=2.0",
-  "scipy>=1.10",
+  "scipy<1.16",
   "scikit-learn>=1.2",
   "pandas>=1.5",
   "torch>=2.5",
@@ -53,7 +53,9 @@ tests = [
 optional = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm==1.61.15"
+  "litellm==1.61.15",
+  "pyparsing>=3.0",
+  "pygraphviz"
 ]
 all = [
   "networkx>=3.0",
@@ -94,4 +96,3 @@ pgmpy = [
 ]
 [tool.setuptools]
 include-package-data = true
-

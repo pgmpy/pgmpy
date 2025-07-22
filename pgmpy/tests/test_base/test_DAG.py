@@ -2,7 +2,6 @@
 
 import os
 import unittest
-import warnings
 
 import networkx as nx
 import numpy as np
@@ -426,8 +425,6 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
-        dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
-
     def test_dag_fit(self):
         edge_list = [("A", "C"), ("B", "C")]
         for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
@@ -678,6 +675,37 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
 
+    def test_edge_strength_plotting_to_daft(self):
+        """Test edge strength plotting in to_daft method"""
+        dag = DAG([("A", "B"), ("C", "B")])
+
+        with self.assertRaises(ValueError) as context:
+            dag.to_daft(plot_edge_strength=True)
+        self.assertIn(
+            "Edge strength plotting requested but strengths not found",
+            str(context.exception),
+        )
+
+        dag.edges[("A", "B")]["strength"] = 0.123
+        dag.edges[("C", "B")]["strength"] = 0.456
+
+        daft_plot = dag.to_daft(plot_edge_strength=True)
+        self.assertIsNotNone(daft_plot)
+
+        dag_no_strength = DAG([("A", "B"), ("C", "B")])
+        daft_plot_default = dag_no_strength.to_daft()
+        self.assertIsNotNone(daft_plot_default)
+
+    def test_edge_strength_plotting_with_existing_labels(self):
+        """Test edge strength plotting when user provides custom edge labels"""
+        dag = DAG([("A", "B")])
+        dag.edges[("A", "B")]["strength"] = 0.789
+
+        daft_plot = dag.to_daft(
+            plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}}
+        )
+        self.assertIsNotNone(daft_plot)
+
 
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
@@ -774,6 +802,22 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
         self.assertEqual(set(model_from_file.latents), expected_latents)
+
+    def test_from_dagitty_isolated_nodes(self):
+        dag1 = DAG.from_dagitty("dag { A -> B C D -> E F G H} ")
+        dag2 = DAG.from_dagitty("dag { A }")
+        self.assertEqual(
+            set(dag1.nodes()), set(["A", "B", "C", "D", "E", "F", "G", "H"])
+        )
+        self.assertEqual(set(dag2.nodes()), set(["A"]))
+        self.assertEqual(
+            set(dag1.edges()),
+            set([("A", "B"), ("D", "E")]),
+        )
+        self.assertEqual(
+            set(dag2.edges()),
+            set([]),
+        )
 
     def test_from_daggitty_single_line_with_group_of_vars(self):
         dag = DAG.from_dagitty(
@@ -1057,8 +1101,6 @@ class TestPDAG(unittest.TestCase):
             ("B", "D"),
             ("D", "B"),
         }
-        expected_dir = [("A", "C"), ("D", "C")]
-        expected_undir = [("B", "A"), ("B", "D")]
         self.assertEqual(set(pdag_copy.edges()), expected_edges)
         self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
@@ -1074,8 +1116,6 @@ class TestPDAG(unittest.TestCase):
             ("B", "D"),
             ("D", "B"),
         }
-        expected_dir = [("A", "C"), ("D", "C")]
-        expected_undir = [("B", "A"), ("B", "D")]
         self.assertEqual(set(pdag_copy.edges()), expected_edges)
         self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
@@ -1146,6 +1186,37 @@ class TestPDAG(unittest.TestCase):
         expected_edges = {("B", "C"), ("C", "D"), ("A", "C")}
         self.assertEqual(expected_edges, set(dag.edges()))
         self.assertEqual(dag.latents, set(["A"]))
+
+        undirected_edges = [(1, 4), (5, 0)]
+        directed_edges = [
+            (0, 2),
+            (1, 2),
+            (3, 1),
+            (3, 2),
+            (3, 4),
+            (4, 2),
+            (5, 1),
+            (5, 2),
+            (5, 4),
+        ]
+        pdag = PDAG(undirected_ebunch=undirected_edges, directed_ebunch=directed_edges)
+        dag = pdag.to_dag()
+        dag_actual = set(
+            [
+                (0, 2),
+                (1, 2),
+                (3, 1),
+                (3, 2),
+                (3, 4),
+                (4, 1),
+                (4, 2),
+                (5, 0),
+                (5, 1),
+                (5, 2),
+                (5, 4),
+            ]
+        )
+        self.assertSetEqual(set(dag.edges), dag_actual)
 
     def test_pdag_to_cpdag(self):
         pdag = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
