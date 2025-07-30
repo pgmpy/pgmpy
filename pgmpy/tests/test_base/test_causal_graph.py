@@ -14,7 +14,7 @@ def cg():
 @pytest.fixture
 def cg2():
     cg2 = CausalGraph(
-        ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+        ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
         roles={"U": "adjustment", "M": "adjustment", "X": "exposure"},
     )
     return cg2
