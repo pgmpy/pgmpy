@@ -179,7 +179,7 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
     ...     roles={
     ...         "X": "exposure",
     ...         "Y": "outcome",
-    ...     }
+    ...     },
     ... )
     >>> cg.get_role("exposure")
     ['X']
