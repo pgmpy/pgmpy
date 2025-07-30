@@ -155,7 +155,7 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
 
     Parameters
     ----------
-    incoming_graph_data : input graph (optional, default: None)
+    ebunch : input graph (optional, default: None)
         Data to initialize graph. If None (default) an empty
         graph is created.  The data can be any format that is supported
         by the to_networkx_graph() function, currently including edge list,
@@ -185,12 +185,12 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
     ['X']
     """
 
-    def __init__(self, incoming_graph_data=None, **attr):
+    def __init__(self, ebunch=None, **attr):
         """Initialize a graph with edges, name, or graph attributes.
 
         Parameters
         ----------
-        incoming_graph_data : input graph (optional, default: None)
+        ebunch : input graph (optional, default: None)
             Data to initialize graph. If None (default) an empty
             graph is created.  The data can be an edge list, or any
             NetworkX graph object.  If the corresponding optional Python
@@ -204,7 +204,7 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
             roles = attr.pop("roles")
             if not isinstance(roles, dict):
                 raise TypeError("Roles must be provided as a dictionary.")
-        super().__init__(incoming_graph_data, **attr)
+        super().__init__(ebunch, **attr)
 
         for node, role in roles.items():
             if not isinstance(node, Hashable):

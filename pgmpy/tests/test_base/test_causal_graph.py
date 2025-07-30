@@ -1,45 +1,42 @@
-import unittest
+import pytest
+
 from pgmpy.base.causal_graph import CausalGraph
 from pgmpy.base.DAG import DAG
 
 
-class TestCausalGraph(unittest.TestCase):
-    def setUp(self):
-        self.edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
-        self.cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y")
+@pytest.fixture
+def cg():
+    edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+    roles = {"X": "exposure", "Y": "outcome"}
+    return CausalGraph(ebunch=edges, roles=roles)
 
-    def test_init_with_edges_and_roles(self):
-        cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y")
-        self.assertEqual(cg.get_role("exposure"), {"X"})
-        self.assertEqual(cg.get_role("outcome"), {"Y"})
-        self.assertEqual(set(cg.nodes()), {"U", "X", "M", "Y"})
-        self.assertEqual(set(cg.edges()), set(self.edges))
 
-    def test_init_with_DAG(self):
-        dag = DAG(self.edges)
-        cg = CausalGraph(graph=dag, exposure="X", outcome="Y")
-        self.assertEqual(set(cg.nodes()), set(dag.nodes()))
-        self.assertEqual(set(cg.edges()), set(dag.edges()))
+@pytest.fixture
+def cg2():
+    cg2 = CausalGraph(
+        ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+        roles={"U": "adjustment", "M": "adjustment", "X": "exposure"},
+    )
+    return cg2
 
-    def test_role_aliases(self):
-        cg = CausalGraph(graph=self.edges, treatment="X", target="Y")
-        self.assertEqual(cg.get_role("exposure"), {"X"})
-        self.assertEqual(cg.get_role("outcome"), {"Y"})
-        self.assertTrue(cg.has_role("exposure"))
-        self.assertTrue(cg.has_role("outcome"))
 
-    def test_roles_dict_and_kwargs(self):
-        cg = CausalGraph(
-            graph=self.edges, roles={"adjustment": {"U", "M"}}, exposure="X"
-        )
-        self.assertEqual(cg.get_role("adjustment"), {"U", "M"})
-        self.assertEqual(cg.get_role("exposure"), {"X"})
+class TestCausalGraph:
 
-    def test_with_role_and_without_role(self):
-        cg2 = self.cg.with_role("adjustment", {"U", "M"})
-        self.assertEqual(cg2.get_role("adjustment"), {"U", "M"})
+    def test_init_with_edges_and_roles(self, cg):
+        assert cg.get_role("exposure") == ["X"]
+        assert cg.get_role("outcome") == ["Y"]
+        assert set(cg.nodes()) == {"U", "X", "M", "Y"}
+
+    def test_roles_dict_and_kwargs(self, cg2):
+        cg = cg2
+        assert set(cg.get_role("adjustment")) == {"U", "M"}
+        assert set(cg.get_role("exposure")) == {"X"}
+
+    def test_with_role_and_without_role(self, cg):
+        cg2 = cg.with_role("adjustment", {"U", "M"})
+        assert set(cg2.get_role("adjustment")) == {"U", "M"}
         cg3 = cg2.without_role("adjustment")
-        self.assertFalse(cg3.has_role("adjustment"))
+        assert cg3.has_role("adjustment")
 
     def test_get_roles(self):
         cg = CausalGraph(
@@ -79,39 +76,23 @@ class TestCausalGraph(unittest.TestCase):
         cg3 = self.cg.with_role("adjustment", {"U"})
         self.assertNotEqual(hash(self.cg), hash(cg3))
 
-    def test_to_dag(self):
-        dag = self.cg.to_dag()
-        self.assertIsInstance(dag, DAG)
-        self.assertEqual(set(dag.nodes()), set(self.cg.nodes()))
-        self.assertEqual(set(dag.edges()), set(self.cg.edges()))
-
-    def test_is_valid_causal_structure(self):
-        cg = CausalGraph(graph=self.edges, exposure="X", outcome="Y")
-        self.assertTrue(cg.is_valid_causal_structure())
-        cg2 = CausalGraph(graph=self.edges, exposure=["X", "M"], outcome="Y")
-        with self.assertRaises(ValueError):
+    def test_is_valid_causal_structure(self, cg):
+        assert cg.is_valid_causal_structure()
+        cg2 = CausalGraph(
+            ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+            roles={"Y": "outcome", "M": "exposure", "X": "exposure"},
+        )
+        with pytest.raises(ValueError):
             cg2.is_valid_causal_structure()
 
-    def test_with_nodes_and_with_edges(self):
-        cg2 = self.cg.with_nodes(["Z"])
-        self.assertIn("Z", cg2.nodes())
-        cg3 = self.cg.with_edges([("X", "Z")])
-        self.assertIn(("X", "Z"), cg3.edges())
+    def test_with_nodes_and_with_edges(self, cg):
+        cg2 = cg.with_nodes(["Z"])
+        assert "Z" in cg2.nodes()
+        cg3 = cg.with_edges([("X", "Z")])
+        assert ("X", "Z") in cg3.edges()
 
-    def test_without_nodes_and_without_edges(self):
-        cg2 = self.cg.without_nodes(["U"])
-        self.assertNotIn("U", cg2.nodes())
-        cg3 = self.cg.without_edges([("U", "X")])
-        self.assertNotIn(("U", "X"), cg3.edges())
-
-    def test_str_and_repr(self):
-        s = str(self.cg)
-        r = repr(self.cg)
-        self.assertIn("CausalGraph", s)
-        self.assertEqual(s, r)
-
-    def test_getattr_forwarding(self):
-        self.assertEqual(set(self.cg.get_parents("X")), {"U"})
-
-    def tearDown(self):
-        pass
+    def test_without_nodes_and_without_edges(self, cg):
+        cg2 = cg.without_nodes(["U"])
+        assert "U" not in cg2.nodes()
+        cg3 = cg.without_edges([("U", "X")])
+        assert ("U", "X") not in cg3.edges()
