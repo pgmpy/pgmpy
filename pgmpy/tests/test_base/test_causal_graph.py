@@ -79,7 +79,7 @@ class TestCausalGraph:
     def test_is_valid_causal_structure(self, cg):
         assert cg.is_valid_causal_structure()
         cg2 = CausalGraph(
-            ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+            ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
             roles={"Y": "outcome", "M": "exposure", "X": "exposure"},
         )
         with pytest.raises(ValueError):
