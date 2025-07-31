@@ -278,7 +278,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             return lgbn
 
     def add_node(
-        self, node: Hashable, weight: Optional[float] = None, latent: bool = False
+        self,
+        node: Hashable,
+        weight: Optional[float] = None,
+        latent: bool = False,
+        **kwargs,
     ):
         """
         Adds a single node to the Graph.
@@ -325,7 +329,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         if latent:
             self.latents.add(node)
 
-        super().add_node(node, weight=weight)
+        super().add_node(node, weight=weight, **kwargs)
 
     def add_nodes_from(
         self,
