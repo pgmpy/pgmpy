@@ -156,7 +156,7 @@ class _GraphRolesMixin:
         return True
 
 
-class CausalGraph(_GraphRolesMixin, nx.DiGraph):
+class _CausalGraph(_GraphRolesMixin, nx.DiGraph):
     """A causal graphical model which manages variable roles explicitly.
 
     Typical roles are exposure, outcome, adjustment set, but this structure
@@ -187,9 +187,9 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
 
     Examples
     --------
-    >>> from pgmpy.base.causal_graph import CausalGraph
+    >>> from pgmpy.base.causal_graph._base import CausalGraph
     >>>
-    >>> cg = CausalGraph(
+    >>> cg = _CausalGraph(
     ...     [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
     ...     roles={
     ...         "exposure": "X",
