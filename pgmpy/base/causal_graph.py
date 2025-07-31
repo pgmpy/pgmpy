@@ -225,4 +225,4 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
         super().__init__(ebunch, **attr)
 
         for role, vars in roles.items():
-            self.with_role(role=role,variables=vars, inplace=True)
+            self.with_role(role=role, variables=vars, inplace=True)
