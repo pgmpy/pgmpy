@@ -68,7 +68,7 @@ class _GraphRolesMixin:
         """
         return role in self.get_roles()
 
-    def with_role(self, role: str, variables, inplace=False) -> "CausalGraph":
+    def with_role(self, role: str, variables, inplace=False):
         """Return a new CausalGraph with the specified role assignment.
 
         Parameters
@@ -99,13 +99,16 @@ class _GraphRolesMixin:
 
         return new_graph
 
-    def without_role(self, role: str, inplace=False) -> "CausalGraph":
+    def without_role(self, role: str, variables=None, inplace=False):
         """Return a new CausalGraph with the specified role removed.
 
         Parameters
         ----------
         role : str
             The name of the role to remove, e.g., "exposure", "outcome".
+        variables : set, list, or iterable, default = all variables with the role
+            The variables to remove the role from. If not provided,
+            all variables with the specified role will have it removed.
         inplace=False : bool, optional
             If True, modifies the current graph in place. Defaults to False.
 
@@ -120,9 +123,10 @@ class _GraphRolesMixin:
         else:
             new_graph = self
 
-        for _, attr in new_graph.nodes(data=True):
-            if attr.get("role", None) == role:
-                attr.pop("role")
+        for v, attr in new_graph.nodes(data=True):
+            if variables is None or v in variables:
+                if attr.get("role", None) == role:
+                    attr.pop("role")
         return new_graph
 
     def is_valid_causal_structure(self) -> bool:
