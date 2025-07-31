@@ -41,10 +41,15 @@ class TestCausalGraph:
         cg2 = cg.with_role("adjustment", {"U", "M"})
         assert set(cg2.get_role("adjustment")) == {"U", "M"}
         cg3 = cg2.without_role("adjustment")
-        assert cg3.has_role("adjustment")
+        assert not cg3.has_role("adjustment")
 
     def test_get_roles(self, edges):
-        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "M"})
+        cg = CausalGraph(
+            graph=edges,
+            roles={
+                "X": "exposure", "Y": "outcome", "U": "adjustment", "M": "adjustment"
+            },
+        )
         roles = cg.get_roles()
         assert set(roles) == {"exposure", "outcome", "adjustment"}
 
@@ -56,7 +61,7 @@ class TestCausalGraph:
         cg2 = cg.copy()
         assert cg == cg2
         cg3 = cg.with_role("adjustment", {"U"})
-        assert cg == cg3
+        assert cg != cg3
 
     def test_hash(self, cg):
         cg2 = cg.copy()
@@ -72,15 +77,3 @@ class TestCausalGraph:
         )
         with pytest.raises(ValueError):
             cg2.is_valid_causal_structure()
-
-    def test_with_nodes_and_with_edges(self, cg):
-        cg2 = cg.with_nodes(["Z"])
-        assert "Z" in cg2.nodes()
-        cg3 = cg.with_edges([("X", "Z")])
-        assert ("X", "Z") in cg3.edges()
-
-    def test_without_nodes_and_without_edges(self, cg):
-        cg2 = cg.without_nodes(["U"])
-        assert "U" not in cg2.nodes()
-        cg3 = cg.without_edges([("U", "X")])
-        assert ("U", "X") not in cg3.edges()

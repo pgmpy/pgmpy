@@ -92,7 +92,10 @@ class _GraphRolesMixin:
             new_graph = self
 
         for var in variables:
-            new_graph.add_node(var, role=role)
+            if var not in new_graph:
+                raise ValueError(f"Variable '{var}' not found in the graph.")
+            else:
+                new_graph.add_node(var, role=role)
 
         return new_graph
 
