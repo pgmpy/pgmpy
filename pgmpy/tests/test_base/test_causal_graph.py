@@ -20,6 +20,11 @@ def cg2():
     return cg2
 
 
+@pytest.fixture
+def edges():
+    return [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
+
+
 class TestCausalGraph:
 
     def test_init_with_edges_and_roles(self, cg):
@@ -38,43 +43,37 @@ class TestCausalGraph:
         cg3 = cg2.without_role("adjustment")
         assert cg3.has_role("adjustment")
 
-    def test_get_roles(self):
-        cg = CausalGraph(
-            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"}
-        )
+    def test_get_roles(self, edges):
+        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "M"})
         roles = cg.get_roles()
         self.assertEqual(roles["exposure"], {"X"})
         self.assertEqual(roles["outcome"], {"Y"})
         self.assertEqual(roles["adjustment"], {"U", "M"})
 
-    def test_validate_roles_success(self):
-        cg = CausalGraph(
-            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "M"}
-        )
+    def test_validate_roles_success(self, edges):
+        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "M"})
         self.assertTrue(cg.validate_roles())
 
-    def test_validate_roles_invalid(self):
-        cg = CausalGraph(
-            graph=self.edges, exposure="X", outcome="Y", adjustment={"U", "Z"}
-        )
-        with self.assertRaises(ValueError):
+    def test_validate_roles_invalid(self, edges):
+        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "Z"})
+        with pytest.raises(ValueError):
             cg.validate_roles()
 
-    def test_with_role_invalid_variable(self):
-        with self.assertRaises(ValueError):
-            self.cg.with_role("adjustment", {"Z"})
+    def test_with_role_invalid_variable(self, cg):
+        with pytest.raises(ValueError):
+            cg.with_role("adjustment", {"Z"})
 
-    def test_copy_and_equality(self):
-        cg2 = self.cg.copy()
-        self.assertEqual(self.cg, cg2)
-        cg3 = self.cg.with_role("adjustment", {"U"})
-        self.assertNotEqual(self.cg, cg3)
+    def test_copy_and_equality(self, cg):
+        cg2 = cg.copy()
+        assert cg == cg2
+        cg3 = cg.with_role("adjustment", {"U"})
+        assert cg == cg3
 
-    def test_hash(self):
+    def test_hash(self, cg):
         cg2 = self.cg.copy()
-        self.assertEqual(hash(self.cg), hash(cg2))
-        cg3 = self.cg.with_role("adjustment", {"U"})
-        self.assertNotEqual(hash(self.cg), hash(cg3))
+        assert hash(cg) == hash(cg2)
+        cg3 = cg.with_role("adjustment", {"U"})
+        assert hash(cg) != hash(cg3)
 
     def test_is_valid_causal_structure(self, cg):
         assert cg.is_valid_causal_structure()
