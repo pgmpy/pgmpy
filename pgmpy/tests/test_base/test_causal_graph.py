@@ -1,6 +1,6 @@
 import pytest
 
-from pgmpy.base.causal_graph import CausalGraph
+from pgmpy.base import DAG as CausalGraph
 
 
 @pytest.fixture
