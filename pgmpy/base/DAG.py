@@ -125,6 +125,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         roles=None,
     ):
         super().__init__(ebunch)
+
+        self._check_cycles()
+
         self.latents = set(latents)
 
         if roles is None:
