@@ -7,7 +7,7 @@ from pgmpy.base.DAG import DAG
 @pytest.fixture
 def cg():
     edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
-    roles = {"X": "exposure", "Y": "outcome"}
+    roles = {"exposure": "X", "outcome": "Y"}
     return CausalGraph(ebunch=edges, roles=roles)
 
 
@@ -15,7 +15,7 @@ def cg():
 def cg2():
     cg2 = CausalGraph(
         ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-        roles={"U": "adjustment", "M": "adjustment", "X": "exposure"},
+        roles={"adjustment": {"U", "M"}, "exposure": "X"},
     )
     return cg2
 
@@ -46,9 +46,7 @@ class TestCausalGraph:
     def test_get_roles(self, edges):
         cg = CausalGraph(
             graph=edges,
-            roles={
-                "X": "exposure", "Y": "outcome", "U": "adjustment", "M": "adjustment"
-            },
+            roles={"exposure": "X", "outcome": "Y", "adjustment": {"U", "M"}},
         )
         roles = cg.get_roles()
         assert set(roles) == {"exposure", "outcome", "adjustment"}
@@ -73,7 +71,7 @@ class TestCausalGraph:
         assert cg.is_valid_causal_structure()
         cg2 = CausalGraph(
             ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-            roles={"Y": "outcome", "M": "exposure", "X": "exposure"},
+            roles={"outcome": "Y", "exposure": {"M", "X"}},
         )
         with pytest.raises(ValueError):
             cg2.is_valid_causal_structure()

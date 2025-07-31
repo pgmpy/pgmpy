@@ -176,9 +176,11 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
         sparse matrix, or PyGraphviz graph.
 
     roles : dict, optional (default: None)
-        A dictionary mapping node names to their roles. The keys are node names
-        and the values are role names (strings). If provided, this will
-        automatically assign roles to the nodes in the graph.
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
     attr : keyword arguments, optional (default= no attributes)
         Attributes to add to graph as key=value pairs.
@@ -190,8 +192,8 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
     >>> cg = CausalGraph(
     ...     [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
     ...     roles={
-    ...         "X": "exposure",
-    ...         "Y": "outcome",
+    ...         "exposure": "X",
+    ...         "outcome": "Y,
     ...     },
     ... )
     >>> cg.get_role("exposure")
