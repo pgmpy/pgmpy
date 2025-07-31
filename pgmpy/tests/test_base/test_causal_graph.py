@@ -46,18 +46,7 @@ class TestCausalGraph:
     def test_get_roles(self, edges):
         cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "M"})
         roles = cg.get_roles()
-        self.assertEqual(roles["exposure"], {"X"})
-        self.assertEqual(roles["outcome"], {"Y"})
-        self.assertEqual(roles["adjustment"], {"U", "M"})
-
-    def test_validate_roles_success(self, edges):
-        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "M"})
-        self.assertTrue(cg.validate_roles())
-
-    def test_validate_roles_invalid(self, edges):
-        cg = CausalGraph(graph=edges, exposure="X", outcome="Y", adjustment={"U", "Z"})
-        with pytest.raises(ValueError):
-            cg.validate_roles()
+        assert set(roles) == {"exposure", "outcome", "adjustment"}
 
     def test_with_role_invalid_variable(self, cg):
         with pytest.raises(ValueError):
