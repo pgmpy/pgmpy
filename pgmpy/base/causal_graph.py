@@ -204,6 +204,9 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
             roles = attr.pop("roles")
             if not isinstance(roles, dict):
                 raise TypeError("Roles must be provided as a dictionary.")
+        else:
+            roles = {}
+
         super().__init__(ebunch, **attr)
 
         for node, role in roles.items():

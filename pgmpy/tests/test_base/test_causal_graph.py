@@ -70,7 +70,7 @@ class TestCausalGraph:
         assert cg == cg3
 
     def test_hash(self, cg):
-        cg2 = self.cg.copy()
+        cg2 = cg.copy()
         assert hash(cg) == hash(cg2)
         cg3 = cg.with_role("adjustment", {"U"})
         assert hash(cg) != hash(cg3)
