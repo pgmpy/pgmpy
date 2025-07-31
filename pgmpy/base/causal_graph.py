@@ -75,7 +75,7 @@ class _GraphRolesMixin:
         ----------
         role : str
             The name of the role to assign, e.g., "exposure", "outcome".
-        variables : set, list, or any iterable
+        variables : str, set, list, or any iterable
             The variables to assign to the role.
         inplace=False : bool, optional
             If True, modifies the current graph in place. Defaults to False.
@@ -86,6 +86,9 @@ class _GraphRolesMixin:
             A new CausalGraph instance with the specified role assigned,
             to the variables provided.
         """
+        if isinstance(variables, str):
+            variables = {variables}
+
         if not inplace:
             new_graph = self.copy()
         else:
@@ -106,7 +109,7 @@ class _GraphRolesMixin:
         ----------
         role : str
             The name of the role to remove, e.g., "exposure", "outcome".
-        variables : set, list, or iterable, default = all variables with the role
+        variables : str, set, list, or iterable, default = all variables with the role
             The variables to remove the role from. If not provided,
             all variables with the specified role will have it removed.
         inplace=False : bool, optional
@@ -118,6 +121,9 @@ class _GraphRolesMixin:
             A new CausalGraph instance with the specified role removed
             from all nodes that had it.
         """
+        if isinstance(variables, str):
+            variables = {variables}
+
         if not inplace:
             new_graph = self.copy()
         else:
@@ -216,9 +222,5 @@ class CausalGraph(_GraphRolesMixin, nx.DiGraph):
 
         super().__init__(ebunch, **attr)
 
-        for node, role in roles.items():
-            if not isinstance(node, Hashable):
-                raise TypeError("Node names must be hashable.")
-            if not isinstance(role, str):
-                raise TypeError("Role names must be strings.")
-            self.add_node(node, role=role)
+        for role, vars in roles.items():
+            self.with_role(role=role,variables=vars, inplace=True)
