@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Hashable
-
-
-import networkx as nx
+__all__ = ["_GraphRolesMixin"]
 
 
 class _GraphRolesMixin:
