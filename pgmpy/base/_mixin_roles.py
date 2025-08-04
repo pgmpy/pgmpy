@@ -37,13 +37,13 @@ class _GraphRolesMixin:
         roles.discard(None)  # remove "None"
         return list(roles)
 
-    def get_role_sets(self):
-        """Get dict of sets of roles preset in the graph.
+    def get_role_dict(self):
+        """Get dict of lists of roles preset in the graph.
 
         Returns
         -------
-        Dict with str keys and values being set of nodes
-            keys are roles present in the graph, and sets are nodes with that role
+        Dict with str keys and values being list of nodes
+            keys are roles present in the graph, and lists are nodes with that role
         """
         tpls = [(n, d.get("role", None)) for n, d in self.nodes(data=True)]
         r_dict = {r: [] for r in self.get_roles()}
@@ -69,7 +69,7 @@ class _GraphRolesMixin:
         return role in self.get_roles()
 
     def with_role(self, role: str, variables, inplace=False):
-        """Return a new CausalGraph with the specified role assignment.
+        """Return a new graph with the specified role assignment.
 
         Parameters
         ----------
@@ -82,9 +82,8 @@ class _GraphRolesMixin:
 
         Returns
         -------
-        CausalGraph
-            A new CausalGraph instance with the specified role assigned,
-            to the variables provided.
+        graph of same type as self
+            A new instance with the specified role assigned, to the variables provided.
         """
         if isinstance(variables, str):
             variables = {variables}
@@ -103,7 +102,7 @@ class _GraphRolesMixin:
         return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
-        """Return a new CausalGraph with the specified role removed.
+        """Return a new graph with the specified role removed.
 
         Parameters
         ----------
@@ -117,9 +116,8 @@ class _GraphRolesMixin:
 
         Returns
         -------
-        CausalGraph
-            A new CausalGraph instance with the specified role removed
-            from all nodes that had it.
+        graph of same type as self
+            A new instance with the specified role removed from all nodes that had it.
         """
         if isinstance(variables, str):
             variables = {variables}
@@ -150,79 +148,7 @@ class _GraphRolesMixin:
 
         if not valid:
             raise ValueError(
-                f"CausalGraph must have at least one 'exposure' and one 'outcome'"
+                f"{type(self)} must have at least one 'exposure' and one 'outcome'"
                 f"role defined, but {problem_str}."
             )
         return True
-
-
-class _CausalGraph(_GraphRolesMixin, nx.DiGraph):
-    """A causal graphical model which manages variable roles explicitly.
-
-    Typical roles are exposure, outcome, adjustment set, but this structure
-    supports any roles.
-
-    Extends ``networkx.DiGraph`` with additional functionality for
-    managing variable roles and ensuring the integrity of causal
-    relationships.
-
-    Parameters
-    ----------
-    ebunch : input graph (optional, default: None)
-        Data to initialize graph. If None (default) an empty
-        graph is created.  The data can be any format that is supported
-        by the to_networkx_graph() function, currently including edge list,
-        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
-        sparse matrix, or PyGraphviz graph.
-
-    roles : dict, optional (default: None)
-        A dictionary mapping roles to node names.
-        The keys are roles, and the values are role names (strings or iterables of str).
-        If provided, this will automatically assign roles to the nodes in the graph.
-        Passing a key-value pair via ``roles`` is equivalent to calling
-        ``with_role(role, variables)`` for each key-value pair in the dictionary.
-
-    attr : keyword arguments, optional (default= no attributes)
-        Attributes to add to graph as key=value pairs.
-
-    Examples
-    --------
-    >>> from pgmpy.base.causal_graph._base import CausalGraph
-    >>>
-    >>> cg = _CausalGraph(
-    ...     [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-    ...     roles={
-    ...         "exposure": "X",
-    ...         "outcome": "Y",
-    ...     },
-    ... )
-    >>> cg.get_role("exposure")
-    ['X']
-    """
-
-    def __init__(self, ebunch=None, **attr):
-        """Initialize a graph with edges, name, or graph attributes.
-
-        Parameters
-        ----------
-        ebunch : input graph (optional, default: None)
-            Data to initialize graph. If None (default) an empty
-            graph is created.  The data can be an edge list, or any
-            NetworkX graph object.  If the corresponding optional Python
-            packages are installed the data can also be a 2D NumPy array, a
-            SciPy sparse array, or a PyGraphviz graph.
-
-        attr : keyword arguments, optional (default= no attributes)
-            Attributes to add to graph as key=value pairs.
-        """
-        if "roles" in attr:
-            roles = attr.pop("roles")
-            if not isinstance(roles, dict):
-                raise TypeError("Roles must be provided as a dictionary.")
-        else:
-            roles = {}
-
-        super().__init__(ebunch, **attr)
-
-        for role, vars in roles.items():
-            self.with_role(role=role, variables=vars, inplace=True)
