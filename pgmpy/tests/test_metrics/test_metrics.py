@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import PC
 from pgmpy.estimators.CITests import chi_square
@@ -21,7 +22,6 @@ from pgmpy.metrics import (
 from pgmpy.metrics.metrics import _latent_admg
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
-from pgmpy import config
 
 
 class TestCorrelationScore(unittest.TestCase):
@@ -246,22 +246,22 @@ class TestLatentADMG(unittest.TestCase):
 
     def setUp(self):
         """Prepare canonical DAGs for latent projection tests."""
-        # DAG 1: A → H → B (H is latent)
+        # DAG 1: A -> H -> B (H is latent)
         self.dag_chain = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
 
-        # DAG 2: A → H ← B (collider through latent H)
+        # DAG 2: A -> H <- B (collider through latent H)
         self.dag_collider = DiscreteBayesianNetwork([("A", "H"), ("B", "H")])
 
     def test_latent_chain_projects_to_directed(self):
         """
-        A → H → B projects to A → B when H is latent.
+        A -> H -> B projects to A -> B when H is latent.
         """
         admg = _latent_admg(self.dag_chain, observed=["A", "B"])
         self.assertEqual(set(admg.edges()), {("A", "B")})
 
     def test_latent_collider_projects_to_none(self):
         """
-        A → H ← B projects to *no* edge when H is latent.
+        A -> H <- B projects to *no* edge when H is latent.
         """
         admg = _latent_admg(self.dag_collider, observed=["A", "B"])
         # Expect no edge between A and B
@@ -269,7 +269,8 @@ class TestLatentADMG(unittest.TestCase):
 
     def test_m_graph_unshielded(self):
         """
-        M‐structure: a→x, a→b←c, c→y.  Marginalize to {x,y} ⇒ no edge between x and y.
+        M‐structure: a -> x, a -> b <- c, c -> y.  Marginalize to {x,y} => no
+        edge between x and y.
         """
         # 1) Build the full M‐structure
         model = DiscreteBayesianNetwork(
@@ -291,20 +292,20 @@ class TestLatentADMG(unittest.TestCase):
         # 4) And that no edge has been created between x and y
         self.assertEqual(set(admg.edges()), set())
 
-        # 5) Compare via SHD against an “empty” DBN on {x,y}
+        # 5) Compare via SHD against an “empty” DAG on {x,y}
         expected = DiscreteBayesianNetwork()  # start with no edges
         expected.add_nodes_from(observed)  # add exactly x,y
 
         # SHD should be zero when there truly is no edge
         self.assertEqual(SHD(admg, expected), 0)
 
-        # 6) If we now add the spurious edge x→y, SHD must be non‐zero
+        # 6) If we now add the spurious edge x -> y, SHD must be non‐zero
         expected.add_edge("x", "y")
         self.assertNotEqual(SHD(admg, expected), 0)
 
     def test_chain_graph_expected(self):
         """
-        Chain structure: a→b→c→d.  Marginalize to {a,c} ⇒ a→c
+        Chain structure: a -> b -> c -> d.  Marginalize to {a,c} => a -> c
         """
         # 1) Build the full chain DAG
         model = DiscreteBayesianNetwork(
@@ -322,7 +323,7 @@ class TestLatentADMG(unittest.TestCase):
         # 3) Only nodes a,c should remain
         self.assertEqual(set(admg.nodes()), set(observed))
 
-        # 4) Expect a single directed edge a→c
+        # 4) Expect a single directed edge a -> c
         self.assertEqual(set(admg.edges()), {("a", "c")})
 
         # 5) Compare via SHD against a “true” DBN with exactly that edge
@@ -337,7 +338,7 @@ class TestLatentADMG(unittest.TestCase):
 
     def test_unshielded_collider_graph(self):
         """
-        Unshielded collider: a→b←c→d.  Marginalize to {a,c} ⇒ no edge between a and c
+        Unshielded collider: a -> b <- c -> d.  Marginalize to {a,c} => no edge between a and c
         """
         # 1) Build the collider+extension
         model = DiscreteBayesianNetwork(
@@ -361,13 +362,13 @@ class TestLatentADMG(unittest.TestCase):
         expected.add_nodes_from(observed)
         self.assertEqual(SHD(admg, expected), 0)
 
-        # 5) Adding a spurious a→c makes SHD non-zero
+        # 5) Adding a spurious a -> c makes SHD non-zero
         expected.add_edge("a", "c")
         self.assertNotEqual(SHD(admg, expected), 0)
 
     def test_pure_confounding_graph(self):
         """
-        Pure confounding: a→b and a→c.  Marginalize to {b,c} ⇒ b↔c
+        Pure confounding: a -> b and a -> c.  Marginalize to {b,c} => b <-> c
         """
         # 1) Build the confounder DAG
         model = DiscreteBayesianNetwork(
@@ -381,7 +382,7 @@ class TestLatentADMG(unittest.TestCase):
         observed = ["b", "c"]
         admg = _latent_admg(model, observed=observed)
 
-        # 3) Only nodes b,c remain, with a bidirected link b↔c
+        # 3) Only nodes b,c remain, with a bidirected link b <-> c
         self.assertEqual(set(admg.nodes()), set(observed))
         self.assertEqual(set(admg.edges()), {("b", "c"), ("c", "b")})
 

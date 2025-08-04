@@ -601,62 +601,54 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
 
 
 def self_compatibility_graphical(
-    estimator_class,
+    estimator,
     data: pd.DataFrame,
     num_subsets: int = 50,
     subset_fraction: float = 0.8,
-    random_state: int = None,
+    seed: int = None,
     **estimator_kwargs,
 ) -> float:
     """
-    Implements Definition 6 from [1] (Faller et al., AISTATS 2024)
+    Computes the graphical self compatibility score of `estimator` on `data`.
 
-    Computes graphical self-compatibility by:
-      1) Fitting a joint DAG on all variables.
-      2) Projecting it to each random subset via Definition 5’s latent ADMG.
-      3) Fitting a marginal DAG on each subset.
-      4) Measuring SHD between the projected joint and the marginal.
-      5) Averaging those SHDs.
+    The graphical self-compatibility measure [1] defines how consistent the
+    learned subgraphs are with the learned model structure. This can be used
+    as a proxy measure for the SHD between the learned and true graph.
 
     Parameters
     ----------
-    estimator_class : class
-        A pgmpy StructureEstimator (e.g. PC, HillClimbSearch).
-    data : pd.DataFrame, shape (n_samples, n_vars)
-        Observed dataset.
-    num_subsets : int, default=50
-        Number of random subsets to draw.
-    subset_fraction : float in (0,1], default=0.8
-        Fraction of variables to include in each subset.
-    random_state : int or None
-        RNG seed for reproducibility.
-    **estimator_kwargs
-        Keyword args forwarded to estimator_class(...).estimate().
+    estimator: class
+        The causal discovery algorithm to use. This can be any class
+        inheriting pgmpy.estimators.StructureEstimator.
+
+    data : pd.DataFrame
+        The data from which to learn the causal structure. The expected
+        shape is (n_observations, variables).
+
+    num_subsets : int (default=50)
+        The number of random subsets of variables to draw.
+
+    subset_fraction : float (default=0.8)
+        The fraction of variables to sample in each sampled subset.
+
+    seed: int or None (default: None)
+        The seed value for the random number generator.
+
+    estimator_kwargs: kwargs
+        Additional arguments for the `estimator.estimate` method.
 
     Returns
     -------
-    float
+    float: Self compatibility score.
         Mean SHD between latent-projected joint and marginal DAGs.
 
     Examples
     --------
-    >>> import pandas as pd, numpy as np
-    >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.factors.discrete import TabularCPD
-    >>> from pgmpy.sampling import BayesianModelSampling
+    >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.estimators import HillClimbSearch
     >>> from pgmpy.metrics import self_compatibility_graphical
-    >>> # 1) Build a simple BN X→Y
-    >>> model = DiscreteBayesianNetwork([("X", "Y")])
-    >>> model.add_cpds(
-    ...     TabularCPD("X", 2, [[0.5], [0.5]]),
-    ...     TabularCPD(
-    ...         "Y", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["X"], evidence_card=[2]
-    ...     ),
-    ... )
-    >>> # 2) Sample 100 rows
-    >>> df = BayesianModelSampling(model).forward_sample(size=100)
-    >>> # 3) Compute graphical self-compatibility
+    >>> model = get_example_model("cancer")
+    >>> df = model.simulate(1000)
     >>> score = self_compatibility_graphical(
     ...     HillClimbSearch,
     ...     df,
@@ -664,47 +656,51 @@ def self_compatibility_graphical(
     ...     subset_fraction=0.5,
     ...     scoring_method="bic-d",
     ... )
-    >>> isinstance(score, float)
-    True
+    >>> print(score)
 
     References
     ----------
-    [1] Faller, P. M., et al. (2024).
-        “Self‐compatibility: Evaluating Causal Discovery without Ground Truth.”
-        In AISTATS. arXiv:2307.09552
+    [1] Faller, P. M., et al. (2024). “Self‐compatibility: Evaluating Causal
+        Discovery without Ground Truth.” In AISTATS. arXiv:2307.09552
     """
-    if random_state is None:
+
+    # Step 0: Variable and data structure initializations
+    if seed is None:
         rng = np.random.RandomState()
     else:
-        rng = np.random.RandomState(random_state)
+        rng = np.random.RandomState(seed)
 
     all_variables = list(data.columns)
     variable_count = len(all_variables)
     subset_size = max(2, int(np.floor(subset_fraction * variable_count)))
 
-    # 1) Fit joint model on all variables
-    joint_learner = estimator_class(data)
+    # Step 1: Learn the model structure on all the variables.
+    joint_learner = estimator(data)
     joint = joint_learner.estimate(**estimator_kwargs)
     if isinstance(joint, PDAG):
         joint = joint.to_dag()
     shd_values = []
 
+    # Step 2: Iterate over subset of variables and learn structure on them.
     for i in range(num_subsets):
-        # a) sample subset of columns
+        # Step 2.1: Select a subset of variables and data.
         observed_set = rng.choice(
             all_variables, size=subset_size, replace=False
         ).tolist()
         sub_data = data[observed_set]
+
+        # Step 2.2: Learn the structure on subset of variables and compute the
+        #           marginal graph from the full graph.
         joint_proj = _latent_admg(joint, observed_set)
-        # b) fit marginal model
-        marg_learner = estimator_class(sub_data)
+        marg_learner = estimator(sub_data)
         marginal = marg_learner.estimate(**estimator_kwargs)
+
+        # Step 2.3: Compute the SHD between learned and marginal graph.
         if isinstance(marginal, PDAG):
             marginal = marginal.to_dag()
-        # d) project marginal onto observed_set
+
         marg_proj = _latent_admg(marginal, observed_set)
-        # e) compute SHD
         shd_values.append(SHD(joint_proj, marg_proj))
 
-    # 3) average SHD
+    # Step 3: Return the average SHD.
     return float(np.mean(shd_values)) if shd_values else 0.0
