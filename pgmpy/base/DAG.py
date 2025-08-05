@@ -149,7 +149,9 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> "
+        ...     "'carry matches' [beta=0.2] smoking -> cancer [beta=0.5] "
+        ...     "'carry matches' -> cancer }"
         ... )
 
         Creating a Linear Gaussian Bayesian network from dagitty:
@@ -1466,6 +1468,155 @@ class DAG(nx.DiGraph):
                 agraph.get_edge(u, v).attr["label"] = strength_label
 
         return agraph
+
+    def to_lavaan(self) -> str:
+        """
+        Convert the DAG to lavaan syntax representation.
+
+        The lavaan syntax represents structural equations where each line
+        shows a dependent variable regressed on its parents using the ~ operator.
+        Isolated nodes (nodes with no parents) are not included in the output.
+
+        Returns
+        -------
+        str
+            String representation of the DAG in lavaan syntax format.
+            Each line represents a regression equation where the dependent
+            variable is regressed on its parents.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_lavaan())
+        Y ~ X + Z
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_lavaan())
+        B ~ A
+        C ~ B
+
+        >>> # Empty DAG returns empty string
+        >>> empty_dag = DAG()
+        >>> print(empty_dag.to_lavaan())
+        ""
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/lavaan context if needed.
+
+        References
+        ----------
+        lavaan syntax: http://lavaan.ugent.be/tutorial/syntax1.html
+        """
+        if not self.edges():
+            return ""
+
+        # Group children by their parents
+        child_to_parents = {}
+        for parent, child in self.edges():
+            # Convert to string
+            parent_str = str(parent)
+            child_str = str(child)
+
+            if child_str not in child_to_parents:
+                child_to_parents[child_str] = []
+            child_to_parents[child_str].append(parent_str)
+
+        lavaan_statements = []
+        # Sort by string representation to handle mixed types
+        for child in sorted(child_to_parents.keys(), key=str):
+            parents = sorted(child_to_parents[child], key=str)
+            parents_str = " + ".join(parents)
+            lavaan_statements.append(f"{child} ~ {parents_str}")
+
+        return "\n".join(lavaan_statements)
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the DAG to dagitty syntax representation.
+
+        The dagitty syntax represents directed acyclic graphs using
+        the dag { statements } format with -> for directed edges.
+        Isolated nodes (nodes with no edges) are included as standalone nodes.
+
+        Returns
+        -------
+        str
+            String representation of the DAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_dagitty())
+        dag {
+        X -> Y
+        Z -> Y
+        }
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_dagitty())
+        dag {
+        A -> B
+        B -> C
+        }
+
+        >>> # DAG with isolated node
+        >>> dag3 = DAG()
+        >>> dag3.add_nodes_from(["A", "B"])
+        >>> dag3.add_edge("A", "B")
+        >>> dag3.add_node("C")  # Isolated node
+        >>> print(dag3.to_dagitty())
+        dag {
+        A -> B
+        C
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/dagitty context if needed.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+
+        # Add edges
+        if self.edges():
+            edge_statements = []
+            # Sort by string representation to handle mixed types
+            for parent, child in sorted(
+                self.edges(), key=lambda x: (str(x[0]), str(x[1]))
+            ):
+                # Convert to string
+                parent_str = str(parent)
+                child_str = str(child)
+                edge_statements.append(f"{parent_str} -> {child_str}")
+            statements.extend(edge_statements)
+
+        # Add isolated nodes (nodes with no edges)
+        nodes_in_edges = set()
+        for parent, child in self.edges():
+            nodes_in_edges.add(parent)
+            nodes_in_edges.add(child)
+
+        isolated_nodes = set(self.nodes()) - nodes_in_edges
+        if isolated_nodes:
+            # Sort by string representation
+            for node in sorted(isolated_nodes, key=str):
+                statements.append(str(node))
+
+        if not statements:
+            return "dag {\n}"
+
+        statements_str = "\n".join(statements)
+        return f"dag {{\n{statements_str}\n}}"
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
