@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
 from itertools import chain, combinations, permutations
-from tqdm import tqdm
-
-import networkx as nx
-import pandas as pd
 from typing import (
     Callable,
     Collection,
@@ -19,17 +15,21 @@ from typing import (
     Union,
 )
 
+import pandas as pd
+import networkx as nx
+from tqdm import tqdm
+
 from pgmpy import config
+from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.PC import PC
-from pgmpy.estimators import StructureEstimator
-from pgmpy.base import DAG, PDAG, UndirectedGraph
+from pgmpy.base import UndirectedGraph
 from pgmpy.independencies import Independencies
 from pgmpy.global_vars import logger
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.base.ancestral.base import AncestralGraph
 
 
-class FCI(StructureEstimator, AncestralGraph):
+class FCI(BaseConstraintEstimator, AncestralGraph):
     """
     An implementation of the FCI (Fast Causal Inference) algorithm.
 
@@ -47,7 +47,26 @@ class FCI(StructureEstimator, AncestralGraph):
         independencies: Optional[Independencies] = None,
         **kwargs,
     ) -> None:
-        super(PC, self).__init__(data, independencies, edge_types, **kwargs)
+        """
+        Initializes the FCI estimator.
+
+        Parameters
+        ----------
+        edge_types: Tuple[str, str]
+            Tuple of edge types, typically ('circle', 'tail') or ('circle', 'arrowhead').
+        data: Optional[pd.DataFrame]
+            Data for structure estimation.
+        independencies: Optional[Independencies]
+            Pre-defined independencies.
+        **kwargs:
+            Additional keyword arguments.
+        """
+        super(BaseConstraintEstimator, self).__init__(
+            data=data, independencies=independencies, **kwargs
+        )
+        self.edge_types = edge_types
+        self.graph = None
+        self._separating_sets = None
 
     def build_skeleton(
         self,
@@ -58,19 +77,49 @@ class FCI(StructureEstimator, AncestralGraph):
         show_progress: bool = True,
         **kwargs,
     ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
+        """
+        Builds the skeleton of the graph.
 
-        # Initilize initial values and structures
+        This method overrides the parent's `build_skeleton` to implement
+        the specific logic for FCI, but it can still leverage the shared
+        `_get_potential_sepsets` method from the base class.
+
+        Parameters
+        ----------
+        variant: str (default: "stable")
+            The variant of the algorithm.
+        ci_test: Union[str, Callable, None] (default: None)
+            The conditional independence test.
+        significance_level: float (default: 0.01)
+            The significance level for the CI test.
+        max_cond_vars: int (default: 5)
+            The maximum size of the conditioning set.
+        show_progress: bool (default: True)
+            Whether to show a progress bar.
+        **kwargs:
+            Additional keyword arguments for the CI test.
+
+        Returns
+        -------
+        Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]
+            The graph skeleton and the separating sets.
+        """
+
+        # Initialize initial values and structures
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_callable_ci_test(ci_test, full=True, data=None)
+        ci_test = get_callable_ci_test(ci_test, full=True, data=self.data)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables")
 
-        # Step1: Initialize the uindirected graph
+        # Step1: Initialize the undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
         # currently skipping the temporal ordering due to lack of expert knowledge
+        temporal_ordering = (
+            {}
+        )  # FCI doesn't use temporal ordering in the same way as PC
 
         # Exit Condition: (AS PER THE PC algorithm)
         while not all(
@@ -82,8 +131,8 @@ class FCI(StructureEstimator, AncestralGraph):
             # Currently including only a single variant
             if variant == "orig":
                 for u, v in graph.edges():
-                    for separating_set in PC._get_potential_sepsets(
-                        u, v, graph, lim_neighbors=lim_neighbors
+                    for separating_set in self._get_potential_sepsets(
+                        u, v, temporal_ordering, graph, lim_neighbors=lim_neighbors
                     ):
                         # If a conditioning set exists, remove the edge,
                         # store the separating set and move on to finding
@@ -93,11 +142,11 @@ class FCI(StructureEstimator, AncestralGraph):
                             v,
                             separating_set,
                             data=self.data,
-                            Independencies=self.independencies,
+                            independencies=self.independencies,
                             significance_level=significance_level,
                             **kwargs,
                         ):
-                            separating_set[frozenset((u, v))] = separating_set
+                            separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
                             break
 
@@ -119,43 +168,12 @@ class FCI(StructureEstimator, AncestralGraph):
             pbar.close()
         return graph, separating_sets
 
-    @staticmethod
-    def _get_potential_sepsets(
-        u: Hashable,
-        v: Hashable,
-        temporal_ordering: Dict[Hashable, int],
-        graph: UndirectedGraph,
-        lim_neighbors: int,
-    ) -> Collection[Tuple]:
-        """
-        Return the temporally consistent superset of separating set of u, v.
-        """
-        separating_set_u = set(graph.neighbors(u))
-        separating_set_v = set(graph.neighbors(v))
-        separating_set_u.discard(v)
-        separating_set_v.discard(u)
-
-        if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[u])
-            for neigh in list(separating_set_u):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_u.discard(neigh)
-
-            for neigh in list(separating_set_v):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_v.discard(neigh)
-
-        return chain(
-            combinations(separating_set_u, lim_neighbors),
-            combinations(separating_set_v, lim_neighbors),
-        )
-
     def _orient_colliders(self):
         """
         Orients unshielded triples as colliders (Rule R0).
 
         An unshielded triple (a, c, b) is oriented as a collider a*->c<-*b if
-        [cite_start]and only if c is not in the separating set of a and b[cite: 40].
+        and only if c is not in the separating set of a and b.
         """
         for a in self.graph.nodes():
             for b in self.graph.neighbors(a):
@@ -180,7 +198,7 @@ class FCI(StructureEstimator, AncestralGraph):
         while changed:
             changed = False
 
-            # [cite_start]Rule 1: If a*->b o-*c, and a and c are not adjacent, then orient a*->b->c[cite: 41].
+            # Rule 1: If a*->b o-*c, and a and c are not adjacent, then orient a*->b->c.
             for b in self.graph.nodes():
                 for a in self.graph.predecessors(b):
                     for c in self.graph.successors(b):
@@ -200,7 +218,7 @@ class FCI(StructureEstimator, AncestralGraph):
                             self.graph.add_edge(c, b, mark="tail")
                             changed = True
 
-            # [cite_start]Rule 2: If α->β*->γ, α*-o γ, and α and γ are adjacent, then orient α*-o γ as α*->γ[cite: 42].
+            # Rule 2: If α->β*->γ, α*-o γ, and α and γ are adjacent, then orient α*-o γ as α*->γ.
             for a in self.graph.nodes():
                 for c in self.graph.neighbors(a):
                     if (
@@ -217,7 +235,7 @@ class FCI(StructureEstimator, AncestralGraph):
                                 self.add_edge(a, c, "tail", "arrowhead")
                                 changed = True
 
-            # [cite_start]Rule 3: If α*->β<-*γ, α and γ are not adjacent, and θ*-o β, then orient θ*-o β as θ*->β[cite: 43].
+            # Rule 3: If α*->β<-*γ, α and γ are not adjacent, and θ*-o β, then orient θ*-o β as θ*->β.
             for b in self.graph.nodes():
                 for a, c in permutations(self.graph.predecessors(b), 2):
                     if (
