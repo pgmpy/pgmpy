@@ -664,34 +664,29 @@ def self_compatibility_graphical(
         Discovery without Ground Truth.” In AISTATS. arXiv:2307.09552
     """
 
-    # Step 0: Variable and data structure initializations
-    if seed is None:
-        rng = np.random.RandomState()
-    else:
-        rng = np.random.RandomState(seed)
-
-    all_variables = list(data.columns)
-    variable_count = len(all_variables)
-    subset_size = max(2, int(np.floor(subset_fraction * variable_count)))
+    # Step 0: Initialize variables
+    rng = np.random.RandomState(seed)
+    subset_size = max(3, int(subset_fraction * len(data.columns)))
 
     # Step 1: Learn the model structure on all the variables.
-    joint_learner = estimator(data)
-    joint = joint_learner.estimate(**estimator_kwargs)
-    if isinstance(joint, PDAG):
-        joint = joint.to_dag()
+    full_structure = estimator(data).estimate(**estimator_kwargs)
+    # joint_learner = estimator(data)
+    # joint = joint_learner.estimate(**estimator_kwargs)
+    if isinstance(full_structure, PDAG):
+        full_structure = full_structure.to_dag()
     shd_values = []
 
     # Step 2: Iterate over subset of variables and learn structure on them.
     for i in range(num_subsets):
         # Step 2.1: Select a subset of variables and data.
         observed_set = rng.choice(
-            all_variables, size=subset_size, replace=False
+            data.columns, size=subset_size, replace=False
         ).tolist()
         sub_data = data[observed_set]
 
         # Step 2.2: Learn the structure on subset of variables and compute the
         #           marginal graph from the full graph.
-        joint_proj = _latent_admg(joint, observed_set)
+        structure_proj = _latent_admg(full_structure, observed_set)
         marg_learner = estimator(sub_data)
         marginal = marg_learner.estimate(**estimator_kwargs)
 
@@ -700,7 +695,7 @@ def self_compatibility_graphical(
             marginal = marginal.to_dag()
 
         marg_proj = _latent_admg(marginal, observed_set)
-        shd_values.append(SHD(joint_proj, marg_proj))
+        shd_values.append(SHD(structure_proj, marg_proj))
 
     # Step 3: Return the average SHD.
     return float(np.mean(shd_values)) if shd_values else 0.0
