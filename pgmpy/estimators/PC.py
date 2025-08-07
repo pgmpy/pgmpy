@@ -245,6 +245,7 @@ class PC(StructureEstimator):
         skel, separating_sets = self.build_skeleton(
             ci_test=ci_test,
             significance_level=significance_level,
+            max_cond_vars=max_cond_vars,
             variant=variant,
             n_jobs=n_jobs,
             expert_knowledge=expert_knowledge,
