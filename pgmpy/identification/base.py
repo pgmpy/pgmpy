@@ -34,15 +34,19 @@ class BaseIdentification:
         Parameters
         ----------
         causal_graph : DAG, PDAG, ADMG, MAG, or PAG object
-            The input causal graph on which to perform identification.
+            The input causal graph on which to perform identification. The
+            causal graph must have variables with exposure and outcome roles
+            defined.
 
         Returns
         -------
         identified_graph : DAG, PDAG, ADMG, MAG, or PAG object
-            A new causal graph instance with variable roles assigned.
+            A new causal graph instance with variable roles assigned according
+            to the identification method.
 
         success : bool
-            True if the exposure and outcome are successfully identified; False otherwise.
+            True if the exposure and outcome are successfully identified; False
+            otherwise.
         """
         if causal_graph.is_valid_causal_structure():
             return self._identify(causal_graph)
