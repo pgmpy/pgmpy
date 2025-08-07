@@ -9,24 +9,44 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
-class DAG(nx.DiGraph):
-    """
-    Base class for all Directed Graphical Models.
+class DAG(_GraphRolesMixin, nx.DiGraph):
+    """Directed Graphical Model, graph with vertex roles.
 
-    Each node in the graph can represent either a random variable, `Factor`,
+    Each node in the graph can represent either a random variable, ``Factor``,
     or a cluster of random variables. Edges in the graph represent the
     dependencies between these.
 
+    Abstract roles can be assigned to nodes in the graph, such as
+    exposure, outcome, adjustment set, etc. These roles are used, or created,
+    by algorithms that use the graph, such as causal inference,
+    causal discovery, causal prediction.
+
     Parameters
     ----------
-    data: input graph
-        Data to initialize graph. If data=None (default) an empty graph is
-        created. The data can be an edge list or any Networkx graph object.
+    ebunch : input graph (optional, default: None)
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes (default: empty set)
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
     Examples
     --------
@@ -35,7 +55,11 @@ class DAG(nx.DiGraph):
     >>> from pgmpy.base import DAG
     >>> G = DAG()
 
-    G can be grown in several ways:
+    Edges and vertices can be passed to the constructor as an edge list.
+
+    >>> G = DAG(ebunch=[("a", "b"), ("b", "c")])
+
+    G can be also grown incrementally, in several ways:
 
     **Nodes:**
 
@@ -72,15 +96,57 @@ class DAG(nx.DiGraph):
     True
     >>> len(G)  # number of nodes in graph
     3
+
+    Roles can be assigned to nodes in the graph at construction or using methods.
+
+    At construction:
+
+    >>> G = DAG(
+    ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
+    ...     roles={"exposure": "X", "outcome": "Y"},
+    ... )
+
+    Roles can also be assigned after creation using the ``with_role`` method.
+
+    >>> G = G.with_role("adjustment", {"U", "M"})
+
+    Vertices of a specific role can be retrieved using the ``get_role`` method.
+
+    >>> G.get_role("exposure")
+    ['X']
+    >>> G.get_role("adjustment")
+    ['U', 'M']
     """
 
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        roles=None,
     ):
-        super(DAG, self).__init__(ebunch)
+        super().__init__(ebunch)
+
+        self._check_cycles()
+
         self.latents = set(latents)
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        # set the roles to the vertices as networkx attributes
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
+
+    def _check_cycles(self):
+        """Checks if the graph has cycles.
+
+        Raises
+        ------
+        ValueError
+            If the graph has cycles.
+        """
         cycles = []
         try:
             cycles = list(nx.find_cycle(self))
@@ -215,7 +281,11 @@ class DAG(nx.DiGraph):
             return lgbn
 
     def add_node(
-        self, node: Hashable, weight: Optional[float] = None, latent: bool = False
+        self,
+        node: Hashable,
+        weight: Optional[float] = None,
+        latent: bool = False,
+        **kwargs,
     ):
         """
         Adds a single node to the Graph.
@@ -262,7 +332,7 @@ class DAG(nx.DiGraph):
         if latent:
             self.latents.add(node)
 
-        super(DAG, self).add_node(node, weight=weight)
+        super().add_node(node, weight=weight, **kwargs)
 
     def add_nodes_from(
         self,
@@ -364,7 +434,7 @@ class DAG(nx.DiGraph):
         >>> G.edge["Ankur"]["Maria"]
         {'weight': 0.1}
         """
-        super(DAG, self).add_edge(u, v, weight=weight)
+        super().add_edge(u, v, weight=weight)
 
     def add_edges_from(
         self,
