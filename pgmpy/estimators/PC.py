@@ -243,13 +243,13 @@ class PC(StructureEstimator):
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
+            variant=variant,
             ci_test=ci_test,
             significance_level=significance_level,
             max_cond_vars=max_cond_vars,
-            variant=variant,
-            n_jobs=n_jobs,
             expert_knowledge=expert_knowledge,
             enforce_expert_knowledge=enforce_expert_knowledge,
+            n_jobs=n_jobs,
             show_progress=show_progress,
             **kwargs,
         )
