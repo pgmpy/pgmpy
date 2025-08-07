@@ -15,11 +15,11 @@ class BaseIdentification:
     ...     "A simple identification method when all variable are observed"
     ...
     ...     def _identify(self, causal_graph):
-    ...         outcome_parents = set(
-    ...             causal_graph.predecessors(causal_graph.exposure)
-    ...         ) - {causal_graph.exposure}
-    ...         causal_graph = causal_graph.add_roles("adjustment", outcome_parents)
-    ...         return casual_graph, True
+    ...         outcome_parents = causal_graph.predecessors(
+    ...             causal_graph.get_role("exposure")
+    ...         )
+    ...         identified_cg = causal_graph.with_role("adjustment", outcome_parents)
+    ...         return identified_cg, True
     ...
     """
 
