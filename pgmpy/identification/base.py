@@ -1,7 +1,12 @@
 class BaseIdentification:
     """Base class for all identification methods.
 
-    All identification methods in pgmpy should inherit `BaseIdentification`.
+    All identification methods in pgmpy must inherit `BaseIdentification`.
+    Inheriting methods need to define the `_identify` method, which implements
+    the specific identification algorithm. The `_identify` method should take a
+    causal graph as input and return a modified version of the graph with
+    variable roles assigned, along with a boolean indicating whether the
+    identification was successful.
 
     Examples
     --------
@@ -28,19 +33,19 @@ class BaseIdentification:
 
         Parameters
         ----------
-        causal_graph : CausalGraph
+        causal_graph : Instance of one of DAG, PDAG, ADMG, MAG, or PAG.
             The input causal graph on which to perform identification.
 
         Returns
         -------
-        identified_graph : CausalGraph
+        identified_graph : Instance of one of DAG, PDAG, ADMG, MAG, or PAG.
             A new causal graph instance with variable roles assigned.
 
         success : bool
             True if the exposure and outcome are successfully identified; False otherwise.
         """
-        causal_graph = causal_graph.copy()
-        return self._identify(causal_graph)
+        if causal_graph.is_valid_causal_structure():
+            return self._identify(causal_graph)
 
     def __call__(self, causal_graph):
         """Alias for the `identify` method"""
