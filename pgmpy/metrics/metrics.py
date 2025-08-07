@@ -478,7 +478,7 @@ def SHD(true_model, est_model):
 
 def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     """
-    Compute the latent‐projection ADMG L(G, observed_set) of a DAG G onto a subset observed_set ⊂ V.
+    Compute the latent‐projection ADMG L(G, observed_set) of a DAG G onto a subset observed_set, V.
     (Helper function for self_compatibility_graphical)
 
     Implements Definition 5 (latent ADMG) from [1] (Faller et al., AISTATS 2024)
@@ -487,15 +487,16 @@ def _latent_admg(dag: DAG, observed: list) -> nx.DiGraph:
     ----------
     dag : DAG
         The full DAG G on variables V (may include latent nodes).
+
     observed : list
         Subset observed_set ⊂ V to project onto (observed variables).
 
     Returns
     -------
-    nx.DiGraph
-    An ADMG over the observed nodes, where:
-        - X -> Y encodes a latent‐only directed chain X ->…-> Y
-        - X <-> Y is encoded by having both X -> Y and Y -> X in the graph.
+    nx.DiGraph:
+        An ADMG over the observed nodes, where:
+            - X -> Y encodes a latent‐only directed chain X ->…-> Y
+            - X <-> Y is encoded by having both X -> Y and Y -> X in the graph.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.metrics.metrics import _latent_admg
@@ -667,34 +668,28 @@ def self_compatibility_graphical(
     # Step 0: Initialize variables
     rng = np.random.RandomState(seed)
     subset_size = max(3, int(subset_fraction * len(data.columns)))
+    shd_values = []
 
     # Step 1: Learn the model structure on all the variables.
     full_structure = estimator(data).estimate(**estimator_kwargs)
-    # joint_learner = estimator(data)
-    # joint = joint_learner.estimate(**estimator_kwargs)
     if isinstance(full_structure, PDAG):
         full_structure = full_structure.to_dag()
-    shd_values = []
 
     # Step 2: Iterate over subset of variables and learn structure on them.
     for i in range(num_subsets):
         # Step 2.1: Select a subset of variables and data.
-        observed_set = rng.choice(
-            data.columns, size=subset_size, replace=False
-        ).tolist()
-        sub_data = data[observed_set]
+        observed_set = rng.choice(data.columns, size=subset_size, replace=False)
+        sub_data = data.loc[:, observed_set]
 
         # Step 2.2: Learn the structure on subset of variables and compute the
         #           marginal graph from the full graph.
         structure_proj = _latent_admg(full_structure, observed_set)
-        marg_learner = estimator(sub_data)
-        marginal = marg_learner.estimate(**estimator_kwargs)
+        marginal_structure = estimator(sub_data).estimate(**estimator_kwargs)
+        if isinstance(marginal_structure, PDAG):
+            full_structure = marginal_structure.to_dag()
 
         # Step 2.3: Compute the SHD between learned and marginal graph.
-        if isinstance(marginal, PDAG):
-            marginal = marginal.to_dag()
-
-        marg_proj = _latent_admg(marginal, observed_set)
+        marg_proj = _latent_admg(marginal_structure, observed_set)
         shd_values.append(SHD(structure_proj, marg_proj))
 
     # Step 3: Return the average SHD.
