@@ -8,11 +8,7 @@ import pandas as pd
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
-from pgmpy.estimators import (
-    BaseEstimator,
-    BayesianEstimator,
-    MaximumLikelihoodEstimator,
-)
+from pgmpy.estimators import BayesianEstimator
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,
@@ -586,7 +582,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
     def test_load_save(self):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")
-        for model in {test_model_small, test_model_large}:
+        for model in [test_model_small, test_model_large]:
             for filetype in {"bif", "xmlbif", "xdsl"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)
