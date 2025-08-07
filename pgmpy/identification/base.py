@@ -33,12 +33,12 @@ class BaseIdentification:
 
         Parameters
         ----------
-        causal_graph : Instance of one of DAG, PDAG, ADMG, MAG, or PAG.
+        causal_graph : DAG, PDAG, ADMG, MAG, or PAG object
             The input causal graph on which to perform identification.
 
         Returns
         -------
-        identified_graph : Instance of one of DAG, PDAG, ADMG, MAG, or PAG.
+        identified_graph : DAG, PDAG, ADMG, MAG, or PAG object
             A new causal graph instance with variable roles assigned.
 
         success : bool
