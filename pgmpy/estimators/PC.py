@@ -485,6 +485,7 @@ class PC(StructureEstimator):
 
         v: variable
             The node along with u whose separating set is being calculated.
+
         temporal_ordering: dict
             The temporal ordering of variables according to prior knowledge.
 
