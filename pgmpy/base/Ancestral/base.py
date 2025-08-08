@@ -1,27 +1,11 @@
 #!/usr/bin/env python
 
-from itertools import permutations, combinations, chain
-from typing import (
-    Callable,
-    Collection,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
-
-import pandas as pd
 import networkx as nx
-from tqdm import tqdm
 
 from pgmpy.base.DAG import DAG
 
 
-
-class AncestralGraph(DAG):
+class AncestralGraph(nx.DiGraph, DAG):
     """
     Base class for all ancestral graphical models.
 
@@ -70,7 +54,7 @@ class AncestralGraph(DAG):
             The mark at the 'v' endpoint. Must be one of 'tail', 'arrowhead', 'circle'.
         """
         # A single 'add_edge' call might not be enough for bidirected or undirected edges,
-        # as NetworkX's DiGraph treats u->v and v->u as separate edges.
+        # as DiGraph treats u->v and v->u as separate edges.
         # We store the mark at the 'v' end for the u->v edge.
         # For symmetric edges (bidirected, undirected, etc.), we need to add two edges.
         if u_mark not in {"tail", "arrowhead", "circle"} or v_mark not in {
@@ -80,8 +64,8 @@ class AncestralGraph(DAG):
         }:
             raise ValueError("Marks must be one of 'tail', 'arrowhead', or 'circle'.")
 
-        self.add_node(u)
-        self.add_node(v)
+        # self.add_node(u)
+        # self.add_node(v)
 
         # Store the mark for the edge u -> v
         self.graph.add_edge(u, v, mark=v_mark)
