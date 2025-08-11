@@ -1,6 +1,6 @@
 import pytest
 
-from pgmpy.base import DAG as DAG
+from pgmpy.base import DAG
 
 
 @pytest.fixture
@@ -62,19 +62,17 @@ class TestDAG:
         with pytest.raises(ValueError):
             cg.with_role("adjustment", {"Z"})
 
-    @pytest.mark.xfail(reason="Equality not implemented for DAG")
     def test_copy_and_equality(self, cg):
         cg2 = cg.copy()
         assert cg == cg2
         cg3 = cg.with_role("adjustment", {"U"})
         assert cg != cg3
 
-    @pytest.mark.xfail(reason="Hashing not implemented for DAG")
     def test_hash(self, cg):
         cg2 = cg.copy()
-        assert hash(cg) == hash(cg2)
+        assert cg == cg2
         cg3 = cg.with_role("adjustment", {"U"})
-        assert hash(cg) != hash(cg3)
+        assert cg != cg3
 
     def test_is_valid_causal_structure(self, cg):
         assert cg.is_valid_causal_structure()

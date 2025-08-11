@@ -215,7 +215,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2]",
+        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }",
         ... )
 
         Creating a Linear Gaussian Bayesian network from dagitty:
@@ -1619,9 +1620,39 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return False
 
     def copy(self):
+        """Returns a copy of the DAG object."""
         dag = DAG(ebunch=self.edges(), latents=self.latents)
         dag.add_nodes_from(self.nodes())
+
+        for role, vars in self.get_role_dict().items():
+            dag.with_role(role=role, variables=vars, inplace=True)
+
         return dag
+
+    def __eq__(self, other):
+        """
+        Checks if two DAGs are equal. Two DAGs are considered equal if they
+        have the same nodes, edges, latent variables, and variable roles.
+
+        Parameters
+        ----------
+        other: DAG object
+            The other DAG to compare with.
+
+        Returns
+        -------
+        bool
+            True if the DAGs are equal, False otherwise.
+        """
+        if not isinstance(other, DAG):
+            return False
+
+        return (
+            set(self.nodes()) == set(other.nodes())
+            and set(self.edges()) == set(other.edges())
+            and self.latents == other.latents
+            and self.get_role_dict() == other.get_role_dict()
+        )
 
     def edge_strength(self, data, edges=None):
         """
