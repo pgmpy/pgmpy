@@ -1511,26 +1511,17 @@ class DAG(nx.DiGraph):
         ----------
         lavaan syntax: http://lavaan.ugent.be/tutorial/syntax1.html
         """
-        if not self.edges():
-            return ""
-
-        # Group children by their parents
-        child_to_parents = {}
-        for parent, child in self.edges():
-            # Convert to string
-            parent_str = str(parent)
-            child_str = str(child)
-
-            if child_str not in child_to_parents:
-                child_to_parents[child_str] = []
-            child_to_parents[child_str].append(parent_str)
-
         lavaan_statements = []
-        # Sort by string representation to handle mixed types
-        for child in sorted(child_to_parents.keys(), key=str):
-            parents = sorted(child_to_parents[child], key=str)
-            parents_str = " + ".join(parents)
-            lavaan_statements.append(f"{child} ~ {parents_str}")
+
+        # Iterate over each node and create equation for non-root nodes
+        for node in sorted(self.nodes(), key=str):
+            parents = self.get_parents(node)
+            if parents:  # If node has parents (i.e., not a root node)
+                # Convert node and parents to strings and sort parents
+                node_str = str(node)
+                parent_strs = sorted([str(parent) for parent in parents], key=str)
+                parents_str = " + ".join(parent_strs)
+                lavaan_statements.append(f"{node_str} ~ {parents_str}")
 
         return "\n".join(lavaan_statements)
 
@@ -1600,23 +1591,16 @@ class DAG(nx.DiGraph):
                 edge_statements.append(f"{parent_str} -> {child_str}")
             statements.extend(edge_statements)
 
-        # Add isolated nodes (nodes with no edges)
-        nodes_in_edges = set()
-        for parent, child in self.edges():
-            nodes_in_edges.add(parent)
-            nodes_in_edges.add(child)
+        # Add isolated nodes (nodes with no neighbors)
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
 
-        isolated_nodes = set(self.nodes()) - nodes_in_edges
-        if isolated_nodes:
-            # Sort by string representation
-            for node in sorted(isolated_nodes, key=str):
-                statements.append(str(node))
-
-        if not statements:
+        # Join statements and format - empty list produces empty string
+        content = "\n".join(statements)
+        if content:
+            return f"dag {{\n{content}\n}}"
+        else:
             return "dag {\n}"
-
-        statements_str = "\n".join(statements)
-        return f"dag {{\n{statements_str}\n}}"
 
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
