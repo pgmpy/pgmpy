@@ -85,6 +85,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
 
         self.assertEqual(sepsets, [])
 
+    @patch('module.path.get_ci_test')
     def test_build_skeleton_no_independence(self, mock_get_ci_test):
         """Test skeleton building when no independence found."""
         mock_ci_test = Mock(return_value=False)
@@ -99,6 +100,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
         self.assertEqual(len(graph.edges()), expected_edges)
         self.assertEqual(len(separating_sets), 0)
 
+    @patch('module.path.get_ci_test')
     def test_build_skeleton_with_independence(self, mock_get_ci_test):
         """Test skeleton building when independence found."""
 
@@ -117,6 +119,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
         self.assertIn(frozenset(["A", "B"]), separating_sets)
         self.assertEqual(separating_sets[frozenset(["A", "B"])], ())
 
+    @patch('module.path.get_ci_test')
     def test_build_skeleton_max_cond_vars(self, mock_get_ci_test):
         """Test skeleton building respects max_cond_vars limit."""
         mock_ci_test = Mock(return_value=False)
@@ -132,6 +135,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
                 "Reached maximum number of allowed conditional variables. Exiting"
             )
 
+    @patch('module.path.get_ci_test')
     def test_build_skeleton_return_types(self, mock_get_ci_test):
         """Test build_skeleton returns correct types."""
         mock_ci_test = Mock(return_value=False)
