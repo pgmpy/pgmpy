@@ -1,67 +1,104 @@
-import torch
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.gaussian_process.kernels import ConstantKernel as C
-from torch_hsic import hsic
+from collections.abc import Callable
+
+import numpy as np
+import pandas as pd
+from sklearn.base import clone
+
+from pgmpy.estimators import CITests as ci_tests
+
+# A set of allowed independence tests for this ANM implementation.
+# Only tests suitable for continuous or mixed data are included.
+ALLOWED_ANM_CI_TESTS = {ci_tests.pearsonr, ci_tests.gcm, ci_tests.pillai_trace}
 
 
-def anm_bivariate(x, y):
+def ANM(
+    x: np.ndarray,
+    y: np.ndarray,
+    regressor,
+    independence_test: Callable,
+    significance_level: float = 0.05,
+) -> str:
+    """Performs bivariate causal discovery using the Additive Noise Model (ANM).
+
+    This function tests for a causal relationship between two variables, `x` and `y`,
+    in both directions (`x` -> `y` and `y` -> `x`). It uses a provided regressor
+    and a specific set of allowed pgmpy conditional independence tests.
+
+    The ANM principle assumes that for the true causal direction, the residuals of a
+    regression are independent of the cause variable. This implementation infers the
+    causal direction by comparing the p-values from these independence tests.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        A 1D NumPy array representing the first variable.
+    y : np.ndarray
+        A 1D NumPy array representing the second variable.
+    regressor : sklearn-compatible estimator
+        An instance of a regressor model (e.g., from scikit-learn) with
+        `.fit()` and `.predict()` methods.
+    independence_test : callable
+        A function from pgmpy.estimators.CITests to test for independence.
+        Allowed tests are 'pearsonr', 'gcm', and 'pillai_trace'.
+    significance_level : float, optional
+        The significance level for the independence test, used to decide the
+        causal direction. Defaults to 0.05.
+
+    Returns
+    -------
+    str
+        The inferred causal orientation. One of 'x->y', 'y->x', or 'x--y'
+        (for an undecided relationship).
+
+    Raises
+    ------
+    ValueError
+        If the provided `independence_test` is not in the allowed set of tests.
     """
-    Performs bivariate causal discovery using the Additive Noise Model (ANM).
+    # --- Validate that the provided independence test is allowed ---
+    if independence_test not in ALLOWED_ANM_CI_TESTS:
+        allowed_names = sorted([f.__name__ for f in ALLOWED_ANM_CI_TESTS])
+        raise ValueError(
+            f"Invalid independence_test. Allowed tests for ANM are: {allowed_names}. "
+            f"Got: {independence_test.__name__}"
+        )
 
-    This function tests for a causal relationship between two variables, x and y,
-    in both directions (x -> y and y -> x) based on the ANM principle. It uses
-    a Gaussian Process Regressor to model the functional relationship and the
-    Hilbert-Schmidt Independence Criterion (HSIC) to test for the independence
-    of the residuals.
+    # --- Internal helper to run the pgmpy test ---
+    def run_independence_test(cause_arr, residual_arr):
+        # For pgmpy tests, create a DataFrame and call with named args
+        df = pd.DataFrame(
+            {"cause": cause_arr.flatten(), "residual": residual_arr.flatten()}
+        )
+        # pgmpy tests return a tuple (statistic, p_value, ...); we need the p_value
+        return independence_test(X="cause", Y="residual", Z=[], data=df, boolean=False)[
+            1
+        ]
 
-    Args:
-        x (np.ndarray): A 1D numpy array representing the cause variable.
-        y (np.ndarray): A 1D numpy array representing the effect variable.
+    # Reshape data for scikit-learn
+    x_reshaped = x.reshape(-1, 1)
+    y_reshaped = y.reshape(-1, 1)
 
-    Returns:
-        dict: A dictionary containing the p-values for both causal directions.
-              'p_value_xy': p-value for the causal direction x -> y.
-              'p_value_yx': p-value for the causal direction y -> x.
-    """
+    # --- Test for X -> Y ---
+    reg_xy = clone(regressor)
+    reg_xy.fit(x_reshaped, y_reshaped.ravel())
+    y_pred = reg_xy.predict(x_reshaped)
+    residuals_xy = y_reshaped.flatten() - y_pred.flatten()
+    p_value_xy = run_independence_test(x, residuals_xy)
 
-    # Reshape data for sklearn
-    x = x.reshape(-1, 1)
-    y = y.reshape(-1, 1)
+    # --- Test for Y -> X ---
+    reg_yx = clone(regressor)
+    reg_yx.fit(y_reshaped, x_reshaped.ravel())
+    x_pred = reg_yx.predict(y_reshaped)
+    residuals_yx = x_reshaped.flatten() - x_pred.flatten()
+    p_value_yx = run_independence_test(y, residuals_yx)
 
-    # Define the Gaussian Process Regressor kernel
-    kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
+    # --- Decision Logic ---
+    accept_xy = p_value_xy >= significance_level
+    accept_yx = p_value_yx >= significance_level
 
-    # Test for X -> Y
-    gp_xy = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10)
-    gp_xy.fit(x, y)
-    y_pred = gp_xy.predict(x)
-    res_xy = y - y_pred
-    p_value_xy = hsic_test(
-        torch.from_numpy(x).float(), torch.from_numpy(res_xy).float()
-    )
-
-    # Test for Y -> X
-    gp_yx = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10)
-    gp_yx.fit(y, x)
-    x_pred = gp_yx.predict(y)
-    res_yx = x - x_pred
-    p_value_yx = hsic_test(
-        torch.from_numpy(y).float(), torch.from_numpy(res_yx).float()
-    )
-
-    return {"p_value_xy": p_value_xy, "p_value_yx": p_value_yx}
-
-
-def hsic_test(x, y):
-    """
-    Performs the Hilbert-Schmidt Independence Criterion (HSIC) test.
-
-    Args:
-        x (torch.Tensor): A torch tensor of the first variable.
-        y (torch.Tensor): A torch tensor of the second variable.
-
-    Returns:
-        float: The p-value from the HSIC test.
-    """
-    return hsic.HSIC(x, y)
+    if accept_xy and not accept_yx:
+        return "x->y"
+    elif not accept_xy and accept_yx:
+        return "y->x"
+    else:
+        return "x--y"
