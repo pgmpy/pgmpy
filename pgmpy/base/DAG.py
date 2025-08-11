@@ -1775,7 +1775,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return strengths
 
 
-class PDAG(nx.DiGraph):
+class PDAG(_GraphRolesMixin, nx.DiGraph):
     """
     Class for representing PDAGs (also known as CPDAG). PDAGs are the equivalence classes of
     DAGs and contain both directed and undirected edges.
@@ -1789,6 +1789,7 @@ class PDAG(nx.DiGraph):
         directed_ebunch: list[tuple[Hashable, Hashable]] = [],
         undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
         latents: Iterable[Hashable] = [],
+        roles=None,
     ):
         """
         Initializes a PDAG class.
@@ -1804,6 +1805,13 @@ class PDAG(nx.DiGraph):
         latents: list, array-like
             List of nodes which are latent variables.
 
+        roles : dict, optional (default: None)
+            A dictionary mapping roles to node names.
+            The keys are roles, and the values are role names (strings or iterables of str).
+            If provided, this will automatically assign roles to the nodes in the graph.
+            Passing a key-value pair via ``roles`` is equivalent to calling
+            ``with_role(role, variables)`` for each key-value pair in the dictionary.
+        
         Returns
         -------
         An instance of the PDAG object.
@@ -1820,6 +1828,14 @@ class PDAG(nx.DiGraph):
                 set([(Y, X) for (X, Y) in self.undirected_edges])
             )
         )
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
 
     def all_neighbors(self, node):
         """
@@ -1925,6 +1941,9 @@ class PDAG(nx.DiGraph):
             latents=self.latents,
         )
         pdag.add_nodes_from(self.nodes())
+
+        for role, vars in self.get_role_dict().items():
+            pdag.with_role(role=role, variables=vars, inplace=True)
         return pdag
 
     def _directed_graph(self):
