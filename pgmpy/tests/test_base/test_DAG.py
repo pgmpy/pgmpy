@@ -1144,7 +1144,9 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag_copy.get_role("exposure"), ["A"])
         self.assertEqual(pdag_copy.get_role("adjustment"), ["D"])
         self.assertEqual(pdag_copy.get_role("outcome"), ["C"])
-        self.assertEqual(sorted(pdag_copy.get_roles()), sorted(['adjustment', 'exposure', 'outcome']))
+        self.assertEqual(
+            sorted(pdag_copy.get_roles()), sorted(["adjustment", "exposure", "outcome"])
+        )
 
     def test_pdag_to_dag(self):
         # PDAG no: 1  Possibility of creating a v-structure

@@ -1811,7 +1811,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             If provided, this will automatically assign roles to the nodes in the graph.
             Passing a key-value pair via ``roles`` is equivalent to calling
             ``with_role(role, variables)`` for each key-value pair in the dictionary.
-        
+
         Returns
         -------
         An instance of the PDAG object.
