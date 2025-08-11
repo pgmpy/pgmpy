@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from pgmpy.base.Ancestral.base import AncestralGraph
+from pgmpy.base.AncestralBase import Ancestralbase
 
 
-class MAG(AncestralGraph):
+class MAG(Ancestralbase):
     """
     Maximal Ancestral Graph (MAG) implementation extending AncestralGraph.
     Implements MAG-specific methods from:

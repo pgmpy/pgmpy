@@ -5,7 +5,7 @@ import networkx as nx
 from pgmpy.base.DAG import DAG
 
 
-class AncestralGraph(nx.DiGraph, DAG):
+class AncestralBase(nx.DiGraph, DAG):
     """
     Base class for all ancestral graphical models.
 

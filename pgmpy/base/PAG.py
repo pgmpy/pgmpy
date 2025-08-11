@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from pgmpy.base.Ancestral.base import AncestralGraph
+from pgmpy.base.AncestralBase import AncestralBase
 
 
-class PAG(AncestralGraph):
+class PAG(AncestralBase):
     """
     Partial Ancestral Graph (PAG) implementation extending AncestralGraph.
     Implements PAG-specific methods from:
