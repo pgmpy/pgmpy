@@ -484,6 +484,9 @@ class TestDAGCreation(unittest.TestCase):
                 pseudo_counts=pseudo_counts,
             )
             self.assertTrue(fitted_model_bayesian.check_model())
+            self.assertEqual(
+                sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"]
+            )
 
     def tearDown(self):
         del self.graph
