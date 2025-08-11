@@ -9,6 +9,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 import pgmpy.estimators.CITests as CITests
 
+
 class TestBaseConstraintEstimator(unittest.TestCase):
 
     def setUp(self):
