@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import (
@@ -17,7 +18,6 @@ from pgmpy.metrics import (
 )
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
-from pgmpy import config
 
 
 class TestCorrelationScore(unittest.TestCase):
@@ -71,7 +71,7 @@ class TestStructureScore(unittest.TestCase):
         self.alarm_no_cpd.cpds = []
 
     def test_discrete_network(self):
-        for model in {self.alarm, self.alarm_no_cpd}:
+        for model in [self.alarm, self.alarm_no_cpd]:
             for scoring_method in {"k2", "bdeu", "bds", "bic-d"}:
                 metric = structure_score(self.alarm, self.data, scoring_method)
                 self.assertTrue(isinstance(metric, float))

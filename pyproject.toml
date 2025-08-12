@@ -96,3 +96,8 @@ pgmpy = [
 ]
 [tool.setuptools]
 include-package-data = true
+
+[tool.pytest.ini_options]
+addopts = "-p no:doctest"
+norecursedirs = [".git", "ignore", "build", "__pycache__"]
+filterwarnings = ["default"]
