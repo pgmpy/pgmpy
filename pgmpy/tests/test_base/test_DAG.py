@@ -460,6 +460,34 @@ class TestDAGCreation(unittest.TestCase):
                 TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
             )
 
+    def test_dag_with_independent_node_fit(self):
+        edge_list = [("A", "C"), ("B", "C")]
+        dag = DAG(edge_list)
+        dag.add_node("D")
+        dbn = DiscreteBayesianNetwork(edge_list)
+        dbn.add_node("D")
+        for model in [dag, dbn]:
+            data = pd.DataFrame(
+                data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
+            )
+            pseudo_counts = {
+                "A": [[9], [3]],
+                "B": [[9], [3]],
+                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+                "D": [[9]],
+            }
+
+            fitted_model_bayesian = model.fit(
+                data,
+                estimator=BayesianEstimator,
+                prior_type="dirichlet",
+                pseudo_counts=pseudo_counts,
+            )
+            self.assertTrue(fitted_model_bayesian.check_model())
+            self.assertEqual(
+                sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"]
+            )
+
     def tearDown(self):
         del self.graph
 

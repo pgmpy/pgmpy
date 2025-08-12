@@ -97,26 +97,6 @@ pgmpy = [
 [tool.setuptools]
 include-package-data = true
 
-[tool.flake8]
-max-line-length = 120
-ignore = [
-  "E203",
-  "E231",
-  "E241",
-  "E222",
-  "E221",
-  "W503",
-  "E712",
-]
-exclude = [
-  ".git",
-  "__pycache__",
-  "docs/source/conf.py",
-  "old",
-  "build",
-  "dist",
-]
-
 [tool.pytest.ini_options]
 addopts = "-p no:doctest"
 norecursedirs = [".git", "ignore", "build", "__pycache__"]

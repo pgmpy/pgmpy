@@ -40,8 +40,10 @@ class BayesianEstimator(ParameterEstimator):
                 )
 
             elif isinstance(model, DAG):
-                model = DiscreteBayesianNetwork(model.edges())
-                model.add_nodes_from(model.nodes())
+                edges = model.edges()
+                nodes = model.nodes()
+                model = DiscreteBayesianNetwork(edges)
+                model.add_nodes_from(nodes)
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
