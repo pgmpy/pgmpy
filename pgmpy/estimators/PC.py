@@ -20,10 +20,10 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
+from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 
 
 class PC(BaseConstraintEstimator):
@@ -244,18 +244,34 @@ class PC(BaseConstraintEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
+        temporal_ordering = expert_knowledge.temporal_ordering
+        if not isinstance(temporal_ordering, dict) or not temporal_ordering:
+            raise ValueError(
+                "`temporal_ordering` must be provided in ExpertKnowledge and must be a non-empty dict."
+            )
+
+        missing_nodes = set(self.data.columns) - set(temporal_ordering.keys())
+        if missing_nodes:
+            raise ValueError(
+                f"`temporal_ordering` is missing order values for: {missing_nodes}"
+            )
+
+        if not all(isinstance(v, int) for v in temporal_ordering.values()):
+            raise TypeError("All values in `temporal_ordering` must be integers.")
+
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         # This calls the method inherited from BaseConstraintEstimator.
-        skel, separating_sets = super().build_skeleton(
+        skel, separating_sets = self.build_skeleton(
+            variant=variant,
             ci_test=ci_test,
             significance_level=significance_level,
-            variant=variant,
-            n_jobs=n_jobs,
+            max_cond_vars=max_cond_vars,
             expert_knowledge=expert_knowledge,
             enforce_expert_knowledge=enforce_expert_knowledge,
+            n_jobs=n_jobs,
             show_progress=show_progress,
             **kwargs,
         )

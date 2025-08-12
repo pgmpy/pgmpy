@@ -1,13 +1,13 @@
 import unittest
-from unittest.mock import Mock, patch
-import pandas as pd
-import networkx as nx
 from itertools import combinations
+from unittest.mock import Mock, patch
 
-from pgmpy.independencies import Independencies
+import networkx as nx
+import pandas as pd
+
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
-import pgmpy.estimators.CITests as CITests
+from pgmpy.independencies import Independencies
 
 
 class TestBaseConstraintEstimator(unittest.TestCase):
@@ -45,9 +45,6 @@ class TestBaseConstraintEstimator(unittest.TestCase):
         graph.add_edges_from([("A", "B"), ("B", "C"), ("C", "D")])
 
         sepsets = list(self.estimator._get_potential_sepsets("A", "B", {}, graph, 1))
-
-        # A has neighbor B only, B has neighbors A and C
-        # Excluding each other: A has no others, B has C
         expected_sepsets = [("C",)]
         self.assertEqual(sepsets, expected_sepsets)
 
