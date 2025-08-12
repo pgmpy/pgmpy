@@ -949,6 +949,11 @@ class TestPDAG(unittest.TestCase):
             undirected_ebunch=[("B", "A"), ("B", "D")],
             roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
         )
+        self.pdag_role_set = PDAG(
+            directed_ebunch=[("A", "C"), ("D", "C")],
+            undirected_ebunch=[("B", "A"), ("B", "D")],
+            roles={"exposure": ("A", "D"), "outcome": ("C")},
+        )
 
     def test_init_normal(self):
         # Mix directed and undirected
@@ -1175,6 +1180,24 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(
             sorted(pdag_copy.get_roles()), sorted(["adjustment", "exposure", "outcome"])
         )
+
+        pdag_copy = self.pdag_role_set.copy()
+        expected_edges = {
+            ("A", "C"),
+            ("D", "C"),
+            ("A", "B"),
+            ("B", "A"),
+            ("B", "D"),
+            ("D", "B"),
+        }
+        self.assertEqual(set(pdag_copy.edges()), expected_edges)
+        self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
+        self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
+        self.assertEqual(pdag_copy.undirected_edges, set([("B", "A"), ("B", "D")]))
+        self.assertEqual(pdag_copy.latents, set())
+        self.assertEqual(sorted(pdag_copy.get_role("exposure")), sorted(["A", "D"]))
+        self.assertEqual(pdag_copy.get_role("outcome"), ["C"])
+        self.assertEqual(sorted(pdag_copy.get_roles()), sorted(["exposure", "outcome"]))
 
     def test_pdag_to_dag(self):
         # PDAG no: 1  Possibility of creating a v-structure
