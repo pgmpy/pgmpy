@@ -1513,11 +1513,10 @@ class DAG(nx.DiGraph):
         """
         lavaan_statements = []
 
-        # Iterate over each node and create equation for non-root nodes
+        # Create regression equations for nodes with parents in the format "Y ~ X + Z"
         for node in sorted(self.nodes(), key=str):
             parents = self.get_parents(node)
-            if parents:  # If node has parents (i.e., not a root node)
-                # Convert node and parents to strings and sort parents
+            if parents:
                 node_str = str(node)
                 parent_strs = sorted([str(parent) for parent in parents], key=str)
                 parents_str = " + ".join(parent_strs)
@@ -1578,24 +1577,20 @@ class DAG(nx.DiGraph):
         """
         statements = []
 
-        # Add edges
+        # Create edge statements in "X -> Y" format and add isolated nodes
         if self.edges():
             edge_statements = []
-            # Sort by string representation to handle mixed types
             for parent, child in sorted(
                 self.edges(), key=lambda x: (str(x[0]), str(x[1]))
             ):
-                # Convert to string
                 parent_str = str(parent)
                 child_str = str(child)
                 edge_statements.append(f"{parent_str} -> {child_str}")
             statements.extend(edge_statements)
 
-        # Add isolated nodes (nodes with no neighbors)
         for node in sorted(nx.isolates(self), key=str):
             statements.append(str(node))
 
-        # Join statements and format - empty list produces empty string
         content = "\n".join(statements)
         if content:
             return f"dag {{\n{content}\n}}"
