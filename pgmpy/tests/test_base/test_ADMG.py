@@ -275,8 +275,7 @@ class TestADMGSeparation:
         assert not self.admg.is_mseparated("A", "B")
 
         # Test with conditional set
-        separated = self.admg.is_mseparated("A", "D", conditional_set={"C"})
-        assert separated is True
+        assert self.admg.is_mseparated("A", "D", conditional_set={"C"}) is True
         assert self.admg.is_mseparated("A", "D", conditional_set=set()) is False
         # This depends on the specific graph structure and d-separation rules
 
