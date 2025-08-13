@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import (
@@ -70,7 +71,7 @@ class TestStructureScore(unittest.TestCase):
         self.alarm_no_cpd.cpds = []
 
     def test_discrete_network(self):
-        for model in {self.alarm, self.alarm_no_cpd}:
+        for model in [self.alarm, self.alarm_no_cpd]:
             for scoring_method in {"k2", "bdeu", "bds", "bic-d"}:
                 metric = structure_score(self.alarm, self.data, scoring_method)
                 self.assertTrue(isinstance(metric, float))
@@ -116,6 +117,16 @@ class TestLogLikelihoodScore(unittest.TestCase):
         self.assertRaises(
             ValueError, log_likelihood_score, self.model, df_wrong_columns
         )
+
+
+class TestLogLikelihoodScoreTorch(TestLogLikelihoodScore):
+    def setUp(self):
+        self.original_backend = config.get_backend()
+        config.set_backend("torch")
+        super().setUp()
+
+    def tearDown(self):
+        config.set_backend(self.original_backend)
 
 
 class TestImpliedCI(unittest.TestCase):

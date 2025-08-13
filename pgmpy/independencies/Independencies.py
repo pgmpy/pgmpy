@@ -26,15 +26,15 @@ class Independencies(object):
     Creating an independencies object with one independence assertion:
     Random Variable X is independent of Y
 
-    >>> independencies = independencies(['X', 'Y'])
+    >>> independencies = independencies(["X", "Y"])
 
     Creating an independencies object with three conditional
     independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
-    >>> independencies = independencies(['X', 'Y', 'Z'],
-    ...             ['a', ['b', 'c'], 'd'],
-    ...             ['l', ['m', 'n'], 'o'])
+    >>> independencies = independencies(
+    ...     ["X", "Y", "Z"], ["a", ["b", "c"], "d"], ["l", ["m", "n"], "o"]
+    ... )
 
     Public Methods
     --------------
@@ -82,14 +82,14 @@ class Independencies(object):
         Examples
         --------
         >>> from pgmpy.independencies import Independencies, IndependenceAssertion
-        >>> ind = Independencies(['A', 'B', ['C', 'D']])
-        >>> IndependenceAssertion('A', 'B', ['C', 'D']) in ind
+        >>> ind = Independencies(["A", "B", ["C", "D"]])
+        >>> IndependenceAssertion("A", "B", ["C", "D"]) in ind
         True
         >>> # does not depend on variable order:
-        >>> IndependenceAssertion('B', 'A', ['D', 'C']) in ind
+        >>> IndependenceAssertion("B", "A", ["D", "C"]) in ind
         True
         >>> # but does not check entailment:
-        >>> IndependenceAssertion('X', 'Y', 'Z') in Independencies(['X', 'Y'])
+        >>> IndependenceAssertion("X", "Y", "Z") in Independencies(["X", "Y"])
         False
         """
         if not isinstance(assertion, IndependenceAssertion):
@@ -114,7 +114,7 @@ class Independencies(object):
         Examples
         --------
         >>> from pgmpy.independencies import Independencies
-        >>> independencies = Independencies(['X', 'Y', 'Z'])
+        >>> independencies = Independencies(["X", "Y", "Z"])
         >>> independencies.get_assertions()
         """
         return self.independencies
@@ -132,8 +132,8 @@ class Independencies(object):
         --------
         >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies()
-        >>> independencies.add_assertions(['X', 'Y', 'Z'])
-        >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
+        >>> independencies.add_assertions(["X", "Y", "Z"])
+        >>> independencies.add_assertions(["a", ["b", "c"], "d"])
         """
         for assertion in assertions:
             if isinstance(assertion, IndependenceAssertion):
@@ -161,7 +161,7 @@ class Independencies(object):
         Examples
         --------
         >>> from pgmpy.independencies import Independencies
-        >>> ind1 = Independencies(('A', ['B', 'C'], 'D'))
+        >>> ind1 = Independencies(("A", ["B", "C"], "D"))
         >>> ind1.closure()
         (A \u27c2 B | D, C)
         (A \u27c2 B, C | D)
@@ -169,7 +169,7 @@ class Independencies(object):
         (A \u27c2 C | D, B)
         (A \u27c2 C | D)
 
-        >>> ind2 = Independencies(('W', ['X', 'Y', 'Z']))
+        >>> ind2 = Independencies(("W", ["X", "Y", "Z"]))
         >>> ind2.closure()
         (W \u27c2 Y)
         (W \u27c2 Y | X)
@@ -286,8 +286,8 @@ class Independencies(object):
         Examples
         --------
         >>> from pgmpy.independencies import Independencies
-        >>> ind1 = Independencies([['A', 'B'], ['C', 'D'], 'E'])
-        >>> ind2 = Independencies(['A', 'C', 'E'])
+        >>> ind1 = Independencies([["A", "B"], ["C", "D"], "E"])
+        >>> ind2 = Independencies(["A", "C", "E"])
         >>> ind1.entails(ind2)
         True
         >>> ind2.entails(ind1)
@@ -316,9 +316,11 @@ class Independencies(object):
         Examples
         --------
         >>> from pgmpy.independencies import Independencies
-        >>> ind1 = Independencies(['X', ['Y', 'W'], 'Z'])
-        >>> ind2 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'])
-        >>> ind3 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'], ['X', 'Y', ['W','Z']])
+        >>> ind1 = Independencies(["X", ["Y", "W"], "Z"])
+        >>> ind2 = Independencies(["X", "Y", "Z"], ["X", "W", "Z"])
+        >>> ind3 = Independencies(
+        ...     ["X", "Y", "Z"], ["X", "W", "Z"], ["X", "Y", ["W", "Z"]]
+        ... )
         >>> ind1.is_equivalent(ind2)
         False
         >>> ind1.is_equivalent(ind3)
@@ -425,10 +427,10 @@ class IndependenceAssertion(object):
     Examples
     --------
     >>> from pgmpy.independencies import IndependenceAssertion
-    >>> assertion = IndependenceAssertion('U', 'X')
-    >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
-    >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
-    >>> assertion = IndependenceAssertion(['U', 'V'], ['X', 'Y'], ['Z', 'A'])
+    >>> assertion = IndependenceAssertion("U", "X")
+    >>> assertion = IndependenceAssertion("U", ["X", "Y"])
+    >>> assertion = IndependenceAssertion("U", ["X", "Y"], "Z")
+    >>> assertion = IndependenceAssertion(["U", "V"], ["X", "Y"], ["Z", "A"])
 
 
     Public Methods
@@ -510,7 +512,7 @@ class IndependenceAssertion(object):
         Examples
         --------
         >>> from pgmpy.independencies import IndependenceAssertion
-        >>> asser = IndependenceAssertion('X', 'Y', 'Z')
+        >>> asser = IndependenceAssertion("X", "Y", "Z")
         >>> asser.get_assertion()
         """
         return self.event1, self.event2, self.event3

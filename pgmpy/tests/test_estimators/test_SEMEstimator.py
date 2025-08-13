@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pgmpy import config
 from pgmpy.estimators import IVEstimator, SEMEstimator
