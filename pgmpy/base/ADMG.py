@@ -1,12 +1,13 @@
 import collections
-from typing import Hashable, Optional, Sequence
+
 import networkx as nx
 from networkx import MultiDiGraph
 
+from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.base.DAG import DAG as pgmpy_DAG
 
 
-class ADMG(MultiDiGraph):
+class ADMG(_GraphRolesMixin, MultiDiGraph):
     """
     A class representing an Acyclic Directed Mixed Graph (ADMG).
 
@@ -23,9 +24,21 @@ class ADMG(MultiDiGraph):
     latents : set of str, optional
         Set of latent variables in the graph. These are not directly represented as nodes
         but are used to indicate the presence of bidirected edges.
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
     """
 
-    def __init__(self, directed_ebunch=None, bidirected_ebunch=None, latents=None):
+    def __init__(
+        self,
+        directed_ebunch=None,
+        bidirected_ebunch=None,
+        latents=None,
+        roles=None,
+    ):
         super().__init__()
         # Using edge attributes to distinguish bidirected edges
         self.latents = set(latents) if latents else set()
@@ -35,11 +48,20 @@ class ADMG(MultiDiGraph):
         if bidirected_ebunch:
             self.add_bidirected_edges(bidirected_ebunch)
 
-    def add_node(self, node):
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        # set the roles to the vertices as networkx attributes
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
+
+    def add_node(self, node, **attr):
         """
         Adds a node to the ADMG from the MultiDiGraph class.
         """
-        super().add_node(node)
+        super().add_node(node, **attr)
 
     def add_nodes_from(self, nodes, **attr):
         """
