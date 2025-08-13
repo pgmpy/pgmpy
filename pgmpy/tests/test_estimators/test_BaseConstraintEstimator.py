@@ -5,6 +5,7 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.independencies import Independencies
 
@@ -39,16 +40,22 @@ class TestBaseConstraintEstimator(unittest.TestCase):
                 "D": [1, 1, 0, 0, 1, 1, 0, 0],
             }
         )
-        self.sample = Independencies(["A", "B"], ["C", "D"])
+        self.sample_indep = Independencies(["A", "B"], ["C", "D"])
         self.estimator = BaseConstraintEstimator(data=self.sample_data)
+        self.default_temporal_ordering = {}
+        for var in self.sample_data.columns:
+            self.default_temporal_ordering[var] = 0
 
     def test_init_with_data(self):
         estimator = BaseConstraintEstimator(data=self.sample_data)
         self.assertIsNotNone(estimator.data)
-        self.assertEqual(list(estimator.data.columns), ["A", "B", "C", "D"])
+        self.assertEqual(
+            list(estimator.data.columns),
+            ["A", "B", "C", "D"],
+        )
 
     def test_init_with_independencies(self):
-        estimator = BaseConstraintEstimator(independencies=self.sample)
+        estimator = BaseConstraintEstimator(independencies=self.sample_indep)
         self.assertIsNone(estimator.data)
         self.assertIsNotNone(estimator.independencies)
 
@@ -65,7 +72,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             self.estimator._get_potential_sepsets(
                 "A",
                 "B",
-                {},
+                self.default_temporal_ordering,
                 graph,
                 1,
             )
@@ -81,7 +88,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             self.estimator._get_potential_sepsets(
                 "A",
                 "B",
-                {},
+                self.default_temporal_ordering,
                 graph,
                 1,
             )
@@ -117,7 +124,7 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             self.estimator._get_potential_sepsets(
                 "A",
                 "B",
-                {},
+                self.default_temporal_ordering,
                 graph,
                 1,
             )
@@ -130,6 +137,9 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             max_cond_vars=1,
             variant="orig",
             show_progress=False,
+            expert_knowledge=ExpertKnowledge(
+                temporal_ordering=self.default_temporal_ordering
+            ),
         )
         expected_edges = len(list(combinations(self.sample_data.columns, 2)))
         self.assertEqual(len(graph.edges()), expected_edges)
@@ -141,6 +151,9 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             max_cond_vars=1,
             variant="stable",
             show_progress=False,
+            expert_knowledge=ExpertKnowledge(
+                temporal_ordering=self.default_temporal_ordering
+            ),
         )
         self.assertFalse(graph.has_edge("A", "B"))
         self.assertIn(frozenset(["A", "B"]), separating_sets)
@@ -151,12 +164,15 @@ class TestBaseConstraintEstimator(unittest.TestCase):
 
     def test_build_skeleton_max_cond_vars(self):
         graph, _ = self.estimator.build_skeleton(
-            ci_test=lambda *a, **k: False,
-            max_cond_vars=0,
             variant="orig",
+            ci_test=lambda *a, **k: False,
+            significance_level=0.01,
+            max_cond_vars=0,
             show_progress=False,
+            expert_knowledge=ExpertKnowledge(
+                temporal_ordering=self.default_temporal_ordering
+            ),
         )
-        # Just check it's a valid nx.Graph
         self.assertIsInstance(graph, nx.Graph)
 
     def test_build_skeleton_return_types(self):
@@ -165,6 +181,9 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             max_cond_vars=1,
             variant="parallel",
             show_progress=False,
+            expert_knowledge=ExpertKnowledge(
+                temporal_ordering=self.default_temporal_ordering
+            ),
         )
         graph, separating_sets = result
         self.assertIsInstance(graph, nx.Graph)
@@ -181,6 +200,9 @@ class TestBaseConstraintEstimator(unittest.TestCase):
             max_cond_vars=1,
             variant="orig",
             show_progress=False,
+            expert_knowledge=ExpertKnowledge(
+                temporal_ordering=self.default_temporal_ordering
+            ),
         )
         for edge_set, sep_set in separating_sets.items():
             self.assertIsInstance(edge_set, frozenset)
@@ -189,5 +211,6 @@ class TestBaseConstraintEstimator(unittest.TestCase):
 
     def tearDown(self):
         del self.sample_data
-        del self.sample_independencies
+        del self.sample_indep
         del self.estimator
+        del self.default_temporal_ordering
