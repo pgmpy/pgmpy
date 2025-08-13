@@ -804,7 +804,7 @@ class BeliefPropagation(Inference):
         self.sepset_beliefs[sepset_key] = sigma
 
     def _is_converged(self, operation):
-        """
+        r"""
         Checks whether the calibration has converged or not. At convergence
         the sepset belief would be precisely the sepset marginal.
 

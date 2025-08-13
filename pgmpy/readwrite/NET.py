@@ -4,6 +4,8 @@ from string import Template
 
 import numpy as np
 
+from pgmpy.global_vars import logger
+
 try:
     from pyparsing import (
         CharsNotIn,
@@ -271,7 +273,13 @@ class NETWriter(object):
             variable = cpd.variable
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
-                variable_states[variable].append(str(state))
+                state_str = str(state)
+                if "," in state_str:
+                    logger.warning(
+                        f"State name '{state_str}' for variable '{variable}' contains commas. "
+                        "This may cause issues when loading the file. Consider removing any special characters."
+                    )
+                variable_states[variable].append(state_str)
         return variable_states
 
     def get_parents(self):

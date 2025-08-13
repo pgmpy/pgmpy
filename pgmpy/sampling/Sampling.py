@@ -1,11 +1,9 @@
 import itertools
 from collections import namedtuple
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
-from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config

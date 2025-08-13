@@ -397,7 +397,7 @@ class FactorGraph(UndirectedGraph):
             return factors[0]
 
     def get_partition_function(self):
-        """
+        r"""
         Returns the partition function for a given undirected graph.
 
         A partition function is defined as
