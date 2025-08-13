@@ -27,8 +27,8 @@ from pgmpy.independencies import Independencies
 
 class BaseConstraintEstimator(StructureEstimator):
     """
-    Base class for constraint-based causal discovery algorithms like
-    PC and FCI.
+    Base class for constraint-based causal discovery algorithms like PC and
+    FCI.
 
     This class provides common methods for building the skeleton of a graph,
     handling separating sets, and managing the core logic of the
@@ -54,14 +54,13 @@ class BaseConstraintEstimator(StructureEstimator):
         constraint-based causal discovery algorithms.
 
         Constraint-based methods rely on statistical tests to detect whether
-        two variables are conditionally indpendent given a conditioning set.
+        two variables are conditionally independent given a conditioning set.
         These `independencies` form the backbone of causal graph structure
         learning by progressively removing the edges that are unsupported
         by the data.
         """
         super().__init__(data=data, independencies=independencies, **kwargs)
 
-    @staticmethod
     def _get_potential_sepsets(
         self,
         u: Hashable,
@@ -95,12 +94,20 @@ class BaseConstraintEstimator(StructureEstimator):
         Returns
         -------
         Collection[Tuple]
-            An iterable of tuples, where each tuple is a potential separating set.
+            An iterable of tuples, where each tuple is a potential separating
+            set.
         """
         separating_set_u = set(graph.neighbors(u))
         separating_set_v = set(graph.neighbors(v))
         separating_set_u.discard(v)
         separating_set_v.discard(u)
+
+        # If no temporal ordering provided, skip filtering
+        if not temporal_ordering:
+            return chain(
+                combinations(separating_set_u, lim_neighbors),
+                combinations(separating_set_v, lim_neighbors),
+            )
 
         try:
             max_order = min(temporal_ordering[u], temporal_ordering[v])
@@ -111,9 +118,15 @@ class BaseConstraintEstimator(StructureEstimator):
 
         for neigh in list(separating_set_u):
             if neigh not in temporal_ordering:
-                raise KeyError(f"Neighbor {neigh} not found in temporal_ordering.")
+                raise KeyError(f"{neigh} not found in temporal_ordering.")
             if temporal_ordering[neigh] > max_order:
                 separating_set_u.discard(neigh)
+
+        for neigh in list(separating_set_v):
+            if neigh not in temporal_ordering:
+                raise KeyError(f"{neigh} not found in temporal_ordering.")
+            if temporal_ordering[neigh] > max_order:
+                separating_set_v.discard(neigh)
 
         return chain(
             combinations(separating_set_u, lim_neighbors),
@@ -133,44 +146,32 @@ class BaseConstraintEstimator(StructureEstimator):
         **kwargs,
     ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
         """
-        Estimates a graph skeleton (UndirectedGraph) from a set of independencies
-        using (the first part of) the PC algorithm. The independencies can either be
-        provided as an instance of the `Independencies`-class or by passing a
-        decision function that decides any conditional independency assertion.
-        Returns a tuple `(skeleton, separating_sets)`.
+        Estimates a graph skeleton (UndirectedGraph) from a set of
+        independencies using (the first part of) the PC algorithm. The
+        independencies can either be provided as an instance of the
+        `Independencies`-class or by passing a decision function that decides
+        any conditional independency assertion. Returns a tuple `(skeleton,
+        separating_sets)`.
 
-        If an Independencies-instance is passed, the contained IndependenceAssertions
-        have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-separations of some Bayesian network or
-        if the independence assertions are closed under the semi-graphoid axioms.
-        Otherwise, the procedure may fail to identify the correct structure.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        skeleton: UndirectedGraph
-            An estimate for the undirected graph skeleton of the BN underlying the data.
-
-        separating_sets: dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes them
-            conditionally independent. (needed for edge orientation procedures)
+        If an Independencies-instance is passed, the contained
+        IndependenceAssertions have to admit a faithful BN representation.
+        This is the case if they are obtained as a set of d-separations of
+        some Bayesian network or if the independence assertions are closed
+        under the semi-graphoid axioms. Otherwise, the procedure may fail to
+        identify the correct structure.
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-            Section 3.4.2.1 (page 85), Algorithm 3.3
+        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2,
+            Algorithm 10.2 (page 550)
+            http://www.cs.technion.ac.il/~dang/books/
+            Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        [2] Koller & Friedman, Probabilistic Graphical Models - Principles
+            and Techniques, 2009, Section 3.4.2.1 (page 85), Algorithm 3.3
         """
-        # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=None
-        )  # this is called twice, before on PC estimate
+        ci_test = get_callable_ci_test(ci_test, full=True, data=None)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -178,67 +179,63 @@ class BaseConstraintEstimator(StructureEstimator):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
 
+        # Default temporal ordering if missing/empty
+        temporal_ordering = expert_knowledge.temporal_ordering
+        if not temporal_ordering:
+            temporal_ordering = {var: 0 for var in self.variables}
+
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
-        # Step 1: Initialize a fully connected undirected graph
+        # Step 1: Initialize fully connected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
-        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
-        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while not all(
-            [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
-        ):
-            # Step 2: Iterate over the edges and find a conditioning set of
-            # size `lim_neighbors` which makes u and v independent.
+        x = len(list(graph.neighbors))
+        while not all(x(var) < lim_neighbors for var in self.variables):
             if variant == "orig":
-                for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
+                for u, v in list(graph.edges()):
+                    if (
+                        enforce_expert_knowledge is False
+                        or (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in self._get_potential_sepsets(
+                        for sep_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
-                            # If a conditioning set exists remove the edge, store the separating set
-                            # and move on to finding conditioning set for next edge.
                             if ci_test(
                                 u,
                                 v,
-                                separating_set,
+                                sep_set,
                                 data=self.data,
                                 independencies=self.independencies,
                                 significance_level=significance_level,
                                 **kwargs,
                             ):
-                                separating_sets[frozenset((u, v))] = separating_set
+                                separating_sets[frozenset((u, v))] = sep_set
                                 graph.remove_edge(u, v)
                                 break
 
             elif variant == "stable":
-                # In case of stable, precompute neighbors as this is the stable algorithm.
-                for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
+                for u, v in list(graph.edges()):
+                    if (
+                        enforce_expert_knowledge is False
+                        or (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
-                            # If a conditioning set exists remove the edge, store the
-                            # separating set and move on to finding conditioning set for next edge.
                             if ci_test(
                                 u,
                                 v,
-                                separating_set,
+                                sep_set,
                                 data=self.data,
                                 independencies=self.independencies,
                                 significance_level=significance_level,
                                 **kwargs,
                             ):
-                                separating_sets[frozenset((u, v))] = separating_set
+                                separating_sets[frozenset((u, v))] = sep_set
                                 graph.remove_edge(u, v)
                                 break
 
@@ -251,19 +248,21 @@ class BaseConstraintEstimator(StructureEstimator):
                         if ci_test(
                             u,
                             v,
-                            separating_set,
+                            sep_set,
                             data=self.data,
                             independencies=self.independencies,
                             significance_level=significance_level,
                             **kwargs,
                         ):
-                            return (u, v), separating_set
+                            return (u, v), sep_set
 
                 results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False)
-                    or ((u, v) not in expert_knowledge.required_edges)
+                    for (u, v) in list(graph.edges())
+                    if (
+                        enforce_expert_knowledge is False
+                        or (u, v) not in expert_knowledge.required_edges
+                    )
                 )
                 for result in results:
                     if result is not None:
@@ -273,14 +272,14 @@ class BaseConstraintEstimator(StructureEstimator):
 
             else:
                 raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
+                    "variant must be one of (orig, stable, parallel). "
+                    f"Got: {variant}"
                 )
 
-            # Step 3: After iterating over all the edges, expand the search space by increasing the size
-            # of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
                 logger.info(
-                    "Reached maximum number of allowed conditional variables. Exiting"
+                    "Reached maximum number of allowed conditional "
+                    "variables. Exiting"
                 )
                 break
             lim_neighbors += 1
@@ -288,7 +287,7 @@ class BaseConstraintEstimator(StructureEstimator):
             if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
                 pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
+                    f"Working for n conditional variables: " f"{lim_neighbors}"
                 )
 
         if show_progress and config.SHOW_PROGRESS:
