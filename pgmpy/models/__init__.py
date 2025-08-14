@@ -9,6 +9,7 @@ from .JunctionTree import JunctionTree
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .MarkovChain import MarkovChain
 from .MarkovNetwork import MarkovNetwork
+from .NaiveBackdoorRegressor import NaiveBackdoorRegressor
 from .NaiveBayes import NaiveBayes
 from .SEM import SEM, SEMAlg, SEMGraph
 
@@ -28,4 +29,5 @@ __all__ = [
     "SEMAlg",
     "SEM",
     "FunctionalBayesianNetwork",
+    "NaiveBackdoorRegressor",
 ]
