@@ -1,4 +1,5 @@
 import collections
+from typing import Hashable, Iterable, Sequence
 
 import networkx as nx
 from networkx import MultiDiGraph
@@ -57,13 +58,33 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
 
-    def add_node(self, node, **kwargs):
+    def add_node(
+        self,
+        node: Hashable,
+        latent: bool = False,
+        **kwargs,
+    ):
         """
         Adds a node to the ADMG from the MultiDiGraph class.
+
+        Parameters
+        ----------
+        node : str, int, or any hashable python object.
+            The node to add to the graph.
+
+        latent: boolean (default: False)
+            Specifies whether the variable is latent or not.
         """
+        if latent:
+            self.latents.add(node)
+
         super().add_node(node, **kwargs)
 
-    def add_nodes_from(self, nodes, **kwargs):
+    def add_nodes_from(
+        self,
+        nodes: Iterable[Hashable],
+        latent: Sequence[bool] | bool = False,
+    ):
         """
         Adds multiple nodes to the graph.
 
@@ -71,8 +92,18 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ----------
         nodes : iterable
             An iterable of nodes to add.
+
+        latent: bool, list, tuple (default=False)
+            A container of boolean. The value at index i tells whether the
+            node at index i is latent or not.
         """
-        return super().add_nodes_from(nodes, **kwargs)
+        nodes = list(nodes)
+
+        if isinstance(latent, bool):
+            latent = [latent] * len(nodes)
+
+        for index in range(len(nodes)):
+            self.add_node(node=nodes[index], latents=latent[index])
 
     def add_directed_edges(self, ebunch):
         """
