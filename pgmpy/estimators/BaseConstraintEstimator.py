@@ -224,7 +224,7 @@ class BaseConstraintEstimator(StructureEstimator):
                         enforce_expert_knowledge is False
                         or (u, v) not in expert_knowledge.required_edges
                     ):
-                        for separating_set in self._get_potential_sepsets(
+                        for sep_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
                             if ci_test(
