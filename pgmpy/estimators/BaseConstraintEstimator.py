@@ -193,8 +193,8 @@ class BaseConstraintEstimator(StructureEstimator):
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
-        neighbor_counts = (len(graph.neighbors(v)) for v in self.variables)
-        while not all(count < lim_neighbors for count in neighbor_counts):
+        neighbors = (len(list(graph.neighbors(v))) for v in self.variables)
+        while not all(count < lim_neighbors for count in neighbors):
 
             if variant == "orig":
                 for u, v in list(graph.edges()):
