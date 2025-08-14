@@ -57,13 +57,13 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
 
-    def add_node(self, node, **attr):
+    def add_node(self, node, **kwargs):
         """
         Adds a node to the ADMG from the MultiDiGraph class.
         """
-        super().add_node(node, **attr)
+        super().add_node(node, **kwargs)
 
-    def add_nodes_from(self, nodes, **attr):
+    def add_nodes_from(self, nodes, **kwargs):
         """
         Adds multiple nodes to the graph.
 
@@ -72,7 +72,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         nodes : iterable
             An iterable of nodes to add.
         """
-        return super().add_nodes_from(nodes, **attr)
+        return super().add_nodes_from(nodes, **kwargs)
 
     def add_directed_edges(self, ebunch):
         """
@@ -111,7 +111,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             super().add_edge(u, v, type="bidirected")
             super().add_edge(v, u, type="bidirected")
 
-    def add_edge(self, u, v, **attr):
+    def add_edge(self, u, v, **kwargs):
         """
         Raises an error if trying to add a regular edge.
         """
