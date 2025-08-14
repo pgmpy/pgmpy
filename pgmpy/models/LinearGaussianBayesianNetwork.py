@@ -254,7 +254,7 @@ class LinearGaussianBayesianNetwork(DAG):
             cpd = self.get_cpds(node=var)
             for i, evidence_var in enumerate(cpd.evidence):
                 B[var_to_index[evidence_var], var_to_index[var]] = cpd.beta[i + 1]
-            omega[var_to_index[var], var_to_index[var]] = cpd.std
+            omega[var_to_index[var], var_to_index[var]] = (cpd.std)**2
 
         # Step 3: Compute the implied covariance matrix
         identity_matrix = np.eye(n_nodes)
@@ -581,6 +581,9 @@ class LinearGaussianBayesianNetwork(DAG):
         data: pd.DataFrame
             A pandas DataFrame with the data to which to fit the model
             structure. All variables must be continuous valued.
+        method: str
+            The method to use for estimating the parameters. It can be either maximum
+            likelihood estimation (mle) or unbiased estimation (unbiased).
 
         Returns
         -------
@@ -608,39 +611,41 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"Following variables are missing in the data: {missing_vars}"
             )
 
+        if method not in {"mle", "unbiased"}:
+            raise ValueError("method must be one of {'mle', 'unbiased'}")
+
         # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
         for node in self.nodes():
             parents = self.get_parents(node)
 
-            # Step 2.1: If node doesn't have any parents (i.e. root node),
-            #           simply take the mean and variance.
             if len(parents) == 0:
+                # Root node: use ddof=0 for MLE, ddof=1 for unbiased
+                ddof = 0 if method == "mle" else 1
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
                         beta=[data.loc[:, node].mean()],
-                        std=data.loc[:, node].var(),
+                        std=data.loc[:, node].std(ddof=ddof),
                     )
                 )
-
-            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
-            #           Compute error variance using predicted values.
             else:
+                # Regression: use ddof=0 for MLE, ddof=p for unbiased
                 lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
-                error_var = (data.loc[:, node] - lm.predict(data.loc[:, parents])).var()
+                residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
+                p = 1 + len(parents)  # intercept + coefficients
+                ddof = 0 if method == "mle" else p
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
                         beta=np.append([lm.intercept_], lm.coef_),
-                        std=error_var,
+                        std=residuals.std(ddof=ddof),
                         evidence=parents,
                     )
                 )
 
         # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
-
         return self
 
     def predict(
@@ -693,6 +698,7 @@ class LinearGaussianBayesianNetwork(DAG):
         mu_b = np.delete(mu, missing_indexes)
 
         cov_aa = cov[missing_indexes, missing_indexes]
+        # breakpoint()
         cov_bb = np.delete(
             np.delete(cov, missing_indexes, axis=0), missing_indexes, axis=1
         )

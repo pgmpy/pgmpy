@@ -141,13 +141,13 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_simulate(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df_cont = self.model.simulate(n_samples=10000, seed=42)
+        df_cont = self.model.simulate(n_samples=1000000, seed=42)
 
         # Same model in terms of equations
         rng = np.random.default_rng(seed=42)
-        x1 = 1 + rng.normal(0, 2, 10000)
-        x2 = -5 + 0.5 * x1 + rng.normal(0, 2, 10000)
-        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+        x1 = 1 + rng.normal(0, 4, 1000000)
+        x2 = -5 + 0.5 * x1 + rng.normal(0, 4, 1000000)
+        x3 = 4 + -1 * x2 + rng.normal(0, 3, 1000000)
         df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         np_test.assert_array_almost_equal(df_cont.mean(), df_equ.mean(), decimal=1)
@@ -179,12 +179,12 @@ class TestLGBNMethods(unittest.TestCase):
     def test_simulate_with_intervention(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         do = {"x2": 1.0}
-        df = self.model.simulate(n_samples=10000, seed=42, do=do)
+        df = self.model.simulate(n_samples=1000_000, seed=42, do=do)
 
         rng = np.random.default_rng(seed=42)
-        x1 = 1 + rng.normal(0, 2, 10000)
-        x2 = np.full(10000, 1.0)
-        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+        x1 = 1 + rng.normal(0, 4, 1000_000)
+        x2 = np.full(1000_000, 1.0)
+        x3 = 4 + -1 * x2 + rng.normal(0, 3, 1000_000)
         df_equ = pd.DataFrame({"x1": x1, "x3": x3, "x2": do["x2"]})
 
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
@@ -197,13 +197,13 @@ class TestLGBNMethods(unittest.TestCase):
         virtual_intervention = [new_cpd]
 
         df = self.model.simulate(
-            n_samples=10000, seed=42, virtual_intervention=virtual_intervention
+            n_samples=100_000, seed=42, virtual_intervention=virtual_intervention
         )
 
         rng = np.random.default_rng(seed=42)
-        x1 = 1 + rng.normal(0, 2, 10000)
-        x2 = 1 + rng.normal(0, np.sqrt(2), 10000)
-        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+        x1 = 1 + rng.normal(0, 4, 100_000)
+        x2 = 1 + rng.normal(0, 2, 100_000)
+        x3 = 4 + -1 * x2 + rng.normal(0, 3, 100_000)
 
         df_equiv = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
@@ -283,6 +283,7 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(1e5), seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        # breakpoint()
         new_model.fit(df, method="mle")
 
         for node in self.model.nodes():
@@ -331,6 +332,7 @@ class TestLGBNMethods(unittest.TestCase):
         variables, mu, cov = self.model.predict(df)
         self.assertEqual(variables, ["x2"])
         self.assertEqual(mu.shape, (10, 1))
+        # breakpoint()
         self.assertTrue(
             np.allclose(
                 mu.round(2).squeeze(),
