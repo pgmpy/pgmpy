@@ -51,6 +51,28 @@ class BaseIdentification:
         if causal_graph.is_valid_causal_structure():
             return self._identify(causal_graph)
 
+    def validate(self, causal_graph):
+        """
+        Validate the input causal graph for identification.
+
+        This method checks if the variable roles assigned in the `causal_graph`
+        are appropriate for identification. For example, given a causal graph
+        with exposure, outcome, and adjustment roles, it verifies that the
+        adjustment set is valid for the given exposure and outcome.
+
+        Parameters
+        ----------
+        causal_graph : DAG, PDAG, ADMG, MAG, or PAG object
+            The input causal graph to validate.
+
+        Returns
+        -------
+        bool:
+            True if the graph is valid for identification; False otherwise.
+        """
+        if causal_graph.is_valid_causal_structure():
+            return self._validate(causal_graph)
+
     def __call__(self, causal_graph):
         """Alias for the `identify` method"""
         return self.identify(causal_graph)

@@ -91,6 +91,40 @@ class BackdoorIdentification(BaseIdentification):
         list: A list of adjustment sets that satisfy the backdoor criterion.
         """
         backdoor_graph = self.get_proper_backdoor_graph(causal_graph, inplace=False)
-        return backdoor_graph.minimal_dseparator(
-            causal_graph.get_roles("exposure"), causal_graph.get_roles("outcome")
-        )
+        if self.variant == "minimal":
+            return backdoor_graph.minimal_dseparator(
+                causal_graph.get_roles("exposure"), causal_graph.get_roles("outcome")
+            )
+        if self.variant == "all":
+            # TODO
+            pass
+
+    def _validate(self, causal_graph):
+        """
+        Validate the causal graph for backdoor identification.
+
+        Given a `causal_graph` with variable roles `exposure`, `outcome`, and
+        `adjustment` defined, this method checks if the given `adjustment` set
+        is valid and satisfies the backdoor criterion.
+
+        Parameters
+        ----------
+        causal_graph: pgmpy.models.DAG
+            The causal graph to validate.
+
+        Returns
+        -------
+        bool:
+            True if the `adjustment` set is valid, False otherwise.
+        """
+        Z = causal_graph.get_roles("adjustment")
+
+        observed = causal_graph.get_roles("exposure") + Z
+        parents_d_sep = []
+        for p in self.dag.predecessors(causal_graph.get_roles("exposure")):
+            parents_d_sep.append(
+                not self.dag.is_dconnected(
+                    p, causal_graph.get_roles("outcome"), observed=observed
+                )
+            )
+        return all(parents_d_sep)
