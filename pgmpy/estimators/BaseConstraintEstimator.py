@@ -243,7 +243,7 @@ class BaseConstraintEstimator(StructureEstimator):
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
-                    for separating_set in self._get_potential_sepsets(
+                    for sep_set in self._get_potential_sepsets(
                         u, v, temporal_ordering, graph, lim_neighbors
                     ):
                         if ci_test(
