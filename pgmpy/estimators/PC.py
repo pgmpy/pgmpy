@@ -14,15 +14,11 @@ from typing import (
 
 import networkx as nx
 import pandas as pd
-from joblib import Parallel, delayed
-from tqdm.auto import tqdm
 
-from pgmpy import config
 from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
-from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
 
@@ -244,15 +240,14 @@ class PC(BaseConstraintEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
-        temporal_ordering = expert_knowledge.temporal_ordering    
+        temporal_ordering = expert_knowledge.temporal_ordering
         if temporal_ordering is None:
             temporal_ordering = dict()
-            
         if not isinstance(temporal_ordering, dict) or not temporal_ordering:
             raise ValueError(
                 "`temporal_ordering` must be provided in ExpertKnowledge and must be a non-empty dict."
             )
-            
+
         if temporal_ordering:
             missing_nodes = set(self.data.columns) - set(temporal_ordering.keys())
             if missing_nodes:
