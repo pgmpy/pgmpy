@@ -244,20 +244,24 @@ class PC(BaseConstraintEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
-        temporal_ordering = expert_knowledge.temporal_ordering
+        temporal_ordering = expert_knowledge.temporal_ordering    
+        if temporal_ordering is None:
+            temporal_ordering = dict()
+            
         if not isinstance(temporal_ordering, dict) or not temporal_ordering:
             raise ValueError(
                 "`temporal_ordering` must be provided in ExpertKnowledge and must be a non-empty dict."
             )
+            
+        if temporal_ordering:
+            missing_nodes = set(self.data.columns) - set(temporal_ordering.keys())
+            if missing_nodes:
+                raise ValueError(
+                    f"`temporal_ordering` is missing order values for: {missing_nodes}"
+                )
 
-        missing_nodes = set(self.data.columns) - set(temporal_ordering.keys())
-        if missing_nodes:
-            raise ValueError(
-                f"`temporal_ordering` is missing order values for: {missing_nodes}"
-            )
-
-        if not all(isinstance(v, int) for v in temporal_ordering.values()):
-            raise TypeError("All values in `temporal_ordering` must be integers.")
+            if not all(isinstance(v, int) for v in temporal_ordering.values()):
+                raise TypeError("All values in `temporal_ordering` must be integers.")
 
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
