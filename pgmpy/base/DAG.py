@@ -1538,6 +1538,134 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return agraph
 
+    def to_lavaan(self) -> str:
+        """
+        Convert the DAG to lavaan syntax representation.
+
+        The lavaan syntax represents structural equations where each line
+        shows a dependent variable regressed on its parents using the ~ operator.
+        Isolated nodes (nodes with no parents) are not included in the output.
+
+        Returns
+        -------
+        str
+            String representation of the DAG in lavaan syntax format.
+            Each line represents a regression equation where the dependent
+            variable is regressed on its parents.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_lavaan())
+        Y ~ X + Z
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_lavaan())
+        B ~ A
+        C ~ B
+
+        >>> # Empty DAG returns empty string
+        >>> empty_dag = DAG()
+        >>> print(empty_dag.to_lavaan())
+        ""
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/lavaan context if needed.
+
+        References
+        ----------
+        lavaan syntax: http://lavaan.ugent.be/tutorial/syntax1.html
+        """
+        lavaan_statements = []
+
+        # Create regression equations for nodes with parents in the format "Y ~ X + Z"
+        for node in sorted(self.nodes(), key=str):
+            parents = self.get_parents(node)
+            if parents:
+                node_str = str(node)
+                parent_strs = sorted([str(parent) for parent in parents], key=str)
+                parents_str = " + ".join(parent_strs)
+                lavaan_statements.append(f"{node_str} ~ {parents_str}")
+
+        return "\n".join(lavaan_statements)
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the DAG to dagitty syntax representation.
+
+        The dagitty syntax represents directed acyclic graphs using
+        the dag { statements } format with -> for directed edges.
+        Isolated nodes (nodes with no edges) are included as standalone nodes.
+
+        Returns
+        -------
+        str
+            String representation of the DAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_dagitty())
+        dag {
+        X -> Y
+        Z -> Y
+        }
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_dagitty())
+        dag {
+        A -> B
+        B -> C
+        }
+
+        >>> # DAG with isolated node
+        >>> dag3 = DAG()
+        >>> dag3.add_nodes_from(["A", "B"])
+        >>> dag3.add_edge("A", "B")
+        >>> dag3.add_node("C")  # Isolated node
+        >>> print(dag3.to_dagitty())
+        dag {
+        A -> B
+        C
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/dagitty context if needed.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+
+        # Create edge statements in "X -> Y" format and add isolated nodes
+        if self.edges():
+            edge_statements = []
+            for parent, child in sorted(
+                self.edges(), key=lambda x: (str(x[0]), str(x[1]))
+            ):
+                parent_str = str(parent)
+                child_str = str(child)
+                edge_statements.append(f"{parent_str} -> {child_str}")
+            statements.extend(edge_statements)
+
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        content = "\n".join(statements)
+        if content:
+            return f"dag {{\n{content}\n}}"
+        else:
+            return "dag {\n}"
+
     def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
         """
         Estimates the CPD for each variable based on a given data set.
@@ -1775,7 +1903,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return strengths
 
 
-class PDAG(nx.DiGraph):
+class PDAG(_GraphRolesMixin, nx.DiGraph):
     """
     Class for representing PDAGs (also known as CPDAG). PDAGs are the equivalence classes of
     DAGs and contain both directed and undirected edges.
@@ -1789,6 +1917,7 @@ class PDAG(nx.DiGraph):
         directed_ebunch: list[tuple[Hashable, Hashable]] = [],
         undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
         latents: Iterable[Hashable] = [],
+        roles=None,
     ):
         """
         Initializes a PDAG class.
@@ -1803,6 +1932,13 @@ class PDAG(nx.DiGraph):
 
         latents: list, array-like
             List of nodes which are latent variables.
+
+        roles : dict, optional (default: None)
+            A dictionary mapping roles to node names.
+            The keys are roles, and the values are role names (strings or iterables of str).
+            If provided, this will automatically assign roles to the nodes in the graph.
+            Passing a key-value pair via ``roles`` is equivalent to calling
+            ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
         Returns
         -------
@@ -1820,6 +1956,14 @@ class PDAG(nx.DiGraph):
                 set([(Y, X) for (X, Y) in self.undirected_edges])
             )
         )
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
 
     def all_neighbors(self, node):
         """
@@ -1925,6 +2069,9 @@ class PDAG(nx.DiGraph):
             latents=self.latents,
         )
         pdag.add_nodes_from(self.nodes())
+
+        for role, vars in self.get_role_dict().items():
+            pdag.with_role(role=role, variables=vars, inplace=True)
         return pdag
 
     def _directed_graph(self):
@@ -2194,3 +2341,29 @@ class PDAG(nx.DiGraph):
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
         """
         return nx.nx_agraph.to_agraph(self)
+
+    def __eq__(self, other):
+        """
+        Checks if two PDAGs are equal. Two PDAGs are considered equal if they
+        have the same nodes, edges, latent variables, and variable roles.
+
+        Parameters
+        ----------
+        other: PDAG object
+            The other PDAG to compare with.
+
+        Returns
+        -------
+        bool
+            True if the PDAGs are equal, False otherwise.
+        """
+        if not isinstance(other, PDAG):
+            return False
+
+        return (
+            set(self.nodes()) == set(other.nodes())
+            and set(self.directed_edges) == set(other.directed_edges)
+            and set(self.undirected_edges) == set(other.undirected_edges)
+            and self.latents == other.latents
+            and self.get_role_dict() == other.get_role_dict()
+        )
