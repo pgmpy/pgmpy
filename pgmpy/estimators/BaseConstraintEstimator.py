@@ -177,7 +177,8 @@ class BaseConstraintEstimator(StructureEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            cols = self.data.columns if self.data is not None else list(self.variables)
+            expert_knowledge.limit_search_space(cols)
 
         # Default temporal ordering if missing/empty
         temporal_ordering = expert_knowledge.temporal_ordering

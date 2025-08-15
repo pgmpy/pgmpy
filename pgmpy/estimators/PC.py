@@ -242,16 +242,16 @@ class PC(BaseConstraintEstimator):
 
         temporal_ordering = expert_knowledge.temporal_ordering
 
+        if not temporal_ordering:
+            temporal_ordering = {var: 0 for var in self.variables}
+
         if not isinstance(temporal_ordering, dict) or not temporal_ordering:
             raise ValueError(
                 "`temporal_ordering` must be provided in ExpertKnowledge and must be a non-empty dict."
             )
 
-        # if missing or empty, defaulting all the variables to order 0
-        if temporal_ordering is None:
-            temporal_ordering = {var: 0 for var in self.variables}
-
-        missing_nodes = set(self.data.columns) - set(temporal_ordering.keys())
+        vars_ = list(self.variables)
+        missing_nodes = set(vars_) - set(temporal_ordering.keys())
         if missing_nodes:
             raise ValueError(
                 f"`temporal_ordering` is missing order values for: {missing_nodes}"
@@ -263,7 +263,8 @@ class PC(BaseConstraintEstimator):
         expert_knowledge.temporal_ordering = temporal_ordering
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            cols = self.data.columns if self.data is not None else list(self.variables)
+            expert_knowledge.limit_search_space(cols)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         # This calls the method inherited from BaseConstraintEstimator.
