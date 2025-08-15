@@ -21,8 +21,9 @@ class BackdoorIdentification(BaseIdentification):
         ----------
         variant: str
             The variant of backdoor identification to use. Default is 'minimal'.
-            - 'minimal': Returns the smallest adjustment set.
             - 'all': Returns all adjustment sets that satisfy the backdoor criterion.
+            - 'minimal': Returns the smallest adjustment set.
+            - 'minimal_variance': Returns the adjustment set for which estimators achieve minimal variance.
         """
         self.variant = variant
 
