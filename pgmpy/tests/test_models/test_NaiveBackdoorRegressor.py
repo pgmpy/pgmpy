@@ -34,27 +34,16 @@ def test_sklearn_compatibility(estimator, check):
 def test_basic_functionality_with_adjustment():
     """Test basic fit and predict functionality with synthetic causal data."""
 
-    # Synthetic causal data: Z -> X, Z -> Y, X -> Y
-    np.random.seed(42)
-    n_samples = 1000
-
-    # Generate confounder Z
-    Z = np.random.normal(0, 1, n_samples)
-
-    # Generate exposure X influenced by Z
-    X = 0.5 * Z + np.random.normal(0, 0.5, n_samples)
-
-    # Generate outcome Y influenced by both X and Z (confounded relationship)
-    Y = 2.0 * X + 1.5 * Z + np.random.normal(0, 0.3, n_samples)
-
-    data = pd.DataFrame(
-        {
-            "X": X,  # exposure
-            "Y": Y,  # note: outcome (this will be y in fit, not used in X)
-            "Z": Z,  # adjustment/confounder
-        }
+    # Create LinearGaussianBayesianNetwork using dagitty with specif coeff
+    lgbn = DAG.from_dagitty(
+        "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
     )
 
+    # Generate synthetic data
+    np.random.seed(42)
+    data = lgbn.simulate(1000)
+
+    # Create DAG with roles for the NaiveBackdoorRegressor
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": "Z"},
@@ -71,7 +60,7 @@ def test_basic_functionality_with_adjustment():
         regressor = NaiveBackdoorRegressor(dag=dag, base_estimator=base_est)
 
         # Split data
-        train_size = int(0.7 * n_samples)
+        train_size = int(0.7 * len(data))
         # Features should include exposure + adjustment variables
         X_train = data[["X", "Z"]].iloc[:train_size]
         y_train = data["Y"].iloc[:train_size]  # outcome
@@ -97,21 +86,20 @@ def test_basic_functionality_with_adjustment():
 def test_no_adjustment_variables():
     """Test case where there are no adjustment variables (no confounders)."""
 
-    dag = DAG(ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y"})
+    # simple X -> Y relationship
+    lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
-    # Generate simple causal data without confounders
+    # Generate synthetic data
     np.random.seed(42)
-    n_samples = 100
-    X = np.random.normal(0, 1, n_samples)
-    Y = 2.0 * X + np.random.normal(0, 0.3, n_samples)
+    data = lgbn.simulate(100)
 
-    data = pd.DataFrame({"X": X, "Y": Y})
+    dag = DAG(ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y"})
 
     regressor = NaiveBackdoorRegressor(dag=dag)
     regressor.fit(data[["X"]], data["Y"])
     predictions = regressor.predict(data[["X"]])
 
-    assert len(predictions) == n_samples
+    assert len(predictions) == len(data)
     assert regressor.adjustment_vars_ == []
     assert list(regressor.get_feature_names_out()) == ["X"]
     assert isinstance(regressor.estimator_, LinearRegression)  # default estimator
@@ -120,26 +108,26 @@ def test_no_adjustment_variables():
 def test_multiple_adjustment_variables():
     """Test with multiple adjustment variables."""
 
+    # complex causal structure
+    lgbn = DAG.from_dagitty(
+        "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
+    )
+
+    # Generate synthetic data
+    np.random.seed(42)
+    data = lgbn.simulate(200)
+
     # DAG with multiple confounders: U1 -> X, U1 -> Y, U2 -> X, U2 -> Y, X -> Y
     dag = DAG(
         ebunch=[("U1", "X"), ("U1", "Y"), ("U2", "X"), ("U2", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["U1", "U2"]},
     )
 
-    np.random.seed(42)
-    n_samples = 200
-    U1 = np.random.normal(0, 1, n_samples)
-    U2 = np.random.normal(0, 1, n_samples)
-    X = 0.3 * U1 + 0.4 * U2 + np.random.normal(0, 0.5, n_samples)
-    Y = 1.5 * X + 0.6 * U1 + 0.7 * U2 + np.random.normal(0, 0.3, n_samples)
-
-    data = pd.DataFrame({"X": X, "Y": Y, "U1": U1, "U2": U2})
-
     regressor = NaiveBackdoorRegressor(dag=dag, base_estimator=LinearRegression())
     regressor.fit(data[["X", "U1", "U2"]], data["Y"])
     predictions = regressor.predict(data[["X", "U1", "U2"]])
 
-    assert len(predictions) == n_samples
+    assert len(predictions) == len(data)
     assert regressor.exposure_var_ == "X"
     assert set(regressor.adjustment_vars_) == {"U1", "U2"}
     assert set(regressor.get_feature_names_out()) == {"X", "U1", "U2"}
@@ -210,12 +198,18 @@ def test_numpy_array_input():
 def test_sample_weight_support():
     """Test that sample_weight parameter is properly passed to base estimator."""
 
+    # for realistic causal relationship
+    lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
+
+    # small dataset
+    np.random.seed(42)
+    data = lgbn.simulate(4)
+
     dag = DAG(ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y"})
 
     # estimator that supports sample_weight
     regressor = NaiveBackdoorRegressor(dag=dag, base_estimator=LinearRegression())
 
-    data = pd.DataFrame({"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8]})
     sample_weights = np.array([1, 1, 2, 2])  # Give more weight to last two samples
 
     regressor.fit(data[["X"]], data["Y"], sample_weight=sample_weights)
