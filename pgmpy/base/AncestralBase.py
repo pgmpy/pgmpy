@@ -32,7 +32,6 @@ class AncestralBase(nx.DiGraph, DAG):
             Example: [('A', 'B', 'tail', 'arrowhead')] for A -> B.
         """
         super().__init__()
-        # Use NetworkX for the underlying graph structure.
         self.graph = nx.DiGraph()
 
         if ebunch:
@@ -64,10 +63,6 @@ class AncestralBase(nx.DiGraph, DAG):
         }:
             raise ValueError("Marks must be one of 'tail', 'arrowhead', or 'circle'.")
 
-        # self.add_node(u)
-        # self.add_node(v)
-
-        # Store the mark for the edge u -> v
         self.graph.add_edge(u, v, mark=v_mark)
 
         # For symmetric edges, we must also add the reverse edge
@@ -155,8 +150,6 @@ class AncestralBase(nx.DiGraph, DAG):
             self.graph.has_edge(u, v)
             and self.graph.get_edge_data(u, v).get("mark") == "tail"
         )
-
-    ## get all the relationahips between the nodes ##
 
     # Only for directed edegs for now
     def get_parents(self, node):
