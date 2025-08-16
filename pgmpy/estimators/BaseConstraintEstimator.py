@@ -20,6 +20,7 @@ from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 
+
 class BaseConstraintEstimator(StructureEstimator):
     """
     Base class for all constraint-based structure learning algorithms.
@@ -49,9 +50,10 @@ class BaseConstraintEstimator(StructureEstimator):
     **kwargs:
         Additional keyword arguments passed to `StructureEstimator`.
     """
+
     def __init__(self, data=None, independencies=None, **kwargs):
         super().__init__(data, independencies, **kwargs)
-    
+
     def build_skeleton(
         self,
         variant: str = "stable",
@@ -227,7 +229,7 @@ class BaseConstraintEstimator(StructureEstimator):
             pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
         return graph, separating_sets
-    
+
     @staticmethod
     def _get_potential_sepsets(
         u: Hashable,
