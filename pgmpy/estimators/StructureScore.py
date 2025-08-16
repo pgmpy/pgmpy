@@ -682,7 +682,52 @@ class BDs(BDeu):
         return score
 
 
-class BIC(StructureScore):
+class LogLikeliHood(StructureScore):
+    """
+    Class for calculating Log-Likelihoods based on StructureScore
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+    """
+
+    def __init__(self, data, **kwargs):
+        super(LogLikeliHood, self).__init__(data, **kwargs)
+
+    def _log_likelihood(self, variable, parents):
+
+        var_states = self.state_names[variable]
+        var_cardinality = len(var_states)
+        parents = list(parents)
+        state_counts = self.state_counts(variable, parents, reindex=False)
+        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
+
+        counts = np.asarray(state_counts)
+        log_likelihoods = np.zeros_like(counts, dtype=float)
+
+        # Compute the log-counts
+        np.log(counts, out=log_likelihoods, where=counts > 0)
+
+        # Compute the log-conditional sample size
+        log_conditionals = np.sum(counts, axis=0, dtype=float)
+        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
+
+        # Compute the log-likelihoods
+        log_likelihoods -= log_conditionals
+        log_likelihoods *= counts
+
+        return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
+
+    def local_score(self, variable, parents):
+        ll, num_parents_states, var_cardinality = self._log_likelihood(
+            variable=variable, parents=parents
+        )
+        return ll
+
+
+class BIC(LogLikeliHood):
     """
     BIC (Bayesian Information Criterion) structure score for discrete Bayesian networks.
 
@@ -763,34 +808,16 @@ class BIC(StructureScore):
             the data contains unsupported types (e.g., continuous values).
         """
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
-        parents = list(parents)
-        state_counts = self.state_counts(variable, parents, reindex=False)
         sample_size = len(self.data)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
-
-        counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=float)
-
-        # Compute the log-counts
-        np.log(counts, out=log_likelihoods, where=counts > 0)
-
-        # Compute the log-conditional sample size
-        log_conditionals = np.sum(counts, axis=0, dtype=float)
-        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
-
-        # Compute the log-likelihoods
-        log_likelihoods -= log_conditionals
-        log_likelihoods *= counts
-
-        score = np.sum(log_likelihoods)
-        score -= 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
+        ll, num_parents_states, var_cardinality = self._log_likelihood(
+            variable=variable, parents=parents
+        )
+        score = ll - 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
 
         return score
 
 
-class AIC(StructureScore):
+class AIC(LogLikeliHood):
     """
     AIC (Akaike Information Criterion) structure score for discrete Bayesian networks.
 
@@ -874,28 +901,10 @@ class AIC(StructureScore):
             the data contains unsupported types (e.g., continuous values).
         """
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
-        parents = list(parents)
-        state_counts = self.state_counts(variable, parents, reindex=False)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
-
-        counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=float)
-
-        # Compute the log-counts
-        np.log(counts, out=log_likelihoods, where=counts > 0)
-
-        # Compute the log-conditional sample size
-        log_conditionals = np.sum(counts, axis=0, dtype=float)
-        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
-
-        # Compute the log-likelihoods
-        log_likelihoods -= log_conditionals
-        log_likelihoods *= counts
-
-        score = np.sum(log_likelihoods)
-        score -= num_parents_states * (var_cardinality - 1)
+        ll, num_parents_states, var_cardinality = self._log_likelihood(
+            variable=variable, parents=parents
+        )
+        score = ll - num_parents_states * (var_cardinality - 1)
 
         return score
 
