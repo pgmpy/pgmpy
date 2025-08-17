@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from pgmpy.base.AncestralBase import Ancestralbase
+from pgmpy.base.AncestralBase import AncestralBase
 
 
-class MAG(Ancestralbase):
+class MAG(AncestralBase):
     """
     Maximal Ancestral Graph (MAG) implementation extending AncestralGraph.
     Implements MAG-specific methods from:
@@ -13,19 +13,7 @@ class MAG(Ancestralbase):
     """
 
     def is_visible_edge(self, u, v):
-        """
-        Checks if the directed edge u -> v is visible in the MAG.
 
-        From Definition 8:
-        u -> v is visible if there exists a vertex C not adjacent to v such that:
-            (a) C *-> u, OR
-            (b) there is a collider path from C to u that is into u and
-                every vertex on the path is a parent of v.
-
-        Returns
-        -------
-        bool
-        """
         if not self.is_directed(u, v):
             return False
 
@@ -115,6 +103,7 @@ class MAG(Ancestralbase):
         ----------
         u, v : hashable
             Endpoints to check for an inducing path.
+
         L : set, optional
             Subset of vertices relative to which the path is evaluated.
             Defaults to empty set.
