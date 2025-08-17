@@ -25,7 +25,7 @@ class AncestralBase(nx.DiGraph, DAG):
 
         Parameters
         ----------
-        ebunch : list-like, optional
+        ebunch : list, optional
             A container of edges. Each edge must be a tuple of the form
             (u, v, u_mark, v_mark), where u and v are the nodes, and u_mark
             and v_mark are the marks at the endpoints of u and v respectively.
@@ -45,17 +45,16 @@ class AncestralBase(nx.DiGraph, DAG):
         ----------
         u : hashable
             The starting node of the edge.
+
         v : hashable
             The ending node of the edge.
+
         u_mark : str
             The mark at the 'u' endpoint. Must be one of 'tail', 'arrowhead', 'circle'.
+
         v_mark : str
             The mark at the 'v' endpoint. Must be one of 'tail', 'arrowhead', 'circle'.
         """
-        # A single 'add_edge' call might not be enough for bidirected or undirected edges,
-        # as DiGraph treats u->v and v->u as separate edges.
-        # We store the mark at the 'v' end for the u->v edge.
-        # For symmetric edges (bidirected, undirected, etc.), we need to add two edges.
         if u_mark not in {"tail", "arrowhead", "circle"} or v_mark not in {
             "tail",
             "arrowhead",
@@ -65,42 +64,23 @@ class AncestralBase(nx.DiGraph, DAG):
 
         self.graph.add_edge(u, v, mark=v_mark)
 
-        # For symmetric edges, we must also add the reverse edge
-        # and store its mark.
         if self._is_symmetric_edge(u_mark, v_mark):
             self.graph.add_edge(v, u, mark=u_mark)
         elif self.graph.has_edge(v, u):
-            # If a reverse edge already exists, and the new edge is not symmetric,
-            # this is an invalid operation for this implementation's logic.
-            # A more robust implementation might handle mixed edge types between nodes.
             pass
 
     def add_edges_from(self, ebunch):
-        """
-        Adds multiple edges from an iterable container.
-
-        Parameters
-        ----------
-        ebunch : list-like
-            A container of edges, where each edge is a tuple of the form
-            (u, v, u_mark, v_mark).
-        """
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
 
     def _is_symmetric_edge(self, u_mark, v_mark):
-        """
-        Helper function to determine if an edge type is symmetric.
-        This includes bidirected (<->) and undirected (o-o) edges.
-        """
+
         return (u_mark == "arrowhead" and v_mark == "arrowhead") or (
             u_mark == "circle" and v_mark == "circle"
         )
 
     def is_directed(self, u, v):
-        """
-        Checks if there is a directed edge from u to v (u -> v).
-        """
+
         if self.graph.has_edge(u, v) and self.graph.has_edge(v, u):
             return (
                 self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
@@ -113,10 +93,7 @@ class AncestralBase(nx.DiGraph, DAG):
             )
 
     def is_bidirected(self, u, v):
-        """
-        Checks if there is a bidirected edge between u and v (u <-> v).
-        This is a symmetric relationship.
-        """
+
         return (
             self.graph.has_edge(u, v)
             and self.graph.has_edge(v, u)
@@ -125,49 +102,28 @@ class AncestralBase(nx.DiGraph, DAG):
         )
 
     def has_arrowhead_at(self, u, v):
-        """
-        Checks if the edge between u and v has an arrowhead at the v endpoint.
-        """
+
         return (
             self.graph.has_edge(u, v)
             and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
         )
 
     def has_circle_at(self, u, v):
-        """
-        Checks if the edge between u and v has a circle at the v endpoint.
-        """
+
         return (
             self.graph.has_edge(u, v)
             and self.graph.get_edge_data(u, v).get("mark") == "circle"
         )
 
     def has_tail_at(self, u, v):
-        """
-        Checks if the edge between u and v has a tail at the v endpoint.
-        """
+
         return (
             self.graph.has_edge(u, v)
             and self.graph.get_edge_data(u, v).get("mark") == "tail"
         )
 
-    # Only for directed edegs for now
     def get_parents(self, node):
-        """
-        Returns a set of all parents of the given node.
 
-        A node 'p' is a parent of 'c' if there is a directed edge p -> c.
-
-        Parameters
-        ----------
-        node : hashable
-            The node for which to find parents.
-
-        Returns
-        -------
-        set
-            A set of all parents of `node`.
-        """
         parents = set()
         for neighbor in self.graph.predecessors(node):
             if (
@@ -178,21 +134,7 @@ class AncestralBase(nx.DiGraph, DAG):
         return parents
 
     def get_children(self, node):
-        """
-        Returns a set of all children of the given node.
 
-        A node 'c' is a child of 'p' if there is a directed edge p -> c.
-
-        Parameters
-        ----------
-        node : hashable
-            The node for which to find children.
-
-        Returns
-        -------
-        set
-            A set of all children of `node`.
-        """
         children = set()
         for neighbor in self.graph.adj[node]:
             if (
@@ -202,23 +144,8 @@ class AncestralBase(nx.DiGraph, DAG):
                 children.add(neighbor)
         return children
 
-    # A method only for bidirected edges
     def get_spouses(self, node):
-        """
-        Returns a set of all spouses of the given node.
 
-        A node 's' is a spouse of 'u' if there is a bidirected edge u <-> s.
-
-        Parameters
-        ----------
-        node : hashable
-            The node for which to find spouses.
-
-        Returns
-        -------
-        set
-            A set of all spouses of `node`.
-        """
         spouses = set()
         for neighbor in self.graph.adj[node]:
             if (
@@ -228,24 +155,7 @@ class AncestralBase(nx.DiGraph, DAG):
                 spouses.add(neighbor)
         return spouses
 
-    # Implementation logic only works for directed edges for now
     def get_ancestors(self, node):
-        """
-        Returns a set of all ancestors of the given node.
-
-        An ancestor of a node 'n' is any node from which there is a directed
-        path ending at 'n'.
-
-        Parameters
-        ----------
-        node : hashable
-            The node for which to find ancestors.
-
-        Returns
-        -------
-        set
-            A set of all ancestors of `node`.
-        """
 
         ancestors = set()
         queue = list(self.get_parents(node))
@@ -260,24 +170,8 @@ class AncestralBase(nx.DiGraph, DAG):
                     queue.append(parent)
         return ancestors
 
-    # Implementation logic only works for directed edges for now
     def get_descendants(self, node):
-        """
-        Returns a set of all descendants of the given node.
 
-        A descendant of a node 'n' is any node to which there is a directed
-        path starting from 'n'.
-
-        Parameters
-        ----------
-        node : hashable
-            The node for which to find descendants.
-
-        Returns
-        -------
-        set
-            A set of all descendants of `node`.
-        """
         descendants = set()
         queue = list(self.get_children(node))
         visited = set(queue)
