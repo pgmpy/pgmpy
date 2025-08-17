@@ -1,5 +1,4 @@
 import pytest
-import networkx as nx
 
 from pgmpy.base.ADMG import ADMG
 
@@ -13,6 +12,7 @@ class TestADMGInitialization:
         assert len(admg.nodes) == 0
         assert len(admg.edges) == 0
         assert len(admg.latents) == 0
+        assert len(admg.get_roles()) == 0
 
     def test_initialization_with_directed_edges(self):
         """Test initialization with directed edges."""
@@ -43,6 +43,44 @@ class TestADMGInitialization:
         admg = ADMG(latents=latents)
 
         assert admg.latents == {"L1", "L2"}
+
+    def test_initialization_with_roles(self):
+        """Test initialization with roles variables."""
+        directed_edges = [("A", "C"), ("B", "C")]
+        roles = {"exposure": ("A", "B"), "outcome": ["C"]}
+        admg = ADMG(directed_ebunch=directed_edges, roles=roles)
+
+        assert set(admg.get_role("exposure")) == set(["A", "B"])
+        assert admg.get_role("outcome") == ["C"]
+        assert set(admg.get_roles()) == set(["exposure", "outcome"])
+        assert admg.get_role_dict() == {"exposure": ["A", "B"], "outcome": ["C"]}
+
+
+class TestADMGNodeOperations:
+    """Test node addition and validation."""
+
+    def test_add_node(self):
+        """Test adding a single node."""
+        admg = ADMG()
+        admg.add_node("A")
+        admg.add_node("B")
+        admg.add_node("C", latent=True)
+        admg.add_node("D", latent=True)
+
+        assert set(admg.nodes()) == {"A", "B", "C", "D"}
+        assert set(admg.latents) == {"C", "D"}
+
+    def test_add_nodes_from(self):
+        """Test adding multiple nodes at once."""
+        admg = ADMG()
+        admg.add_nodes_from(["A", "B"])
+        admg.add_nodes_from(set(["C", "D"]))
+        admg.add_nodes_from(["E", "F"], latent=[False, True])
+        admg.add_nodes_from(["G", "H"], latent=True)
+        admg.add_nodes_from(set(["I", "J"]), latent=True)
+
+        assert set(admg.nodes()) == {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+        assert set(admg.latents) == {"F", "G", "H", "I", "J"}
 
 
 class TestADMGEdgeOperations:
@@ -264,7 +302,8 @@ class TestADMGSeparation:
         assert not self.admg.is_mseparated("A", "B")
 
         # Test with conditional set
-        separated = self.admg.is_mseparated("A", "D", conditional_set={"C"})
+        assert self.admg.is_mseparated("A", "D", conditional_set={"C"}) is True
+        assert self.admg.is_mseparated("A", "D", conditional_set=set()) is False
         # This depends on the specific graph structure and d-separation rules
 
     def test_is_m_connected(self):
