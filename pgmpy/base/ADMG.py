@@ -103,7 +103,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             latent = [latent] * len(nodes)
 
         for index in range(len(nodes)):
-            self.add_node(node=nodes[index], latents=latent[index])
+            self.add_node(node=nodes[index], latent=latent[index])
 
     def add_directed_edges(self, ebunch):
         """
