@@ -24,29 +24,30 @@ class AncestralBase:
         }:
             raise ValueError("Marks must be one of 'tail', 'arrowhead', or 'circle'.")
 
-        self.graph.add_edge(u, v, mark=v_mark)
+        self.graph.add_edge(u, v, mark=u_mark)
+        self.graph.add_edge(v, u, mark=v_mark)
 
-        if self._is_symmetric_edge(u_mark, v_mark):
-            self.graph.add_edge(v, u, mark=u_mark)
+        # if self._is_symmetric_edge(u_mark, v_mark):
+        #     self.graph.add_edge(v, u, mark=u_mark)
 
     def add_edges_from(self, ebunch):
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
 
-    def _is_symmetric_edge(self, u_mark, v_mark):
-        return (u_mark == "arrowhead" and v_mark == "arrowhead") or (
-            u_mark == "circle" and v_mark == "circle"
-        )
+    # def _is_symmetric_edge(self, u_mark, v_mark):
+    #     return (u_mark == "arrowhead" and v_mark == "arrowhead") or (
+    #         u_mark == "circle" and v_mark == "circle"
+    #     )
+
+    # Edge Query methods
 
     def is_directed(self, u, v):
-        if not self.graph.has_edge(u, v):
-            return False
-        if self.graph.has_edge(v, u):
-            return (
-                self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
-                and self.graph.get_edge_data(v, u).get("mark") == "tail"
-            )
-        return self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
+        return (
+            self.graph.has_edge(u, v)
+            and self.graph.has_edge(v, u)
+            and self.graph.get_edge_data(u, v).get("mark") == "tail"
+            and self.graph.get_edge_data(v, u).get("mark") == "arrowhead"
+        )
 
     def is_bidirected(self, u, v):
         return (
@@ -55,6 +56,8 @@ class AncestralBase:
             and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
             and self.graph.get_edge_data(v, u).get("mark") == "arrowhead"
         )
+
+    # Mark Query methods
 
     def has_arrowhead_at(self, u, v):
         return (
@@ -74,6 +77,8 @@ class AncestralBase:
             and self.graph.get_edge_data(u, v).get("mark") == "tail"
         )
 
+    # Relationship methods
+
     def get_parents(self, node):
         if node not in self.graph:
             return set()
@@ -82,8 +87,8 @@ class AncestralBase:
             if (
                 self.graph.has_edge(neighbor, node)
                 and self.graph.has_edge(node, neighbor)
-                and self.graph.get_edge_data(neighbor, node).get("mark") == "arrowhead"
-                and self.graph.get_edge_data(node, neighbor).get("mark") == "tail"
+                and self.graph.get_edge_data(neighbor, node).get("mark") == "tail"
+                and self.graph.get_edge_data(node, neighbor).get("mark") == "arrowhead"
             ):
                 parents.add(neighbor)
         return parents
@@ -96,8 +101,8 @@ class AncestralBase:
             if (
                 self.graph.has_edge(node, neighbor)
                 and self.graph.has_edge(neighbor, node)
-                and self.graph.get_edge_data(node, neighbor).get("mark") == "arrowhead"
-                and self.graph.get_edge_data(neighbor, node).get("mark") == "tail"
+                and self.graph.get_edge_data(node, neighbor).get("mark") == "tail"
+                and self.graph.get_edge_data(neighbor, node).get("mark") == "arrowhead"
             ):
                 children.add(neighbor)
         return children

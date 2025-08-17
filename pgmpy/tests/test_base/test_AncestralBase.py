@@ -73,12 +73,12 @@ class TestAncestralBase(unittest.TestCase):
         self.assertTrue(self.graph.graph.has_edge("C", "D"))
         self.assertTrue(self.graph.graph.has_edge("D", "C"))
 
-    def test_is_symmetric_edge(self):
-        self.assertTrue(self.graph._is_symmetric_edge("arrowhead", "arrowhead"))
-        self.assertTrue(self.graph._is_symmetric_edge("circle", "circle"))
-        self.assertFalse(self.graph._is_symmetric_edge("tail", "arrowhead"))
-        self.assertFalse(self.graph._is_symmetric_edge("circle", "arrowhead"))
-        self.assertFalse(self.graph._is_symmetric_edge("tail", "circle"))
+    # def test_is_symmetric_edge(self):
+    #     self.assertTrue(self.graph._is_symmetric_edge("arrowhead", "arrowhead"))
+    #     self.assertTrue(self.graph._is_symmetric_edge("circle", "circle"))
+    #     self.assertFalse(self.graph._is_symmetric_edge("tail", "arrowhead"))
+    #     self.assertFalse(self.graph._is_symmetric_edge("circle", "arrowhead"))
+    #     self.assertFalse(self.graph._is_symmetric_edge("tail", "circle"))
 
     def test_is_directed_simple(self):
         self.graph.add_edge("A", "B", "tail", "arrowhead")
