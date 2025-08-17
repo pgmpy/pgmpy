@@ -56,6 +56,33 @@ class TestADMGInitialization:
         assert admg.get_role_dict() == {"exposure": ["A", "B"], "outcome": ["C"]}
 
 
+class TestADMGNodeOperations:
+    """Test node addition and validation."""
+
+    def test_add_node(self):
+        """Test adding a single node."""
+        admg = ADMG()
+        admg.add_node("A")
+        admg.add_node("B")
+        admg.add_node("C", latent=True)
+        admg.add_node("D", latent=True)
+
+        assert set(admg.nodes()) == {"A", "B", "C", "D"}
+        assert set(admg.latents) == {"C", "D"}
+
+    def test_add_nodes_from(self):
+        """Test adding multiple nodes at once."""
+        admg = ADMG()
+        admg.add_nodes_from(["A", "B"])
+        admg.add_nodes_from(set(["C", "D"]))
+        admg.add_nodes_from(["E", "F"], latent=[False, True])
+        admg.add_nodes_from(["G", "H"], latent=True)
+        admg.add_nodes_from(set(["I", "J"]), latent=True)
+
+        assert set(admg.nodes()) == {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+        assert set(admg.latents) == {"F", "G", "H", "I", "J"}
+
+
 class TestADMGEdgeOperations:
     """Test edge addition and validation."""
 
