@@ -81,6 +81,76 @@ class BaseConstraintEstimator(StructureEstimator):
 
         Parameters
         ----------
+        variant: str (one of "orig", "stable", "parallel")
+            The variant of PC algorithm to run.
+                "orig": The original PC algorithm. Might not give the same
+                        results in different runs but does less independence
+                        tests compared to stable.
+                "stable": Gives the same result in every run but does needs to
+                        do more statistical independence tests.
+                "parallel": Parallel version of PC Stable. Can run on multiple
+                        cores with the same result on each run.
+
+        ci_test: str or fun
+            The statistical test to use for testing conditional independence in
+            the dataset. If `str` values should be one of:
+                "independence_match": If using this option, an additional parameter
+                        `independencies` must be specified.
+                "chi_square": Uses the Chi-Square independence test. This works
+                        only for discrete datasets.
+                "pearsonr": Uses the partial correlation based on pearson
+                        correlation coefficient to test independence. This works
+                        only for continuous datasets.
+                "g_sq": G-test. Works only for discrete datasets.
+                "log_likelihood": Log-likelihood test. Works only for discrete dataset.
+                "freeman_tuckey": Freeman Tuckey test. Works only for discrete dataset.
+                "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
+                "neyman": Neyman test. Works only for discrete variables.
+                "cressie_read": Cressie Read test. Works only for discrete variables.
+
+        significance_level: float (default: 0.01)
+            The statistical tests use this value to compare with the p-value of
+            the test to decide whether the tested variables are independent or
+            not. Different tests can treat this parameter differently:
+                1. Chi-Square: If p-value > significance_level, it assumes that the
+                    independence condition satisfied in the data.
+                2. pearsonr: If p-value > significance_level, it assumes that the
+                    independence condition satisfied in the data.
+
+        max_cond_vars: int (default: 5)
+            The maximum number of variables to condition on while testing
+            independence.
+
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes required/forbidden edges in the final graph, temporal
+            information about the variables etc. Please refer
+            pgmpy.estimators.ExpertKnowledge class for more details.
+
+        enforce_expert_knowledge: boolean (default: False)
+            If True, the algorithm modifies the search space according to the
+            edges specified in expert knowledge object. This implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, there will
+                    be no edge between u and v.
+                2. For every edge (u, v) specified in `required_edges`, one of the
+                    following would be present in the final model: u -> v, u <-
+                    v, or u - v (if CPDAG is returned).
+
+            If False, the algorithm attempts to make the edge orientations as
+            specified by expert knowledge after learning the skeleton. This
+            implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, the final
+                    graph would have either v <- u or no edge except if u -> v is part
+                    of a collider structure in the learned skeleton.
+                2. For every edge (u, v) specified in `required_edges`, the final graph
+                    would either have u -> v or no edge except if v <- u is part of a
+                    collider structure in the learned skeleton.
+
+        n_jobs: int (default: -1)
+            The number of jobs to run in parallel.
+
+        show_progress: bool (default: True)
+            If True, shows a progress bar while running the algorithm.
 
         Returns
         -------

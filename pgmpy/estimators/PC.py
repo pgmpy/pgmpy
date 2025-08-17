@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-from itertools import chain, combinations, permutations
+from itertools import permutations
 from typing import (
     Callable,
     Dict,
@@ -161,6 +159,10 @@ class PC(BaseConstraintEstimator):
                 2. pearsonr: If p-value > significance_level, it assumes that the
                     independence condition satisfied in the data.
 
+        max_cond_vars: int (default: 5)
+            The maximum number of variables to condition on while testing
+            independence.
+
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
             Expert knowledge to be used with the algorithm. Expert knowledge
             includes required/forbidden edges in the final graph, temporal
@@ -185,6 +187,12 @@ class PC(BaseConstraintEstimator):
                 2. For every edge (u, v) specified in `required_edges`, the final graph
                     would either have u -> v or no edge except if v <- u is part of a
                     collider structure in the learned skeleton.
+
+        n_jobs: int (default: -1)
+            The number of jobs to run in parallel.
+
+        show_progress: bool (default: True)
+            If True, shows a progress bar while running the algorithm.
 
         Returns
         -------
