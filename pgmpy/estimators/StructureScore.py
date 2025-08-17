@@ -19,21 +19,22 @@ def get_scoring_method(
 ) -> Tuple["StructureScore", "StructureScore"]:
     available_methods = {
         "continuous": {
+            "bic-g": BICGauss,
             "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
-            "bic-g": BICGauss,
         },
         "discrete": {
+            "bic-d": BIC,
+            "aic-d": AIC,
             "k2": K2,
             "bdeu": BDeu,
             "bds": BDs,
-            "bic-d": BIC,
-            "aic-d": AIC,
+            "ll-d": LogLikeliHood,
         },
         "mixed": {
-            "ll-cg": LogLikelihoodCondGauss,
-            "aic-cg": AICCondGauss,
             "bic-cg": BICCondGauss,
+            "aic-cg": AICCondGauss,
+            "ll-cg": LogLikelihoodCondGauss,
         },
     }
     all_available_methods = [
@@ -394,9 +395,11 @@ class BDeu(StructureScore):
         DataFrame where each column represents a discrete variable.
         Missing values should be set as `numpy.nan`.
         Note: pandas converts such columns to dtype float.
+
     equivalent_sample_size : int, optional (default: 10)
         The equivalent (imaginary) sample size for the Dirichlet hyperparameters.
         The score is sensitive to this value; experiment with different values as needed.
+
     state_names : dict, optional
         Dictionary mapping variable names to their discrete states.
         If not specified, unique values observed in the data are used as possible states.
@@ -684,7 +687,11 @@ class BDs(BDeu):
 
 class LogLikeliHood(StructureScore):
     """
-    Class for calculating Log-Likelihoods based on StructureScore
+    Log-likelihood structure score for Discrete Bayesian networks.
+
+    This score evaluates the fit of a Discrete Bayesian network structure
+    by computing the (unpenalized) log-likelihood of the observed data given the model.
+
     Parameters
     ----------
     data: pandas DataFrame object
