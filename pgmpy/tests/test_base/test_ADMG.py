@@ -1,6 +1,7 @@
 import pytest
 
 from pgmpy.base.ADMG import ADMG
+from pgmpy.base.DAG import DAG
 
 
 class TestADMGInitialization:
@@ -246,6 +247,9 @@ class TestADMGGraphOperations:
         self.admg = ADMG()
         self.admg.add_directed_edges([("A", "B"), ("B", "C"), ("D", "E")])
         self.admg.add_bidirected_edges([("A", "D"), ("B", "E")])
+        self.admg.add_node("F", latent=True)
+        self.admg.with_role(role="exposure", variables={"A"}, inplace=True)
+        self.admg.with_role(role="outcome", variables={"C"}, inplace=True)
 
     def test_get_ancestral_graph(self):
         """Test getting ancestral graph of a subset of nodes."""
@@ -285,6 +289,75 @@ class TestADMGGraphOperations:
         from pgmpy.base.DAG import DAG as pgmpy_DAG
 
         assert isinstance(dag, pgmpy_DAG)
+
+    def test_admg_equality(self):
+        """
+        Test the `__eq__` method
+        which compares both graph structure and variable-role mappings to allow comparison of two models.
+        """
+        # ToDo:
+        # If issue #2306 is resolved,
+        # `admg` should be deleted.
+        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
+        admg = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["F"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+
+        # Case1: When the models are the same
+        other1 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["F"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case2: When the models differ
+        other2 = DAG(
+            ebunch=[("A", "C"), ("D", "C")],
+            latents=["B"],
+            roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
+        )
+        # Case3: When the directed_ebunch variables differ between models
+        other3 = ADMG(
+            directed_ebunch=[("A", "C"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["F"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case4: When the bidirected_ebunch variables differ between models
+        other4 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "E"), ("B", "E")],
+            latents=["F"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case5: When the latents variables differ between models
+        other5 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["G"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case6: When the roles variables differ between models
+        other6 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["F"],
+            roles={"exposure": ["A"], "adjustment": "D", "outcome": ["C"]},
+        )
+
+        # ToDo:
+        # If issue #2306 is resolved,
+        # `admg.__eq__(other_number)` should be changed to `self.admg.__eq__(other_number)`.
+        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
+        assert admg.__eq__(other1) is True
+        assert admg.__eq__(other2) is False
+        assert admg.__eq__(other3) is False
+        assert admg.__eq__(other4) is False
+        assert admg.__eq__(other5) is False
+        assert admg.__eq__(other6) is False
 
 
 class TestADMGSeparation:
