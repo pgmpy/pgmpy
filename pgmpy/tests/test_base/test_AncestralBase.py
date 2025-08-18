@@ -26,7 +26,7 @@ class TestAncestralBase(unittest.TestCase):
         self.assertTrue(graph.graph.has_edge("B", "C"))
 
     def test_add_edge_directed(self):
-        self.graph.add_edge("A", "B", "tail", "arrowhead")
+        self.graph.add_edge("A", "B", "arrowhead", "tail")
         self.assertTrue(self.graph.graph.has_edge("A", "B"))
         self.assertEqual(self.graph.graph.get_edge_data("A", "B")["mark"], "arrowhead")
         self.assertFalse(self.graph.graph.has_edge("B", "A"))
@@ -87,8 +87,8 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_is_directed_with_reverse_edge(self):
         """Test when both directions exist."""
-        self.graph.graph.add_edge("A", "B", mark="arrowhead")
-        self.graph.graph.add_edge("B", "A", mark="tail")
+        self.graph.graph.add_edge("A", "B", mark="tail")
+        self.graph.graph.add_edge("B", "A", mark="arrowhead")
         self.assertTrue(self.graph.is_directed("A", "B"))
         self.assertFalse(self.graph.is_directed("B", "A"))
 
@@ -117,7 +117,7 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_has_arrowhead_at(self):
         """Test has_arrowhead_at method."""
-        self.graph.add_edge("A", "B", "tail", "arrowhead")
+        self.graph.add_edge("A", "B", "arrowhead", "tail")
         self.assertTrue(self.graph.has_arrowhead_at("A", "B"))
         self.assertFalse(self.graph.has_arrowhead_at("B", "A"))
 
