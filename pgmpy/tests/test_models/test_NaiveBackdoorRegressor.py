@@ -16,13 +16,11 @@ from pgmpy.prediction.NaiveBackdoorRegressor import NaiveBackdoorRegressor
 
 def make_estimator():
     """Create a valid estimator for sklearn compatibility tests."""
-
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
     )
-
-    return NaiveBackdoorRegressor(causal_graph=dag, base_estimator=DummyRegressor())
+    return NaiveBackdoorRegressor(causal_graph=dag, base_estimator=LinearRegression())
 
 
 @parametrize_with_checks([make_estimator()])
@@ -94,7 +92,12 @@ def test_no_adjustment_variables():
     data = lgbn.simulate(100)
 
     dag = DAG(
-        ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y", "adjustment": []}
+        ebunch=[("X", "Y")],
+        roles={
+            "exposure": "X",
+            "outcome": "Y",
+            "adjustment": [],
+        },  # Explicit empty adjustment
     )
 
     regressor = NaiveBackdoorRegressor(causal_graph=dag)
@@ -210,7 +213,12 @@ def test_sample_weight_support():
     data = lgbn.simulate(4)
 
     dag = DAG(
-        ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y", "adjustment": []}
+        ebunch=[("X", "Y")],
+        roles={
+            "exposure": "X",
+            "outcome": "Y",
+            "adjustment": [],
+        },  # Explicit empty adjustment
     )
 
     # estimator that supports sample_weight
