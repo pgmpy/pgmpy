@@ -86,10 +86,10 @@ class AncestralBase(nx.DiGraph):
         return neighbors
 
     def get_parents(self, node):
-        return self.get_neighbors(node, v_type=">")
+        return self.get_neighbors(node, u_type=">")
 
     def get_children(self, node):
-        return self.get_neighbors(node, u_type=">")
+        return self.get_neighbors(node, v_type=">")
 
     def get_spouses(self, node):
         return self.get_neighbors(node, u_type=">", v_type=">")
@@ -101,6 +101,7 @@ class AncestralBase(nx.DiGraph):
             if current not in ancestors:
                 ancestors.add(current)
                 queue.extend(self.get_parents(current))
+        ancestors.discard(node)
         return ancestors
 
     def get_descendants(self, node):
@@ -110,4 +111,5 @@ class AncestralBase(nx.DiGraph):
             if current not in descendants:
                 descendants.add(current)
                 queue.extend(self.get_children(current))
+        descendants.discard(node)
         return descendants
