@@ -181,7 +181,8 @@ class TestFBNMethods(unittest.TestCase):
         self.assertTrue(np.all(samples["lognormal"] > 0))
         self.assertTrue(np.all(samples["gamma"] > 0))
 
-    def test_svi_fit_normal(self):
+    def test_svi_fit_predict_normal(self):
+        # Simulate some data
         alpha = 0.5
         beta = 0.8
         x1 = np.random.normal(0.2, 0.9, size=1000)
@@ -189,6 +190,7 @@ class TestFBNMethods(unittest.TestCase):
         x3 = np.random.normal((x2 * beta) + 0.3, 0.7)
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
+        # Define the model and fit it.
         def x1_fn(parent):
             mu = pyro.param("x1_mu", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
@@ -256,6 +258,21 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x3_inter"], 0.3, delta=0.1)
         self.assertAlmostEqual(params["x3_sigma"], 0.7, delta=0.1)
         self.assertAlmostEqual(params["x3_beta"], 0.8, delta=0.1)
+
+        # Predict data using the fitted model.
+        data_small = (data.iloc[:10,]).copy()
+        missing_mask = np.random.choice([0, 1], size=(10, 3))
+        data_small[missing_mask == 0] = np.nan
+
+        results = model.predict(df=data_small, method="MCMC", num_samples=1000)
+        for index, result in results.items():
+            for var, arr in result.items():
+                try:
+                    self.assertAlmostEqual(arr.mean(), data.loc[index, var], delta=0.1)
+                except:
+                    import ipdb
+
+                    ipdb.set_trace()
 
     def test_svi_fit_different_distributions(self):
         x1 = np.random.beta(0.2, 0.8, size=1000)
