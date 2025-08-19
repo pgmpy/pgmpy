@@ -4,7 +4,7 @@ import numpy as np
 
 class AncestralBase(nx.DiGraph):
     def __init__(self, ebunch=None):
-        super().__init__(ebunch)
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
 
@@ -50,11 +50,18 @@ class AncestralBase(nx.DiGraph):
             self.add_edge(u, v, u_mark, v_mark)
 
     def _get_marks(self, u, v):
-        """Return (mark_at_u, mark_at_v)."""
-        marks = self.get_edge_data(u, v)["marks"]
-        if (u, v) in self.edges:
-            return marks
-        return marks[::-1]
+        """
+        Return (mark_at_u, mark_at_v) for the edge between u and v.
+        Works regardless of stored edge direction.
+        """
+        data = self.get_edge_data(u, v)
+        if data is not None:  # edge stored as (u, v)
+            return data["marks"]
+        data = self.get_edge_data(v, u)
+        if data is not None:  # edge stored as (v, u) → reverse marks
+            u_mark, v_mark = data["marks"]
+            return v_mark, u_mark
+        raise ValueError(f"No edge between {u} and {v}")
 
     def get_neighbors(self, node, u_type=None, v_type=None):
         """
@@ -65,12 +72,17 @@ class AncestralBase(nx.DiGraph):
         if node not in self:
             return set()
         neighbors = set()
-        for neighbor in self.neighbors(node):
-            u_mark, v_mark = self._get_marks(neighbor, node)
-            if (u_type is None or u_mark == u_type) and (
-                v_type is None or v_mark == v_type
-            ):
-                neighbors.add(neighbor)
+        for neighbor in self.nodes:
+            if neighbor == node:
+                continue
+            try:
+                u_mark, v_mark = self._get_marks(neighbor, node)
+                if (u_type is None or u_mark == u_type) and (
+                    v_type is None or v_mark == v_type
+                ):
+                    neighbors.add(neighbor)
+            except ValueError:
+                continue
         return neighbors
 
     def get_parents(self, node):
