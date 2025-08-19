@@ -15,6 +15,9 @@ class AncestralBase:
             self.add_edges_from(ebunch)
 
     def add_edge(self, u, v, u_mark, v_mark):
+        if u == v:
+            raise ValueError("Nodes cannot be the same for an edge.")
+
         if u_mark not in {"tail", "arrowhead", "circle"} or v_mark not in {
             "tail",
             "arrowhead",
@@ -25,17 +28,9 @@ class AncestralBase:
         self.graph.add_edge(u, v, mark=v_mark)
         self.graph.add_edge(v, u, mark=u_mark)
 
-        # if self._is_symmetric_edge(u_mark, v_mark):
-        #     self.graph.add_edge(v, u, mark=u_mark)
-
     def add_edges_from(self, ebunch):
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
-
-    # def _is_symmetric_edge(self, u_mark, v_mark):
-    #     return (u_mark == "arrowhead" and v_mark == "arrowhead") or (
-    #         u_mark == "circle" and v_mark == "circle"
-    #     )
 
     # Edge Query methods
 
@@ -43,8 +38,8 @@ class AncestralBase:
         return (
             self.graph.has_edge(u, v)
             and self.graph.has_edge(v, u)
-            and self.graph.get_edge_data(u, v).get("mark") == "tail"
-            and self.graph.get_edge_data(v, u).get("mark") == "arrowhead"
+            and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
+            and self.graph.get_edge_data(v, u).get("mark") == "tail"
         )
 
     def is_bidirected(self, u, v):
@@ -82,12 +77,7 @@ class AncestralBase:
             return set()
         parents = set()
         for neighbor in self.graph.predecessors(node):
-            if (
-                self.graph.has_edge(neighbor, node)
-                and self.graph.has_edge(node, neighbor)
-                and self.graph.get_edge_data(neighbor, node).get("mark") == "tail"
-                and self.graph.get_edge_data(node, neighbor).get("mark") == "arrowhead"
-            ):
+            if self.is_directed(neighbor, node):
                 parents.add(neighbor)
         return parents
 
@@ -96,12 +86,7 @@ class AncestralBase:
             return set()
         children = set()
         for neighbor in self.graph.successors(node):
-            if (
-                self.graph.has_edge(node, neighbor)
-                and self.graph.has_edge(neighbor, node)
-                and self.graph.get_edge_data(node, neighbor).get("mark") == "tail"
-                and self.graph.get_edge_data(neighbor, node).get("mark") == "arrowhead"
-            ):
+            if self.is_directed(node, neighbor):
                 children.add(neighbor)
         return children
 
@@ -110,12 +95,7 @@ class AncestralBase:
             return set()
         spouses = set()
         for neighbor in self.graph.successors(node):
-            if (
-                self.graph.has_edge(node, neighbor)
-                and self.graph.has_edge(neighbor, node)
-                and self.graph.get_edge_data(node, neighbor).get("mark") == "arrowhead"
-                and self.graph.get_edge_data(neighbor, node).get("mark") == "arrowhead"
-            ):
+            if self.is_bidirected(node, neighbor):
                 spouses.add(neighbor)
         return spouses
 

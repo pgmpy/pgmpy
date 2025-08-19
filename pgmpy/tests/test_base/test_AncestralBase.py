@@ -24,10 +24,10 @@ class TestAncestralBase(unittest.TestCase):
         self.assertTrue(graph.graph.has_edge("B", "C"))
 
     def test_add_edge_directed(self):
-        self.graph.add_edge("A", "B", "arrowhead", "tail")
+        self.graph.add_edge("A", "B", "tail", "arrowhead")
         self.assertTrue(self.graph.graph.has_edge("A", "B"))
-        self.assertEqual(self.graph.graph.get_edge_data("A", "B")["mark"], "arrowhead")
-        self.assertFalse(self.graph.graph.has_edge("B", "A"))
+        self.assertTrue(self.graph.has_arrowhead_at("B", "A"))
+        self.assertFalse(self.graph.has_arrowhead_at("A", "B"))
 
     def test_add_edge_bidirected(self):
         """Test adding a bidirected edge (arrowhead <-> arrowhead)."""
@@ -70,13 +70,6 @@ class TestAncestralBase(unittest.TestCase):
         self.assertTrue(self.graph.graph.has_edge("C", "B"))
         self.assertTrue(self.graph.graph.has_edge("C", "D"))
         self.assertTrue(self.graph.graph.has_edge("D", "C"))
-
-    # def test_is_symmetric_edge(self):
-    #     self.assertTrue(self.graph._is_symmetric_edge("arrowhead", "arrowhead"))
-    #     self.assertTrue(self.graph._is_symmetric_edge("circle", "circle"))
-    #     self.assertFalse(self.graph._is_symmetric_edge("tail", "arrowhead"))
-    #     self.assertFalse(self.graph._is_symmetric_edge("circle", "arrowhead"))
-    #     self.assertFalse(self.graph._is_symmetric_edge("tail", "circle"))
 
     def test_is_directed_simple(self):
         self.graph.add_edge("A", "B", "tail", "arrowhead")
@@ -232,14 +225,15 @@ class TestAncestralBase(unittest.TestCase):
         self.assertTrue(self.graph.is_bidirected("B", "C"))
 
         # Test mark detection
-        self.assertTrue(self.graph.has_arrowhead_at("A", "B"))
+        self.assertTrue(self.graph.has_arrowhead_at("B", "A"))
+        self.assertTrue(self.graph.has_tail_at("A", "B"))
         self.assertTrue(self.graph.has_circle_at("C", "D"))
 
     def test_edge_cases(self):
         """Test edge cases and boundary conditions."""
         # Test with same node
         with self.assertRaises(ValueError):
-            self.graph.add_edge("A", "A", "invalid", "arrowhead")
+            self.graph.add_edge("A", "A", "tail", "arrowhead")
 
         # Test methods on non-existent nodes
         self.assertEqual(self.graph.get_parents("NonExistent"), set())
