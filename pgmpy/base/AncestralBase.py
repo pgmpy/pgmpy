@@ -1,132 +1,101 @@
 import networkx as nx
+import numpy as np
 
 
-class AncestralBase:
-    """
-    Base class for all ancestral graphical models.
-
-    Wraps a networkx.DiGraph to handle mixed graphs with
-    directed, bidirected, and partially directed edges.
-    """
-
+class AncestralBase(nx.DiGraph):
     def __init__(self, ebunch=None):
-        self.graph = nx.DiGraph()
+        super().__init__(ebunch)
         if ebunch:
             self.add_edges_from(ebunch)
+
+    def to_adjacency_matrix(self):
+        """
+        Return adjacency matrix with edge marks and node-to-index mapping.
+
+        Returns
+        -------
+        M : np.ndarray
+            A square matrix of shape (n_nodes, n_nodes) where M[i, j]
+            is the mark at node j for edge (i, j).
+        node_index : dict
+            Mapping from node label to row/col index.
+        """
+        nodes = list(self.nodes)
+        n = len(nodes)
+        node_index = {node: i for i, node in enumerate(nodes)}
+
+        # Initialize matrix with empty strings
+        M = np.full((n, n), "", dtype=object)
+
+        for u, v, data in self.edges(data=True):
+            u_idx, v_idx = node_index[u], node_index[v]
+            u_mark, v_mark = data["marks"]
+
+            # Mark from u→v is v_mark (mark at v's end)
+            M[u_idx, v_idx] = v_mark
+            # Mark from v→u is u_mark (mark at u's end)
+            M[v_idx, u_idx] = u_mark
+
+        return M, node_index
 
     def add_edge(self, u, v, u_mark, v_mark):
         if u == v:
             raise ValueError("Nodes cannot be the same for an edge.")
-
-        if u_mark not in {"tail", "arrowhead", "circle"} or v_mark not in {
-            "tail",
-            "arrowhead",
-            "circle",
-        }:
-            raise ValueError("Marks must be one of 'tail', 'arrowhead', or 'circle'.")
-
-        self.graph.add_edge(u, v, mark=v_mark)
-        self.graph.add_edge(v, u, mark=u_mark)
+        if u_mark not in {"-", ">", "o"} or v_mark not in {"-", ">", "o"}:
+            raise ValueError("Marks must be one of '-', '>', or 'o'.")
+        super().add_edge(u, v, marks=(u_mark, v_mark))
 
     def add_edges_from(self, ebunch):
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
 
-    # Edge Query methods
+    def _get_marks(self, u, v):
+        """Return (mark_at_u, mark_at_v)."""
+        marks = self.get_edge_data(u, v)["marks"]
+        if (u, v) in self.edges:
+            return marks
+        return marks[::-1]
 
-    def is_directed(self, u, v):
-        return (
-            self.graph.has_edge(u, v)
-            and self.graph.has_edge(v, u)
-            and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
-            and self.graph.get_edge_data(v, u).get("mark") == "tail"
-        )
-
-    def is_bidirected(self, u, v):
-        return (
-            self.graph.has_edge(u, v)
-            and self.graph.has_edge(v, u)
-            and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
-            and self.graph.get_edge_data(v, u).get("mark") == "arrowhead"
-        )
-
-    # Mark Query methods
-
-    def has_arrowhead_at(self, u, v):
-        return (
-            self.graph.has_edge(u, v)
-            and self.graph.get_edge_data(u, v).get("mark") == "arrowhead"
-        )
-
-    def has_circle_at(self, u, v):
-        return (
-            self.graph.has_edge(u, v)
-            and self.graph.get_edge_data(u, v).get("mark") == "circle"
-        )
-
-    def has_tail_at(self, u, v):
-        return (
-            self.graph.has_edge(u, v)
-            and self.graph.get_edge_data(u, v).get("mark") == "tail"
-        )
-
-    # Relationship methods
+    def get_neighbors(self, node, u_type=None, v_type=None):
+        """
+        Return neighbors of a node that satisfy edge mark constraints.
+        u_type = mark at neighbor’s side
+        v_type = mark at node’s side
+        """
+        if node not in self:
+            return set()
+        neighbors = set()
+        for neighbor in self.neighbors(node):
+            u_mark, v_mark = self._get_marks(neighbor, node)
+            if (u_type is None or u_mark == u_type) and (
+                v_type is None or v_mark == v_type
+            ):
+                neighbors.add(neighbor)
+        return neighbors
 
     def get_parents(self, node):
-        if node not in self.graph:
-            return set()
-        parents = set()
-        for neighbor in self.graph.predecessors(node):
-            if self.is_directed(neighbor, node):
-                parents.add(neighbor)
-        return parents
+        return self.get_neighbors(node, v_type=">")
 
     def get_children(self, node):
-        if node not in self.graph:
-            return set()
-        children = set()
-        for neighbor in self.graph.successors(node):
-            if self.is_directed(node, neighbor):
-                children.add(neighbor)
-        return children
+        return self.get_neighbors(node, u_type=">")
 
     def get_spouses(self, node):
-        if node not in self.graph:
-            return set()
-        spouses = set()
-        for neighbor in self.graph.successors(node):
-            if self.is_bidirected(node, neighbor):
-                spouses.add(neighbor)
-        return spouses
+        return self.get_neighbors(node, u_type=">", v_type=">")
 
     def get_ancestors(self, node):
-        if node not in self.graph:
-            return set()
-        ancestors = set()
-        queue = list(self.get_parents(node))
-        visited = set(queue)
-
+        ancestors, queue = set(), list(self.get_parents(node))
         while queue:
             current = queue.pop(0)
-            ancestors.add(current)
-            for parent in self.get_parents(current):
-                if parent not in visited:
-                    visited.add(parent)
-                    queue.append(parent)
+            if current not in ancestors:
+                ancestors.add(current)
+                queue.extend(self.get_parents(current))
         return ancestors
 
     def get_descendants(self, node):
-        if node not in self.graph:
-            return set()
-        descendants = set()
-        queue = list(self.get_children(node))
-        visited = set(queue)
-
+        descendants, queue = set(), list(self.get_children(node))
         while queue:
             current = queue.pop(0)
-            descendants.add(current)
-            for child in self.get_children(current):
-                if child not in visited:
-                    visited.add(child)
-                    queue.append(child)
+            if current not in descendants:
+                descendants.add(current)
+                queue.extend(self.get_children(current))
         return descendants
