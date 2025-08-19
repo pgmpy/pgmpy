@@ -22,8 +22,8 @@ class AncestralBase:
         }:
             raise ValueError("Marks must be one of 'tail', 'arrowhead', or 'circle'.")
 
-        self.graph.add_edge(u, v, mark=u_mark)
-        self.graph.add_edge(v, u, mark=v_mark)
+        self.graph.add_edge(u, v, mark=v_mark)
+        self.graph.add_edge(v, u, mark=u_mark)
 
         # if self._is_symmetric_edge(u_mark, v_mark):
         #     self.graph.add_edge(v, u, mark=u_mark)

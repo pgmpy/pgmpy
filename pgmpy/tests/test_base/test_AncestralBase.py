@@ -27,7 +27,7 @@ class TestAncestralBase(unittest.TestCase):
         self.graph.add_edge("A", "B", "arrowhead", "tail")
         self.assertTrue(self.graph.graph.has_edge("A", "B"))
         self.assertEqual(self.graph.graph.get_edge_data("A", "B")["mark"], "arrowhead")
-        self.assertFalse(self.graph.graph.has_edge("A", "B"))
+        self.assertFalse(self.graph.graph.has_edge("B", "A"))
 
     def test_add_edge_bidirected(self):
         """Test adding a bidirected edge (arrowhead <-> arrowhead)."""
