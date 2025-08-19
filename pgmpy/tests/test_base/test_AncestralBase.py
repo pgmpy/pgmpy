@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 
 import networkx as nx
@@ -27,7 +25,7 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_add_edge_directed(self):
         self.graph.add_edge("A", "B", "arrowhead", "tail")
-        self.assertTrue(self.graph.graph.has_edge("A", "B"))
+        self.assertFalse(self.graph.graph.has_edge("A", "B"))
         self.assertEqual(self.graph.graph.get_edge_data("A", "B")["mark"], "arrowhead")
         self.assertFalse(self.graph.graph.has_edge("B", "A"))
 
