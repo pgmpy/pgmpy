@@ -296,8 +296,11 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(["A", "B"])
         """
+        if not variables:
+            raise ValueError(
+                "The `variables` argument to query() must contain at least one variable."
+            )
         evidence = evidence if evidence is not None else dict()
-
         if isinstance(
             self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
         ):
@@ -315,10 +318,13 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        if not variables:
-            raise ValueError(
-                "The `variables` argument to query() must contain at least one variable."
-            )
+        if isinstance(self.model, DiscreteBayesianNetwork):
+            for evidence_var in evidence:
+                if (
+                    isinstance(evidence_var, str)
+                    and evidence_var not in self.model.nodes()
+                ):
+                    raise ValueError(f"Node {evidence_var} not in graph")
 
         # Step 2: If virtual_evidence is provided, modify the network.
         if isinstance(self.model, DiscreteBayesianNetwork) and (
@@ -575,6 +581,13 @@ class VariableElimination(Inference):
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
+        if isinstance(self.model, DiscreteBayesianNetwork):
+            for evidence_var in evidence:
+                if (
+                    isinstance(evidence_var, str)
+                    and evidence_var not in self.model.nodes()
+                ):
+                    raise ValueError(f"Node {evidence_var} not in graph")
         common_vars = set(evidence if evidence is not None else []).intersection(
             variables
         )
