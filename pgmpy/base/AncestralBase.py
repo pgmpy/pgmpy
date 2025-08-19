@@ -1,3 +1,5 @@
+from collections import deque
+
 import networkx as nx
 import numpy as np
 
@@ -24,7 +26,6 @@ class AncestralBase(nx.DiGraph):
         n = len(nodes)
         node_index = {node: i for i, node in enumerate(nodes)}
 
-        # Initialize matrix with empty strings
         M = np.full((n, n), "", dtype=object)
 
         for u, v, data in self.edges(data=True):
@@ -72,13 +73,14 @@ class AncestralBase(nx.DiGraph):
         if node not in self:
             return set()
         neighbors = set()
-        for neighbor in self.nodes:
-            if neighbor == node:
-                continue
+        for neighbor in nx.all_neighbors(self, node):
             try:
-                u_mark, v_mark = self._get_marks(neighbor, node)
-                if (u_type is None or u_mark == u_type) and (
-                    v_type is None or v_mark == v_type
+                # The _get_marks method needs u and v to be the same as they are passed in.
+                # So we must pass the neighbor as u, and the node as v to get the correct marks.
+                neighbor_mark, node_mark = self._get_marks(neighbor, node)
+
+                if (u_type is None or neighbor_mark == u_type) and (
+                    v_type is None or node_mark == v_type
                 ):
                     neighbors.add(neighbor)
             except ValueError:
@@ -95,21 +97,21 @@ class AncestralBase(nx.DiGraph):
         return self.get_neighbors(node, u_type=">", v_type=">")
 
     def get_ancestors(self, node):
-        ancestors, queue = set(), list(self.get_parents(node))
+        ancestors = set()
+        queue = deque(self.get_parents(node))
         while queue:
-            current = queue.pop(0)
+            current = queue.popleft()
             if current not in ancestors:
                 ancestors.add(current)
                 queue.extend(self.get_parents(current))
-        ancestors.discard(node)
         return ancestors
 
     def get_descendants(self, node):
-        descendants, queue = set(), list(self.get_children(node))
+        descendants = set()
+        queue = deque(self.get_children(node))
         while queue:
-            current = queue.pop(0)
+            current = queue.popleft()
             if current not in descendants:
                 descendants.add(current)
                 queue.extend(self.get_children(current))
-        descendants.discard(node)
         return descendants
