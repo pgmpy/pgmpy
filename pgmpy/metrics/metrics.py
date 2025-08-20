@@ -32,7 +32,7 @@ def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
         },
         "fisher-c": {
             "func": fisher_c,
-            "req_params": ["ci_test", "calculate_rmsea", "show_progress"],
+            "req_params": ["ci_test", "compute_rmsea", "show_progress"],
         },
     }
     if not isinstance(data, pd.DataFrame) or data is None:

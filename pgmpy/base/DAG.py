@@ -1927,7 +1927,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "significance_level": 0.05,
             "score": f1_score,
             "ci_test": chi_square,
-            "calculate_rmsea": True,
+            "compute_rmsea": True,
             "show_progress": True,
         }
         # For custom parameter updation
