@@ -1,4 +1,5 @@
-from .backdoor import BackdoorIdentification
 from .base import BaseIdentification
+from .backdoor import BackdoorIdentification
 
-__all__ = ["BaseIdentification", "BackdoorIdentification"]
+__all__ = ["BaseIdentification",
+           "BackdoorIdentification"]
