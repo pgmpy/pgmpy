@@ -8,26 +8,41 @@ class BackdoorIdentification(BaseIdentification):
     Backdoor identification for finding adjustment sets in causal graphs.
 
     This class implements the backdoor criterion for identifying causal effects
-    in a directed acyclic graph (DAG). It provides methods to check if a set of
-    variables satisfies the backdoor criterion and to compute the backdoor
-    adjustment formula.
+    in a directed acyclic graph (DAG). Additionally, it provides methods to
+    check if the current set of variables with role `adjustment` satisfy the
+    backdoor criterion and to compute the backdoor adjustment formula.
+
+    Parameters
+    ----------
+    variant: str
+        The variant of backdoor identification to use. Default is 'minimal'.
+        - 'all': Returns all adjustment sets that satisfy the backdoor criterion.
+        - 'minimal': Returns the smallest adjustment set.
+        - 'minimal_variance': Returns the adjustment set for which estimators achieve minimal variance.
+
+    Examples
+    --------
+    >>> from pgmpy.base import DAG
+    >>> dag = DAG(
+    ...     ebunch=[
+    ...         ("x1", "y1"),
+    ...         ("x1", "z1"),
+    ...         ("z1", "z2"),
+    ...         ("z2", "x2"),
+    ...         ("y2", "z2"),
+    ...     ],
+    ...     roles={"exposure": "x1", "outcome": "y1"},
+    ... )
+    >>> dag_with_adj = BackdoorIdentification(variant="minimal").identify(dag)
+    >>> dag_with_adj.roles
+    {'exposure': 'x1', 'outcome': 'y1', 'adjustment': ['z1', 'z2']}
+    >>> BackdoorIdentification.validate(dag)
     """
 
     def __init__(self, variant="minimal"):
-        """
-        Initialize the BackdoorIdentification instance.
-
-        Parameters
-        ----------
-        variant: str
-            The variant of backdoor identification to use. Default is 'minimal'.
-            - 'all': Returns all adjustment sets that satisfy the backdoor criterion.
-            - 'minimal': Returns the smallest adjustment set.
-            - 'minimal_variance': Returns the adjustment set for which estimators achieve minimal variance.
-        """
         self.variant = variant
 
-    def get_proper_backdoor_graph(self, causal_graph, inplace=False):
+    def _get_proper_backdoor_graph(self, causal_graph, inplace=False):
         """
         Returns a proper backdoor graph of the `causal_graph`.
 
@@ -59,7 +74,7 @@ class BackdoorIdentification(BaseIdentification):
         ...     ],
         ...     roles={"exposure": "x1", "outcome": "y1"},
         ... )
-        >>> dag_proper = BackdoorIdentification().get_proper_backdoor_graph(
+        >>> dag_proper = BackdoorIdentification()._get_proper_backdoor_graph(
         ...     dag, inplace=False
         ... )
         >>> dag_proper.edges()
@@ -72,9 +87,9 @@ class BackdoorIdentification(BaseIdentification):
         """
         model = causal_graph if inplace else causal_graph.copy()
         edges_to_remove = []
-        for source in causal_graph.get_roles("exposure"):
+        for source in causal_graph.get_role("exposure"):
             paths = nx.all_simple_edge_paths(
-                causal_graph, source, causal_graph.get_roles("outcome")
+                causal_graph, source, causal_graph.get_role("outcome")
             )
             for path in paths:
                 edges_to_remove.append(path[0])
@@ -85,13 +100,17 @@ class BackdoorIdentification(BaseIdentification):
         """
         Identify adjustment sets using the backdoor criterion.
 
-        Parameters:
-        causal_graph (pgmpy.models.DAG): The causal graph to analyze.
+        Parameters
+        ----------
+        causal_graph: DAG | PDAG | MAG | PAG
+            The causal graph for which the adjustment sets are to be identified.
 
-        Returns:
-        list: A list of adjustment sets that satisfy the backdoor criterion.
+        Returns
+        -------
+        causal_graph: DAG | PDAG | MAG | PAG
+            The causal graph with the identified adjustment set added as role `adjustment`.
         """
-        backdoor_graph = self.get_proper_backdoor_graph(causal_graph, inplace=False)
+        backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
         if self.variant == "minimal":
             return backdoor_graph.minimal_dseparator(
                 causal_graph.get_roles("exposure"), causal_graph.get_roles("outcome")
@@ -110,7 +129,7 @@ class BackdoorIdentification(BaseIdentification):
 
         Parameters
         ----------
-        causal_graph: pgmpy.models.DAG
+        causal_graph: DAG | PDAG | MAG | PAG
             The causal graph to validate.
 
         Returns
