@@ -67,18 +67,19 @@ class AncestralBase(nx.DiGraph):
     def get_neighbors(self, node, u_type=None, v_type=None):
         """
         Return neighbors of a node that satisfy edge mark constraints.
-        u_type = mark at neighbor’s side
-        v_type = mark at node’s side
+        u_type = mark at neighbor's side (when going FROM neighbor TO node)
+        v_type = mark at node's side (when going FROM node TO neighbor)
         """
         if node not in self:
             return set()
         neighbors = set()
         for neighbor in nx.all_neighbors(self, node):
             try:
-                # The _get_marks method needs u and v to be the same as they are passed in.
-                # So we must pass the neighbor as u, and the node as v to get the correct marks.
-                neighbor_mark, node_mark = self._get_marks(neighbor, node)
+                # Get marks: node_mark is mark at node, neighbor_mark is mark at neighbor
+                node_mark, neighbor_mark = self._get_marks(node, neighbor)
 
+                # u_type constraint: mark at neighbor when going FROM neighbor TO node
+                # v_type constraint: mark at node when going FROM node TO neighbor
                 if (u_type is None or neighbor_mark == u_type) and (
                     v_type is None or node_mark == v_type
                 ):
@@ -88,30 +89,41 @@ class AncestralBase(nx.DiGraph):
         return neighbors
 
     def get_parents(self, node):
-        return self.get_neighbors(node, v_type=">")
-
-    def get_children(self, node):
+        """Get nodes that have '>' pointing TO this node"""
         return self.get_neighbors(node, u_type=">")
 
+    def get_children(self, node):
+        """Get nodes that this node has '>' pointing TO"""
+        return self.get_neighbors(node, v_type=">")
+
     def get_spouses(self, node):
+        """Get nodes with bidirectional '>' marks"""
         return self.get_neighbors(node, u_type=">", v_type=">")
 
     def get_ancestors(self, node):
+        """Get all ancestor nodes (parents, grandparents, etc.)"""
         ancestors = set()
+        visited = set()  # Track visited nodes to prevent infinite loops
         queue = deque(self.get_parents(node))
+        
         while queue:
             current = queue.popleft()
-            if current not in ancestors:
+            if current not in visited:
+                visited.add(current)
                 ancestors.add(current)
                 queue.extend(self.get_parents(current))
         return ancestors
 
     def get_descendants(self, node):
+        """Get all descendant nodes (children, grandchildren, etc.)"""
         descendants = set()
+        visited = set()  # Track visited nodes to prevent infinite loops
         queue = deque(self.get_children(node))
+        
         while queue:
             current = queue.popleft()
-            if current not in descendants:
+            if current not in visited:
+                visited.add(current)
                 descendants.add(current)
                 queue.extend(self.get_children(current))
         return descendants
