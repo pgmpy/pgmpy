@@ -61,7 +61,7 @@ class AncestralBase(nx.DiGraph):
         data = self.get_edge_data(v, u)
         if data is not None:  # edge stored as (v, u) → reverse marks
             u_mark, v_mark = data["marks"]
-            return u_mark, v_mark
+            return v_mark, u_mark
         raise ValueError(f"No edge between {u} and {v}")
 
     def get_neighbors(self, node, u_type=None, v_type=None):
@@ -88,10 +88,10 @@ class AncestralBase(nx.DiGraph):
         return neighbors
 
     def get_parents(self, node):
-        return self.get_neighbors(node, u_type=">")
+        return self.get_neighbors(node, v_type=">")
 
     def get_children(self, node):
-        return self.get_neighbors(node, v_type=">")
+        return self.get_neighbors(node, u_type=">")
 
     def get_spouses(self, node):
         return self.get_neighbors(node, u_type=">", v_type=">")
