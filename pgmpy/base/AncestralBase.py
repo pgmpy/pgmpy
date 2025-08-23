@@ -1,11 +1,16 @@
 from collections import deque
+from typing import Hashable, Iterable, Optional
 
 import networkx as nx
 import numpy as np
 
 
 class AncestralBase(nx.DiGraph):
-    def __init__(self, ebunch=None):
+    def __init__(
+        self,
+        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        latents: set[Hashable] = set(),
+    ):
         super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
@@ -80,8 +85,8 @@ class AncestralBase(nx.DiGraph):
 
                 # u_type constraint: mark at neighbor when going FROM neighbor TO node
                 # v_type constraint: mark at node when going FROM node TO neighbor
-                if (u_type is None or neighbor_mark == u_type) and (
-                    v_type is None or node_mark == v_type
+                if (u_type is None or node_mark == u_type) and (
+                    v_type is None or neighbor_mark == v_type
                 ):
                     neighbors.add(neighbor)
             except ValueError:
@@ -103,7 +108,7 @@ class AncestralBase(nx.DiGraph):
     def get_ancestors(self, node):
         """Get all ancestor nodes (parents, grandparents, etc.)"""
         ancestors = set()
-        visited = set()  # Track visited nodes to prevent infinite loops
+        visited = set([node])
         queue = deque(self.get_parents(node))
 
         while queue:
@@ -117,7 +122,7 @@ class AncestralBase(nx.DiGraph):
     def get_descendants(self, node):
         """Get all descendant nodes (children, grandchildren, etc.)"""
         descendants = set()
-        visited = set()  # Track visited nodes to prevent infinite loops
+        visited = set([node])
         queue = deque(self.get_children(node))
 
         while queue:
@@ -127,3 +132,20 @@ class AncestralBase(nx.DiGraph):
                 descendants.add(current)
                 queue.extend(self.get_children(current))
         return descendants
+
+    def get_reachable_nodes(self, node, u_type=None, v_type=None):
+        """
+        Get all the nodes reachable from the given node
+        with a certain type of edge marks.
+        """
+        reachable = set()
+        visited = set([node])
+        queue = deque(self.get_neighbors(node, u_type=u_type, v_type=v_type))
+
+        while queue:
+            current = queue.popleft()
+            if current not in visited:
+                visited.add(current)
+                reachable.add(current)
+                queue.extend(self.get_neighbors(current, u_type=u_type, v_type=v_type))
+        return reachable
