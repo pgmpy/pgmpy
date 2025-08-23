@@ -105,7 +105,7 @@ class AncestralBase(nx.DiGraph):
         ancestors = set()
         visited = set()  # Track visited nodes to prevent infinite loops
         queue = deque(self.get_parents(node))
-        
+
         while queue:
             current = queue.popleft()
             if current not in visited:
@@ -119,7 +119,7 @@ class AncestralBase(nx.DiGraph):
         descendants = set()
         visited = set()  # Track visited nodes to prevent infinite loops
         queue = deque(self.get_children(node))
-        
+
         while queue:
             current = queue.popleft()
             if current not in visited:
