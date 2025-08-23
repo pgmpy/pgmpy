@@ -193,6 +193,31 @@ class TestImpliedCI(unittest.TestCase):
         p_value = fisher_c(self.model_alarm_random, self.df_alarm, chi_square)
         self.assertEqual(p_value, 0)
 
+    def test_fisher_c_rmsea(self):
+        (p_value, rmsea) = fisher_c(
+            self.model_cancer, self.df_cancer, chi_square, compute_rmsea=True
+        )
+        self.assertEqual(round(p_value, 4), 0.9967)
+        self.assertEqual(round(rmsea, 4), 0)
+
+        (p_value, rmsea) = fisher_c(
+            self.model_cancer_random, self.df_cancer, chi_square, compute_rmsea=True
+        )
+        self.assertEqual(round(p_value, 4), 0.0001)
+        self.assertEqual(round(rmsea, 4), 0.0602)
+
+        (p_value, rmsea) = fisher_c(
+            self.model_alarm, self.df_alarm, chi_square, compute_rmsea=True
+        )
+        self.assertEqual(round(p_value, 4), 0.0005)
+        self.assertEqual(round(rmsea, 4), 0.0117)
+
+        (p_value, rmsea) = fisher_c(
+            self.model_alarm_random, self.df_alarm, chi_square, compute_rmsea=True
+        )
+        self.assertEqual(round(p_value, 4), 0)
+        self.assertEqual(round(rmsea, 4), 0.0476)
+
 
 class TestStructuralHammingDistance(unittest.TestCase):
     def test_shd1(self):
