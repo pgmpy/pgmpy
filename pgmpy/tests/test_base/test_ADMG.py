@@ -322,17 +322,6 @@ class TestADMGGraphOperations:
         Test the `__eq__` method
         which compares both graph structure and variable-role mappings to allow comparison of two models.
         """
-        # ToDo:
-        # If issue #2306 is resolved,
-        # `admg` should be deleted.
-        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
-        admg = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["F"],
-            roles={"exposure": ["A"], "outcome": ["C"]},
-        )
-
         # Case1: When the models are the same
         other1 = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
@@ -375,16 +364,12 @@ class TestADMGGraphOperations:
             roles={"exposure": ["A"], "adjustment": "D", "outcome": ["C"]},
         )
 
-        # ToDo:
-        # If issue #2306 is resolved,
-        # `admg.__eq__(other_number)` should be changed to `self.admg.__eq__(other_number)`.
-        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
-        assert admg.__eq__(other1) is True
-        assert admg.__eq__(other2) is False
-        assert admg.__eq__(other3) is False
-        assert admg.__eq__(other4) is False
-        assert admg.__eq__(other5) is False
-        assert admg.__eq__(other6) is False
+        assert self.admg.__eq__(other1) is True
+        assert self.admg.__eq__(other2) is False
+        assert self.admg.__eq__(other3) is False
+        assert self.admg.__eq__(other4) is False
+        assert self.admg.__eq__(other5) is False
+        assert self.admg.__eq__(other6) is False
 
 
 class TestADMGSeparation:
