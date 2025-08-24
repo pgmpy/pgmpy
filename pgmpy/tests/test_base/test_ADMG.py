@@ -56,6 +56,33 @@ class TestADMGInitialization:
         assert set(admg.get_roles()) == set(["exposure", "outcome"])
         assert admg.get_role_dict() == {"exposure": ["A", "B"], "outcome": ["C"]}
 
+    def test_initialization_and_node_edge_addition(self):
+        """Test the initialization of a ADMG object using two different methods"""
+        # SetUP admg1
+        admg1 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["F"],
+        )
+        # SetUP admg2
+        admg2 = ADMG()
+        admg2.add_directed_edges([("A", "B"), ("B", "C"), ("D", "E")])
+        admg2.add_bidirected_edges([("A", "D"), ("B", "E")])
+        admg2.add_node("F", latent=True)
+
+        assert set(admg1.nodes()) == {"A", "B", "C", "D", "E", "F"}
+        assert set(admg1.edges()) == {
+            ("A", "B"),
+            ("B", "C"),
+            ("D", "E"),
+            ("A", "D"),
+            ("D", "A"),
+            ("B", "E"),
+            ("E", "B"),
+        }
+        assert admg1.latents == {"F"}
+        assert admg1 == admg2
+
 
 class TestADMGNodeOperations:
     """Test node addition and validation."""

@@ -37,7 +37,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         self,
         directed_ebunch=None,
         bidirected_ebunch=None,
-        latents=None,
+        latents: Iterable[Hashable] = [],
         roles=None,
     ):
         super().__init__()
@@ -48,6 +48,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             self.add_directed_edges(directed_ebunch)
         if bidirected_ebunch:
             self.add_bidirected_edges(bidirected_ebunch)
+
+        self.add_nodes_from(nodes=latents, latent=True)
 
         if roles is None:
             roles = {}
