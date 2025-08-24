@@ -82,24 +82,6 @@ class TestAncestralBase(unittest.TestCase):
         neighbors_b = self.graph.get_neighbors("B")
         self.assertEqual(neighbors_b, {"A"})
 
-    # def test_get_neighbors_with_constraints(self):
-    #     """Test getting neighbors with mark constraints."""
-    #     self.graph.add_edge("A", "B", "-", ">")  # A---B>
-    #     self.graph.add_edge("A", "C", ">", "-")  # A>---C
-    #     self.graph.add_edge("A", "D", "o", "o")  # AoooD
-
-    #     # u_type constraint: mark at neighbor when going FROM neighbor TO A
-    #     neighbors_u_arrow = self.graph.get_neighbors("A", u_type=">")
-    #     self.assertEqual(neighbors_u_arrow, {"B"})
-
-    #     # v_type constraint: mark at A when going FROM A TO neighbor
-    #     neighbors_v_arrow = self.graph.get_neighbors("A", v_type=">")
-    #     self.assertEqual(neighbors_v_arrow, {"C"})
-
-    #     # Both constraints
-    #     neighbors_both = self.graph.get_neighbors("A", u_type=">", v_type=">")
-    #     self.assertEqual(neighbors_both, set())
-
     def test_get_neighbors_nonexistent_node(self):
         """Test getting neighbors for non-existent node."""
         neighbors = self.graph.get_neighbors("Z")
