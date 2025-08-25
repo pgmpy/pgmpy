@@ -4,6 +4,26 @@ from pgmpy.base.AncestralBase import AncestralBase
 
 
 class MAG(AncestralBase):
+
+    def __init__(self, ebunch=None, latents=None):
+        """
+        Class for representing Maximal Ancestral Graphs (MAGs).
+
+        Parameters
+        ----------
+        ebunch: list of tuples, optional (default: None)
+            List of edges to initialize the graph. Each edge is represented
+            as a tuple (u, v, u_mark, v_mark) where u_mark and v_mark can be
+            '>' (arrowhead) or '-' (tail).
+        latents: set, optional (default: None)
+            Set of latent variables in the graph.
+        """
+        super().__init__()
+        self.latents = latents if latents is not None else set()
+        if ebunch is not None:
+            for u, v, u_mark, v_mark in ebunch:
+                self.add_edge(u, v, u_mark=u_mark, v_mark=v_mark)
+
     def _is_collider(self, p, c, n):
         """Check if c is a collider on the path p-c-n."""
         p_mark, c_mark = self._get_marks(p, c)
@@ -67,6 +87,17 @@ class MAG(AncestralBase):
         to see if an inducing path exists between u and v.
         """
         return self.has_inducing_path(u, v, self.latents)
+
+    def is_invisible_edge(self, u, v):
+        """
+        Check if an edge (u, v) is invisible.
+
+        An edge is invisible if it does not correspond to an inducing path.
+        This is a complex property, often defined as an edge that's
+        a result of marginalizing out variables. A simpler check is
+        to see if no inducing path exists between u and v.
+        """
+        return not self.has_inducing_path(u, v, self.latents)
 
     def lower_manipulation(self, X: set):
         """
