@@ -1902,6 +1902,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return strengths
 
+    def __hash__(self):
+        """
+        Returns a hash value for the DAG object. The hash value is computed based on
+        the nodes, edges, latent variables, and variable roles of the DAG.
+        """
+        return hash(
+            (
+                frozenset(self.nodes()),
+                frozenset(self.edges()),
+                frozenset(self.latents),
+                frozenset(
+                    (role, frozenset(self.get_role(role))) for role in self.get_roles()
+                ),
+            )
+        )
+
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
     """
