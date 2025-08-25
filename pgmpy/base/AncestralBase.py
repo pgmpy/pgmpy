@@ -14,6 +14,7 @@ class AncestralBase(nx.DiGraph):
         super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
+        self.latents = set(latents)
 
     def to_adjacency_matrix(self):
         """
