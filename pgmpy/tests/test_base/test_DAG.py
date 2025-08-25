@@ -748,6 +748,12 @@ class TestDAGCreation(unittest.TestCase):
         dag2 = dag2.with_role("exposure", "E")
         self.assertEqual(hash(dag1), hash(dag2))
 
+        dag1 = dag1.with_role("outcome", "D")
+        self.assertNotEqual(hash(dag1), hash(dag2))
+
+        dag2 = dag2.with_role("outcome", "D")
+        self.assertEqual(hash(dag1), hash(dag2))
+
 
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
