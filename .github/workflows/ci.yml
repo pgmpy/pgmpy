@@ -17,6 +17,7 @@ jobs:
         include:
           - os: windows-latest
             python-version: '3.13.6'
+            group: [1, 2, 3]
         exclude:
           - os: windows-latest
             python-version: '3.13'
