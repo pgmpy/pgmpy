@@ -172,7 +172,7 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
            and selects the required feature columns based on names.
         3. X is a NumPy array without `feature_names` (sklearn compatibility case):
            It assumes the first N columns correspond to the N required features
-           and renames them. This is a pragmatic workaround for sklearn's
+           and renames them. Workaround for sklearn's
            generic test suite, which does not support named features.
         """
         required_features = self._extract_feature_columns()
@@ -189,7 +189,7 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
                     f"requires {len(required_features)}: {required_features}"
                 )
             # Select the first N columns and rename them to match the semantic roles.
-            # This is a specific, documented workaround for sklearn's check_estimator.
+            # Workaround for sklearn's check_estimator.
             feature_df = X_df.iloc[:, : len(required_features)].copy()
             feature_df.columns = required_features
             return feature_df
