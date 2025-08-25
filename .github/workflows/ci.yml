@@ -21,10 +21,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ (matrix.os == 'windows-latest' && matrix.py == '3.13') && '3.13.6' || matrix.py }}
+      - name: Setup Python ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ (matrix.os == 'windows-latest' && matrix.py == '3.13') && '3.13.6' || matrix.py }}
+          python-version: ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
           cache: pip
 
       - name: Print Python info
