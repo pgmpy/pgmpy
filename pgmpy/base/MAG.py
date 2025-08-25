@@ -48,27 +48,22 @@ class MAG(AncestralBase):
         paths = list(nx.all_simple_paths(self, source=u, target=v))
         for path in paths:
             is_inducing = True
-            # The path must have at least 3 nodes to have an intermediate node
             if len(path) > 2:
-                # Check all intermediate nodes
                 for i in range(1, len(path) - 1):
                     node = path[i]
                     prev_node = path[i - 1]
                     next_node = path[i + 1]
 
-                    # Condition 1: Intermediate nodes must be colliders
                     if not self._is_collider(prev_node, node, next_node):
                         is_inducing = False
                         break
 
-                    # Condition 2: Colliders must be ancestors of u or v
                     if not (
                         node in self.get_ancestors(u) or node in self.get_ancestors(v)
                     ):
                         is_inducing = False
                         break
 
-                    # Condition 3: Intermediate nodes must be in W (latent variables)
                     if node not in W:
                         is_inducing = False
                         break
@@ -109,17 +104,14 @@ class MAG(AncestralBase):
         - For every invisible edge `u - v` where `v` is in X, this edge is replaced
           by a bidirected edge `u <-> v`.
         """
-        # Create a new MAG to store the result
         new_mag = MAG(ebunch=self.edges(), latents=self.latents)
 
         for u, v, data in new_mag.edges(data=True):
             if v in X:
                 u_mark, v_mark = data["marks"]
                 if u_mark == ">":
-                    # This is a directed edge u -> v
                     new_mag.remove_edge(u, v)
                 elif u_mark == "-":
-                    # This is an undirected edge u - v
                     new_mag.remove_edge(u, v)
                     new_mag.add_edge(u, v, u_mark=">", v_mark=">")
 
@@ -152,35 +144,5 @@ class MAG(AncestralBase):
         This is done by converting the MAG to an augmented DAG and
         checking for d-separation.
         """
-        # Conceptually, a MAG is an equivalence class of DAGs. To check
-        # m-separation (which is the independence criteria in MAGs),
-        # we can construct a single augmented DAG.
-        # This augmented DAG is a complex concept. A simpler approach for this
-        # implementation is to follow the m-separation rules directly.
 
-        # The core rule is: a path is m-connecting if it is not blocked.
-        # A path is blocked if there's an intermediate node 'v' such that:
-        # 1. 'v' is a non-collider and v is in Z.
-        # 2. 'v' is a collider and v is NOT in the ancestors of Z.
-
-        # NOTE: A full implementation of m-separation is complex and
-        # requires carefully iterating through all paths. For a practical
-        # pgmpy implementation, this would be a detailed graph traversal.
-        # This is a placeholder for the conceptual logic.
-
-        # A full, robust implementation of m-separation is a non-trivial
-        # graph traversal algorithm. The conceptual approach:
-        # 1. Find all paths between X and Y.
-        # 2. For each path, check if it's m-blocked by Z.
-        # 3. If any path is NOT m-blocked, X and Y are m-connected.
-
-        # A path is m-blocked by Z if there is an intermediate node C on the path
-        # such that either:
-        #   (a) C is a non-collider and C is in Z.
-        #   (b) C is a collider, and C and its descendants are NOT in Z.
-
-        # A simpler way to conceptualize this is through the augmented DAG.
-        # For simplicity, we'll return False for now, as a full implementation
-        # of m-separation is beyond this scope.
-
-        return False
+        raise NotImplementedError("This method is not yet implemented.")
