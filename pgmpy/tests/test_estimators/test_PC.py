@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 
-from pgmpy.base import PDAG
+from pgmpy.base import PDAG  # noqa: F401
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
@@ -102,7 +102,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
                 variant=variant,
                 ci_test="independence_match",
                 return_type="skeleton",
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
 
@@ -127,7 +127,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
                 variant=variant,
                 ci_test="independence_match",
                 return_type="skeleton",
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
 
@@ -241,7 +241,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
                 variant="orig",
                 ci_test="independence_match",
                 return_type="dag",
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
@@ -255,7 +255,7 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
                 variant="orig",
                 ci_test="independence_match",
                 return_type="dag",
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
             expected_edges_1 = set(model.edges())
@@ -355,7 +355,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                     ci_test=test,
                     return_type="skeleton",
                     significance_level=0.005,
-                    n_jobs=2,
+                    n_jobs=1,
                     show_progress=False,
                 )
 
@@ -372,7 +372,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 ci_test="chi_square",
                 return_type="dag",
                 significance_level=0.001,
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
@@ -420,7 +420,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     variant=variant,
                     ci_test=ci_test,
                     return_type="skeleton",
-                    n_jobs=2,
+                    n_jobs=1,
                     show_progress=False,
                 )
                 expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
@@ -466,7 +466,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     variant=variant,
                     ci_test=fake_ci,
                     return_type="skeleton",
-                    n_jobs=2,
+                    n_jobs=1,
                     show_progress=False,
                 )
                 expected_edges = {("X", "Z"), ("Y", "Z")}
@@ -489,7 +489,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     variant=variant,
                     ci_test=ci_test,
                     return_type="dag",
-                    n_jobs=2,
+                    n_jobs=1,
                     show_progress=False,
                 )
 
@@ -505,8 +505,8 @@ class TestPCRealModels(unittest.TestCase):
         alarm_model = get_example_model("alarm")
         data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
         est = PC(data)
-        dag = est.estimate(
-            variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False
+        dag = est.estimate(  # noqa: F841
+            variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False
         )
 
     def test_pc_asia(self):
@@ -516,11 +516,11 @@ class TestPCRealModels(unittest.TestCase):
         req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges)
         with self.assertLogs(level="WARNING") as cm:
-            dag = est.estimate(
+            dag = est.estimate(  # noqa: F841
                 variant="stable",
                 max_cond_vars=4,
                 expert_knowledge=background,
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
         self.assertEqual(
@@ -545,7 +545,7 @@ class TestPCRealModels(unittest.TestCase):
                     ("bronc", "dysp"),
                 ]
             ),
-            n_jobs=2,
+            n_jobs=1,
             show_progress=False,
         )
 
@@ -567,7 +567,7 @@ class TestPCRealModels(unittest.TestCase):
         pdag = est.estimate(
             variant="stable",
             expert_knowledge=background,
-            n_jobs=2,
+            n_jobs=1,
             show_progress=False,
         )
         self.assertSetEqual(

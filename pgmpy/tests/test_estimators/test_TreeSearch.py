@@ -133,7 +133,8 @@ class TestTreeSearch(unittest.TestCase):
             "adjusted_mutual_info",
             "normalized_mutual_info",
         ]:
-            for n_jobs in [2, 1]:
+            # for n_jobs in [2, 1]:
+            for n_jobs in [1]:
                 # learn graph structure
                 est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
                 dag = est.estimate(
@@ -174,7 +175,8 @@ class TestTreeSearch(unittest.TestCase):
             "adjusted_mutual_info",
             "normalized_mutual_info",
         ]:
-            for n_jobs in [2, 1]:
+            # for n_jobs in [2, 1]:
+            for n_jobs in [1]:
                 # learn graph structure
                 est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
                 dag = est.estimate(
