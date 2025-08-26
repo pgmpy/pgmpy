@@ -1,9 +1,9 @@
 import networkx as nx
 
-from pgmpy.base.AncestralBase import AncestralBase
+# from pgmpy.base.AncestralBase import AncestralBase
 
 
-class MAG(AncestralBase):
+class MAG:
 
     def __init__(self, ebunch=None, latents=None):
         """
@@ -18,7 +18,7 @@ class MAG(AncestralBase):
         latents: set, optional (default: None)
             Set of latent variables in the graph.
         """
-        super().__init__()
+        # super().__init__()
         self.latents = latents if latents is not None else set()
         if ebunch is not None:
             for u, v, u_mark, v_mark in ebunch:
@@ -136,13 +136,3 @@ class MAG(AncestralBase):
                     new_mag.remove_edge(u, neighbor)
 
         return new_mag
-
-    def get_conditional_independence_model(self, X: set, Y: set, Z: set):
-        """
-        Check for conditional independence X ⊥ Y | Z in a MAG.
-
-        This is done by converting the MAG to an augmented DAG and
-        checking for d-separation.
-        """
-
-        raise NotImplementedError("This method is not yet implemented.")
