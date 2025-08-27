@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 import pyro.distributions as dist
-from skbase.utils.dependencies._import import _safe_import
+from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
 

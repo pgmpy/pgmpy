@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-from skbase.utils.dependencies._import import _safe_import
+from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
 

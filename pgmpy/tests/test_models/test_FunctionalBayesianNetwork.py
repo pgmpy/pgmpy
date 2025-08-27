@@ -5,7 +5,7 @@ import numpy.testing as np_test
 import pandas as pd
 import pyro
 import pyro.distributions as dist
-from skbase.utils.dependencies._import import _safe_import
+from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
 
