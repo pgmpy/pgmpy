@@ -1,16 +1,20 @@
 import logging
 import unittest
 
+import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 from skbase.utils.dependencies._import import _safe_import
 
 torch = _safe_import("torch")
-
 
 from pgmpy import config
 from pgmpy.global_vars import DuplicateFilter
 
 
-class TestConfig(unittest.TestCase):
+class TestConfig:
+    def assertEqual(x, y):
+        assert x == y
+
     def test_defaults(self):
         self.assertEqual(config.BACKEND, "numpy")
         self.assertEqual(config.get_backend(), "numpy")
@@ -24,6 +28,10 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.SHOW_PROGRESS, True)
         self.assertEqual(config.get_show_progress(), True)
 
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("torch", severtiy="none"),
+        reason="test only if torch is available",
+    )
     def test_torch_cpu(self):
         config.set_backend(backend="torch", device="cpu", dtype=torch.float32)
 
@@ -39,7 +47,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.SHOW_PROGRESS, True)
         self.assertEqual(config.get_show_progress(), True)
 
-    @unittest.skipIf(not torch.cuda.is_available(), "No GPU")
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("torch", severtiy="none")
+        or not torch.cuda.is_available(),
+        reason="test only if torch and torch.cuda are available",
+    )
     def test_torch_gpu(self):
         config.set_backend(backend="torch", device="cuda", dtype=torch.float32)
 
