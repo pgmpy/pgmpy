@@ -3,11 +3,9 @@ import unittest
 
 import networkx as nx
 import pandas as pd
-import pytest
-import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
-from pgmpy.utils import get_example_model
 
 
 class TestExpertInLoop(unittest.TestCase):
@@ -207,6 +205,7 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
 
+    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
     def test_combined_expert_knowledge(self):
         """Test combination of forbidden edges, required edges, and temporal order."""
         expert_knowledge = ExpertKnowledge(
@@ -231,6 +230,7 @@ class TestExpertInLoop(unittest.TestCase):
             v_order = expert_knowledge.temporal_ordering[v]
             assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
+    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
     def test_edge_orientation_priority(self):
         """Test that edge orientation follows the correct priority order."""
         expert_knowledge = ExpertKnowledge(

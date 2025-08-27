@@ -3,6 +3,7 @@ from pgmpy.utils._safe_import import _safe_import
 
 from pgmpy.global_vars import logger
 
+torch = _safe_import("torch")
 optim = _safe_import("torch.optim")
 
 
