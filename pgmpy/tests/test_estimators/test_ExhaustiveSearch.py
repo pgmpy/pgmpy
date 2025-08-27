@@ -84,7 +84,9 @@ class TestBaseEstimator(unittest.TestCase):
         self.assertEqual(set(est_bic.edges()), {("B", "C")})
 
     def test_estimate_titanic(self):
-        est_k2 = ExhaustiveSearch(self.titanic_data2, scoring_method=K2(self.titanic_data2))
+        est_k2 = ExhaustiveSearch(
+            self.titanic_data2, scoring_method=K2(self.titanic_data2)
+        )
         e1 = est_k2.estimate()
         self.assertSetEqual(
             set(e1.edges()),
@@ -92,7 +94,9 @@ class TestBaseEstimator(unittest.TestCase):
         )
 
     def test_all_scores(self):
-        est_k2 = ExhaustiveSearch(self.titanic_data2, scoring_method=K2(self.titanic_data2))
+        est_k2 = ExhaustiveSearch(
+            self.titanic_data2, scoring_method=K2(self.titanic_data2)
+        )
         scores = est_k2.all_scores()
         scores_ref = [
             (-2072.9132364404695, []),
@@ -150,7 +154,7 @@ class TestBaseEstimator(unittest.TestCase):
             [score for score, model in scores],
             [score for score, edges in scores_ref],
         )
-    
+
     def test_estimate_rand_bic_default(self):
         """
         Tests the new default BIC scoring method.
