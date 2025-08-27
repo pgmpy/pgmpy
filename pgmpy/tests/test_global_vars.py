@@ -1,7 +1,10 @@
 import logging
 import unittest
 
-import torch
+from skbase.utils.dependencies._import import _safe_import
+
+torch = _safe_import("torch")
+
 
 from pgmpy import config
 from pgmpy.global_vars import DuplicateFilter

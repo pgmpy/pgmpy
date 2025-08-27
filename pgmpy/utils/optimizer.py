@@ -1,14 +1,9 @@
 from math import isclose
+from skbase.utils.dependencies._import import _safe_import
 
 from pgmpy.global_vars import logger
 
-
-try:  # pragma: no cover
-    import torch
-
-    optim = torch.optim
-except ImportError:  # pragma: no cover
-    optim = None
+optim = _safe_import("torch.optim")
 
 
 def pinverse(t):

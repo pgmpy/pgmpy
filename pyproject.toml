@@ -29,16 +29,19 @@ dependencies = [
   "scipy>=1.10",
   "scikit-learn>=1.2",
   "pandas>=1.5",
-  "torch>=2.5",
   "statsmodels>=0.14.5",
   "tqdm>=4.64",
   "pyparsing>=3.0",
   "joblib>=1.2",
   "opt_einsum>=3.3",
-  "pyro-ppl>=1.9.1"
+  "pyro-ppl>=1.9.1",
+  "scikit-base>=0.12.4",
 ]
 
 [project.optional-dependencies]
+torch = [
+  "torch>=2.5",
+]
 tests = [
   "xdoctest>=0.11.0",
   "pytest>=3.3.1",
@@ -47,14 +50,15 @@ tests = [
   "coverage>=4.3.4",
   "mock",
   "black",
-  "pre-commit"
+  "pre-commit",
 ]
 optional = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
   "litellm==1.61.15",
   "pyparsing>=3.0",
-  "pygraphviz"
+  "pygraphviz",
+  "torch>=2.5",
 ]
 all = [
   "networkx>=3.0",
@@ -71,7 +75,7 @@ all = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
   "litellm==1.61.15",
-  "pyparsing>=3.0"
+  "pyparsing>=3.0",
 ]
 
 [project.urls]

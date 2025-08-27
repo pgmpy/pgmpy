@@ -2,7 +2,9 @@
 from copy import deepcopy
 
 import numpy as np
-import torch
+from skbase.utils.dependencies._import import _safe_import
+
+torch = _safe_import("torch")
 
 from pgmpy import config
 
