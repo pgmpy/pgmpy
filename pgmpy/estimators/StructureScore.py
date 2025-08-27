@@ -24,10 +24,10 @@ def get_scoring_method(
             "aic-g": AICGauss,
         },
         "discrete": {
+            "bic-d": BIC,
             "k2": K2,
             "bdeu": BDeu,
             "bds": BDs,
-            "bic-d": BIC,
             "aic-d": AIC,
             "ll-d": LogLikeliHood,
         },
