@@ -75,6 +75,10 @@ class TestExpertInLoop(unittest.TestCase):
             ("Age", "Education"),
         }
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate(self):
         true_edges = [
             # Education-related paths
@@ -133,6 +137,10 @@ class TestExpertInLoop(unittest.TestCase):
 
         self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
         dag = self.estimator_small.estimate(
@@ -144,6 +152,10 @@ class TestExpertInLoop(unittest.TestCase):
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, set([]))
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_cache(self):
         self.estimator_small.orientation_cache = self.orientations_small
 
@@ -156,6 +168,10 @@ class TestExpertInLoop(unittest.TestCase):
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, self.orientations_small)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_custom_orient_fn(self):
         def custom_orient(var1, var2, **kwargs):
             # Always orient edges from alphabetically first to second
@@ -179,6 +195,10 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in self.estimator_small.orientation_cache:
             self.assertTrue(edge[0] < edge[1])
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_orient_fn_kwargs(self):
         def orient_with_kwargs(var1, var2, **kwargs):
             # Use a keyword argument to determine orientation

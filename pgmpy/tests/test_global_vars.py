@@ -12,7 +12,7 @@ from pgmpy.global_vars import DuplicateFilter
 
 
 class TestConfig:
-    def assertEqual(x, y):
+    def assertEqual(self, x, y):
         assert x == y
 
     def test_defaults(self):
