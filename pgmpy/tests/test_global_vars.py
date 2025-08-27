@@ -67,6 +67,11 @@ class TestConfig:
         self.assertEqual(config.SHOW_PROGRESS, True)
         self.assertEqual(config.get_show_progress(), True)
 
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("torch", severity="none")
+        or not torch.cuda.is_available(),
+        reason="test only if torch and torch.cuda are available",
+    )
     def test_no_progress(self):
         config.set_show_progress(show_progress=False)
 
