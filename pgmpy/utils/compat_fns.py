@@ -104,6 +104,8 @@ def get_compute_backend():
     if config.get_backend() == "numpy":
         return np
     else:
+        import torch
+
         return torch
 
 

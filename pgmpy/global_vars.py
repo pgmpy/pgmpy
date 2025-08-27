@@ -181,6 +181,8 @@ class Config:
             return np
 
         else:
+            import torch
+
             return torch
 
 
