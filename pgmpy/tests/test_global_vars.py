@@ -29,7 +29,7 @@ class TestConfig:
         self.assertEqual(config.get_show_progress(), True)
 
     @pytest.mark.skipif(
-        not _check_soft_dependencies("torch", severtiy="none"),
+        not _check_soft_dependencies("torch", severity="none"),
         reason="test only if torch is available",
     )
     def test_torch_cpu(self):
@@ -48,7 +48,7 @@ class TestConfig:
         self.assertEqual(config.get_show_progress(), True)
 
     @pytest.mark.skipif(
-        not _check_soft_dependencies("torch", severtiy="none")
+        not _check_soft_dependencies("torch", severity="none")
         or not torch.cuda.is_available(),
         reason="test only if torch and torch.cuda are available",
     )
