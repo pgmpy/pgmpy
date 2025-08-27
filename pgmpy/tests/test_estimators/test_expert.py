@@ -205,7 +205,10 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
 
-    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_combined_expert_knowledge(self):
         """Test combination of forbidden edges, required edges, and temporal order."""
         expert_knowledge = ExpertKnowledge(
@@ -230,7 +233,10 @@ class TestExpertInLoop(unittest.TestCase):
             v_order = expert_knowledge.temporal_ordering[v]
             assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
-    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_orientation_priority(self):
         """Test that edge orientation follows the correct priority order."""
         expert_knowledge = ExpertKnowledge(

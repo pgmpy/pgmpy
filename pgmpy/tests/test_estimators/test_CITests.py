@@ -377,7 +377,10 @@ class TestResidualMethod(unittest.TestCase):
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
-    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_pillai(self):
         # Non-conditional tests
         dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]

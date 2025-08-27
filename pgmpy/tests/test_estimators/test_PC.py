@@ -408,7 +408,10 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
-    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_build_skeleton(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
@@ -479,7 +482,10 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     )
                 self.assertEqual(sep_sets, expected_sepsets)
 
-    @unittest.skipUnless(_check_soft_dependencies("xgboost", severity="none"))
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_build_dag(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
