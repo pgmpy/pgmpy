@@ -8,7 +8,7 @@ on: [push, pull_request]
 
 jobs:
   test-nosoftdeps:
-    name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    name: test-nosoftdeps (${{ matrix.os }}, python ${{ matrix.python-version}})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
