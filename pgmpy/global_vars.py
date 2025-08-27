@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import numpy as np
-from skbase.utils.dependencies. import _check_soft_dependencies
+from skbase.utils.dependencies import _check_soft_dependencies
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
