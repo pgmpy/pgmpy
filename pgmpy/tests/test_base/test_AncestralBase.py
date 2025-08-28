@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 from pgmpy.base.AncestralBase import AncestralBase
 
 
@@ -56,21 +58,6 @@ class TestAncestralBase(unittest.TestCase):
         self.assertEqual(len(self.graph.edges), 3)
         self.assertEqual(len(self.graph.nodes), 3)
 
-    def test_get_marks(self):
-        """Test retrieving marks for edges."""
-        self.graph.add_edge("A", "B", "-", ">")
-        marks = self.graph._get_marks("A", "B")
-        self.assertEqual(marks, ("-", ">"))
-
-        # Test reverse direction
-        marks = self.graph._get_marks("B", "A")
-        self.assertEqual(marks, (">", "-"))
-
-    def test_get_marks_no_edge_error(self):
-        """Test that getting marks for non-existent edge raises error."""
-        with self.assertRaises(ValueError):
-            self.graph._get_marks("A", "B")
-
     def test_get_neighbors_basic(self):
         """Test getting neighbors without constraints."""
         self.graph.add_edge("A", "B", "-", ">")
@@ -89,9 +76,9 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_parents(self):
         """Test getting parent nodes."""
-        self.graph.add_edge("A", "B", "-", ">")  # A---B> (A is parent of B)
-        self.graph.add_edge("C", "B", "-", ">")  # C---B> (C is parent of B)
-        self.graph.add_edge("B", "D", "-", ">")  # B---D> (B is parent of D)
+        self.graph.add_edge("A", "B", "-", ">")
+        self.graph.add_edge("C", "B", "-", ">")
+        self.graph.add_edge("B", "D", "-", ">")
 
         parents_b = self.graph.get_parents("B")
         self.assertEqual(parents_b, {"A", "C"})
@@ -104,9 +91,9 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_children(self):
         """Test getting child nodes."""
-        self.graph.add_edge("A", "B", "-", ">")  # A---B> (B is child of A)
-        self.graph.add_edge("A", "C", "-", ">")  # A---C> (C is child of A)
-        self.graph.add_edge("B", "D", "-", ">")  # B---D> (D is child of B)
+        self.graph.add_edge("A", "B", "-", ">")
+        self.graph.add_edge("A", "C", "-", ">")
+        self.graph.add_edge("B", "D", "-", ">")
 
         children_a = self.graph.get_children("A")
         self.assertEqual(children_a, {"B", "C"})
@@ -119,9 +106,9 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_spouses(self):
         """Test getting spouse nodes (bidirectional arrows)."""
-        self.graph.add_edge("A", "B", ">", ">")  # A<->B (spouses)
-        self.graph.add_edge("A", "C", "-", ">")  # A---C> (not spouses)
-        self.graph.add_edge("C", "D", ">", ">")  # C<->D (spouses)
+        self.graph.add_edge("A", "B", ">", ">")
+        self.graph.add_edge("A", "C", "-", ">")
+        self.graph.add_edge("C", "D", ">", ">")
 
         spouses_a = self.graph.get_spouses("A")
         self.assertEqual(spouses_a, {"B"})
@@ -134,11 +121,10 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_ancestors(self):
         """Test getting all ancestors."""
-        # Create a genealogy: A->B->C->D
         self.graph.add_edge("A", "B", "-", ">")
         self.graph.add_edge("B", "C", "-", ">")
         self.graph.add_edge("C", "D", "-", ">")
-        self.graph.add_edge("E", "C", "-", ">")  # E is also parent of C
+        self.graph.add_edge("E", "C", "-", ">")
 
         ancestors_d = self.graph.get_ancestors("D")
         self.assertEqual(ancestors_d, {"A", "B", "C", "E"})
@@ -151,20 +137,19 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_descendants(self):
         """Test getting all descendants."""
-        # Create a genealogy: A->B->C->D
         self.graph.add_edge("A", "B", "-", ">")
         self.graph.add_edge("B", "C", "-", ">")
         self.graph.add_edge("C", "D", "-", ">")
-        self.graph.add_edge("B", "E", "-", ">")  # B has another child E
+        self.graph.add_edge("B", "E", "-", ">")
 
         descendants_a = self.graph.get_descendants("A")
-        self.assertEqual(descendants_a, {"B", "C", "D", "E"})
+        self.assertEqual(descendants_a, {"A", "B", "C", "D", "E"})
 
         descendants_b = self.graph.get_descendants("B")
-        self.assertEqual(descendants_b, {"C", "D", "E"})
+        self.assertEqual(descendants_b, {"B", "C", "D", "E"})
 
         descendants_d = self.graph.get_descendants("D")
-        self.assertEqual(descendants_d, set())
+        self.assertEqual(descendants_d, set("D"))
 
     def test_get_reachable_nodes(self):
         """Test getting reachable nodes with constraints."""
@@ -173,47 +158,54 @@ class TestAncestralBase(unittest.TestCase):
         self.graph.add_edge("A", "D", "o", "o")
         self.graph.add_edge("D", "E", "o", "o")
 
-        # Reachable with v_type=">" (following directed edges)
         reachable_directed = self.graph.get_reachable_nodes("A", v_type=">")
-        self.assertEqual(reachable_directed, {"B", "C"})
+        self.assertEqual(reachable_directed, {"A", "B", "C"})
 
-        # Reachable with v_type="o" (following undirected edges)
         reachable_undirected = self.graph.get_reachable_nodes("A", v_type="o")
-        self.assertEqual(reachable_undirected, {"D", "E"})
+        self.assertEqual(reachable_undirected, {"A", "D", "E"})
 
-    def test_to_adjacency_matrix(self):
+    def test_adjacency_matrix(self):
         """Test conversion to adjacency matrix."""
         self.graph.add_edge("A", "B", "-", ">")
         self.graph.add_edge("B", "C", ">", "-")
 
-        M, node_index = self.graph.to_adjacency_matrix()
+        M, node_index = self.graph.adjacency_matrix
 
-        # Check dimensions
         self.assertEqual(M.shape, (3, 3))
         self.assertEqual(len(node_index), 3)
 
-        # Check node mapping
         self.assertIn("A", node_index)
         self.assertIn("B", node_index)
         self.assertIn("C", node_index)
 
-        # Check matrix values
         a_idx, b_idx, c_idx = node_index["A"], node_index["B"], node_index["C"]
 
-        # A->B edge: mark at B is ">", mark at A is "-"
         self.assertEqual(M[a_idx, b_idx], ">")
         self.assertEqual(M[b_idx, a_idx], "-")
 
-        # B->C edge: mark at C is "-", mark at B is ">"
         self.assertEqual(M[b_idx, c_idx], "-")
         self.assertEqual(M[c_idx, b_idx], ">")
 
-        # No direct A-C connection
         self.assertEqual(M[a_idx, c_idx], "")
         self.assertEqual(M[c_idx, a_idx], "")
 
-    def test_to_adjacency_matrix_empty_graph(self):
+    def test_adjacency_matrix_empty_graph(self):
         """Test adjacency matrix for empty graph."""
-        M, node_index = self.graph.to_adjacency_matrix()
+        M, node_index = self.graph.adjacency_matrix
         self.assertEqual(M.shape, (0, 0))
         self.assertEqual(len(node_index), 0)
+
+    def test_adjacency_matrix_setter(self):
+        """Test setting graph from adjacency matrix."""
+        M = np.array([[0, ">", 0], ["-", 0, ">"], [0, "-", 0]], dtype=object)
+
+        self.graph.adjacency_matrix = M
+
+        self.assertEqual(len(self.graph.nodes), 3)
+        self.assertEqual(len(self.graph.edges), 2)
+
+        self.assertTrue(self.graph.has_edge("X_0", "X_1"))
+        self.assertTrue(self.graph.has_edge("X_1", "X_2"))
+
+        self.assertEqual(self.graph["X_0"]["X_1"]["marks"], {"X_0": ">", "X_1": "-"})
+        self.assertEqual(self.graph["X_1"]["X_2"]["marks"], {"X_1": ">", "X_2": "-"})

@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 
 
-class AncestralBase(nx.DiGraph):
+class AncestralBase(nx.Graph):
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
@@ -15,8 +15,10 @@ class AncestralBase(nx.DiGraph):
         if ebunch:
             self.add_edges_from(ebunch)
         self.latents = set(latents)
+        self.valid_marks = {">", "-", "o"}
 
-    def to_adjacency_matrix(self):
+    @property
+    def adjacency_matrix(self):
         """
         Return adjacency matrix with edge marks and node-to-index mapping.
 
@@ -32,43 +34,43 @@ class AncestralBase(nx.DiGraph):
         n = len(nodes)
         node_index = {node: i for i, node in enumerate(nodes)}
 
-        M = np.full((n, n), "", dtype=object)
+        M = np.full((n, n), 0, dtype=object)
 
         for u, v, data in self.edges(data=True):
             u_idx, v_idx = node_index[u], node_index[v]
             u_mark, v_mark = data["marks"]
 
-            # Mark from u→v is v_mark (mark at v's end)
             M[u_idx, v_idx] = v_mark
-            # Mark from v→u is u_mark (mark at u's end)
             M[v_idx, u_idx] = u_mark
 
         return M, node_index
 
+    @adjacency_matrix.setter
+    def adjacency_matrix(self, value):
+        value = np.asarray(value)
+        if value.ndim != 2 or value.shape[0] != value.shape[1]:
+            raise ValueError("Adjacency matrix must be square (n x n).")
+        n = value.shape[0]
+        variables = [f"X_{i}" for i in range(n)]
+        self.clear()
+        for i in variables:
+            for j in variables:
+                if i != j:
+                    u_mark = value[i, j]
+                    v_mark = value[j, i]
+                    if u_mark != 0 and v_mark != 0:
+                        self.add_edge(i, j, u_mark, v_mark)
+
     def add_edge(self, u, v, u_mark, v_mark):
         if u == v:
             raise ValueError("Nodes cannot be the same for an edge.")
-        if u_mark not in {"-", ">", "o"} or v_mark not in {"-", ">", "o"}:
-            raise ValueError("Marks must be one of '-', '>', or 'o'.")
-        super().add_edge(u, v, marks=(u_mark, v_mark))
+        if u_mark not in self.valid_marks or v_mark not in self.valid_marks:
+            raise ValueError(f"Marks must be one of {self.valid_marks}.")
+        super().add_edge(u, v, marks={u: u_mark, v: v_mark})
 
     def add_edges_from(self, ebunch):
-        for u, v, u_mark, v_mark in ebunch:
-            self.add_edge(u, v, u_mark, v_mark)
-
-    def _get_marks(self, u, v):
-        """
-        Return (mark_at_u, mark_at_v) for the edge between u and v.
-        Works regardless of stored edge direction.
-        """
-        data = self.get_edge_data(u, v)
-        if data is not None:  # edge stored as (u, v)
-            return data["marks"]
-        data = self.get_edge_data(v, u)
-        if data is not None:  # edge stored as (v, u) → reverse marks
-            u_mark, v_mark = data["marks"]
-            return v_mark, u_mark
-        raise ValueError(f"No edge between {u} and {v}")
+        for u, v, marks in ebunch:
+            self.add_edge(u, v, marks)
 
     def get_neighbors(self, node, u_type=None, v_type=None):
         """
@@ -80,18 +82,17 @@ class AncestralBase(nx.DiGraph):
             return set()
         neighbors = set()
         for neighbor in nx.all_neighbors(self, node):
-            try:
-                # Get marks: node_mark is mark at node, neighbor_mark is mark at neighbor
-                node_mark, neighbor_mark = self._get_marks(node, neighbor)
 
-                # u_type constraint: mark at neighbor when going FROM neighbor TO node
-                # v_type constraint: mark at node when going FROM node TO neighbor
-                if (u_type is None or node_mark == u_type) and (
-                    v_type is None or neighbor_mark == v_type
-                ):
-                    neighbors.add(neighbor)
-            except ValueError:
-                continue
+            node_mark, neighbor_mark = (
+                self.edges[node, neighbor]["marks"][node],
+                self.edges[node, neighbor]["marks"][neighbor],
+            )
+
+            if (u_type is None or node_mark == u_type) and (
+                v_type is None or neighbor_mark == v_type
+            ):
+                neighbors.add(neighbor)
+
         return neighbors
 
     def get_parents(self, node):
@@ -109,8 +110,8 @@ class AncestralBase(nx.DiGraph):
     def get_ancestors(self, node):
         """Get all ancestor nodes (parents, grandparents, etc.)"""
         ancestors = set()
-        visited = set([node])
-        queue = deque(self.get_parents(node))
+        visited = set()
+        queue = deque(node)
 
         while queue:
             current = queue.popleft()
@@ -123,8 +124,8 @@ class AncestralBase(nx.DiGraph):
     def get_descendants(self, node):
         """Get all descendant nodes (children, grandchildren, etc.)"""
         descendants = set()
-        visited = set([node])
-        queue = deque(self.get_children(node))
+        visited = set()
+        queue = deque(node)
 
         while queue:
             current = queue.popleft()
@@ -140,8 +141,8 @@ class AncestralBase(nx.DiGraph):
         with a certain type of edge marks.
         """
         reachable = set()
-        visited = set([node])
-        queue = deque(self.get_neighbors(node, u_type=u_type, v_type=v_type))
+        visited = set()
+        queue = deque(node)
 
         while queue:
             current = queue.popleft()
