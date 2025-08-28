@@ -6,6 +6,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
@@ -372,6 +373,10 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         dag.to_daft(node_pos="circular")
@@ -491,6 +496,10 @@ class TestDAGCreation(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_basic(self):
         """Test basic functionality and numerical values using simulated data from LinearGaussianBN"""
         # Create a linear Gaussian Bayesian network
@@ -525,6 +534,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr[0] ** 2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr[0] ** 2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_specific_edge(self):
         """Test computing strength for specific edge using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -554,6 +567,10 @@ class TestDAGCreation(unittest.TestCase):
         xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
         self.assertAlmostEqual(strength_xy[("X", "Y")], xy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_multiple_edges(self):
         """Test computing strength for multiple specific edges using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -586,6 +603,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr**2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_stored_in_graph(self):
         """Test that edge strengths are stored in the graph after computation using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -656,6 +677,10 @@ class TestDAGCreation(unittest.TestCase):
             str(context.exception),
         )
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_skip_latent_edges(self):
         """Test that edge_strength skips edges with latent variables and continues with others"""
         # Create DAG with some latent variables
@@ -703,6 +728,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_to_daft(self):
         """Test edge strength plotting in to_daft method"""
         dag = DAG([("A", "B"), ("C", "B")])
@@ -724,6 +753,10 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot_default = dag_no_strength.to_daft()
         self.assertIsNotNone(daft_plot_default)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_with_existing_labels(self):
         """Test edge strength plotting when user provides custom edge labels"""
         dag = DAG([("A", "B")])
