@@ -44,8 +44,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         """
         if config.get_backend() == "numpy":
-            logger.info("Functional BN requires pytorch backend. Switching.")
-            config.set_backend("torch")
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
+            )
+            logger.info(msg)
+            raise ValueError(msg)
 
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,

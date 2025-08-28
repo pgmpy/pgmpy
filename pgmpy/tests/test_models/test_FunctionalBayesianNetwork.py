@@ -18,7 +18,6 @@ from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwor
 from pgmpy.utils import get_example_model
 
 
-
 @unittest.skipUnless(
     _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",

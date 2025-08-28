@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator
@@ -208,6 +209,10 @@ class TestMLE(unittest.TestCase):
         get_reusable_executor().shutdown(wait=True)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestMLETorch(TestMLE):
     def setUp(self):
         config.set_backend("torch")
