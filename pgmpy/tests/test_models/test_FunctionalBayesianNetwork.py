@@ -1,12 +1,11 @@
 import unittest
 
 import numpy as np
-import numpy.testing as np_test
 import pandas as pd
-import pyro
-import pyro.distributions as dist
 from pgmpy.utils._safe_import import _safe_import
 
+pyro = _safe_import("pyro")
+dist = _safe_import("pyro.distributions")
 torch = _safe_import("torch")
 
 from pgmpy import config

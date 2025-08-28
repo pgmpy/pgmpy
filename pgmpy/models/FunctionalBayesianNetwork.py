@@ -2,12 +2,14 @@ from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Un
 
 import networkx as nx
 import pandas as pd
-import pyro
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+
+pyro = _safe_import("pyro")
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
