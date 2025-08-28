@@ -53,7 +53,8 @@ class AncestralBase(nx.Graph):
 
         for u, v, data in self.edges(data=True):
             u_idx, v_idx = node_index[u], node_index[v]
-            u_mark, v_mark = data["marks"]
+            u_mark = data["marks"][u]
+            v_mark = data["marks"][v]
 
             M[u_idx, v_idx] = v_mark
             M[v_idx, u_idx] = u_mark
@@ -83,13 +84,13 @@ class AncestralBase(nx.Graph):
         n = value.shape[0]
         variables = [f"X_{i}" for i in range(n)]
         self.clear()
-        for i in variables:
-            for j in variables:
+        for i in range(n):
+            for j in range(n):
                 if i != j:
                     u_mark = value[i, j]
                     v_mark = value[j, i]
                     if u_mark != 0 and v_mark != 0:
-                        self.add_edge(i, j, u_mark, v_mark)
+                        self.add_edge(variables[i], variables[j], u_mark, v_mark)
 
     def add_edge(self, u, v, u_mark, v_mark):
         """
@@ -129,8 +130,8 @@ class AncestralBase(nx.Graph):
         ----------
         ebunch : Iterable[tuple]
             Each tuple should be of the form (u, v, u_mark, v_mark)."""
-        for u, v, marks in ebunch:
-            self.add_edge(u, v, marks)
+        for u, v, u_mark, v_mark in ebunch:
+            self.add_edge(u, v, u_mark, v_mark)
 
     def get_neighbors(self, node, u_type=None, v_type=None):
         """
