@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils._safe_import import _safe_import
@@ -54,6 +55,8 @@ class FunctionalCPD(BaseFactor):
         self.parents = parents if parents else []
         self.variables = [variable] + self.parents
         self.vectorized = vectorized
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
     def sample(self, n_samples=100, parent_sample=None):
         """

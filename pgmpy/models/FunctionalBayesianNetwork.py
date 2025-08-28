@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Un
 
 import networkx as nx
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -51,6 +52,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             )
             logger.info(msg)
             raise ValueError(msg)
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
