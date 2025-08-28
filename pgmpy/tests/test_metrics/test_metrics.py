@@ -120,7 +120,6 @@ class TestLogLikelihoodScore(unittest.TestCase):
         )
 
 
-
 @unittest.skipUnless(
     _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",

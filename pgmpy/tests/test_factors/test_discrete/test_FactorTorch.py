@@ -2833,6 +2833,7 @@ class TestTabularCPDInitTorch(unittest.TestCase):
     def tearDown(self):
         config.set_backend("numpy")
 
+
 @unittest.skipUnless(
     _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",

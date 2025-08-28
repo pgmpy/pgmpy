@@ -12,7 +12,7 @@ from pgmpy import config
 
 
 def _is_torch_tensor(obj):
-    if not _check_soft_dependencies("torch", severiety="none"):
+    if not _check_soft_dependencies("torch", severity="none"):
         return False
 
     return isinstance(obj, torch.Tensor)
