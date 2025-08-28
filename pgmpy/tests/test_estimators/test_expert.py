@@ -3,11 +3,9 @@ import unittest
 
 import networkx as nx
 import pandas as pd
-import pytest
-import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
-from pgmpy.utils import get_example_model
 
 
 class TestExpertInLoop(unittest.TestCase):
@@ -77,6 +75,10 @@ class TestExpertInLoop(unittest.TestCase):
             ("Age", "Education"),
         }
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate(self):
         true_edges = [
             # Education-related paths
@@ -135,6 +137,10 @@ class TestExpertInLoop(unittest.TestCase):
 
         self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
         dag = self.estimator_small.estimate(
@@ -146,6 +152,10 @@ class TestExpertInLoop(unittest.TestCase):
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, set([]))
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_cache(self):
         self.estimator_small.orientation_cache = self.orientations_small
 
@@ -158,6 +168,10 @@ class TestExpertInLoop(unittest.TestCase):
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
         self.assertEqual(orientations_cache, self.orientations_small)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_custom_orient_fn(self):
         def custom_orient(var1, var2, **kwargs):
             # Always orient edges from alphabetically first to second
@@ -181,6 +195,10 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in self.estimator_small.orientation_cache:
             self.assertTrue(edge[0] < edge[1])
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_estimate_with_orient_fn_kwargs(self):
         def orient_with_kwargs(var1, var2, **kwargs):
             # Use a keyword argument to determine orientation
@@ -207,6 +225,10 @@ class TestExpertInLoop(unittest.TestCase):
         for edge in dag_reverse.edges():
             self.assertTrue(edge[0] > edge[1])
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_combined_expert_knowledge(self):
         """Test combination of forbidden edges, required edges, and temporal order."""
         expert_knowledge = ExpertKnowledge(
@@ -231,6 +253,10 @@ class TestExpertInLoop(unittest.TestCase):
             v_order = expert_knowledge.temporal_ordering[v]
             assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_orientation_priority(self):
         """Test that edge orientation follows the correct priority order."""
         expert_knowledge = ExpertKnowledge(
