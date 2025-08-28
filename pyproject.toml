@@ -59,6 +59,7 @@ optional = [
   "pyparsing>=3.0",
   "pygraphviz",
   "torch>=2.5",
+  "pyro-ppl>=1.9.1",
 ]
 all = [
   "networkx>=3.0",
