@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-import pyro
 
 from pgmpy.factors.base import BaseFactor
+from pgmpy.utils._safe_import import _safe_import
+
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalCPD(BaseFactor):
