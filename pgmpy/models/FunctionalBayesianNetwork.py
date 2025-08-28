@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Un
 import networkx as nx
 import pandas as pd
 import pyro
-import torch
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
@@ -378,6 +377,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             if node not in data.columns:
                 raise ValueError(f"data doesn't contain column for the node: {node}.")
             else:
+                import torch
+
                 tensor_data[node] = torch.tensor(
                     data[node].values,
                     dtype=config.get_dtype(),

@@ -2,7 +2,9 @@
 from copy import deepcopy
 
 import numpy as np
-import torch
+from pgmpy.utils._safe_import import _safe_import
+
+torch = _safe_import("torch")
 
 from pgmpy import config
 
@@ -102,6 +104,8 @@ def get_compute_backend():
     if config.get_backend() == "numpy":
         return np
     else:
+        import torch
+
         return torch
 
 

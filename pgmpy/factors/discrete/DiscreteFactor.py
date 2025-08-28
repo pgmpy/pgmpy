@@ -3,7 +3,6 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pgmpy import config
 from pgmpy.extern import tabulate
@@ -96,6 +95,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if config.BACKEND == "numpy":
             values = np.array(values, dtype=config.get_dtype())
         else:
+            import torch
+
             values = (
                 torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
             )
@@ -289,6 +290,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if config.get_backend() == "numpy":
             index = np.array(index)
         else:
+            import torch
+
             if (len(index) == 1) and (isinstance(index[0], torch.Tensor)):
                 index = index[0][None]
             else:

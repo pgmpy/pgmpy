@@ -2,9 +2,11 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro
 import pyro.distributions as dist
-import torch
+from pgmpy.utils._safe_import import _safe_import
+
+torch = _safe_import("torch")
+
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
