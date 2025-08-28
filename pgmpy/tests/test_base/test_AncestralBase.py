@@ -186,8 +186,8 @@ class TestAncestralBase(unittest.TestCase):
         self.assertEqual(M[b_idx, c_idx], "-")
         self.assertEqual(M[c_idx, b_idx], ">")
 
-        self.assertEqual(M[a_idx, c_idx], "")
-        self.assertEqual(M[c_idx, a_idx], "")
+        self.assertEqual(M[a_idx, c_idx], 0)
+        self.assertEqual(M[c_idx, a_idx], 0)
 
     def test_adjacency_matrix_empty_graph(self):
         """Test adjacency matrix for empty graph."""
