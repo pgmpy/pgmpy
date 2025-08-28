@@ -26,10 +26,10 @@ class AncestralBase(nx.Graph):
             an empty set.
         """
         super().__init__()
+        self.valid_marks = {">", "-", "o"}
         if ebunch:
             self.add_edges_from(ebunch)
         self.latents = set(latents)
-        self.valid_marks = {">", "-", "o"}
 
     @property
     def adjacency_matrix(self):
