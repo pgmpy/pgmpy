@@ -604,6 +604,10 @@ potential (xray | either){
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

@@ -400,6 +400,10 @@ class TestUAIReaderTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestUAIWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
