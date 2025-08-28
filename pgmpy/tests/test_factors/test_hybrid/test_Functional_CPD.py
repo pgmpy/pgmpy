@@ -5,7 +5,7 @@ import pandas as pd
 from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
-dist = _safe_import("pyro.distributions")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 
 
 from pgmpy.factors.continuous import LinearGaussianCPD

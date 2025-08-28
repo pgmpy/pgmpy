@@ -2,10 +2,12 @@ import unittest
 
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
+
 from pgmpy.utils._safe_import import _safe_import
 
-pyro = _safe_import("pyro")
-dist = _safe_import("pyro.distributions")
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 torch = _safe_import("torch")
 
 from pgmpy import config
@@ -16,6 +18,11 @@ from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwor
 from pgmpy.utils import get_example_model
 
 
+
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNMethods(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

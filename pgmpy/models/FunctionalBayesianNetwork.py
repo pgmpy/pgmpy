@@ -9,7 +9,7 @@ from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils._safe_import import _safe_import
 
-pyro = _safe_import("pyro")
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
