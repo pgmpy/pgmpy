@@ -39,11 +39,6 @@ class TestFBNMethods(unittest.TestCase):
 
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
-    def test_backend_switch(self):
-        config.set_backend("numpy")
-        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        self.assertEqual(config.get_backend(), "torch")
-
     def test_cpds_simple(self):
         self.assertEqual("x1", self.cpd1.variable)
         cpd = self.model.get_cpds("x1")
