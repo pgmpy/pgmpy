@@ -138,8 +138,8 @@ class TestAncestralBase(unittest.TestCase):
         spouses_c = self.graph.get_spouses("C")
         self.assertEqual(spouses_c, {"D"})
 
-        spouse_d = self.graph.get_spouses("D")
-        self.assertEqual(spouse_d, set())
+        spouses_d = self.graph.get_spouses("D")
+        self.assertEqual(spouses_d, {"C"})
 
     def test_get_ancestors(self):
         """Test getting all ancestors."""
