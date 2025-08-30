@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import torch
 
 from pgmpy import config
 from pgmpy.inference import CausalInference
@@ -29,6 +28,8 @@ class SEMEstimator(object):
             raise ValueError(
                 f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
             )
+
+        import torch
 
         # Initialize trainable and fixed mask tensors
         self.B_mask = torch.tensor(
@@ -74,6 +75,8 @@ class SEMEstimator(object):
         """
         Computes the implied covariance matrix from the given parameters.
         """
+        import torch
+
         B_masked = torch.mul(B, self.B_mask) + self.B_fixed_mask
         B_inv = pinverse(self.B_eye - B_masked)
         zeta_masked = torch.mul(zeta, self.zeta_mask) + self.zeta_fixed_mask
@@ -268,6 +271,8 @@ class SEMEstimator(object):
 
         # Initialize the values of parameters as tensors.
         backend = compat_fns.get_compute_backend()
+
+        import torch
 
         if isinstance(init_values, dict):
             B_init, zeta_init = init_values["B"], init_values["zeta"]

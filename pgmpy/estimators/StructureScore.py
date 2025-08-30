@@ -19,22 +19,22 @@ def get_scoring_method(
 ) -> Tuple["StructureScore", "StructureScore"]:
     available_methods = {
         "continuous": {
+            "bic-g": BICGauss,
             "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
-            "bic-g": BICGauss,
         },
         "discrete": {
+            "bic-d": BIC,
             "k2": K2,
             "bdeu": BDeu,
             "bds": BDs,
-            "bic-d": BIC,
             "aic-d": AIC,
             "ll-d": LogLikeliHood,
         },
         "mixed": {
+            "bic-cg": BICCondGauss,
             "ll-cg": LogLikelihoodCondGauss,
             "aic-cg": AICCondGauss,
-            "bic-cg": BICCondGauss,
         },
     }
     all_available_methods = [

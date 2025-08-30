@@ -4,8 +4,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
+from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
@@ -408,6 +408,10 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_build_skeleton(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
@@ -478,6 +482,10 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                     )
                 self.assertEqual(sep_sets, expected_sepsets)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_build_dag(self):
         for ci_test in ["pearsonr", "pillai", "gcm"]:
             for variant in ["orig", "stable", "parallel"]:
