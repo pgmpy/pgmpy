@@ -293,7 +293,7 @@ class AncestralBase(nx.Graph):
         >>> print(graph.get_parents("A"))
         set()
         """
-        return self.get_neighbors(node, u_type=">")
+        return self.get_neighbors(node, u_type=">", v_type="-")
 
     def get_children(self, node):
         """
@@ -321,7 +321,7 @@ class AncestralBase(nx.Graph):
         >>> print(graph.get_children("D"))
         set()
         """
-        return self.get_neighbors(node, v_type=">")
+        return self.get_neighbors(node, u_type="-", v_type=">")
 
     def get_spouses(self, node):
         """
