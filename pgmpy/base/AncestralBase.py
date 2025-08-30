@@ -24,6 +24,20 @@ class AncestralBase(nx.Graph):
         latents : set, optional
             Set of latent (unobserved) variables in the graph. Default is
             an empty set.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
+
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.nodes)
+        ['A', 'B', 'C']
+        >>> print(graph.edges(data=True))
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
+        >>> graph.add_edge("C", "D", "o", "o")
+        >>> print(graph.edges(data=True))
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-
         """
         super().__init__()
         self.valid_marks = {">", "-", "o"}
@@ -44,6 +58,19 @@ class AncestralBase(nx.Graph):
 
         node_index : dict
             Mapping from node label to row/col index.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> M, node_index = graph.adjacency_matrix
+        >>> print(M)
+        [[0 '>' 0]
+         ['-' 0 '-']
+         [0 '>' 0]]
+        >>> print(node_index)
+        {'A': 0, 'B': 1, 'C': 2}
         """
         nodes = list(self.nodes)
         n = len(nodes)
@@ -73,10 +100,20 @@ class AncestralBase(nx.Graph):
             for edge (i, j). Marks must be one of {">", "-", "o
             or 0 (no edge).
 
-        Raises
-        ------
-        ValueError
-            If the input matrix is not square or contains invalid marks.
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> M = np.array([[0, ">", 0], ["-", 0, ">"], [0, "-", 0]], dtype=object)
+        >>> graph = AncestralBase()
+        >>> graph.adjacency_matrix = M
+        >>> print(graph.nodes)
+        ['X_0', 'X_1', 'X_2']
+        >>> print(graph.edges(data=True))
+        [('X_0', 'X_1', {'marks': {'X_0': '>', 'X_1': '-'}}), ('X_1', 'X_2', {'marks': {'X_1': '>', 'X_2': '-'}})]
         """
         value = np.asarray(value)
         if value.ndim != 2 or value.shape[0] != value.shape[1]:
@@ -152,6 +189,20 @@ class AncestralBase(nx.Graph):
         -------
         neighbors : set
             Set of neighboring nodes satisfying the mark constraints.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_neighbors("B"))
+        {'A', 'C'}
+        >>> print(graph.get_neighbors("B", u_type=">"))
+        {'C'}
+        >>> print(graph.get_neighbors("B", v_type="-"))
+        {'A'}
+        >>> print(graph.get_neighbors("B", u_type=">", v_type="-"))
+        {'C'}
         """
         if node not in self:
             return set()
@@ -183,6 +234,18 @@ class AncestralBase(nx.Graph):
         -------
         parents : set
             Set of parent nodes.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", "-", ">"), ("C", "B", "-", ">"), ("B", "D", "-", ">")]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_parents("B"))
+        {'A', 'C'}
+        >>> print(graph.get_parents("D"))
+        {'B'}
+        >>> print(graph.get_parents("A"))
+        set()
         """
         return self.get_neighbors(node, u_type=">")
 
@@ -199,6 +262,18 @@ class AncestralBase(nx.Graph):
         -------
         children : set
             Set of child nodes.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", "-", ">"), ("A", "C", "-", ">"), ("B", "D", "-", ">")]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_children("A"))
+        {'B', 'C'}
+        >>> print(graph.get_children("B"))
+        {'D'}
+        >>> print(graph.get_children("D"))
+        set()
         """
         return self.get_neighbors(node, v_type=">")
 
@@ -215,6 +290,18 @@ class AncestralBase(nx.Graph):
         -------
         spouses : set
             Set of spouse nodes.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [("A", "B", ">", ">"), ("A", "C", "-", ">"), ("C", "D", ">", ">")]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_spouses("A"))
+        {'B'}
+        >>> print(graph.get_spouses("C"))
+        {'D'}
+        >>> print(graph.get_spouses("B"))
+        set()
         """
         return self.get_neighbors(node, u_type=">", v_type=">")
 
@@ -231,6 +318,23 @@ class AncestralBase(nx.Graph):
         -------
         ancestors : set
             Set of ancestor nodes including the starting node.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [
+        ...     ("A", "B", "-", ">"),
+        ...     ("B", "C", "-", ">"),
+        ...     ("C", "D", "-", ">"),
+        ...     ("E", "C", "-", ">"),
+        ... ]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_ancestors("D"))
+        {'A', 'B', 'C', 'D', 'E'}
+        >>> print(graph.get_ancestors("C"))
+        {'A', 'B', 'C', 'E'}
+        >>> print(graph.get_ancestors("A"))
+        {'A'}
         """
         ancestors = set()
         visited = set()
@@ -257,6 +361,23 @@ class AncestralBase(nx.Graph):
         -------
         descendants : set
             Set of descendant nodes including the starting node.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [
+        ...     ("A", "B", "-", ">"),
+        ...     ("B", "C", "-", ">"),
+        ...     ("C", "D", "-", ">"),
+        ...     ("B", "E", "-", ">"),
+        ... ]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_descendants("A"))
+        {'A', 'B', 'C', 'D', 'E'}
+        >>> print(graph.get_descendants("B"))
+        {'B', 'C', 'D', 'E'}
+        >>> print(graph.get_descendants("D"))
+        {'D'}
         """
         descendants = set()
         visited = set()
@@ -290,6 +411,21 @@ class AncestralBase(nx.Graph):
         -------
         reachable : set
             Set of reachable nodes including the starting node.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> edges = [
+        ...     ("A", "B", "-", ">"),
+        ...     ("B", "C", "-", ">"),
+        ...     ("A", "D", "o", "o"),
+        ...     ("D", "E", "o", "o"),
+        ... ]
+        >>> graph = AncestralBase(ebunch=edges)
+        >>> print(graph.get_reachable_nodes("A", v_type=">"))
+        {'A', 'B', 'C'}
+        >>> print(graph.get_reachable_nodes("A", u_type="o", v_type="o"))
+        {'A', 'D', 'E'}
         """
         reachable = set()
         visited = set()
