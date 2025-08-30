@@ -125,18 +125,21 @@ class TestAncestralBase(unittest.TestCase):
         self.graph.add_edge("A", "C", "-", ">")
         self.graph.add_edge("C", "D", ">", ">")
         self.graph.add_edge("A", "X", "o", "o")
-
+        self.graph.add_edge("C", "B", ">", "-")
         self.graph.add_edge("B", "X", "-", ">")
         self.graph.add_edge("C", "Y", "o", "o")
 
         spouses_a = self.graph.get_spouses("A")
         self.assertEqual(spouses_a, {"B"})
 
+        spouses_b = self.graph.get_spouses("B")
+        self.assertEqual(spouses_b, {"A"})
+
         spouses_c = self.graph.get_spouses("C")
         self.assertEqual(spouses_c, {"D"})
 
-        spouses_b = self.graph.get_spouses("B")
-        self.assertEqual(spouses_b, {"A"})
+        spouse_d = self.graph.get_spouses("D")
+        self.assertEqual(spouse_d, set())
 
     def test_get_ancestors(self):
         """Test getting all ancestors."""
