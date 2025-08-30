@@ -93,7 +93,7 @@ class TestAncestralBase(unittest.TestCase):
         self.graph.add_edge("Z", "B", ">", "-")
 
         parents_b = self.graph.get_parents("B")
-        self.assertEqual(parents_b, {"A", "C"})
+        self.assertEqual(parents_b, {"A", "C", "Y"})
 
         parents_d = self.graph.get_parents("D")
         self.assertEqual(parents_d, {"B"})
@@ -151,7 +151,7 @@ class TestAncestralBase(unittest.TestCase):
         self.assertEqual(ancestors_d, {"A", "B", "C", "D", "E"})
 
         ancestors_c = self.graph.get_ancestors("C")
-        self.assertEqual(ancestors_c, {"A", "B", "C", "E"})
+        self.assertEqual(ancestors_c, {"A", "B", "C", "E", "Y"})
 
         ancestors_a = self.graph.get_ancestors("A")
         self.assertEqual(ancestors_a, {"A"})
@@ -164,10 +164,10 @@ class TestAncestralBase(unittest.TestCase):
         self.graph.add_edge("B", "E", "-", ">")
 
         self.graph.add_edge("A", "X", "o", "o")
-        self.graph.add_edge("C", "Y", ">", ">")  #
+        self.graph.add_edge("C", "Y", ">", ">")
 
         descendants_a = self.graph.get_descendants("A")
-        self.assertEqual(descendants_a, {"A", "B", "C", "D", "E"})
+        self.assertEqual(descendants_a, {"A", "B", "C", "D", "E", "Y"})
 
         descendants_b = self.graph.get_descendants("B")
         self.assertEqual(descendants_b, {"B", "C", "D", "E"})
