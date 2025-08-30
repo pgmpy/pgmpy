@@ -17,27 +17,47 @@ class AncestralBase(nx.Graph):
         Parameters
         ----------
         ebunch : Iterable[tuple], optional
-            An iterable of edges (u, v, u_mark, v_mark) to initialize the graph.
-            Each mark must be one of {">", "-", "o"}. Default is None
-            which initializes an empty graph.
+            An iterable of edges of the form (u, v, u_mark, v_mark) used to
+            initialize the graph. Each mark must be one of {">", "-", "o"}.
+            Default is None, which initializes an empty graph.
 
         latents : set, optional
             Set of latent (unobserved) variables in the graph. Default is
             an empty set.
 
+        Edge Representation
+        -------------------
+        Internally, each edge is stored with an attribute dictionary
+        called ``marks``. The ``marks`` dict maps the two endpoint
+        nodes to their respective marks, for example:
+
+        - Directed: ("A", "B", "-", ">") is stored as
+          ("A", "B", {"marks": {"A": "-", "B": ">"}})   # A → B
+        - Reverse directed: ("A", "B", ">", "-") is stored as
+          ("A", "B", {"marks": {"A": ">", "B": "-"}})   # A ← B
+        - Bidirected: ("A", "B", ">", ">") is stored as
+          ("A", "B", {"marks": {"A": ">", "B": ">"}})   # A ↔ B
+        - Undirected: ("A", "B", "o", "o") is stored as
+          ("A", "B", {"marks": {"A": "o", "B": "o"}})   # A — B
+
+        Notes
+        -----
+        - Self-loops are not allowed (u != v).
+        - Invalid or mismatched mark combinations will raise ValueError.
+
         Examples
         --------
         >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
-
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.nodes)
-        ['A', 'B', 'C']
-        >>> print(graph.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
+        >>> list(graph.edges(data=True))
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
         >>> graph.add_edge("C", "D", "o", "o")
-        >>> print(graph.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-
+        >>> list(graph.edges(data=True))
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
+         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
         """
         super().__init__()
         self.valid_marks = {">", "-", "o"}
@@ -147,6 +167,32 @@ class AncestralBase(nx.Graph):
         v_mark : str
             Mark at node v for edge (u, v). Must be one of {">",
             "-", "o"}.
+
+        xamples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        >>> g = AncestralBase()
+
+        # Directed edge A → B
+        >>> g.add_edge("A", "B", "-", ">")
+        >>> g["A"]["B"]["marks"]
+        {'A': '-', 'B': '>'}
+
+        # Reverse directed edge A ← B
+        >>> g.add_edge("A", "C", ">", "-")
+        >>> g["A"]["C"]["marks"]
+        {'A': '>', 'C': '-'}
+
+        # Bidirected edge A ↔ D
+        >>> g.add_edge("A", "D", ">", ">")
+        >>> g["A"]["D"]["marks"]
+        {'A': '>', 'D': '>'}
+
+        # Undirected edge C — E
+        >>> g.add_edge("C", "E", "o", "o")
+        >>> g["C"]["E"]["marks"]
+        {'C': 'o', 'E': 'o'}
+
 
         Raises
         ------
