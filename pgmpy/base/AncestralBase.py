@@ -13,6 +13,18 @@ class AncestralBase(nx.Graph):
     ):
         """
         Ancestral graph base class.
+        Internally, each edge is stored with an attribute dictionary
+        called ``marks``. The ``marks`` dict maps the two endpoint
+        nodes to their respective marks, for example:
+
+        - Directed: ("A", "B", "-", ">") is stored as
+          ("A", "B", {"marks": {"A": "-", "B": ">"}})
+        - Reverse directed: ("A", "B", ">", "-") is stored as
+          ("A", "B", {"marks": {"A": ">", "B": "-"}})
+        - Bidirected: ("A", "B", ">", ">") is stored as
+          ("A", "B", {"marks": {"A": ">", "B": ">"}})
+        - Undirected: ("A", "B", "o", "o") is stored as
+          ("A", "B", {"marks": {"A": "o", "B": "o"}})
 
         Parameters
         ----------
@@ -24,26 +36,6 @@ class AncestralBase(nx.Graph):
         latents : set, optional
             Set of latent (unobserved) variables in the graph. Default is
             an empty set.
-
-        Edge Representation
-        -------------------
-        Internally, each edge is stored with an attribute dictionary
-        called ``marks``. The ``marks`` dict maps the two endpoint
-        nodes to their respective marks, for example:
-
-        - Directed: ("A", "B", "-", ">") is stored as
-          ("A", "B", {"marks": {"A": "-", "B": ">"}})   # A → B
-        - Reverse directed: ("A", "B", ">", "-") is stored as
-          ("A", "B", {"marks": {"A": ">", "B": "-"}})   # A ← B
-        - Bidirected: ("A", "B", ">", ">") is stored as
-          ("A", "B", {"marks": {"A": ">", "B": ">"}})   # A ↔ B
-        - Undirected: ("A", "B", "o", "o") is stored as
-          ("A", "B", {"marks": {"A": "o", "B": "o"}})   # A — B
-
-        Notes
-        -----
-        - Self-loops are not allowed (u != v).
-        - Invalid or mismatched mark combinations will raise ValueError.
 
         Examples
         --------
@@ -168,7 +160,12 @@ class AncestralBase(nx.Graph):
             Mark at node v for edge (u, v). Must be one of {">",
             "-", "o"}.
 
-        xamples
+        Returns
+        -------
+        None
+            Adds the edge to the graph in-place
+
+        Examples
         --------
         >>> from pgmpy.base import AncestralBase
         >>> g = AncestralBase()
@@ -192,12 +189,6 @@ class AncestralBase(nx.Graph):
         >>> g.add_edge("C", "E", "o", "o")
         >>> g["C"]["E"]["marks"]
         {'C': 'o', 'E': 'o'}
-
-
-        Raises
-        ------
-        ValueError
-            If marks are invalid or nodes are the same.
         """
         if u == v:
             raise ValueError("Nodes cannot be the same for an edge.")
@@ -212,7 +203,24 @@ class AncestralBase(nx.Graph):
         Parameters
         ----------
         ebunch : Iterable[tuple]
-            Each tuple should be of the form (u, v, u_mark, v_mark)."""
+            Each tuple should be of the form (u, v, u_mark, v_mark).
+
+        Returns
+        -------
+        None
+            Adds the edges to the graph in-place.
+
+
+        Examples
+        --------
+        >>> g = AncestralBase()
+        >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
+        >>> g.add_edges_from(edges)
+        >>> list(g.edges(data=True))
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
+         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+        """
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
 
