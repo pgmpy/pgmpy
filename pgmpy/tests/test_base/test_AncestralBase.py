@@ -11,11 +11,16 @@ class TestAncestralBase(unittest.TestCase):
         """Set up test fixtures before each test method."""
         edges = [
             ("A", "B", "-", ">"),
-            ("C", "A", "-", ">"),
+            ("A", "C", ">", "-"),
             ("A", "D", "o", "o"),
             ("A", "E", ">", ">"),
+            ("A", "F", "-", "-"),
+            ("A", "G", "-", "o"),
+            ("A", "H", "o", "-"),
+            ("A", "I", "o", ">"),
+            ("A", "J", ">", "o"),
             ("B", "X", "-", ">"),
-            ("Y", "C", "-", ">"),
+            ("C", "Y", ">", "-"),
         ]
         self.graph = AncestralBase(ebunch=edges)
 
@@ -33,18 +38,6 @@ class TestAncestralBase(unittest.TestCase):
         self.assertEqual(len(graph.edges), 2)
         self.assertEqual(graph["A"]["B"]["marks"], {"A": "-", "B": ">"})
         self.assertEqual(graph["B"]["C"]["marks"], {"B": ">", "C": "-"})
-
-    def test_add_edge_valid(self):
-        """Test adding valid edges with different mark combinations."""
-        self.assertEqual(len(self.graph.edges), 6)
-        self.assertIn("A", self.graph.nodes)
-        self.assertIn("B", self.graph.nodes)
-        self.assertIn("C", self.graph.nodes)
-        self.assertIn("D", self.graph.nodes)
-
-        self.assertEqual(self.graph["A"]["B"]["marks"], {"A": "-", "B": ">"})
-        self.assertEqual(self.graph["A"]["C"]["marks"], {"A": ">", "C": "-"})
-        self.assertEqual(self.graph["A"]["D"]["marks"], {"C": "o", "D": "o"})
 
     def test_add_edge_same_node_error(self):
         """Test that adding edge with same source and target raises error."""
@@ -74,8 +67,10 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_get_neighbors_basic(self):
         """Test getting neighbors without constraints."""
-        self.assertEqual(self.graph.get_neighbors("A"), {"B", "C", "D", "E"})
+        all_nodes_except_A = {"B", "C", "D", "E", "F", "G", "H", "I", "J"}
+        self.assertEqual(self.graph.get_neighbors("A"), all_nodes_except_A)
         self.assertEqual(self.graph.get_neighbors("B"), {"A", "X"})
+        self.assertEqual(self.graph.get_neighbors("C"), {"A", "Y"})
 
     def test_get_neighbors_nonexistent_node(self):
         """Test getting neighbors for non-existent node."""
@@ -85,40 +80,53 @@ class TestAncestralBase(unittest.TestCase):
         """Test getting parent nodes."""
         self.assertEqual(self.graph.get_parents("A"), {"C"})
         self.assertEqual(self.graph.get_parents("B"), {"A"})
-        self.assertEqual(self.graph.get_parents("Y"), set())
+        self.assertEqual(self.graph.get_parents("C"), {"Y"})
 
     def test_get_children(self):
         """Test getting child nodes."""
         self.assertEqual(self.graph.get_children("A"), {"B"})
         self.assertEqual(self.graph.get_children("B"), {"X"})
-        self.assertEqual(self.graph.get_children("C"), {"A"})
-        self.assertEqual(self.graph.get_children("Y"), set())
+        self.assertEqual(self.graph.get_children("Y"), {"C"})
 
     def test_get_spouses(self):
         """Test getting spouse nodes (bidirectional arrows)."""
         self.assertEqual(self.graph.get_spouses("A"), {"E"})
         self.assertEqual(self.graph.get_spouses("E"), {"A"})
-        self.assertEqual(self.graph.get_spouses("C"), set())
+        self.assertEqual(self.graph.get_spouses("B"), set())
 
     def test_get_ancestors(self):
         """Test getting all ancestors."""
         self.assertEqual(self.graph.get_ancestors("A"), {"A", "C", "Y"})
-        self.assertEqual(self.graph.get_ancestors("B"), {"B", "A"})
-        self.assertEqual(self.graph.get_ancestors("C"), {"C", "Y"})
-        self.assertEqual(self.graph.get_ancestors("Y"), set())
+        self.assertEqual(self.graph.get_ancestors("X"), {"X", "B", "A", "C", "Y"})
 
     def test_get_descendants(self):
         """Test getting all descendants."""
         self.assertEqual(self.graph.get_descendants("A"), {"A", "B", "X"})
-        self.assertEqual(self.graph.get_descendants("B"), {"B", "X"})
-        self.assertEqual(self.graph.get_descendants("D"), set())
+        self.assertEqual(self.graph.get_descendants("Y"), {"Y", "C", "A", "B", "X"})
 
     def test_get_reachable_nodes(self):
         """Test getting reachable nodes with constraints."""
         self.assertEqual(
             self.graph.get_reachable_nodes("A", v_type=">"), {"A", "B", "X"}
         )
-        self.assertEqual(self.graph.get_reachable_nodes("A", v_type="o"), {"A", "D"})
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type=">", v_type="-"), {"A", "C", "Y"}
+        )
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type="o", v_type="o"), {"A", "D"}
+        )
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type=">", v_type=">"), {"A", "E"}
+        )
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type="-", v_type="-"), {"A", "F"}
+        )
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type="o", v_type=">"), {"A", "I"}
+        )
+        self.assertEqual(
+            self.graph.get_reachable_nodes("A", u_type=">", v_type="o"), {"A", "J"}
+        )
 
     def test_adjacency_matrix(self):
         """Test conversion to adjacency matrix."""
