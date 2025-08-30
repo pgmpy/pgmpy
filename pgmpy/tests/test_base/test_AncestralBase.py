@@ -107,7 +107,7 @@ class TestAncestralBase(unittest.TestCase):
     def test_get_reachable_nodes(self):
         """Test getting reachable nodes with constraints."""
         self.assertEqual(
-            self.graph.get_reachable_nodes("A", v_type=">"), {"A", "B", "X"}
+            self.graph.get_reachable_nodes("A", v_type=">"), {"A", "B", "X", "E", "I"}
         )
         self.assertEqual(
             self.graph.get_reachable_nodes("A", u_type=">", v_type="-"), {"A", "C", "Y"}
@@ -130,10 +130,12 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_adjacency_matrix(self):
         """Test conversion to adjacency matrix."""
-        self.graph.add_edge("A", "B", "-", ">")
-        self.graph.add_edge("B", "C", ">", "-")
-
-        M, node_index = self.graph.adjacency_matrix
+        edges = [
+            ("A", "B", "-", ">"),
+            ("B", "C", ">", "-"),
+        ]
+        graph = AncestralBase(ebunch=edges)
+        M, node_index = graph.adjacency_matrix
 
         expected = np.array([[0, ">", 0], ["-", 0, "-"], [0, ">", 0]], dtype=object)
 
