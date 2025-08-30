@@ -157,11 +157,11 @@ class TestAncestralBase(unittest.TestCase):
         graph = AncestralBase()
         graph.adjacency_matrix = M
 
-        self.assertEqual(len(self.graph.nodes), 3)
-        self.assertEqual(len(self.graph.edges), 2)
+        self.assertEqual(len(graph.nodes), 3)
+        self.assertEqual(len(graph.edges), 2)
 
-        self.assertTrue(self.graph.has_edge("X_0", "X_1"))
-        self.assertTrue(self.graph.has_edge("X_1", "X_2"))
+        self.assertTrue(graph.has_edge("X_0", "X_1"))
+        self.assertTrue(graph.has_edge("X_1", "X_2"))
 
-        self.assertEqual(self.graph["X_0"]["X_1"]["marks"], {"X_0": ">", "X_1": "-"})
-        self.assertEqual(self.graph["X_1"]["X_2"]["marks"], {"X_1": ">", "X_2": "-"})
+        self.assertEqual(graph["X_0"]["X_1"]["marks"], {"X_0": ">", "X_1": "-"})
+        self.assertEqual(graph["X_1"]["X_2"]["marks"], {"X_1": ">", "X_2": "-"})
