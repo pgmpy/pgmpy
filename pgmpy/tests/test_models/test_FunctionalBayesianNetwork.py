@@ -828,13 +828,13 @@ class TestFBNSimulation(unittest.TestCase):
         reason="execute only if required dependency present",
     )
     def test_simulate_with_virtual_intervention(self):
+        import torch
+
         model = FunctionalBayesianNetwork([("x1", "x2")])
         base_x1 = FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0))
         x2 = FunctionalCPD(
             "x2",
-            fn=lambda p: dist.Delta(
-                2.0 * p["x1"] + 1.0
-            ),  # parent value is a torch scalar (ok)
+            fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0),
             parents=["x1"],
         )
         model.add_cpds(base_x1, x2)

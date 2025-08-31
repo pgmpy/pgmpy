@@ -3,14 +3,14 @@ import unittest
 import numpy as np
 import pandas as pd
 import pyro.distributions as dist
-from pgmpy.utils._safe_import import _safe_import
-
-torch = _safe_import("torch")
-
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+from pgmpy.utils.check_dependencies import _check_soft_dependencies
+
+torch = _safe_import("torch")
 
 
 class TestFCPD(unittest.TestCase):
@@ -32,6 +32,10 @@ class TestFCPD(unittest.TestCase):
             callable(cpd.fn), "The function passed to FunctionalCPD must be callable."
         )
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("torch", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_linear_gaussian(self):
         """
         Test the equivalence of FunctionalCPD with LinearGaussianCPD sampling.
@@ -86,6 +90,10 @@ class TestFCPD(unittest.TestCase):
             f" differs from LinearGaussian variance ({linear_gaussian_variance})",
         )
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("torch", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_different_distributions(self):
         exp_cpd = FunctionalCPD("exponential", lambda _: dist.Exponential(rate=2.0))
 
@@ -131,6 +139,10 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("torch", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_sample_iterative(self):
         """
         Test FunctionalCPD with iterative sampling (vectorized=False).
@@ -152,7 +164,6 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # Test parent sample none vectorized
     def test_vectorized_without_parent(self):
         """
         Test FunctionalCPD with vectorized sampling without parents.
@@ -166,7 +177,6 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # Test parent sample none iterative
     def test_iterative_without_parent(self):
         """
         Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
