@@ -3,12 +3,12 @@ import unittest
 import numpy as np
 import pandas as pd
 import pyro.distributions as dist
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from pgmpy.utils._safe_import import _safe_import
-from pgmpy.utils.check_dependencies import _check_soft_dependencies
 
 torch = _safe_import("torch")
 
