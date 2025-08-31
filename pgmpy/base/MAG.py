@@ -1,138 +1,282 @@
+from typing import Hashable, Iterable, Optional
+
 import networkx as nx
 
-# from pgmpy.base.AncestralBase import AncestralBase
+from pgmpy.base.AncestralBase import AncestralBase
 
 
-class MAG:
+class MAG(AncestralBase):
+    """
+    Class for representing Maximal Ancestral Graphs (MAGs).
+    MAGs are mixed graphs that can contain directed (->), bidirected (<->),
+    and undirected (-) edges, and are closed under marginalization and conditioning.
+    """
 
-    def __init__(self, ebunch=None, latents=None):
+    def __init__(
+        self,
+        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        latents: set[Hashable] = set(),
+    ):
         """
-        Class for representing Maximal Ancestral Graphs (MAGs).
+        Initialize a Maximal Ancestral Graph.
 
         Parameters
         ----------
-        ebunch: list of tuples, optional (default: None)
-            List of edges to initialize the graph. Each edge is represented
-            as a tuple (u, v, u_mark, v_mark) where u_mark and v_mark can be
-            '>' (arrowhead) or '-' (tail).
-        latents: set, optional (default: None)
-            Set of latent variables in the graph.
+        ebunch : iterable of tuples, optional
+            A list or iterable of edges to add at initialization.
+        latents : set, default=set()
+            Set of latent (unobserved) variables.
+
+        Returns
+        -------
+        MAG
+            A new instance of a Maximal Ancestral Graph.
+
+        Examples
+        --------
+        >>> mag = MAG(ebunch=[("A", "B"), ("B", "C")], latents={"L"})
+        >>> mag.nodes()
+        ['A', 'B', 'C']
         """
-        # super().__init__()
-        self.latents = latents if latents is not None else set()
-        if ebunch is not None:
-            for u, v, u_mark, v_mark in ebunch:
-                self.add_edge(u, v, u_mark=u_mark, v_mark=v_mark)
+        super().__init__(ebunch=ebunch, latents=latents)
 
-    def _is_collider(self, p, c, n):
-        """Check if c is a collider on the path p-c-n."""
-        p_mark, c_mark = self._get_marks(p, c)
-        c_mark2, n_mark = self._get_marks(c, n)
-        return p_mark == ">" and c_mark2 == ">"
-
-    def has_inducing_path(self, u, v, W: set):
+    def _is_collider(self, u_node, c_node, v_node):
         """
-        Check for the existence of an inducing path between u and v
-        relative to the set of latent variables W.
+        Check if a node is a collider in a path u - c - v.
 
-        An inducing path from u to v is a path where:
-        1. Every non-endpoint node on the path is a collider (tail-to-tail).
-        2. Every collider is an ancestor of either u or v.
-        3. All intermediate nodes are in W (latent variables).
+        A collider is a node with incoming arrowheads on both sides:
+        u -> c <- v.
+
+        Parameters
+        ----------
+        u_node : Hashable
+            The first endpoint in the triple (u, c, v).
+        c_node : Hashable
+            The middle node, candidate collider.
+        v_node : Hashable
+            The second endpoint in the triple.
+
+        Returns
+        -------
+        bool
+            True if `c_node` is a collider on the path, False otherwise.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Z", "-", ">")  # X -> Z
+        >>> mag.add_edge("Y", "Z", "-", ">")  # Y -> Z
+        >>> mag._is_collider("X", "Z", "Y")
+        True
         """
-        if not self.latents.issuperset(W):
-            raise ValueError("W must be a subset of the graph's latent variables.")
+        mark_uc_at_c = self.edges[u_node, c_node]["marks"][c_node]
+        mark_cv_at_c = self.edges[c_node, v_node]["marks"][c_node]
 
-        # Check for existence of a path between u and v.
-        # This is a brute-force check on all possible simple paths.
-        paths = list(nx.all_simple_paths(self, source=u, target=v))
-        for path in paths:
+        return mark_uc_at_c == ">" and mark_cv_at_c == ">"
+
+    def has_inducing_path(self, u, v, W):
+        """
+        Check if there exists an inducing path between two nodes relative to W.
+
+        An inducing path between u and v is a path such that:
+        - All intermediate nodes are in W,
+        - Each intermediate node is a collider,
+        - Each intermediate node is an ancestor of u or v.
+
+        Parameters
+        ----------
+        u : Hashable
+            Source node.
+        v : Hashable
+            Target node.
+        W : set
+            Subset of nodes to check inducing paths through (often latents).
+
+        Returns
+        -------
+        bool
+            True if there exists an inducing path, False otherwise.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
+        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
+        >>> mag.latents = {"L"}
+        >>> mag.has_inducing_path("X", "Y", mag.latents)
+        True
+        """
+        for path in nx.all_simple_paths(self, source=u, target=v):
+            if len(path) <= 2:
+                continue
+
+            intermediate_nodes = set(path[1:-1])
+
+            if not intermediate_nodes.issubset(W):
+                continue
+
+            ancestors_uv = self.get_ancestors(u).union(self.get_ancestors(v))
             is_inducing = True
-            if len(path) > 2:
-                for i in range(1, len(path) - 1):
-                    node = path[i]
-                    prev_node = path[i - 1]
-                    next_node = path[i + 1]
 
-                    if not self._is_collider(prev_node, node, next_node):
-                        is_inducing = False
-                        break
+            for i in range(1, len(path) - 1):
+                prev_node, current_node, next_node = path[i - 1], path[i], path[i + 1]
 
-                    if not (
-                        node in self.get_ancestors(u) or node in self.get_ancestors(v)
-                    ):
-                        is_inducing = False
-                        break
+                if not self._is_collider(prev_node, current_node, next_node):
+                    is_inducing = False
+                    break
 
-                    if node not in W:
-                        is_inducing = False
-                        break
+                if current_node not in ancestors_uv:
+                    is_inducing = False
+                    break
 
             if is_inducing:
                 return True
+
         return False
 
-    def is_visible_edge(self, u, v):
+    def is_visible_edge(self, u, v) -> bool:
         """
-        Check if an edge (u, v) is visible.
+        Check if an edge is visible.
 
-        An edge is visible if it corresponds to an inducing path.
-        This is a complex property, often defined as an edge that's
-        not a result of marginalizing out variables. A simpler check is
-        to see if an inducing path exists between u and v.
+        An edge is visible if it exists and is not shielded by an inducing path
+        through latent variables.
+
+        Parameters
+        ----------
+        u : Hashable
+            First node.
+        v : Hashable
+            Second node.
+
+        Returns
+        -------
+        bool
+            True if the edge is visible, False otherwise.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", "-", ">")  # X -> Y
+        >>> mag.is_visible_edge("X", "Y")
+        True
         """
-        return self.has_inducing_path(u, v, self.latents)
+        if not self.has_edge(u, v):
+            return False
+        return not self.has_inducing_path(u, v, self.latents)
 
     def is_invisible_edge(self, u, v):
         """
-        Check if an edge (u, v) is invisible.
+        Check if an edge is invisible.
 
-        An edge is invisible if it does not correspond to an inducing path.
-        This is a complex property, often defined as an edge that's
-        a result of marginalizing out variables. A simpler check is
-        to see if no inducing path exists between u and v.
+        An edge is invisible if it exists but is shielded by an inducing path
+        through latent variables.
+
+        Parameters
+        ----------
+        u : Hashable
+            First node.
+        v : Hashable
+            Second node.
+
+        Returns
+        -------
+        bool
+            True if the edge is invisible, False otherwise.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "L", "-", ">")
+        >>> mag.add_edge("Y", "L", "-", ">")
+        >>> mag.latents = {"L"}
+        >>> mag.is_invisible_edge("X", "Y")
+        True
         """
-        return not self.has_inducing_path(u, v, self.latents)
+        if not self.has_edge(u, v):
+            return False
+        return self.has_inducing_path(u, v, self.latents)
 
-    def lower_manipulation(self, X: set):
+    def lower_manipulation(self, X):
         """
-        Perform a lower manipulation on the MAG with respect to set X.
+        Perform lower manipulation (marginalization).
 
-        This corresponds to marginalizing out variables in X.
-        The effect is:
-        - For every visible edge `u -> v` where `v` is in X, this edge is removed.
-        - For every invisible edge `u - v` where `v` is in X, this edge is replaced
-          by a bidirected edge `u <-> v`.
+        Removes variables in `X` from the MAG while preserving independence
+        structure implied by marginalization. Invisible edges are replaced with
+        bidirected edges. Directed edges into marginalized nodes are removed.
+
+        Parameters
+        ----------
+        X : set
+            Set of nodes to marginalize (remove).
+
+        Returns
+        -------
+        MAG
+            A new MAG with nodes in X marginalized out.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "L", "-", ">")
+        >>> mag.add_edge("Y", "L", "-", ">")
+        >>> mag.latents = {"L"}
+        >>> new_mag = mag.lower_manipulation({"L"})
+        >>> new_mag.edges()
+        [('X', 'Y')]
         """
-        new_mag = MAG(ebunch=self.edges(), latents=self.latents)
+        new_mag = self.copy()
 
-        for u, v, data in new_mag.edges(data=True):
-            if v in X:
-                u_mark, v_mark = data["marks"]
-                if u_mark == ">":
+        for u, v in list(self.edges()):
+            if u not in X and v not in X:
+                continue
+
+            if self.is_invisible_edge(u, v):
+                new_mag.add_edge(u, v, ">", ">")
+
+            elif self.is_visible_edge(u, v):
+                marks = self.edges[u, v]["marks"]
+                if v in X and marks.get(u) == "-" and marks.get(v) == ">":
                     new_mag.remove_edge(u, v)
-                elif u_mark == "-":
+                elif u in X and marks.get(v) == "-" and marks.get(u) == ">":
                     new_mag.remove_edge(u, v)
-                    new_mag.add_edge(u, v, u_mark=">", v_mark=">")
 
+        new_mag.remove_nodes_from(X)
         return new_mag
 
-    def upper_manipulation(self, X: set):
+    def upper_manipulation(self, X):
         """
-        Perform an upper manipulation on the MAG with respect to set X.
+        Perform upper manipulation (conditioning).
 
-        This corresponds to conditioning on variables in X.
-        The effect is:
-        - For every edge `u -> v` where `u` is in X, this edge is removed.
+        Removes directed edges outgoing from nodes in `X`, representing
+        conditioning on those variables.
+
+        Parameters
+        ----------
+        X : set
+            Set of nodes to condition on.
+
+        Returns
+        -------
+        MAG
+            A new MAG with outgoing edges from X removed.
+
+        Examples
+        --------
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", "-", ">")
+        >>> new_mag = mag.upper_manipulation({"X"})
+        >>> new_mag.has_edge("X", "Y")
+        False
         """
-        new_mag = MAG(ebunch=self.edges(), latents=self.latents)
+        new_mag = self.copy()
+        edges_to_remove = []
 
-        for u in X:
-            # We are conditioning on X, so we delete all edges pointing OUT of X.
-            for neighbor in new_mag.get_neighbors(u):
-                # The _get_marks method handles both directions
-                u_mark, neighbor_mark = new_mag._get_marks(u, neighbor)
-                if u_mark == ">":  # This is an edge u -> neighbor
-                    new_mag.remove_edge(u, neighbor)
+        for u, v in self.edges():
+            marks = self.edges[u, v]["marks"]
+            if u in X and marks.get(u) == "-" and marks.get(v) == ">":
+                edges_to_remove.append((u, v))
+            elif v in X and marks.get(v) == "-" and marks.get(u) == ">":
+                edges_to_remove.append((u, v))
 
+        new_mag.remove_edges_from(edges_to_remove)
         return new_mag
