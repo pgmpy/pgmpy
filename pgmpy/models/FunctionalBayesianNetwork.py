@@ -425,17 +425,18 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         elif method.lower() == "mcmc":
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
-                priors = prior_fn()
+                priors_dists = prior_fn()
+                priors_vals = {
+                    name: pyro.sample(name, d) for name, d in priors_dists.items()
+                }
+
                 with pyro.plate("data", data.shape[0]):
                     for node in sort_nodes:
-                        pyro.sample(
-                            f"{node}",
-                            cpds_dict[node].fn(
-                                priors,
-                                {p: tensor_data[p] for p in cpds_dict[node].parents},
-                            ),
-                            obs=tensor_data[node],
+                        dist_node = cpds_dict[node].fn(
+                            priors_vals,
+                            {p: tensor_data[p] for p in cpds_dict[node].parents},
                         )
+                        pyro.sample(f"{node}", dist_node, obs=tensor_data[node])
 
             # Step 3.2: Fit the model using MCMC.
             nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
