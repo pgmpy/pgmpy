@@ -8,13 +8,12 @@ on: [push, pull_request]
 
 jobs:
   test-nosoftdeps:
-    name: test-nosoftdeps (${{ matrix.os }}, python ${{ matrix.python-version}})
+    name: Tests with soft dependencies - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        group: [1, 2, 3]
       fail-fast: true
 
     steps:
@@ -54,16 +53,15 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --splits 3 --group ${{ matrix.group }} --verbose --junitxml=test-results.xml
+        run: pytest --verbose --junitxml=test-results.xml
 
-  build:
-    name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+  test-fulldep:
+    name: Test with full dependencies - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        group: [1, 2, 3]
       fail-fast: true
 
     steps:
@@ -103,7 +101,7 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 3 --group ${{ matrix.group }} --verbose --junitxml=test-results.xml
+        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose --junitxml=test-results.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
