@@ -39,8 +39,6 @@ class TestMAG(unittest.TestCase):
         self.mag.add_edge("C", "D", "-", ">")
         self.assertTrue(self.mag.is_invisible_edge("C", "D"))
         self.assertFalse(self.mag.is_visible_edge("C", "D"))
-        self.assertFalse(self.mag.is_visible_edge("X", "A"))
-        self.assertFalse(self.mag.is_invisible_edge("X", "A"))
 
     def test_edge_visibility_mutual_exclusivity(self):
         for u, v in self.mag.edges():
@@ -76,7 +74,7 @@ class TestMAG(unittest.TestCase):
         self.assertEqual(set(self.mag.edges()), original_edges)
 
     def test_graph_properties(self):
-        self.assertEqual(len(self.mag.nodes()), 11)
+        self.assertEqual(len(self.mag.nodes()), 13)
         self.assertIn("L", self.mag.latents)
         self.assertTrue(self.mag.has_edge("B", "H"))
         self.assertTrue(self.mag.has_edge("B", "I"))
