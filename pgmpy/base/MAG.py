@@ -87,8 +87,10 @@ class MAG(AncestralBase):
         ----------
         u : Hashable
             Source node.
+
         v : Hashable
             Target node.
+
         W : set
             Subset of nodes to check inducing paths through (often latents).
 
@@ -145,6 +147,7 @@ class MAG(AncestralBase):
         ----------
         u : Hashable
             First node.
+
         v : Hashable
             Second node.
 
@@ -175,6 +178,7 @@ class MAG(AncestralBase):
         ----------
         u : Hashable
             First node.
+
         v : Hashable
             Second node.
 
