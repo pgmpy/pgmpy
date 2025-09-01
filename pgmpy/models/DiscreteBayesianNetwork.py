@@ -1332,11 +1332,11 @@ class DiscreteBayesianNetwork(DAG):
         evidence: Optional[Dict[Hashable, Hashable]] = None,
         virtual_evidence: Optional[List[TabularCPD]] = None,
         virtual_intervention: Optional[List[TabularCPD]] = None,
+        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         include_latents: bool = False,
         partial_samples: Optional[pd.DataFrame] = None,
         seed: Optional[int] = None,
         show_progress: bool = True,
-        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         return_full: bool = False,
     ) -> pd.DataFrame:
         """
@@ -1366,6 +1366,19 @@ class DiscreteBayesianNetwork(DAG):
             of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
             intervention probabilities.
 
+        missing_prob: TabularCPD, list of TabularCPDs (default: None)
+            Used to define the missingness mechanism in the simulated data. For
+            each variable with missing values, provide a TabularCPD defining
+            the probability of a value being missing given the variable's value
+            (Missing at Random) and optionally its parents' values (Missing Not
+            at Random).
+
+            TabularCPD format: The variable name of each TabularCPD should end
+              with the name of node in DiscreteBayesianNetwork with * at the end
+              of the name. The state names of each TabularCPD should be the same
+              as the state names of the corresponding node in
+              DiscreteBayesianNetwork.
+
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
@@ -1380,15 +1393,6 @@ class DiscreteBayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        missing_prob: TabularCPD, list  (default: None)
-            The probability of missing value for the variable of TabularCPD.
-            In case of missing value for more than one variable, provide list of TabularCPD.
-            The variable name of each TabularCPD should
-              end with the name of node in DiscreteBayesianNetwork
-                with * at the end of the name.
-            The state names of each TabularCPD should be the same
-              as the state names of the corresponding
-                node in DiscreteBayesianNetwork.
 
         return_full: bool (default: False)
             If True, return both full samples and samples with missing values (if performed).
