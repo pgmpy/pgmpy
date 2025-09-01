@@ -34,8 +34,11 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> mag = MAG(ebunch=[("A", "B"), ("B", "C")], latents={"L"})
-        >>> mag.nodes()
+        >>> from pgmpy.base.MAG import MAG
+        >>> mag = MAG(
+        ...     ebunch=[("A", "B", "-", ">"), ("B", "C", "-", ">")], latents={"L"}
+        ... )
+        >>> list(mag.nodes())
         ['A', 'B', 'C']
         """
         super().__init__(ebunch=ebunch, latents=latents)
@@ -80,9 +83,11 @@ class MAG(AncestralBase):
         Check if there exists an inducing path between two nodes relative to W.
 
         An inducing path between u and v is a path such that:
-        - All intermediate nodes are in W,
-        - Each intermediate node is a collider,
-        - Each intermediate node is an ancestor of u or v.
+        - The path has length > 2 (at least one intermediate node),
+        - Every intermediate node is a collider on the path,
+        - Every intermediate node is either:
+            * in W, or
+            * an ancestor of u or v.
 
         Parameters
         ----------
@@ -114,22 +119,16 @@ class MAG(AncestralBase):
             if len(path) <= 2:
                 continue
 
-            intermediate_nodes = set(path[1:-1])
-
-            if not intermediate_nodes.issubset(W):
-                continue
-
-            ancestors_uv = self.get_ancestors(u).union(self.get_ancestors(v))
             is_inducing = True
-
             for i in range(1, len(path) - 1):
-                prev_node, current_node, next_node = path[i - 1], path[i], path[i + 1]
+                prev_node, curr_node, next_node = path[i - 1], path[i], path[i + 1]
 
-                if not self._is_collider(prev_node, current_node, next_node):
+                if not self._is_collider(prev_node, curr_node, next_node):
                     is_inducing = False
                     break
 
-                if current_node not in ancestors_uv:
+                ancestors_uv_vu = self.get_ancestors(u).union(self.get_ancestors(v))
+                if curr_node not in W and curr_node not in ancestors_uv_vu:
                     is_inducing = False
                     break
 
@@ -194,15 +193,23 @@ class MAG(AncestralBase):
         --------
         >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "L", "-", ">")
-        >>> mag.add_edge("Y", "L", "-", ">")
+        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
+        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
+        >>> mag.latents = {"L"}
+        >>> mag.is_invisible_edge("X", "Y")
+        False
+
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", "-", ">")  # X -> Y (the edge we are testing)
+        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
+        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
         >>> mag.latents = {"L"}
         >>> mag.is_invisible_edge("X", "Y")
         True
         """
         if not self.has_edge(u, v):
             return False
-        return self.has_inducing_path(u, v, self.latents)
+        return not self.is_visible_edge(u, v)
 
     def lower_manipulation(self, X):
         """
@@ -230,24 +237,20 @@ class MAG(AncestralBase):
         >>> mag.add_edge("Y", "L", "-", ">")
         >>> mag.latents = {"L"}
         >>> new_mag = mag.lower_manipulation({"L"})
-        >>> new_mag.edges()
+        >>> list(new_mag.edges())
         [('X', 'Y')]
         """
         new_mag = self.copy()
 
-        for u, v in list(self.edges()):
-            if u not in X and v not in X:
-                continue
+        for node in X:
+            neighbors = list(self.neighbors(node))
 
-            if self.is_invisible_edge(u, v):
-                new_mag.add_edge(u, v, ">", ">")
+            for i in range(len(neighbors)):
+                for j in range(i + 1, len(neighbors)):
+                    u, v = neighbors[i], neighbors[j]
 
-            elif self.is_visible_edge(u, v):
-                marks = self.edges[u, v]["marks"]
-                if v in X and marks.get(u) == "-" and marks.get(v) == ">":
-                    new_mag.remove_edge(u, v)
-                elif u in X and marks.get(v) == "-" and marks.get(u) == ">":
-                    new_mag.remove_edge(u, v)
+                    if self._is_collider(u, node, v):
+                        new_mag.add_edge(u, v, ">", ">")
 
         new_mag.remove_nodes_from(X)
         return new_mag
@@ -290,3 +293,25 @@ class MAG(AncestralBase):
 
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
+
+    def copy(self):
+        """
+        Return a copy of the graph, preserving edge marks and latents.
+
+        Returns
+        -------
+        MAG
+            Copy of the MAG graph
+        """
+        new_graph = self.__class__()
+
+        new_graph.add_nodes_from(self.nodes())
+
+        for u, v, data in self.edges(data=True):
+            u_mark, v_mark = data["marks"][u], data["marks"][v]
+            new_graph.add_edge(u, v, u_mark, v_mark)
+
+        if hasattr(self, "latents"):
+            new_graph.latents = set(self.latents)
+
+        return new_graph
