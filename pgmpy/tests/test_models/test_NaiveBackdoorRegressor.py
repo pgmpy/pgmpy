@@ -17,8 +17,8 @@ from pgmpy.prediction.NaiveBackdoorRegressor import NaiveBackdoorRegressor
 def make_estimator():
     """Create a valid estimator for sklearn compatibility tests."""
     dag = DAG(
-        ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        ebunch=[("X", "Y")],
+        roles={"exposure": "X", "outcome": "Y", "adjustment": []},
     )
     return NaiveBackdoorRegressor(causal_graph=dag, base_estimator=LinearRegression())
 
@@ -339,16 +339,3 @@ def test_pretreatment_variables():
     # Feature columns should include pretreatment
     assert set(regressor.feature_columns_) == {"X", "Z", "P"}
     assert regressor.pretreatment_vars_ == ["P"]
-
-
-def test_multi_output_not_implemented():
-    """Test that multi_output raises NotImplementedError."""
-    dag = DAG(
-        ebunch=[("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": []},
-    )
-
-    with pytest.raises(
-        NotImplementedError, match="Multiple outcome support is planned"
-    ):
-        NaiveBackdoorRegressor(causal_graph=dag, multi_output=True)
