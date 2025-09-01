@@ -63,6 +63,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "Z", "-", ">")  # X -> Z
         >>> mag.add_edge("Y", "Z", "-", ">")  # Y -> Z
@@ -101,6 +102,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")  # X -> L
         >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
@@ -158,6 +160,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "Y", "-", ">")  # X -> Y
         >>> mag.is_visible_edge("X", "Y")
@@ -189,6 +192,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")
         >>> mag.add_edge("Y", "L", "-", ">")
@@ -220,6 +224,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")
         >>> mag.add_edge("Y", "L", "-", ">")
@@ -266,6 +271,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base.MAG import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "Y", "-", ">")
         >>> new_mag = mag.upper_manipulation({"X"})
