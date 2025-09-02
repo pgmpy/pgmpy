@@ -23,6 +23,8 @@ class AncestralBase(nx.Graph):
           ("A", "B", {"marks": {"A": ">", "B": ">"}})
         - Undirected: ("A", "B", "-", "-") is stored as
           ("A", "B", {"marks": {"A": "-", "B": "-"}})
+        - Circle endpoint: ("A", "B", "o", ">") is stored as
+          ("A", "B", {"marks": {"A": "o", "B": ">"}})
 
         Parameters
         ----------
@@ -37,7 +39,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> list(graph.edges(data=True))
@@ -165,7 +167,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> g = AncestralBase()
 
         # Directed edge A → B
@@ -206,7 +208,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> g = AncestralBase()
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> g.add_edges_from(edges)
@@ -240,7 +242,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> print(graph.get_neighbors("B"))
@@ -285,7 +287,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("C", "B", "-", ">"), ("B", "D", "-", ">")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> print(graph.get_parents("B"))
@@ -313,7 +315,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("A", "C", "-", ">"), ("B", "D", "-", ">")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> print(graph.get_children("A"))
@@ -341,7 +343,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", ">", ">"), ("A", "C", "-", ">"), ("C", "D", ">", ">")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> print(graph.get_spouses("A"))
@@ -369,7 +371,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [
         ...     ("A", "B", "-", ">"),
         ...     ("B", "C", "-", ">"),
@@ -412,7 +414,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [
         ...     ("A", "B", "-", ">"),
         ...     ("B", "C", "-", ">"),
@@ -462,7 +464,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base.AncestralBase import AncestralBase
+        >>> from pgmpy.base import AncestralBase
         >>> edges = [
         ...     ("A", "B", "-", ">"),
         ...     ("B", "C", "-", ">"),

@@ -2,14 +2,19 @@ from typing import Hashable, Iterable, Optional
 
 import networkx as nx
 
-from pgmpy.base.AncestralBase import AncestralBase
+from pgmpy.base import AncestralBase
 
 
 class MAG(AncestralBase):
     """
     Class for representing Maximal Ancestral Graphs (MAGs).
-    MAGs are mixed graphs that can contain directed (->), bidirected (<->),
-    and undirected (-) edges, and are closed under marginalization and conditioning.
+    A MAG is a type of graph used in causal inference to represent conditional
+    independence relations when some variables are latent (unobserved). Unlike
+    simple directed acyclic graphs (DAGs), MAGs allow for special edge types
+    (directed and bidirected) that capture the presence of latent confounding
+    and selection bias. Every pair of nodes in a MAG is connected in such a way
+    that the graph is "maximal," meaning no additional edges can be added
+    without changing the set of implied conditional independence relations.
     """
 
     def __init__(
@@ -18,7 +23,7 @@ class MAG(AncestralBase):
         latents: set[Hashable] = set(),
     ):
         """
-        Initialize a Maximal Ancestral Graph.
+        Initialize a Maximal Ancestral Graph
 
         Parameters
         ----------
@@ -34,16 +39,16 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG(
-        ...     ebunch=[("A", "B", "-", ">"), ("B", "C", "-", ">")], latents={"L"}
+        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")], latents={"L"}
         ... )
-        >>> list(mag.nodes())
-        ['A', 'B', 'C']
+        >>> sorted(mag.nodes())
+        ['A', 'B', 'C', 'L']
         """
         super().__init__(ebunch=ebunch, latents=latents)
 
-    def _is_collider(self, u_node, c_node, v_node):
+    def _is_collider(self, u, c, v):
         """
         Check if a node is a collider in a path u - c - v.
 
@@ -52,29 +57,29 @@ class MAG(AncestralBase):
 
         Parameters
         ----------
-        u_node : Hashable
+        u : Hashable
             The first endpoint in the triple (u, c, v).
-        c_node : Hashable
+        c : Hashable
             The middle node, candidate collider.
-        v_node : Hashable
+        v : Hashable
             The second endpoint in the triple.
 
         Returns
         -------
         bool
-            True if `c_node` is a collider on the path, False otherwise.
+            True if `c` is a collider on the path, False otherwise.
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "Z", "-", ">")  # X -> Z
         >>> mag.add_edge("Y", "Z", "-", ">")  # Y -> Z
         >>> mag._is_collider("X", "Z", "Y")
         True
         """
-        mark_uc_at_c = self.edges[u_node, c_node]["marks"][c_node]
-        mark_cv_at_c = self.edges[c_node, v_node]["marks"][c_node]
+        mark_uc_at_c = self.edges[u, c]["marks"][c]
+        mark_cv_at_c = self.edges[c, v]["marks"][c]
 
         return mark_uc_at_c == ">" and mark_cv_at_c == ">"
 
@@ -107,7 +112,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")  # X -> L
         >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
@@ -159,9 +164,9 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", "-", ">")  # X -> Y
+        >>> mag.add_edge("X", "Y", "-", ">")  #     X -> Y
         >>> mag.is_visible_edge("X", "Y")
         True
         """
@@ -194,7 +199,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")  # X -> L
         >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
@@ -234,7 +239,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "L", "-", ">")
         >>> mag.add_edge("Y", "L", "-", ">")
@@ -277,7 +282,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
-        >>> from pgmpy.base.MAG import MAG
+        >>> from pgmpy.base import MAG
         >>> mag = MAG()
         >>> mag.add_edge("X", "Y", "-", ">")
         >>> new_mag = mag.upper_manipulation({"X"})
