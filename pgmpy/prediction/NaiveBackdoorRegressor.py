@@ -95,16 +95,9 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
                 f"causal_graph must have 'get_role' method, got {type(dag)}"
             )
 
-        try:
-            exposure_vars = list(dag.get_role("exposure"))
-            outcome_vars = list(dag.get_role("outcome"))
-            adjustment_vars = list(dag.get_role("adjustment"))
-        except ValueError:
-            raise ValueError(
-                "The 'adjustment' role must be explicitly defined in the causal graph, "
-                "even if no adjustment variables are needed. Use an empty list [] "
-                "to indicate no adjustment variables are required."
-            )
+        exposure_vars = list(dag.get_role("exposure"))
+        outcome_vars = list(dag.get_role("outcome"))
+        adjustment_vars = list(dag.get_role("adjustment"))
 
         pretreatment_vars = list(
             dag.get_role("pretreatment") if dag.has_role("pretreatment") else []
@@ -276,6 +269,7 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
 
         X_features = self._prepare_feature_df(X, feature_names)
 
+        # self.n_features_in_ = X_features.shape[1]
         self.n_features_in_ = X_arr.shape[1]
         self.feature_names_in_ = np.array(X_features.columns, dtype=object)
 
