@@ -1,6 +1,6 @@
-from .AncestralBase import AncestralBase
-from .DAG import DAG, PDAG
-from .MAG import MAG
-from .UndirectedGraph import UndirectedGraph
+from pgmpy.base.AncestralBase import AncestralBase
+from pgmpy.base.DAG import DAG, PDAG
+from pgmpy.base.MAG import MAG
+from pgmpy.base.UndirectedGraph import UndirectedGraph
 
 __all__ = ["UndirectedGraph", "DAG", "PDAG", "AncestralBase", "MAG"]
