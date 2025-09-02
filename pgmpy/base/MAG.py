@@ -167,7 +167,10 @@ class MAG(AncestralBase):
         """
         if not self.has_edge(u, v):
             return False
-        return not self.has_inducing_path(u, v, self.latents)
+
+        graph_without_edge = self.copy()
+        graph_without_edge.remove_edge(u, v)
+        return not graph_without_edge.has_inducing_path(u, v, self.latents)
 
     def is_invisible_edge(self, u, v):
         """

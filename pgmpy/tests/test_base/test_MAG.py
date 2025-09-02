@@ -16,7 +16,8 @@ class TestMAG(unittest.TestCase):
             ("B", "H", ">", "-"),
             ("B", "I", "-", "-"),
         ]
-        self.mag = MAG(ebunch=edges)
+        latents = {"L"}
+        self.mag = MAG(ebunch=edges, latents=latents)
 
     def test_init_empty(self):
         empty_mag = MAG()
