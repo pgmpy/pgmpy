@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pgmpy.base.AncestralBase import AncestralBase
+from pgmpy.base import AncestralBase
 
 
 class TestAncestralBase(unittest.TestCase):

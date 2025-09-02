@@ -1,6 +1,6 @@
 import unittest
 
-from pgmpy.base.MAG import MAG
+from pgmpy.base import MAG
 
 
 class TestMAG(unittest.TestCase):
