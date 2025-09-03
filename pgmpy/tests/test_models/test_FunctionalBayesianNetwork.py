@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.utils._safe_import import _safe_import
 from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
@@ -693,6 +692,7 @@ class TestFBNMethods(unittest.TestCase):
         del self.cpd1
         del self.cpd2
         del self.cpd3
+
 
 @unittest.skipUnless(
     _check_soft_dependencies("pyro-ppl", severity="none"),
