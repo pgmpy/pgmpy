@@ -2,10 +2,9 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro
-import pyro.distributions as dist
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.utils._safe_import import _safe_import
 from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
@@ -15,8 +14,14 @@ from pgmpy.utils import get_example_model
 from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNMethods(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -689,12 +694,11 @@ class TestFBNMethods(unittest.TestCase):
         del self.cpd2
         del self.cpd3
 
-
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNSimulation(unittest.TestCase):
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_linear_gaussian(self):
         lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         lg_cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=1)
@@ -737,10 +741,6 @@ class TestFBNSimulation(unittest.TestCase):
                 err_msg=f"Standard deviation mismatch for {var}",
             )
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_different_distributions(self):
         model = FunctionalBayesianNetwork(
             [
@@ -790,10 +790,6 @@ class TestFBNSimulation(unittest.TestCase):
         self.assertTrue(np.all(samples["lognormal"] > 0))
         self.assertTrue(np.all(samples["gamma"] > 0))
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_with_do_scalar(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         cpd_x1 = FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0))
@@ -807,10 +803,6 @@ class TestFBNSimulation(unittest.TestCase):
         self.assertTrue(np.allclose(df["x1"].values, 3.0))
         self.assertTrue(np.allclose(df["x2"].values, 7.0))
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_with_do_scalar_validation(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         model.add_cpds(
@@ -823,10 +815,6 @@ class TestFBNSimulation(unittest.TestCase):
         with self.assertRaises(ValueError):
             model.simulate(n_samples=5, seed=0, do={"not_a_node": 1.0})
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_with_virtual_intervention(self):
         import torch
 
@@ -847,10 +835,6 @@ class TestFBNSimulation(unittest.TestCase):
         self.assertTrue(np.allclose(df["x1"].values, 4.2))
         self.assertTrue(np.allclose(df["x2"].values, 2.0 * 4.2 + 1.0))
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_virtual_intervention_validation(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         model.add_cpds(
@@ -868,10 +852,6 @@ class TestFBNSimulation(unittest.TestCase):
         with self.assertRaises(ValueError):
             model.simulate(n_samples=5, seed=0, virtual_intervention=[missing_vi])
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_simulate_do_and_virtual_intervention_conflict_raises(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         model.add_cpds(
@@ -890,6 +870,10 @@ class TestFBNSimulation(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
@@ -912,6 +896,10 @@ class TestFBNCreation(unittest.TestCase):
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
         model_str = "ind60 =~ x1"
