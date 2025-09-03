@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro.distributions as dist
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -10,9 +9,13 @@ from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from pgmpy.utils._safe_import import _safe_import
 
-torch = _safe_import("torch")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFCPD(unittest.TestCase):
     def test_class_init(self):
         """

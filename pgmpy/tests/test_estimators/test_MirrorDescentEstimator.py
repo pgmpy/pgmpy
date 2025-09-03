@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
-
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
+
 from pgmpy import config
 from pgmpy.estimators import MirrorDescentEstimator
 from pgmpy.factors import FactorDict
@@ -135,6 +136,10 @@ class TestMarginalEstimator(unittest.TestCase):
         del self.df
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestMarginalEstimatorTorch(TestMarginalEstimator):
     def setUp(self) -> None:
         config.set_backend("torch")

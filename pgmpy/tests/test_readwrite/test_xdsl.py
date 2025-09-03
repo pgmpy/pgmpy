@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -284,6 +285,10 @@ class TestXDSLWriterMethods(unittest.TestCase):
         del self.writer_dummy
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -372,6 +377,10 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXDSLWriterMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
