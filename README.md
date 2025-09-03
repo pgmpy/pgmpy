@@ -16,7 +16,7 @@ pgmpy is a Python library for causal and probabilistic modeling using graphical 
 | **Code** |  [![!pypi](https://img.shields.io/pypi/v/pgmpy?color=orange)](https://pypi.org/project/pgmpy/) [![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![!python-versions](https://img.shields.io/pypi/pyversions/pgmpy)](https://www.python.org/) [![!black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)  |
 | **Downloads** | ![PyPI - Downloads](https://img.shields.io/pypi/dw/pgmpy) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pgmpy) [![Downloads](https://static.pepy.tech/personalized-badge/pgmpy?period=total&units=international_system&left_color=grey&right_color=blue&left_text=cumulative%20(pypi))](https://pepy.tech/project/pgmpy) |
 
-### Key Features
+## Key Features
 
 | Feature | Description |
 |--------|-------------|
