@@ -3,6 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy import config
@@ -119,6 +120,10 @@ class TestLogLikelihoodScore(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestLogLikelihoodScoreTorch(TestLogLikelihoodScore):
     def setUp(self):
         self.original_backend = config.get_backend()

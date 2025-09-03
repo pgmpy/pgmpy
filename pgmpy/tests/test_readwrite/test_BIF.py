@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -527,6 +528,10 @@ probability ( light-on | family-out ) {
                 os.unlink(tmp_path)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -850,6 +855,10 @@ class TestBIFReaderTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

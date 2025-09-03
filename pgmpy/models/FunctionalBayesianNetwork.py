@@ -2,12 +2,15 @@ from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Un
 
 import networkx as nx
 import pandas as pd
-import pyro
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
@@ -42,8 +45,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         """
         if config.get_backend() == "numpy":
-            logger.info("Functional BN requires pytorch backend. Switching.")
-            config.set_backend("torch")
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
+            )
+            logger.info(msg)
+            raise ValueError(msg)
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
