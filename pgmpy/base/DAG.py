@@ -8,7 +8,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import UndirectedGraph
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
@@ -546,6 +545,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> moral_graph.edges()
         EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
         """
+        from pgmpy.base import UndirectedGraph
+
         moral_graph = UndirectedGraph()
         moral_graph.add_nodes_from(self.nodes())
         moral_graph.add_edges_from(self.to_undirected().edges())
