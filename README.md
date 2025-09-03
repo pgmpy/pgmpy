@@ -152,11 +152,11 @@ cpd_c = FunctionalCPD(
     parents=["y", "w"],
 )
 
-complex_bn.add_cpds(cpd_x1, cpd_x2, cpd_w, cpd_y, cpd_z, cpd_c)
-complex_bn.check_model()
+func_bn.add_cpds(cpd_x1, cpd_x2, cpd_w, cpd_y, cpd_z, cpd_c)
+func_bn.check_model()
 
 # Simulate data from the model
-df_func = complex_bn.simulate(n_samples=1000, seed=123)
+df_func = func_bn.simulate(n_samples=1000, seed=123)
 
 # For learning and inference in Functional Bayesian Networks, please refer to the example notebook: https://github.com/pgmpy/pgmpy/blob/dev/examples/Functional_Bayesian_Network_Tutorial.ipynb
 ```
