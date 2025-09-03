@@ -2,8 +2,13 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro
-import pyro.distributions as dist
+from skbase.utils.dependencies import _check_soft_dependencies
+
+from pgmpy.utils._safe_import import _safe_import
+
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
+torch = _safe_import("torch")
 
 from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -16,6 +21,10 @@ from pgmpy.utils._safe_import import _safe_import
 torch = _safe_import("torch")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNMethods(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -780,6 +789,10 @@ class TestFBNMethods(unittest.TestCase):
         del self.cpd3
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
@@ -802,6 +815,10 @@ class TestFBNCreation(unittest.TestCase):
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
         model_str = "ind60 =~ x1"
