@@ -48,8 +48,8 @@ To install from conda-forge, use:
 ```bash
 conda install conda-forge::pgmpy
 ```
-
-### Discrete Data
+### Examples
+#### Discrete Data
 ```python
 from pgmpy.utils import get_example_model
 
@@ -71,7 +71,7 @@ evidence_df = alarm_df.drop(columns=["FIO2"], axis=1)
 pred_FIO2 = dag_fitted.predict(evidence_df)
 ```
 
-### Linear Gaussian Data
+#### Linear Gaussian Data
 ```python
 # Load an example Gaussian Bayesian Network and simulate data
 gaussian_bn = get_example_model("ecoli70")
@@ -94,7 +94,7 @@ evidence_df = ecoli_df.drop(columns=["ftsJ"], axis=1)
 pred_ftsJ = dag_fitted.predict(evidence_df)
 ```
 
-### Mixture Data with Arbitrary Relationships
+#### Mixture Data with Arbitrary Relationships
 ```python
 import pyro.distributions as dist
 
