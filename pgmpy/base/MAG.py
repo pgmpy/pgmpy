@@ -8,6 +8,7 @@ from pgmpy.base import AncestralBase
 class MAG(AncestralBase):
     """
     Class for representing Maximal Ancestral Graphs (MAGs).
+
     A MAG is a type of graph used in causal inference to represent conditional
     independence relations when some variables are latent (unobserved). Unlike
     simple directed acyclic graphs (DAGs), MAGs allow for special edge types
@@ -21,6 +22,7 @@ class MAG(AncestralBase):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        roles=None,
     ):
         """
         Initialize a Maximal Ancestral Graph
@@ -29,8 +31,16 @@ class MAG(AncestralBase):
         ----------
         ebunch : iterable of tuples, optional
             A list or iterable of edges to add at initialization.
+
         latents : set, default=set()
             Set of latent (unobserved) variables.
+
+        roles : dict, optional (default: None)
+            A dictionary mapping roles to node names.
+            The keys are roles, and the values are role names (strings or iterables of str).
+            If provided, this will automatically assign roles to the nodes in the graph.
+            Passing a key-value pair via ``roles`` is equivalent to calling
+            ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
         Returns
         -------
@@ -45,8 +55,38 @@ class MAG(AncestralBase):
         ... )
         >>> sorted(mag.nodes())
         ['A', 'B', 'C', 'L']
+
+        Roles can be assigned to nodes in the graph at construction or using methods.
+
+        At construction:
+
+        >>> mag = MAG(
+        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "A", "outcome": "B"},
+        ... )
+
+        Roles can also be assigned after creation using ``with_role`` method.
+
+        >>> mag = mag.with_role("adjustment", {"L", "C"})
+
+        Vertices of a specific role can be retrieved using ``get_role`` method.
+
+        >>> mag.get_role("exposure")
+        ["A"]
+        >>> mag.get_role("adjustment")
+        ["L", "C"]
+
         """
         super().__init__(ebunch=ebunch, latents=latents)
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as dictionary")
+
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
 
     def _is_collider(self, u, c, v):
         """
@@ -73,8 +113,8 @@ class MAG(AncestralBase):
         --------
         >>> from pgmpy.base import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "Z", "-", ">")  # X -> Z
-        >>> mag.add_edge("Y", "Z", "-", ">")  # Y -> Z
+        >>> mag.add_edge("X", "Z", "-", ">")
+        >>> mag.add_edge("Y", "Z", "-", ">")
         >>> mag._is_collider("X", "Z", "Y")
         True
         """
@@ -114,17 +154,18 @@ class MAG(AncestralBase):
         --------
         >>> from pgmpy.base import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
-        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
+        >>> mag.add_edge("X", "L", "-", ">")
+        >>> mag.add_edge("Y", "L", "-", ">")
         >>> mag.latents = {"L"}
         >>> mag.has_inducing_path("X", "Y", mag.latents)
         True
         """
+
+        is_inducing = True
         for path in nx.all_simple_paths(self, source=u, target=v):
             if len(path) <= 2:
                 continue
 
-            is_inducing = True
             for i in range(1, len(path) - 1):
                 prev_node, curr_node, next_node = path[i - 1], path[i], path[i + 1]
 
@@ -137,10 +178,7 @@ class MAG(AncestralBase):
                     is_inducing = False
                     break
 
-            if is_inducing:
-                return True
-
-        return False
+        return is_inducing
 
     def is_visible_edge(self, u, v) -> bool:
         """
@@ -166,7 +204,7 @@ class MAG(AncestralBase):
         --------
         >>> from pgmpy.base import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", "-", ">")  #     X -> Y
+        >>> mag.add_edge("X", "Y", "-", ">")
         >>> mag.is_visible_edge("X", "Y")
         True
         """
@@ -176,48 +214,6 @@ class MAG(AncestralBase):
         graph_without_edge = self.copy()
         graph_without_edge.remove_edge(u, v)
         return not graph_without_edge.has_inducing_path(u, v, self.latents)
-
-    def is_invisible_edge(self, u, v):
-        """
-        Check if an edge is invisible.
-
-        An edge is invisible if it exists but is shielded by an inducing path
-        through latent variables.
-
-        Parameters
-        ----------
-        u : Hashable
-            First node.
-
-        v : Hashable
-            Second node.
-
-        Returns
-        -------
-        bool
-            True if the edge is invisible, False otherwise.
-
-        Examples
-        --------
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
-        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
-        >>> mag.latents = {"L"}
-        >>> mag.is_invisible_edge("X", "Y")
-        False
-
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", "-", ">")  # X -> Y (the edge we are testing)
-        >>> mag.add_edge("X", "L", "-", ">")  # X -> L
-        >>> mag.add_edge("Y", "L", "-", ">")  # Y -> L
-        >>> mag.latents = {"L"}
-        >>> mag.is_invisible_edge("X", "Y")
-        True
-        """
-        if not self.has_edge(u, v):
-            return False
-        return not self.is_visible_edge(u, v)
 
     def lower_manipulation(self, X):
         """
@@ -302,24 +298,58 @@ class MAG(AncestralBase):
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
 
-    def copy(self):
+    def __eq__(self, other):
         """
-        Return a copy of the graph, preserving edge marks and latents.
+        Checks if two MAGs are equal. Two MAGs are equal if they have the same
+        nodes, edges(including marks), latent variables, and variable roles
+
+        Parameters
+        ----------
+        other: MAG object
+            The other MAG to compare with
 
         Returns
         -------
-        MAG
-            Copy of the MAG graph
+        bool
+            True if the MAGs are equal, False otherwise
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag1 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "X"},
+        ... )
+        >>> mag2 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "X"},
+        ... )
+        >>> mag1 == mag2
+        True
+
+        >>> mag3 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposure": "X"}
+        ... )
+        >>> mag1 == mag3
+        False
         """
-        new_graph = self.__class__()
+        if not isinstance(other, MAG):
+            return False
 
-        new_graph.add_nodes_from(self.nodes())
+        self_edges = {
+            (u, v, frozenset(data["marks"].items()))
+            for u, v, data in self.edges(data=True)
+        }
+        other_edges = {
+            (u, v, frozenset(data["marks"].items()))
+            for u, v, data in other.edges(data=True)
+        }
 
-        for u, v, data in self.edges(data=True):
-            u_mark, v_mark = data["marks"][u], data["marks"][v]
-            new_graph.add_edge(u, v, u_mark, v_mark)
-
-        if hasattr(self, "latents"):
-            new_graph.latents = set(self.latents)
-
-        return new_graph
+        return (
+            set(self.nodes()) == set(other.nodes())
+            and self_edges == other_edges
+            and self.latents == other.latents
+            and self.get_role_dict() == other.get_role_dict()
+        )

@@ -4,8 +4,10 @@ from typing import Hashable, Iterable, Optional
 import networkx as nx
 import numpy as np
 
+from pgmpy.base._mixin_roles import _GraphRolesMixin
 
-class AncestralBase(nx.Graph):
+
+class AncestralBase(nx.Graph, _GraphRolesMixin):
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
@@ -488,3 +490,25 @@ class AncestralBase(nx.Graph):
                 reachable.add(current)
                 queue.extend(self.get_neighbors(current, u_type=u_type, v_type=v_type))
         return reachable
+
+    def copy(self):
+        """
+        Return a copy of the graph, preserving edge marks and latents.
+
+        Returns
+        -------
+        MAG
+            Copy of the AncestralBase graph
+        """
+        new_graph = self.__class__()
+
+        new_graph.add_nodes_from(self.nodes())
+
+        for u, v, data in self.edges(data=True):
+            u_mark, v_mark = data["marks"][u], data["marks"][v]
+            new_graph.add_edge(u, v, u_mark, v_mark)
+
+        if hasattr(self, "latents"):
+            new_graph.latents = set(self.latents)
+
+        return new_graph
