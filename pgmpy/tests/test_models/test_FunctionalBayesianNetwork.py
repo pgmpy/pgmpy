@@ -12,6 +12,8 @@ from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwor
 from pgmpy.utils import get_example_model
 from pgmpy.utils._safe_import import _safe_import
 
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 torch = _safe_import("torch")
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
@@ -142,7 +144,7 @@ class TestFBNMethods(unittest.TestCase):
 
         params = model.fit(
             data,
-            method="svi",
+            estimator="svi",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
             seed=42,
             num_steps=100,
@@ -198,7 +200,7 @@ class TestFBNMethods(unittest.TestCase):
 
         params = model.fit(
             data,
-            method="SVI",
+            estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
             seed=42,
             num_steps=100,
@@ -262,7 +264,7 @@ class TestFBNMethods(unittest.TestCase):
         pyro.clear_param_store()
         params = model.fit(
             data,
-            method="MCMC",
+            estimator="MCMC",
             prior_fn=prior_fn,
             seed=42,
             num_steps=100,
@@ -327,7 +329,7 @@ class TestFBNMethods(unittest.TestCase):
 
         pyro.clear_param_store()
         params = model.fit(
-            data, method="MCMC", prior_fn=prior_fn, seed=42, num_steps=100
+            data, estimator="MCMC", prior_fn=prior_fn, seed=42, num_steps=100
         )
 
         self.assertIn("x1_concen1", params)
@@ -476,7 +478,7 @@ class TestFBNMethods(unittest.TestCase):
 
         params = model.fit(
             df,
-            method="SVI",
+            estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
             seed=42,
             num_steps=200,
@@ -626,7 +628,7 @@ class TestFBNMethods(unittest.TestCase):
 
         params = model.fit(
             df,
-            method="MCMC",
+            estimator="MCMC",
             prior_fn=prior_fn,
             seed=42,
             num_steps=100,
