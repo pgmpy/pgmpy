@@ -255,7 +255,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     def fit(
         self,
         data: pd.DataFrame,
-        method: str = "SVI",
+        estimator: str = "SVI",
         optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
         prior_fn: Optional[Callable] = None,
         num_steps: int = 1000,
@@ -271,14 +271,14 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         data: pandas.DataFrame
             DataFrame with observations of variables.
 
-        method: str (default: "SVI")
+        estimator: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
         optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
-            Only used if method is "SVI". The optimizer to use for optimization.
+            Only used if `estimator` is "SVI". The optimizer to use for optimization.
 
         prior_fn: function
-            Only used if method is "MCMC". A function that returns a dictionary of
+            Only used if `estimator` is "MCMC". A function that returns a dictionary of
             pyro distributions for each parameter in the model.
 
         num_steps: int (default: 100)
@@ -290,17 +290,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             Seed value for random number generator.
 
         nuts_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.NUTS.
 
         mcmc_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.MCMC.
 
         Returns
         -------
-        dict: If method is "SVI", returns a dictionary of parameter values.
-              If method is "MCMC", returns a dictionary of posterior samples for each parameter.
+        dict: If `estimator` is "SVI", returns a dictionary of parameter values.
+              If `estimator` is "MCMC", returns a dictionary of posterior samples for each parameter.
 
         Examples
         --------
@@ -333,7 +333,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
         >>> cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
-        >>> params = model.fit(data, method="SVI", num_steps=100)
+        >>> params = model.fit(data, estimator="SVI", num_steps=100)
         >>> print(params)
 
         >>> def prior_fn():
@@ -359,7 +359,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
 
-        >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
+        >>> params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, num_steps=100)
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
         # Step 0: Checks for specified arguments.
@@ -371,9 +371,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         if not isinstance(num_steps, int):
             raise ValueError(f"num_steps should be an integer. Got: {type(num_steps)}.")
 
-        if method.lower() not in ["svi", "mcmc"]:
+        if estimator.lower() not in ["svi", "mcmc"]:
             raise ValueError(
-                "Currently only SVI and MCMC methods are supported. method argument needs to be either 'SVI' or 'MCMC'."
+                f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}."
             )
 
         # Step 1: Preprocess the data and initialize data structures.
@@ -401,7 +401,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
         # Step 2: Fit the model using the specified method.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
 
             def guide(tensor_data):
                 pass
@@ -431,8 +431,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        # Step 3: Fit the model using specified method
-        elif method.lower() == "mcmc":
+        # Step 3: Fit the model using specified estimator
+        elif estimator.lower() == "mcmc":
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
                 priors_dists = prior_fn()
@@ -454,7 +454,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             mcmc.run(tensor_data)
 
         # Step 4: Return the fitted parameter values.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
             return dict(pyro.get_param_store().items())
         else:
             return mcmc.get_samples()
