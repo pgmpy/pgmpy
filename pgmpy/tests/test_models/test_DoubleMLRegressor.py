@@ -59,7 +59,6 @@ def make_estimator_for_checks():
         estimator_m=DummyRegressor(strategy="mean"),
         n_folds=3,
         random_state=0,
-        feature_names=["x0", "x1", "x2"],
         allow_array_unnamed=False,
     )
     return est
@@ -127,7 +126,6 @@ def test_doubleml_recovers_theta_on_simple_plr():
         estimator_m=LinearRegression(),
         n_folds=3,
         random_state=0,
-        feature_names=None,
         allow_array_unnamed=False,
     )
 

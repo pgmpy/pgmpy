@@ -1,62 +1,82 @@
-import warnings
-from types import SimpleNamespace
 from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.base import BaseEstimator, RegressorMixin, check_array, clone
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.utils.validation import check_is_fitted, check_X_y
 
 from pgmpy.base.DAG import DAG
 
 
-class _SklearnTags:
+class _TagContainer:
+    """Generic tag-container that returns safe defaults for unknown attributes.
+
+    Attributes explicitly set are returned. For any attribute sklearn probes but
+    we don't set, return False so tests don't crash.
     """
-    Wrapper for sklearn tags expected by estimator_checks.
-    Exposes tag keys as attributes, provides input_tags, and implements
-    dict-like access and required internal flags such as _skip_test.
-    """
 
-    def __init__(self, tags_dict: Mapping[str, Any]):
-        self._tags = dict(tags_dict or {})
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
-        # Expose tags as attributes for attribute-style access
-        for k, v in self._tags.items():
-            # don't overwrite internal attributes accidentally
-            if not hasattr(self, k):
-                setattr(self, k, v)
-
-        # Provide input_tags namespace expected by newer sklearn internals
-        self.input_tags = SimpleNamespace(
-            two_d_array=True,
-            # add other input-related flags if needed:
-            # allow_nd=False, allow_sparse=False, dtype="float"
-        )
-
-        # Required by sklearn's harness in various versions
-        self._skip_test = False
-        # convenience alias
-        self._supports = self._tags
-
-    # dict-like helpers
-    def get(self, key, default=None):
-        return self._tags.get(key, default)
-
-    def keys(self):
-        return self._tags.keys()
-
-    def items(self):
-        return self._tags.items()
-
-    def __getitem__(self, key):
-        return self._tags[key]
+    def __getattr__(self, name):
+        # For boolean-like probes, default to False instead of raising.
+        return False
 
     def __repr__(self):
-        return f"_SklearnTags({self._tags!r}, input_tags={self.input_tags!r})"
+        attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+        return f"_TagContainer({attrs})"
 
 
-class DoubleMLRegressor(BaseEstimator, RegressorMixin):
+class _SklearnTagsDict(dict):
+    """Dict-like object returned by __sklearn_tags__ that also exposes
+    .input_tags / .target_tags attributes required by estimator_checks.
+
+    - mapping values must be plain Python types (bool, list, str, ...).
+    - attribute access for unknown boolean-like flags returns False.
+    - attribute access for unknown "*_tags" returns a TagContainer.
+    """
+
+    def __init__(self, mapping: Mapping[str, Any]):
+        super().__init__(mapping)
+        # safe containers sklearn probes
+        object.__setattr__(
+            self,
+            "input_tags",
+            _TagContainer(
+                two_d_array=True,
+                pairwise=False,
+                sparse=False,
+                dense=False,
+                allow_nd=False,
+                allow_sparse=False,
+                dtype="float",
+            ),
+        )
+        object.__setattr__(self, "target_tags", _TagContainer(required=False))
+        object.__setattr__(self, "_skip_test", False)
+        object.__setattr__(self, "_supports", dict(mapping))
+
+    def __getattr__(self, name: str):
+        # return mapping value if present
+        if name in self:
+            return self[name]
+        # create and return containers for any "*_tags" probe
+        if name.endswith("_tags"):
+            container = _TagContainer()
+            object.__setattr__(self, name, container)
+            return container
+        # internal attrs raise
+        if name.startswith("_"):
+            raise AttributeError(name)
+        # default for boolean-like probes
+        return False
+
+    def __repr__(self):
+        return f"_SklearnTagsDict({dict(self)!r}, input_tags={self.input_tags!r})"
+
+
+class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
     Double-ML skeleton (single-exposure) with cross-fitting and explicit feature_names support.
 
@@ -72,11 +92,6 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
         Number of folds for cross-fitting (>=2).
     random_state : int or None
         Random seed for folding.
-    feature_names : sequence of str or None
-        If X passed to fit is a NumPy array, this **must** be provided and must match the
-        number of columns in X. If X is a DataFrame and feature_names is provided, the DataFrame
-        will be copied and its columns renamed to feature_names (so pass names in the same order
-        as the array/columns).
     allow_array_unnamed : bool
         If True, allow NumPy arrays without feature_names by automatically naming columns
         'x0','x1',... (unsafe for real causal work). Default False.
@@ -89,122 +104,77 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
         estimator_m: Optional[Any] = None,
         n_folds: int = 5,
         random_state: Optional[int] = None,
-        feature_names: Optional[Sequence[str]] = None,
         allow_array_unnamed: bool = False,
     ):
 
         self.dag = dag
         self.estimator_g = estimator_g
         self.estimator_m = estimator_m
-        self.n_folds = int(n_folds)
+        self.n_folds = n_folds
         self.random_state = random_state
+        self.allow_array_unnamed = allow_array_unnamed
 
-        # implementing feature names for mapping of NumPy arrays
-        if feature_names is None:
-            self.feature_names = None
-        else:
-            # convert to list of strings and validate uniqueness
-            self.feature_names = [str(fn) for fn in feature_names]
-            if len(set(self.feature_names)) != len(self.feature_names):
-                raise ValueError("feature_names must be unique.")
-        self.allow_array_unnamed = bool(allow_array_unnamed)
+    #    self.__sklearn_tags__()
 
-    def _more_tags(self):
-        return {"requires_y": True, "no_sparse_input": True}
+    # def _more_tags(self):
+    #    return {"requires_y": True, "no_sparse_input": True}
 
-    def get_tags(self):
-        tags = {"requires_y": True, "no_sparse_input": True}
-        try:
-            more = self._more_tags()
-            if isinstance(more, dict):
-                tags.update(more)
-        except Exception:
-            pass
-        return tags
+    # def get_tags(self):
+    #    tags = {"requires_y": True, "no_sparse_input": True}
+    #    try:
+    #        more = self._more_tags()
+    #        if isinstance(more, dict):
+    #            tags.update(more)
+    #    except Exception:
+    #        pass
+    #   return tags
 
     def __sklearn_tags__(self):
+        # Plain-typed base tags (booleans, lists, strings — no custom objects)
         """
-        Return compatibility tags object for sklearn estimator checks.
-        Provides a robust default tag set for regressors and uses the class-level
-        wrapper so sklearn internals can access attributes like .input_tags,
-        ._skip_test, and tag attributes (e.g., requires_fit).
-        """
-        # Start from get_tags() if present, else fall back to defaults
-        try:
-            base_tags = dict(self.get_tags())
-        except Exception:
-            base_tags = {}
-
-        defaults = {
+        base_tags = {
             "requires_fit": True,
             "requires_y": True,
             "no_sparse_input": True,
             "multioutput": False,
             "allow_nan": False,
             "requires_positive_y": False,
-            "X_types": ["2darray"],
+            "X_types": ("2darray",),
+            "no_validation": False,
         }
+        # merge user-provided tags if they are a plain dict
+        try:
+            more = self.get_tags()
+            if isinstance(more, dict):
+                base_tags.update(more)
+        except Exception:
+            pass
 
-        for k, v in defaults.items():
-            base_tags.setdefault(k, v)
-
-        # Return the wrapper object expected by sklearn's tests
-        return _SklearnTags(base_tags)
-
-    def _as_dataframe(self, X) -> pd.DataFrame:
+        # return a dict-like object that also exposes .input_tags / .target_tags
+        return _SklearnTagsDict(base_tags)
         """
-        Convert X to a pandas DataFrame with deterministic column names.
+        tags = super().__sklearn_tags__()
+        tags.target_tags.single_output = False
+        tags.non_deterministic = True
+        return tags
 
-        Rules:
-         - If X is a DataFrame: return a copy. If feature_names were provided, the copy's
-           columns will be set to feature_names (order assumed correct).
-         - If X is an ndarray:
-             * if feature_names is provided: use them as columns (length checked).
-             * elif allow_array_unnamed True: synthesize x0,x1,... and warn the user.
-             * else: raise ValueError instructing the user to pass a DataFrame or feature_names.
+    def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
+        """
+        Convert input X to a pandas DataFrame
+        - If X is a DataFrame: return a copy. If feature_names were provided, the copy's
+          columns will be set to feature_names (order assumed correct).
+        - If X is an array-like: convert to ndarray, reshape if 1-D, and set columns.
+        - If feature_names is provided, use it; otherwise generate generic names
+          feature_0, feature_1, ...ror instructing the user to pass a DataFrame or feature_names.
         """
         if isinstance(X, pd.DataFrame):
-            df = X.copy()
-            if self.feature_names is not None:
-                # enforce caller-provided mapping order (user must ensure correct order)
-                if len(self.feature_names) != df.shape[1]:
-                    raise ValueError(
-                        "feature_names length does not match DataFrame columns. "
-                        f"{len(self.feature_names)} != {df.shape[1]}"
-                    )
-                df.columns = list(self.feature_names)
-            return df
-
-        # numpy array path
+            return X.copy()
         arr = np.asarray(X)
         if arr.ndim == 1:
             arr = arr.reshape(-1, 1)
-        n_cols = arr.shape[1]
-
-        if self.feature_names is not None:
-            if len(self.feature_names) != n_cols:
-                raise ValueError(
-                    "feature_names length does not match number of columns in X. "
-                    f"{len(self.feature_names)} != {n_cols}"
-                )
-            cols = list(self.feature_names)
-            return pd.DataFrame(arr, columns=cols)
-
-        if self.allow_array_unnamed:
-            warnings.warn(
-                "Passing a NumPy array without feature_names: columns will be named x0, x1, ... "
-                "This is unsafe for causal estimation; prefer passing a DataFrame or feature_names.",
-                UserWarning,
-            )
-            cols = [f"x{i}" for i in range(n_cols)]
-            return pd.DataFrame(arr, columns=cols)
-
-        # reject ambiguous arrays
-        raise ValueError(
-            "Ambiguous input: X is a NumPy array but no feature_names were provided. "
-            "Either pass X as a pandas DataFrame with column names matching the DAG roles, "
-            "or construct the estimator with feature_names=[...]."
-        )
+        if feature_names is None:
+            feature_names = [f"feature_{i}" for i in range(arr.shape[1])]
+        return pd.DataFrame(arr, columns=feature_names)
 
     def _read_roles(self) -> Tuple[str, List[str]]:
         if not (
@@ -253,34 +223,90 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
         adj_list = [c for c in adj_list if c is not None and c != exposure_col]
         return exposure_col, adj_list
 
+    def _prepare_feature_df(
+        self, X, feature_names: Optional[Sequence[str]] = None
+    ) -> pd.DataFrame:
+        """
+        Ensure input X is a DataFrame whose columns match the DAG roles required by this estimator.
+
+        Behavior:
+        - If X is a DataFrame with semantic column names (e.g., 'x0','x1','x2'), verify required columns exist and
+            retrun a DataFrame with columns ordered as [exposure] + adjustments + pretreatment_vars (if present).
+        - If X is an ndarray or DataFrame with generic column names (feature_0, feature_1, ... OR integer names),
+            treat the first N columns as corresponding to the required DAG features and rename them to role names.
+        """
+        exposure_col, adj_cols = self._read_roles()
+
+        required_features = [exposure_col] + list(adj_cols)
+
+        # Convert to DataFrame
+        X_df = self._ensure_dataframe(X, feature_names=feature_names)
+
+        cols = list(X_df.columns)
+        is_generic_feature_style = all(
+            str(c).startswith("feature_") for c in cols
+        ) or all(isinstance(c, (int, np.integer)) for c in cols)
+
+        if is_generic_feature_style:
+            found = X_df.shape[1]
+            required = len(required_features)
+            if found < required:
+                raise ValueError(
+                    f"Found array with {found} feature(s) (shape[1]={found}) while "
+                    f"{self.__class__.__name__} is expecting {required} features as input."
+                )
+            # select the first N columns and rename them to the DAG role names
+            out = X_df.iloc[:, : len(required_features)].copy()
+            out.columns = required_features
+            return out
+
+        # Standard named-columns path: ensure required columns exist
+        missing = set(required_features) - set(X_df.columns)
+        if missing:
+            raise ValueError(
+                f"Missing required columns in input data: {sorted(missing)}. Required columns: {required_features}"
+            )
+
+        # return DataFrame with exact ordering of required features
+        return X_df[required_features].copy()
+
     # -----Fit ---- Predict ---
-    def fit(self, X, y, sample_weight: Optional[np.ndarray] = None):
+    def fit(self, X, y, sample_weight: Optional[Any] = None):
+        # validate input & set sklearn convention attributes
         X_arr, y_arr = check_X_y(
             X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
         )
-
-        # convert to DataFrame (and validate mapping)
-        dfX = X if isinstance(X, pd.DataFrame) else self._as_dataframe(X_arr)
-        feature_names = list(dfX.columns)
-
         self.n_features_in_ = X_arr.shape[1]
-        self.feature_names_in_ = np.array(feature_names, dtype=object)
+
+        try:
+            n_folds_requested = int(self.n_folds)
+        except Exception:
+            raise ValueError(f"n_folds must be integer-like; got {self.n_folds!r}")
+
+        n_folds = max(2, min(n_folds_requested, X_arr.shape[0]))
+
+        # coerce sample_weight if provided (accept pd.Series)
+        if sample_weight is not None:
+            sample_weight = np.asarray(sample_weight)
+            if sample_weight.shape[0] != X_arr.shape[0]:
+                raise ValueError("sample_weight must have shape (n_samples,)")
+
+        # Map inputs to DAG-role-named DataFrame
+        dfX = self._prepare_feature_df(X, feature_names=None)
+        self.feature_columns_ = list(dfX.columns)  # expose for predict
 
         df = dfX.copy()
         df["outcome"] = np.asarray(y_arr).ravel()
 
-        exposure_col, adj_cols = self._read_roles()
+        exposure_col = self.feature_columns_[0]
+        adj_cols = self.feature_columns_[1:]
 
-        # ensure DAG-required columns are present
         missing = [c for c in [exposure_col] + adj_cols if c not in df.columns]
         if missing:
             raise ValueError(
-                f"Missing columns required by DAG roles: {missing}. "
-                "When using arrays, pass feature_names mapping or pass a DataFrame with correct column names."
+                f"Missing columns required by DAG roles: {missing}. When using arrays, "
+                f"pass a DataFrame with correct column names."
             )
-
-        adj_cols = [c for c in adj_cols if c in df.columns and c != exposure_col]
-        design_cols = [exposure_col] + adj_cols
 
         # prepare nuisance covariates excluding treatment
         if len(adj_cols) == 0:
@@ -294,7 +320,9 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
         if n_samples < 2:
             raise ValueError("Not enough samples to fit.")
 
-        n_folds = max(2, min(self.n_folds, n_samples))
+        # do not coerce self.n_folds here; compute local bounded folds
+        n_folds = max(2, min(int(self.n_folds), n_samples))
+
         unique_vals, counts = np.unique(t_vec, return_counts=True)
         use_stratify = unique_vals.size == 2 and np.min(counts) >= n_folds
         splitter = (
@@ -381,7 +409,7 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
             self.y_mean_ = float(y_vec.mean())
             self.t_mean_ = float(t_vec.mean())
 
-        # orthogonal estimate
+        # orthogonal estimate (OLS on residuals)
         y_res = y_vec - self.g_hat_
         t_res = t_vec - self.m_hat_
         X_res = np.column_stack([np.ones(len(t_res)), t_res])
@@ -391,35 +419,46 @@ class DoubleMLRegressor(BaseEstimator, RegressorMixin):
 
         self.treatment_effect_ = theta
         self.coef_ = np.concatenate(
-            ([theta], np.zeros(len(design_cols) - 1, dtype=float))
+            ([theta], np.zeros(len([exposure_col] + adj_cols) - 1, dtype=float))
         )
         self.intercept_ = intercept
 
-        self._design_columns = design_cols.copy()
+        self._design_columns = [exposure_col] + adj_cols
         self.n_folds_ = n_folds
         self.is_fitted_ = True
         return self
 
     def predict(self, X):
-        check_is_fitted(self, "is_fitted_")
-        X_df = self._as_dataframe(X)
+        check_is_fitted(self, "n_features_in_")
 
-        exposure_col = self._design_columns[0]
-        adj_cols = self._design_columns[1:]
+        X_arr = check_array(X, ensure_2d=True, force_all_finite=True)
+        found = X_arr.shape[1]
+        expected = getattr(self, "n_features_in_", None)
+        if expected is not None and found != expected:
+            raise ValueError(
+                f"Found array with {found} feature(s) (shape[1]={found}) while "
+                f"{self.__class__.__name__} is expecting {expected} features as input."
+            )
+
+        # Map to DAG role columns (this will rename generic features to role names)
+        X_df = self._prepare_feature_df(X, feature_names=None)
+
+        exposure_col = self.feature_columns_[0]  # stored earlier in fit
+        adj_cols = self.feature_columns_[1:]
 
         if exposure_col not in X_df.columns:
             raise ValueError(
                 f"Exposure '{exposure_col}' not found in input columns for predict()."
             )
 
+        # compute g_pred using stored nuisance models or y_mean_ fallback
         if (
             hasattr(self, "estimator_g_")
             and self.estimator_g_ is not None
             and len(adj_cols) > 0
         ):
             X_adj = X_df[adj_cols].to_numpy(dtype=float)
-            g_pred = self.estimator_g_.predict(X_adj)
-            g_pred = np.asarray(g_pred).ravel()
+            g_pred = np.asarray(self.estimator_g_.predict(X_adj)).ravel()
         else:
             g_pred = np.repeat(getattr(self, "y_mean_", 0.0), X_df.shape[0])
 
