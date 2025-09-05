@@ -165,3 +165,44 @@ class TestAncestralBase(unittest.TestCase):
 
         self.assertEqual(graph["X_0"]["X_1"]["marks"], {"X_0": ">", "X_1": "-"})
         self.assertEqual(graph["X_1"]["X_2"]["marks"], {"X_1": ">", "X_2": "-"})
+
+    def test_init_with_roles(self):
+        """Test initialization with roles assigned at construction."""
+        edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
+        roles = {"exposure": "A", "outcome": "C"}
+        graph = AncestralBase(ebunch=edges, roles=roles)
+
+        self.assertEqual(graph.nodes["A"]["role"], "exposure")
+        self.assertEqual(graph.nodes["C"]["role"], "outcome")
+        self.assertNotIn("role", graph.nodes["B"])
+
+    def test_with_role_method(self):
+        """Test assigning roles after initialization."""
+        graph = AncestralBase([("A", "B", "-", ">")])
+        graph = graph.with_role("instrument", "A")
+
+        self.assertEqual(graph.nodes["A"]["role"], "instrument")
+
+        graph = graph.with_role("adjustment", {"A", "B"}, inplace=True)
+        self.assertEqual(graph.nodes["A"]["role"], "adjustment")
+        self.assertEqual(graph.nodes["B"]["role"], "adjustment")
+
+    def test_copy_preserves_roles(self):
+        """Test that copy preserves node roles."""
+        roles = {"exposure": "A", "outcome": "B"}
+        graph = AncestralBase([("A", "B", "-", ">")], roles=roles)
+        new_graph = graph.copy()
+
+        self.assertEqual(new_graph.nodes["A"]["role"], "exposure")
+        self.assertEqual(new_graph.nodes["B"]["role"], "outcome")
+
+    def test_equality_with_roles(self):
+        """Test equality operator includes roles."""
+        edges = [("A", "B", "-", ">")]
+        roles = {"exposure": "A"}
+        g1 = AncestralBase(edges, roles=roles)
+        g2 = AncestralBase(edges, roles=roles)
+        g3 = AncestralBase(edges, roles={"outcome": "A"})
+
+        self.assertTrue(g1 == g2)
+        self.assertFalse(g1 == g3)

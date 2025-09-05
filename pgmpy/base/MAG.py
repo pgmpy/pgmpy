@@ -16,6 +16,10 @@ class MAG(AncestralBase):
     and selection bias. Every pair of nodes in a MAG is connected in such a way
     that the graph is "maximal," meaning no additional edges can be added
     without changing the set of implied conditional independence relations.
+
+    References
+    ----------
+        [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
     """
 
     def __init__(
@@ -78,15 +82,7 @@ class MAG(AncestralBase):
         ["L", "C"]
 
         """
-        super().__init__(ebunch=ebunch, latents=latents)
-
-        if roles is None:
-            roles = {}
-        elif not isinstance(roles, dict):
-            raise TypeError("Roles must be provided as dictionary")
-
-        for role, vars in roles.items():
-            self.with_role(role=role, variables=vars, inplace=True)
+        super().__init__(ebunch=ebunch, latents=latents, roles=roles)
 
     def _is_collider(self, u, c, v):
         """
@@ -297,59 +293,3 @@ class MAG(AncestralBase):
 
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
-
-    def __eq__(self, other):
-        """
-        Checks if two MAGs are equal. Two MAGs are equal if they have the same
-        nodes, edges(including marks), latent variables, and variable roles
-
-        Parameters
-        ----------
-        other: MAG object
-            The other MAG to compare with
-
-        Returns
-        -------
-        bool
-            True if the MAGs are equal, False otherwise
-
-        Examples
-        --------
-        >>> from pgmpy.base import MAG
-        >>> mag1 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
-        ...     latents={"L"},
-        ...     roles={"exposure": "X"},
-        ... )
-        >>> mag2 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
-        ...     latents={"L"},
-        ...     roles={"exposure": "X"},
-        ... )
-        >>> mag1 == mag2
-        True
-
-        >>> mag3 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposure": "X"}
-        ... )
-        >>> mag1 == mag3
-        False
-        """
-        if not isinstance(other, MAG):
-            return False
-
-        self_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in self.edges(data=True)
-        }
-        other_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in other.edges(data=True)
-        }
-
-        return (
-            set(self.nodes()) == set(other.nodes())
-            and self_edges == other_edges
-            and self.latents == other.latents
-            and self.get_role_dict() == other.get_role_dict()
-        )

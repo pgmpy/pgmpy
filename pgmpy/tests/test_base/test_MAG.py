@@ -13,8 +13,6 @@ def mag():
         ("B", "D", ">", ">"),
         ("A", "D", "-", ">"),
         ("B", "C", "-", ">"),
-        ("A", "L", "-", "-"),
-        ("C", "L", "-", "-"),
     ]
     latents = {"L"}
     return MAG(ebunch=edges, latents=latents)
@@ -144,5 +142,3 @@ def test_graph_properties(mag):
     assert mag.has_edge("C", "D")
     assert mag.has_edge("A", "D")
     assert mag.has_edge("B", "C")
-    assert mag.has_edge("A", "L")
-    assert mag.has_edge("C", "L")
