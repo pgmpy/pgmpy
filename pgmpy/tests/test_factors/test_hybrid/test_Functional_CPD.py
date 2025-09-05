@@ -4,12 +4,14 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from pgmpy.utils._safe_import import _safe_import
 
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
+torch = _safe_import("torch")
 
 
 @unittest.skipUnless(
@@ -21,6 +23,8 @@ class TestFCPD(unittest.TestCase):
         """
         Test the initialization of the FunctionalCPD class.
         """
+        config.set_backend("torch")
+
         cpd = FunctionalCPD(
             variable="x3",
             fn=lambda parent_sample: dist.Normal(
@@ -35,10 +39,6 @@ class TestFCPD(unittest.TestCase):
             callable(cpd.fn), "The function passed to FunctionalCPD must be callable."
         )
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_linear_gaussian(self):
         """
         Test the equivalence of FunctionalCPD with LinearGaussianCPD sampling.
@@ -93,10 +93,6 @@ class TestFCPD(unittest.TestCase):
             f" differs from LinearGaussian variance ({linear_gaussian_variance})",
         )
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_different_distributions(self):
         exp_cpd = FunctionalCPD("exponential", lambda _: dist.Exponential(rate=2.0))
 
@@ -142,10 +138,6 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("torch", severity="none"),
-        reason="execute only if required dependency present",
-    )
     def test_sample_iterative(self):
         """
         Test FunctionalCPD with iterative sampling (vectorized=False).
