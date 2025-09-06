@@ -19,12 +19,13 @@ torch = _safe_import("torch")
     reason="execute only if required dependency present",
 )
 class TestFCPD(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
     def test_class_init(self):
         """
         Test the initialization of the FunctionalCPD class.
         """
-        config.set_backend("torch")
-
         cpd = FunctionalCPD(
             variable="x3",
             fn=lambda parent_sample: dist.Normal(
@@ -184,3 +185,6 @@ class TestFCPD(unittest.TestCase):
         samples = cpd.sample(n_samples=1000)
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
+
+    def tearDown(self):
+        config.set_backend("numpy")
