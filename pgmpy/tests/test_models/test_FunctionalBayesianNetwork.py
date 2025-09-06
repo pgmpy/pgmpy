@@ -15,6 +15,8 @@ from pgmpy.utils._safe_import import _safe_import
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 torch = _safe_import("torch")
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 
 
 @unittest.skipUnless(
@@ -89,97 +91,6 @@ class TestFBNMethods(unittest.TestCase):
         self.model.add_cpds(cpd4)
 
         self.assertRaises(ValueError, self.model.check_model)
-
-    def test_simulate_linear_gaussian(self):
-        lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        lg_cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=1)
-        lg_cpd2 = LinearGaussianCPD(
-            variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"]
-        )
-        lg_cpd3 = LinearGaussianCPD(variable="x3", beta=[4, -1], std=1, evidence=["x2"])
-        lg_model.add_cpds(lg_cpd1, lg_cpd2, lg_cpd3)
-
-        fn_model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        fn_cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(1, 1))
-        fn_cpd2 = FunctionalCPD(
-            "x2",
-            lambda parent: dist.Normal(-5 + parent["x1"] * 0.5, 1),
-            parents=["x1"],
-        )
-        fn_cpd3 = FunctionalCPD(
-            "x3",
-            lambda parent: dist.Normal(4 + parent["x2"] * -1, 1),
-            parents=["x2"],
-        )
-        fn_model.add_cpds(fn_cpd1, fn_cpd2, fn_cpd3)
-
-        n_samples = 5000
-        seed = 42
-        lg_samples = lg_model.simulate(n_samples=n_samples, seed=seed)
-        fn_samples = fn_model.simulate(n_samples=n_samples, seed=seed)
-
-        for var in ["x1", "x2", "x3"]:
-            np.testing.assert_allclose(
-                lg_samples[var].mean(),
-                fn_samples[var].mean(),
-                rtol=0.1,
-                err_msg=f"Mean mismatch for {var}",
-            )
-            np.testing.assert_allclose(
-                lg_samples[var].std(),
-                fn_samples[var].std(),
-                rtol=0.1,
-                err_msg=f"Standard deviation mismatch for {var}",
-            )
-
-    def test_simulate_different_distributions(self):
-        model = FunctionalBayesianNetwork(
-            [
-                ("exponential", "uniform"),
-                ("uniform", "lognormal"),
-                ("lognormal", "gamma"),
-            ]
-        )
-
-        cpd1 = FunctionalCPD("exponential", lambda _: dist.Exponential(0.5))
-
-        cpd2 = FunctionalCPD(
-            "uniform",
-            lambda parent: dist.Uniform(
-                parent["exponential"], parent["exponential"] + 2
-            ),
-            parents=["exponential"],
-        )
-
-        cpd3 = FunctionalCPD(
-            "lognormal",
-            lambda parent: dist.LogNormal(np.log(parent["uniform"]), 1),
-            parents=["uniform"],
-        )
-
-        cpd4 = FunctionalCPD(
-            "gamma",
-            lambda parent: dist.Gamma(2.0, parent["lognormal"] / 5),
-            parents=["lognormal"],
-        )
-
-        model.add_cpds(cpd1, cpd2, cpd3, cpd4)
-        n_samples = 10000
-        samples = model.simulate(n_samples=n_samples, seed=42)
-
-        self.assertEqual(len(samples), n_samples)
-        self.assertEqual(
-            set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"}
-        )
-
-        self.assertTrue(np.all(samples["exponential"] >= 0))
-        self.assertAlmostEqual(samples["exponential"].mean(), 2.0, delta=0.2)
-
-        self.assertTrue(np.all(samples["uniform"] >= samples["exponential"]))
-        self.assertTrue(np.all(samples["uniform"] <= samples["exponential"] + 2))
-
-        self.assertTrue(np.all(samples["lognormal"] > 0))
-        self.assertTrue(np.all(samples["gamma"] > 0))
 
     def test_svi_fit_normal(self):
         alpha = 0.5
@@ -783,6 +694,182 @@ class TestFBNMethods(unittest.TestCase):
         del self.cpd1
         del self.cpd2
         del self.cpd3
+
+
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
+class TestFBNSimulation(unittest.TestCase):
+    def test_simulate_linear_gaussian(self):
+        lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        lg_cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=1)
+        lg_cpd2 = LinearGaussianCPD(
+            variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"]
+        )
+        lg_cpd3 = LinearGaussianCPD(variable="x3", beta=[4, -1], std=1, evidence=["x2"])
+        lg_model.add_cpds(lg_cpd1, lg_cpd2, lg_cpd3)
+
+        fn_model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        fn_cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(1, 1))
+        fn_cpd2 = FunctionalCPD(
+            "x2",
+            lambda parent: dist.Normal(-5 + parent["x1"] * 0.5, 1),
+            parents=["x1"],
+        )
+        fn_cpd3 = FunctionalCPD(
+            "x3",
+            lambda parent: dist.Normal(4 + parent["x2"] * -1, 1),
+            parents=["x2"],
+        )
+        fn_model.add_cpds(fn_cpd1, fn_cpd2, fn_cpd3)
+
+        n_samples = 5000
+        seed = 42
+        lg_samples = lg_model.simulate(n_samples=n_samples, seed=seed)
+        fn_samples = fn_model.simulate(n_samples=n_samples, seed=seed)
+
+        for var in ["x1", "x2", "x3"]:
+            np.testing.assert_allclose(
+                lg_samples[var].mean(),
+                fn_samples[var].mean(),
+                rtol=0.1,
+                err_msg=f"Mean mismatch for {var}",
+            )
+            np.testing.assert_allclose(
+                lg_samples[var].std(),
+                fn_samples[var].std(),
+                rtol=0.1,
+                err_msg=f"Standard deviation mismatch for {var}",
+            )
+
+    def test_simulate_different_distributions(self):
+        model = FunctionalBayesianNetwork(
+            [
+                ("exponential", "uniform"),
+                ("uniform", "lognormal"),
+                ("lognormal", "gamma"),
+            ]
+        )
+
+        cpd1 = FunctionalCPD("exponential", lambda _: dist.Exponential(0.5))
+
+        cpd2 = FunctionalCPD(
+            "uniform",
+            lambda parent: dist.Uniform(
+                parent["exponential"], parent["exponential"] + 2
+            ),
+            parents=["exponential"],
+        )
+
+        cpd3 = FunctionalCPD(
+            "lognormal",
+            lambda parent: dist.LogNormal(np.log(parent["uniform"]), 1),
+            parents=["uniform"],
+        )
+
+        cpd4 = FunctionalCPD(
+            "gamma",
+            lambda parent: dist.Gamma(2.0, parent["lognormal"] / 5),
+            parents=["lognormal"],
+        )
+
+        model.add_cpds(cpd1, cpd2, cpd3, cpd4)
+        n_samples = 10000
+        samples = model.simulate(n_samples=n_samples, seed=42)
+
+        self.assertEqual(len(samples), n_samples)
+        self.assertEqual(
+            set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"}
+        )
+
+        self.assertTrue(np.all(samples["exponential"] >= 0))
+        self.assertAlmostEqual(samples["exponential"].mean(), 2.0, delta=0.2)
+
+        self.assertTrue(np.all(samples["uniform"] >= samples["exponential"]))
+        self.assertTrue(np.all(samples["uniform"] <= samples["exponential"] + 2))
+
+        self.assertTrue(np.all(samples["lognormal"] > 0))
+        self.assertTrue(np.all(samples["gamma"] > 0))
+
+    def test_simulate_with_do_scalar(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        cpd_x1 = FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0))
+        cpd_x2 = FunctionalCPD(
+            "x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]
+        )
+        model.add_cpds(cpd_x1, cpd_x2)
+
+        df = model.simulate(n_samples=10, seed=42, do={"x1": 3.0})
+
+        self.assertTrue(np.allclose(df["x1"].values, 3.0))
+        self.assertTrue(np.allclose(df["x2"].values, 7.0))
+
+    def test_simulate_with_do_scalar_validation(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        model.add_cpds(
+            FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD(
+                "x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]
+            ),
+        )
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=5, seed=0, do={"not_a_node": 1.0})
+
+    def test_simulate_with_virtual_intervention(self):
+        import torch
+
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        base_x1 = FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0))
+        x2 = FunctionalCPD(
+            "x2",
+            fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0),
+            parents=["x1"],
+        )
+        model.add_cpds(base_x1, x2)
+
+        const = torch.tensor(4.2, dtype=config.get_dtype(), device=config.get_device())
+        vi_x1 = FunctionalCPD("x1", fn=lambda _: dist.Delta(const))  # unconditional VI
+
+        df = model.simulate(n_samples=12, seed=13, virtual_intervention=[vi_x1])
+
+        self.assertTrue(np.allclose(df["x1"].values, 4.2))
+        self.assertTrue(np.allclose(df["x2"].values, 2.0 * 4.2 + 1.0))
+
+    def test_simulate_virtual_intervention_validation(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        model.add_cpds(
+            FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"]),
+        )
+
+        bad_vi = FunctionalCPD(
+            "x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"]
+        )
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=5, seed=0, virtual_intervention=[bad_vi])
+
+        missing_vi = FunctionalCPD("does_not_exist", fn=lambda _: dist.Delta(0.0))
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=5, seed=0, virtual_intervention=[missing_vi])
+
+    def test_simulate_do_and_virtual_intervention_conflict_raises(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        model.add_cpds(
+            FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"]),
+        )
+
+        vi_x1 = FunctionalCPD("x1", fn=lambda _: dist.Delta(4.2))  # unconditional
+
+        with self.assertRaises(ValueError):
+            model.simulate(
+                n_samples=5,
+                seed=0,
+                do={"x1": 3.0},
+                virtual_intervention=[vi_x1],
+            )
 
 
 @unittest.skipUnless(
