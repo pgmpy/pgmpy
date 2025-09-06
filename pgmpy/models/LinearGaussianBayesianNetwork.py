@@ -254,7 +254,7 @@ class LinearGaussianBayesianNetwork(DAG):
             cpd = self.get_cpds(node=var)
             for i, evidence_var in enumerate(cpd.evidence):
                 B[var_to_index[evidence_var], var_to_index[var]] = cpd.beta[i + 1]
-            omega[var_to_index[var], var_to_index[var]] = (cpd.std)**2
+            omega[var_to_index[var], var_to_index[var]] = (cpd.std) ** 2
 
         # Step 3: Compute the implied covariance matrix
         identity_matrix = np.eye(n_nodes)
@@ -459,7 +459,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
                 model.remove_cpds(model.get_cpds(var))
 
-                # Step 2.2 : For each children of an intervened node, change its CPD to remove
+                # Step 2.2 : For each child of an intervened node, change its CPD to remove
                 #  the parent (intervened node) from the evidence and update its intercept accordingly
                 for child in model.get_children(var):
                     child_cpd = model.get_cpds(child)
@@ -571,7 +571,10 @@ class LinearGaussianBayesianNetwork(DAG):
         raise ValueError("Cardinality is not defined for continuous variables.")
 
     def fit(
-        self, data: pd.DataFrame, estimator: str = "mle", std_estimator: str = "unbiased",
+        self,
+        data: pd.DataFrame,
+        estimator: str = "mle",
+        std_estimator: str = "unbiased",
     ) -> "LinearGaussianBayesianNetwork":
         """
         Estimates the parameters of the model using the given `data`.
@@ -615,7 +618,9 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"Following variables are missing in the data: {missing_vars}"
             )
 
-        if estimator not in {"mle",}:
+        if estimator not in {
+            "mle",
+        }:
             raise ValueError("estimator must be one of {'mle', 'unbiased'}")
         if std_estimator not in {"mle", "unbiased"}:
             raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
@@ -710,20 +715,24 @@ class LinearGaussianBayesianNetwork(DAG):
         mu_b = mu[observed_indexes]
 
         cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a|×|a| submatrix
-        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b|×|b| submatrix
-        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a|×|b| submatrix
+        cov_bb = cov[
+            np.ix_(observed_indexes, observed_indexes)
+        ]  # Full |b|×|b| submatrix
+        cov_ab = cov[
+            np.ix_(missing_indexes, observed_indexes)
+        ]  # Full |a|×|b| submatrix
 
         # Step 2: Compute the conditional distributions
         X_b = data.loc[:, observed_vars].values  # shape: (n_samples, |observed|)
         centered_b = X_b - np.atleast_1d(mu_b)  # shape: (n_samples, |observed|).
         mu_cond = (
-                np.atleast_2d(mu_a)
-                + (cov_ab @ np.linalg.solve(cov_bb, centered_b.T)).T
+            np.atleast_2d(mu_a) + (cov_ab @ np.linalg.solve(cov_bb, centered_b.T)).T
         )
         cov_cond = cov_aa - cov_ab @ np.linalg.solve(cov_bb, cov_ab.T)
 
         # Step 3: Return values
         return (missing_vars, mu_cond, cov_cond)
+
     def to_markov_model(self) -> None:
         """
         For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.

@@ -284,7 +284,9 @@ class TestLGBNMethods(unittest.TestCase):
         df = self.model.simulate(n_samples=int(1e5), seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         # breakpoint()
-        new_model.fit(df, method="mle")
+        new_model.fit(
+            df,
+        )
 
         for node in self.model.nodes():
             cpd_orig = self.model.get_cpds(node)
@@ -309,7 +311,7 @@ class TestLGBNMethods(unittest.TestCase):
         df = model_lin.simulate(n_samples=int(1e6), seed=42)
 
         new_model_lin = LinearGaussianBayesianNetwork(model.edges())
-        new_model_lin.fit(df, method="mle")
+        new_model_lin.fit(df)
 
         for node in model_lin.nodes():
             cpd_orig = model_lin.get_cpds(node)
