@@ -19,7 +19,7 @@ class MAG(AncestralBase):
 
     References
     ----------
-        [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
+    [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
     """
 
     def __init__(
@@ -82,6 +82,19 @@ class MAG(AncestralBase):
         ["L", "C"]
 
         """
+        if ebunch:
+            for _, _, u_mark, v_mark in ebunch:
+                if (u_mark, v_mark) not in {
+                    ("-", ">"),
+                    (">", "-"),
+                    (">", ">"),
+                    ("-", "-"),
+                }:
+                    raise ValueError(
+                        f"Invalid edge type ({u_mark}, {v_mark}). "
+                        "MAGs only allow directed ('-', '>'), reverse directed ('>', '-'), "
+                        "bidirected ('>', '>'), and undirected ('-', '-') edges."
+                    )
         super().__init__(ebunch=ebunch, latents=latents, roles=roles)
 
     def _is_collider(self, u, c, v):
@@ -95,8 +108,10 @@ class MAG(AncestralBase):
         ----------
         u : Hashable
             The first endpoint in the triple (u, c, v).
+
         c : Hashable
             The middle node, candidate collider.
+
         v : Hashable
             The second endpoint in the triple.
 
@@ -114,6 +129,9 @@ class MAG(AncestralBase):
         >>> mag._is_collider("X", "Z", "Y")
         True
         """
+        if not (self.has_edge(u, c) and self.has_edge(c, v)):
+            return False
+
         mark_uc_at_c = self.edges[u, c]["marks"][c]
         mark_cv_at_c = self.edges[c, v]["marks"][c]
 
@@ -178,84 +196,132 @@ class MAG(AncestralBase):
 
     def is_visible_edge(self, u, v) -> bool:
         """
-        Check if an edge is visible.
+        Check if a directed edge u -> v is visible in the MAG.
 
-        An edge is visible if it exists and is not shielded by an inducing path
-        through latent variables.
+        A directed edge A → B in a MAG is considered visible if there exists a vertex C
+        not adjacent to B such that either:
+            1. C → A exists, or
+            2. There is a collider path from C to A that is into A, and every vertex
+            on that path is a parent of B.
 
         Parameters
         ----------
         u : Hashable
-            First node.
+            Source node (tail of the edge).
 
         v : Hashable
-            Second node.
+            Target node (head of the edge).
 
         Returns
         -------
         bool
-            True if the edge is visible, False otherwise.
+            True if the edge u -> v is visible, False otherwise.
 
         Examples
         --------
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", "-", ">")
-        >>> mag.is_visible_edge("X", "Y")
+        >>> edges = [
+        ...     ("A", "D", "-", ">"),
+        ...     ("B", "C", "-", ">"),
+        ...     ("X", "A", "-", ">"),
+        ... ]
+        >>> mag = MAG(ebunch=edges)
+        >>> mag.is_visible_edge("A", "D")
         True
+        >>> mag.is_visible_edge("B", "C")
+        False
         """
         if not self.has_edge(u, v):
             return False
+        marks = self.edges[u, v]["marks"]
+        if marks.get(u) != "-" or marks.get(v) != ">":
+            return False
 
-        graph_without_edge = self.copy()
-        graph_without_edge.remove_edge(u, v)
-        return not graph_without_edge.has_inducing_path(u, v, self.latents)
+        neighbors_v = set(self.neighbors(v))
 
-    def lower_manipulation(self, X):
-        """
-        Perform lower manipulation (marginalization).
+        for c in self.nodes:
+            if c in {u, v} or c in neighbors_v:
+                continue
 
-        Removes variables in `X` from the MAG while preserving independence
-        structure implied by marginalization. Invisible edges are replaced with
-        bidirected edges. Directed edges into marginalized nodes are removed.
+            if self.has_edge(c, u):
+                cm = self.edges[c, u]["marks"]
+                if cm.get(c) == "-" and cm.get(u) == ">":
+                    return True
 
-        Parameters
-        ----------
-        X : set
-            Set of nodes to marginalize (remove).
+            for path in nx.all_simple_paths(self, source=c, target=u):
+                if len(path) < 3:
+                    continue
 
-        Returns
-        -------
-        MAG
-            A new MAG with nodes in X marginalized out.
+                valid = True
+                for i in range(1, len(path) - 1):
+                    prev_node, curr_node, next_node = path[i - 1], path[i], path[i + 1]
 
-        Examples
-        --------
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "L", "-", ">")
-        >>> mag.add_edge("Y", "L", "-", ">")
-        >>> mag.latents = {"L"}
-        >>> new_mag = mag.lower_manipulation({"L"})
-        >>> list(new_mag.edges())
-        [('X', 'Y')]
-        """
-        new_mag = self.copy()
+                    if not self._is_collider(prev_node, curr_node, next_node):
+                        valid = False
+                        break
 
-        for node in X:
-            neighbors = list(self.neighbors(node))
+                    if not (
+                        self.has_edge(curr_node, v)
+                        and self.edges[curr_node, v]["marks"].get(curr_node) == "-"
+                        and self.edges[curr_node, v]["marks"].get(v) == ">"
+                    ):
+                        valid = False
+                        break
 
-            for i in range(len(neighbors)):
-                for j in range(i + 1, len(neighbors)):
-                    u, v = neighbors[i], neighbors[j]
+                if valid:
+                    return True
 
-                    if self._is_collider(u, node, v):
-                        new_mag.add_edge(u, v, ">", ">")
+        return False
 
-        new_mag.remove_nodes_from(X)
-        return new_mag
+    # def lower_manipulation(self, X, inplace=False):
+    #     """
+    #     Perform lower manipulation (marginalization).
 
-    def upper_manipulation(self, X):
+    #     Removes variables in `X` from the MAG while preserving independence
+    #     structure implied by marginalization. Invisible edges are replaced with
+    #     bidirected edges. Directed edges into marginalized nodes are removed.
+
+    #     Parameters
+    #     ----------
+    #     X : set
+    #         Set of nodes to marginalize (remove).
+
+    #     inplace : bool, optional
+    #         If True, modifies the current graph in place. Defaults to False.
+
+    #     Returns
+    #     -------
+    #     MAG
+    #         A new MAG with nodes in X marginalized out.
+
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.base import MAG
+    #     >>> mag = MAG()
+    #     >>> mag.add_edge("X", "L", "-", ">")
+    #     >>> mag.add_edge("Y", "L", "-", ">")
+    #     >>> mag.latents = {"L"}
+    #     >>> new_mag = mag.lower_manipulation({"L"})
+    #     >>> list(new_mag.edges())
+    #     [('X', 'Y')]
+    #     """
+    #     if not inplace:
+    #         new_mag = self.copy()
+    #     else:
+    #         new_mag = self
+
+    #     for node in X:
+    #         neighbors = list(self.neighbors(node))
+
+    #         for i in range(len(neighbors)):
+    #             for j in range(i + 1, len(neighbors)):
+    #                 u, v = neighbors[i], neighbors[j]
+
+    #                 if self._is_collider(u, node, v):
+    #                     new_mag.add_edge(u, v, ">", ">")
+
+    #     return new_mag
+
+    def upper_manipulation(self, X, inplace=False):
         """
         Perform upper manipulation (conditioning).
 
@@ -266,6 +332,9 @@ class MAG(AncestralBase):
         ----------
         X : set
             Set of nodes to condition on.
+
+        inplace : bool, optional
+            If True, modifies the current graph in place. Defaults to False.
 
         Returns
         -------
@@ -281,15 +350,43 @@ class MAG(AncestralBase):
         >>> new_mag.has_edge("X", "Y")
         False
         """
-        new_mag = self.copy()
+
+        if not inplace:
+            new_mag = self.copy()
+        else:
+            new_mag = self
         edges_to_remove = []
 
-        for u, v in self.edges():
-            marks = self.edges[u, v]["marks"]
+        for u, v, data in self.edges(data=True):
+            marks = data["marks"]
             if u in X and marks.get(u) == "-" and marks.get(v) == ">":
                 edges_to_remove.append((u, v))
+
             elif v in X and marks.get(v) == "-" and marks.get(u) == ">":
                 edges_to_remove.append((u, v))
 
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
+
+    def copy(self):
+        """
+        Return a copy of the graph, preserving nodes, edges, marks, latents, and roles.
+
+        Returns
+        -------
+        MAG
+            A new instance of the same class as self with all properties copied.
+        """
+        ebunch = [
+            (u, v, data["marks"][u], data["marks"][v])
+            for u, v, data in self.edges(data=True)
+        ]
+        mag = MAG(
+            ebunch=ebunch,
+            latents=self.latents.copy(),
+        )
+
+        for role, vars in self.get_role_dict().items():
+            mag.with_role(role=role, variables=vars, inplace=True)
+
+        return mag

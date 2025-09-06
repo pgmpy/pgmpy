@@ -593,19 +593,16 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         AncestralBase
             A new instance of the same class as self with all properties copied.
         """
-        new_graph = self.__class__()
+        ebunch = [
+            (u, v, data["marks"][u], data["marks"][v])
+            for u, v, data in self.edges(data=True)
+        ]
+        ancestral_base = AncestralBase(
+            ebunch=ebunch,
+            latents=self.latents.copy(),
+        )
 
-        new_graph.add_nodes_from(self.nodes())
+        for role, vars in self.get_role_dict().items():
+            ancestral_base.with_role(role=role, variables=vars, inplace=True)
 
-        for u, v, data in self.edges(data=True):
-            u_mark, v_mark = data["marks"][u], data["marks"][v]
-            new_graph.add_edge(u, v, u_mark, v_mark)
-
-        if hasattr(self, "latents"):
-            new_graph.latents = set(self.latents)
-
-        if hasattr(self, "get_role_dict"):
-            for role, vars in self.get_role_dict().items():
-                new_graph.with_role(role=role, variables=vars, inplace=True)
-
-        return new_graph
+        return ancestral_base
