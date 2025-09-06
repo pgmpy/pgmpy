@@ -13,14 +13,12 @@ from pgmpy.global_vars import logger
 
 class LinearGaussianBayesianNetwork(DAG):
     """
-    A linear Gaussian Bayesian Network is a Bayesian Network, all
-    of whose variables are continuous, and where all of the CPDs
-    are linear Gaussians.
+    A Linear Gaussian Bayesian Network is a Bayesian Network whose
+    variables are all continuous, and whose CPDs are linear Gaussians.
 
-    An important result is that the linear Gaussian Bayesian Networks
+    An important result is that Linear Gaussian Bayesian Networks
     are an alternative representation for the class of multivariate
     Gaussian distributions.
-
     """
 
     def __init__(
@@ -38,13 +36,13 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def add_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
-        Add linear Gaussian CPD (Conditional Probability Distribution)
+        Add Linear Gaussian CPDs (Conditional Probability Distributions)
         to the Bayesian Network.
 
         Parameters
         ----------
-        cpds  :  instances of LinearGaussianCPD
-            List of LinearGaussianCPDs which will be associated with the model
+        cpds : instances of LinearGaussianCPD
+            LinearGaussianCPDs which will be associated with the model.
 
         Examples
         --------
@@ -59,9 +57,8 @@ class LinearGaussianBayesianNetwork(DAG):
         ...     print(cpd)
         ...
         P(x1) = N(1; 4)
-        P(x2| x1) = N(0.5*x1_mu); -5)
-        P(x3| x2) = N(-1*x2_mu); 4)
-
+        P(x2 | x1) = N(-5 + 0.5*x1; 4)
+        P(x3 | x2) = N(4 + -1*x2; 3)
         """
         for cpd in cpds:
             if not isinstance(cpd, LinearGaussianCPD):
@@ -82,8 +79,8 @@ class LinearGaussianBayesianNetwork(DAG):
         self, node: Optional[Hashable] = None
     ) -> Union[LinearGaussianCPD, List[LinearGaussianCPD]]:
         """
-        Returns the cpd of the node. If node is not specified returns all the CPDs
-        that have been added till now to the graph
+        Returns the CPD of the specified node. If node is not specified, returns all CPDs
+        that have been added so far to the graph.
 
         Parameters
         ----------
@@ -93,7 +90,8 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Returns
         -------
-        A list of linear Gaussian CPDs.
+        list[LinearGaussianCPD] or LinearGaussianCPD
+            A CPD or list of Linear Gaussian CPDs.
 
         Examples
         --------
@@ -105,6 +103,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
+        [P(x1) = N(1; 4), P(x2 | x1) = N(-5 + 0.5*x1; 4), P(x3 | x2) = N(4 + -1*x2; 3)]
         """
         if node is not None:
             if node not in self.nodes():
@@ -118,13 +117,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def remove_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
-        Removes the cpds that are provided in the argument.
+        Removes the CPDs provided in the arguments.
 
         Parameters
         ----------
-        *cpds: LinearGaussianCPD object
-            A LinearGaussianCPD object on any subset of the variables
-            of the model which is to be associated with the model.
+        *cpds: LinearGaussianCPD
+            LinearGaussianCPD objects (or their variable names) to remove.
 
         Examples
         --------
@@ -138,17 +136,16 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
         ...
-
         P(x1) = N(1; 4)
-        P(x2| x1) = N(0.5*x1_mu); -5)
-        P(x3| x2) = N(-1*x2_mu); 4)
+        P(x2 | x1) = N(-5 + 0.5*x1; 4)
+        P(x3 | x2) = N(4 + -1*x2; 3)
 
         >>> model.remove_cpds(cpd2, cpd3)
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
         ...
-
         P(x1) = N(1; 4)
+
 
         """
         for cpd in cpds:
@@ -171,22 +168,23 @@ class LinearGaussianBayesianNetwork(DAG):
         Parameters
         ----------
         loc: float
-            The mean of the normal distribution from which the coefficients are
-            sampled.
-
+            Mean of the normal from which coefficients are sampled.
         scale: float
-            The standard deviation of the normal distribution from which the
-            coefficients are sampled.
-
+            Std dev of the normal from which coefficients are sampled.
         inplace: bool (default: False)
-            If inplace=True, adds the generated LinearGaussianCPDs to `model` itself,
-            else creates a copy of the model.
+            If True, adds the generated LinearGaussianCPDs to the model;
+            otherwise returns them.
+        seed: int (optional)
+            Seed for the random number generator.
 
-        seed: int
-            The seed for the random number generator.
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> model.get_random_cpds(loc=0, scale=1, seed=42)
         """
+        # We want a different seed for each CPD; increment an integer seed in the loop.
         # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
-        seed = seed if seed else 42
 
         cpds = []
         for i, var in enumerate(self.nodes()):
@@ -207,17 +205,18 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def to_joint_gaussian(self) -> Tuple[np.ndarray, np.ndarray]:
         """
+        Represents the Linear Gaussian Bayesian Network as a joint
         Linear Gaussian Bayesian Networks can be represented using a joint
         Gaussian distribution over all the variables. This method gives
         the mean and covariance of this equivalent joint gaussian distribution.
-
         Returns
         -------
         mean, cov: np.ndarray, np.ndarray
+            Mean vector and covariance matrix of the joint Gaussian.
             The mean and the covariance matrix of the joint gaussian distribution.
-
         Examples
         --------
+        >>> mean, cov = model.to_joint_gaussian()
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -225,14 +224,12 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
         >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> mean, cov = model.to_joint_gaussian()
         >>> mean
-        array([ 1. ], [-4.5], [ 8.5])
+        array([ 1. , -4.5,  8.5])
         >>> cov
-        array([[ 4.,  2., -2.],
-               [ 2.,  5., -5.],
-               [-2., -5.,  8.]])
-
+        array([[ 16.,   8.,  -8.],
+               [  8.,  20., -20.],
+               [ -8., -20.,  29.]])
         """
         variables = list(nx.topological_sort(self))
         var_to_index = {var: i for i, var in enumerate(variables)}
@@ -267,18 +264,17 @@ class LinearGaussianBayesianNetwork(DAG):
     def log_likelihood(self, data: pd.DataFrame) -> float:
         """
         Computes the log-likelihood of the given dataset under the current
-        Linear Gaussian Bayesian Network model.
+        Linear Gaussian Bayesian Network.
 
         Parameters
         ----------
         data : pandas.DataFrame
-            The dataset containing observations for all variables in the model.
-            The columns must match the model's variable names.
+            Observations for all variables (columns must match model variables).
 
         Returns
         -------
         float
-            The total log-likelihood of the data under the current model.
+            Total log-likelihood of the data under the model.
 
         Examples
         --------
@@ -352,11 +348,12 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: Optional[int] = None,
     ) -> pd.DataFrame:
         """
-        Simulates data from the given model.
+        Simulates data from the model.
 
         Parameters
         ----------
         n_samples: int
+            Number of samples to draw.
             The number of samples to draw from the model.
 
         do: dict (default: None)
@@ -377,14 +374,14 @@ class LinearGaussianBayesianNetwork(DAG):
 
         seed: int (default: None)
             Seed for the random number generator.
-
         Returns
         -------
+        pandas.DataFrame
         pandas.DataFrame: generated samples
             A pandas data frame with the generated samples.
-
         Examples
         --------
+        >>> model.simulate(n_samples=3, seed=42)
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -394,16 +391,15 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
-        >>> model.simulate(n_samples=3, seed=42)
-
-        Sampling with intervention (do)
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
 
-        Sampling with evidence
+        Sampling with intervention (do)
         >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
 
-        Sampling with both intervention and evidence
+        Sampling with evidence
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+
+        Sampling with both intervention and evidence
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
@@ -542,16 +538,15 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def check_model(self) -> bool:
         """
-        Checks the model for various errors. This method checks for the following
-        error -
+        Checks the model for structural/parameter consistency.
 
-        * Checks if the CPDs associated with nodes are consistent with their parents.
+        Currently checks:
+        * Each CPD's listed parents match the graph's parents.
 
         Returns
         -------
-        check: boolean
-            True if all the checks pass.
-
+        bool
+            True if all checks pass; raises ValueError otherwise.
         """
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
@@ -577,26 +572,26 @@ class LinearGaussianBayesianNetwork(DAG):
         std_estimator: str = "unbiased",
     ) -> "LinearGaussianBayesianNetwork":
         """
-        Estimates the parameters of the model using the given `data`.
+        Estimates (fits) the Linear Gaussian CPDs from data.
 
         Parameters
         ----------
         data: pd.DataFrame
+            Continuous-valued data containing all model variables.
             A pandas DataFrame with the data to which to fit the model
             structure. All variables must be continuously valued.
-        estimator: str
+            Currently only 'mle' (OLS) supported.
             The estimator to use for estimating the parameters. Currently, MLE via OLS is the
             only supported method.
-        std_estimator: str
-            Wether to use maximum likelihood estimate (MLE) or unbiased estimate for standard
+            'mle' uses ddof=0; 'unbiased' uses ddof = 1 + number_of_parents.
+            Whether to use maximum likelihood estimate (MLE) or unbiased estimate for standard
             deviation. If 'mle', then ddof=0 is used while calculating standard deviation. If
             unbiased, ddof = 1 + number of parents.
-
         Returns
         -------
+        self
         None: The estimated LinearGaussianCPDs are added to the model. They can
             be accessed using `model.cpds`.
-
         Examples
         --------
         >>> import numpy as np
@@ -608,9 +603,9 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> model.fit(df)
         >>> model.cpds
+        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0>,
         [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
          <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
-         <LinearGaussianCPD: P(x3 | x2) = N(0.006*x2 + -0.1; 0.922) at 0x7eb6abbdba10]
         """
         # Step 1: Check the input
         if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
@@ -666,16 +661,17 @@ class LinearGaussianBayesianNetwork(DAG):
         self, data: pd.DataFrame, distribution: str = "joint"
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
+        Predicts the conditional distribution of missing variables
         Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
-
         Parameters
         ----------
         data: pandas.DataFrame
+            DataFrame with a subset of model variables observed.
             The dataframe with missing variable which to predict.
-
         Returns
         -------
         variables: list
+            Missing variables (order matches returned distribution).
             The list of variables on which the returned conditional distribution is defined on.
 
         mu: np.array
@@ -684,16 +680,15 @@ class LinearGaussianBayesianNetwork(DAG):
 
         cov: np.array
             The covariance of the conditional joint distribution over the missing variables.
-
         Examples
         --------
+        >>> # Drop a column you want to predict (avoid inplace=True to keep return value)
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
         >>> df = model.simulate(n_samples=5)
         >>> # Drop a column that we want to predict.
         >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
         >>> model.predict(df)
-        (['folK'], array([[0.38194262], [3.06014724], [1.36829103], [0.89197438], [2.98887488]]),
                    array([[0.13440001]]))
         """
         # Step 0: Check the inputs
@@ -760,15 +755,16 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: Optional[int] = None,
     ) -> "LinearGaussianBayesianNetwork":
         """
+        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes`
         Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
-
         Parameters
         ----------
         n_nodes: int
+            Number of nodes.
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+            Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
@@ -777,23 +773,22 @@ class LinearGaussianBayesianNetwork(DAG):
             If None, the node names are integer values starting from 0.
 
         latents: bool (default: False)
-            If True, also creates latent variables.
-
         loc: float
+
+            Mean of normal for coefficients.
             The mean of the normal distribution from which the coefficients are
             sampled.
 
-        scale: float
+            Std dev of normal for coefficients.
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
 
         seed: int
             The seed for the random number generator.
-
         Returns
         -------
-        Random DAG: pgmpy.base.DAG
-            The randomly generated DAG.
+        LinearGaussianBayesianNetwork
+            The randomly generated model.
 
         Examples
         --------
