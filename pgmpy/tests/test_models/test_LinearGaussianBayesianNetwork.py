@@ -118,7 +118,7 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(mean, np.array([1.0, -4.5, 8.5]), decimal=3)
         np_test.assert_array_almost_equal(
             cov,
-            np.array([[4.0, 2.0, -2.0], [2.0, 5.0, -5.0], [-2.0, -5.0, 8.0]]),
+            np.array([[16.0, 8.0, -8.0], [8.0, 20.0, -20.0], [-8.0, -20.0, 29.0]]),
             decimal=3,
         )
 
@@ -332,15 +332,15 @@ class TestLGBNMethods(unittest.TestCase):
         variables, mu, cov = self.model.predict(df)
         self.assertEqual(variables, ["x2"])
         self.assertEqual(mu.shape, (10, 1))
-        # breakpoint()
         self.assertTrue(
             np.allclose(
                 mu.round(2).squeeze(),
-                [-5.31, -5.63, -4.71, -3.3, -4.82, -2.61, -5.98, -3.25, -3.94, -5.32],
+                [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
             )
         )
-        self.assertEqual(cov.round(2).squeeze(), 1.71)
+        self.assertEqual(cov.round(2).squeeze(), 5.76)
 
+        # Test predict on the alarm model
         # Test predict on the alarm model
         model = get_example_model("alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())

@@ -571,7 +571,7 @@ class LinearGaussianBayesianNetwork(DAG):
         raise ValueError("Cardinality is not defined for continuous variables.")
 
     def fit(
-        self, data: pd.DataFrame, method: str = "mle"
+        self, data: pd.DataFrame, estimator: str = "mle", std_estimator: str = "unbiased",
     ) -> "LinearGaussianBayesianNetwork":
         """
         Estimates the parameters of the model using the given `data`.
@@ -580,10 +580,14 @@ class LinearGaussianBayesianNetwork(DAG):
         ----------
         data: pd.DataFrame
             A pandas DataFrame with the data to which to fit the model
-            structure. All variables must be continuous valued.
-        method: str
-            The method to use for estimating the parameters. It can be either maximum
-            likelihood estimation (mle) or unbiased estimation (unbiased).
+            structure. All variables must be continuously valued.
+        estimator: str
+            The estimator to use for estimating the parameters. Currently, MLE via OLS is the
+            only supported method.
+        std_estimator: str
+            Wether to use maximum likelihood estimate (MLE) or unbiased estimate for standard
+            deviation. If 'mle', then ddof=0 is used while calculating standard deviation. If
+            unbiased, ddof = 1 + number of parents.
 
         Returns
         -------
@@ -611,17 +615,20 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"Following variables are missing in the data: {missing_vars}"
             )
 
-        if method not in {"mle", "unbiased"}:
-            raise ValueError("method must be one of {'mle', 'unbiased'}")
+        if estimator not in {"mle",}:
+            raise ValueError("estimator must be one of {'mle', 'unbiased'}")
+        if std_estimator not in {"mle", "unbiased"}:
+            raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
 
         # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
         for node in self.nodes():
             parents = self.get_parents(node)
+            # Step 2.1: If node doesn't have any parents (i.e. root node),
+            #  simply take the mean and variance.
 
             if len(parents) == 0:
-                # Root node: use ddof=0 for MLE, ddof=1 for unbiased
-                ddof = 0 if method == "mle" else 1
+                ddof = 0 if std_estimator == "mle" else 1
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
@@ -629,12 +636,14 @@ class LinearGaussianBayesianNetwork(DAG):
                         std=data.loc[:, node].std(ddof=ddof),
                     )
                 )
+            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
+            # Compute error variance using predicted values.
+
             else:
-                # Regression: use ddof=0 for MLE, ddof=p for unbiased
                 lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
                 residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
                 p = 1 + len(parents)  # intercept + coefficients
-                ddof = 0 if method == "mle" else p
+                ddof = 0 if std_estimator == "mle" else p
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
@@ -691,34 +700,30 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 1: Create separate mean and cov matrices for missing and known variables.
         mu, cov = self.to_joint_gaussian()
         variable_order = list(nx.topological_sort(self))
+
+        missing_vars = [var for var in variable_order if var in missing_vars]
+        observed_vars = [var for var in variable_order if var not in missing_vars]
         missing_indexes = [variable_order.index(var) for var in missing_vars]
-        remain_vars = [var for var in variable_order if var not in missing_vars]
+        observed_indexes = [variable_order.index(var) for var in observed_vars]
 
         mu_a = mu[missing_indexes]
-        mu_b = np.delete(mu, missing_indexes)
+        mu_b = mu[observed_indexes]
 
-        cov_aa = cov[missing_indexes, missing_indexes]
-        # breakpoint()
-        cov_bb = np.delete(
-            np.delete(cov, missing_indexes, axis=0), missing_indexes, axis=1
-        )
-        cov_ab = np.delete(cov[missing_indexes, :], missing_indexes, axis=1)
+        cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a|×|a| submatrix
+        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b|×|b| submatrix
+        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a|×|b| submatrix
 
         # Step 2: Compute the conditional distributions
-        cov_bb_inv = np.linalg.inv(cov_bb)
+        X_b = data.loc[:, observed_vars].values  # shape: (n_samples, |observed|)
+        centered_b = X_b - np.atleast_1d(mu_b)  # shape: (n_samples, |observed|).
         mu_cond = (
-            np.atleast_2d(mu_a)
-            + (
-                cov_ab
-                @ cov_bb_inv
-                @ (data.loc[:, remain_vars].values - np.atleast_2d(mu_b)).T
-            ).T
+                np.atleast_2d(mu_a)
+                + (cov_ab @ np.linalg.solve(cov_bb, centered_b.T)).T
         )
-        cov_cond = cov_aa - cov_ab @ cov_bb_inv @ cov_ab.T
+        cov_cond = cov_aa - cov_ab @ np.linalg.solve(cov_bb, cov_ab.T)
 
         # Step 3: Return values
-        return ([variable_order[i] for i in missing_indexes], mu_cond, cov_cond)
-
+        return (missing_vars, mu_cond, cov_cond)
     def to_markov_model(self) -> None:
         """
         For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.
