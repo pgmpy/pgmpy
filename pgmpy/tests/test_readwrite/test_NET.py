@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -429,6 +430,10 @@ class TestNETReader(unittest.TestCase):
         pass
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -599,6 +604,10 @@ potential (xray | either){
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
