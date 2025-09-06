@@ -13,6 +13,8 @@ def mag():
         ("B", "D", ">", ">"),
         ("A", "D", "-", ">"),
         ("B", "C", "-", ">"),
+        ("A", "L", "-", "-"),
+        ("C", "L", "-", "-"),
     ]
     latents = {"L"}
     return MAG(ebunch=edges, latents=latents)
@@ -70,6 +72,15 @@ def test_inducing_path_with_latent():
 
 
 def test_visible_edges_fixture(mag):
+    edges = [
+        ("A", "B", ">", ">"),
+        ("C", "D", ">", ">"),
+        ("A", "C", ">", ">"),
+        ("B", "D", ">", ">"),
+        ("A", "D", "-", ">"),
+        ("B", "C", "-", ">"),
+    ]
+    mag = MAG(ebunch=edges)
     assert mag.is_visible_edge("A", "B")
     assert mag.is_visible_edge("A", "D")
     assert mag.is_visible_edge("B", "C")
@@ -136,7 +147,7 @@ def test_manipulations_keep_original(mag):
 
 
 def test_graph_properties(mag):
-    assert len(mag.nodes()) == 4
+    assert len(mag.nodes()) == 5
     assert mag.latents == {"L"}
     assert mag.has_edge("A", "B")
     assert mag.has_edge("C", "D")
