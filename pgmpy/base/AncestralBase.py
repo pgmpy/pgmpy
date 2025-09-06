@@ -586,23 +586,26 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
 
     def copy(self):
         """
-        Return a copy of the graph, preserving edge marks and latents and roles.
+        Return a copy of the graph, preserving nodes, edges, marks, latents, and roles.
 
         Returns
         -------
         AncestralBase
-            Returns a copy of self.
+            A new instance of the same class as self with all properties copied.
         """
-        ebunch = [
-            (u, v, data["marks"][u], data["marks"][v])
-            for u, v, data in self.edges(data=True)
-        ]
+        new_graph = self.__class__()
 
-        new_graph = AncestralBase(ebunch=ebunch, latents=set(self.latents))
+        new_graph.add_nodes_from(self.nodes())
 
-        new_graph.add_edges_from(self.nodes)
+        for u, v, data in self.edges(data=True):
+            u_mark, v_mark = data["marks"][u], data["marks"][v]
+            new_graph.add_edge(u, v, u_mark, v_mark)
 
-        for role, vars in self.get_role_dict().items():
-            new_graph.with_role(role=role, variables=vars, inplace=True)
+        if hasattr(self, "latents"):
+            new_graph.latents = set(self.latents)
+
+        if hasattr(self, "get_role_dict"):
+            for role, vars in self.get_role_dict().items():
+                new_graph.with_role(role=role, variables=vars, inplace=True)
 
         return new_graph

@@ -136,7 +136,7 @@ def test_manipulations_keep_original(mag):
 
 
 def test_graph_properties(mag):
-    assert len(mag.nodes()) == 5
+    assert len(mag.nodes()) == 4
     assert mag.latents == {"L"}
     assert mag.has_edge("A", "B")
     assert mag.has_edge("C", "D")

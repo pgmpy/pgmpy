@@ -189,8 +189,12 @@ class TestAncestralBase(unittest.TestCase):
 
     def test_copy_preserves_roles(self):
         """Test that copy preserves node roles."""
+        edges = [
+            ("A", "B", "-", ">"),
+            ("A", "C", "-", ">"),
+        ]
         roles = {"exposure": "A", "outcome": "B"}
-        graph = AncestralBase([("A", "B", "-", ">")], roles=roles)
+        graph = AncestralBase(ebunch=edges, roles=roles)
         new_graph = graph.copy()
 
         self.assertEqual(new_graph.nodes["A"]["role"], "exposure")
