@@ -1,6 +1,8 @@
 import networkx as nx
 
+from pgmpy.base import DAG
 from pgmpy.identification import BaseIdentification
+from pgmpy.utils.sets import _powerset
 
 
 class BackdoorIdentification(BaseIdentification):
@@ -16,6 +18,7 @@ class BackdoorIdentification(BaseIdentification):
     ----------
     variant: str
         The variant of backdoor identification to use. Default is 'minimal'.
+
         - 'all': Returns all adjustment sets that satisfy the backdoor criterion.
         - 'minimal': Returns the smallest adjustment set.
         - 'minimal_variance': Returns the adjustment set for which estimators achieve minimal variance.
@@ -77,7 +80,8 @@ class BackdoorIdentification(BaseIdentification):
         >>> dag_proper = BackdoorIdentification()._get_proper_backdoor_graph(
         ...     dag, inplace=False
         ... )
-        >>> dag_proper.edges()
+        >>> list(dag_proper.edges())
+        [('x1', 'z1'), ('z1', 'z2'), ('z2', 'x2'), ('y2', 'z2')]
 
         References
         ----------
@@ -102,7 +106,7 @@ class BackdoorIdentification(BaseIdentification):
 
         Parameters
         ----------
-        causal_graph: DAG | PDAG | MAG | PAG
+        causal_graph: DAG | PDAG | ADMG | MAG | PAG
             The causal graph for which the adjustment sets are to be identified.
 
         Returns
@@ -110,14 +114,32 @@ class BackdoorIdentification(BaseIdentification):
         causal_graph: DAG | PDAG | MAG | PAG
             The causal graph with the identified adjustment set added as role `adjustment`.
         """
+        if not isinstance(causal_graph, DAG):
+            raise NotImplementedError(
+                "Backdoor identification is only implemented for DAGs."
+            )
+
         backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
         if self.variant == "minimal":
             return backdoor_graph.minimal_dseparator(
                 causal_graph.get_roles("exposure"), causal_graph.get_roles("outcome")
             )
-        if self.variant == "all":
-            # TODO
-            pass
+
+        elif self.variant == "minimal_variance":
+            raise NotImplementedError(
+                "Backdoor identification with minimal variance is not implemented yet."
+            )
+
+        elif self.variant == "all":
+            ancestors = causal_graph.ancestors(
+                causal_graph.get_roles("exposure") + causal_graph.get_roles("outcome")
+            )
+
+            valid_adjustment_sets = []
+            for s in _powerset(ancestors):
+                if self.validate(causal_graph=causal_graph, adjustment_set=s):
+                    valid_adjustment_sets.append(s)
+            return valid_adjustment_sets
 
     def _validate(self, causal_graph):
         """
@@ -125,11 +147,11 @@ class BackdoorIdentification(BaseIdentification):
 
         Given a `causal_graph` with variable roles `exposure`, `outcome`, and
         `adjustment` defined, this method checks if the given `adjustment` set
-        is valid and satisfies the backdoor criterion.
+        is valid.
 
         Parameters
         ----------
-        causal_graph: DAG | PDAG | MAG | PAG
+        causal_graph: DAG | PDAG | ADMG | MAG | PAG
             The causal graph to validate.
 
         Returns
@@ -137,14 +159,15 @@ class BackdoorIdentification(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        Z = causal_graph.get_roles("adjustment")
+        conditional_vars = causal_graph.get_roles("exposure") + causal_graph.get_roles(
+            "adjustment"
+        )
 
-        observed = causal_graph.get_roles("exposure") + Z
         parents_d_sep = []
         for p in self.dag.predecessors(causal_graph.get_roles("exposure")):
             parents_d_sep.append(
                 not self.dag.is_dconnected(
-                    p, causal_graph.get_roles("outcome"), observed=observed
+                    p, causal_graph.get_roles("outcome"), observed=conditional_vars
                 )
             )
         return all(parents_d_sep)
