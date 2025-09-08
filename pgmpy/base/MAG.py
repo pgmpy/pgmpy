@@ -244,11 +244,17 @@ class MAG(AncestralBase):
 
             if self.has_edge(c, u):
                 cm = self.edges[c, u]["marks"]
-                if cm.get(c) == "-" and cm.get(u) == ">":
+                if cm.get(u) == ">":
                     return True
 
             for path in nx.all_simple_paths(self, source=c, target=u):
                 if len(path) < 3:
+                    continue
+
+                last = path[-2]
+                if not self.has_edge(last, u):
+                    continue
+                if self.edges[last, u]["makrs"][u] != ">":
                     continue
 
                 valid = True
@@ -272,66 +278,18 @@ class MAG(AncestralBase):
 
         return False
 
-    # def lower_manipulation(self, X, inplace=False):
-    #     """
-    #     Perform lower manipulation (marginalization).
-
-    #     Removes variables in `X` from the MAG while preserving independence
-    #     structure implied by marginalization. Invisible edges are replaced with
-    #     bidirected edges. Directed edges into marginalized nodes are removed.
-
-    #     Parameters
-    #     ----------
-    #     X : set
-    #         Set of nodes to marginalize (remove).
-
-    #     inplace : bool, optional
-    #         If True, modifies the current graph in place. Defaults to False.
-
-    #     Returns
-    #     -------
-    #     MAG
-    #         A new MAG with nodes in X marginalized out.
-
-    #     Examples
-    #     --------
-    #     >>> from pgmpy.base import MAG
-    #     >>> mag = MAG()
-    #     >>> mag.add_edge("X", "L", "-", ">")
-    #     >>> mag.add_edge("Y", "L", "-", ">")
-    #     >>> mag.latents = {"L"}
-    #     >>> new_mag = mag.lower_manipulation({"L"})
-    #     >>> list(new_mag.edges())
-    #     [('X', 'Y')]
-    #     """
-    #     if not inplace:
-    #         new_mag = self.copy()
-    #     else:
-    #         new_mag = self
-
-    #     for node in X:
-    #         neighbors = list(self.neighbors(node))
-
-    #         for i in range(len(neighbors)):
-    #             for j in range(i + 1, len(neighbors)):
-    #                 u, v = neighbors[i], neighbors[j]
-
-    #                 if self._is_collider(u, node, v):
-    #                     new_mag.add_edge(u, v, ">", ">")
-
-    #     return new_mag
-
-    def upper_manipulation(self, X, inplace=False):
+    def lower_manipulation(self, X, inplace=False):
         """
-        Perform upper manipulation (conditioning).
+        Perform lower manipulation.
 
-        Removes directed edges outgoing from nodes in `X`, representing
-        conditioning on those variables.
+        Deletes all the edges that are that are `visible` and out of variables
+        in X. It also replaces all edges that are of variables in X but are
+        invisible in M with bidirected edges and otherwise keeps the graph as it is.
 
         Parameters
         ----------
         X : set
-            Set of nodes to condition on.
+            Set of nodes to perform manipulation on.
 
         inplace : bool, optional
             If True, modifies the current graph in place. Defaults to False.
@@ -345,12 +303,76 @@ class MAG(AncestralBase):
         --------
         >>> from pgmpy.base import MAG
         >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", "-", ">")
+        >>> mag.add_edge("A", "B", "-", ">")
+        >>> mag.add_edge("A", "C", "-", ">")
+        >>> mag.add_edge("C", "B", "-", ">")
+        >>> mag.add_edge("B", "C", ">", ">")
+        >>> new_mag = mag.lower_manipulation({"A"})
+        >>> list(new_mag.edges(data=True))
+        [('B', 'C', {'marks': {'C': '>', 'B': '>'}})]
+        """
+        if not inplace:
+            new_mag = self.copy()
+        else:
+            new_mag = self
+
+        edges_to_remove = []
+        edges_to_change = []
+
+        for u, v, data in self.edges(data=True):
+            marks = data["marks"]
+            marks_u = marks.get(u)
+            marks_v = marks.get(v)
+            if u in X and marks_u == "-" and marks_v == ">":
+                if self.is_visible_edge(u, v):
+                    edges_to_remove.append((u, v))
+                else:
+                    edges_to_change.append((u, v))
+
+        new_mag.remove_edges_from(edges_to_change + edges_to_remove)
+        for u, v in edges_to_change:
+            other = v if u in X else u
+            for neighbor in self.neighbors(v):
+                if neighbor != other and neighbor not in X:
+                    new_mag.add_edge(other, neighbor, ">", ">")
+
+        return new_mag
+
+    def upper_manipulation(self, X, inplace=False):
+        """
+        Perform upper manipulation.
+
+        Deletes all edges (directed or bidirected) that have an arrowhead
+        pointing to any variable in X. The rest of the graph remains unchanged.
+
+        Parameters
+        ----------
+        X : set
+            Set of nodes to perform manipulation on.
+
+        inplace : bool, optional
+            If True, modifies the current graph in place. Defaults to False.
+
+        Returns
+        -------
+        MAG
+            A new MAG with incoming edges to X removed.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", ">", "-")
+        >>> mag.add_edge("Z", "X", ">", "-")
+        >>> mag.add_edge("A", "X", "-", ">")
         >>> new_mag = mag.upper_manipulation({"X"})
+        >>> new_mag.has_edge("Z", "X")
+        True
+        >>> new_mag.has_edge("A", "X")
+        False
         >>> new_mag.has_edge("X", "Y")
         False
         """
-
         if not inplace:
             new_mag = self.copy()
         else:
@@ -359,10 +381,9 @@ class MAG(AncestralBase):
 
         for u, v, data in self.edges(data=True):
             marks = data["marks"]
-            if u in X and marks.get(u) == "-" and marks.get(v) == ">":
+            if u in X and marks.get(u) == ">":
                 edges_to_remove.append((u, v))
-
-            elif v in X and marks.get(v) == "-" and marks.get(u) == ">":
+            elif v in X and marks.get(v) == ">":
                 edges_to_remove.append((u, v))
 
         new_mag.remove_edges_from(edges_to_remove)

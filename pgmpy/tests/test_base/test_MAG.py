@@ -71,25 +71,32 @@ class TestMAG:
         assert not mag.is_visible_edge("A", "C")
         assert not mag.is_visible_edge("B", "D")
 
-    # def test_lower_manipulation(mag):
+    def test_lower_manipulation(self, mag):
+        new_mag = mag.lower_manipulation({"A"})
+        assert not new_mag.has_edge("A", "D")
+        assert new_mag.has_edge("A", "B")
+        assert new_mag.has_edge("A", "C")
+        assert new_mag.has_edge("B", "C")
+
+        new_mag = mag.lower_manipulation({"B"})
+        assert not new_mag.has_edge("B", "C")
+        assert new_mag.has_edge("A", "B")
+        assert new_mag.has_edge("A", "C")
+        assert new_mag.has_edge("A", "D")
 
     def test_upper_manipulation(self, mag):
-        new_mag = mag.upper_manipulation({"A"})
+        new_mag = mag.upper_manipulation({"D"})
         assert not new_mag.has_edge("A", "D")
-        assert mag.has_edge("A", "B")
-        assert mag.has_edge("A", "C")
-        assert mag.has_edge("A", "D")
+        assert not new_mag.has_edge("C", "D")
+        assert not new_mag.has_edge("B", "D")
 
-        mag_copy = mag.copy()
-        mag_copy.upper_manipulation({"A"}, inplace=True)
-        assert not mag_copy.has_edge("A", "D")
-        assert mag_copy.has_edge("A", "B")
-        assert mag_copy.has_edge("A", "C")
+        assert new_mag.has_edge("A", "B")
 
-        new_mag_b = mag.upper_manipulation({"B"})
-        assert not new_mag_b.has_edge("B", "C")
-        assert new_mag_b.has_edge("A", "B")
-        assert new_mag_b.has_edge("B", "D")
+        new_mag = mag.upper_manipulation({"C"})
+        assert not new_mag.has_edge("B", "C")
+        assert not new_mag.has_edge("A", "C")
+
+        assert new_mag.has_edge("A", "B")
 
     def test_graph_properties(self, mag):
         assert len(mag.nodes()) == 4
