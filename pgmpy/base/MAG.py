@@ -310,7 +310,7 @@ class MAG(AncestralBase):
         >>> mag.add_edge("B", "C", ">", ">")
         >>> new_mag = mag.lower_manipulation({"A"})
         >>> list(new_mag.edges(data=True))
-        [('B', 'C', {'marks': {'C': '>', 'B': '>'}})]
+        [('B', 'C', {'marks': {'B': '>', 'C': '>'}})]
         """
         if not inplace:
             new_mag = self.copy()
