@@ -1,9 +1,10 @@
 import os
+import tempfile
 import unittest
 
-import networkx as nx
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -484,7 +485,53 @@ probability ( light-on | family-out ) {
             self.assertEqual(self.model.get_cpds(var), read_model.get_cpds(var))
         os.remove("test_bif.bif")
 
+    def test_comma_state_name_warning(self):
+        # Create a simple model with state names containing commas
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": ["state,1", "state,2"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["yes", "no"], "A": ["state,1", "state,2"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
 
+        # Test that warning is raised when writing
+        with tempfile.NamedTemporaryFile(suffix=".bif", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            with self.assertLogs("pgmpy", level="WARNING") as cm:
+                writer = BIFWriter(model)
+                writer.write_bif(tmp_path)
+
+                # Verify the warning was logged
+                self.assertIn(
+                    "State name 'state,1' for variable 'A' contains commas. "
+                    "This may cause issues when loading the file. Consider removing any special characters.",
+                    cm.output[0],
+                )
+
+            # Verify that loading fails due to commas in state names
+            with self.assertRaises(ValueError):
+                BIFReader(tmp_path).get_model()
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -808,6 +855,10 @@ class TestBIFReaderTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

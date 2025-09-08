@@ -2,13 +2,17 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.estimators import IVEstimator, SEMEstimator
 from pgmpy.models import SEM, SEMGraph
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestSEMEstimator(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

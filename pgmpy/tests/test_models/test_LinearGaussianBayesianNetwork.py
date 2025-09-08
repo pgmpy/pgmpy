@@ -190,6 +190,50 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
 
+    def test_simulate_with_virtual_intervention(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
+        virtual_intervention = [new_cpd]
+
+        df = self.model.simulate(
+            n_samples=10000, seed=42, virtual_intervention=virtual_intervention
+        )
+
+        rng = np.random.default_rng(seed=42)
+        x1 = 1 + rng.normal(0, 2, 10000)
+        x2 = 1 + rng.normal(0, np.sqrt(2), 10000)
+        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
+
+        df_equiv = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+        np_test.assert_array_almost_equal(df.mean(), df_equiv.mean(), decimal=1)
+        np_test.assert_array_almost_equal(df.cov(), df_equiv.cov(), decimal=1)
+
+    def test_simulate_latents(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        self.model.latents.add("x2")
+
+        df_with_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=True
+        )
+        df_without_latents = self.model.simulate(
+            n_samples=1000, seed=42, include_latents=False
+        )
+
+        for latent_var in self.model.latents:
+            self.assertIn(latent_var, df_with_latents.columns)
+
+        for latent_var in self.model.latents:
+            self.assertNotIn(latent_var, df_without_latents.columns)
+
+        non_latent_vars = [
+            node for node in self.model.nodes() if node not in self.model.latents
+        ]
+        for var in non_latent_vars:
+            self.assertIn(var, df_with_latents.columns)
+            self.assertIn(var, df_without_latents.columns)
+
     def test_simulate_against_manual_results(self):
         model = LinearGaussianBayesianNetwork(
             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
@@ -349,6 +393,44 @@ class TestLGBNMethods(unittest.TestCase):
             model3, LinearGaussianBayesianNetwork, "Incorrect instance"
         )
 
+    def test_log_likelihood(self):
+        # Test log likelihood with dataframes
+        self.model.add_cpds(self.cpd1)
+        self.model.add_cpds(self.cpd2)
+        self.model.add_cpds(self.cpd3)
+        np.random.seed(42)
+        x1 = np.random.normal(0, 4, 100)
+        x2 = -5 + 0.5 * x1 + np.random.normal(0, 4, 100)
+        x3 = 4 - 1 * x2 + np.random.normal(0, 3, 100)
+        good_fit = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+        bad_fit = pd.DataFrame(
+            np.random.normal(0, 10, (100, 3)), columns=["x1", "x2", "x3"]
+        )
+        ll_good = self.model.log_likelihood(good_fit)
+        ll_bad = self.model.log_likelihood(bad_fit)
+        self.assertIsInstance(
+            ll_good, float, "Expected log_likelihood to return a float."
+        )
+        self.assertIsInstance(
+            ll_bad, float, "Expected log_likelihood to return a float."
+        )
+        self.assertGreater(
+            ll_good,
+            ll_bad,
+            "Expected higher log-likelihood for well-fitting data compared to random data.",
+        )
+
+        # Wrong column names should raise error
+        data_wrong_names = pd.DataFrame(
+            {
+                "a": np.random.normal(0, 1, 100),
+                "b": np.random.normal(0, 1, 100),
+                "c": np.random.normal(0, 1, 100),
+            }
+        )
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(data_wrong_names)
+
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
 
@@ -387,3 +469,68 @@ class TestDAGParser(unittest.TestCase):
         model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
         expected_edges = set([("smoking", "carry matches")])
         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+    def test_from_dagitty_DAG_ctor(self):
+        from pgmpy.base import DAG
+
+        # Adapted from https://www.dagitty.net/manual-3.x.pdf#page=4 section 3.1 with beta modified
+        model_str = """dag{
+        "carry matches" [latent]
+        cancer [outcome]
+        smoking -> "carry matches" [beta=0.2]
+        smoking -> cancer [beta=0.5]
+        "carry matches" -> cancer
+        }"""
+        model_from_str = DAG.from_dagitty(model_str)
+        self.assertIsInstance(model_from_str, LinearGaussianBayesianNetwork)
+        self.assertEqual(
+            sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"]
+        )
+        expected_edges = set(
+            [
+                ("smoking", "carry matches"),
+                ("smoking", "cancer"),
+                ("carry matches", "cancer"),
+            ]
+        )
+        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(model_from_str.check_model(), True)
+
+        # Test CPDs
+        self.assertEqual(len(model_from_str.cpds), 3)
+
+        # Check if all std dev are set
+        self.assertIsNotNone(model_from_str.get_cpds("cancer").std)
+        self.assertIsNotNone(model_from_str.get_cpds("carry matches").std)
+        self.assertIsNotNone(model_from_str.get_cpds("smoking").std)
+
+        # Check variable names
+        self.assertEqual(model_from_str.get_cpds("cancer").variable, "cancer")
+        self.assertEqual(
+            model_from_str.get_cpds("carry matches").variable, "carry matches"
+        )
+        self.assertEqual(model_from_str.get_cpds("smoking").variable, "smoking")
+
+        # Check evidences
+        self.assertEqual(
+            sorted(model_from_str.get_cpds("cancer").evidence),
+            ["carry matches", "smoking"],
+        )
+        self.assertEqual(
+            sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"]
+        )
+        self.assertEqual(sorted(model_from_str.get_cpds("smoking").evidence), [])
+
+        # Check if the betas specified were correctly set
+        self.assertEqual(model_from_str.get_cpds("cancer").beta[1], 0.5)
+        self.assertEqual(model_from_str.get_cpds("carry matches").beta[1], 0.2)
+
+        # Check if intercepts are 0
+        self.assertEqual(model_from_str.get_cpds("cancer").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("carry matches").beta[0], 0.0)
+        self.assertEqual(model_from_str.get_cpds("smoking").beta[0], 0.0)
+
+        # Check if std devs are 1
+        self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
+        self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
+        self.assertEqual(model_from_str.get_cpds("smoking").std, 1)

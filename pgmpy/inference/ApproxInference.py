@@ -16,7 +16,7 @@ class ApproxInference(object):
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model('alarm')
+    >>> model = get_example_model("alarm")
     >>> infer = ApproxInference(model)
     """
 
@@ -73,12 +73,14 @@ class ApproxInference(object):
 
         if joint == True:
             return self._get_factor_from_df(
-                samples.groupby(variables).size() / samples.shape[0], state_names
+                samples.groupby(variables, observed=False).size() / samples.shape[0],
+                state_names,
             )
         else:
             return {
                 var: self._get_factor_from_df(
-                    samples.groupby([var]).size() / samples.shape[0], state_names
+                    samples.groupby([var], observed=False).size() / samples.shape[0],
+                    state_names,
                 )
                 for var in variables
             }
@@ -256,15 +258,25 @@ class ApproxInference(object):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.inference import ApproxInference
-        >>> from pgmpy.factors.discrete import State,TabularCPD
+        >>> from pgmpy.factors.discrete import State, TabularCPD
         >>> model = get_example_model("alarm")
         >>> infer = ApproxInference(model)
         >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
         {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
-        >>> virtual_evidence_history = TabularCPD(variable='HISTORY', variable_card=2,values=[[0.99],[0.01]],
-        ...                                  state_names={"HISTORY": ["TRUE", "FALSE"]})
-        >>> evidence = {'CVP':'NORMAL'}
-        >>> print(infer.map_query(variables=["HISTORY"], evidence=evidence, virtual_evidence=[virtual_evidence_history]))
+        >>> virtual_evidence_history = TabularCPD(
+        ...     variable="HISTORY",
+        ...     variable_card=2,
+        ...     values=[[0.99], [0.01]],
+        ...     state_names={"HISTORY": ["TRUE", "FALSE"]},
+        ... )
+        >>> evidence = {"CVP": "NORMAL"}
+        >>> print(
+        ...     infer.map_query(
+        ...         variables=["HISTORY"],
+        ...         evidence=evidence,
+        ...         virtual_evidence=[virtual_evidence_history],
+        ...     )
+        ... )
         {'HISTORY': 'TRUE'}
         """
         final_distribution = self.query(

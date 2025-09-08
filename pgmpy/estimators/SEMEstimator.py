@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import torch
 
 from pgmpy import config
+from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
-
-from pgmpy.inference import CausalInference
 
 
 class SEMEstimator(object):
@@ -16,10 +14,13 @@ class SEMEstimator(object):
     """
 
     def __init__(self, model):
-        if config.BACKEND == "numpy":
-            raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. Call pgmpy.config.set_backend('torch') to switch"
+        if config.get_backend() == "numpy":
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
             )
+            raise ValueError(msg)
 
         if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
@@ -29,6 +30,8 @@ class SEMEstimator(object):
             raise ValueError(
                 f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
             )
+
+        import torch
 
         # Initialize trainable and fixed mask tensors
         self.B_mask = torch.tensor(
@@ -74,6 +77,8 @@ class SEMEstimator(object):
         """
         Computes the implied covariance matrix from the given parameters.
         """
+        import torch
+
         B_masked = torch.mul(B, self.B_mask) + self.B_fixed_mask
         B_inv = pinverse(self.B_eye - B_masked)
         zeta_masked = torch.mul(zeta, self.zeta_mask) + self.zeta_fixed_mask
@@ -262,11 +267,14 @@ class SEMEstimator(object):
 
         if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError(
-                f"The column names data do not match the variables in the model. Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
+                f"The column names data do not match the variables in the model. "
+                f"Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
             )
 
         # Initialize the values of parameters as tensors.
         backend = compat_fns.get_compute_backend()
+
+        import torch
 
         if isinstance(init_values, dict):
             B_init, zeta_init = init_values["B"], init_values["zeta"]
@@ -422,7 +430,7 @@ class IVEstimator:
 
         Examples
         --------
-        >>> from pgmpy.estimators import IVEstimator # TODO: Finish example.
+        >>> from pgmpy.estimators import IVEstimator  # TODO: Finish example.
         """
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)

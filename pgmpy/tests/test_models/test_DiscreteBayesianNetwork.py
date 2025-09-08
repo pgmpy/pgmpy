@@ -9,8 +9,8 @@ import pandas as pd
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    BaseEstimator,
     BayesianEstimator,
+    ExpectationMaximization,
     MaximumLikelihoodEstimator,
 )
 from pgmpy.factors.discrete import (
@@ -586,7 +586,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
     def test_load_save(self):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")
-        for model in {test_model_small, test_model_large}:
+        for model in [test_model_small, test_model_large]:
             for filetype in {"bif", "xmlbif", "xdsl"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)
@@ -1051,6 +1051,40 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             self.model2.get_cpds("B"), TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]])
         )
 
+    def test_dag_fit(self):
+        model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+        }
+
+        fitted_model_bayesian = model.fit(
+            data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+        )
+        self.assertEqual(
+            fitted_model_bayesian.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+
+        fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
+
+        self.assertEqual(
+            fitted_model_mle.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+
+        fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
+
+        self.assertEqual(
+            fitted_model_em.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+
     def test_fit_update(self):
         model = get_example_model("asia")
         model_copy = model.copy()
@@ -1067,6 +1101,29 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             self.assertTrue(
                 model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
             )
+
+    def test_dag_with_independent_node_fit(self):
+        edge_list = [("A", "C"), ("B", "C")]
+        model = DiscreteBayesianNetwork(edge_list)
+        model.add_node("D")
+        data = pd.DataFrame(
+            data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
+        )
+        pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+            "D": [[9]],
+        }
+
+        fitted_model_bayesian = model.fit(
+            data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+        )
+        self.assertTrue(fitted_model_bayesian.check_model())
+        self.assertEqual(sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"])
 
     def test_fit_missing_data(self):
         self.model2.fit(self.data2, state_names={"C": [0, 1]})
