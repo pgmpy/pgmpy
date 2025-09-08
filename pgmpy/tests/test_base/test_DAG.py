@@ -10,15 +10,8 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    ExpectationMaximization,
-    MaximumLikelihoodEstimator,
-)
 from pgmpy.estimators.CITests import pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 
 
@@ -429,69 +422,6 @@ class TestDAGCreation(unittest.TestCase):
             self.assertEqual(sorted(dag.nodes()), node_names)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
-
-    def test_dag_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
-            data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertEqual(
-                fitted_model_bayesian.get_cpds("B"),
-                TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
-            )
-
-            fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
-
-            self.assertEqual(
-                fitted_model_mle.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-            fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
-
-            self.assertEqual(
-                fitted_model_em.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-    def test_dag_with_independent_node_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        dag = DAG(edge_list)
-        dag.add_node("D")
-        dbn = DiscreteBayesianNetwork(edge_list)
-        dbn.add_node("D")
-        for model in [dag, dbn]:
-            data = pd.DataFrame(
-                data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
-            )
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-                "D": [[9]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertTrue(fitted_model_bayesian.check_model())
-            self.assertEqual(
-                sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"]
-            )
 
     def tearDown(self):
         del self.graph
