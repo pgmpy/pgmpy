@@ -863,13 +863,18 @@ class DiscreteBayesianNetwork(DAG):
                     f"Algorithm should be a valid pgmpy inference method. Got {type(algo)} instead."
                 )
 
-        model_inference = algo(self)
         data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(
             lambda t: t.index.tolist()
         )
         data_unique = data_unique_indexes.index.to_frame()
-        pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
-            delayed(model_inference.query if stochastic else model_inference.map_query)(
+        
+        # Create a helper function that creates a new inference object for each worker
+        # to avoid race conditions when using shared memory parallelization
+        def _make_prediction(data_point_with_index):
+            index, data_point = data_point_with_index
+            model_inference = algo(self)
+            query_method = model_inference.query if stochastic else model_inference.map_query
+            return query_method(
                 variables=missing_variables.union(
                     set(data_point.index[data_point.isna()])
                 ),
@@ -877,7 +882,10 @@ class DiscreteBayesianNetwork(DAG):
                 show_progress=False,
                 **kwargs,
             )
-            for index, data_point in tqdm(
+        
+        pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
+            delayed(_make_prediction)(item)
+            for item in tqdm(
                 data_unique.iterrows(), total=data_unique.shape[0]
             )
         )

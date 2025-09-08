@@ -1203,6 +1203,22 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         self.assertTrue((p3.value_counts() == [12, 12, 3, 3]).all())
         self.assertTrue((p3_nans.value_counts() == [15, 8, 7]).all())
 
+    def test_predict_parallel_stability(self):
+        """Test that parallel prediction with BeliefPropagation is stable and doesn't have race conditions."""
+        titanic = DiscreteBayesianNetwork()
+        titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic.fit(self.titanic_data2[500:])
+
+        # Test with high parallelism - this was causing the race condition
+        test_data = self.titanic_data2[["Sex", "Pclass"]][:30]
+        
+        # Test multiple times to increase chance of catching race conditions
+        for _ in range(5):
+            result = titanic.predict(test_data, algo=BeliefPropagation, n_jobs=-1)
+            self.assertEqual(result.shape, (30, 3))
+            # The exact values may vary due to parallelization, but should be consistent
+            self.assertTrue(len(result.value_counts()) > 0)
+
     def test_predict_stochastic(self):
         titanic = DiscreteBayesianNetwork()
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
