@@ -597,7 +597,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             (u, v, data["marks"][u], data["marks"][v])
             for u, v, data in self.edges(data=True)
         ]
-        ancestral_base = AncestralBase(
+        ancestral_base = self.__class__(
             ebunch=ebunch,
             latents=self.latents.copy(),
         )
@@ -606,5 +606,3 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             ancestral_base.with_role(role=role, variables=vars, inplace=True)
 
         return ancestral_base
-
-        __class__

@@ -320,16 +320,6 @@ class MAG(AncestralBase):
         edges_to_remove = []
         edges_to_change = []
 
-        # for u, v, data in self.edges(data=True):
-        #     marks = data["marks"]
-        #     marks_u = marks.get(u)
-        #     marks_v = marks.get(v)
-        #     if u in X and marks_u == "-" and marks_v == ">":
-        #         if self.is_visible_edge(u, v):
-        #             edges_to_remove.append((u, v))
-        #         else:
-        #             edges_to_change.append((u, v))
-
         for u in X:
             neighbors = self.get_neighbors(u, u_type="-", v_type=">")
             for v in neighbors:
@@ -388,35 +378,10 @@ class MAG(AncestralBase):
             new_mag = self
         edges_to_remove = []
 
-        for u, v, data in self.edges(data=True):
-            marks = data["marks"]
-            if u in X and marks.get(u) == ">":
-                edges_to_remove.append((u, v))
-            elif v in X and marks.get(v) == ">":
+        for u in X:
+            neighbors = self.get_neighbors(u, u_type=">", v_type=None)
+            for v in neighbors:
                 edges_to_remove.append((u, v))
 
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
-
-    def copy(self):
-        """
-        Return a copy of the graph, preserving nodes, edges, marks, latents, and roles.
-
-        Returns
-        -------
-        MAG
-            A new instance of the same class as self with all properties copied.
-        """
-        ebunch = [
-            (u, v, data["marks"][u], data["marks"][v])
-            for u, v, data in self.edges(data=True)
-        ]
-        mag = MAG(
-            ebunch=ebunch,
-            latents=self.latents.copy(),
-        )
-
-        for role, vars in self.get_role_dict().items():
-            mag.with_role(role=role, variables=vars, inplace=True)
-
-        return mag

@@ -3,7 +3,7 @@ import pytest
 from pgmpy.base import MAG
 
 
-# graph has been taken from the zhang 2008 paper
+# graph has been taken from the zhang 2008 paper (figure 1)
 @pytest.fixture
 def mag():
     edges = [
@@ -18,11 +18,15 @@ def mag():
     return MAG(ebunch=edges, roles=roles)
 
 
-# @pytest.fixture
-# def mag2():
-#     edges = [
-
-#     ]
+@pytest.fixture
+def mag2():
+    edges = [
+        ("P", "Q", ">", ">"),
+        ("Q", "R", "-", ">"),
+        ("P", "R", "-", ">"),
+        ("P", "L", "-", ">"),
+    ]
+    return MAG(ebunch=edges, latents={"L"})
 
 
 class TestMAG:
@@ -79,7 +83,7 @@ class TestMAG:
         assert not mag.is_visible_edge("A", "C")
         assert not mag.is_visible_edge("B", "D")
 
-    def test_lower_manipulation(self, mag):
+    def test_lower_manipulation(self, mag, mag2):
         new_mag = mag.lower_manipulation({"A"})
         assert not new_mag.has_edge("A", "D")
         assert new_mag.has_edge("A", "B")
@@ -92,19 +96,26 @@ class TestMAG:
         assert new_mag.has_edge("A", "C")
         assert new_mag.has_edge("A", "D")
 
-    def test_upper_manipulation(self, mag):
+        new_mag2 = mag2.lower_manipulation({"P"})
+        assert not new_mag2.has_edge("P", "R")
+        assert new_mag2.has_edge("Q", "R")
+
+    def test_upper_manipulation(self, mag, mag2):
         new_mag = mag.upper_manipulation({"D"})
         assert not new_mag.has_edge("A", "D")
         assert not new_mag.has_edge("C", "D")
         assert not new_mag.has_edge("B", "D")
-
         assert new_mag.has_edge("A", "B")
 
         new_mag = mag.upper_manipulation({"C"})
         assert not new_mag.has_edge("B", "C")
         assert not new_mag.has_edge("A", "C")
-
         assert new_mag.has_edge("A", "B")
+
+        new_mag2 = mag2.upper_manipulation({"R"})
+        assert not new_mag2.has_edge("P", "R")
+        assert not new_mag2.has_edge("Q", "R")
+        assert new_mag2.has_edge("P", "Q")
 
     def test_graph_properties(self, mag):
         assert len(mag.nodes()) == 4
