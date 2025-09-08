@@ -606,3 +606,5 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             ancestral_base.with_role(role=role, variables=vars, inplace=True)
 
         return ancestral_base
+
+        __class__

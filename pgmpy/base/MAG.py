@@ -320,11 +320,19 @@ class MAG(AncestralBase):
         edges_to_remove = []
         edges_to_change = []
 
-        for u, v, data in self.edges(data=True):
-            marks = data["marks"]
-            marks_u = marks.get(u)
-            marks_v = marks.get(v)
-            if u in X and marks_u == "-" and marks_v == ">":
+        # for u, v, data in self.edges(data=True):
+        #     marks = data["marks"]
+        #     marks_u = marks.get(u)
+        #     marks_v = marks.get(v)
+        #     if u in X and marks_u == "-" and marks_v == ">":
+        #         if self.is_visible_edge(u, v):
+        #             edges_to_remove.append((u, v))
+        #         else:
+        #             edges_to_change.append((u, v))
+
+        for u in X:
+            neighbors = self.get_neighbors(u, u_type="-", v_type=">")
+            for v in neighbors:
                 if self.is_visible_edge(u, v):
                     edges_to_remove.append((u, v))
                 else:

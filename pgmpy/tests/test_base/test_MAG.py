@@ -3,6 +3,7 @@ import pytest
 from pgmpy.base import MAG
 
 
+# graph has been taken from the zhang 2008 paper
 @pytest.fixture
 def mag():
     edges = [
@@ -14,7 +15,14 @@ def mag():
         ("B", "C", "-", ">"),
     ]
     roles = {"exposure": {"A"}, "outcome": {"D"}, "adjustment": {"B", "C"}}
-    return MAG(ebunch=edges, latents={"L"}, roles=roles)
+    return MAG(ebunch=edges, roles=roles)
+
+
+# @pytest.fixture
+# def mag2():
+#     edges = [
+
+#     ]
 
 
 class TestMAG:
@@ -100,7 +108,6 @@ class TestMAG:
 
     def test_graph_properties(self, mag):
         assert len(mag.nodes()) == 4
-        assert mag.latents == {"L"}
         assert mag.has_edge("A", "B")
         assert mag.has_edge("C", "D")
         assert mag.has_edge("A", "D")
