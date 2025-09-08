@@ -921,11 +921,11 @@ def equivalent_t(X, Y, Z, data, boolean=True, delta_th=0.1, **kwargs) -> tuple |
         n = data.shape[0]
         s = len(Z)
 
-        # might not be a correct name
-        variance_stab = np.sqrt(n - s - 3)
+        # Standard error multiplier for Fisher z-transformation
+        std_error_factor = np.sqrt(n - s - 3)
 
-        z_score_low = variance_stab * (coeff - z_delta)
-        z_score_high = variance_stab * (coeff + z_delta)
+        z_score_low = std_error_factor * (coeff - z_delta)
+        z_score_high = std_error_factor * (coeff + z_delta)
 
         # Compute p-value two-tailed test
         p_value_low = stats.norm.cdf(z_score_low)
