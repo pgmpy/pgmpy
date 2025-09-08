@@ -14,11 +14,13 @@ class SEMEstimator(object):
     """
 
     def __init__(self, model):
-        if config.BACKEND == "numpy":
-            raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. "
-                "Call pgmpy.config.set_backend('torch') to switch"
+        if config.get_backend() == "numpy":
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
             )
+            raise ValueError(msg)
 
         if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
