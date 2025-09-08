@@ -18,22 +18,20 @@ except ImportError:
 
 class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
     """
-    A naive backdoor regressor that uses causal graph roles for feature selection.
+    Naive backdoor regressor using causal graph roles for feature selection.
 
-    This estimator combines exposure, adjustment, and pretreatment variables as features
-    to predict the outcome variable. The approach is "naive" because it assumes the
-    adjustment set is already correctly identified in the causal graph roles and simply
-    concatenates these variables as features for standard ML prediction.
+    This estimator concatenates exposure, adjustment, and pretreatment variables
+    as features to predict the outcome variable using standard ML algorithms.
+    It's "naive" because it assumes the adjustment set is correctly identified
+    in the causal graph and simply combines these variables for prediction.
 
     Parameters
     ----------
     causal_graph : DAG, PDAG, or ADMG
-        A pgmpy causal graph object (DAG, PDAG, or ADMG) with defined roles for
-        exposure, outcome, and adjustment variables. Must have exactly one exposure
-        and one outcome variable. The 'adjustment' role must be explicitly defined
-        even if empty to prevent accidental omission of confounders.
+        Causal graph with defined variable roles. Must have exactly one exposure
+        and one outcome variable. The adjustment role must be defined (can be empty).
     base_estimator : sklearn estimator, optional (default=LinearRegression())
-        Base sklearn estimator for prediction.
+        Base estimator for prediction.
 
     Attributes
     ----------
@@ -65,9 +63,9 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         self.causal_graph = causal_graph
         self.base_estimator = base_estimator
 
-        # Cache roles during init to avoid DAG mutation during fit
-        # Note: This is a workaround for pgmpy's DAG methods that mutate internal state
-        # For sklearn compatibility, we delay validation until fit() is called
+        # Cache roles during init to avoid DAG mutation during fit.
+        # This is needed because pgmpy's DAG methods can mutate internal state,
+        # and sklearn compatibility requires parameter validation to be deferred until fit().
         try:
             self._cached_roles = self._extract_roles_safely(causal_graph)
         except (TypeError, AttributeError, ValueError):
@@ -78,12 +76,12 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         """Set parameters and re-cache roles if causal_graph changes."""
         result = super().set_params(**params)
 
+        # Re-cache roles if causal_graph parameter was updated
         if "causal_graph" in params:
             try:
                 self._cached_roles = self._extract_roles_safely(self.causal_graph)
             except (TypeError, AttributeError, ValueError):
-                # If the new causal_graph is invalid, we'll catch it during validation
-                # This allows sklearn's parameter validation tests to work
+                # Invalid graph will be caught during fit() validation
                 self._cached_roles = None
 
         return result
@@ -120,17 +118,17 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
 
     def _validate_dag_and_extract_roles(self):
         """Validate causal graph has required roles and extract variable assignments."""
+        # Step 1: Extract roles from DAG (use cached if available)
         if self._cached_roles is None:
             self._cached_roles = self._extract_roles_safely(self.causal_graph)
 
         cached_roles = self._cached_roles
-
         exposure_vars = cached_roles["exposure"]
         outcome_vars = cached_roles["outcome"]
         adjustment_vars = cached_roles["adjustment"]
         pretreatment_vars = cached_roles["pretreatment"]
 
-        # Validation for single exposure/outcome
+        # Step 2: Validate exactly one exposure and one outcome variable
         if len(exposure_vars) != 1:
             raise ValueError(
                 f"Exactly one exposure variable must be defined. Found {len(exposure_vars)}: {exposure_vars}"
@@ -142,12 +140,6 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
             )
 
         return exposure_vars[0], outcome_vars[0], adjustment_vars, pretreatment_vars
-
-    def _check_feature_names(self, X, reset):
-        """Validate feature names for sklearn compatibility."""
-        # This method can be used for additional feature name validation
-        # Currently using basic sklearn validation in _validate_data
-        pass
 
     def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
         """Convert input to DataFrame, generating generic names if needed."""
@@ -166,46 +158,44 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
 
     def _prepare_feature_df(self, X, feature_names=None) -> pd.DataFrame:
         """
-        Ensures input X is a DataFrame with columns matching the causal graph's roles.
+        Convert input to DataFrame with columns matching causal graph roles.
 
-        This method handles three cases:
-        1. X is a pandas DataFrame: It selects the required feature columns based on names.
-        2. X is a NumPy array with `feature_names`: It converts X to a DataFrame
-           and selects the required feature columns based on names.
-        3. X is a NumPy array without `feature_names` (sklearn compatibility case):
-           It assumes the first N columns correspond to the N required features
-           and renames them. Workaround for sklearn's
-           generic test suite, which does not support named features.
+        Handles three cases:
+        1. DataFrame input: Select required columns by name
+        2. Array with `feature_names`: Convert to DataFrame and select by name
+        3. Array without `feature_names` (sklearn tests): Map first N columns to roles
         """
+        # Step 1: Get required feature columns (set during fit)
         if hasattr(self, "feature_columns_"):
             required_features = self.feature_columns_
         else:
+            # This branch is for predict() called before fit()
             exposure_var, _, adjustment_vars, pretreatment_vars = (
                 self._validate_dag_and_extract_roles()
             )
             required_features = [exposure_var] + adjustment_vars + pretreatment_vars
-            self.feature_columns_ = required_features
 
+        # Step 2: Convert input to DataFrame format
         X_df = self._ensure_dataframe(X, feature_names)
 
-        # Case 3: Handle sklearn compatibility for generic inputs
-        # Check for feature_0, feature_1, etc. OR integer column names 0, 1, 2, etc.
-        is_sklearn_generic_input = all(
-            str(col).startswith("feature_") for col in X_df.columns
-        ) or all(isinstance(col, (int, np.integer)) for col in X_df.columns)
-        if is_sklearn_generic_input:
+        # Step 3: Handle sklearn compatibility for generic feature names
+        has_generic_names = all(str(col).startswith("feature_") for col in X_df.columns)
+        has_numeric_names = all(
+            isinstance(col, (int, np.integer)) for col in X_df.columns
+        )
+
+        if has_generic_names or has_numeric_names:
+            # Step 3a: sklearn test case - map first N columns to semantic role names
             if len(X_df.columns) < len(required_features):
                 raise ValueError(
                     f"Input has {len(X_df.columns)} features, but the causal model "
                     f"requires {len(required_features)}: {required_features}"
                 )
-            # Select the first N columns and rename them to match the semantic roles.
-            # Workaround for sklearn's check_estimator.
             feature_df = X_df.iloc[:, : len(required_features)].copy()
             feature_df.columns = required_features
             return feature_df
 
-        # Cases 1 & 2: Standard semantic mapping from named columns
+        # Step 4: Standard case - map named columns to causal roles
         missing_columns = set(required_features) - set(X_df.columns)
         if missing_columns:
             raise ValueError(
@@ -221,32 +211,29 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         y,
         sample_weight: Optional[np.ndarray] = None,
         feature_names=None,
-        use_feature_names_out=True,
     ):
         """
         Fit the Naive Backdoor Regressor.
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features) or pandas DataFrame
+        X : array-like or DataFrame of shape (n_samples, n_features)
             Training data. If DataFrame, must include columns for exposure,
-            adjustment, and pretreatment variables as defined in causal graph roles.
-            If array, `feature_names` must be provided unless used within a
-            generic sklearn context (like compatibility tests).
+            adjustment, and pretreatment variables as defined in causal graph.
+            If array, `feature_names` should be provided (except for sklearn tests).
         y : array-like of shape (n_samples,)
             Target values (outcome variable).
         sample_weight : array-like of shape (n_samples,), optional
-            Sample weights.
+            Sample weights for training.
         feature_names : list, optional
             Feature names when X is an array.
-        use_feature_names_out : bool, optional (default=True)
-            If True, feature_names_in_ are set and used for validation.
 
         Returns
         -------
-        self
+        self : object
             Returns self for method chaining.
         """
+        # Step 1: Validate input data using sklearn utilities
         if validate_data is not None:
             X_arr, y_arr = validate_data(
                 self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
@@ -257,39 +244,39 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
                 X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
             )
 
-        # Extract and validate causal graph roles and define required features
+        # Step 2: Extract and validate causal graph roles
         exposure_var, outcome_var, adjustment_vars, pretreatment_vars = (
             self._validate_dag_and_extract_roles()
         )
+
+        # Step 3: Store role variables as instance attributes
         self.exposure_var_ = exposure_var
         self.outcome_var_ = outcome_var
         self.adjustment_vars_ = adjustment_vars
         self.pretreatment_vars_ = pretreatment_vars
         self.feature_columns_ = [exposure_var] + adjustment_vars + pretreatment_vars
 
+        # Step 4: Prepare feature DataFrame from input data
         X_features = self._prepare_feature_df(X, feature_names)
 
-        # self.n_features_in_ = X_features.shape[1]
+        # Step 5: Set sklearn-required attributes
         self.n_features_in_ = X_arr.shape[1]
         self.feature_names_in_ = np.array(X_features.columns, dtype=object)
 
-        # Initialize base estimator
+        # Step 6: Initialize and configure base estimator
         self.estimator_ = (
             LinearRegression()
             if self.base_estimator is None
             else clone(self.base_estimator)
         )
 
+        # Step 7: Prepare fitting parameters and fit the estimator
         fit_params = {}
         if sample_weight is not None:
             fit_params["sample_weight"] = sample_weight
-
         self.estimator_.fit(X_features, y_arr, **fit_params)
 
-        # Explanation attribute
-        exposure_var, outcome_var, adjustment_vars, pretreatment_vars = (
-            self._validate_dag_and_extract_roles()
-        )
+        # Step 8: Create readable explanation
         adj_str = ", ".join(adjustment_vars) if adjustment_vars else "none"
         pre_str = ", ".join(pretreatment_vars) if pretreatment_vars else "none"
         self.explanation_ = (
@@ -302,8 +289,10 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
 
     def predict(self, X, feature_names=None):
         """Make predictions using the fitted regressor."""
+        # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
+        # Step 2: Validate input data using sklearn utilities
         if validate_data is not None:
             X = validate_data(
                 self,
@@ -317,8 +306,10 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
             # Fallback for older sklearn versions
             X = check_array(X, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
+        # Step 3: Prepare feature DataFrame with causal graph roles
         X_features = self._prepare_feature_df(X, feature_names)
 
+        # Step 4: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_features)
         return np.asarray(predictions).ravel()
 
