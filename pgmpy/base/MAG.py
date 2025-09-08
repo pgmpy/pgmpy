@@ -107,13 +107,13 @@ class MAG(AncestralBase):
         Parameters
         ----------
         u : Hashable
-            The first endpoint in the triple (u, c, v).
+            The first endpoint in the triplet (u, c, v).
 
         c : Hashable
             The middle node, candidate collider.
 
         v : Hashable
-            The second endpoint in the triple.
+            The second endpoint in the triplet.
 
         Returns
         -------
@@ -254,7 +254,7 @@ class MAG(AncestralBase):
                 last = path[-2]
                 if not self.has_edge(last, u):
                     continue
-                if self.edges[last, u]["makrs"][u] != ">":
+                if self.edges[last, u]["marks"][u] != ">":
                     continue
 
                 valid = True
@@ -280,11 +280,12 @@ class MAG(AncestralBase):
 
     def lower_manipulation(self, X, inplace=False):
         """
-        Perform lower manipulation.
+        Performs lower manipulation.
 
-        Deletes all the edges that are that are `visible` and out of variables
-        in X. It also replaces all edges that are of variables in X but are
-        invisible in M with bidirected edges and otherwise keeps the graph as it is.
+        Removes all edges that are visible and originate from nodes in X.
+        For edges from X that are invisible, adds bidirected edges from the other
+        endpoint to its neighbors outside X to preserve conditional independencies.
+        All other edges remain unchanged.
 
         Parameters
         ----------
@@ -340,7 +341,7 @@ class MAG(AncestralBase):
 
     def upper_manipulation(self, X, inplace=False):
         """
-        Perform upper manipulation.
+        Performs upper manipulation.
 
         Deletes all edges (directed or bidirected) that have an arrowhead
         pointing to any variable in X. The rest of the graph remains unchanged.
