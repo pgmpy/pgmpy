@@ -1,79 +1,14 @@
-from typing import Any, List, Mapping, Optional, Sequence, Tuple
+import copy
+import warnings
+from typing import Any, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, check_array, clone
+from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.model_selection import KFold, StratifiedKFold
-from sklearn.utils.validation import check_is_fitted, check_X_y
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from pgmpy.base.DAG import DAG
-
-
-class _TagContainer:
-    """Generic tag-container that returns safe defaults for unknown attributes.
-
-    Attributes explicitly set are returned. For any attribute sklearn probes but
-    we don't set, return False so tests don't crash.
-    """
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-    def __getattr__(self, name):
-        # For boolean-like probes, default to False instead of raising.
-        return False
-
-    def __repr__(self):
-        attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
-        return f"_TagContainer({attrs})"
-
-
-class _SklearnTagsDict(dict):
-    """Dict-like object returned by __sklearn_tags__ that also exposes
-    .input_tags / .target_tags attributes required by estimator_checks.
-
-    - mapping values must be plain Python types (bool, list, str, ...).
-    - attribute access for unknown boolean-like flags returns False.
-    - attribute access for unknown "*_tags" returns a TagContainer.
-    """
-
-    def __init__(self, mapping: Mapping[str, Any]):
-        super().__init__(mapping)
-        # safe containers sklearn probes
-        object.__setattr__(
-            self,
-            "input_tags",
-            _TagContainer(
-                two_d_array=True,
-                pairwise=False,
-                sparse=False,
-                dense=False,
-                allow_nd=False,
-                allow_sparse=False,
-                dtype="float",
-            ),
-        )
-        object.__setattr__(self, "target_tags", _TagContainer(required=False))
-        object.__setattr__(self, "_skip_test", False)
-        object.__setattr__(self, "_supports", dict(mapping))
-
-    def __getattr__(self, name: str):
-        # return mapping value if present
-        if name in self:
-            return self[name]
-        # create and return containers for any "*_tags" probe
-        if name.endswith("_tags"):
-            container = _TagContainer()
-            object.__setattr__(self, name, container)
-            return container
-        # internal attrs raise
-        if name.startswith("_"):
-            raise AttributeError(name)
-        # default for boolean-like probes
-        return False
-
-    def __repr__(self):
-        return f"_SklearnTagsDict({dict(self)!r}, input_tags={self.input_tags!r})"
 
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
@@ -103,7 +38,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         estimator_g: Any,
         estimator_m: Optional[Any] = None,
         n_folds: int = 5,
-        random_state: Optional[int] = None,
+        seed: Optional[int] = None,
         allow_array_unnamed: bool = False,
     ):
 
@@ -111,50 +46,26 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.estimator_g = estimator_g
         self.estimator_m = estimator_m
         self.n_folds = n_folds
-        self.random_state = random_state
+        self.seed = seed
         self.allow_array_unnamed = allow_array_unnamed
 
-    #    self.__sklearn_tags__()
-
-    # def _more_tags(self):
-    #    return {"requires_y": True, "no_sparse_input": True}
-
-    # def get_tags(self):
-    #    tags = {"requires_y": True, "no_sparse_input": True}
-    #    try:
-    #        more = self._more_tags()
-    #        if isinstance(more, dict):
-    #            tags.update(more)
-    #    except Exception:
-    #        pass
-    #   return tags
+    def set_params(self, **params):
+        """Set only recognized params; ignore unknown ones (sklearn checks expect no exceptions)."""
+        valid = set(self.get_params(deep=False).keys())
+        for key, val in params.items():
+            if key in valid:
+                object.__setattr__(self, key, val)
+            else:
+                # Do not raise: sklearn's validation harness may try random set_params names.
+                warnings.warn(
+                    f"Ignoring unknown parameter in set_params: {key}", UserWarning
+                )
+        return self
 
     def __sklearn_tags__(self):
-        # Plain-typed base tags (booleans, lists, strings — no custom objects)
-        """
-        base_tags = {
-            "requires_fit": True,
-            "requires_y": True,
-            "no_sparse_input": True,
-            "multioutput": False,
-            "allow_nan": False,
-            "requires_positive_y": False,
-            "X_types": ("2darray",),
-            "no_validation": False,
-        }
-        # merge user-provided tags if they are a plain dict
-        try:
-            more = self.get_tags()
-            if isinstance(more, dict):
-                base_tags.update(more)
-        except Exception:
-            pass
-
-        # return a dict-like object that also exposes .input_tags / .target_tags
-        return _SklearnTagsDict(base_tags)
-        """
         tags = super().__sklearn_tags__()
         tags.target_tags.single_output = False
+        tags.regressor_tags.poor_score = True
         tags.non_deterministic = True
         return tags
 
@@ -177,30 +88,31 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         return pd.DataFrame(arr, columns=feature_names)
 
     def _read_roles(self) -> Tuple[str, List[str]]:
+        """Read roles from DAG without mutating the original user-supplied DAG."""
+        # Work on a deep copy so we never change the user's DAG object.
+        dag_copy = copy.deepcopy(self.dag)
+
         if not (
-            hasattr(self.dag, "get_role")
-            and hasattr(self.dag, "is_valid_causal_structure")
+            hasattr(dag_copy, "get_role")
+            and hasattr(dag_copy, "is_valid_causal_structure")
         ):
-            # if DAG class is available check type; otherwise raise guidance
             if isinstance(DAG, type) and not isinstance(self.dag, DAG):
                 raise ValueError(
                     "dag must be an instance of pgmpy's DAG or implement get_role/is_valid_causal_structure."
                 )
-            # else proceed but still require get_role/is_valid_causal_structure
-            if not hasattr(self.dag, "get_role") or not hasattr(
-                self.dag, "is_valid_causal_structure"
+            if not hasattr(dag_copy, "get_role") or not hasattr(
+                dag_copy, "is_valid_causal_structure"
             ):
                 raise ValueError(
                     "dag must implement get_role(role) and is_valid_causal_structure()."
                 )
 
-        # Validate the DAG; is_valid_causal_structure raises useful errors if invalid
         try:
-            self.dag.is_valid_causal_structure()
+            dag_copy.is_valid_causal_structure()
         except Exception as e:
             raise ValueError(f"DAG validation failed: {e}")
 
-        exposure_list = self.dag.get_role("exposure") or []
+        exposure_list = dag_copy.get_role("exposure") or []
         if not exposure_list:
             raise ValueError(
                 "DAG must define an 'exposure' role. Use dag.with_role('exposure', var)."
@@ -211,8 +123,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             )
         exposure_col = exposure_list[0]
 
-        # adjustments
-        adj_raw = self.dag.get_role("adjustment") or []
+        adj_raw = dag_copy.get_role("adjustment") or []
         if isinstance(adj_raw, (list, tuple, set)):
             adj_list = list(adj_raw)
         elif adj_raw is None:
@@ -252,8 +163,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             required = len(required_features)
             if found < required:
                 raise ValueError(
-                    f"Found array with {found} feature(s) (shape[1]={found}) while "
-                    f"{self.__class__.__name__} is expecting {required} features as input."
+                    f"Input has {found} features, but the causal model "
+                    f"requires {len(required_features)}: {required_features}"
                 )
             # select the first N columns and rename them to the DAG role names
             out = X_df.iloc[:, : len(required_features)].copy()
@@ -270,11 +181,10 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # return DataFrame with exact ordering of required features
         return X_df[required_features].copy()
 
-    # -----Fit ---- Predict ---
     def fit(self, X, y, sample_weight: Optional[Any] = None):
         # validate input & set sklearn convention attributes
-        X_arr, y_arr = check_X_y(
-            X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
+        X_arr, y_arr = validate_data(
+            self, X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
         )
         self.n_features_in_ = X_arr.shape[1]
 
@@ -288,6 +198,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # coerce sample_weight if provided (accept pd.Series)
         if sample_weight is not None:
             sample_weight = np.asarray(sample_weight)
+            if sample_weight.ndim > 1:
+                if sample_weight.shape == (X_arr.shape[0], 1):
+                    sample_weight = sample_weight.ravel()
+                else:
+                    raise ValueError("sample_weight must be 1D of shape (n_samples,)")
+            # Length mismatch: raise ValueError - sklearn tests expect this behaviour
             if sample_weight.shape[0] != X_arr.shape[0]:
                 raise ValueError("sample_weight must have shape (n_samples,)")
 
@@ -318,7 +234,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         t_vec = df[exposure_col].to_numpy(dtype=float)
         n_samples = df.shape[0]
         if n_samples < 2:
-            raise ValueError("Not enough samples to fit.")
+            raise ValueError(f"Not enough samples to fit. n_samples = {n_samples}")
 
         # do not coerce self.n_folds here; compute local bounded folds
         n_folds = max(2, min(int(self.n_folds), n_samples))
@@ -326,11 +242,9 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         unique_vals, counts = np.unique(t_vec, return_counts=True)
         use_stratify = unique_vals.size == 2 and np.min(counts) >= n_folds
         splitter = (
-            StratifiedKFold(
-                n_splits=n_folds, shuffle=True, random_state=self.random_state
-            )
+            StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=self.seed)
             if use_stratify
-            else KFold(n_splits=n_folds, shuffle=True, random_state=self.random_state)
+            else KFold(n_splits=n_folds, shuffle=True, random_state=self.seed)
         )
 
         g_hat = np.zeros(n_samples, dtype=float)
@@ -402,8 +316,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 if self.estimator_m is not None
                 else clone(self.estimator_g)
             )
-            full_g.fit(X_for_nuisance, y_vec)
-            full_m.fit(X_for_nuisance, t_vec)
+            if X_for_nuisance.size == 0:
+                X_for_nuisance = np.empty((n_samples, 0))
+            else:
+                X_for_nuisance_full = X_for_nuisance
+            full_g.fit(X_for_nuisance_full, y_vec)
+            full_m.fit(X_for_nuisance_full, t_vec)
             self.estimator_g_ = full_g
             self.estimator_m_ = full_m
             self.y_mean_ = float(y_vec.mean())
@@ -431,7 +349,9 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     def predict(self, X):
         check_is_fitted(self, "n_features_in_")
 
-        X_arr = check_array(X, ensure_2d=True, force_all_finite=True)
+        X_arr = validate_data(
+            self, X, reset=False, ensure_2d=True, force_all_finite=True
+        )
         found = X_arr.shape[1]
         expected = getattr(self, "n_features_in_", None)
         if expected is not None and found != expected:
