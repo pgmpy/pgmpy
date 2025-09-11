@@ -593,6 +593,78 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+        """
+        Estimates the CPD for each variable based on a given data set.
+
+        Parameters
+        ----------
+        data: pandas DataFrame object
+            DataFrame object with column names identical to the variable names of the network.
+            (If some values in the data are missing the data cells should be set to `numpy.nan`.
+            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+
+        estimator: Estimator class
+            One of:
+            - MaximumLikelihoodEstimator (default)
+            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
+            or 'equivalent_sample_size' as additional keyword arguments.
+            See `BayesianEstimator.get_parameters()` for usage.
+            - ExpectationMaximization
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
+
+        Returns
+        -------
+        Fitted Model: DiscreteBayesianNetwork
+            Returns a DiscreteBayesianNetwork object with learned CPDs.
+            The DAG structure is preserved, and parameters (CPDs) are added.
+            This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.base import DAG
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DAG([("A", "C"), ("B", "C")])
+        >>> fitted_model = model.fit(data)
+        >>> fitted_model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x17945372c30>,
+        <TabularCPD representing P(B:2) at 0x17945a19760>,
+        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
+        """
+        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
+        from pgmpy.models import DiscreteBayesianNetwork
+
+        if isinstance(self, DiscreteBayesianNetwork):
+            bn = self
+        else:
+            bn = DiscreteBayesianNetwork(self.edges())
+            bn.add_nodes_from(self.nodes())
+
+        if estimator is None:
+            estimator = MaximumLikelihoodEstimator
+        else:
+            if not issubclass(estimator, BaseEstimator):
+                raise TypeError("Estimator object should be a valid pgmpy estimator.")
+
+        _estimator = estimator(
+            bn,
+            data,
+            state_names=state_names,
+        )
+        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
+        bn.add_cpds(*cpds_list)
+        return bn
+
     def fit_update(
         self, data: pd.DataFrame, n_prev_samples: Optional[int] = None, n_jobs: int = 1
     ) -> None:
@@ -1332,11 +1404,11 @@ class DiscreteBayesianNetwork(DAG):
         evidence: Optional[Dict[Hashable, Hashable]] = None,
         virtual_evidence: Optional[List[TabularCPD]] = None,
         virtual_intervention: Optional[List[TabularCPD]] = None,
+        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         include_latents: bool = False,
         partial_samples: Optional[pd.DataFrame] = None,
         seed: Optional[int] = None,
         show_progress: bool = True,
-        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         return_full: bool = False,
     ) -> pd.DataFrame:
         """
@@ -1366,6 +1438,19 @@ class DiscreteBayesianNetwork(DAG):
             of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
             intervention probabilities.
 
+        missing_prob: TabularCPD, list of TabularCPDs (default: None)
+            Used to define the missingness mechanism in the simulated data. For
+            each variable with missing values, provide a TabularCPD defining
+            the probability of a value being missing given the variable's value
+            (Missing at Random) and optionally its parents' values (Missing Not
+            at Random).
+
+            TabularCPD format: The variable name of each TabularCPD should end
+              with the name of node in DiscreteBayesianNetwork with * at the end
+              of the name. The state names of each TabularCPD should be the same
+              as the state names of the corresponding node in
+              DiscreteBayesianNetwork.
+
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
@@ -1380,15 +1465,6 @@ class DiscreteBayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        missing_prob: TabularCPD, list  (default: None)
-            The probability of missing value for the variable of TabularCPD.
-            In case of missing value for more than one variable, provide list of TabularCPD.
-            The variable name of each TabularCPD should
-              end with the name of node in DiscreteBayesianNetwork
-                with * at the end of the name.
-            The state names of each TabularCPD should be the same
-              as the state names of the corresponding
-                node in DiscreteBayesianNetwork.
 
         return_full: bool (default: False)
             If True, return both full samples and samples with missing values (if performed).

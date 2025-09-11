@@ -73,12 +73,14 @@ class ApproxInference(object):
 
         if joint == True:
             return self._get_factor_from_df(
-                samples.groupby(variables).size() / samples.shape[0], state_names
+                samples.groupby(variables, observed=False).size() / samples.shape[0],
+                state_names,
             )
         else:
             return {
                 var: self._get_factor_from_df(
-                    samples.groupby([var]).size() / samples.shape[0], state_names
+                    samples.groupby([var], observed=False).size() / samples.shape[0],
+                    state_names,
                 )
                 for var in variables
             }

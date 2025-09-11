@@ -9,7 +9,6 @@ from typing import Hashable, Optional
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pgmpy import config
 from pgmpy.extern import tabulate
@@ -152,10 +151,11 @@ class TabularCPD(DiscreteFactor):
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
-        values_casted: np.ndarray | torch.Tensor
         if config.BACKEND == "numpy":
             values_casted = np.array(object=values, dtype=config.get_dtype())
         else:
+            import torch
+
             values_casted = (
                 torch.tensor(values).type(config.get_dtype()).to(config.get_device())
             )

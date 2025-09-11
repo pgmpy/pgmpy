@@ -1,8 +1,13 @@
 import numpy as np
 import pandas as pd
-import pyro
+from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.factors.base import BaseFactor
+from pgmpy.utils._safe_import import _safe_import
+
+torch = _safe_import("torch")
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalCPD(BaseFactor):
@@ -52,6 +57,8 @@ class FunctionalCPD(BaseFactor):
         self.parents = parents if parents else []
         self.variables = [variable] + self.parents
         self.vectorized = vectorized
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
     def sample(self, n_samples=100, parent_sample=None):
         """
@@ -104,16 +111,22 @@ class FunctionalCPD(BaseFactor):
                 )
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
+
             if self.vectorized:
                 dists = self.fn(parent_sample)
                 samples = pyro.sample(f"{self.variable}_vectorized", dists)
                 sampled_values = samples.detach().numpy()
             else:
                 for i in range(n_samples):
+                    row = parent_sample.iloc[i]
+                    parents_t = {
+                        p: torch.as_tensor(
+                            row[p], dtype=config.get_dtype(), device=config.get_device()
+                        )
+                        for p in self.parents
+                    }
                     sampled_values.append(
-                        pyro.sample(
-                            f"{self.variable}", self.fn(parent_sample.iloc[i, :])
-                        ).item()
+                        pyro.sample(f"{self.variable}", self.fn(parents_t)).item()
                     )
 
         else:
