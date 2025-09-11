@@ -145,7 +145,7 @@ class _GraphRolesMixin:
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposure' and one 'outcome'"
+                f"{type(self)} must have at least one 'exposure' and one 'outcome' "
                 f"role defined, but {problem_str}."
             )
         return True

@@ -113,17 +113,36 @@ class BackdoorIdentification(BaseIdentification):
         -------
         causal_graph: DAG | PDAG | MAG | PAG
             The causal graph with the identified adjustment set added as role `adjustment`.
+
+        success: bool
+            True if the identification was successful, False otherwise.
         """
         if not isinstance(causal_graph, DAG):
             raise NotImplementedError(
                 "Backdoor identification is only implemented for DAGs."
             )
+        if len(causal_graph.get_role("exposure")) != 1:
+            raise NotImplementedError(
+                "Backdoor identification is only implemented for single exposure variable."
+            )
+        if len(causal_graph.get_role("outcome")) != 1:
+            raise NotImplementedError(
+                "Backdoor identification is only implemented for single outcome variable."
+            )
 
         backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
         if self.variant == "minimal":
-            return backdoor_graph.minimal_dseparator(
-                causal_graph.get_roles("exposure"), causal_graph.get_roles("outcome")
+            adjustment_set = backdoor_graph.minimal_dseparator(
+                causal_graph.get_role("exposure")[0],
+                causal_graph.get_role("outcome")[0],
             )
+            if adjustment_set is None:
+                return causal_graph, False
+            else:
+                return (
+                    causal_graph.with_role("adjustment", adjustment_set, inplace=False),
+                    True,
+                )
 
         elif self.variant == "minimal_variance":
             raise NotImplementedError(
@@ -131,15 +150,19 @@ class BackdoorIdentification(BaseIdentification):
             )
 
         elif self.variant == "all":
-            ancestors = causal_graph.ancestors(
-                causal_graph.get_roles("exposure") + causal_graph.get_roles("outcome")
+            ancestors = causal_graph._get_ancestors_of(
+                causal_graph.get_role("exposure") + causal_graph.get_role("outcome")
             )
 
-            valid_adjustment_sets = []
-            for s in _powerset(ancestors):
-                if self.validate(causal_graph=causal_graph, adjustment_set=s):
-                    valid_adjustment_sets.append(s)
-            return valid_adjustment_sets
+            valid_adj_graphs = []
+            for s in _powerset(ancestors - {"X", "Y"}):
+                adj_causal_graph = causal_graph.with_role(
+                    "adjustment", s, inplace=False
+                )
+                if self.validate(causal_graph=adj_causal_graph):
+                    valid_adj_graphs.append(adj_causal_graph)
+
+            return valid_adj_graphs, len(valid_adj_graphs) > 0
 
     def _validate(self, causal_graph):
         """
@@ -159,15 +182,23 @@ class BackdoorIdentification(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        conditional_vars = causal_graph.get_roles("exposure") + causal_graph.get_roles(
+        conditional_vars = causal_graph.get_role("exposure") + causal_graph.get_role(
             "adjustment"
         )
 
+        predecessors = set()
+        for exposure_var in causal_graph.get_role("exposure"):
+            predecessors.update(causal_graph.predecessors(exposure_var))
+
         parents_d_sep = []
-        for p in self.dag.predecessors(causal_graph.get_roles("exposure")):
-            parents_d_sep.append(
-                not self.dag.is_dconnected(
-                    p, causal_graph.get_roles("outcome"), observed=conditional_vars
+        for pred_var in predecessors:
+            outcome_d_seps = []
+            for outcome_var in causal_graph.get_role("outcome"):
+                outcome_d_seps.append(
+                    causal_graph.is_dconnected(
+                        pred_var, outcome_var, observed=conditional_vars
+                    )
                 )
-            )
+            parents_d_sep.append(not any(outcome_d_seps))
+
         return all(parents_d_sep)
