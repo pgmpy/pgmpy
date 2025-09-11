@@ -1,10 +1,10 @@
 from collections import deque
 from typing import Hashable, Iterable, Optional
 
-from pgmpy.base import MAG, AncestralBase
+from pgmpy.base import MAG
 
 
-class PAG(AncestralBase, MAG):
+class PAG(MAG):
     """
     Partial Ancestral Graph (PAG).
 
