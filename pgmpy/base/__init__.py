@@ -15,3 +15,7 @@ __all__ = [
     "MAG",
     "SimpleCausalModel",
 ]
+from .PAG import PAG
+from .UndirectedGraph import UndirectedGraph
+
+__all__ = ["UndirectedGraph", "DAG", "PDAG", "AncestralBase", "MAG", "PAG"]

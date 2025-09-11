@@ -1,10 +1,10 @@
 from collections import deque
 from typing import Hashable, Iterable, Optional
 
-from pgmpy.base import AncestralBase
+from pgmpy.base import MAG, AncestralBase
 
 
-class PAG(AncestralBase):
+class PAG(AncestralBase, MAG):
     """
     Partial Ancestral Graph (PAG).
 
@@ -139,7 +139,7 @@ class PAG(AncestralBase):
             if current == v:
                 return True
             visited.add(current)
-            for neighbor in self.neighbors(current):
+            for neighbor in self.get_neighbors(current):
                 mark = self.edges[current, neighbor]["marks"][current]
                 if mark != ">" and neighbor not in visited:
                     queue.append(neighbor)
@@ -328,5 +328,9 @@ class PAG(AncestralBase):
         None
             Manipulates the graph in-place.
         """
-        self.lower_manipulation(Y)
-        self.upper_manipulation(X)
+        if not inplace:
+            new_pag = self.copy()
+        else:
+            new_pag = self
+        new_pag.lower_manipulation(Y)
+        new_pag.upper_manipulation(X)
