@@ -1,7 +1,8 @@
 import logging
+from typing import Optional
 
 import numpy as np
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
@@ -53,7 +54,10 @@ class Config:
                 f"Current backend is numpy. Device can only be set for torch backend"
             )
 
+        import torch
+
         if device is None:
+
             if torch.cuda.is_available():
                 self.DEVICE = torch.device("cuda:0")
             else:
@@ -75,7 +79,12 @@ class Config:
         """
         return self.DEVICE
 
-    def set_backend(self, backend, device=None, dtype=None):
+    def set_backend(
+        self,
+        backend: str,
+        device: Optional[str] = None,
+        dtype=None,
+    ):
         """
         Setup the compute backend.
 
@@ -101,6 +110,13 @@ class Config:
             self.BACKEND = "numpy"
             self.DEVICE = None
         else:
+            msg = (
+                "Error in pgmpy Config.set_backend: setting the pgmpy backend to torch "
+                "requires torch to be installed in the python environment, but "
+                "torch was not found. Ensure to install torch using "
+                "`pip install pgmpy[torch]`, or `pip install pgmpy[optional]`"
+            )
+            _check_soft_dependencies("torch", msg=msg)
             self.BACKEND = "torch"
             self.set_device(device)
         self.set_dtype(dtype=dtype)
@@ -111,7 +127,7 @@ class Config:
         """
         return self.BACKEND
 
-    def set_show_progress(self, show_progress):
+    def set_show_progress(self, show_progress: bool):
         """
         Sets a global variable to (not) show progress bars.
 
@@ -120,7 +136,7 @@ class Config:
         show_progress: boolean
             If True, shows progress bars, else doesn't.
         """
-        if show_progress not in [True, False]:
+        if not isinstance(show_progress, bool):
             raise ValueError(f"show_progress must be a boolean. Got: {show_progress}")
 
         self.SHOW_PROGRESS = show_progress
@@ -137,7 +153,7 @@ class Config:
 
         Parameters
         ----------
-        dtype: Instance of numpy.dtype of torch.dtype. (default: None)
+        dtype: Instance of numpy.dtype or torch.dtype. (default: None)
             Sets the dtype to `dtype`. If None set to either numpy.float64 or torch.float64 depending on the backend.
         """
         if self.BACKEND == "numpy":
@@ -148,6 +164,8 @@ class Config:
 
         elif self.BACKEND == "torch":
             if dtype is None:
+                import torch
+
                 self.DTYPE = torch.float64
             else:
                 self.DTYPE = dtype
@@ -163,6 +181,8 @@ class Config:
             return np
 
         else:
+            import torch
+
             return torch
 
 

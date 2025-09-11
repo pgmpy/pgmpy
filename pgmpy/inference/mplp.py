@@ -27,23 +27,57 @@ class Mplp(Inference):
     >>> from pgmpy.inference import Mplp
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> student = DiscreteMarkovNetwork()
-    >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
-    >>> factor_a = DiscreteFactor(['A'], cardinality=[2], values=np.array([0.54577, 1.8323]))
-    >>> factor_b = DiscreteFactor(['B'], cardinality=[2], values=np.array([0.93894, 1.065]))
-    >>> factor_c = DiscreteFactor(['C'], cardinality=[2], values=np.array([0.89205, 1.121]))
-    >>> factor_d = DiscreteFactor(['D'], cardinality=[2], values=np.array([0.56292, 1.7765]))
-    >>> factor_e = DiscreteFactor(['E'], cardinality=[2], values=np.array([0.47117, 2.1224]))
-    >>> factor_f = DiscreteFactor(['F'], cardinality=[2], values=np.array([1.5093, 0.66257]))
-    >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2],
-    ...                             values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
-    >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2],
-    ...                             values=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]))
-    >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2],
-    ...                             values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
-    >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2],
-    ...                             values=np.array([31.228, 0.032023, 0.032023, 31.228]))
-    >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f, factor_a_b,
-    ...                     factor_b_c, factor_c_d, factor_d_e)
+    >>> student.add_edges_from([("A", "B"), ("B", "C"), ("C", "D"), ("E", "F")])
+    >>> factor_a = DiscreteFactor(
+    ...     ["A"], cardinality=[2], values=np.array([0.54577, 1.8323])
+    ... )
+    >>> factor_b = DiscreteFactor(
+    ...     ["B"], cardinality=[2], values=np.array([0.93894, 1.065])
+    ... )
+    >>> factor_c = DiscreteFactor(
+    ...     ["C"], cardinality=[2], values=np.array([0.89205, 1.121])
+    ... )
+    >>> factor_d = DiscreteFactor(
+    ...     ["D"], cardinality=[2], values=np.array([0.56292, 1.7765])
+    ... )
+    >>> factor_e = DiscreteFactor(
+    ...     ["E"], cardinality=[2], values=np.array([0.47117, 2.1224])
+    ... )
+    >>> factor_f = DiscreteFactor(
+    ...     ["F"], cardinality=[2], values=np.array([1.5093, 0.66257])
+    ... )
+    >>> factor_a_b = DiscreteFactor(
+    ...     ["A", "B"],
+    ...     cardinality=[2, 2],
+    ...     values=np.array([1.3207, 0.75717, 0.75717, 1.3207]),
+    ... )
+    >>> factor_b_c = DiscreteFactor(
+    ...     ["B", "C"],
+    ...     cardinality=[2, 2],
+    ...     values=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]),
+    ... )
+    >>> factor_c_d = DiscreteFactor(
+    ...     ["C", "D"],
+    ...     cardinality=[2, 2],
+    ...     values=np.array([0.0043227, 231.34, 231.34, 0.0043227]),
+    ... )
+    >>> factor_d_e = DiscreteFactor(
+    ...     ["E", "F"],
+    ...     cardinality=[2, 2],
+    ...     values=np.array([31.228, 0.032023, 0.032023, 31.228]),
+    ... )
+    >>> student.add_factors(
+    ...     factor_a,
+    ...     factor_b,
+    ...     factor_c,
+    ...     factor_d,
+    ...     factor_e,
+    ...     factor_f,
+    ...     factor_a_b,
+    ...     factor_b_c,
+    ...     factor_c_d,
+    ...     factor_d_e,
+    ... )
     >>> mplp = Mplp(student)
     """
 
@@ -98,7 +132,7 @@ class Mplp(Inference):
         self.integrality_gap_threshold = 0.0002
 
     class Cluster(object):
-        """
+        r"""
         Inner class for representing a cluster.
         A cluster is a subset of variables.
 
@@ -108,10 +142,12 @@ class Mplp(Inference):
             This is the set of variables that form the cluster.
 
         intersection_set_variables: set containing frozensets.
-            collection of intersection of all pairs of cluster variables. For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
+            collection of intersection of all pairs of cluster variables.
+              For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \}
+                  for clusters C_1, C_2 & C_3.
 
-        cluster_potential: DiscreteFactor
-            Each cluster has an initial probability distribution provided beforehand.
+            cluster_potential: DiscreteFactor
+                Each cluster has an initial probability distribution provided beforehand.
         """
 
         def __init__(self, intersection_set_variables, cluster_potential):
@@ -317,11 +353,22 @@ class Mplp(Inference):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()
+        ... ]
         >>> mm.add_factors(*phi)
         >>> mplp = Mplp(mm)
         >>> mplp.find_triangles()
@@ -477,11 +524,22 @@ class Mplp(Inference):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()
+        ... ]
         >>> mm.add_factors(*phi)
         >>> mplp = Mplp(mm)
         >>> mplp.map_query()
@@ -535,7 +593,8 @@ class Mplp(Inference):
 
         prolong: bool
                  If set False: The moment we exhaust of all the triplets the tightening stops.
-                 If set True: The tightening will be performed max_iterations number of times irrespective of the triplets.
+                 If set True: The tightening will be performed max_iterations
+                   number of times irrespective of the triplets.
 
         References
         ----------
@@ -549,23 +608,57 @@ class Mplp(Inference):
         >>> from pgmpy.inference import Mplp
         >>> import numpy as np
         >>> student = DiscreteMarkovNetwork()
-        >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
-        >>> factor_a = DiscreteFactor(['A'], cardinality=[2], values=np.array([0.54577, 1.8323]))
-        >>> factor_b = DiscreteFactor(['B'], cardinality=[2], values=np.array([0.93894, 1.065]))
-        >>> factor_c = DiscreteFactor(['C'], cardinality=[2], values=np.array([0.89205, 1.121]))
-        >>> factor_d = DiscreteFactor(['D'], cardinality=[2], values=np.array([0.56292, 1.7765]))
-        >>> factor_e = DiscreteFactor(['E'], cardinality=[2], values=np.array([0.47117, 2.1224]))
-        >>> factor_f = DiscreteFactor(['F'], cardinality=[2], values=np.array([1.5093, 0.66257]))
-        >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2],
-        ...                             values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
-        >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2],
-        ...                             values=np.array([0.00024189, 4134.2, 4134.2, 0.0002418]))
-        >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2],
-        ...                             values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
-        >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2],
-        ...                             values=np.array([31.228, 0.032023, 0.032023, 31.228]))
-        >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f,
-        ...                     factor_a_b, factor_b_c, factor_c_d, factor_d_e)
+        >>> student.add_edges_from([("A", "B"), ("B", "C"), ("C", "D"), ("E", "F")])
+        >>> factor_a = DiscreteFactor(
+        ...     ["A"], cardinality=[2], values=np.array([0.54577, 1.8323])
+        ... )
+        >>> factor_b = DiscreteFactor(
+        ...     ["B"], cardinality=[2], values=np.array([0.93894, 1.065])
+        ... )
+        >>> factor_c = DiscreteFactor(
+        ...     ["C"], cardinality=[2], values=np.array([0.89205, 1.121])
+        ... )
+        >>> factor_d = DiscreteFactor(
+        ...     ["D"], cardinality=[2], values=np.array([0.56292, 1.7765])
+        ... )
+        >>> factor_e = DiscreteFactor(
+        ...     ["E"], cardinality=[2], values=np.array([0.47117, 2.1224])
+        ... )
+        >>> factor_f = DiscreteFactor(
+        ...     ["F"], cardinality=[2], values=np.array([1.5093, 0.66257])
+        ... )
+        >>> factor_a_b = DiscreteFactor(
+        ...     ["A", "B"],
+        ...     cardinality=[2, 2],
+        ...     values=np.array([1.3207, 0.75717, 0.75717, 1.3207]),
+        ... )
+        >>> factor_b_c = DiscreteFactor(
+        ...     ["B", "C"],
+        ...     cardinality=[2, 2],
+        ...     values=np.array([0.00024189, 4134.2, 4134.2, 0.0002418]),
+        ... )
+        >>> factor_c_d = DiscreteFactor(
+        ...     ["C", "D"],
+        ...     cardinality=[2, 2],
+        ...     values=np.array([0.0043227, 231.34, 231.34, 0.0043227]),
+        ... )
+        >>> factor_d_e = DiscreteFactor(
+        ...     ["E", "F"],
+        ...     cardinality=[2, 2],
+        ...     values=np.array([31.228, 0.032023, 0.032023, 31.228]),
+        ... )
+        >>> student.add_factors(
+        ...     factor_a,
+        ...     factor_b,
+        ...     factor_c,
+        ...     factor_d,
+        ...     factor_e,
+        ...     factor_f,
+        ...     factor_a_b,
+        ...     factor_b_c,
+        ...     factor_c_d,
+        ...     factor_d_e,
+        ... )
         >>> mplp = Mplp(student)
         >>> result = mplp.map_query()
         >>> result

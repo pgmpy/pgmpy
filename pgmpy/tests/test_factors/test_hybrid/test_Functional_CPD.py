@@ -2,15 +2,26 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro
-import pyro.distributions as dist
+from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
+torch = _safe_import("torch")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFCPD(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
     def test_class_init(self):
         """
         Test the initialization of the FunctionalCPD class.
@@ -79,7 +90,8 @@ class TestFCPD(unittest.TestCase):
             functional_variance,
             linear_gaussian_variance,
             delta=tolerance,
-            msg=f"Functional variance ({functional_variance}) differs from LinearGaussian variance ({linear_gaussian_variance})",
+            msg=f"Functional variance ({functional_variance})"
+            f" differs from LinearGaussian variance ({linear_gaussian_variance})",
         )
 
     def test_different_distributions(self):
@@ -103,3 +115,76 @@ class TestFCPD(unittest.TestCase):
 
         self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
         self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
+
+    def test_sample_vectorized(self):
+        """
+        Test FunctionalCPD with vectorized sampling.
+        """
+
+        def vectorized_fn(parent_sample):
+            x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
+            x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
+            mean = 1.0 + 0.5 * x1 + 0.25 * x2
+            return dist.Normal(mean, torch.ones_like(mean))
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=vectorized_fn, parents=["x1", "x2"], vectorized=True
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_sample_iterative(self):
+        """
+        Test FunctionalCPD with iterative sampling (vectorized=False).
+        """
+
+        def row_fn(row):
+            mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
+            return dist.Normal(mean, 1.0)
+
+        cpd = FunctionalCPD(
+            variable="x3", fn=row_fn, parents=["x1", "x2"], vectorized=False
+        )
+
+        parent_samples = pd.DataFrame(
+            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+        )
+
+        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_vectorized_without_parent(self):
+        """
+        Test FunctionalCPD with vectorized sampling without parents.
+        """
+
+        def vectorized_fn(parent_sample):
+            return dist.Normal(torch.zeros(1000), torch.ones(1000))
+
+        cpd = FunctionalCPD(variable="z", fn=vectorized_fn, parents=[], vectorized=True)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_iterative_without_parent(self):
+        """
+        Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
+        """
+
+        def iterative_fn(parent_sample):
+            return dist.Normal(0.0, 1.0)
+
+        cpd = FunctionalCPD(variable="z", fn=iterative_fn, parents=[], vectorized=False)
+        samples = cpd.sample(n_samples=1000)
+        self.assertEqual(len(samples), 1000)
+        self.assertTrue(np.isfinite(samples).all())
+
+    def tearDown(self):
+        config.set_backend("numpy")

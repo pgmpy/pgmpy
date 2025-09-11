@@ -1,11 +1,8 @@
 import itertools
 from collections import namedtuple
 
-import networkx as nx
 import numpy as np
 import pandas as pd
-import torch
-from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -73,12 +70,16 @@ class BayesianModelSampling(BayesianModelInference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
-        >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
-        >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
-        ...                0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
-        ...                ['intel', 'diff'], [2, 2])
+        >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> cpd_d = TabularCPD("diff", 2, [[0.6], [0.4]])
+        >>> cpd_i = TabularCPD("intel", 2, [[0.7], [0.3]])
+        >>> cpd_g = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     ["intel", "diff"],
+        ...     [2, 2],
+        ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> inference.forward_sample(size=2)
@@ -119,6 +120,8 @@ class BayesianModelSampling(BayesianModelInference):
                             inverse
                         ]
                     else:
+                        import torch
+
                         weight_index = torch.Tensor(
                             [state_to_index[u] for u in unique]
                         )[inverse]
@@ -185,16 +188,22 @@ class BayesianModelSampling(BayesianModelInference):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import State
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
-        >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
-        >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
-        ...                0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
-        ...                ['intel', 'diff'], [2, 2])
+        >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> cpd_d = TabularCPD("diff", 2, [[0.6], [0.4]])
+        >>> cpd_i = TabularCPD("intel", 2, [[0.7], [0.3]])
+        >>> cpd_g = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     ["intel", "diff"],
+        ...     [2, 2],
+        ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> evidence = [State(var='diff', state=0)]
-        >>> inference.rejection_sample(evidence=evidence, size=2, return_type='dataframe')
+        >>> evidence = [State(var="diff", state=0)]
+        >>> inference.rejection_sample(
+        ...     evidence=evidence, size=2, return_type="dataframe"
+        ... )
                 intel       diff       grade
         0         0          0          1
         1         0          0          1
@@ -301,16 +310,22 @@ class BayesianModelSampling(BayesianModelInference):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = DiscreteBayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
-        >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
-        >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
-        ...         0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
-        ...         ['intel', 'diff'], [2, 2])
+        >>> student = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
+        >>> cpd_d = TabularCPD("diff", 2, [[0.6], [0.4]])
+        >>> cpd_i = TabularCPD("intel", 2, [[0.7], [0.3]])
+        >>> cpd_g = TabularCPD(
+        ...     "grade",
+        ...     3,
+        ...     [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+        ...     ["intel", "diff"],
+        ...     [2, 2],
+        ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> evidence = [State('diff', 0)]
-        >>> inference.likelihood_weighted_sample(evidence=evidence, size=2, return_type='recarray')
+        >>> evidence = [State("diff", 0)]
+        >>> inference.likelihood_weighted_sample(
+        ...     evidence=evidence, size=2, return_type="recarray"
+        ... )
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
@@ -406,11 +421,13 @@ class GibbsSampling(MarkovChain):
 
     >>> from pgmpy.factors.discrete import TabularCPD
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
-    >>> sat_cpd = TabularCPD('sat', 2, [[0.95, 0.2], [0.05, 0.8]], evidence=['intel'], evidence_card=[2])
+    >>> intel_cpd = TabularCPD("intel", 2, [[0.7], [0.3]])
+    >>> sat_cpd = TabularCPD(
+    ...     "sat", 2, [[0.95, 0.2], [0.05, 0.8]], evidence=["intel"], evidence_card=[2]
+    ... )
     >>> student = DiscreteBayesianNetwork()
-    >>> student.add_nodes_from(['intel', 'sat'])
-    >>> student.add_edge('intel', 'sat')
+    >>> student.add_nodes_from(["intel", "sat"])
+    >>> student.add_edge("intel", "sat")
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
@@ -529,12 +546,12 @@ class GibbsSampling(MarkovChain):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import DiscreteMarkovNetwork
-        >>> model = DiscreteMarkovNetwork([('A', 'B'), ('C', 'B')])
-        >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
-        >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> model = DiscreteMarkovNetwork([("A", "B"), ("C", "B")])
+        >>> factor_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4, return_tupe='dataframe')
+        >>> gibbs.sample(size=4, return_tupe="dataframe")
            A  B  C
         0  0  1  1
         1  1  0  0
@@ -582,9 +599,9 @@ class GibbsSampling(MarkovChain):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import DiscreteMarkovNetwork
-        >>> model = DiscreteMarkovNetwork([('A', 'B'), ('C', 'B')])
-        >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
-        >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> model = DiscreteMarkovNetwork([("A", "B"), ("C", "B")])
+        >>> factor_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
         >>> gen = gibbs.generate_sample(size=2)

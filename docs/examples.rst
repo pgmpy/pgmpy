@@ -25,6 +25,7 @@ Causal Discovery / Structure Learning
    examples/Structure_Learning
    examples/Structure_Learning_Chow_Liu
    examples/Structure_Learning_TAN
+   examples/Expert_Knowledge
 
 Parameter Estimation
 """"""""""""""""""""

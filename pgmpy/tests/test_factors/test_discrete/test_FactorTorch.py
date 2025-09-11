@@ -5,6 +5,7 @@ from shutil import get_terminal_size
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors import factor_divide, factor_product, factor_sum_product
@@ -17,6 +18,10 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns, get_example_model
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFactorInitTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -96,6 +101,10 @@ class TestFactorInitTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFactorMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -892,7 +901,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         phi2 = DiscreteFactor(["x3", "x1", "x2"], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi1), hash(phi2))
 
-        var1 = TestHash(1, 2)
+        var1 = _TestHash(1, 2)
         phi3 = DiscreteFactor([var1, self.var2, self.var3], [2, 4, 3], range(24))
         phi4 = DiscreteFactor(
             [self.var2, var1, self.var3],
@@ -926,8 +935,8 @@ class TestFactorMethodsTorch(unittest.TestCase):
         )
         self.assertEqual(hash(phi3), hash(phi4))
 
-        var1 = TestHash(2, 3)
-        var2 = TestHash("x2", 1)
+        var1 = _TestHash(2, 3)
+        var2 = _TestHash("x2", 1)
         phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], range(8))
         phi4 = DiscreteFactor(
             [self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7]
@@ -1011,7 +1020,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
-class TestHash:
+class _TestHash:
     # Used to check the hash function of DiscreteFactor class.
 
     def __init__(self, x, y):
@@ -1029,6 +1038,10 @@ class TestHash:
         )
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestTabularCPDInitTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -2821,6 +2834,10 @@ class TestTabularCPDInitTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestTabularCPDMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
