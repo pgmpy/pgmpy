@@ -2312,3 +2312,62 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             and self.latents == other.latents
             and self.get_role_dict() == other.get_role_dict()
         )
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None) -> "PDAG":
+        """
+        Initializes a `PDAG` instance using DAGitty syntax.
+
+        Creates a `PDAG` from the dagitty string.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline string representing the model structure.
+            Refer https://www.dagitty.net/manual-3.x.pdf#page=3.58 and
+            https://github.com/jtextor/dagitty/blob/7a657776dc8f5e5ba4e323edb028e2c2aaf29327/gui/js/dagitty.js#L3417
+
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG.from_dagitty(
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches'",
+        ...     "smoking -> cancer 'carry matches' -> cancer }",
+        ... )
+
+        >>> # PDAG with isolated node and no parameters
+        >>> pdag = PDAG.from_dagitty("dag{ X -> Y  Z }")
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, latents, _, nodes = parse_dagitty(dagitty_str)
+        pdag = cls()
+        edge_set = set(ebunch)
+        processed = set()
+
+        for u, v in edge_set:
+            if (v, u) in edge_set:
+                if (v, u) not in processed and (u, v) not in processed:
+                    pdag.add_edge(u, v)
+                    pdag.add_edge(v, u)
+                    if hasattr(pdag, "undirected_edges"):
+                        pdag.undirected_edges.add((u, v))
+                    processed.add((u, v))
+                    processed.add((v, u))
+            else:
+                pdag.add_edge(u, v)
+                if hasattr(pdag, "directed_edges"):
+                    pdag.directed_edges.add((u, v))
+        pdag.latents = set(latents)
+        pdag.add_nodes_from(nodes)
+
+        return pdag
