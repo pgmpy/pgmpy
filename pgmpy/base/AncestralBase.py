@@ -565,7 +565,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag1 == mag3
         False
         """
-        if not isinstance(other, AncestralBase):
+        if not isinstance(other, __class__):
             return False
 
         self_edges = {

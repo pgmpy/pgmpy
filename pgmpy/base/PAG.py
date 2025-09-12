@@ -72,7 +72,6 @@ class PAG(MAG):
         >>> g.get_role("adjustment")
         ["L", "C"]
         """
-
         super().__init__(ebunch=ebunch, latents=latents, roles=roles)
 
     def is_definite_non_collider(self, vertex, adj_u, adj_v):
@@ -81,7 +80,7 @@ class PAG(MAG):
 
         A vertex is a definite non-collider if:
         - Either incident edge has a tail at the vertex, or
-        - Both incident edges have circle marks at vertex and the two adjacent vertices are not adjacent.
+        - Both incident edges have circle marks at vertex and the two adjacent vertices are not adjacent to each other.
 
         Parameters
         ----------
@@ -99,14 +98,8 @@ class PAG(MAG):
         bool
             True if the vertex is a definite non-collider, False otherwise.
         """
-        u_mark, _ = (
-            self.edges[adj_u, vertex]["marks"][adj_u],
-            self.edges[adj_u, vertex]["marks"][vertex],
-        )
-        _, v_mark = (
-            self.edges[vertex, adj_v]["marks"][vertex],
-            self.edges[vertex, adj_v]["marks"][adj_v],
-        )
+        u_mark = self.edges[adj_u, vertex]["marks"].get(vertex)
+        v_mark = self.edges[vertex, adj_v]["marks"].get(vertex)
         if u_mark == "-" or v_mark == "-":
             return True
         if u_mark == "o" and v_mark == "o" and not self.has_edge(adj_u, adj_v):
@@ -149,7 +142,7 @@ class PAG(MAG):
         """
         Return the set of possible ancestors of a given node.
 
-        A node X is a possible ancestor of Y if there exists a possibly directed path from X to Y.
+        A node X is a possible ancestor of Y if X=Y or if there exists a possibly directed path from X to Y.
 
         Parameters
         ----------
@@ -161,7 +154,7 @@ class PAG(MAG):
         set
             Set of possible ancestor nodes including the node itself.
         """
-        possible_ancestors = set()
+        possible_ancestors = set([node])
         for other in self.nodes:
             if self.has_possibly_directed_path(other, node):
                 possible_ancestors.add(other)
@@ -187,150 +180,288 @@ class PAG(MAG):
         bool
             True if the edge is definitely visible, False otherwise.
         """
+        if not self.has_edge(u, v):
+            return False
         if self.edges[u, v]["marks"][u] != "-" or self.edges[u, v]["marks"][v] != ">":
             return False
-        for parent in self.get_parents(u):
-            if parent not in self.get_neighbors(v):
+
+        for neighbor in self.get_neighbors(u, v_type=">"):
+            if neighbor not in self.get_neighbors(v):
                 return True
-        for spouse in self.get_spouses(u):
-            if spouse in self.get_parents(v):
-                return True
+
+        stack = [u]
+        visited = set()
+
+        while stack:
+            current = stack.pop()
+
+            for pred in self.get_neighbors(current, u_type=None, v_type=">"):
+                if pred in visited or pred == u:
+                    continue
+                visited.add(pred)
+
+                if pred not in self.get_neighbors(v, u_type=None, v_type=None):
+                    return True
+
+                if pred in self.get_neighbors(v, u_type="-", v_type=">"):
+                    stack.append(pred)
+
         return False
 
-    def is_definite_m_connecting_path(self, path, Z):
+    def find_path(self, start, end):
         """
-        Check if a path is a definite m-connecting path relative to a conditioning set Z.
+        Finds a single uncovered, potentially directed path from start to end
+        using a non-recursive Depth-First Search (DFS).
 
-        A path is definite m-connecting if:
-        - Every non-endpoint vertex is either a definite non-collider or a collider.
-        - Every definite non-collider is not in Z.
-        - Every collider is a possible ancestor of some node in Z.
+        A path is:
+        - Potentially directed (p.d.) if for any edge X--Y on the path, the mark
+          at X is not '>'.
+        - Uncovered if for any triple <X, Y, Z> on the path, X and Z are not
+          adjacent.
 
         Parameters
         ----------
-        path : list
-            List of nodes representing the path.
-
-        Z : set
-            Conditioning set of nodes.
-
-        Returns
-        -------
-        bool
-            True if the path is a definite m-connecting path relative to Z, False otherwise.
-        """
-        for i in range(1, len(path) - 1):
-            u, v, w = path[i - 1], path[i], path[i + 1]
-            if self.is_definite_non_collider(path, v, u, w):
-                if v in Z:
-                    return False
-            else:
-                if not (self.get_possible_ancestors(v) & Z):
-                    return False
-        return True
-
-    def is_possibly_m_connecting_path(self, path, Z):
-        """
-        Check if a path is a possibly m-connecting path relative to a conditioning set Z.
-
-        Parameters
-        ----------
-        path : list
-            List of nodes representing the path.
-
-        Z : set
-            Conditioning set of nodes.
+        start : Hashable
+            The starting node of the path.
+        end : Hashable
+            The target node of the path.
 
         Returns
         -------
-        bool
-            True if the path is possibly m-connecting relative to Z, False otherwise.
+        list or None
+            A list of nodes representing the path, or None if no such path exists.
         """
-        for i in range(1, len(path) - 1):
-            u, v, w = path[i - 1], path[i], path[i + 1]
-            if self.is_definite_non_collider(path, v, u, w):
-                if v in Z:
-                    return False
-            else:
-                if not (self.get_possible_ancestors(v) & Z):
-                    return False
-        return True
+        stack = [(start, [start])]
+        visited = {start}
 
-    def is_definitely_m_separated(self, X, Y, Z):
-        """
-        Determine if sets X and Y are definitely m-separated by a conditioning set Z in the PAG.
+        while stack:
+            current, path = stack.pop()
 
-        X and Y are definitely m-separated if no possibly m-connecting path exists between them given Z.
+            if current == end:
+                return path
+            for neighbor in sorted(self.get_neighbors(current)):
+                if neighbor not in visited:
+                    if self.edges[current, neighbor]["marks"][current] != ">":
+                        is_uncovered = True
+                        if len(path) >= 2:
+                            prev_node = path[-1]
+                            if self.has_edge(prev_node, neighbor):
+                                is_uncovered = False
 
-        Parameters
-        ----------
-        X : set
-            Set of nodes representing the first set.
+                        if is_uncovered:
+                            new_path = path + [neighbor]
+                            stack.append((neighbor, new_path))
+                            visited.add(neighbor)
 
-        Y : set
-            Set of nodes representing the second set.
+        return None
 
-        Z : set
-            Conditioning set of nodes.
+    def rule_0(self, pag, sep_set):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u):
+                for w in pag.get_neighbors(v):
+                    if u != w and not pag.has_edge(u, w):
+                        if v in sep_set.get((u, w), set()) or v in sep_set.get(
+                            (w, u), set()
+                        ):
+                            pass
+                        else:
+                            if (
+                                pag.edges[u, v]["marks"][v] == "o"
+                                and pag.edges[v, w]["marks"][v] == "o"
+                            ):
+                                pag.edges[u, v]["marks"][v] = ">"
+                                pag.edges[v, w]["marks"][v] = ">"
+                                changed = True
+        return changed
 
-        Returns
-        -------
-        bool
-            True if X and Y are definitely m-separated by Z, False otherwise.
-        """
-        X = set(X)
-        Y = set(Y)
-        Z = set(Z)
+    def rule_1(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u, u_type=None, v_type=">"):
+                for w in pag.get_neighbors(u, u_type="o"):
+                    if not pag.has_edge(v, w):
+                        if pag.edges[u, w]["marks"][u] == "o":
+                            pag.edges[u, w]["marks"][u] = ">"
+                            pag.edges[u, w]["marks"][w] = "-"
+                            changed = True
+        return changed
 
-        def explore(node, coming_from=None, visited=None):
-            if visited is None:
-                visited = set()
-            visited.add(node)
-            for neighbor in self.neighbors(node):
-                if neighbor in visited:
-                    continue
-                if coming_from:
-                    if self.is_definite_non_collider(
-                        [coming_from, node, neighbor], node, coming_from, neighbor
+    def rule_2(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u, u_type="-", v_type=">"):
+                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
+                    if pag.edges[u, w]["marks"][w] == "-":
+                        if pag.edges.get((v, w)) and pag.edges[v, w]["marks"][w] == "o":
+                            pag.edges[v, w]["marks"][w] = ">"
+                            pag.edges[v, w]["marks"][v] = "-"
+                            changed = True
+            for v in pag.get_neighbors(u, u_type=None, v_type=">"):
+                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
+                    if pag.edges[u, w]["marks"][w] == "-":
+                        if pag.edges.get((v, w)) and pag.edges[v, w]["marks"][w] == "o":
+                            pag.edges[v, w]["marks"][w] = ">"
+                            pag.edges[v, w]["marks"][v] = "-"
+                            changed = True
+        return changed
+
+    def rule_6(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for _ in pag.get_neighbors(u, u_type="-", v_type="-"):
+                for w in pag.get_neighbors(u, u_type="o", v_type=None):
+                    if pag.edges[u, w]["marks"][u] == "o":
+                        pag.edges[u, w]["marks"][u] = "-"
+                        changed = True
+        return changed
+
+    def rule_7(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u, u_type=None, v_type="o"):
+                if pag.edges[v, u]["marks"][v] == "-":
+                    for w in pag.get_neighbors(u, u_type="o"):
+                        if not pag.has_edge(v, w):
+                            pag.edges[u, w]["marks"][u] = "-"
+                            changed = True
+        return changed
+
+    def rule_8(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u, u_type="-", v_type=">"):
+                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
+                    if (
+                        pag.edges.get((v, w))
+                        and pag.edges[v, w]["marks"][v] == "o"
+                        and pag.edges[v, w]["marks"][w] == ">"
                     ):
-                        if node in Z:
-                            continue
-                    else:
-                        if not (self.get_possible_ancestors(node) & Z):
-                            continue
-                yield neighbor
-                yield from explore(neighbor, coming_from=node, visited=visited.copy())
+                        pag.edges[v, w]["marks"][v] = "-"
+                        changed = True
 
-        for x in X:
-            reachable = set(explore(x))
-            if reachable & Y:
-                return False
-        return True
+            for v in pag.get_neighbors(u, v_type="o"):
+                if pag.edges[v, u]["marks"][v] == "-":
+                    for w in pag.get_neighbors(u, u_type=">", v_type="-"):
+                        if (
+                            pag.edges.get((v, w))
+                            and pag.edges[v, w]["marks"][v] == "o"
+                            and pag.edges[v, w]["marks"][w] == ">"
+                        ):
+                            pag.edges[v, w]["marks"][v] = "-"
+                            changed = True
+        return changed
 
-    def YX_manipulation(self, Y, X, inplace=False):
-        """
-        Apply composite YX-manipulation: lower-priority lower manipulation
-        followed by lower-priority upper manipulation.
+    def rule_9(self, pag):
+        changed = False
+        for u, v in pag.edges:
+            if (
+                pag.edges[u, v]["marks"][u] == "o"
+                and pag.edges[u, v]["marks"][v] == ">"
+            ):
 
-        Parameters
-        ----------
-        Y : set
-            Set of nodes for lower-priority manipulation.
+                queue = deque([(u, [u])])
+                visited = {u}
 
-        X : set
-            Set of nodes for upper-priority manipulation.
+                while queue:
+                    current, path = queue.popleft()
 
-        inplace : bool
-            Manipulates the graph in place if True, False otherwise.
+                    if current == v:
+                        is_uncovered_pd_path = True
+                        for i in range(len(path) - 1):
+                            u, v = path[i], path[i + 1]
+                            if pag.edges[u, v]["marks"][u] == ">":
+                                is_uncovered_pd_path = False
+                                break
+                            if i > 0 and i < len(path) - 1:
+                                prev_node = path[i - 1]
+                                if pag.has_edge(prev_node, v):
+                                    is_uncovered_pd_path = False
+                                    break
 
-        Returns
-        -------
-        None
-            Manipulates the graph in-place.
-        """
-        if not inplace:
-            new_pag = self.copy()
+                        if is_uncovered_pd_path:
+                            v = path[1]
+                            if not pag.has_edge(v, v):
+                                pag.edges[u, v]["marks"][u] = "-"
+                                changed = True
+                                break
+
+                    for neighbor in pag.get_neighbors(current):
+                        if (
+                            pag.edges[current, neighbor]["marks"][current] != ">"
+                            and neighbor not in visited
+                        ):
+                            visited.add(neighbor)
+                            queue.append((neighbor, path + [neighbor]))
+        return changed
+
+    def rule_10(self, pag):
+        changed = False
+        for u in pag.nodes:
+            for v in pag.get_neighbors(u, u_type=">", v_type="-"):
+                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
+                    if v != w:
+                        for alpha in pag.get_neighbors(u, u_type="o", v_type=">"):
+                            p1 = self.find_path(alpha, v)
+                            p2 = self.find_path(alpha, w)
+
+                            if p1 and p2:
+                                mu = p1[1] if len(p1) > 1 else v
+                                omega = p2[1] if len(p2) > 1 else w
+
+                                if mu != omega and not pag.has_edge(mu, omega):
+                                    pag.edges[alpha, u]["marks"][alpha] = "-"
+                                    changed = True
+        return changed
+
+    def apply_orientation_rules(self, rules, inplace=False, sepsets=None):
+        pag = self if inplace else self.copy()
+
+        rules_map = {
+            "R0": pag.rule_0,
+            "R1": pag.rule_1,
+            "R2": pag.rule_2,
+            "R3": pag.rule_3,
+            "R4": pag.rule_4,
+            "R5": pag.rule_5,
+            "R6": pag.rule_6,
+            "R7": pag.rule_7,
+            "R8": pag.rule_8,
+            "R9": pag.rule_9,
+            "R10": pag.rule_10,
+        }
+
+        if not rules:
+            rules_to_apply = [
+                "R0",
+                "R1",
+                "R2",
+                "R3",
+                "R4",
+                "R5",
+                "R6",
+                "R7",
+                "R8",
+                "R9",
+                "R10",
+            ]
+
         else:
-            new_pag = self
-        new_pag.lower_manipulation(Y)
-        new_pag.upper_manipulation(X)
+            rules_to_apply = [r.upper() for r in rules]
+
+        changed = True
+        while changed:
+            changed = False
+            for rule_name in rules_to_apply:
+                rule_func = rules_map.get(rule_name)
+                if rule_func:
+                    if rule_name in ["R0", "R4"]:
+                        if sepsets is None:
+                            raise ValueError(
+                                f"Rule {rule_name} requires sepsets to be provided."
+                            )
+                        if rule_func(pag, sepsets):
+                            changed = True
+                    else:
+                        if rule_func(pag):
+                            changed = True

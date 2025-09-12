@@ -123,3 +123,6 @@ class TestMAG:
         assert mag.has_edge("C", "D")
         assert mag.has_edge("A", "D")
         assert mag.has_edge("B", "C")
+
+
+# TO DO : Equality Test
