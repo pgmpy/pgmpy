@@ -195,3 +195,5 @@ class TestMAG:
 
         assert set(model_from_str.nodes()) == expected_nodes
         assert model_from_str.get_role_dict() == expected_roles
+
+# TO DO : Equality Test

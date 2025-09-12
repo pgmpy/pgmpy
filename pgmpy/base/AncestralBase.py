@@ -703,7 +703,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag1 == mag3
         False
         """
-        if not isinstance(other, AncestralBase):
+        if not isinstance(other, __class__):
             return False
 
         self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
