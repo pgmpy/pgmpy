@@ -183,4 +183,18 @@ class _GraphRolesMixin:
 
     @latents.setter
     def latents(self, variables):
+        """
+        Replace the `latents` nodes.
+
+        Parameters
+        ----------
+        variables: set of nodes (default: empty set)
+            A set of latent variables in the graph. These are not observed
+            variables but are used to represent unobserved confounding or
+            other latent structures.
+        """
+        if self.has_role("latents"):
+            self.without_role(
+                role="latents", variables=self.get_role("latents"), inplace=True
+            )
         self.with_role(role="latents", variables=variables, inplace=True)

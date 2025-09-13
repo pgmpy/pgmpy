@@ -76,6 +76,8 @@ class TestDAGCreation(unittest.TestCase):
     def test_add_node_nonstring(self):
         self.graph = DAG()
         self.graph.add_node(1)
+        self.assertListEqual(sorted(self.graph.nodes()), [1])
+        self.assertEqual(self.graph.latents, set())
 
     def test_add_nodes_from_string(self):
         self.graph = DAG()
@@ -86,9 +88,8 @@ class TestDAGCreation(unittest.TestCase):
     def test_add_nodes_from_non_string(self):
         self.graph = DAG()
         self.graph.add_nodes_from([1, 2, 3, 4])
-
-        # TODO: What needs to be resolved before merging PR #2338
-        # This test function do not have assert
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2, 3, 4])
+        self.assertEqual(self.graph.latents, set())
 
     def test_add_node_weight(self):
         self.graph = DAG()
@@ -119,6 +120,8 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edge_nonstring(self):
         self.graph.add_edge(1, 2)
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [[1, 2]])
 
     def test_add_edges_from_string(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
@@ -136,6 +139,8 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edges_from_nonstring(self):
         self.graph.add_edges_from([(1, 2), (2, 3)])
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2, 3])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [[1, 2], [2, 3]])
 
     def test_add_edge_weight(self):
         self.graph.add_edge("a", "b", weight=0.3)

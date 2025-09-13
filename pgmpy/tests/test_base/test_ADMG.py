@@ -79,7 +79,7 @@ class TestADMGInitialization:
         with pytest.raises(ValueError, match="Variable 'G' not found in the graph."):
             admg.with_role(role="latents", variables="G", inplace=True)
 
-    def test_latnets_without_role(self):
+    def test_latents_without_role(self):
         admg = ADMG(
             directed_ebunch=[("X", "Y")],
             bidirected_ebunch=[
