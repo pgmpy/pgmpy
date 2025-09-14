@@ -59,7 +59,13 @@ class TestMAG:
         assert empty.latents == set()
 
     def test_roles_and_equality(self):
-        e = [("X", "Z", "-", ">"), ("Y", "Z", "-", ">")]
+        e = [
+            ("X", "Z", "-", ">"),
+            ("Y", "Z", "-", ">"),
+            ("L", "X", "-", ">"),
+            ("L", "Z", "-", ">"),
+            ("U", "X", "-", ">"),
+        ]
         roles = {"exposure": "X", "outcome": "Z", "adjustment": {"Y"}}
         m1 = MAG(ebunch=e, latents={"L"}, roles=roles)
         m2 = MAG(
@@ -73,7 +79,13 @@ class TestMAG:
         assert m1 != m3
 
         m4 = MAG(
-            ebunch=[("X", "Z", ">", ">"), ("Y", "Z", "-", ">")],
+            ebunch=[
+                ("X", "Z", ">", ">"),
+                ("Y", "Z", "-", ">"),
+                ("L", "X", "-", ">"),
+                ("L", "Z", "-", ">"),
+                ("U", "X", "-", ">"),
+            ],
             latents={"L"},
             roles=roles,
         )
