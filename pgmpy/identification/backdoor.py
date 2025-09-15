@@ -1,18 +1,19 @@
 import networkx as nx
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.identification import BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class BackdoorIdentification(BaseIdentification):
+class AdjustmentIdentification(BaseIdentification):
     """
-    Backdoor identification for finding adjustment sets in causal graphs.
+    Given a causal graph, finds the adjustment set.
 
-    This class implements the backdoor criterion for identifying causal effects
-    in a directed acyclic graph (DAG). Additionally, it provides methods to
-    check if the current set of variables with role `adjustment` satisfy the
-    backdoor criterion and to compute the backdoor adjustment formula.
+    This class implements a few variants for computing adjustment sets for
+    identifying the total causal effect of the `exposure` variables on
+    `outcome` variables. Additionally, it provides methods to check if the
+    current set of variables with role `adjustment` satisfy the backdoor
+    criterion and to compute the backdoor adjustment formula.
 
     Parameters
     ----------
@@ -40,6 +41,13 @@ class BackdoorIdentification(BaseIdentification):
     >>> dag_with_adj.roles
     {'exposure': 'x1', 'outcome': 'y1', 'adjustment': ['z1', 'z2']}
     >>> BackdoorIdentification.validate(dag)
+
+    References
+    ----------
+    [1] Perkovi, Emilija, et al. "Complete graphical characterization and
+    construction of adjustment sets in Markov equivalence classes of ancestral
+    graphs." Journal of Machine Learning Research.
+    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs." Journal of Machine Learning Research.
     """
 
     def __init__(self, variant="minimal"):
@@ -85,10 +93,11 @@ class BackdoorIdentification(BaseIdentification):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in
-            Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1
-            (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al. "Complete graphical characterization and
+            construction of adjustment sets in Markov equivalence classes of
+            ancestral graphs." The Journal of Machine Learning Research.
         """
+        # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()
         edges_to_remove = []
         for source in causal_graph.get_role("exposure"):
@@ -117,21 +126,25 @@ class BackdoorIdentification(BaseIdentification):
         success: bool
             True if the identification was successful, False otherwise.
         """
-        if not isinstance(causal_graph, DAG):
-            raise NotImplementedError(
-                "Backdoor identification is only implemented for DAGs."
-            )
-        if len(causal_graph.get_role("exposure")) != 1:
-            raise NotImplementedError(
-                "Backdoor identification is only implemented for single exposure variable."
-            )
-        if len(causal_graph.get_role("outcome")) != 1:
-            raise NotImplementedError(
-                "Backdoor identification is only implemented for single outcome variable."
-            )
-
-        backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
+        # Step 1: If variant = "minimal", use the algorithm from [1]. Get the
+        #         proper backdoor graph and compute the adjustment set.
         if self.variant == "minimal":
+            if not isinstance(causal_graph, DAG):
+                raise NotImplementedError(
+                    "Backdoor identification is only implemented for DAGs."
+                )
+            if len(causal_graph.get_role("exposure")) != 1:
+                raise NotImplementedError(
+                    "Backdoor identification is only implemented for single exposure variable."
+                )
+            if len(causal_graph.get_role("outcome")) != 1:
+                raise NotImplementedError(
+                    "Backdoor identification is only implemented for single outcome variable."
+                )
+
+            backdoor_graph = self._get_proper_backdoor_graph(
+                causal_graph, inplace=False
+            )
             adjustment_set = backdoor_graph.minimal_dseparator(
                 causal_graph.get_role("exposure")[0],
                 causal_graph.get_role("outcome")[0],
@@ -144,11 +157,20 @@ class BackdoorIdentification(BaseIdentification):
                     True,
                 )
 
+        # Step 2: If variant = "minimal_variance", use the algorithm from [2].
+        #         O(X, Y, G) = pa(cn(X, Y, G), G) \ forb(X, Y, G)
         elif self.variant == "minimal_variance":
+            if not isinstance(causal_graph, (DAG, PDAG)):
+                raise ValueError(
+                    "minimal_variance variant is only supported for DAGs and CPDAGs. Please use variant='minimal'"
+                )
+
             raise NotImplementedError(
                 "Backdoor identification with minimal variance is not implemented yet."
             )
 
+        # Step 3: If variant = "all", iterate over all possible sets of adjustment
+        #         variables, and return all that are valid.
         elif self.variant == "all":
             ancestors = causal_graph._get_ancestors_of(
                 causal_graph.get_role("exposure") + causal_graph.get_role("outcome")
