@@ -1706,8 +1706,8 @@ class DiscreteBayesianNetwork(DAG):
 
     def save(self, filename: str, filetype: str = "bif") -> None:
         """
-        Writes the model to a file. Plese avoid using any special characters or
-        spaces in variable or state names.
+        Writes the model to a file. Please avoid using any special characters or
+        spaces in variable names or state names in the model.
 
         Parameters
         ----------
@@ -1724,12 +1724,20 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm = get_example_model("alarm")
         >>> alarm.save("alarm.bif", filetype="bif")
         """
+        from pgmpy.readwrite import (
+            BIFWriter,
+            NETWriter,
+            UAIWriter,
+            XDSLWriter,
+            XMLBIFWriter,
+        )
+
         supported_formats_writer_map = {
-            "bif": ("pgmpy.readwrite", "BIFWriter", "write_bif"),
-            "uai": ("pgmpy.readwrite", "UAIWriter", "write_uai"),
-            "xmlbif": ("pgmpy.readwrite", "XMLBIFWriter", "write_xmlbif"),
-            "xdsl": ("pgmpy.readwrite", "XDSLWriter", "write_xdsl"),
-            "net": ("pgmpy.readwrite", "NETWriter", "write_net"),
+            "bif": BIFWriter,
+            "uai": UAIWriter,
+            "xmlbif": XMLBIFWriter,
+            "xdsl": XDSLWriter,
+            "net": NETWriter,
         }
         if filetype not in supported_formats_writer_map.keys():
             raise ValueError(f"Unsupported file format: {filetype}")
@@ -1738,14 +1746,8 @@ class DiscreteBayesianNetwork(DAG):
         if parsed_filetype in supported_formats_writer_map.keys():
             filetype = parsed_filetype
 
-        module_name, class_name, method_name = supported_formats_writer_map[filetype]
-
-        module = importlib.import_module(module_name)
-        WriterClass = getattr(module, class_name)
-
-        writer = WriterClass(self)
-        write_method = getattr(writer, method_name)
-        write_method(filename=filename)
+        writer_class = supported_formats_writer_map[filetype]
+        writer_class(self).write(filename=filename)
 
     @staticmethod
     def load(

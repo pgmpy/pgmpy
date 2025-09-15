@@ -260,7 +260,7 @@ class XDSLWriter(object):
     >>> from pgmpy.utils import get_example_model
     >>> asia = get_example_model("asia")
     >>> writer = XDSLWriter(asia)
-    >>> writer.write_xdsl("asia.xdsl")
+    >>> writer.write("asia.xdsl")
 
     Reference
     ---------
@@ -432,7 +432,7 @@ class XDSLWriter(object):
                 {"active": "true", "width": "128", "height": "128"},
             )
 
-    def write_xdsl(self, filename=None):
+    def write(self, filename=None):
         """
         Write the xdsl data into the file.
 
@@ -446,7 +446,7 @@ class XDSLWriter(object):
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.write_xdsl("asia.xdsl")
+        >>> writer.write("asia.xdsl")
         """
         xml_str = etree.tostring(self.root, encoding=self.encoding)
         parsed = md.parseString(xml_str)
@@ -455,3 +455,9 @@ class XDSLWriter(object):
         if filename is not None:
             with open(filename, "wb") as f:
                 f.write(pretty_xml_str)
+
+    def write_xdsl(self, filename):
+        logger.warning(
+            "The `XDSLWriter.write_xdsl` has been deprecated. Please use `XDSLWriter.write` instead."
+        )
+        self.write(filename)

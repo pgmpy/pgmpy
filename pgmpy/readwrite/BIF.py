@@ -438,7 +438,7 @@ class BIFWriter(object):
     >>> writer = BIFWriter(asia)
     >>> writer
     <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
-    >>> writer.write_bif("asia.bif")
+    >>> writer.write("asia.bif")
     """
 
     def __init__(self, model, round_values=None):
@@ -704,7 +704,7 @@ $values
             )
         return tables
 
-    def write_bif(self, filename):
+    def write(self, filename):
         """
         Writes the BIF data into a file
 
@@ -718,8 +718,14 @@ $values
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> asia = get_example_model("asia")
         >>> writer = BIFWriter(asia)
-        >>> writer.write_bif(filename="asia.bif")
+        >>> writer.write(filename="asia.bif")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_bif(self, filename):
+        logger.warn(
+            "The `BIFWriter.write_bif` has been deprecated. Please use `BIFWriter.write` instead."
+        )
+        self.write(filename)
