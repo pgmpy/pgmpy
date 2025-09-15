@@ -45,9 +45,10 @@ class AdjustmentIdentification(BaseIdentification):
     References
     ----------
     [1] Perkovi, Emilija, et al. "Complete graphical characterization and
-    construction of adjustment sets in Markov equivalence classes of ancestral
-    graphs." Journal of Machine Learning Research.
-    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs." Journal of Machine Learning Research.
+        construction of adjustment sets in Markov equivalence classes of ancestral
+        graphs." Journal of Machine Learning Research.
+    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs."
+        Journal of Machine Learning Research.
     """
 
     def __init__(self, variant="minimal"):
