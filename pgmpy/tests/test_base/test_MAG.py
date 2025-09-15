@@ -29,6 +29,29 @@ def mag2():
     return MAG(ebunch=edges, latents={"L"})
 
 
+# mag3 and mag4 are taken from Maathuis 2018 JMLR Figure 2
+@pytest.fixture
+def mag3():
+    edges = [("V", "X", "-", ">"), ("X", "Y", "-", ">")]
+    return MAG(ebunch=edges)
+
+
+@pytest.fixture
+def mag4():
+    edges = [
+        ("V1", "V2", ">", ">"),
+        ("V2", "V3", ">", ">"),
+        ("V3", "V4", ">", ">"),
+        ("V3", "V4", ">", ">"),
+        ("V4", "X", ">", ">"),
+        ("X", "Y", "-", ">"),
+        ("V2", "Y", "-", ">"),
+        ("V3", "Y", "-", ">"),
+        ("V4", "Y", "-", ">"),
+    ]
+    return MAG(ebunch=edges)
+
+
 class TestMAG:
     def test_empty_init(self):
         empty = MAG()
@@ -36,7 +59,13 @@ class TestMAG:
         assert empty.latents == set()
 
     def test_roles_and_equality(self):
-        e = [("X", "Z", "-", ">"), ("Y", "Z", "-", ">")]
+        e = [
+            ("X", "Z", "-", ">"),
+            ("Y", "Z", "-", ">"),
+            ("L", "X", "-", ">"),
+            ("L", "Z", "-", ">"),
+            ("U", "X", "-", ">"),
+        ]
         roles = {"exposure": "X", "outcome": "Z", "adjustment": {"Y"}}
         m1 = MAG(ebunch=e, latents={"L"}, roles=roles)
         m2 = MAG(
@@ -50,7 +79,13 @@ class TestMAG:
         assert m1 != m3
 
         m4 = MAG(
-            ebunch=[("X", "Z", ">", ">"), ("Y", "Z", "-", ">")],
+            ebunch=[
+                ("X", "Z", ">", ">"),
+                ("Y", "Z", "-", ">"),
+                ("L", "X", "-", ">"),
+                ("L", "Z", "-", ">"),
+                ("U", "X", "-", ">"),
+            ],
             latents={"L"},
             roles=roles,
         )
@@ -75,13 +110,16 @@ class TestMAG:
         new_mag = MAG(ebunch=edges, latents={"L"})
         assert new_mag.has_inducing_path("X", "Y", {"L"})
 
-    def test_is_visible_edge(self, mag):
+    def test_is_visible_edge(self, mag, mag3, mag4):
         assert not mag.is_visible_edge("A", "D")
         assert not mag.is_visible_edge("B", "C")
         assert not mag.is_visible_edge("A", "B")
         assert not mag.is_visible_edge("C", "D")
         assert not mag.is_visible_edge("A", "C")
         assert not mag.is_visible_edge("B", "D")
+
+        assert mag3.is_visible_edge("X", "Y")
+        assert mag4.is_visible_edge("X", "Y")
 
     def test_lower_manipulation(self, mag, mag2):
         new_mag = mag.lower_manipulation({"A"})
