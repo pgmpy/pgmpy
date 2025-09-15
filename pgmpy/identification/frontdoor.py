@@ -14,23 +14,29 @@ class Frontdoor(BaseIdentification):
     satisfying the frontdoor criterion with respect to `exposure` and `outcome` in
     the causal graph.
 
+    Parameters
+    ----------
+    variant: all | None
+        If all, returns all possible frontdoor identification causal graphs.
+        If None, returns one at random.
+
     Examples
     --------
     >>> from pgmpy.base import DAG
     >>> dag = DAG(
     ...     ebunch=[
-    ...         ("x1", "y1"),
-    ...         ("x1", "z1"),
-    ...         ("z1", "z2"),
-    ...         ("z2", "x2"),
-    ...         ("y2", "z2"),
+    ...         ("X", "M"),
+    ...         ("M", "Y"),
+    ...         ("U", "X"),
+    ...         ("U", "Y"),
     ...     ],
-    ...     roles={"exposure": "x1", "outcome": "y1"},
+    ...     roles={"exposure": "X", "outcome": "Y"},
     ... )
-    >>> dag_with_adj = FrontdoorIdentification().identify(dag)
+    >>> dag_with_adj, is_identified = FrontdoorIdentification().identify(dag)
     >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['z1', 'z2']}
+    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
     >>> FrontdoorIdentification.validate(dag)
+    True
     """
 
     def __init__(self, variant=None):
