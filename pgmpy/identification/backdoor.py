@@ -1,6 +1,6 @@
 import networkx as nx
 
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import ADMG, DAG, MAG, PAG, PDAG
 from pgmpy.identification import BaseIdentification
 from pgmpy.utils.sets import _powerset
 
@@ -53,6 +53,10 @@ class AdjustmentIdentification(BaseIdentification):
 
     def __init__(self, variant="minimal"):
         self.variant = variant
+        if self.variant in ("minimal", "all"):
+            self.supported_graph_types = {DAG, PDAG, ADMG, MAG, PAG}
+        elif self.variant == "minimal_variance":
+            self.supported_graph_types = {DAG, PDAG}
 
     def _get_proper_backdoor_graph(self, causal_graph, inplace=False):
         """
@@ -121,7 +125,7 @@ class AdjustmentIdentification(BaseIdentification):
 
         Returns
         -------
-        causal_graph: DAG | PDAG | MAG | PAG
+        causal_graph: DAG | PDAG | ADMG | MAG | PAG
             The causal graph with the identified adjustment set added as role `adjustment`.
 
         success: bool
@@ -130,10 +134,6 @@ class AdjustmentIdentification(BaseIdentification):
         # Step 1: If variant = "minimal", use the algorithm from [1]. Get the
         #         proper backdoor graph and compute the adjustment set.
         if self.variant == "minimal":
-            if not isinstance(causal_graph, DAG):
-                raise NotImplementedError(
-                    "Backdoor identification is only implemented for DAGs."
-                )
             if len(causal_graph.get_role("exposure")) != 1:
                 raise NotImplementedError(
                     "Backdoor identification is only implemented for single exposure variable."
@@ -161,11 +161,6 @@ class AdjustmentIdentification(BaseIdentification):
         # Step 2: If variant = "minimal_variance", use the algorithm from [2].
         #         O(X, Y, G) = pa(cn(X, Y, G), G) \ forb(X, Y, G)
         elif self.variant == "minimal_variance":
-            if not isinstance(causal_graph, (DAG, PDAG)):
-                raise ValueError(
-                    "minimal_variance variant is only supported for DAGs and CPDAGs. Please use variant='minimal'"
-                )
-
             raise NotImplementedError(
                 "Backdoor identification with minimal variance is not implemented yet."
             )
@@ -205,18 +200,20 @@ class AdjustmentIdentification(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        conditional_vars = causal_graph.get_role("exposure") + causal_graph.get_role(
-            "adjustment"
-        )
+        exposure = causal_graph.get_role("exposure")
+        outcome = causal_graph.get_role("outcome")
+        adjustment_vars = causal_graph.get_role("adjustment")
+
+        conditional_vars = exposure + adjustment_vars
 
         predecessors = set()
-        for exposure_var in causal_graph.get_role("exposure"):
+        for exposure_var in exposure:
             predecessors.update(causal_graph.predecessors(exposure_var))
 
         parents_d_sep = []
         for pred_var in predecessors:
             outcome_d_seps = []
-            for outcome_var in causal_graph.get_role("outcome"):
+            for outcome_var in outcome:
                 outcome_d_seps.append(
                     causal_graph.is_dconnected(
                         pred_var, outcome_var, observed=conditional_vars

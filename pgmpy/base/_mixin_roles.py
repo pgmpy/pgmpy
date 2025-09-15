@@ -198,3 +198,27 @@ class _GraphRolesMixin:
                 role="latents", variables=self.get_role("latents"), inplace=True
             )
         self.with_role(role="latents", variables=variables, inplace=True)
+
+    @property
+    def observed(self):
+        """
+        Property
+        --------
+        observed: set of nodes (default: empty set)
+            A set of observed variables in the graph. These are the variables
+            that can be measured directed and have data available for them.
+
+        Examples
+        --------
+        Create a DAG with latents and check the observed value.
+
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("a", "b")], latents="a")
+        >>> G.observed
+        {'b'}
+        """
+        nodes = set(self.nodes())
+        if self.has_role("latents"):
+            return nodes - set(self.get_role("latents"))
+        else:
+            return nodes
