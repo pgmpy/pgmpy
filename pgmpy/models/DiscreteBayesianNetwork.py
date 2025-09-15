@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import importlib
 import itertools
 from collections import defaultdict
 from functools import reduce
@@ -1776,12 +1775,20 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm.save("alarm.bif", filetype="bif")
         >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
         """
+        from pgmpy.readwrite import (
+            BIFReader,
+            NETReader,
+            UAIReader,
+            XDSLReader,
+            XMLBIFReader,
+        )
+
         supported_formats_reader_map = {
-            "bif": ("pgmpy.readwrite", "BIFReader"),
-            "uai": ("pgmpy.readwrite", "UAIReader"),
-            "xmlbif": ("pgmpy.readwrite", "XMLBIFReader"),
-            "xdsl": ("pgmpy.readwrite", "XDSLReader"),
-            "net": ("pgmpy.readwrite", "NETReader"),
+            "bif": BIFReader,
+            "uai": UAIReader,
+            "xmlbif": XMLBIFReader,
+            "xdsl": XDSLReader,
+            "net": NETReader,
         }
 
         if filetype not in supported_formats_reader_map.keys():
@@ -1791,16 +1798,14 @@ class DiscreteBayesianNetwork(DAG):
         if parsed_filetype in supported_formats_reader_map.keys():
             filetype = parsed_filetype
 
-        module_name, class_name = supported_formats_reader_map[filetype]
-        module = importlib.import_module(module_name)
-        ReaderClass = getattr(module, class_name)
+        reader_class = supported_formats_reader_map[filetype]
 
         if filetype == "bif":
             n_jobs = kwargs.get("n_jobs", -1)
             state_name_type = kwargs.get("state_name_type", str)
-            reader = ReaderClass(path=filename, n_jobs=n_jobs)
+            reader = reader_class(path=filename, n_jobs=n_jobs)
             return reader.get_model(state_name_type=state_name_type)
 
         else:
-            reader = ReaderClass(path=filename)
+            reader = reader_class(path=filename)
             return reader.get_model()
