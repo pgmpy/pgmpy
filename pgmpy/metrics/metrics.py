@@ -208,7 +208,7 @@ def structure_score(model, data, scoring_method="bic-g", **kwargs):
     --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import structure_score
-    >>> model = get_example_model('alarm')
+    >>> model = get_example_model("alarm")
     >>> data = model.simulate(int(1e4))
     >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
@@ -299,7 +299,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> implied_cis(model=model, data=df, ci_test=chi_square, show_progress=False)
            u         v cond_vars   p-value
@@ -333,7 +333,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     return cis
 
 
-def fisher_c(model, data, ci_test, show_progress=True):
+def fisher_c(model, data, ci_test, compute_rmsea=False, show_progress=True):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.
@@ -355,21 +355,29 @@ def fisher_c(model, data, ci_test, show_progress=True):
         The function for statistical test. Can be either any of the tests in
         pgmpy.estimators.CITests or any custom function of the same form.
 
+    compute_rmsea: bool (default: False)
+        While calculating Fisher C statistic if RMSEA value required should be
+        included in method call as True. Returns a tuple of (p-value, rmsea) if
+        True otherwise only the p-value.
+
     show_progress: bool (default: True)
         Whether to show the progress of testing.
 
     Returns
     -------
-    float: The p-value for the fit of the model structure to the data. A low
+    float (default): The p-value for the fit of the model structure to the data. A low
         p-value (e.g. <0.05) represents that the model structure doesn't fit the
-        data well.
+        data well. This is returned if the compute_rmsea parameter is False.
+
+    tuple: A (float, float) tuple packing p-value and rmsea value is returned if RMSEA
+            computation is necessary, i.e., compute_rmsea is True in the method call
 
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
-    >>> model = get_example_model('cancer')
+    >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
     0.7504
@@ -403,6 +411,15 @@ def fisher_c(model, data, ci_test, show_progress=True):
 
     C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
+    rmsea = np.nan
+
+    if compute_rmsea:
+        if len(data) != 1 and len(cis) != 0:
+            rmsea = np.sqrt(
+                max((C - 2 * len(cis)) / (2 * len(cis) * (len(data) - 1)), 0)
+            )
+        return (p_value, rmsea)
+
     return p_value
 
 
