@@ -1,11 +1,11 @@
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.identification import AdjustmentIdentification, BaseIdentification
+from pgmpy.identification import Adjustment, BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class FrontdoorIdentification(BaseIdentification):
+class Frontdoor(BaseIdentification):
     """
     Given a causal graph, finds the set of variables satisfying frontdoor criterion.
 
@@ -66,7 +66,7 @@ class FrontdoorIdentification(BaseIdentification):
         causal_graph_copy.with_role("outcome", Y)
         causal_graph_copy.with_role("adjustment", Z)
 
-        return AdjustmentIdentification().validate(causal_graph_copy)
+        return Adjustment().validate(causal_graph_copy)
 
     def _validate(self, causal_graph):
         """ """

@@ -5,7 +5,7 @@ from pgmpy.identification import BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class AdjustmentIdentification(BaseIdentification):
+class Adjustment(BaseIdentification):
     """
     Given a causal graph, finds the adjustment set.
 
