@@ -54,9 +54,9 @@ class Adjustment(BaseIdentification):
     def __init__(self, variant="minimal"):
         self.variant = variant
         if self.variant in ("minimal", "all"):
-            self.supported_graph_types = {DAG, PDAG, ADMG, MAG}
+            self.supported_graph_types = (DAG, PDAG, ADMG, MAG)
         elif self.variant == "minimal_variance":
-            self.supported_graph_types = {DAG, PDAG}
+            self.supported_graph_types = (DAG, PDAG)
 
     def _get_proper_backdoor_graph(self, causal_graph, inplace=False):
         """
