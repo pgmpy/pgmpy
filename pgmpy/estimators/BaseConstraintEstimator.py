@@ -172,9 +172,8 @@ class BaseConstraintEstimator(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=None
-        )  # this is called twice, before on PC estimate
+        if ci_test is None:
+            ci_test = get_callable_ci_test(ci_test, data=self.data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
