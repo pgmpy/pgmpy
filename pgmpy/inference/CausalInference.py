@@ -130,9 +130,9 @@ class CausalInference(object):
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
-        logger.warn(
-            "Deprecation Warning: This method will be deprecated in future releases. ",
-            "Please use `pgmpy.identification.Adjustment` class instead.",
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
         )
 
         Z_ = _variable_or_iterable_to_set(Z)
@@ -174,9 +174,9 @@ class CausalInference(object):
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
-        logger.warn(
-            "Deprecation Warning: This method will be deprecated in future releases. ",
-            "Please use `pgmpy.identification.Adjustment` class instead.",
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
         )
 
         try:
@@ -228,9 +228,9 @@ class CausalInference(object):
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
-        logger.warn(
-            "Deprecation Warning: This method will be deprecated in future releases. ",
-            "Please use `pgmpy.identification.Frontdoor` class instead.",
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
         )
         Z = _variable_or_iterable_to_set(Z)
 
@@ -286,9 +286,9 @@ class CausalInference(object):
         -------
         frozenset: a frozenset of frozensets
         """
-        logger.warn(
-            "Deprecation Warning: This method will be deprecated in future releases. ",
-            "Please use `pgmpy.identification.Frontdoor` class instead.",
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
         )
         assert X in self.observed_variables
         assert Y in self.observed_variables
