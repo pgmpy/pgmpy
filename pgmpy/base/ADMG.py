@@ -1,5 +1,4 @@
 import collections
-from typing import Hashable, Iterable, Sequence
 
 import networkx as nx
 from networkx import MultiDiGraph
@@ -42,12 +41,13 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
     ):
         super().__init__()
         # Using edge attributes to distinguish bidirected edges
-        self.latents = set(latents) if latents else set()
 
         if directed_ebunch:
             self.add_directed_edges(directed_ebunch)
         if bidirected_ebunch:
             self.add_bidirected_edges(bidirected_ebunch)
+
+        self.latents = set(latents) if latents else set()
 
         if roles is None:
             roles = {}
@@ -57,53 +57,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         # set the roles to the vertices as networkx attributes
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
-
-    def add_node(
-        self,
-        node: Hashable,
-        latent: bool = False,
-        **kwargs,
-    ):
-        """
-        Adds a node to the ADMG from the MultiDiGraph class.
-
-        Parameters
-        ----------
-        node : str, int, or any hashable python object.
-            The node to add to the graph.
-
-        latent: boolean (default: False)
-            Specifies whether the variable is latent or not.
-        """
-        if latent:
-            self.latents.add(node)
-
-        super().add_node(node, **kwargs)
-
-    def add_nodes_from(
-        self,
-        nodes: Iterable[Hashable],
-        latent: Sequence[bool] | bool = False,
-    ):
-        """
-        Adds multiple nodes to the graph.
-
-        Parameters
-        ----------
-        nodes : iterable
-            An iterable of nodes to add.
-
-        latent: bool, list, tuple (default=False)
-            A container of boolean. The value at index i tells whether the
-            node at index i is latent or not.
-        """
-        nodes = list(nodes)
-
-        if isinstance(latent, bool):
-            latent = [latent] * len(nodes)
-
-        for index in range(len(nodes)):
-            self.add_node(node=nodes[index], latent=latent[index])
 
     def add_directed_edges(self, ebunch):
         """
