@@ -204,7 +204,7 @@ class Adjustment(BaseIdentification):
         outcome = causal_graph.get_role("outcome")[0]
         adjustment_vars = causal_graph.get_role("adjustment")
 
-        conditional_vars = exposure + adjustment_vars
+        conditional_vars = [exposure] + adjustment_vars
 
         predecessors = set()
         for exposure_var in exposure:
