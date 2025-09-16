@@ -328,6 +328,48 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    def test_minimal_dseparator_order_independence(self):
+        """Test that minimal_dseparator returns consistent results regardless of iteration order.
+        
+        This test addresses issue #2354 where the algorithm had order dependency bugs.
+        """
+        # Case from issue #2354 - should return {'C'} not {'A', 'B'}  
+        dag = DAG([('A', 'X'), ('A', 'B'), ('B', 'X'), ('C', 'B'), ('C', 'Y')])
+        
+        # The key test: this should consistently return the truly minimal separator
+        result = dag.minimal_dseparator('X', 'Y')
+        
+        # Verify that the result is a valid d-separator
+        self.assertFalse(dag.is_dconnected('X', 'Y', observed=result), 
+                        f"Result {result} should d-separate X and Y")
+        
+        # Check that {'C'} alone is sufficient (the truly minimal separator)
+        self.assertFalse(dag.is_dconnected('X', 'Y', observed={'C'}), 
+                        "{'C'} should d-separate X and Y")
+        
+        # Check that empty set is not sufficient
+        self.assertTrue(dag.is_dconnected('X', 'Y', observed=set()), 
+                       "Empty set should not d-separate X and Y")
+        
+        # The algorithm should find the minimal separator
+        # Note: We test the minimality property rather than exact result due to potential 
+        # implementation variations, but {'C'} is the unique minimal separator here
+        if result == {'C'}:
+            # This is the correct minimal separator
+            pass
+        elif result == {'A', 'B'}:
+            # This was the buggy result - check that it's at least locally minimal
+            self.assertTrue(dag.is_dconnected('X', 'Y', observed={'A'}))
+            self.assertTrue(dag.is_dconnected('X', 'Y', observed={'B'}))
+            # But note that {'C'} would be smaller and also sufficient
+            self.fail("Algorithm returned {'A', 'B'} instead of minimal {'C'}")
+        else:
+            self.fail(f"Unexpected result: {result}")
+            
+        # The correct result should be {'C'}
+        self.assertEqual(result, {'C'}, 
+                        "minimal_dseparator should return the minimal separator {'C'}")
+
     @unittest.skipUnless(
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",

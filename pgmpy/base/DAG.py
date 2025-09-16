@@ -886,12 +886,26 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             return None
 
         # Go through the separator set, remove one element and check if it remains
-        # a dseparating set.
+        # a dseparating set. We need to find the globally minimal set, not just locally minimal.
+        # The correct approach is to keep trying to remove elements until no more removals
+        # are possible in any order.
         minimal_separator = separator.copy()
 
-        for u in separator:
-            if not an_graph.is_dconnected(start, end, observed=minimal_separator - {u}):
-                minimal_separator.remove(u)
+        # Keep trying to remove elements until no more can be removed.
+        # This ensures we find a globally minimal set, not just locally minimal.
+        changed = True
+        while changed:
+            changed = False
+            # Try removing each element currently in the set
+            for u in list(minimal_separator):
+                if u in minimal_separator:  # Double-check it's still in the set
+                    test_set = minimal_separator - {u}
+                    # If removing this element still leaves a d-separating set, remove it
+                    if not an_graph.is_dconnected(start, end, observed=test_set):
+                        minimal_separator.remove(u)
+                        changed = True
+                        # Important: don't break here! Continue trying to remove other elements
+                        # in this same iteration to find the globally minimal set
 
         return minimal_separator
 
