@@ -131,29 +131,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self.causal_graph = causal_graph
         self.estimator = estimator
 
-        # Cache roles during init to avoid DAG mutation during fit.
-        # This is needed because pgmpy's DAG methods can mutate internal state,
-        # and sklearn compatibility requires parameter validation to be deferred until fit().
-        try:
-            self._cached_roles = self._extract_roles_safely(causal_graph)
-        except (TypeError, AttributeError, ValueError):
-            # Allow invalid parameters during init for sklearn compatibility tests
-            self._cached_roles = None
-
-    def set_params(self, **params):
-        """Set parameters and re-cache roles if causal_graph changes."""
-        result = super().set_params(**params)
-
-        # Re-cache roles if causal_graph parameter was updated
-        if "causal_graph" in params:
-            try:
-                self._cached_roles = self._extract_roles_safely(self.causal_graph)
-            except (TypeError, AttributeError, ValueError):
-                # Invalid graph will be caught during fit() validation
-                self._cached_roles = None
-
-        return result
-
     def _extract_roles_safely(self, dag):
         """Extract roles from DAG during initialization."""
         if not hasattr(dag, "get_role"):
@@ -186,17 +163,14 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
     def _validate_dag_and_extract_roles(self):
         """Validate causal graph has required roles and extract variable assignments."""
-        # Step 1: Extract roles from DAG (use cached if available)
-        if self._cached_roles is None:
-            self._cached_roles = self._extract_roles_safely(self.causal_graph)
+        # Extract roles from DAG
+        roles = self._extract_roles_safely(self.causal_graph)
+        exposure_vars = roles["exposure"]
+        outcome_vars = roles["outcome"]
+        adjustment_vars = roles["adjustment"]
+        pretreatment_vars = roles["pretreatment"]
 
-        cached_roles = self._cached_roles
-        exposure_vars = cached_roles["exposure"]
-        outcome_vars = cached_roles["outcome"]
-        adjustment_vars = cached_roles["adjustment"]
-        pretreatment_vars = cached_roles["pretreatment"]
-
-        # Step 2: Validate exactly one exposure and one outcome variable
+        # Validate exactly one exposure and one outcome variable
         if len(exposure_vars) != 1:
             raise ValueError(
                 f"Exactly one exposure variable must be defined. Found {len(exposure_vars)}: {exposure_vars}"
@@ -208,21 +182,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
             )
 
         return exposure_vars[0], outcome_vars[0], adjustment_vars, pretreatment_vars
-
-    def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
-        """Convert input to DataFrame, generating generic names if needed."""
-        if isinstance(X, pd.DataFrame):
-            return X.copy()
-
-        X_arr = np.asarray(X)
-        if X_arr.ndim == 1:
-            X_arr = X_arr.reshape(-1, 1)
-
-        if feature_names is None:
-            # Generate generic names for array inputs, e.g., from sklearn tests
-            feature_names = [f"feature_{i}" for i in range(X_arr.shape[1])]
-
-        return pd.DataFrame(X_arr, columns=feature_names)
 
     def _prepare_feature_df(self, X, feature_names=None) -> pd.DataFrame:
         """
@@ -244,7 +203,15 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
             required_features = [exposure_var] + adjustment_vars + pretreatment_vars
 
         # Step 2: Convert input to DataFrame format
-        X_df = self._ensure_dataframe(X, feature_names)
+        if isinstance(X, pd.DataFrame):
+            X_df = X.copy()
+        else:
+            X_arr = np.asarray(X)
+
+            if feature_names is None:
+                # Generate generic names for array inputs, e.g., from sklearn tests
+                feature_names = [f"feature_{i}" for i in range(X_arr.shape[1])]
+            X_df = pd.DataFrame(X_arr, columns=feature_names)
 
         # Step 3: Handle sklearn compatibility for generic feature names
         has_generic_names = all(str(col).startswith("feature_") for col in X_df.columns)
@@ -301,42 +268,43 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self : object
             Returns self for method chaining.
         """
-        # Step 1: Validate input data using sklearn utilities
+        # Step 1: Validate input data and causal graph
         X_arr, y_arr = validate_data(
             self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
         )
 
-        # Step 2: Extract and validate causal graph roles
+        # Extract and validate causal graph roles
         exposure_var, outcome_var, adjustment_vars, pretreatment_vars = (
             self._validate_dag_and_extract_roles()
         )
 
-        # Step 3: Store role variables as instance attributes
+        # Step 2: Store role variables as instance attributes
         self.exposure_var_ = exposure_var
         self.outcome_var_ = outcome_var
         self.adjustment_vars_ = adjustment_vars
         self.pretreatment_vars_ = pretreatment_vars
         self.feature_columns_ = [exposure_var] + adjustment_vars + pretreatment_vars
 
-        # Step 4: Prepare feature DataFrame from input data
+        # Step 3: Prepare feature DataFrame from input data
         X_features = self._prepare_feature_df(X, feature_names)
 
-        # Step 5: Set sklearn-required attributes
-        self.n_features_in_ = X_arr.shape[1]
+        # Step 4: Set sklearn-required attributes
+        self.n_features_in_ = len(X_features.columns)
+
         self.feature_names_in_ = np.array(X_features.columns, dtype=object)
 
-        # Step 6: Initialize and configure base estimator
+        # Step 5: Initialize and configure base estimator
         self.estimator_ = (
             LinearRegression() if self.estimator is None else clone(self.estimator)
         )
 
-        # Step 7: Prepare fitting parameters and fit the estimator
+        # Step 6: Prepare fitting parameters and fit the estimator
         fit_params = {}
         if sample_weight is not None:
             fit_params["sample_weight"] = sample_weight
         self.estimator_.fit(X_features, y_arr, **fit_params)
 
-        # Step 8: Create readable explanation
+        # Step 7: Create readable explanation
         adj_str = ", ".join(adjustment_vars) if adjustment_vars else "none"
         pre_str = ", ".join(pretreatment_vars) if pretreatment_vars else "none"
         self.explanation_ = (
@@ -352,21 +320,21 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # Step 2: Validate input data using sklearn utilities
-        X = validate_data(
+        # Step 2: Prepare feature DataFrame with causal graph roles
+        X_features = self._prepare_feature_df(X, feature_names)
+
+        # Step 3: Validate the filtered input data using sklearn utilities
+        X_validated = validate_data(
             self,
-            X,
+            X_features,
             accept_sparse=False,
             ensure_2d=True,
             dtype="numeric",
             reset=False,
         )
 
-        # Step 3: Prepare feature DataFrame with causal graph roles
-        X_features = self._prepare_feature_df(X, feature_names)
-
         # Step 4: Make predictions and return as 1D array
-        predictions = self.estimator_.predict(X_features)
+        predictions = self.estimator_.predict(X_validated)
         return np.asarray(predictions).ravel()
 
     def get_feature_names_out(self, input_features=None):
