@@ -37,10 +37,10 @@ class Adjustment(BaseIdentification):
     ...     ],
     ...     roles={"exposure": "x1", "outcome": "y1"},
     ... )
-    >>> dag_with_adj = BackdoorIdentification(variant="minimal").identify(dag)
+    >>> dag_with_adj = Adjustment(variant="minimal").identify(dag)
     >>> dag_with_adj.roles
     {'exposure': 'x1', 'outcome': 'y1', 'adjustment': ['z1', 'z2']}
-    >>> BackdoorIdentification.validate(dag)
+    >>> Adjustment.validate(dag)
 
     References
     ----------
@@ -79,7 +79,7 @@ class Adjustment(BaseIdentification):
         Examples
         --------
         >>> from pgmpy.models import DAG
-        >>> from pgmpy.inference import BackdoorIdnentification
+        >>> from pgmpy.inference import Adjustment
         >>> dag = DAG(
         ...     ebunch=[
         ...         ("x1", "y1"),
@@ -90,9 +90,7 @@ class Adjustment(BaseIdentification):
         ...     ],
         ...     roles={"exposure": "x1", "outcome": "y1"},
         ... )
-        >>> dag_proper = BackdoorIdentification()._get_proper_backdoor_graph(
-        ...     dag, inplace=False
-        ... )
+        >>> dag_proper = Adjustment()._get_proper_backdoor_graph(dag, inplace=False)
         >>> list(dag_proper.edges())
         [('x1', 'z1'), ('z1', 'z2'), ('z2', 'x2'), ('y2', 'z2')]
 
@@ -169,12 +167,13 @@ class Adjustment(BaseIdentification):
         # Step 3: If variant = "all", iterate over all possible sets of adjustment
         #         variables, and return all that are valid.
         elif self.variant == "all":
-            ancestors = causal_graph._get_ancestors_of(
-                causal_graph.get_role("exposure") + causal_graph.get_role("outcome")
-            )
+            exposure = causal_graph.get_role("exposure")
+            outcome = causal_graph.get_role("outcome")
+
+            ancestors = causal_graph._get_ancestors_of(exposure + outcome)
 
             valid_adj_graphs = []
-            for s in _powerset(ancestors - {"X", "Y"}):
+            for s in _powerset(ancestors - {exposure, outcome}):
                 adj_causal_graph = causal_graph.with_role(
                     "adjustment", s, inplace=False
                 )

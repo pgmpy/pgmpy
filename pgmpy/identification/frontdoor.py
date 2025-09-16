@@ -41,7 +41,7 @@ class Frontdoor(BaseIdentification):
 
     def __init__(self, variant=None):
         self.supported_graph_types = (DAG,)
-        self.variant = None
+        self.variant = variant
 
     def _identify(self, causal_graph):
         exposure = causal_graph.get_role("exposure")
