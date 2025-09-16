@@ -10,7 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.globals import logger
+from pgmpy.global_vars import logger
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
