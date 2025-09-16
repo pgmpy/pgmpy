@@ -200,8 +200,8 @@ class Adjustment(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        exposure = causal_graph.get_role("exposure")
-        outcome = causal_graph.get_role("outcome")
+        exposure = causal_graph.get_role("exposure")[0]
+        outcome = causal_graph.get_role("outcome")[0]
         adjustment_vars = causal_graph.get_role("adjustment")
 
         conditional_vars = exposure + adjustment_vars
