@@ -143,13 +143,14 @@ class Adjustment(BaseIdentification):
                     "Backdoor identification is only implemented for single outcome variable."
                 )
 
+            exposure = causal_graph.get_role("exposure")[0]
+            outcome = causal_graph.get_role("outcome")[0]
+
             backdoor_graph = self._get_proper_backdoor_graph(
                 causal_graph, inplace=False
             )
-            adjustment_set = backdoor_graph.minimal_dseparator(
-                causal_graph.get_role("exposure")[0],
-                causal_graph.get_role("outcome")[0],
-            )
+            adjustment_set = backdoor_graph.minimal_dseparator(exposure, outcome)
+
             if adjustment_set is None:
                 return causal_graph, False
             else:
