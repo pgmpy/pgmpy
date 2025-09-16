@@ -1,5 +1,5 @@
-from .NaiveBackdoorRegressor import NaiveBackdoorRegressor
+from .NaiveAdjustmentRegressor import NaiveAdjustmentRegressor
 
 __all__ = [
-    "NaiveBackdoorRegressor",
+    "NaiveAdjustmentRegressor",
 ]

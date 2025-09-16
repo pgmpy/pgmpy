@@ -1,5 +1,5 @@
 """
-Naive Backdoor Regressor in sklearn Compatible Design.
+Naive Adjustment Regressor in sklearn Compatible Design.
 """
 
 from typing import Optional
@@ -8,29 +8,28 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
-
-try:
-    from sklearn.utils.validation import validate_data
-except ImportError:
-    validate_data = None
+from sklearn.utils.validation import (  # check_array,; check_X_y,
+    check_is_fitted,
+    validate_data,
+)
 
 
-class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
+class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
     """
-    Naive backdoor regressor using causal graph roles for feature selection.
+    Naive adjustment regressor using causal graph roles for feature selection.
 
     This estimator concatenates exposure, adjustment, and pretreatment variables
     as features to predict the outcome variable using standard ML algorithms.
-    It's "naive" because it assumes the adjustment set is correctly identified
-    in the causal graph and simply combines these variables for prediction.
+    It's "naive" because it uses a simple prediction model with the adjustment
+    set and doesn't employ sophisticated causal inference methods like double ML,
+    inverse propensity weighting, or other advanced causal estimation techniques.
 
     Parameters
     ----------
-    causal_graph : DAG, PDAG, or ADMG
+    causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles. Must have exactly one exposure
         and one outcome variable. The adjustment role must be defined (can be empty).
-    base_estimator : sklearn estimator, optional (default=LinearRegression())
+    estimator : sklearn estimator, optional (default=LinearRegression())
         Base estimator for prediction.
 
     Attributes
@@ -53,15 +52,84 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         List of feature column names used (exposure + adjustment + pretreatment).
     `explanation_` : str
         Formatted description of the fitted model.
+
+    Examples
+    --------
+    Basic usage with a simple causal DAG:
+
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from pgmpy.base import DAG
+    >>> from pgmpy.prediction import NaiveAdjustmentRegressor
+    >>> from sklearn.linear_model import LinearRegression
+    >>>
+    >>> # Create a simple causal DAG: Z -> X, Z -> Y, X -> Y
+    >>> # where Z is a confounder, X is exposure, Y is outcome
+    >>> dag = DAG(
+    ...     ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
+    ...     roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+    ... )
+    >>>
+    >>> # Generate some synthetic data
+    >>> np.random.seed(42)
+    >>> n = 100
+    >>> Z = np.random.normal(0, 1, n)
+    >>> X = 0.5 * Z + np.random.normal(0, 0.5, n)
+    >>> Y = 2.0 * X + 1.5 * Z + np.random.normal(0, 0.3, n)
+    >>>
+    >>> data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+    >>>
+    >>> # Fit the regressor
+    >>> regressor = NaiveAdjustmentRegressor(causal_graph=dag)
+    >>> regressor.fit(data[["X", "Z"]], data["Y"])
+    NaiveAdjustmentRegressor(...)
+    >>>
+    >>> # Make predictions
+    >>> predictions = regressor.predict(data[["X", "Z"]])
+    >>> print(f"Predictions shape: {predictions.shape}")
+    Predictions shape: (100,)
+
+    Using a custom estimator:
+
+    >>> from sklearn.ensemble import RandomForestRegressor
+    >>>
+    >>> # Use Random Forest as the base estimator
+    >>> rf_regressor = NaiveAdjustmentRegressor(
+    ...     causal_graph=dag,
+    ...     estimator=RandomForestRegressor(n_estimators=10, random_state=42),
+    ... )
+    >>> rf_regressor.fit(data[["X", "Z"]], data["Y"])
+    NaiveAdjustmentRegressor(...)
+
+    Example with pretreatment variables:
+
+    >>> # Create DAG with pretreatment variable P
+    >>> dag_with_pretreatment = DAG(
+    ...     ebunch=[("P", "X"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
+    ...     roles={
+    ...         "exposure": "X",
+    ...         "outcome": "Y",
+    ...         "adjustment": ["Z"],
+    ...         "pretreatment": ["P"],
+    ...     },
+    ... )
+    >>>
+    >>> # Add pretreatment variable to data
+    >>> data_with_P = data.copy()
+    >>> data_with_P["P"] = np.random.normal(0, 1, n)
+    >>>
+    >>> regressor_with_P = NaiveAdjustmentRegressor(causal_graph=dag_with_pretreatment)
+    >>> regressor_with_P.fit(data_with_P[["X", "Z", "P"]], data_with_P["Y"])
+    NaiveAdjustmentRegressor(...)
     """
 
     def __init__(
         self,
         causal_graph,
-        base_estimator: Optional[BaseEstimator] = None,
+        estimator: Optional[BaseEstimator] = None,
     ):
         self.causal_graph = causal_graph
-        self.base_estimator = base_estimator
+        self.estimator = estimator
 
         # Cache roles during init to avoid DAG mutation during fit.
         # This is needed because pgmpy's DAG methods can mutate internal state,
@@ -234,15 +302,9 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
             Returns self for method chaining.
         """
         # Step 1: Validate input data using sklearn utilities
-        if validate_data is not None:
-            X_arr, y_arr = validate_data(
-                self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
-            )
-        else:
-            # Fallback for older sklearn versions
-            X_arr, y_arr = check_X_y(
-                X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
-            )
+        X_arr, y_arr = validate_data(
+            self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
+        )
 
         # Step 2: Extract and validate causal graph roles
         exposure_var, outcome_var, adjustment_vars, pretreatment_vars = (
@@ -265,9 +327,7 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
 
         # Step 6: Initialize and configure base estimator
         self.estimator_ = (
-            LinearRegression()
-            if self.base_estimator is None
-            else clone(self.base_estimator)
+            LinearRegression() if self.estimator is None else clone(self.estimator)
         )
 
         # Step 7: Prepare fitting parameters and fit the estimator
@@ -280,7 +340,7 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         adj_str = ", ".join(adjustment_vars) if adjustment_vars else "none"
         pre_str = ", ".join(pretreatment_vars) if pretreatment_vars else "none"
         self.explanation_ = (
-            f"NaiveBackdoorRegressor(exposure={exposure_var}, outcome={outcome_var}, "
+            f"NaiveAdjustmentRegressor(exposure={exposure_var}, outcome={outcome_var}, "
             f"adjustment=[{adj_str}], pretreatment=[{pre_str}], "
             f"estimator={type(self.estimator_).__name__})"
         )
@@ -293,18 +353,14 @@ class NaiveBackdoorRegressor(RegressorMixin, BaseEstimator):
         check_is_fitted(self, "estimator_")
 
         # Step 2: Validate input data using sklearn utilities
-        if validate_data is not None:
-            X = validate_data(
-                self,
-                X,
-                accept_sparse=False,
-                ensure_2d=True,
-                dtype="numeric",
-                reset=False,
-            )
-        else:
-            # Fallback for older sklearn versions
-            X = check_array(X, accept_sparse=False, ensure_2d=True, dtype="numeric")
+        X = validate_data(
+            self,
+            X,
+            accept_sparse=False,
+            ensure_2d=True,
+            dtype="numeric",
+            reset=False,
+        )
 
         # Step 3: Prepare feature DataFrame with causal graph roles
         X_features = self._prepare_feature_df(X, feature_names)
