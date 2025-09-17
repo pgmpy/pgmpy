@@ -105,3 +105,6 @@ include-package-data = true
 addopts = "-p no:doctest"
 norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
+
+[tool.isort]
+skip = ["pgmpy/estimators/__init__.py"]
