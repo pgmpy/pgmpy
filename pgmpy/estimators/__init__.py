@@ -4,6 +4,7 @@ from pgmpy.estimators.base import (
     ParameterEstimator,
     StructureEstimator,
 )
+from pgmpy.estimators.StructureScore import AIC
 from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
@@ -19,7 +20,6 @@ from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 from pgmpy.estimators.PC import PC
 from pgmpy.estimators.SEMEstimator import IVEstimator, SEMEstimator
 from pgmpy.estimators.StructureScore import (
-    AIC,
     BIC,
     K2,
     AICCondGauss,
