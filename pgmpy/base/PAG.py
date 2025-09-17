@@ -244,26 +244,6 @@ class PAG(MAG):
 
         return None
 
-    def rule_0(self, pag, sep_set):
-        changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u):
-                for w in pag.get_neighbors(v):
-                    if u != w and not pag.has_edge(u, w):
-                        if v in sep_set.get((u, w), set()) or v in sep_set.get(
-                            (w, u), set()
-                        ):
-                            pass
-                        else:
-                            if (
-                                pag.edges[u, v]["marks"][v] == "o"
-                                and pag.edges[v, w]["marks"][v] == "o"
-                            ):
-                                pag.edges[u, v]["marks"][v] = ">"
-                                pag.edges[v, w]["marks"][v] = ">"
-                                changed = True
-        return changed
-
     def rule_1(self, pag):
         """
         R1: If u *→ v ◦−◦ w and u and w are not adjacent, orient v ◦−◦ w as v → w.
@@ -716,7 +696,7 @@ class PAG(MAG):
 
     def apply_orientation_rules(self, rules=None, inplace=False, sepsets=None):
         """
-        Apply a set of orientation rules (R0–R10) to the PAG.
+        Apply a set of orientation rules (R1–R10) to the PAG.
 
         Parameters
         ----------
@@ -737,7 +717,6 @@ class PAG(MAG):
         pag = self if inplace else self.copy()
 
         rules_map = {
-            "R0": pag.rule_0,
             "R1": pag.rule_1,
             "R2": pag.rule_2,
             "R3": pag.rule_3,
