@@ -103,9 +103,9 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
     Example with pretreatment variables:
 
-    >>> # Create DAG with pretreatment variable P
+    >>> # Create DAG with pretreatment variable P -> Y
     >>> dag_with_pretreatment = DAG(
-    ...     ebunch=[("P", "X"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
+    ...     ebunch=[("P", "Y"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
     ...     roles={
     ...         "exposure": "X",
     ...         "outcome": "Y",
@@ -114,9 +114,11 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
     ...     },
     ... )
     >>>
-    >>> # Add pretreatment variable to data
-    >>> data_with_P = data.copy()
-    >>> data_with_P["P"] = np.random.normal(0, 1, n)
+    >>> # Generate data with proper relationships using simulate
+    >>> lgbn_with_P = DAG.from_dagitty(
+    ...     "dag { P -> Y [beta=0.8] Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
+    ... )
+    >>> data_with_P = lgbn_with_P.simulate(100, seed=42)
     >>>
     >>> regressor_with_P = NaiveAdjustmentRegressor(causal_graph=dag_with_pretreatment)
     >>> regressor_with_P.fit(data_with_P[["X", "Z", "P"]], data_with_P["Y"])
@@ -131,27 +133,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self.causal_graph = causal_graph
         self.estimator = estimator
 
-    def _extract_roles_safely(self, dag):
-        """Extract roles from DAG during initialization."""
-        if not hasattr(dag, "get_role"):
-            raise TypeError(
-                f"causal_graph must have 'get_role' method, got {type(dag)}"
-            )
-
-        exposure_vars = list(dag.get_role("exposure"))
-        outcome_vars = list(dag.get_role("outcome"))
-        adjustment_vars = list(dag.get_role("adjustment"))
-        pretreatment_vars = list(
-            dag.get_role("pretreatment") if dag.has_role("pretreatment") else []
-        )
-
-        return {
-            "exposure": exposure_vars,
-            "outcome": outcome_vars,
-            "adjustment": adjustment_vars,
-            "pretreatment": pretreatment_vars,
-        }
-
     def __sklearn_tags__(self):
         """Tags for sklearn compatibility."""
         tags = super().__sklearn_tags__()
@@ -162,11 +143,14 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
     def _validate_dag_and_extract_roles(self):
         """Validate causal graph has required roles and extract variable assignments."""
-        roles = self._extract_roles_safely(self.causal_graph)
-        exposure_vars = roles["exposure"]
-        outcome_vars = roles["outcome"]
-        adjustment_vars = roles["adjustment"]
-        pretreatment_vars = roles["pretreatment"]
+        exposure_vars = list(self.causal_graph.get_role("exposure"))
+        outcome_vars = list(self.causal_graph.get_role("outcome"))
+        adjustment_vars = list(self.causal_graph.get_role("adjustment"))
+        pretreatment_vars = list(
+            self.causal_graph.get_role("pretreatment")
+            if self.causal_graph.has_role("pretreatment")
+            else []
+        )
 
         # Validate exactly one exposure and one outcome variable
         if len(exposure_vars) != 1:
@@ -206,7 +190,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
             X_arr = np.asarray(X)
 
             if X_arr.ndim == 1:
-                X_arr = X_arr.reshape(-1, 1)
                 raise ValueError(
                     "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
                 )
