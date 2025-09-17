@@ -234,8 +234,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         feature_names=None,
     ):
         """
-        Fit the Naive Backdoor Regressor.
-
         Parameters
         ----------
         X : array-like or DataFrame of shape (n_samples, n_features)
