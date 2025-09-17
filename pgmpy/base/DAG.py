@@ -115,6 +115,39 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     ['X']
     >>> G.get_role("adjustment")
     ['U', 'M']
+
+    **Latents:**
+        Latent variables can be managed using the `latents` parameter at
+        initialization or by assigning the "latents" role to nodes. The
+        `latents` parameter is a convenient shortcut for `roles={'latents': ...}`.
+
+    Create a graph with initial latent variables 'U' and 'V':
+
+    >>> from pgmpy.base import DAG
+    >>> G = DAG(
+    ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y"), ("V", "M")],
+    ...     latents={"U", "V"},
+    ... )
+    >>> sorted(G.latents)
+    ['U', 'V']
+
+    Add a new latent variable 'Z' using the role system:
+
+    >>> G.add_node("Z")
+    >>> G.with_role(role="latents", variables="Z", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'V', 'Z']
+
+    You can also check for latents using the `get_role` method:
+
+    >>> sorted(G.get_role(role="latents"))
+    ['U', 'V', 'Z']
+
+    Remove a latent variable from the role:
+
+    >>> G.without_role(role="latents", variables="V", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'Z']
     """
 
     def __init__(
@@ -284,7 +317,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         node: Hashable,
         weight: Optional[float] = None,
-        latent: bool = False,
         **kwargs,
     ):
         """
@@ -297,10 +329,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         weight: int, float
             The weight of the node.
-
-        latent: boolean (default: False)
-            Specifies whether the variable is latent or not.
-
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -308,29 +336,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> G.add_node(node="A")
         >>> sorted(G.nodes())
         ['A']
-
-        Adding a node with some weight.
-
-        >>> G.add_node(node="B", weight=0.3)
-
-        The weight of these nodes can be accessed as:
-
-        >>> G.nodes["B"]
-        {'weight': 0.3}
-        >>> G.nodes["A"]
-        {'weight': None}
         """
-
-        # Check for networkx 2.0 syntax
-        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
-            node, attrs = node
-            if attrs.get("weight", None) is not None:
-                attrs["weight"] = weight
-        else:
-            attrs = {"weight": weight}
-
-        if latent:
-            self.latents.add(node)
 
         super().add_node(node, weight=weight, **kwargs)
 
@@ -338,7 +344,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         nodes: Iterable[Hashable],
         weights: Optional[list[float] | tuple[float]] = None,
-        latent: Sequence[bool] | bool = False,
     ):
         """
         Add multiple nodes to the Graph.
@@ -355,9 +360,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             A container of weights (int, float). The weight value at index i
             is associated with the variable at index i.
 
-        latent: bool, list, tuple (default=False)
-            A container of boolean. The value at index i tells whether the
-            node at index i is latent or not.
 
         Examples
         --------
@@ -379,21 +381,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         nodes = list(nodes)
 
-        if isinstance(latent, bool):
-            latent = [latent] * len(nodes)
-
         if weights:
             if len(nodes) != len(weights):
                 raise ValueError(
                     "The number of elements in nodes and weights" "should be equal."
                 )
             for index in range(len(nodes)):
-                self.add_node(
-                    node=nodes[index], weight=weights[index], latent=latent[index]
-                )
+                self.add_node(node=nodes[index], weight=weights[index])
         else:
             for index in range(len(nodes)):
-                self.add_node(node=nodes[index], latent=latent[index])
+                self.add_node(node=nodes[index])
 
     def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float] = None):
         """
@@ -1892,7 +1889,6 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         """
-        self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
@@ -1901,6 +1897,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                 set([(Y, X) for (X, Y) in self.undirected_edges])
             )
         )
+        self.latents = set(latents)
 
         if roles is None:
             roles = {}

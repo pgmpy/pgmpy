@@ -47,7 +47,7 @@ class NETWriter(object):
     >>> writer = NETWriter(asia)
     >>> writer
     <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
-    >>> writer.write_net("asia.net")
+    >>> writer.write("asia.net")
 
     Reference
     ---------
@@ -142,8 +142,9 @@ class NETWriter(object):
         string: CPT format of .net files
         """
         cpt = self.tables[var_name]
-        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=4), 0, -1)
-        cpt_string = str(cpt_array)
+        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=8), 0, -1)
+        # avoid truncated output when serializing to str
+        cpt_string = np.array2string(cpt_array, threshold=np.inf, max_line_width=np.inf)
         net_cpt_string = (
             cpt_string.replace("[", "(")
             .replace("]", ")")
@@ -312,7 +313,7 @@ class NETWriter(object):
             variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
-    def write_net(self, filename):
+    def write(self, filename):
         """
         Writes the NET data into a file
 
@@ -326,11 +327,17 @@ class NETWriter(object):
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
-        >>> writer.write_net(filename="asia.net")
+        >>> writer.write(filename="asia.net")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_net(self, filename):
+        logger.warning(
+            "The `NETWriter.write_net` has been deprecated. Please use `NETWriter.write` instead."
+        )
+        self.write(filename)
 
 
 class NETReader:
