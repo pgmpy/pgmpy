@@ -1,12 +1,14 @@
-from itertools import chain, combinations
+from itertools import chain, combinations, permutations
 from typing import (
     Callable,
     Collection,
     Dict,
+    FrozenSet,
     Hashable,
     Optional,
     Set,
     Tuple,
+    Type,
     Union,
 )
 
@@ -356,3 +358,68 @@ class BaseConstraintEstimator(StructureEstimator):
             combinations(separating_set_u, lim_neighbors),
             combinations(separating_set_v, lim_neighbors),
         )
+
+    @staticmethod
+    def orient_colliders(
+        skeleton: UndirectedGraph,
+        separating_sets: Dict[FrozenSet, Set],
+        temporal_ordering: Dict[Hashable, int] = dict(),
+        graph_cls: Type = None,
+    ):
+        """
+        Orient v-structures (colliders) in the given skeleton based on separating sets.
+
+        Parameters
+        ----------
+        skeleton : nx.Graph
+            Undirected skeleton of the graph.
+
+        separating_sets : dict
+            For each pair of non-adjacent nodes, a separating set of variables.
+
+        temporal_ordering : dict, optional
+            A dict mapping node -> time index. If given, orientations that
+            violate temporal order are blocked.
+
+        graph_cls : class, optional
+            Graph class to use for the result (e.g., PDAG for PC, PAG for FCI).
+            Must support the same constructor interface:
+            `graph_cls(directed_ebunch=..., undirected_ebunch=...)`.
+
+        Returns
+        -------
+        graph_cls instance
+            A partially oriented graph (PDAG for PC, PAG for FCI).
+        """
+
+        # Work on a directed copy to check orientations
+        candidate = skeleton.to_directed()
+
+        # Collider orientation: For each X-Z-Y with X ⟂̸ Y | S, orient X→Z←Y
+        for X, Y in permutations(sorted(candidate.nodes()), 2):
+            if not skeleton.has_edge(X, Y):  # X and Y not adjacent
+                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+                    if Z not in separating_sets[frozenset((X, Y))]:
+                        if (not temporal_ordering) or (
+                            temporal_ordering[Z] >= temporal_ordering[X]
+                            and temporal_ordering[Z] >= temporal_ordering[Y]
+                        ):
+                            candidate.remove_edges_from([(Z, X), (Z, Y)])
+
+        # Collect oriented edges
+        edges = set(candidate.edges())
+        undirected_edges = set()
+        directed_edges = set()
+        for u, v in edges:
+            if (v, u) in edges:
+                undirected_edges.add(tuple(sorted((u, v))))
+            else:
+                directed_edges.add((u, v))
+
+        # Construct result graph
+        oriented_graph = graph_cls(
+            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
+        )
+        oriented_graph.add_nodes_from(candidate.nodes())
+
+        return oriented_graph

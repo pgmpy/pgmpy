@@ -1,9 +1,6 @@
-from itertools import permutations
 from typing import (
     Callable,
     Dict,
-    FrozenSet,
-    Hashable,
     Optional,
     Set,
     Tuple,
@@ -13,7 +10,7 @@ from typing import (
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import DAG, PDAG, UndirectedGraph
+from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
@@ -89,7 +86,7 @@ class PC(BaseConstraintEstimator):
         independencies: Optional[Independencies] = None,
         **kwargs,
     ) -> None:
-        super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
+        super().__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
@@ -290,84 +287,3 @@ class PC(BaseConstraintEstimator):
             raise ValueError(
                 f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
             )
-
-    @staticmethod
-    def orient_colliders(
-        skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
-    ) -> PDAG:
-        """
-        Orients the edges that form v-structures in a graph skeleton
-        based on information from `separating_sets` to form a DAG pattern (PDAG).
-
-        Parameters
-        ----------
-        skeleton: nx.Graph
-            An undirected graph skeleton as e.g. produced by the
-            estimate_skeleton method.
-
-        separating_sets: dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes them
-            conditionally independent.
-
-        Returns
-        -------
-        Model after edge orientation: pgmpy.base.PDAG
-            An estimate for the DAG pattern of the BN underlying the data. The
-            graph might contain some nodes with both-way edges (X->Y and Y->X).
-            Any completion by (removing one of the both-way edges for each such
-            pair) results in a I-equivalent Bayesian network DAG.
-
-        References
-        ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC(data)
-        >>> pdag = c.orient_colliders(*c.build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
-        """
-
-        pdag = skeleton.to_directed()
-
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
-        # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for X, Y in permutations(sorted(pdag.nodes()), 2):
-            if not skeleton.has_edge(X, Y):
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        if (temporal_ordering == dict()) or (
-                            (temporal_ordering[Z] >= temporal_ordering[X])
-                            and (temporal_ordering[Z] >= temporal_ordering[Y])
-                        ):
-                            pdag.remove_edges_from([(Z, X), (Z, Y)])
-
-        edges = set(pdag.edges())
-        undirected_edges = set()
-        directed_edges = set()
-        for u, v in edges:
-            if (v, u) in edges:
-                undirected_edges.add(tuple(sorted((u, v))))
-            else:
-                directed_edges.add((u, v))
-
-        pdag_oriented = PDAG(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
-        pdag_oriented.add_nodes_from(pdag.nodes())
-
-        return pdag_oriented

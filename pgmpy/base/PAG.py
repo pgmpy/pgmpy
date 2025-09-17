@@ -1,4 +1,5 @@
 from collections import deque
+from itertools import product
 from typing import Hashable, Iterable, Optional
 
 from pgmpy.base import MAG
@@ -208,50 +209,38 @@ class PAG(MAG):
 
         return False
 
-    def find_path(self, start, end):
+    def find_uncovered_pd_path(self, start, end, pag):
         """
-        Finds a single uncovered, potentially directed path from start to end
-        using a non-recursive Depth-First Search (DFS).
+        Find an uncovered potentially directed path from start to end.
 
-        A path is:
-        - Potentially directed (p.d.) if for any edge X--Y on the path, the mark
-          at X is not '>'.
-        - Uncovered if for any triple <X, Y, Z> on the path, X and Z are not
-          adjacent.
-
-        Parameters
-        ----------
-        start : Hashable
-            The starting node of the path.
-        end : Hashable
-            The target node of the path.
-
-        Returns
-        -------
-        list or None
-            A list of nodes representing the path, or None if no such path exists.
+        - Potentially directed: For every edge X—Y, the mark at X is not '>'.
+        - Uncovered: For every triple <X, Y, Z> on the path, X and Z are not adjacent.
         """
         stack = [(start, [start])]
-        visited = {start}
 
         while stack:
             current, path = stack.pop()
 
             if current == end:
                 return path
-            for neighbor in sorted(self.get_neighbors(current)):
-                if neighbor not in visited:
-                    if self.edges[current, neighbor]["marks"][current] != ">":
-                        is_uncovered = True
-                        if len(path) >= 2:
-                            prev_node = path[-1]
-                            if self.has_edge(prev_node, neighbor):
-                                is_uncovered = False
 
-                        if is_uncovered:
-                            new_path = path + [neighbor]
-                            stack.append((neighbor, new_path))
-                            visited.add(neighbor)
+            for neighbor in pag.get_neighbors(current):
+                if neighbor in path:
+                    continue  # avoid trivial cycles
+
+                # Check potentially directed condition
+                if pag.edges[current, neighbor]["marks"].get(current) == ">":
+                    continue
+
+                # Check uncovered condition for last triple
+                if len(path) >= 2:
+                    prev = path[-2]
+                    if pag.has_edge(prev, neighbor):
+                        continue
+
+                # Extend path
+                new_path = path + [neighbor]
+                stack.append((neighbor, new_path))
 
         return None
 
@@ -276,145 +265,475 @@ class PAG(MAG):
         return changed
 
     def rule_1(self, pag):
+        """
+        R1: If u *→ v ◦−◦ w and u and w are not adjacent, orient v ◦−◦ w as v → w.
+        We require arrowhead at v on (u,v) and o--o (v,w).
+        """
         changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u, u_type=None, v_type=">"):
-                for w in pag.get_neighbors(u, u_type="o"):
-                    if not pag.has_edge(v, w):
-                        if pag.edges[u, w]["marks"][u] == "o":
-                            pag.edges[u, w]["marks"][u] = ">"
-                            pag.edges[u, w]["marks"][w] = "-"
-                            changed = True
+
+        for v in pag.nodes:
+            u_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v) and pag.edges[u, v]["marks"].get(v) == ">"
+            ]
+
+            w_candidates = [
+                w
+                for w in pag.get_neighbors(v)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "o"
+                and pag.edges[v, w]["marks"].get(w) == "o"
+            ]
+
+            for u, w in product(u_candidates, w_candidates):
+                if pag.has_edge(u, w):  # skip if u and w are adjacent
+                    continue
+
+                if (
+                    pag.edges[v, w]["marks"].get(v) == "o"
+                    and pag.edges[v, w]["marks"].get(w) == "o"
+                ):
+
+                    pag.edges[v, w]["marks"][v] = "-"
+                    pag.edges[v, w]["marks"][w] = ">"
+                    changed = True
         return changed
 
     def rule_2(self, pag):
+        """
+        R2: If u → v → w or u *→ v → w, and u ◦−◦ w, then orient u → w.
+        - Requires: arrowhead at v from u, and directed v → w.
+        """
         changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u, u_type="-", v_type=">"):
-                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
-                    if pag.edges[u, w]["marks"][w] == "-":
-                        if pag.edges.get((v, w)) and pag.edges[v, w]["marks"][w] == "o":
-                            pag.edges[v, w]["marks"][w] = ">"
-                            pag.edges[v, w]["marks"][v] = "-"
-                            changed = True
-            for v in pag.get_neighbors(u, u_type=None, v_type=">"):
-                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
-                    if pag.edges[u, w]["marks"][w] == "-":
-                        if pag.edges.get((v, w)) and pag.edges[v, w]["marks"][w] == "o":
-                            pag.edges[v, w]["marks"][w] = ">"
-                            pag.edges[v, w]["marks"][v] = "-"
-                            changed = True
+
+        for v in pag.nodes:
+            # Step 1: u candidates: u *→ v (arrowhead at v)
+            u_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v) and pag.edges[u, v]["marks"].get(v) == ">"
+            ]
+
+            # Step 2: w candidates: v → w
+            w_candidates = [
+                w
+                for w in pag.get_neighbors(v)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "-"
+                and pag.edges[v, w]["marks"].get(w) == ">"
+            ]
+
+            # Step 3: For each (u, w), check if u ◦−◦ w
+            for u, w in product(u_candidates, w_candidates):
+                if not pag.has_edge(u, w):
+                    continue
+
+                if (
+                    pag.edges[u, w]["marks"].get(u) == "o"
+                    and pag.edges[u, w]["marks"].get(w) == "o"
+                ):
+
+                    # Orient u ◦−◦ w into u → w
+                    pag.edges[u, w]["marks"][u] = "-"
+                    pag.edges[u, w]["marks"][w] = ">"
+                    changed = True
+
         return changed
 
-    def rule_6(self, pag):
+    def rule_3(self, pag):
+        """
+        R3: Fork Rule.
+        If u *→ v ←* w, and u −◦ x ◦− w with u and w not adjacent,
+        and x −◦ v, then orient x → v.
+        """
         changed = False
-        for u in pag.nodes:
-            for _ in pag.get_neighbors(u, u_type="-", v_type="-"):
-                for w in pag.get_neighbors(u, u_type="o", v_type=None):
-                    if pag.edges[u, w]["marks"][u] == "o":
-                        pag.edges[u, w]["marks"][u] = "-"
+
+        for v in pag.nodes:
+            # Step 1: Find u, w such that u *→ v and w *→ v
+            in_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v) and pag.edges[u, v]["marks"].get(v) == ">"
+            ]
+
+            for u, w in product(in_candidates, in_candidates):
+                if u == w:
+                    continue
+
+                # Skip if u and w are adjacent
+                if pag.has_edge(u, w):
+                    continue
+
+                # Step 2: Find x such that u −◦ x ◦− w
+                for x in pag.nodes:
+                    if x in (u, v, w):
+                        continue
+
+                    if not (pag.has_edge(u, x) and pag.has_edge(w, x)):
+                        continue
+
+                    if not (
+                        pag.edges[u, x]["marks"].get(u) == "-"
+                        and pag.edges[u, x]["marks"].get(x) == "o"
+                        and pag.edges[w, x]["marks"].get(w) == "-"
+                        and pag.edges[w, x]["marks"].get(x) == "o"
+                    ):
+                        continue
+
+                    # Step 3: Check if x −◦ v
+                    if not pag.has_edge(x, v):
+                        continue
+
+                    if not (
+                        pag.edges[x, v]["marks"].get(x) == "-"
+                        and pag.edges[x, v]["marks"].get(v) == "o"
+                    ):
+                        continue
+
+                    # Step 4: Orient x −◦ v into x → v
+                    pag.edges[x, v]["marks"][v] = ">"
+                    changed = True
+
+        return changed
+
+    def rule_5(self, pag):
+        """
+        R5: Uncovered Circle Path.
+        If there is a path of ◦−◦ edges between u and v where:
+        - every triple is unshielded,
+        - u is not adjacent to the second-last node,
+        - v is not adjacent to the second node,
+        then orient all edges on that path as undirected.
+        """
+        changed = False
+
+        # Step 1: consider only circle–circle edges
+        circle_edges = [
+            (u, v)
+            for u, v in pag.edges
+            if pag.has_edge(u, v)
+            and pag.edges[u, v]["marks"].get(u) == "o"
+            and pag.edges[u, v]["marks"].get(v) == "o"
+        ]
+
+        for u, v in circle_edges:
+            stack = [(u, [u])]
+
+            while stack:
+                current, path = stack.pop()
+
+                for nbr in pag.get_neighbors(current):
+                    # Step 2: must be a circle–circle edge
+                    if not pag.has_edge(current, nbr):
+                        continue
+                    if not (
+                        pag.edges[current, nbr]["marks"].get(current) == "o"
+                        and pag.edges[current, nbr]["marks"].get(nbr) == "o"
+                    ):
+                        continue
+                    if nbr in path:
+                        continue
+
+                    new_path = path + [nbr]
+
+                    # Step 3: reached v via a path of length ≥ 3
+                    if nbr == v and len(new_path) >= 3:
+                        # Check uncovered triples: no shortcuts between nodes at distance 2
+                        if any(
+                            pag.has_edge(new_path[i], new_path[i + 2])
+                            for i in range(len(new_path) - 2)
+                        ):
+                            continue
+
+                        # Check endpoint adjacency conditions
+                        x, y = new_path[1], new_path[-2]
+                        if pag.has_edge(u, y) or pag.has_edge(v, x):
+                            continue
+
+                        # Step 4: orient entire path as undirected
+                        for a, b in zip(new_path, new_path[1:]):
+                            pag.edges[a, b]["marks"][a] = "-"
+                            pag.edges[a, b]["marks"][b] = "-"
+                        pag.edges[u, v]["marks"][u] = "-"
+                        pag.edges[u, v]["marks"][v] = "-"
                         changed = True
+
+                        stack.clear()
+                        break
+
+                    # Step 5: continue DFS if still valid
+                    if len(new_path) < 3 or not pag.has_edge(new_path[-3], nbr):
+                        stack.append((nbr, new_path))
+
+        return changed
+
+    from itertools import product
+
+    def rule_6(self, pag):
+        """
+        R6: If u − v ◦−◦ w, then orient v − w.
+        """
+        changed = False
+
+        for v in pag.nodes:
+            # Step 1: u candidates with undirected edge u − v
+            u_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v)
+                and pag.edges[u, v]["marks"].get(u) == "-"
+                and pag.edges[u, v]["marks"].get(v) == "-"
+            ]
+
+            # Step 2: w candidates with v ◦−◦ w
+            w_candidates = [
+                w
+                for w in pag.get_neighbors(v)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "o"
+                and pag.edges[v, w]["marks"].get(w) == "o"
+            ]
+
+            # Step 3: For each u − v ◦−◦ w, orient v − w
+            for u, w in product(u_candidates, w_candidates):
+                pag.edges[v, w]["marks"][v] = "-"
+                pag.edges[v, w]["marks"][w] = "-"
+                changed = True
+
         return changed
 
     def rule_7(self, pag):
+        """
+        R7: Tail Propagation with Non-Adjacency.
+        If u −◦ v ◦−◦ w and u,w not adjacent, then orient v − w.
+        """
         changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u, u_type=None, v_type="o"):
-                if pag.edges[v, u]["marks"][v] == "-":
-                    for w in pag.get_neighbors(u, u_type="o"):
-                        if not pag.has_edge(v, w):
-                            pag.edges[u, w]["marks"][u] = "-"
-                            changed = True
+
+        for v in pag.nodes:
+            # Step 1: u candidates with u −◦ v
+            u_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v)
+                and pag.edges[u, v]["marks"].get(u) == "-"
+                and pag.edges[u, v]["marks"].get(v) == "o"
+            ]
+
+            # Step 2: w candidates with v ◦−◦ w
+            w_candidates = [
+                w
+                for w in pag.get_neighbors(v)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "o"
+                and pag.edges[v, w]["marks"].get(w) == "o"
+            ]
+
+            # Step 3: For each (u, w), check non-adjacency, then orient v − w
+            for u, w in product(u_candidates, w_candidates):
+                if pag.has_edge(u, w):  # skip if u and w adjacent
+                    continue
+
+                # Orient v ◦−◦ w into v − w
+                pag.edges[v, w]["marks"][v] = "-"
+                pag.edges[v, w]["marks"][w] = "-"
+                changed = True
+
         return changed
 
     def rule_8(self, pag):
+        """
+        R8: Partial Arrow Completion.
+        If (u → v → w) or (u −◦ v → w), and u ◦→ w, then orient u → w.
+        """
         changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u, u_type="-", v_type=">"):
-                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
-                    if (
-                        pag.edges.get((v, w))
-                        and pag.edges[v, w]["marks"][v] == "o"
-                        and pag.edges[v, w]["marks"][w] == ">"
-                    ):
-                        pag.edges[v, w]["marks"][v] = "-"
-                        changed = True
 
-            for v in pag.get_neighbors(u, v_type="o"):
-                if pag.edges[v, u]["marks"][v] == "-":
-                    for w in pag.get_neighbors(u, u_type=">", v_type="-"):
-                        if (
-                            pag.edges.get((v, w))
-                            and pag.edges[v, w]["marks"][v] == "o"
-                            and pag.edges[v, w]["marks"][w] == ">"
-                        ):
-                            pag.edges[v, w]["marks"][v] = "-"
-                            changed = True
+        for v in pag.nodes:
+            # Step 1: u candidates (u → v OR u −◦ v)
+            u_candidates = [
+                u
+                for u in pag.get_neighbors(v)
+                if pag.has_edge(u, v)
+                and (
+                    # u → v
+                    (
+                        pag.edges[u, v]["marks"].get(u) == "-"
+                        and pag.edges[u, v]["marks"].get(v) == ">"
+                    )
+                    or (
+                        pag.edges[u, v]["marks"].get(u) == "-"
+                        and pag.edges[u, v]["marks"].get(v) == "o"
+                    )
+                )
+            ]
+
+            # Step 2: w candidates (v → w)
+            w_candidates = [
+                w
+                for w in pag.get_neighbors(v)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "-"
+                and pag.edges[v, w]["marks"].get(w) == ">"
+            ]
+
+            # Step 3: For each (u, w), check if u ◦→ w
+            for u, w in product(u_candidates, w_candidates):
+                if not pag.has_edge(u, w):
+                    continue
+
+                if (
+                    pag.edges[u, w]["marks"].get(u) == "o"
+                    and pag.edges[u, w]["marks"].get(w) == ">"
+                ):
+                    # Orient u ◦→ w into u → w
+                    pag.edges[u, w]["marks"][u] = "-"
+                    changed = True
+
         return changed
 
     def rule_9(self, pag):
+        """
+        R9: Potentially Directed Path.
+        If u ◦→ w and there is an uncovered potentially directed path <u, v, …, w>
+        with w and v not adjacent, then orient u → w.
+        """
         changed = False
-        for u, v in pag.edges:
-            if (
-                pag.edges[u, v]["marks"][u] == "o"
-                and pag.edges[u, v]["marks"][v] == ">"
+
+        for u, w in pag.edges:
+            # Step 1: Look for u ◦→ w
+            if not (
+                pag.has_edge(u, w)
+                and pag.edges[u, w]["marks"].get(u) == "o"
+                and pag.edges[u, w]["marks"].get(w) == ">"
             ):
+                continue
 
-                queue = deque([(u, [u])])
-                visited = {u}
+            # BFS search for uncovered potentially directed paths
+            queue = deque([(u, [u])])
 
-                while queue:
-                    current, path = queue.popleft()
+            while queue:
+                current, path = queue.popleft()
 
-                    if current == v:
-                        is_uncovered_pd_path = True
-                        for i in range(len(path) - 1):
-                            u, v = path[i], path[i + 1]
-                            if pag.edges[u, v]["marks"][u] == ">":
-                                is_uncovered_pd_path = False
+                # Step 2: Reached w with a valid path of length ≥ 3
+                if current == w and len(path) >= 3:
+                    is_valid = True
+
+                    for i in range(len(path) - 1):
+                        a, b = path[i], path[i + 1]
+
+                        # Edge must be potentially directed a → b
+                        if pag.edges[a, b]["marks"].get(a) == ">":
+                            is_valid = False
+                            break
+
+                        # Check uncovered triples: no edge between (a, c)
+                        if i >= 1:
+                            prev = path[i - 1]
+                            if pag.has_edge(prev, b):
+                                is_valid = False
                                 break
-                            if i > 0 and i < len(path) - 1:
-                                prev_node = path[i - 1]
-                                if pag.has_edge(prev_node, v):
-                                    is_uncovered_pd_path = False
-                                    break
 
-                        if is_uncovered_pd_path:
-                            v = path[1]
-                            if not pag.has_edge(v, v):
-                                pag.edges[u, v]["marks"][u] = "-"
-                                changed = True
-                                break
+                    if is_valid:
+                        v = path[1]
+                        # Ensure w and v are not adjacent
+                        if not pag.has_edge(v, w):
+                            # Orient u ◦→ w → u → w
+                            pag.edges[u, w]["marks"][u] = "-"
+                            changed = True
+                            break
 
-                    for neighbor in pag.get_neighbors(current):
-                        if (
-                            pag.edges[current, neighbor]["marks"][current] != ">"
-                            and neighbor not in visited
-                        ):
-                            visited.add(neighbor)
-                            queue.append((neighbor, path + [neighbor]))
+                # Step 3: Continue exploring potentially directed edges
+                for nbr in pag.get_neighbors(current):
+                    if nbr in path:
+                        continue
+                    if pag.edges[current, nbr]["marks"].get(current) == ">":
+                        continue
+                    queue.append((nbr, path + [nbr]))
+
         return changed
 
     def rule_10(self, pag):
+        """
+        R10: Two Forks Rule.
+        If u ◦→ w and there are two forks v → w ← x,
+        and uncovered potentially directed paths from u to v and u to x
+        with different first neighbors, then orient u → w.
+        """
         changed = False
-        for u in pag.nodes:
-            for v in pag.get_neighbors(u, u_type=">", v_type="-"):
-                for w in pag.get_neighbors(u, u_type=">", v_type="-"):
-                    if v != w:
-                        for alpha in pag.get_neighbors(u, u_type="o", v_type=">"):
-                            p1 = self.find_path(alpha, v)
-                            p2 = self.find_path(alpha, w)
 
-                            if p1 and p2:
-                                mu = p1[1] if len(p1) > 1 else v
-                                omega = p2[1] if len(p2) > 1 else w
+        for u, w in pag.edges:
+            # Step 1: Look for u ◦→ w
+            if not (
+                pag.has_edge(u, w)
+                and pag.edges[u, w]["marks"].get(u) == "o"
+                and pag.edges[u, w]["marks"].get(w) == ">"
+            ):
+                continue
 
-                                if mu != omega and not pag.has_edge(mu, omega):
-                                    pag.edges[alpha, u]["marks"][alpha] = "-"
-                                    changed = True
+            # Step 2: Find forks into w (v → w and x → w)
+            forks = [
+                v
+                for v in pag.get_neighbors(w)
+                if pag.has_edge(v, w)
+                and pag.edges[v, w]["marks"].get(v) == "-"
+                and pag.edges[v, w]["marks"].get(w) == ">"
+            ]
+
+            # Need at least two distinct forks
+            if len(forks) < 2:
+                continue
+
+            # Step 3: Check pairs of forks (v, x)
+            for i in range(len(forks)):
+                for j in range(i + 1, len(forks)):
+                    v, x = forks[i], forks[j]
+
+                    # Find uncovered potentially directed paths u → … → v and u → … → x
+                    p1 = self.find_uncovered_pd_path(u, v, pag)
+                    p2 = self.find_uncovered_pd_path(u, x, pag)
+
+                    if not (p1 and p2):
+                        continue
+
+                    # Extract first neighbors after u
+                    mu = p1[1] if len(p1) > 1 else v
+                    omega = p2[1] if len(p2) > 1 else x
+
+                    # Step 4: Must have different first neighbors
+                    if mu == omega:
+                        continue
+
+                    # Step 5: Ensure those first neighbors are not adjacent
+                    if pag.has_edge(mu, omega):
+                        continue
+
+                    # Step 6: Orient u ◦→ w into u → w
+                    pag.edges[u, w]["marks"][u] = "-"
+                    changed = True
+                    break  # no need to keep searching once oriented
+
         return changed
 
-    def apply_orientation_rules(self, rules, inplace=False, sepsets=None):
+    def apply_orientation_rules(self, rules=None, inplace=False, sepsets=None):
+        """
+        Apply a set of orientation rules (R0–R10) to the PAG.
+
+        Parameters
+        ----------
+        rules : list[str], optional
+            List of rule names to apply. If None, all rules R0–R10 are applied.
+
+        inplace : bool, default False
+            If True, modify the current PAG in place. Otherwise, work on a copy.
+
+        sepsets : dict, optional
+            Required for rules that depend on separating sets (R0, R4).
+
+        Returns
+        -------
+        PAG
+            The graph after applying the orientation rules.
+        """
         pag = self if inplace else self.copy()
 
         rules_map = {
@@ -431,37 +750,30 @@ class PAG(MAG):
             "R10": pag.rule_10,
         }
 
-        if not rules:
-            rules_to_apply = [
-                "R0",
-                "R1",
-                "R2",
-                "R3",
-                "R4",
-                "R5",
-                "R6",
-                "R7",
-                "R8",
-                "R9",
-                "R10",
-            ]
-
-        else:
+        # Normalize and validate rule list
+        if rules:
             rules_to_apply = [r.upper() for r in rules]
+            unknown = set(rules_to_apply) - set(rules_map.keys())
+            if unknown:
+                raise ValueError(f"Unknown rules: {unknown}")
+        else:
+            rules_to_apply = list(rules_map.keys())
 
+        # Iteratively apply rules until convergence
         changed = True
         while changed:
             changed = False
             for rule_name in rules_to_apply:
-                rule_func = rules_map.get(rule_name)
-                if rule_func:
-                    if rule_name in ["R0", "R4"]:
-                        if sepsets is None:
-                            raise ValueError(
-                                f"Rule {rule_name} requires sepsets to be provided."
-                            )
-                        if rule_func(pag, sepsets):
-                            changed = True
-                    else:
-                        if rule_func(pag):
-                            changed = True
+                rule_func = rules_map[rule_name]
+                if rule_name in {"R0", "R4"}:
+                    if sepsets is None:
+                        raise ValueError(
+                            f"Rule {rule_name} requires sepsets to be provided."
+                        )
+                    if rule_func(pag, sepsets):
+                        changed = True
+                else:
+                    if rule_func(pag):
+                        changed = True
+
+        return pag
