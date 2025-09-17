@@ -34,6 +34,9 @@ class FCI(BaseConstraintEstimator):
         for u, v in skeleton.edges():
             pag.add_edge(u, v, "o", "o")
 
+        # 2. Orient colliders
+        pag_new = self.orient_colliders(skeleton, separating_sets, graph_cls=PAG)
+
         # 3. Apply orientation rules iteratively
         changed = True
         while changed:
