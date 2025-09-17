@@ -448,8 +448,6 @@ class PAG(MAG):
 
         return changed
 
-    from itertools import product
-
     def rule_6(self, pag):
         """
         R6: If u − v ◦−◦ w, then orient v − w.
