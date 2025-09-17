@@ -5,6 +5,7 @@ import xml.etree.ElementTree as etree
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -392,6 +393,10 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             self.assertEqual(cpds_expected, cpds_got)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -478,6 +483,10 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -567,6 +576,10 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

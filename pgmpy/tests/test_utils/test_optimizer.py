@@ -2,7 +2,9 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-import torch
+from pgmpy.utils._safe_import import _safe_import
+
+torch = _safe_import("torch")
 
 from pgmpy import config
 from pgmpy.utils import optimize, pinverse

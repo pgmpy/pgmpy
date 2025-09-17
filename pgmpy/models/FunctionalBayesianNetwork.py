@@ -2,13 +2,15 @@ from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Un
 
 import networkx as nx
 import pandas as pd
-import pyro
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
@@ -43,8 +45,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         """
         if config.get_backend() == "numpy":
-            logger.info("Functional BN requires pytorch backend. Switching.")
-            config.set_backend("torch")
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
+            )
+            logger.info(msg)
+            raise ValueError(msg)
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
@@ -246,7 +255,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     def fit(
         self,
         data: pd.DataFrame,
-        method: str = "SVI",
+        estimator: str = "SVI",
         optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
         prior_fn: Optional[Callable] = None,
         num_steps: int = 1000,
@@ -262,14 +271,14 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         data: pandas.DataFrame
             DataFrame with observations of variables.
 
-        method: str (default: "SVI")
+        estimator: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
         optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
-            Only used if method is "SVI". The optimizer to use for optimization.
+            Only used if `estimator` is "SVI". The optimizer to use for optimization.
 
         prior_fn: function
-            Only used if method is "MCMC". A function that returns a dictionary of
+            Only used if `estimator` is "MCMC". A function that returns a dictionary of
             pyro distributions for each parameter in the model.
 
         num_steps: int (default: 100)
@@ -281,17 +290,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             Seed value for random number generator.
 
         nuts_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.NUTS.
 
         mcmc_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.MCMC.
 
         Returns
         -------
-        dict: If method is "SVI", returns a dictionary of parameter values.
-              If method is "MCMC", returns a dictionary of posterior samples for each parameter.
+        dict: If `estimator` is "SVI", returns a dictionary of parameter values.
+              If `estimator` is "MCMC", returns a dictionary of posterior samples for each parameter.
 
         Examples
         --------
@@ -324,7 +333,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
         >>> cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
-        >>> params = model.fit(data, method="SVI", num_steps=100)
+        >>> params = model.fit(data, estimator="SVI", num_steps=100)
         >>> print(params)
 
         >>> def prior_fn():
@@ -350,7 +359,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
 
-        >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
+        >>> params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, num_steps=100)
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
         # Step 0: Checks for specified arguments.
@@ -362,9 +371,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         if not isinstance(num_steps, int):
             raise ValueError(f"num_steps should be an integer. Got: {type(num_steps)}.")
 
-        if method.lower() not in ["svi", "mcmc"]:
+        if estimator.lower() not in ["svi", "mcmc"]:
             raise ValueError(
-                "Currently only SVI and MCMC methods are supported. method argument needs to be either 'SVI' or 'MCMC'."
+                f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}."
             )
 
         # Step 1: Preprocess the data and initialize data structures.
@@ -378,6 +387,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             if node not in data.columns:
                 raise ValueError(f"data doesn't contain column for the node: {node}.")
             else:
+                import torch
+
                 tensor_data[node] = torch.tensor(
                     data[node].values,
                     dtype=config.get_dtype(),
@@ -390,7 +401,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
         # Step 2: Fit the model using the specified method.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
 
             def guide(tensor_data):
                 pass
@@ -420,21 +431,22 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        # Step 3: Fit the model using specified method
-        elif method.lower() == "mcmc":
+        # Step 3: Fit the model using specified estimator
+        elif estimator.lower() == "mcmc":
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
-                priors = prior_fn()
+                priors_dists = prior_fn()
+                priors_vals = {
+                    name: pyro.sample(name, d) for name, d in priors_dists.items()
+                }
+
                 with pyro.plate("data", data.shape[0]):
                     for node in sort_nodes:
-                        pyro.sample(
-                            f"{node}",
-                            cpds_dict[node].fn(
-                                priors,
-                                {p: tensor_data[p] for p in cpds_dict[node].parents},
-                            ),
-                            obs=tensor_data[node],
+                        dist_node = cpds_dict[node].fn(
+                            priors_vals,
+                            {p: tensor_data[p] for p in cpds_dict[node].parents},
                         )
+                        pyro.sample(f"{node}", dist_node, obs=tensor_data[node])
 
             # Step 3.2: Fit the model using MCMC.
             nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
@@ -442,7 +454,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             mcmc.run(tensor_data)
 
         # Step 4: Return the fitted parameter values.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
             return dict(pyro.get_param_store().items())
         else:
             return mcmc.get_samples()

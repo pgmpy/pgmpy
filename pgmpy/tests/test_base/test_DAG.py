@@ -6,18 +6,12 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    ExpectationMaximization,
-    MaximumLikelihoodEstimator,
-)
 from pgmpy.estimators.CITests import pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 
 
@@ -372,6 +366,10 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         dag.to_daft(node_pos="circular")
@@ -425,72 +423,13 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
-    def test_dag_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
-            data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertEqual(
-                fitted_model_bayesian.get_cpds("B"),
-                TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
-            )
-
-            fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
-
-            self.assertEqual(
-                fitted_model_mle.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-            fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
-
-            self.assertEqual(
-                fitted_model_em.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-    def test_dag_with_independent_node_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        dag = DAG(edge_list)
-        dag.add_node("D")
-        dbn = DiscreteBayesianNetwork(edge_list)
-        dbn.add_node("D")
-        for model in [dag, dbn]:
-            data = pd.DataFrame(
-                data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
-            )
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-                "D": [[9]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertTrue(fitted_model_bayesian.check_model())
-            self.assertEqual(
-                sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"]
-            )
-
     def tearDown(self):
         del self.graph
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_basic(self):
         """Test basic functionality and numerical values using simulated data from LinearGaussianBN"""
         # Create a linear Gaussian Bayesian network
@@ -525,6 +464,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr[0] ** 2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr[0] ** 2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_specific_edge(self):
         """Test computing strength for specific edge using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -554,6 +497,10 @@ class TestDAGCreation(unittest.TestCase):
         xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
         self.assertAlmostEqual(strength_xy[("X", "Y")], xy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_multiple_edges(self):
         """Test computing strength for multiple specific edges using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -586,6 +533,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr**2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_stored_in_graph(self):
         """Test that edge strengths are stored in the graph after computation using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -656,6 +607,10 @@ class TestDAGCreation(unittest.TestCase):
             str(context.exception),
         )
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_skip_latent_edges(self):
         """Test that edge_strength skips edges with latent variables and continues with others"""
         # Create DAG with some latent variables
@@ -703,6 +658,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_to_daft(self):
         """Test edge strength plotting in to_daft method"""
         dag = DAG([("A", "B"), ("C", "B")])
@@ -724,6 +683,10 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot_default = dag_no_strength.to_daft()
         self.assertIsNotNone(daft_plot_default)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_with_existing_labels(self):
         """Test edge strength plotting when user provides custom edge labels"""
         dag = DAG([("A", "B")])
@@ -733,6 +696,26 @@ class TestDAGCreation(unittest.TestCase):
             plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}}
         )
         self.assertIsNotNone(daft_plot)
+
+    def test_hash(self):
+        from pgmpy.utils import get_example_model
+
+        dag1 = get_example_model("M-bias")
+        dag2 = get_example_model("M-bias")
+
+        self.assertEqual(hash(dag1), hash(dag2))
+
+        dag1 = dag1.with_role("exposure", "E")
+        self.assertNotEqual(hash(dag1), hash(dag2))
+
+        dag2 = dag2.with_role("exposure", "E")
+        self.assertEqual(hash(dag1), hash(dag2))
+
+        dag1 = dag1.with_role("outcome", "D")
+        self.assertNotEqual(hash(dag1), hash(dag2))
+
+        dag2 = dag2.with_role("outcome", "D")
+        self.assertEqual(hash(dag1), hash(dag2))
 
 
 class TestDAGParser(unittest.TestCase):
