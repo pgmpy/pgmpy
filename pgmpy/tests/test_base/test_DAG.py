@@ -939,16 +939,16 @@ class TestDAGValidation(unittest.TestCase):
         self.data = self.model.simulate(int(1e3))
 
     def test_dataframe_all_metrics(self):
-        result = self.model.validate(data=self.data)
+        result = self.model.validate(data=self.data, compute_rmsea=True)
         self.assertListEqual(list(result.columns), ["METRIC", "RESULT"])
         expected_metric_names = [
-            "correlation score",
-            "log-likelihood score",
-            "aic score",
-            "bic score",
-            "fisher-c p-value",
-            "rmsea",
-            "failing-cis / total",
+            "Correlation",
+            "Log-likelihood",
+            "Aic",
+            "Bic",
+            "Fisher-C p-value",
+            "RMSEA",
+            "Failing CIs / Total CIs",
         ]
         for metric_name in expected_metric_names:
             self.assertIn(metric_name, result["METRIC"].values)
@@ -956,16 +956,18 @@ class TestDAGValidation(unittest.TestCase):
 
     def test_validate_single_metrics(self):
         metrics_to_test = [
-            ("correlation", ["correlation score"]),
-            ("log-likelihood", ["log-likelihood score"]),
-            ("aic", ["aic score"]),
-            ("bic", ["bic score"]),
-            ("fisher-c", ["fisher-c p-value", "rmsea"]),
-            ("implied-cis", ["failing-cis / total"]),
+            ("correlation", ["Correlation"]),
+            ("log-likelihood", ["Log-likelihood"]),
+            ("aic", ["Aic"]),
+            ("bic", ["Bic"]),
+            ("fisher-c", ["Fisher-C p-value", "RMSEA"]),
+            ("implied-cis", ["Failing CIs / Total CIs"]),
         ]
         for metric, expected_rows in metrics_to_test:
             with self.subTest(metric=metric):
-                result = self.model.validate(data=self.data, metrics=(metric,))
+                result = self.model.validate(
+                    data=self.data, metrics=(metric,), compute_rmsea=True
+                )
                 self.assertListEqual(list(result.columns), ["METRIC", "RESULT"])
                 for name in expected_rows:
                     self.assertIn(name, result["METRIC"].values)
@@ -973,14 +975,15 @@ class TestDAGValidation(unittest.TestCase):
                 self.assertEqual(result.shape[0], len(expected_rows))
 
     def test_output_datatypes(self):
-        result = self.model.validate(data=self.data)
+        result = self.model.validate(data=self.data, compute_rmsea=True)
         expected_dtypes = {
-            "correlation score": float,
-            "log-likelihood score": float,
-            "aic score": float,
-            "bic score": float,
-            "fisher-c p-value": float,
-            "failing-cis / total": str,  # This is a formatted string like "2 / 10"
+            "Correlation": float,
+            "Log-likelihood": float,
+            "Aic": float,
+            "Bic": float,
+            "Fisher-C p-value": float,
+            "RMSEA": float,
+            "Failing CIs / Total CIs": str,  # This is a formatted string like "2 / 10"
         }
         for metric, dtype in expected_dtypes.items():
             metric_row = result[result["METRIC"] == metric]
@@ -1013,7 +1016,7 @@ class TestDAGValidation(unittest.TestCase):
                 result = self.model.validate(
                     data=self.data, metrics=("correlation",), test=test_param
                 )
-                correlation_row = result[result["METRIC"] == "correlation score"]
+                correlation_row = result[result["METRIC"] == "Correlation"]
                 self.assertFalse(correlation_row.empty)
                 actual_score = correlation_row["RESULT"].iloc[0]
                 self.assertIsInstance(actual_score, float)

@@ -1,7 +1,6 @@
-import inspect
 import math
 from itertools import combinations
-from typing import Any, Callable, Union
+from typing import Any, Callable, Optional
 
 import networkx as nx
 import numpy as np
@@ -13,65 +12,43 @@ from tqdm import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.utils import get_dataset_type
 
 
-def get_metrics(metric: Union[str, Callable], model, data, **kwargs) -> Any:
+def get_metrics(metrics: Optional[tuple[str, Callable]] = None) -> Any:
 
-    metrics_and_params = {
-        "correlation": {
-            "func": correlation_score,
-            "req_params": ["test", "significance_level", "score"],
-        },
-        "log-likelihood": {"func": log_likelihood_score, "req_params": []},
-        "aic": {"func": structure_score, "req_params": ["scoring-method"]},
-        "bic": {"func": structure_score, "req_params": ["scoring-method"]},
-        "implied-cis": {
-            "func": implied_cis,
-            "req_params": ["ci_test", "show_progress"],
-        },
-        "fisher-c": {
-            "func": fisher_c,
-            "req_params": ["ci_test", "compute_rmsea", "show_progress"],
-        },
+    metric_call = {
+        "correlation": correlation_score,
+        "log-likelihood": log_likelihood_score,
+        "aic": structure_score,
+        "bic": structure_score,
+        "implied-cis": implied_cis,
+        "fisher-c": fisher_c,
     }
-    if not isinstance(data, pd.DataFrame) or data is None:
-        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+    callable_metrics = {}
 
-    if isinstance(metric, str):
-        metric = metric.lower()
-        if metric not in metrics_and_params:
+    if metrics is None:
+        metrics = metric_call.values()
+
+    for metric in metrics:
+        if isinstance(metric, str):
+            metric = metric.lower()
+            if metric not in metric_call:
+                raise ValueError(
+                    f"Unknown metric method. Available metrics are: {list(metric_call.keys())}"
+                )
+
+            callable_metrics[metric] = metric_call[metric]
+
+        elif callable(metric):
+            metric_name = [k for k, v in metric_call.items() if v == metric]
+            for _ in metric_name:
+                callable_metrics[_] = metric
+
+        else:
             raise ValueError(
-                f"Unknown metric method. Available metrics are: {list(metrics_and_params.keys())}"
+                f"Got method {metric}. Metric should be one of {list(metric_call.keys())} and of type str or Callable"
             )
-
-        metric_info = metrics_and_params[metric]
-        metric_func = metric_info["func"]
-        filtered_kwargs = {
-            k: v for k, v in kwargs.items() if k in metric_info["req_params"]
-        }
-
-        if metric in ["aic", "bic"]:
-            var_type = get_dataset_type(data)
-            if var_type == "continuous":
-                suffix = "g"
-            elif var_type == "discrete":
-                suffix = "d"
-            else:
-                suffix = "cg"
-            filtered_kwargs["scoring_method"] = f"{metric}-" + suffix
-        return metric_func(model=model, data=data, **filtered_kwargs)
-
-    elif callable(metric):
-        sig = inspect.signature(metric)
-        valid_params = sig.parameters.keys()
-        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
-        return metric(model=model, data=data, **filtered_kwargs)
-
-    else:
-        raise ValueError(
-            f"Metric should be one of {list(metrics_and_params.keys())} or of type str or Callable"
-        )
+    return callable_metrics
 
 
 def correlation_score(

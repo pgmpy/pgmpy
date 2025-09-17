@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import inspect
 import itertools
 from os import PathLike
 from typing import Callable, Hashable, Iterable, Optional, Sequence
@@ -1902,59 +1903,93 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return strengths
 
-    def validate(self, data, metrics: Optional[tuple[str | Callable]] = None, **kwargs):
+    def validate(
+        self,
+        data,
+        metrics: Optional[tuple[str | Callable]] = None,
+        significance_level=0.05,
+        **kwargs,
+    ):
+        """
+        Returns a table of the compiled results of the tests run on the DAG using the data provided. The
+        tests are available in pgmpy.metrics.metrics. This method includes support for:
 
-        from sklearn.metrics import f1_score
+        - Correlation Score
+        - Log Likelihood Score
+        - AIC Score
+        - BIC Score
+        - Fisher-C p-value
+        - RMSEA based on the Fisher-C statistic
+        - Measure of failing vs. total CIs based on DAG and data fit
 
-        from pgmpy.estimators.CITests import chi_square
-        from pgmpy.metrics.metrics import get_metrics
+        Parameters
+        ----------
+        data: pandas.Dataframe
+            Dataset to be used to run the scoring methods/tests
 
-        # all validation metrics
-        all_metrics = (
-            "correlation",
-            "log-likelihood",
-            "aic",
-            "bic",
-            "fisher-c",
-            "implied-cis",
-        )
-        # a normal validate call would provide all metric results
-        if metrics is None:
-            metrics = all_metrics
-        # Dictionary for holding default parameters
-        params = {
-            "test": "chi_square",
-            "significance_level": 0.05,
-            "score": f1_score,
-            "ci_test": chi_square,
-            "compute_rmsea": True,
-            "show_progress": True,
-        }
-        # For custom parameter updation
-        params.update(kwargs)
+        metrics: tuple (Callable or strings)
+            A list of the metrics that are to be run on the model and data
 
-        # to store the results of different tests
-        test_results = {}
+        significance_level: float
+            To compare with p-value to count the failing CIs (conditional independencies). A
+            default value of 0.05 is provided which can be overwriteen by user based on need
 
-        for metric_name in metrics:
-            test_results[metric_name] = get_metrics(
-                metric=metric_name, model=self, data=data, **params
+        **kwargs:
+            Any parameter that needs to be customized in the call to different metric based methods.
+            This includes all parameters that affect the metric calls in pgmpy.metrics.metrics.
+
+        Returns
+        ----------
+        df_result: pandas.Dataframe
+            A dataframe of all the metric results run on the given causal model
+            using the dataset provided.
+        """
+        # checking if data provided is valid
+        if not isinstance(data, pd.DataFrame) or data is None:
+            raise ValueError(
+                f"data must be a pandas.DataFrame instance. Got {type(data)}"
             )
 
+        from pgmpy.estimators.CITests import get_callable_ci_test
+        from pgmpy.metrics.metrics import get_metrics
+        from pgmpy.utils import get_dataset_type
+
+        # List of method calls generated according to the metric list provided
+        callable_metrics = get_metrics(metrics=metrics)
+
+        # Getting the CI Test method
+        kwargs["ci_test"] = get_callable_ci_test(test=None, data=data)
+
+        # To store final results of the tests
         metric_vals = {}
-        for t in test_results:
-            if t in ["correlation", "log-likelihood", "aic", "bic"]:
-                metric_vals[t + " score"] = test_results[t]
-            if t == "fisher-c":
-                if isinstance(test_results[t], tuple):
-                    (metric_vals["fisher-c p-value"], metric_vals["rmsea"]) = (
-                        test_results[t]
-                    )
+
+        for n, c in callable_metrics.items():
+            sig = inspect.signature(c)
+            valid_params = sig.parameters.keys()
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+
+            if n in ["aic", "bic"]:
+                var_type = get_dataset_type(data)
+                if var_type == "continuous":
+                    suffix = "g"
+                elif var_type == "discrete":
+                    suffix = "d"
                 else:
-                    metric_vals["fisher-c p-value"] = test_results[t]
-            if t == "implied-cis":
-                metric_vals["failing-cis / total"] = (
-                    f"{(test_results[t]["p-value"] < params["significance_level"]).sum()} / {len(test_results[t])}"
+                    suffix = "cg"
+                filtered_kwargs["scoring_method"] = f"{n}-" + suffix
+
+            result = c(model=self, data=data, **filtered_kwargs)
+
+            if n in ["correlation", "log-likelihood", "aic", "bic"]:
+                metric_vals[n.capitalize()] = result
+            elif n == "fisher-c":
+                if isinstance(result, tuple):
+                    (metric_vals["Fisher-C p-value"], metric_vals["RMSEA"]) = result
+                else:
+                    metric_vals["Fisher-C p-value"] = result
+            elif n == "implied-cis":
+                metric_vals["Failing CIs / Total CIs"] = (
+                    f"{(result["p-value"] < significance_level).sum()} / {len(result)}"
                 )
 
         df_result = pd.DataFrame(
