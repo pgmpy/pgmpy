@@ -4,6 +4,7 @@ from pgmpy.estimators.base import (
     ParameterEstimator,
     StructureEstimator,
 )
+from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
 from pgmpy.estimators.EM import ExpectationMaximization
@@ -14,7 +15,6 @@ from pgmpy.estimators.FCI import FCI
 from pgmpy.estimators.GES import GES
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
-from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 from pgmpy.estimators.PC import PC
 from pgmpy.estimators.SEMEstimator import IVEstimator, SEMEstimator
