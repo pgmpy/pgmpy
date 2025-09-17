@@ -4,12 +4,15 @@ from typing import Hashable, Iterable, Optional
 import networkx as nx
 import numpy as np
 
+from pgmpy.base._mixin_roles import _GraphRolesMixin
 
-class AncestralBase(nx.Graph):
+
+class AncestralBase(nx.Graph, _GraphRolesMixin):
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        roles=None,
     ):
         """
         Ancestral graph base class.
@@ -19,12 +22,12 @@ class AncestralBase(nx.Graph):
 
         - Directed: ("A", "B", "-", ">") is stored as
           ("A", "B", {"marks": {"A": "-", "B": ">"}})
-        - Reverse directed: ("A", "B", ">", "-") is stored as
-          ("A", "B", {"marks": {"A": ">", "B": "-"}})
         - Bidirected: ("A", "B", ">", ">") is stored as
           ("A", "B", {"marks": {"A": ">", "B": ">"}})
-        - Undirected: ("A", "B", "o", "o") is stored as
-          ("A", "B", {"marks": {"A": "o", "B": "o"}})
+        - Undirected: ("A", "B", "-", "-") is stored as
+          ("A", "B", {"marks": {"A": "-", "B": "-"}})
+        - Circle endpoint: ("A", "B", "o", ">") is stored as
+          ("A", "B", {"marks": {"A": "o", "B": ">"}})
 
         Parameters
         ----------
@@ -36,6 +39,13 @@ class AncestralBase(nx.Graph):
         latents : set, optional
             Set of latent (unobserved) variables in the graph. Default is
             an empty set.
+
+        roles : dict, optional (default: None)
+            A dictionary mapping roles to node names.
+            The keys are roles, and the values are role names (strings or iterables of str).
+            If provided, this will automatically assign roles to the nodes in the graph.
+            Passing a key-value pair via ``roles`` is equivalent to calling
+            ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
         Examples
         --------
@@ -50,12 +60,41 @@ class AncestralBase(nx.Graph):
         [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
          ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
          ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+
+        Roles can be assigned to nodes in the graph at construction or using methods.
+
+        At construction:
+
+        >>> g = AncestralBase(
+        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "A", "outcome": "B"},
+        ... )
+
+        Roles can also be assigned after creation using ``with_role`` method.
+
+        >>> g = g.with_role("adjustment", {"L", "C"})
+
+        Vertices of a specific role can be retrieved using ``get_role`` method.
+
+        >>> g.get_role("exposure")
+        ["A"]
+        >>> g.get_role("adjustment")
+        ["L", "C"]
         """
         super().__init__()
         self.valid_marks = {">", "-", "o"}
         if ebunch:
             self.add_edges_from(ebunch)
         self.latents = set(latents)
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as dictionary")
+
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
 
     @property
     def adjacency_matrix(self):
@@ -125,7 +164,7 @@ class AncestralBase(nx.Graph):
         >>> print(graph.nodes)
         ['X_0', 'X_1', 'X_2']
         >>> print(graph.edges(data=True))
-        [('X_0', 'X_1', {'marks': {'X_0': '>', 'X_1': '-'}}), ('X_1', 'X_2', {'marks': {'X_1': '>', 'X_2': '-'}})]
+        [('X_0', 'X_1', {'marks': {'X_1': '-', 'X_0': '>'}}), ('X_1', 'X_2', {'marks': {'X_2': '-', 'X_1': '>'}})]
         """
         value = np.asarray(value)
         if value.ndim != 2 or value.shape[0] != value.shape[1]:
@@ -175,20 +214,15 @@ class AncestralBase(nx.Graph):
         >>> g["A"]["B"]["marks"]
         {'A': '-', 'B': '>'}
 
-        # Reverse directed edge A ← B
-        >>> g.add_edge("A", "C", ">", "-")
-        >>> g["A"]["C"]["marks"]
-        {'A': '>', 'C': '-'}
-
         # Bidirected edge A ↔ D
         >>> g.add_edge("A", "D", ">", ">")
         >>> g["A"]["D"]["marks"]
         {'A': '>', 'D': '>'}
 
         # Undirected edge C — E
-        >>> g.add_edge("C", "E", "o", "o")
+        >>> g.add_edge("C", "E", "-", "-")
         >>> g["C"]["E"]["marks"]
-        {'C': 'o', 'E': 'o'}
+        {'C': '-', 'E': '-'}
         """
         if u == v:
             raise ValueError("Nodes cannot be the same for an edge.")
@@ -213,6 +247,7 @@ class AncestralBase(nx.Graph):
 
         Examples
         --------
+        >>> from pgmpy.base import AncestralBase
         >>> g = AncestralBase()
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> g.add_edges_from(edges)
@@ -252,11 +287,11 @@ class AncestralBase(nx.Graph):
         >>> print(graph.get_neighbors("B"))
         {'A', 'C'}
         >>> print(graph.get_neighbors("B", u_type=">"))
-        {'C'}
+        {'C', 'A'}
         >>> print(graph.get_neighbors("B", v_type="-"))
-        {'A'}
+        {'A', 'C'}
         >>> print(graph.get_neighbors("B", u_type=">", v_type="-"))
-        {'C'}
+        {'C', 'A'}
         """
         if node not in self:
             return set()
@@ -355,7 +390,7 @@ class AncestralBase(nx.Graph):
         >>> print(graph.get_spouses("C"))
         {'D'}
         >>> print(graph.get_spouses("B"))
-        set()
+        {'A'}
         """
         return self.get_neighbors(node, u_type=">", v_type=">")
 
@@ -492,3 +527,82 @@ class AncestralBase(nx.Graph):
                 reachable.add(current)
                 queue.extend(self.get_neighbors(current, u_type=u_type, v_type=v_type))
         return reachable
+
+    def __eq__(self, other):
+        """
+        Checks if two MAGs are equal. Two MAGs are equal if they have the same
+        nodes, edges(including marks), latent variables, and variable roles
+
+        Parameters
+        ----------
+        other: MAG object
+            The other MAG to compare with
+
+        Returns
+        -------
+        bool
+            True if the MAGs are equal, False otherwise
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag1 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "X"},
+        ... )
+        >>> mag2 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "X"},
+        ... )
+        >>> mag1 == mag2
+        True
+
+        >>> mag3 = MAG(
+        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposure": "X"}
+        ... )
+        >>> mag1 == mag3
+        False
+        """
+        if not isinstance(other, AncestralBase):
+            return False
+
+        self_edges = {
+            (u, v, frozenset(data["marks"].items()))
+            for u, v, data in self.edges(data=True)
+        }
+        other_edges = {
+            (u, v, frozenset(data["marks"].items()))
+            for u, v, data in other.edges(data=True)
+        }
+
+        return (
+            set(self.nodes()) == set(other.nodes())
+            and self_edges == other_edges
+            and self.latents == other.latents
+            and self.get_role_dict() == other.get_role_dict()
+        )
+
+    def copy(self):
+        """
+        Return a copy of the graph, preserving nodes, edges, marks, latents, and roles.
+
+        Returns
+        -------
+        AncestralBase
+            A new instance of the same class as self with all properties copied.
+        """
+        ebunch = [
+            (u, v, data["marks"][u], data["marks"][v])
+            for u, v, data in self.edges(data=True)
+        ]
+        ancestral_base = self.__class__(
+            ebunch=ebunch,
+            latents=self.latents.copy(),
+        )
+
+        for role, vars in self.get_role_dict().items():
+            ancestral_base.with_role(role=role, variables=vars, inplace=True)
+
+        return ancestral_base

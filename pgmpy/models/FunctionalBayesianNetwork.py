@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Union
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
@@ -201,7 +202,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         return True
 
     def simulate(
-        self, n_samples: int = 1000, seed: Optional[int] = None
+        self,
+        n_samples: int = 1000,
+        do: Optional[Dict[Hashable, Any]] = None,
+        virtual_intervention: Optional[List[FunctionalCPD]] = None,
+        seed: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Simulate samples from the model.
@@ -213,6 +218,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         seed : int, optional
             The seed value for the random number generator.
+
+        do : dict, optional
+            Specifies hard interventions to the model. The dict should be of
+            the form {variable: value}. Incoming edges into each intervened
+            variable are severed and the variable is set to the given constant
+            for all rows.
+
+        virtual_intervention : list[FunctionalCPD], optional
+            A list of unconditional FunctionalCPD objects (no parents) that
+            replace the corresponding node’s CPD during simulation (i.e.,
+            stochastic interventions like do(X ~ Normal(...))).
 
         Returns
         -------
@@ -237,19 +253,71 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=1000)
         """
+        # Step 0: Set the seed if specified, check arguments and initialize data structures.
         if seed is not None:
             pyro.set_rng_seed(seed)
+
+        if do is None:
+            do = {}
+
+        if virtual_intervention is None:
+            virtual_intervention = []
+
+        # Check if all variables in do and virtual_intervention are valid
+        extra_do = set(do.keys()) - set(self.nodes())
+        if extra_do:
+            raise ValueError(
+                f"`do` contains nodes not in the model: {sorted(extra_do)}"
+            )
+
+        vi_map = {}
+        for cpd in virtual_intervention:
+            if not isinstance(cpd, FunctionalCPD):
+                raise ValueError(
+                    "`virtual_intervention` must be a list of FunctionalCPD objects. Got {type(cpd)}"
+                )
+            if cpd.variable not in set(self.nodes()):
+                raise ValueError(
+                    f"Virtual intervention CPD variable not in the model: {cpd.variable}"
+                )
+            if cpd.parents:
+                raise ValueError(
+                    f"Virtual intervention CPD for {cpd.variable} must be unconditional (no parents)."
+                )
+            vi_map[cpd.variable] = cpd
+
+        overlap = set(do.keys()) & set(vi_map.keys())
+        if overlap:
+            raise ValueError(
+                "Cannot specify both `do` and `virtual_intervention` for the same node(s): "
+                f"{sorted(overlap)}"
+            )
 
         nodes = list(nx.topological_sort(self))
         samples = pd.DataFrame(index=range(n_samples))
 
+        # Step 1: Simulate data
         for node in nodes:
+            # Step 1.1: Handle hard interventions
+            if node in do:
+                samples[node] = np.full(n_samples, do[node])
+                continue
+
+            # Step 1.2: Handle virtual interventions
+            if node in vi_map:
+                samples[node] = vi_map[node].sample(
+                    n_samples=n_samples, parent_sample=None
+                )
+                continue
+
+            # Step 1.3: Standard sampling from the node's CPD
             cpd = self.get_cpds(node)
             parent_samples = samples[cpd.parents] if cpd.parents else None
             samples[node] = cpd.sample(
                 n_samples=n_samples, parent_sample=parent_samples
             )
 
+        # Step 2: Return the simulated samples
         return samples
 
     def fit(

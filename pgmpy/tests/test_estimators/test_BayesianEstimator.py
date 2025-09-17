@@ -18,7 +18,7 @@ class TestBayesianEstimator(unittest.TestCase):
         self.model_latent = DiscreteBayesianNetwork(
             [("A", "C"), ("B", "C")], latents=["C"]
         )
-        self.dag_with_latents = DAG([("A", "B")], latents=["C"])
+        self.dag_with_latents = DAG([("A", "B"), ("B", "C")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
