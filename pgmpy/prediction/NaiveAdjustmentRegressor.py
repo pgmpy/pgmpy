@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import (  # check_array,; check_X_y,
+from sklearn.utils.validation import (
     check_is_fitted,
     validate_data,
 )
@@ -141,7 +141,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         exposure_vars = list(dag.get_role("exposure"))
         outcome_vars = list(dag.get_role("outcome"))
         adjustment_vars = list(dag.get_role("adjustment"))
-
         pretreatment_vars = list(
             dag.get_role("pretreatment") if dag.has_role("pretreatment") else []
         )
@@ -163,7 +162,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
     def _validate_dag_and_extract_roles(self):
         """Validate causal graph has required roles and extract variable assignments."""
-        # Extract roles from DAG
         roles = self._extract_roles_safely(self.causal_graph)
         exposure_vars = roles["exposure"]
         outcome_vars = roles["outcome"]
@@ -196,7 +194,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         if hasattr(self, "feature_columns_"):
             required_features = self.feature_columns_
         else:
-            # This branch is for predict() called before fit()
             exposure_var, _, adjustment_vars, pretreatment_vars = (
                 self._validate_dag_and_extract_roles()
             )
@@ -274,44 +271,38 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self : object
             Returns self for method chaining.
         """
-        # Step 1: Validate input data and causal graph
+        # Step 1: Validate input data
         X_arr, y_arr = validate_data(
             self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
         )
 
-        # Extract and validate causal graph roles
+        # Step 2: Extract and validate causal graph roles
         exposure_var, outcome_var, adjustment_vars, pretreatment_vars = (
             self._validate_dag_and_extract_roles()
         )
 
-        # Step 2: Store role variables as instance attributes
+        # Step 3: Store role variables as instance attributes
         self.exposure_var_ = exposure_var
         self.outcome_var_ = outcome_var
         self.adjustment_vars_ = adjustment_vars
         self.pretreatment_vars_ = pretreatment_vars
         self.feature_columns_ = [exposure_var] + adjustment_vars + pretreatment_vars
 
-        # Step 3: Prepare feature DataFrame from input data
+        # Step 4: Prepare feature DataFrame
         X_features = self._prepare_feature_df(X, feature_names)
 
-        # Step 4: Set sklearn-required attributes
-        # self.n_features_in_ = len(X_features.columns)  # Original line
-        self.n_features_in_ = X_arr.shape[1]  # -- TEST IGNORE ---
-
-        self.feature_names_in_ = np.array(X_features.columns, dtype=object)
-
-        # Step 5: Initialize and configure base estimator
+        # Step 5: Initialize base estimator
         self.estimator_ = (
             LinearRegression() if self.estimator is None else clone(self.estimator)
         )
 
-        # Step 6: Prepare fitting parameters and fit the estimator
+        # Step 6: Fit the estimator
         fit_params = {}
         if sample_weight is not None:
             fit_params["sample_weight"] = sample_weight
         self.estimator_.fit(X_features, y_arr, **fit_params)
 
-        # Step 7: Create readable explanation
+        # Step 7: Create explanation
         adj_str = ", ".join(adjustment_vars) if adjustment_vars else "none"
         pre_str = ", ".join(pretreatment_vars) if pretreatment_vars else "none"
         self.explanation_ = (
@@ -327,7 +318,8 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # Step 2: Validate the filtered input data using sklearn utilities
+        # Step 2: Validate input data for sklearn compatibility
+        # This ensures feature names and n_features_in_ match what was seen during fit
         X_validated = validate_data(
             self,
             X,
@@ -337,11 +329,11 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
             reset=False,
         )
 
-        # Step 3: Prepare feature DataFrame with causal graph roles
-        X_validated = self._prepare_feature_df(X_validated, feature_names)
+        # Step 3: Filter features to match causal graph roles
+        X_filtered = self._prepare_feature_df(X_validated, feature_names)
 
         # Step 4: Make predictions and return as 1D array
-        predictions = self.estimator_.predict(X_validated)
+        predictions = self.estimator_.predict(X_filtered)
         return np.asarray(predictions).ravel()
 
     def get_feature_names_out(self, input_features=None):

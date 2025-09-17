@@ -32,21 +32,17 @@ def test_sklearn_compatibility(estimator, check):
 def test_basic_functionality_with_adjustment():
     """Test basic fit and predict functionality with synthetic causal data."""
 
-    # Create LinearGaussianBayesianNetwork using dagitty with specif coeff
     lgbn = DAG.from_dagitty(
         "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
     )
 
-    # Generate synthetic data
     data = lgbn.simulate(1000, seed=42)
 
-    # Create DAG with roles for the NaiveAdjustmentRegressor
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
     )
 
-    # Test with different base estimators
     estimators = [
         LinearRegression(),
         RandomForestRegressor(n_estimators=10, random_state=42),
@@ -56,24 +52,20 @@ def test_basic_functionality_with_adjustment():
     for base_est in estimators:
         regressor = NaiveAdjustmentRegressor(causal_graph=dag, estimator=base_est)
 
-        # Split data
         train_size = int(0.7 * len(data))
         X_train = data[["X", "Z"]].iloc[:train_size]
         y_train = data["Y"].iloc[:train_size]
         X_test = data[["X", "Z"]].iloc[train_size:]
         y_test = data["Y"].iloc[train_size:]
 
-        # Fit and predict
         regressor.fit(X_train, y_train)
         predictions = regressor.predict(X_test)
 
-        # Basic validation
         assert len(predictions) == len(y_test)
         assert regressor.exposure_var_ == "X"
         assert regressor.outcome_var_ == "Y"
         assert regressor.adjustment_vars_ == ["Z"]
 
-        # For LinearRegression, check if coefficients match simulation parameters
         if isinstance(base_est, LinearRegression):
             # Expected coefficients: [X_coef=2.0, Z_coef=1.5] from simulation
             # Feature order is [X, Z] (exposure + adjustment)
@@ -86,7 +78,6 @@ def test_basic_functionality_with_adjustment():
             # Check intercept is close to 0 (no baseline effect in simulation)
             assert abs(regressor.estimator_.intercept_) < 0.1
 
-        # Check feature names
         feature_names = regressor.get_feature_names_out()
         expected_features = ["X", "Z"]
         assert list(feature_names) == expected_features
@@ -94,13 +85,10 @@ def test_basic_functionality_with_adjustment():
 
 def test_dataframe_input_for_both_x_and_y():
     """Test that regressor works when both X and y are DataFrames."""
-
-    # Create synthetic causal data
     lgbn = DAG.from_dagitty(
         "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
     )
 
-    # Generate synthetic data
     data = lgbn.simulate(100, seed=42)
 
     dag = DAG(
@@ -110,9 +98,8 @@ def test_dataframe_input_for_both_x_and_y():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    # Test with both X and y as DataFrames
     X_df = data[["X", "Z"]]
-    y_df = data[["Y"]]  # Make y a DataFrame instead of Series
+    y_df = data[["Y"]]
 
     regressor.fit(X_df, y_df)
     predictions = regressor.predict(X_df)
@@ -125,11 +112,8 @@ def test_dataframe_input_for_both_x_and_y():
 
 def test_no_adjustment_variables():
     """Test case where there are no adjustment variables (no confounders)."""
-
-    # simple X -> Y relationship
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
-    # Generate synthetic data
     data = lgbn.simulate(100, seed=42)
 
     dag = DAG(
@@ -153,17 +137,13 @@ def test_no_adjustment_variables():
 
 def test_multiple_adjustment_variables():
     """Test with multiple adjustment variables."""
-
-    # complex causal structure
     lgbn = DAG.from_dagitty(
         "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
     )
 
-    # Generate synthetic data
     data = lgbn.simulate(200, seed=42)
 
-    # Unrelated variables that should not be selected by the estimator
-    np.random.seed(42)  # For reproducible noise variables
+    np.random.seed(42)
     data["noise1"] = np.random.normal(0, 1, len(data))
     data["noise2"] = np.random.normal(0, 1, len(data))
 
@@ -175,7 +155,6 @@ def test_multiple_adjustment_variables():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
 
-    # Input data includes unrelated variables
     X_with_noise = data[["X", "U1", "U2", "noise1", "noise2"]]
     regressor.fit(X_with_noise, data["Y"])
     predictions = regressor.predict(X_with_noise)
@@ -185,17 +164,17 @@ def test_multiple_adjustment_variables():
     assert set(regressor.adjustment_vars_) == {"U1", "U2"}
     assert set(regressor.get_feature_names_out()) == {"X", "U1", "U2"}
 
-    # Verify noise variables are not used
-    assert regressor.n_features_in_ == 3
+    assert (
+        regressor.n_features_in_ == 5
+    )  # Input has 5 columns: X, U1, U2, noise1, noise2
+    assert len(regressor.get_feature_names_out()) == 3  # Only X, U1, U2 are used
 
 
 def test_error_handling():
     """Test various error conditions and validation."""
 
     # Test missing required roles
-    dag_no_outcome = DAG(
-        ebunch=[("X", "Y")], roles={"exposure": "X"}  # Missing outcome role
-    )
+    dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposure": "X"})
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_no_outcome)
 
     with pytest.raises(
@@ -223,7 +202,6 @@ def test_error_handling():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    # Data missing required column Z
     incomplete_data = pd.DataFrame({"X": [1, 2], "Y": [3, 4]})
 
     with pytest.raises(ValueError, match="Missing required columns"):
@@ -232,7 +210,6 @@ def test_error_handling():
 
 def test_numpy_array_input():
     """Test that regressor works with numpy array inputs."""
-
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
@@ -240,13 +217,11 @@ def test_numpy_array_input():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    # Create data as numpy arrays
     np.random.seed(42)
     n_samples = 50
     X_array = np.random.normal(0, 1, (n_samples, 2))
     y_array = np.random.normal(0, 1, n_samples)
 
-    # Now arrays require explicit feature names for safety
     regressor.fit(X_array, y_array, feature_names=["X", "Z"])
     predictions = regressor.predict(X_array, feature_names=["X", "Z"])
 
@@ -256,11 +231,8 @@ def test_numpy_array_input():
 
 def test_sample_weight_support():
     """Test that sample_weight parameter is properly passed to base estimator."""
-
-    # for realistic causal relationship
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
-    # small dataset
     data = lgbn.simulate(4, seed=42)
 
     dag = DAG(
@@ -272,7 +244,6 @@ def test_sample_weight_support():
         },
     )
 
-    # estimator that supports sample_weight
     regressor = NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
 
     sample_weights = np.array([1, 1, 2, 2])
@@ -285,15 +256,12 @@ def test_sample_weight_support():
 
 def test_dag_roles_validation():
     """Test that DAG roles are properly validated using pgmpy's built-in methods."""
-
-    # Test valid causal structure
     dag_valid = DAG(
         ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y", "adjustment": []}
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
 
-    # This should work without errors
     exposure, outcome, adjustment, pretreatment = (
         regressor._validate_dag_and_extract_roles()
     )
@@ -302,7 +270,6 @@ def test_dag_roles_validation():
     assert adjustment == []
     assert pretreatment == []
 
-    # Test that pgmpy's validation catches invalid structures
     dag_no_roles = DAG(ebunch=[("X", "Y")])
     regressor_invalid = NaiveAdjustmentRegressor(causal_graph=dag_no_roles)
 
@@ -319,45 +286,35 @@ def test_array_input_requires_feature_names():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    # Array input without feature_names should raise error
     np.random.seed(42)
     X_array = np.random.normal(0, 1, (50, 2))
     y_array = np.random.normal(0, 1, 50)
 
-    # with pytest.raises(ValueError, match="must provide explicit feature names"):
-    #     regressor.fit(X_array, y_array)
-
-    # Should work with feature_names
     regressor.fit(X_array, y_array, feature_names=["X", "Z"])
     predictions = regressor.predict(X_array, feature_names=["X", "Z"])
     assert len(predictions) == 50
 
 
 def test_adjustment_role_behavior():
-    """Test that missing and empty adjustment roles behave identically (pgmpy architecture)."""
-    # Missing adjustment role
+    """Test that missing and empty adjustment roles behave identically."""
     dag_missing_adj = DAG(
         ebunch=[("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y"},  # Missing adjustment role
+        roles={"exposure": "X", "outcome": "Y"},
     )
 
-    # Explicit empty adjustment role
     dag_empty_adj = DAG(
         ebunch=[("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": []},
     )
 
-    # Both should work identically
     regressor1 = NaiveAdjustmentRegressor(causal_graph=dag_missing_adj)
     regressor2 = NaiveAdjustmentRegressor(causal_graph=dag_empty_adj)
 
     data = pd.DataFrame({"X": [1, 2], "Y": [3, 4]})
 
-    # Both should fit successfully
     regressor1.fit(data[["X"]], [5, 6])
     regressor2.fit(data[["X"]], [5, 6])
 
-    # Both should have empty adjustment variables
     assert regressor1.adjustment_vars_ == []
     assert regressor2.adjustment_vars_ == []
 
@@ -392,13 +349,11 @@ def test_pretreatment_variables():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    # Data should include pretreatment variable
     data = pd.DataFrame(
         {"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8], "Z": [0, 1, 0, 1], "P": [1, 1, 0, 0]}
     )
 
     regressor.fit(data[["X", "Z", "P"]], data["Y"])
 
-    # Feature columns should include pretreatment
     assert set(regressor.feature_columns_) == {"X", "Z", "P"}
     assert regressor.pretreatment_vars_ == ["P"]
