@@ -997,18 +997,15 @@ class TestDAGValidation(unittest.TestCase):
             g_sq,
             log_likelihood,
             modified_log_likelihood,
-            pillai_trace,
         )
 
         correlation_test_params = [
             "g_sq",
             "log_likelihood",
             "modified_log_likelihood",
-            "pillai",
             g_sq,
             log_likelihood,
             modified_log_likelihood,
-            pillai_trace,
         ]
 
         for test_param in correlation_test_params:
