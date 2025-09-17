@@ -186,6 +186,10 @@ class LinearGaussianBayesianNetwork(DAG):
         # We want a different seed for each CPD; increment an integer seed in the loop.
         # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
 
+        # this fixes type error when adding None and int, I don't exactly understand the desired
+        # behaviour here so please check if this is correct
+        if seed is None:
+            seed = 0
         cpds = []
         for i, var in enumerate(self.nodes()):
             parents = self.get_parents(var)
