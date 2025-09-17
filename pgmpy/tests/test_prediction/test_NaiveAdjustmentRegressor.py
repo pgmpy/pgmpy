@@ -38,8 +38,7 @@ def test_basic_functionality_with_adjustment():
     )
 
     # Generate synthetic data
-    np.random.seed(42)
-    data = lgbn.simulate(1000)
+    data = lgbn.simulate(1000, seed=42)
 
     # Create DAG with roles for the NaiveAdjustmentRegressor
     dag = DAG(
@@ -102,8 +101,7 @@ def test_dataframe_input_for_both_x_and_y():
     )
 
     # Generate synthetic data
-    np.random.seed(42)
-    data = lgbn.simulate(100)
+    data = lgbn.simulate(100, seed=42)
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
@@ -132,8 +130,7 @@ def test_no_adjustment_variables():
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
     # Generate synthetic data
-    np.random.seed(42)
-    data = lgbn.simulate(100)
+    data = lgbn.simulate(100, seed=42)
 
     dag = DAG(
         ebunch=[("X", "Y")],
@@ -163,10 +160,10 @@ def test_multiple_adjustment_variables():
     )
 
     # Generate synthetic data
-    np.random.seed(42)
-    data = lgbn.simulate(200)
+    data = lgbn.simulate(200, seed=42)
 
     # Unrelated variables that should not be selected by the estimator
+    np.random.seed(42)  # For reproducible noise variables
     data["noise1"] = np.random.normal(0, 1, len(data))
     data["noise2"] = np.random.normal(0, 1, len(data))
 
@@ -264,8 +261,7 @@ def test_sample_weight_support():
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
     # small dataset
-    np.random.seed(42)
-    data = lgbn.simulate(4)
+    data = lgbn.simulate(4, seed=42)
 
     dag = DAG(
         ebunch=[("X", "Y")],
@@ -324,6 +320,7 @@ def test_array_input_requires_feature_names():
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
     # Array input without feature_names should raise error
+    np.random.seed(42)
     X_array = np.random.normal(0, 1, (50, 2))
     y_array = np.random.normal(0, 1, 50)
 

@@ -208,6 +208,12 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         else:
             X_arr = np.asarray(X)
 
+            if X_arr.ndim == 1:
+                X_arr = X_arr.reshape(-1, 1)
+                raise ValueError(
+                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
+                )
+
             if feature_names is None:
                 # Generate generic names for array inputs, e.g., from sklearn tests
                 feature_names = [f"feature_{i}" for i in range(X_arr.shape[1])]
@@ -289,7 +295,8 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         X_features = self._prepare_feature_df(X, feature_names)
 
         # Step 4: Set sklearn-required attributes
-        self.n_features_in_ = len(X_features.columns)
+        # self.n_features_in_ = len(X_features.columns)  # Original line
+        self.n_features_in_ = X_arr.shape[1]  # -- TEST IGNORE ---
 
         self.feature_names_in_ = np.array(X_features.columns, dtype=object)
 
@@ -320,18 +327,18 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # Step 2: Prepare feature DataFrame with causal graph roles
-        X_features = self._prepare_feature_df(X, feature_names)
-
-        # Step 3: Validate the filtered input data using sklearn utilities
+        # Step 2: Validate the filtered input data using sklearn utilities
         X_validated = validate_data(
             self,
-            X_features,
+            X,
             accept_sparse=False,
             ensure_2d=True,
             dtype="numeric",
             reset=False,
         )
+
+        # Step 3: Prepare feature DataFrame with causal graph roles
+        X_validated = self._prepare_feature_df(X_validated, feature_names)
 
         # Step 4: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_validated)
