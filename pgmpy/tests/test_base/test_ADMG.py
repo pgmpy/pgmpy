@@ -40,8 +40,9 @@ class TestADMGInitialization:
 
     def test_initialization_with_latents(self):
         """Test initialization with latent variables."""
+        bidirected_edges = [("L1", "L2")]
         latents = ["L1", "L2"]
-        admg = ADMG(latents=latents)
+        admg = ADMG(bidirected_ebunch=bidirected_edges, latents=latents)
 
         assert admg.latents == {"L1", "L2"}
 
@@ -56,6 +57,50 @@ class TestADMGInitialization:
         assert set(admg.get_roles()) == set(["exposure", "outcome"])
         assert admg.get_role_dict() == {"exposure": ["A", "B"], "outcome": ["C"]}
 
+    def test_latents_with_role(self):
+        admg = ADMG(
+            directed_ebunch=[("X", "Y")],
+            bidirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A"],
+            roles={"exposure": "X", "outcome": "Y", "latents": "B"},
+        )
+        admg.with_role(role="latents", variables="C", inplace=True)
+        admg.with_role(role="latents", variables=["D", "E", "F"], inplace=True)
+
+        assert admg.latents == {"A", "B", "C", "D", "E", "F"}
+        assert set(admg.get_role("latents")) == {"A", "B", "C", "D", "E", "F"}
+
+        with pytest.raises(ValueError, match="Variable 'G' not found in the graph."):
+            admg.with_role(role="latents", variables="G", inplace=True)
+
+    def test_latents_without_role(self):
+        admg = ADMG(
+            directed_ebunch=[("X", "Y")],
+            bidirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A", "B", "C"],
+            roles={"exposure": "X", "outcome": "Y", "latents": ("D", "E", "F")},
+        )
+
+        admg.without_role(role="latents", variables="A", inplace=True)
+        admg.without_role(
+            role="latents", variables=["B", "C", "D", "E", "F"], inplace=True
+        )
+
+        assert admg.latents == set()
+        assert set(admg.get_role("latents")) == set()
+
 
 class TestADMGNodeOperations:
     """Test node addition and validation."""
@@ -65,23 +110,16 @@ class TestADMGNodeOperations:
         admg = ADMG()
         admg.add_node("A")
         admg.add_node("B")
-        admg.add_node("C", latent=True)
-        admg.add_node("D", latent=True)
 
-        assert set(admg.nodes()) == {"A", "B", "C", "D"}
-        assert set(admg.latents) == {"C", "D"}
+        assert set(admg.nodes()) == {"A", "B"}
 
     def test_add_nodes_from(self):
         """Test adding multiple nodes at once."""
         admg = ADMG()
         admg.add_nodes_from(["A", "B"])
         admg.add_nodes_from(set(["C", "D"]))
-        admg.add_nodes_from(["E", "F"], latent=[False, True])
-        admg.add_nodes_from(["G", "H"], latent=True)
-        admg.add_nodes_from(set(["I", "J"]), latent=True)
 
-        assert set(admg.nodes()) == {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
-        assert set(admg.latents) == {"F", "G", "H", "I", "J"}
+        assert set(admg.nodes()) == {"A", "B", "C", "D"}
 
 
 class TestADMGEdgeOperations:
@@ -302,7 +340,7 @@ class TestADMGGraphOperations:
         admg = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["F"],
+            latents=["D"],
             roles={"exposure": ["A"], "outcome": ["C"]},
         )
 
@@ -310,41 +348,41 @@ class TestADMGGraphOperations:
         other1 = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["F"],
+            latents=["D"],
             roles={"exposure": ["A"], "outcome": ["C"]},
         )
         # Case2: When the models differ
         other2 = DAG(
             ebunch=[("A", "C"), ("D", "C")],
-            latents=["B"],
+            latents=["D"],
             roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
         )
         # Case3: When the directed_ebunch variables differ between models
         other3 = ADMG(
             directed_ebunch=[("A", "C"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["F"],
+            latents=["D"],
             roles={"exposure": ["A"], "outcome": ["C"]},
         )
         # Case4: When the bidirected_ebunch variables differ between models
         other4 = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "E"), ("B", "E")],
-            latents=["F"],
+            latents=["D"],
             roles={"exposure": ["A"], "outcome": ["C"]},
         )
         # Case5: When the latents variables differ between models
         other5 = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["G"],
+            latents=["B"],
             roles={"exposure": ["A"], "outcome": ["C"]},
         )
         # Case6: When the roles variables differ between models
         other6 = ADMG(
             directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
             bidirected_ebunch=[("A", "D"), ("B", "E")],
-            latents=["F"],
+            latents=["D"],
             roles={"exposure": ["A"], "adjustment": "D", "outcome": ["C"]},
         )
 
