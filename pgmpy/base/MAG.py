@@ -1,4 +1,5 @@
 from typing import Hashable, Iterable, Optional
+from pgmpy.readwrite.dagitty import serialize_to_dagitty, parse_from_dagitty
 
 import networkx as nx
 
@@ -385,3 +386,43 @@ class MAG(AncestralBase):
 
         new_mag.remove_edges_from(edges_to_remove)
         return new_mag
+
+
+
+    def to_dagitty(self) -> str:
+        """
+        Serialize this MAG into dagitty syntax using `mag { ... }` header.
+        """
+        return serialize_to_dagitty(self, "mag")
+
+    @classmethod
+    def from_dagitty(cls, text: str) -> "MAG":
+        """
+        Construct a MAG from dagitty text.
+        """
+        kind, nodes, dir_e, bidi_e, roles = parse_from_dagitty(text)
+        if kind not in {"mag", "dag"}:
+            # Some tools export ADMG or DAG; MAG requires directed and bidirected only.
+            # Accept 'dag' header if edges are compatible.
+            pass
+
+        g = cls()
+        for n in nodes:
+            g.add_node(n)
+            for rflag in ("exposure", "outcome", "latent"):
+                if roles.get(n, {}).get(rflag):
+                    g.nodes[n][rflag] = True
+
+        for u, v in dir_e:
+            g.add_edge(u, v)
+
+        add_bidi = getattr(g, "add_bidirected_edge", None)
+        if callable(add_bidi):
+            for u, v in bidi_e:
+                add_bidi(u, v)
+        else:
+            for u, v in bidi_e:
+                g.add_edge(u, v, bidirected=True)  # type: ignore
+
+        return g
+

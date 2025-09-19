@@ -12,6 +12,7 @@ from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
+from pgmpy.readwrite.dagitty import serialize_to_dagitty, parse_from_dagitty
 
 
 class DAG(_GraphRolesMixin, nx.DiGraph):
@@ -1844,6 +1845,26 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
         )
 
+        def to_dagitty(self) -> str:
+        return serialize_to_dagitty(self, "dag")
+
+    @classmethod
+    def from_dagitty(cls, text: str) -> "DAG":
+        kind, nodes, dir_e, bidi_e, roles = parse_from_dagitty(text)
+        if kind not in {"dag"}:
+            raise ValueError("DAG.from_dagitty expects a dag { ... } header.")
+        g = cls()
+        for n in nodes:
+            g.add_node(n)
+            for rflag in ("exposure", "outcome", "latent"):
+                if roles.get(n, {}).get(rflag):
+                    g.nodes[n][rflag] = True
+        for u, v in dir_e:
+            g.add_edge(u, v)
+        if bidi_e:
+            # DAGs don't support <->; keep strict.
+            raise ValueError("Bidirected edges not allowed in DAG.")
+        return g
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
     """
@@ -2309,3 +2330,26 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             and self.latents == other.latents
             and self.get_role_dict() == other.get_role_dict()
         )
+
+    def to_dagitty(self) -> str:
+        return serialize_to_dagitty(self, "pdag")
+
+    @classmethod
+    def from_dagitty(cls, text: str) -> "PDAG":
+        kind, nodes, dir_e, bidi_e, roles = parse_from_dagitty(text)
+        if kind not in {"pdag", "dag"}:
+            raise ValueError("PDAG.from_dagitty expects pdag { ... } or dag { ... }.")
+        g = cls()
+        for n in nodes:
+            g.add_node(n)
+            for rflag in ("exposure", "outcome", "latent"):
+                if roles.get(n, {}).get(rflag):
+                    g.nodes[n][rflag] = True
+        # PDAG supports directed and undirected; since dagitty uses '--' for some PDAGs,
+        # and we aren't parsing '--' here, we only add directed edges discovered as '->'.
+        for u, v in dir_e:
+            g.add_edge(u, v)
+        if bidi_e:
+            # PDAG doesn't have <-> in dagitty; reject strictly.
+            raise ValueError("Bidirected edges not allowed in PDAG.")
+        return g

@@ -342,3 +342,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - six not a dependency anymore.
+
+## [Unreleased]
+### Added
+1. Dagitty I/O for mixed graphs:
+   - **ADMG** and **MAG** now support `to_dagitty()` and `from_dagitty()` for round-tripping models to/from dagitty syntax.
+   - Variable roles (**exposure**, **outcome**, **latent**) can now be read/written across **all** model classes (DAG, PDAG, ADMG, MAG), using dagitty’s node attribute tags (e.g., `X [exposure]`).
+   - New internal helper module `pgmpy.readwrite.dagitty` centralizes parsing/serialization.
+   - Note: per project guidance, ADMG is serialized with a `dag { ... }` header while allowing `<->` edges.
+
+### Changed
+1. **DAG** and **PDAG** dagitty writers/readers refactored to use the new shared helper, gaining role support without changing existing public behavior.
+2. Serialization code is more consistent across graph types; error messages are stricter for invalid edge types in unsupported models.
+
+### Tests
+1. Added `pgmpy/tests/test_readwrite/test_dagitty_io.py` with round-trip tests for:
+   - DAG with roles (`exposure`, `outcome`)
+   - ADMG with directed + bidirected edges and `latent` roles
+   - MAG with directed + bidirected edges
+
+### Notes
+1. **PAG**: Dagitty I/O hooks are planned once the `PAG` class lands (see #2346). This release does **not** include PAG I/O.
+2. Backwards compatibility: no breaking changes expected for existing DAG/PDAG dagitty users; output now includes role tags when present.
+
+### References
+1. Related issues: #2350 (DAG/PDAG dagitty), follow-up for PAG: #2346.

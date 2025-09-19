@@ -3,6 +3,7 @@ import collections
 import networkx as nx
 from networkx import MultiDiGraph
 
+from pgmpy.readwrite.dagitty import serialize_to_dagitty, parse_from_dagitty
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.base.DAG import DAG as pgmpy_DAG
 
@@ -606,3 +607,50 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             ):
                 return False
         return True
+
+
+
+        def to_dagitty(self) -> str:
+            """
+            Serialize this ADMG into dagitty syntax.
+
+            Note
+            ----
+            dagitty commonly represents ADMGs under a `dag { ... }` header,
+            but allows `<->` edges inside. We follow that convention.
+            """
+            return serialize_to_dagitty(self, "admg")
+
+        @classmethod
+        def from_dagitty(cls, text: str) -> "ADMG":
+            """
+            Construct an ADMG from dagitty text.
+
+            The parser accepts `dag { ... }` with `<->` edges for ADMGs.
+            """
+            kind, nodes, dir_e, bidi_e, roles = parse_from_dagitty(text)
+
+            # Create empty graph
+            g = cls()
+            for n in nodes:
+                g.add_node(n)
+                for rflag in ("exposure", "outcome", "latent"):
+                    if roles.get(n, {}).get(rflag):
+                        g.nodes[n][rflag] = True
+
+            # Directed edges:
+            for u, v in dir_e:
+                g.add_edge(u, v)
+
+            # Bidirected edges:
+            add_bidi = getattr(g, "add_bidirected_edge", None)
+            if callable(add_bidi):
+                for u, v in bidi_e:
+                    add_bidi(u, v)
+            else:
+                # Fallback: mark an undirected edge with an attribute.
+                for u, v in bidi_e:
+                    g.add_edge(u, v, bidirected=True)  # type: ignore
+
+            return g
+
