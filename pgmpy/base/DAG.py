@@ -129,7 +129,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     ...     latents={"U", "V"},
     ... )
     >>> sorted(G.latents)
-    ['U', 'V']
+    ['U', 'V']     
 
     Add a new latent variable 'Z' using the role system:
 
