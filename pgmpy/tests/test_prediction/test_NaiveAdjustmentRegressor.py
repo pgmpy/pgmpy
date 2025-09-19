@@ -13,13 +13,49 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 from pgmpy.base import DAG
 from pgmpy.prediction.NaiveAdjustmentRegressor import NaiveAdjustmentRegressor
 
+# def make_estimator():
+#     """Create a valid estimator for sklearn compatibility tests."""
+#     # Use integer column names for sklearn compatibility
+#     # sklearn passes numpy arrays which get converted to DataFrames with columns [0, 1, 2, ...]
+
+#     ###  --- FOR REFERENCE ----
+#     # Original array:
+#     # [[0.46693226 0.80723309 0.86748235]
+#     # [0.824674   0.40488296 0.82145585]
+#     # [0.31349205 0.96163982 0.84189278]
+#     # [0.80590202 0.93888954 0.42519219]
+#     # [0.58733317 0.47757527 0.30911211]]
+#     # Array shape: (5, 3)
+
+#     # DataFrame with range index columns:
+#     #         0         1         2
+#     # 0  0.466932  0.807233  0.867482
+#     # 1  0.824674  0.404883  0.821456
+#     # 2  0.313492  0.961640  0.841893
+#     # 3  0.805902  0.938890  0.425192
+#     # 4  0.587333  0.477575  0.309112
+#     # Column names: [0, 1, 2]
+#     # Column types: [<class 'int'>, <class 'int'>, <class 'int'>]
+#     dag = DAG(
+#         ebunch=[],  # No edges needed for simplest case
+#         roles={
+#             "exposure": [0],
+#             "outcome": ["target"],
+#             "adjustment": []
+#         },
+#     )
+#     return NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
+
 
 def make_estimator():
     """Create a valid estimator for sklearn compatibility tests."""
-    dag = DAG(
-        ebunch=[("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": []},
-    )
+    dag = DAG()
+    dag.add_nodes_from([0, 1])  # exposure=0, outcome=1 (dummy)
+
+    # assign roles
+    dag = dag.with_role("exposure", [0])
+    dag = dag.with_role("outcome", [1])
+    dag = dag.with_role("adjustment", [])
     return NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
 
 
@@ -210,23 +246,30 @@ def test_error_handling():
 
 def test_numpy_array_input():
     """Test that regressor works with numpy array inputs."""
+    # Use integer column names for numpy array input
     dag = DAG(
-        ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        ebunch=[
+            (1, 0),
+            (1, 2),
+            (0, 2),
+        ],  # Column 1 -> Column 0, Column 1 -> Column 2, Column 0 -> Column 2
+        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
     np.random.seed(42)
     n_samples = 50
-    X_array = np.random.normal(0, 1, (n_samples, 2))
-    y_array = np.random.normal(0, 1, n_samples)
+    X_array = np.random.normal(
+        0, 1, (n_samples, 2)
+    )  # Columns 0 and 1 (exposure and adjustment)
+    y_array = np.random.normal(0, 1, n_samples)  # Target (outcome column 2)
 
-    regressor.fit(X_array, y_array, feature_names=["X", "Z"])
-    predictions = regressor.predict(X_array, feature_names=["X", "Z"])
+    regressor.fit(X_array, y_array)
+    predictions = regressor.predict(X_array)
 
     assert len(predictions) == n_samples
-    assert regressor.feature_columns_ == ["X", "Z"]
+    assert regressor.feature_columns_ == [0, 1]  # exposure + adjustment
 
 
 def test_sample_weight_support():
@@ -277,21 +320,26 @@ def test_dag_roles_validation():
         regressor_invalid._validate_dag_and_extract_roles()
 
 
-def test_array_input_requires_feature_names():
-    """Test that array input requires explicit feature names."""
+def test_array_input_with_integer_dag_variables():
+    """Test that array input works with integer DAG variable names."""
+    # DAG with integer column names matching array structure
     dag = DAG(
-        ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        ebunch=[
+            (1, 0),
+            (1, 2),
+            (0, 2),
+        ],  # Column 1 -> Column 0, Column 1 -> Column 2, Column 0 -> Column 2
+        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
     np.random.seed(42)
-    X_array = np.random.normal(0, 1, (50, 2))
-    y_array = np.random.normal(0, 1, 50)
+    X_array = np.random.normal(0, 1, (50, 2))  # Columns 0 and 1
+    y_array = np.random.normal(0, 1, 50)  # Target
 
-    regressor.fit(X_array, y_array, feature_names=["X", "Z"])
-    predictions = regressor.predict(X_array, feature_names=["X", "Z"])
+    regressor.fit(X_array, y_array)
+    predictions = regressor.predict(X_array)
     assert len(predictions) == 50
 
 

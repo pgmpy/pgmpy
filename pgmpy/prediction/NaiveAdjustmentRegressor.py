@@ -165,14 +165,10 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
         return exposure_vars[0], outcome_vars[0], adjustment_vars, pretreatment_vars
 
-    def _prepare_feature_df(self, X, feature_names=None) -> pd.DataFrame:
+    def _prepare_feature_df(self, X) -> pd.DataFrame:
         """
-        Convert input to DataFrame with columns matching causal graph roles.
-
-        Handles three cases:
-        1. DataFrame input: Select required columns by name
-        2. Array with `feature_names`: Convert to DataFrame and select by name
-        3. Array without `feature_names` (sklearn tests): Map first N columns to roles
+        Convert input to DataFrame and validate that column names exactly match DAG variables.
+        No column renaming/mapping - strict validation only.
         """
         # Step 1: Get required feature columns (set during fit)
         if hasattr(self, "feature_columns_"):
@@ -187,65 +183,44 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         if isinstance(X, pd.DataFrame):
             X_df = X.copy()
         else:
+            # For numpy arrays, use range index as column names
             X_arr = np.asarray(X)
-
             if X_arr.ndim == 1:
                 raise ValueError(
                     "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
                 )
+            X_df = pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
 
-            if feature_names is None:
-                # Generate generic names for array inputs, e.g., from sklearn tests
-                feature_names = [f"feature_{i}" for i in range(X_arr.shape[1])]
-            X_df = pd.DataFrame(X_arr, columns=feature_names)
-
-        # Step 3: Handle sklearn compatibility for generic feature names
-        has_generic_names = all(str(col).startswith("feature_") for col in X_df.columns)
-        has_numeric_names = all(
-            isinstance(col, (int, np.integer)) for col in X_df.columns
-        )
-
-        if has_generic_names or has_numeric_names:
-            # Step 3a: sklearn test case - map first N columns to semantic role names
-            if len(X_df.columns) < len(required_features):
-                raise ValueError(
-                    f"Input has {len(X_df.columns)} features, but the causal model "
-                    f"requires {len(required_features)}: {required_features}"
-                )
-            feature_df = X_df.iloc[:, : len(required_features)].copy()
-            feature_df.columns = required_features
-            return feature_df
-
-        # Step 4: Standard case - map named columns to causal roles
+        # Step 3: STRICT validation: column names must exactly match DAG variables
         missing_columns = set(required_features) - set(X_df.columns)
         if missing_columns:
             raise ValueError(
                 f"Missing required columns in input data: {list(missing_columns)}. "
-                f"Required columns based on DAG roles: {required_features}."
+                f"DAG expects columns: {required_features}, but got: {list(X_df.columns)}"
             )
 
-        return X_df[required_features]
+        return X_df[required_features].copy()
 
     def fit(
         self,
         X,
         y,
         sample_weight: Optional[np.ndarray] = None,
-        feature_names=None,
     ):
         """
+        Fit the Naive Adjustment Regressor.
+
         Parameters
         ----------
         X : array-like or DataFrame of shape (n_samples, n_features)
-            Training data. If DataFrame, must include columns for exposure,
-            adjustment, and pretreatment variables as defined in causal graph.
-            If array, `feature_names` should be provided (except for sklearn tests).
+            Training data. Column names must exactly match variable names in the causal graph.
+            - If DataFrame: Column names must match DAG variable names exactly
+            - If numpy array: Will be converted to DataFrame with columns [0, 1, 2, ...],
+              so DAG should use integer variable names
         y : array-like of shape (n_samples,)
             Target values (outcome variable).
         sample_weight : array-like of shape (n_samples,), optional
             Sample weights for training.
-        feature_names : list, optional
-            Feature names when X is an array.
 
         Returns
         -------
@@ -270,7 +245,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self.feature_columns_ = [exposure_var] + adjustment_vars + pretreatment_vars
 
         # Step 4: Prepare feature DataFrame
-        X_features = self._prepare_feature_df(X, feature_names)
+        X_features = self._prepare_feature_df(X)
 
         # Step 5: Initialize base estimator
         self.estimator_ = (
@@ -284,8 +259,10 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self.estimator_.fit(X_features, y_arr, **fit_params)
 
         # Step 7: Create explanation
-        adj_str = ", ".join(adjustment_vars) if adjustment_vars else "none"
-        pre_str = ", ".join(pretreatment_vars) if pretreatment_vars else "none"
+        adj_str = ", ".join(map(str, adjustment_vars)) if adjustment_vars else "none"
+        pre_str = (
+            ", ".join(map(str, pretreatment_vars)) if pretreatment_vars else "none"
+        )
         self.explanation_ = (
             f"NaiveAdjustmentRegressor(exposure={exposure_var}, outcome={outcome_var}, "
             f"adjustment=[{adj_str}], pretreatment=[{pre_str}], "
@@ -294,26 +271,41 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
 
         return self
 
-    def predict(self, X, feature_names=None):
-        """Make predictions using the fitted regressor."""
+    def predict(self, X):
+        """Make predictions using the fitted regressor.
+
+        Parameters
+        ----------
+        X : array-like or DataFrame of shape (n_samples, n_features)
+            Input data. Column names must exactly match variable names in the causal graph.
+            - If DataFrame: Column names must match DAG variable names exactly
+            - If numpy array: Will be converted to DataFrame with columns [0, 1, 2, ...],
+              so DAG should use integer variable names
+
+        Returns
+        -------
+        predictions : ndarray of shape (n_samples,)
+            Predicted values.
+        """
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # Step 2: Validate input data for sklearn compatibility
-        # This ensures feature names and n_features_in_ match what was seen during fit
-        X_validated = validate_data(
-            self,
-            X,
-            accept_sparse=False,
-            ensure_2d=True,
-            dtype="numeric",
-            reset=False,
-        )
+        # Step 2: For DataFrames, skip validate_data to preserve column names
+        if isinstance(X, pd.DataFrame):
+            X_filtered = self._prepare_feature_df(X)
+        else:
+            # For arrays, use validate_data
+            X_validated = validate_data(
+                self,
+                X,
+                accept_sparse=False,
+                ensure_2d=True,
+                dtype="numeric",
+                reset=False,
+            )
+            X_filtered = self._prepare_feature_df(X_validated)
 
-        # Step 3: Filter features to match causal graph roles
-        X_filtered = self._prepare_feature_df(X_validated, feature_names)
-
-        # Step 4: Make predictions and return as 1D array
+        # Step 3: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_filtered)
         return np.asarray(predictions).ravel()
 
