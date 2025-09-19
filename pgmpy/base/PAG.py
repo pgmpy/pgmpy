@@ -718,7 +718,7 @@ class PAG(MAG):
             "R1": pag.rule_1,
             "R2": pag.rule_2,
             "R3": pag.rule_3,
-            "R4": pag.rule_4,
+            "R4": pag.rule_4,  # requires sep sets
             "R5": pag.rule_5,
             "R6": pag.rule_6,
             "R7": pag.rule_7,
@@ -727,30 +727,27 @@ class PAG(MAG):
             "R10": pag.rule_10,
         }
 
-        # Normalize and validate rule list
-        if rules:
-            rules_to_apply = [r.upper() for r in rules]
-            unknown = set(rules_to_apply) - set(rules_map.keys())
-            if unknown:
-                raise ValueError(f"Unknown rules: {unknown}")
-        else:
-            rules_to_apply = list(rules_map.keys())
+        rules_to_apply = rules or list(rules_map.keys())
 
-        # Iteratively apply rules until convergence
-        changed = True
-        while changed:
+        # validate the requested rules
+        missing = set(rules_to_apply) - set(rules)
+        if missing:
+            raise ValueError(f"Unknown Rule(s) Requested:  {missing}")
+
+        while True:
             changed = False
-            for rule_name in rules_to_apply:
-                rule_func = rules_map[rule_name]
-                if rule_name in {"R0", "R4"}:
+            for r in rules_to_apply:
+                func = rules_map[r]
+                if r == "R4":
                     if sepsets is None:
                         raise ValueError(
-                            f"Rule {rule_name} requires sepsets to be provided."
+                            f"Rule {r} requires separation sets whhich is missing here"
                         )
-                    if rule_func(pag, sepsets):
-                        changed = True
+                    changed = changed | func(pag, sepsets)
                 else:
-                    if rule_func(pag):
-                        changed = True
+                    changed = changed | func(pag, sepsets)
+
+            if not changed:
+                break
 
         return pag
