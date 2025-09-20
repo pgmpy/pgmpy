@@ -17,7 +17,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import UndirectedGraph
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
@@ -362,8 +362,8 @@ class BaseConstraintEstimator(StructureEstimator):
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
         temporal_ordering: Dict[Hashable, int] = dict(),
-        graph_cls: Type = None,
-    ):
+        graph_cls: Type = PDAG,  # By default
+    ) -> PDAG:
         """
         Orient v-structures (colliders) in the given skeleton based on separating sets.
 
