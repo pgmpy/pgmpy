@@ -347,8 +347,8 @@ class BaseConstraintEstimator(StructureEstimator):
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
         temporal_ordering: Dict[Hashable, int] = dict(),
-        graph_cls: Type = None,
-    ):
+        graph_cls: Type = PDAG,  # By default
+    ) -> PDAG:
         """
         Orient v-structures (colliders) in the given skeleton based on separating sets.
 
