@@ -1,28 +1,12 @@
-<<<<<<< HEAD
 import warnings
 from collections.abc import Callable, Hashable
 from itertools import permutations
-=======
-from typing import (
-    Callable,
-    Dict,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
->>>>>>> fdcb2b7a (add orientation rules except R4 && refactor classes)
 
 import networkx as nx
 import pandas as pd
 
-<<<<<<< HEAD
 from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
-=======
-from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import ExpertKnowledge
->>>>>>> fdcb2b7a (add orientation rules except R4 && refactor classes)
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.independencies import Independencies
@@ -95,14 +79,11 @@ class PC(BaseConstraintEstimator):
         independencies: Independencies | None = None,
         **kwargs,
     ) -> None:
-<<<<<<< HEAD
         warnings.warn(
             "PC is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.PC instead.",
             FutureWarning,
             stacklevel=2,
         )
-=======
->>>>>>> fdcb2b7a (add orientation rules except R4 && refactor classes)
         super().__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
@@ -293,7 +274,6 @@ class PC(BaseConstraintEstimator):
         elif return_type.lower() == "dag":
             return pdag.to_dag()
         else:
-<<<<<<< HEAD
             raise ValueError(f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}")
 
     @staticmethod
@@ -372,8 +352,3 @@ class PC(BaseConstraintEstimator):
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented
-=======
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
-            )
->>>>>>> fdcb2b7a (add orientation rules except R4 && refactor classes)
