@@ -1380,10 +1380,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         daft_pgm = PGM(**pgm_params)
         for node in self.nodes():
-            try:
-                extra_params = node_params[node]
-            except KeyError:
-                extra_params = dict()
+            observed = node in self.observed
+            extra_params = node_params.get(node, dict())
 
             if latex:
                 daft_pgm.add_node(
@@ -1391,7 +1389,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                     rf"${node}$",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
             else:
@@ -1400,7 +1398,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                     f"{node}",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
 
