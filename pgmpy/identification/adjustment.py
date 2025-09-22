@@ -167,10 +167,10 @@ class Adjustment(BaseIdentification):
         # Step 3: If variant = "all", iterate over all possible sets of adjustment
         #         variables, and return all that are valid.
         elif self.variant == "all":
-            exposure = causal_graph.get_role("exposure")
-            outcome = causal_graph.get_role("outcome")
+            exposure = causal_graph.get_role("exposure")[0]
+            outcome = causal_graph.get_role("outcome")[0]
 
-            ancestors = causal_graph._get_ancestors_of(exposure + outcome)
+            ancestors = causal_graph._get_ancestors_of([exposure, outcome])
 
             valid_adj_graphs = []
             for s in _powerset(ancestors - {exposure, outcome}):
@@ -200,11 +200,11 @@ class Adjustment(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        exposure = causal_graph.get_role("exposure")[0]
-        outcome = causal_graph.get_role("outcome")[0]
+        exposure = causal_graph.get_role("exposure")
+        outcome = causal_graph.get_role("outcome")
         adjustment_vars = causal_graph.get_role("adjustment")
 
-        conditional_vars = [exposure] + adjustment_vars
+        conditional_vars = exposure + adjustment_vars
 
         predecessors = set()
         for exposure_var in exposure:
