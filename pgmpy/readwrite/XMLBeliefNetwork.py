@@ -4,6 +4,7 @@ import xml.etree.ElementTree as etree
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -464,7 +465,7 @@ class XBNWriter(object):
                     " " + " ".join(map(str, cpd_values[0])) + " "
                 )
 
-    def write_xbn(self, filename):
+    def write(self, filename):
         """
         Writes the BIF data into a file
 
@@ -478,8 +479,14 @@ class XBNWriter(object):
         >>> from pgmpy.readwrite import XBNReader, XBNWriter
         >>> asia = get_example_model("asia")
         >>> writer = XBNWriter(asia)
-        >>> writer.write_xbn(filename="asia.xbn")
+        >>> writer.write(filename="asia.xbn")
         """
         writer = self.__str__()
         with open(filename, "wb") as fout:
             fout.write(writer)
+
+    def write_xbn(self, filename):
+        logger.warning(
+            "The `XBNWriter.write_xbn` has been deprecated. Please use `XBNWriter.write` instead."
+        )
+        self.write(filename)

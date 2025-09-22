@@ -4,53 +4,39 @@ on: [pull_request]
 
 jobs:
   lint:
-    name: Lint (Python ${{ matrix.python-version }})
+    name: code-quality
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-
     steps:
+      - name: repository checkout step
+        uses: actions/checkout@v5
+
+      - name: python environment step
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: install pre-commit
+        run: python3 -m pip install pre-commit
+
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
-      - name: Install linting tools
+      - name: Get changed files
+        id: changed-files
         run: |
-          pip install --upgrade pip
-          pip install black blackdoc flake8
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ' ')
+          echo "CHANGED_FILES=${CHANGED_FILES}" >> $GITHUB_ENV
 
-      - name: Check code formatting
+      - name: Print changed files
         run: |
-          black --diff .
-          black --check .
+          echo "Changed files:" && echo "$CHANGED_FILES" | tr ' ' '\n'
 
-      - name: Check doctest formatting
+      - name: Run pre-commit on changed files
         run: |
-          blackdoc --diff pgmpy
-          blackdoc --check pgmpy
-
-      - name: Fetch dev branch
-        run: git fetch origin
-
-      - name: Get modified Python files
-        id: files
-        run: |
-          FILES=$(git diff --name-only dev...HEAD | grep '\.py$' | paste -sd' ' -)
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
-
-      - name: Flake8
-        run: |
-          if [ -n "${{ steps.files.outputs.files }}" ]; then
-            echo "Running flake8 on: ${{ steps.files.outputs.files }}"
-            flake8 --config=.flake8 ${{ steps.files.outputs.files }}
+          if [ -n "$CHANGED_FILES" ]; then
+            pre-commit run --color always --files $CHANGED_FILES --show-diff-on-failure
           else
-            echo "No Python files changed."
+            echo "No changed files to check."
           fi
