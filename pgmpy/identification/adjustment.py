@@ -177,6 +177,7 @@ class Adjustment(BaseIdentification):
             ancestors -= set(
                 itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome))
             )
+            ancestors -= {exposure, outcome}
 
             valid_adj_graphs = []
             for s in _powerset(ancestors):
