@@ -20,7 +20,7 @@ from sklearn.utils.validation import check_array
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import DAG, PDAG, UndirectedGraph
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
@@ -30,11 +30,21 @@ from pgmpy.independencies import Independencies
 class BaseCausalEstimator(BaseEstimator, ABC):
     """Abstract base class for causal discovery estimators."""
 
-    def fit(self, X: pd.DataFrame, independencies=None, y=None):
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y=None,
+        independencies=None,
+    ):
         """Fit model to data."""
         return self._fit(X, independencies, y)
 
-    def _fit(self, X: pd.DataFrame, independencies=None, y=None):
+    def _fit(
+        self,
+        X: pd.DataFrame,
+        y=None,
+        independencies=None,
+    ):
         raise NotImplementedError()
 
     def build_skeleton(
@@ -405,18 +415,30 @@ class PC(BaseCausalEstimator):
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
-    def _fit(self, X: pd.DataFrame, independencies=None, y=None):
-        # Store training data info
+    def _fit(
+        self,
+        X: pd.DataFrame,
+        y=None,
+        independencies=None,
+    ):
+        # Handle cases like complex data, sparse arrays etc. first
+        X_arr_ = check_array(
+            X.copy(), dtype="numeric", accept_sparse=False, force_all_finite=True
+        )
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+
         self.n_features_in_ = X.shape[1]
-
-        X_arr_ = check_array(X.copy(), dtype="numeric", force_all_finite=True)
-        self.feature_names_in_ = list(X.columns)
-
         n_samples, n_features = X.shape
+
+        if n_features == 0:
+            raise ValueError(
+                f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required."
+            )
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
+
+        self.feature_names_in_ = list(X.columns)
 
         # CI test
         ci_test = get_callable_ci_test(self.ci_test, data=X)
