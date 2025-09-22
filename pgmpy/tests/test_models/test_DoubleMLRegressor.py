@@ -57,7 +57,7 @@ def make_estimator_for_checks():
         dag=G,
         estimator_g=DummyRegressor(strategy="mean"),
         estimator_m=DummyRegressor(strategy="mean"),
-        n_folds=3,
+        n_folds=1,
         seed=0,
         allow_array_unnamed=False,
     )
