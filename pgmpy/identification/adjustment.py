@@ -1,3 +1,5 @@
+import itertools
+
 import networkx as nx
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
@@ -171,9 +173,13 @@ class Adjustment(BaseIdentification):
             outcome = causal_graph.get_role("outcome")[0]
 
             ancestors = causal_graph._get_ancestors_of([exposure, outcome])
+            # Remove any variables on the path from exposure to outcome (these cannot be in the adjustment set)
+            ancestors -= set(
+                itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome))
+            )
 
             valid_adj_graphs = []
-            for s in _powerset(ancestors - {exposure, outcome}):
+            for s in _powerset(ancestors):
                 adj_causal_graph = causal_graph.with_role(
                     "adjustment", s, inplace=False
                 )
