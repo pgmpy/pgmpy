@@ -273,7 +273,7 @@ class XMLBIFWriter(object):
     >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model("asia")
     >>> writer = XMLBIFWriter(model)
-    >>> writer.write_xmlbif("asia.xml")
+    >>> writer.write("asia.xml")
 
     Reference
     ---------
@@ -512,7 +512,7 @@ class XMLBIFWriter(object):
 
         return table_tag
 
-    def write_xmlbif(self, filename):
+    def write(self, filename):
         """
         Write the xml data into the file.
 
@@ -526,7 +526,13 @@ class XMLBIFWriter(object):
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
         >>> writer = XMLBIFWriter(model)
-        >>> writer.write_xmlbif("asia.xml")
+        >>> writer.write("asia.xml")
         """
         with open(filename, "w") as fout:
             fout.write(self.__str__())
+
+    def write_xmlbif(self, filename):
+        logger.warning(
+            "The `XMLBIFWriter.write_xmlbif` has been deprecated. Please use `XMLBIFWriter.write` instead."
+        )
+        self.write(filename)

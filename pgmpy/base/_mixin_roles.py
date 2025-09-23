@@ -90,12 +90,19 @@ class _GraphRolesMixin:
         else:
             new_graph = self
 
-        for var in variables:
-            if var not in new_graph:
-                raise ValueError(f"Variable '{var}' not found in the graph.")
-            else:
-                new_graph.add_node(var, role=role)
-
+        is_sem_graph = new_graph.__module__ == "pgmpy.models.SEM"
+        if not is_sem_graph:
+            for var in variables:
+                if var not in new_graph:
+                    raise ValueError(f"Variable '{var}' not found in the graph.")
+                else:
+                    new_graph.add_node(var, role=role)
+        else:
+            for var in variables:
+                if var not in new_graph.graph:
+                    raise ValueError(f"Variable '{var}' not found in the graph.")
+                else:
+                    new_graph.add_node(var, role=role)
         return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
@@ -145,7 +152,73 @@ class _GraphRolesMixin:
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposure' and one 'outcome'"
+                f"{type(self)} must have at least one 'exposure' and one 'outcome' "
                 f"role defined, but {problem_str}."
             )
         return True
+
+    @property
+    def latents(self):
+        """
+        Property
+        --------
+        latents : set of nodes (default: empty set)
+            A set of latent variables in the graph. These are not observed
+            variables but are used to represent unobserved confounding or
+            other latent structures.
+
+        Examples
+        --------
+        Create a DAG with latents and check the latents value.
+
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("a", "b")], latents="a")
+        >>> G.latents
+        {'a'}
+        """
+        if self.has_role("latents"):
+            return set(self.get_role("latents"))
+        else:
+            return set()
+
+    @latents.setter
+    def latents(self, variables):
+        """
+        Replace the `latents` nodes.
+
+        Parameters
+        ----------
+        variables: set of nodes (default: empty set)
+            A set of latent variables in the graph. These are not observed
+            variables but are used to represent unobserved confounding or
+            other latent structures.
+        """
+        if self.has_role("latents"):
+            self.without_role(
+                role="latents", variables=self.get_role("latents"), inplace=True
+            )
+        self.with_role(role="latents", variables=variables, inplace=True)
+
+    @property
+    def observed(self):
+        """
+        Property
+        --------
+        observed: set of nodes (default: empty set)
+            A set of observed variables in the graph. These are the variables
+            that can be measured directed and have data available for them.
+
+        Examples
+        --------
+        Create a DAG with latents and check the observed value.
+
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("a", "b")], latents="a")
+        >>> G.observed
+        {'b'}
+        """
+        nodes = set(self.nodes())
+        if self.has_role("latents"):
+            return nodes - set(self.get_role("latents"))
+        else:
+            return nodes

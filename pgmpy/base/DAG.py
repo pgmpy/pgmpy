@@ -8,7 +8,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import UndirectedGraph
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
@@ -116,6 +115,39 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     ['X']
     >>> G.get_role("adjustment")
     ['U', 'M']
+
+    **Latents:**
+        Latent variables can be managed using the `latents` parameter at
+        initialization or by assigning the "latents" role to nodes. The
+        `latents` parameter is a convenient shortcut for `roles={'latents': ...}`.
+
+    Create a graph with initial latent variables 'U' and 'V':
+
+    >>> from pgmpy.base import DAG
+    >>> G = DAG(
+    ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y"), ("V", "M")],
+    ...     latents={"U", "V"},
+    ... )
+    >>> sorted(G.latents)
+    ['U', 'V']
+
+    Add a new latent variable 'Z' using the role system:
+
+    >>> G.add_node("Z")
+    >>> G.with_role(role="latents", variables="Z", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'V', 'Z']
+
+    You can also check for latents using the `get_role` method:
+
+    >>> sorted(G.get_role(role="latents"))
+    ['U', 'V', 'Z']
+
+    Remove a latent variable from the role:
+
+    >>> G.without_role(role="latents", variables="V", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'Z']
     """
 
     def __init__(
@@ -285,7 +317,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         node: Hashable,
         weight: Optional[float] = None,
-        latent: bool = False,
         **kwargs,
     ):
         """
@@ -298,10 +329,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         weight: int, float
             The weight of the node.
-
-        latent: boolean (default: False)
-            Specifies whether the variable is latent or not.
-
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -309,29 +336,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> G.add_node(node="A")
         >>> sorted(G.nodes())
         ['A']
-
-        Adding a node with some weight.
-
-        >>> G.add_node(node="B", weight=0.3)
-
-        The weight of these nodes can be accessed as:
-
-        >>> G.nodes["B"]
-        {'weight': 0.3}
-        >>> G.nodes["A"]
-        {'weight': None}
         """
-
-        # Check for networkx 2.0 syntax
-        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
-            node, attrs = node
-            if attrs.get("weight", None) is not None:
-                attrs["weight"] = weight
-        else:
-            attrs = {"weight": weight}
-
-        if latent:
-            self.latents.add(node)
 
         super().add_node(node, weight=weight, **kwargs)
 
@@ -339,7 +344,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         nodes: Iterable[Hashable],
         weights: Optional[list[float] | tuple[float]] = None,
-        latent: Sequence[bool] | bool = False,
     ):
         """
         Add multiple nodes to the Graph.
@@ -356,9 +360,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             A container of weights (int, float). The weight value at index i
             is associated with the variable at index i.
 
-        latent: bool, list, tuple (default=False)
-            A container of boolean. The value at index i tells whether the
-            node at index i is latent or not.
 
         Examples
         --------
@@ -380,21 +381,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         nodes = list(nodes)
 
-        if isinstance(latent, bool):
-            latent = [latent] * len(nodes)
-
         if weights:
             if len(nodes) != len(weights):
                 raise ValueError(
                     "The number of elements in nodes and weights" "should be equal."
                 )
             for index in range(len(nodes)):
-                self.add_node(
-                    node=nodes[index], weight=weights[index], latent=latent[index]
-                )
+                self.add_node(node=nodes[index], weight=weights[index])
         else:
             for index in range(len(nodes)):
-                self.add_node(node=nodes[index], latent=latent[index])
+                self.add_node(node=nodes[index])
 
     def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float] = None):
         """
@@ -546,6 +542,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> moral_graph.edges()
         EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
         """
+        from pgmpy.base import UndirectedGraph
+
         moral_graph = UndirectedGraph()
         moral_graph.add_nodes_from(self.nodes())
         moral_graph.add_edges_from(self.to_undirected().edges())
@@ -1382,10 +1380,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         daft_pgm = PGM(**pgm_params)
         for node in self.nodes():
-            try:
-                extra_params = node_params[node]
-            except KeyError:
-                extra_params = dict()
+            observed = node in self.observed
+            extra_params = node_params.get(node, dict())
 
             if latex:
                 daft_pgm.add_node(
@@ -1393,7 +1389,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                     rf"${node}$",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
             else:
@@ -1402,7 +1398,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                     f"{node}",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
 
@@ -1666,78 +1662,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         else:
             return "dag {\n}"
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
-        """
-        Estimates the CPD for each variable based on a given data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names of the network.
-            (If some values in the data are missing the data cells should be set to `numpy.nan`.
-            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
-
-        estimator: Estimator class
-            One of:
-            - MaximumLikelihoodEstimator (default)
-            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-            or 'equivalent_sample_size' as additional keyword arguments.
-            See `BayesianEstimator.get_parameters()` for usage.
-            - ExpectationMaximization
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values
-            in the data set are taken to be the only possible states.
-
-        n_jobs: int (default: 1)
-            Number of threads/processes to use for estimation. Using n_jobs > 1
-            for small models or datasets might be slower.
-
-        Returns
-        -------
-        Fitted Model: DiscreteBayesianNetwork
-            Returns a DiscreteBayesianNetwork object with learned CPDs.
-            The DAG structure is preserved, and parameters (CPDs) are added.
-            This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.base import DAG
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DAG([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data)
-        >>> fitted_model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x17945372c30>,
-        <TabularCPD representing P(B:2) at 0x17945a19760>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
-        """
-        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import DiscreteBayesianNetwork
-
-        if isinstance(self, DiscreteBayesianNetwork):
-            bn = self
-        else:
-            bn = DiscreteBayesianNetwork(self.edges())
-            bn.add_nodes_from(self.nodes())
-
-        if estimator is None:
-            estimator = MaximumLikelihoodEstimator
-        else:
-            if not issubclass(estimator, BaseEstimator):
-                raise TypeError("Estimator object should be a valid pgmpy estimator.")
-
-        _estimator = estimator(
-            bn,
-            data,
-            state_names=state_names,
-        )
-        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
-        bn.add_cpds(*cpds_list)
-        return bn
-
     def _variable_name_contains_non_string(self):
         """
         Checks if the variable names contain any non-string values. Used only for CausalInference class.
@@ -1963,7 +1887,6 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         """
-        self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
@@ -1972,6 +1895,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                 set([(Y, X) for (X, Y) in self.undirected_edges])
             )
         )
+        self.latents = set(latents)
 
         if roles is None:
             roles = {}

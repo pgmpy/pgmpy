@@ -9,7 +9,11 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
+from pgmpy.estimators import (
+    BayesianEstimator,
+    MaximumLikelihoodEstimator,
+    ParameterEstimator,
+)
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
@@ -192,6 +196,7 @@ class ExpectationMaximization(ParameterEstimator):
     def get_parameters(
         self,
         latent_card: Optional[Dict[str, int]] = None,
+        apply_smoothing: bool = False,
         max_iter: int = 100,
         atol: float = 1e-08,
         n_jobs: int = 1,
@@ -199,6 +204,7 @@ class ExpectationMaximization(ParameterEstimator):
         seed: Optional[int] = None,
         init_cpds: Union[Dict[str, TabularCPD], str] = {},
         show_progress: bool = True,
+        **kwargs,
     ) -> List[TabularCPD]:
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
@@ -209,6 +215,12 @@ class ExpectationMaximization(ParameterEstimator):
             A dictionary of the form {latent_var: cardinality} specifying the
             cardinality (number of states) of each latent variable. If None,
             assumes `2` states for each latent variable.
+
+        apply_smoothing: bool (default: False)
+            If True, `prior_type` and any additional arguments related to it
+            needs to be specified. Please refer
+            `BayesianEstimator.get_parameters` method for more details on which
+            arguments need to be specified.
 
         max_iter: int (default: 100)
             The maximum number of iterations the algorithm is allowed to run for.
@@ -330,13 +342,19 @@ class ExpectationMaximization(ParameterEstimator):
             - set(init_cpds.keys())
         )
 
-        mle = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
-        mle.model = self.model
-        mle.data = self.data
-        mle.state_names = self.state_names
+        if apply_smoothing:
+            estimator = BayesianEstimator.__new__(BayesianEstimator)
+            estimator.model = self.model
+            estimator.data = self.data
+            estimator.state_names = self.state_names
+        else:
+            estimator = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
+            estimator.model = self.model
+            estimator.data = self.data
+            estimator.state_names = self.state_names
 
         for var in fixed_cpd_vars:
-            fixed_cpds.append(mle.estimate_cpd(var))
+            fixed_cpds.append(estimator.estimate_cpd(var))
 
         # Step 3.2: Randomly initialize the CPDs involving latent variables if init_cpds is not specified.
         latent_cpds = []
@@ -366,7 +384,7 @@ class ExpectationMaximization(ParameterEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
 
-        mle.model = self.model_copy
+        estimator.model = self.model_copy
         # Step 4: Run the EM algorithm.
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
@@ -374,9 +392,9 @@ class ExpectationMaximization(ParameterEstimator):
             weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = fixed_cpds.copy()
-            mle.data = weighted_data
+            estimator.data = weighted_data
             for var in vars_with_latents.union(set(init_cpds.keys())):
-                new_cpds.append(mle.estimate_cpd(var, weighted=True))
+                new_cpds.append(estimator.estimate_cpd(var, weighted=True, **kwargs))
 
             # Step 4.3: Check of convergence and max_iter
             if self._is_converged(new_cpds, atol=atol):

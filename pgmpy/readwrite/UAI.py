@@ -10,6 +10,7 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
@@ -319,7 +320,7 @@ class UAIWriter(object):
     >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model("asia")
     >>> writer = UAIWriter(asia)
-    >>> writer.write_uai("asia.uai")
+    >>> writer.write("asia.uai")
     """
 
     def __init__(self, model, round_values=None):
@@ -478,7 +479,7 @@ class UAIWriter(object):
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
 
-    def write_uai(self, filename):
+    def write(self, filename):
         """
         Write the xml data into the file.
 
@@ -492,8 +493,14 @@ class UAIWriter(object):
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
         >>> writer = UAIWriter(asia)
-        >>> writer.write_uai("asia.uai")
+        >>> writer.write("asia.uai")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_uai(self, filename):
+        logger.warning(
+            "The `UAIWriter.write_uai` has been deprecated. Please use `UAIWriter.write` instead."
+        )
+        self.write(filename)

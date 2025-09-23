@@ -235,9 +235,7 @@ class PC(BaseConstraintEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=self.data, independencies=self.independencies
-        )
+        ci_test = get_callable_ci_test(ci_test, data=self.data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
