@@ -1,6 +1,6 @@
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.identification import BaseIdentification
 
 
@@ -18,6 +18,7 @@ class DummyIdentification(BaseIdentification):
 
     def __init__(self, variant=None):
         self.variant = variant
+        self.supported_graph_types = (DAG, PDAG)
 
     def _identify(self, causal_graph):
         if self.variant == "first":

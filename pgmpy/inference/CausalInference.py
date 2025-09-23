@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from itertools import chain, combinations, product
+from itertools import chain, product
 
 import networkx as nx
 import numpy as np
@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.global_vars import logger
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -129,6 +130,11 @@ class CausalInference(object):
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
+        )
+
         Z_ = _variable_or_iterable_to_set(Z)
 
         observed = [X] + list(Z_)
@@ -168,6 +174,11 @@ class CausalInference(object):
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
+        )
+
         try:
             assert X in self.observed_variables
             assert Y in self.observed_variables
@@ -217,6 +228,10 @@ class CausalInference(object):
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
+        )
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
@@ -271,6 +286,10 @@ class CausalInference(object):
         -------
         frozenset: a frozenset of frozensets
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
+        )
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
@@ -998,7 +1017,7 @@ class CausalInference(object):
             )
         elif not all([node in self.model.nodes() for node in variables]):
             raise ValueError(
-                f"Some of the variables in `variables` are not in the model."
+                "Some of the variables in `variables` are not in the model."
             )
         else:
             variables = list(variables)
