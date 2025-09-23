@@ -109,7 +109,7 @@ def test_basic_functionality_with_adjustment():
             actual_coefs = regressor.estimator_.coef_
 
             # Check coefficients are close to expected values (allowing for noise)
-            np.testing.assert_allclose(actual_coefs, expected_coefs, atol=0.2)
+            np.testing.assert_allclose(actual_coefs, expected_coefs, atol=0.05)
 
             # Check intercept is close to 0 (no baseline effect in simulation)
             assert abs(regressor.estimator_.intercept_) < 0.1
@@ -144,6 +144,9 @@ def test_dataframe_input_for_both_x_and_y():
     assert regressor.exposure_var_ == "X"
     assert regressor.adjustment_vars_ == ["Z"]
     assert list(regressor.get_feature_names_out()) == ["X", "Z"]
+
+    true_values = data["Y"].values
+    np.testing.assert_allclose(predictions, true_values, rtol=0.1)
 
 
 def test_no_adjustment_variables():
@@ -298,26 +301,43 @@ def test_sample_weight_support():
 
 
 def test_dag_roles_validation():
-    """Test that DAG roles are properly validated using pgmpy's built-in methods."""
+    """Test that DAG roles are properly validated during fit."""
     dag_valid = DAG(
         ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y", "adjustment": []}
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
 
-    exposure, outcome, adjustment, pretreatment = (
-        regressor._validate_dag_and_extract_roles()
+    exposure_vars = list(regressor.causal_graph.get_role("exposure"))
+    outcome_vars = list(regressor.causal_graph.get_role("outcome"))
+    adjustment_vars = list(regressor.causal_graph.get_role("adjustment"))
+    pretreatment_vars = list(
+        regressor.causal_graph.get_role("pretreatment")
+        if regressor.causal_graph.has_role("pretreatment")
+        else []
     )
-    assert exposure == "X"
-    assert outcome == "Y"
-    assert adjustment == []
-    assert pretreatment == []
 
+    assert len(exposure_vars) == 1, f"Expected 1 exposure, got {len(exposure_vars)}"
+    assert len(outcome_vars) == 1, f"Expected 1 outcome, got {len(outcome_vars)}"
+    assert exposure_vars[0] == "X"
+    assert outcome_vars[0] == "Y"
+    assert adjustment_vars == []
+    assert pretreatment_vars == []
+
+    # Invalid DAG (no roles) should fail
     dag_no_roles = DAG(ebunch=[("X", "Y")])
     regressor_invalid = NaiveAdjustmentRegressor(causal_graph=dag_no_roles)
 
-    with pytest.raises(ValueError):
-        regressor_invalid._validate_dag_and_extract_roles()
+    exposure_vars_invalid = list(regressor_invalid.causal_graph.get_role("exposure"))
+    outcome_vars_invalid = list(regressor_invalid.causal_graph.get_role("outcome"))
+    assert len(exposure_vars_invalid) == 0
+    assert len(outcome_vars_invalid) == 0
+
+    with pytest.raises(
+        ValueError, match="Exactly one exposure variable must be defined"
+    ):
+        test_data = pd.DataFrame({"X": [1, 2], "Y": [3, 4]})
+        regressor_invalid.fit(test_data[["X"]], test_data["Y"])
 
 
 def test_array_input_with_integer_dag_variables():
