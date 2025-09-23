@@ -161,6 +161,8 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 2: Convert input to DataFrame format
         if isinstance(X, pd.DataFrame):
             X_df = X.copy()
+            # import pdb; pdb.set_trace()
+
         else:
             # For numpy arrays, use range index as column names
             X_arr = np.asarray(X)
@@ -206,10 +208,9 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self : object
             Returns self for method chaining.
         """
+
         # Step 1: Validate input data
-        X_arr, y_arr = validate_data(
-            self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric"
-        )
+        validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 2: Extract and validate causal graph roles
         exposure_vars = list(self.causal_graph.get_role("exposure"))
@@ -252,7 +253,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         )
 
         # Step 6: Fit the estimator
-        self.estimator_.fit(X_features, y_arr, sample_weight=sample_weight)
+        self.estimator_.fit(X_features, y, sample_weight=sample_weight)
 
         # Step 7: Create explanation
         adj_str = ", ".join(map(str, adjustment_vars)) if adjustment_vars else "none"
@@ -286,20 +287,20 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # Step 2: For DataFrames, skip validate_data to preserve column names
-        if isinstance(X, pd.DataFrame):
-            X_filtered = self._prepare_feature_df(X)
-        else:
-            # For arrays, use validate_data
-            X_validated = validate_data(
-                self,
-                X,
-                accept_sparse=False,
-                ensure_2d=True,
-                dtype="numeric",
-                reset=False,
-            )
-            X_filtered = self._prepare_feature_df(X_validated)
+        # # Step 2: For DataFrames, skip validate_data to preserve column names
+        # if isinstance(X, pd.DataFrame):
+        #     X_filtered = self._prepare_feature_df(X)
+        # else:
+        #     # For arrays, use validate_data
+        validate_data(
+            self,
+            X,
+            accept_sparse=False,
+            ensure_2d=True,
+            dtype="numeric",
+            reset=False,
+        )
+        X_filtered = self._prepare_feature_df(X)
 
         # Step 3: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_filtered)

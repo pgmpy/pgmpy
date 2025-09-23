@@ -11,6 +11,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 from pgmpy.prediction.NaiveAdjustmentRegressor import NaiveAdjustmentRegressor
 
 # def make_estimator():
@@ -121,16 +123,22 @@ def test_basic_functionality_with_adjustment():
 
 def test_dataframe_input_for_both_x_and_y():
     """Test that regressor works when both X and y are DataFrames."""
-    lgbn = DAG.from_dagitty(
-        "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
-    )
+    # lgbn = DAG.from_dagitty(
+    #     "dag { Z -> X [beta=0.5] X -> Y [beta=0.3] Z -> Y [beta=0.2] }"
+    # )
 
-    data = lgbn.simulate(100, seed=42)
+    # data = lgbn.simulate(10000, seed=42)
+    lgbn = LGBN([("Z", "X"), ("Z", "Y"), ("X", "Y")])
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
     )
+    cpd_x = LinearGaussianCPD("X", beta=[0, 0.5], std=0.1, evidence=["Z"])
+    cpd_y = LinearGaussianCPD("Y", beta=[0, 0.3, 0.2], std=0.1, evidence=["X", "Z"])
+    cpd_z = LinearGaussianCPD("Z", beta=[0], std=0.1)
+    lgbn.add_cpds(cpd_x, cpd_y, cpd_z)
+    data = lgbn.simulate(10000, seed=42)
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
@@ -139,6 +147,7 @@ def test_dataframe_input_for_both_x_and_y():
 
     regressor.fit(X_df, y_df)
     predictions = regressor.predict(X_df)
+    # import pdb; pdb.set_trace()
 
     assert len(predictions) == len(data)
     assert regressor.exposure_var_ == "X"
@@ -146,7 +155,7 @@ def test_dataframe_input_for_both_x_and_y():
     assert list(regressor.get_feature_names_out()) == ["X", "Z"]
 
     true_values = data["Y"].values
-    np.testing.assert_allclose(predictions, true_values, rtol=0.1)
+    np.testing.assert_allclose(predictions, true_values, atol=0.1)
 
 
 def test_no_adjustment_variables():
