@@ -1,10 +1,10 @@
 import copy
-import warnings
 from typing import Any, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -49,19 +49,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.seed = seed
         self.allow_array_unnamed = allow_array_unnamed
 
-    def set_params(self, **params):
-        """Set only recognized params; ignore unknown ones (sklearn checks expect no exceptions)."""
-        valid = set(self.get_params(deep=False).keys())
-        for key, val in params.items():
-            if key in valid:
-                object.__setattr__(self, key, val)
-            else:
-                # Do not raise: sklearn's validation harness may try random set_params names.
-                warnings.warn(
-                    f"Ignoring unknown parameter in set_params: {key}", UserWarning
-                )
-        return self
-
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.target_tags.single_output = False
@@ -71,12 +58,25 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
         """
-        Convert input X to a pandas DataFrame
-        - If X is a DataFrame: return a copy. If feature_names were provided, the copy's
-          columns will be set to feature_names (order assumed correct).
-        - If X is an array-like: convert to ndarray, reshape if 1-D, and set columns.
-        - If feature_names is provided, use it; otherwise generate generic names
-          feature_0, feature_1, ...ror instructing the user to pass a DataFrame or feature_names.
+        Converts input data X to a pandas DataFrame with appropriate column names.
+
+        - If X is a DataFrame and its columns are unnamed integers (e.g., [0, 1, 2, ...]),
+          renames columns to 'x0', 'x1', ... for sklearn compatibility.
+        - If X is not a DataFrame, converts it to a DataFrame.
+          If X is 1D, reshapes it to 2D.
+          If feature_names are not provided, generates names as 'x0', 'x1', ... based on number of columns.
+
+        Parameters
+        ----------
+        X : array-like or pd.DataFrame
+            Input features.
+        feature_names : list of str, optional
+            Names for the columns. If None, names are auto-generated.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with named columns suitable for downstream processing.
         """
         if isinstance(X, pd.DataFrame):
             # Handle sklearn compatibility.
@@ -93,7 +93,9 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             return pd.DataFrame(arr, columns=feature_names)
 
     def _read_roles(self) -> Tuple[str, List[str]]:
-        """Read roles from DAG without mutating the original user-supplied DAG."""
+        """
+        Read roles from DAG without mutating the original user-supplied DAG.
+        """
         if not isinstance(self.dag, DAG):
             raise ValueError("causal_graph must be an instance of pgmpy's DAG class.")
         dag_copy = copy.deepcopy(self.dag)
@@ -139,16 +141,14 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         return X_df[required_features].copy()
 
     def fit(self, X, y, sample_weight: Optional[Any] = None):
-        if self.n_folds is None:
-            raise ValueError("n_folds must be provided and >= 1")
+        # Step 0: Validate inputs and arguments.
         try:
             n_folds = int(self.n_folds)
-        except Exception:
-            raise ValueError("n_folds must be an integer >= 1")
-        if n_folds < 1:
+            if n_folds < 1:
+                raise ValueError
+        except (TypeError, ValueError):
             raise ValueError("n_folds must be an integer >= 1")
 
-        # Step 0: Validate inputs and arguments.
         X_arr, y_arr = validate_data(
             self, X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
         )
@@ -163,21 +163,24 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.n_features_in_ = X_arr.shape[1]
         df = self._prepare_feature_df(X_arr, feature_names=None)
         self.feature_columns_ = list(df.columns)
-
         df["outcome"] = np.asarray(y_arr).ravel()
         exposure_col, adj_cols = self._read_roles()
+        n_samples = df.shape[0]
 
-        # prepare nuisance covariates excluding treatment
+        # Step 2: Prepare nuisance covariates excluding treatment
         if len(adj_cols) == 0:
-            covariates_df = np.ones((df.shape[0], 0))
+            # Use an intercept only column to ensure estimators recieve a 2D array when adj_col is empty
+            covariates_df = np.ones((n_samples, 1), dtype=float)
         else:
+            # use the adjustment columns as the features for nuisance models
             covariates_df = df[adj_cols].to_numpy(dtype=float)
 
         target_vec = df["outcome"].to_numpy(dtype=float)
         exposure_vec = df[exposure_col].to_numpy(dtype=float)
-
         n_samples = df.shape[0]
 
+        # Step 3: Fit nuisance models
+        # If the user requests for single fold (n_folds == 1), perform a full sample nuisance fit
         if int(self.n_folds) == 1:
             ml_g = clone(self.estimator_g)
             ml_m = (
@@ -187,10 +190,10 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             )
 
             # Fit nuisance models on the entire covariate set
-            ml_g.fit(covariates_df, target_vec)
+            ml_g.fit(covariates_df, target_vec, sample_weight=sample_weight)
             g_hat = np.asarray(ml_g.predict(covariates_df)).ravel()
 
-            ml_m.fit(covariates_df, exposure_vec)
+            ml_m.fit(covariates_df, exposure_vec, sample_weight=sample_weight)
             m_hat = np.asarray(ml_m.predict(covariates_df)).ravel()
 
             self.estimator_g_ = ml_g
@@ -199,6 +202,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             self.g_hat_ = g_hat
             self.m_hat_ = m_hat
         else:
+            # Cross-fitting branch
             splitter = KFold(
                 n_splits=self.n_folds, shuffle=True, random_state=self.seed
             )
@@ -226,26 +230,33 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             self.g_hat_ = g_hat
             self.m_hat_ = m_hat
 
-        # orthogonal estimate (OLS on residuals)
+        # Step 4: orthogonal estimate (OLS on residuals)
         y_res = target_vec - self.g_hat_
         t_res = exposure_vec - self.m_hat_
-        X_res = np.column_stack([np.ones(len(t_res)), t_res])
-        theta_coef, *_ = np.linalg.lstsq(X_res, y_res, rcond=None)
-        intercept = float(theta_coef[0])
-        theta = float(theta_coef[1])
 
-        self.treatment_effect_ = theta
-        self.coef_ = np.concatenate(
-            ([theta], np.zeros(len([exposure_col] + adj_cols) - 1, dtype=float))
-        )
+        # reshape treatment residuals to 2D (sklearn expects 2D X)
+        X_t_for_ols = t_res.reshape(-1, 1)
+
+        # perform a simple OLS of y_res on t_res (and intercept)
+        estimator = LinearRegression()
+        estimator.fit(X_t_for_ols, y_res, sample_weight=sample_weight)
+        theta_coef = estimator.coef_
+        intercept = estimator.intercept_
+
+        self.treatment_effect_ = theta_coef
         self.intercept_ = intercept
 
+        # Step 5: Bookeeping and return
         self._design_columns = [exposure_col] + adj_cols
         self.n_folds_ = self.n_folds
         self.is_fitted_ = True
         return self
 
     def predict(self, X):
+        """
+        Computes final prediction: (intercept + theta*exposure + g_pred)
+        """
+        # ensure estimator is fitted
         check_is_fitted(self, "n_features_in_")
 
         X_arr = validate_data(
@@ -281,6 +292,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         else:
             g_pred = np.repeat(getattr(self, "y_mean_", 0.0), X_df.shape[0])
 
+        # get treatment/t values
         t_vals = X_df[exposure_col].to_numpy(dtype=float).ravel()
+        # compute predictions
         preds = self.intercept_ + self.treatment_effect_ * t_vals + g_pred
         return np.asarray(preds).ravel()

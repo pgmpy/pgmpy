@@ -1,7 +1,5 @@
-# tests/test_doubleml_regressor_sklearn_checks.py
 import numpy as np
 import pandas as pd
-from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_random_state
 from sklearn.utils.estimator_checks import parametrize_with_checks
@@ -10,9 +8,6 @@ from pgmpy.base.DAG import DAG
 from pgmpy.models.DoubleMLRegressor import DoubleMLRegressor
 
 
-# -------------------------
-# Helper: build a simple DAG with roles matching x0,x1,x2
-# -------------------------
 def make_role_dag(
     node_names=("x0", "x1", "x2"), exposure="x0", adjustments=("x1", "x2"), outcome="y"
 ):
@@ -39,9 +34,6 @@ def make_role_dag(
     return G
 
 
-# -------------------------
-# Factory for parametrize_with_checks
-# -------------------------
 def make_estimator_for_checks():
     """
     Return an unfitted DoubleMLRegressor instance configured to accept numpy arrays.
@@ -55,8 +47,8 @@ def make_estimator_for_checks():
     )
     est = DoubleMLRegressor(
         dag=G,
-        estimator_g=DummyRegressor(strategy="mean"),
-        estimator_m=DummyRegressor(strategy="mean"),
+        estimator_g=LinearRegression(),
+        estimator_m=LinearRegression(),
         n_folds=1,
         seed=0,
         allow_array_unnamed=False,
@@ -70,9 +62,6 @@ def test_sklearn_compatibility(estimator, check):
     check(estimator)
 
 
-# -------------------------
-# Synthetic-data recovery test
-# -------------------------
 def test_doubleml_recovers_theta_on_simple_plr():
     """
     Simulate a PLR model:
