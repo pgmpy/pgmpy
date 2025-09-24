@@ -28,7 +28,8 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
     ----------
     causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles. Must have exactly one exposure
-        and one outcome variable. The adjustment role must be defined (can be empty).
+        and one outcome variable. The adjustment role is optional (can be missing,
+        empty or contain variables).
     estimator : sklearn estimator, optional (default=LinearRegression())
         Base estimator for prediction.
 
@@ -161,7 +162,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 2: Convert input to DataFrame format
         if isinstance(X, pd.DataFrame):
             X_df = X.copy()
-            # import pdb; pdb.set_trace()
 
         else:
             # For numpy arrays, use range index as column names
@@ -287,11 +287,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         # Step 1: Validate that estimator is fitted
         check_is_fitted(self, "estimator_")
 
-        # # Step 2: For DataFrames, skip validate_data to preserve column names
-        # if isinstance(X, pd.DataFrame):
-        #     X_filtered = self._prepare_feature_df(X)
-        # else:
-        #     # For arrays, use validate_data
         validate_data(
             self,
             X,
@@ -302,7 +297,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         )
         X_filtered = self._prepare_feature_df(X)
 
-        # Step 3: Make predictions and return as 1D array
+        # Step 2: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_filtered)
         return np.asarray(predictions).ravel()
 

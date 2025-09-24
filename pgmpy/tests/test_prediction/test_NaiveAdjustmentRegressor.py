@@ -15,39 +15,6 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 from pgmpy.prediction.NaiveAdjustmentRegressor import NaiveAdjustmentRegressor
 
-# def make_estimator():
-#     """Create a valid estimator for sklearn compatibility tests."""
-#     # Use integer column names for sklearn compatibility
-#     # sklearn passes numpy arrays which get converted to DataFrames with columns [0, 1, 2, ...]
-
-#     ###  --- FOR REFERENCE ----
-#     # Original array:
-#     # [[0.46693226 0.80723309 0.86748235]
-#     # [0.824674   0.40488296 0.82145585]
-#     # [0.31349205 0.96163982 0.84189278]
-#     # [0.80590202 0.93888954 0.42519219]
-#     # [0.58733317 0.47757527 0.30911211]]
-#     # Array shape: (5, 3)
-
-#     # DataFrame with range index columns:
-#     #         0         1         2
-#     # 0  0.466932  0.807233  0.867482
-#     # 1  0.824674  0.404883  0.821456
-#     # 2  0.313492  0.961640  0.841893
-#     # 3  0.805902  0.938890  0.425192
-#     # 4  0.587333  0.477575  0.309112
-#     # Column names: [0, 1, 2]
-#     # Column types: [<class 'int'>, <class 'int'>, <class 'int'>]
-#     dag = DAG(
-#         ebunch=[],  # No edges needed for simplest case
-#         roles={
-#             "exposure": [0],
-#             "outcome": ["target"],
-#             "adjustment": []
-#         },
-#     )
-#     return NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
-
 
 def make_estimator():
     """Create a valid estimator for sklearn compatibility tests."""
@@ -123,20 +90,16 @@ def test_basic_functionality_with_adjustment():
 
 def test_dataframe_input_for_both_x_and_y():
     """Test that regressor works when both X and y are DataFrames."""
-    # lgbn = DAG.from_dagitty(
-    #     "dag { Z -> X [beta=0.5] X -> Y [beta=0.3] Z -> Y [beta=0.2] }"
-    # )
 
-    # data = lgbn.simulate(10000, seed=42)
     lgbn = LGBN([("Z", "X"), ("Z", "Y"), ("X", "Y")])
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
         roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
     )
-    cpd_x = LinearGaussianCPD("X", beta=[0, 0.5], std=0.1, evidence=["Z"])
-    cpd_y = LinearGaussianCPD("Y", beta=[0, 0.3, 0.2], std=0.1, evidence=["X", "Z"])
-    cpd_z = LinearGaussianCPD("Z", beta=[0], std=0.1)
+    cpd_x = LinearGaussianCPD("X", beta=[0, 0.5], std=0.01, evidence=["Z"])
+    cpd_y = LinearGaussianCPD("Y", beta=[0, 0.3, 0.2], std=0.01, evidence=["X", "Z"])
+    cpd_z = LinearGaussianCPD("Z", beta=[0], std=0.01)
     lgbn.add_cpds(cpd_x, cpd_y, cpd_z)
     data = lgbn.simulate(10000, seed=42)
 
@@ -147,7 +110,6 @@ def test_dataframe_input_for_both_x_and_y():
 
     regressor.fit(X_df, y_df)
     predictions = regressor.predict(X_df)
-    # import pdb; pdb.set_trace()
 
     assert len(predictions) == len(data)
     assert regressor.exposure_var_ == "X"
@@ -287,7 +249,6 @@ def test_numpy_array_input():
 def test_sample_weight_support():
     """Test that sample_weight parameter is properly passed to base estimator."""
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
-
     data = lgbn.simulate(4, seed=42)
 
     dag = DAG(
@@ -316,7 +277,6 @@ def test_dag_roles_validation():
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
-
     exposure_vars = list(regressor.causal_graph.get_role("exposure"))
     outcome_vars = list(regressor.causal_graph.get_role("outcome"))
     adjustment_vars = list(regressor.causal_graph.get_role("adjustment"))
