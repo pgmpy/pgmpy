@@ -142,26 +142,17 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         tags.regressor_tags.poor_score = True
         return tags
 
-    def _prepare_feature_df(
-        self, X, exposure_var=None, adjustment_vars=None, pretreatment_vars=None
-    ) -> pd.DataFrame:
+    def _prepare_feature_df(self, X) -> pd.DataFrame:
         """
         Convert input to DataFrame and validate that column names exactly match DAG variables.
         No column renaming/mapping - strict validation only.
         """
         # Step 1: Get required feature columns
-        if exposure_var is not None:
-            # Use provided parameters (during fit)
-            required_features = (
-                [exposure_var] + (adjustment_vars or []) + (pretreatment_vars or [])
-            )
-        else:
-            # Use stored instance attributes (during predict)
-            required_features = self.feature_columns_
+        required_features = self.feature_columns_
 
         # Step 2: Convert input to DataFrame format
         if isinstance(X, pd.DataFrame):
-            X_df = X.copy()
+            X_df = X
 
         else:
             # For numpy arrays, use range index as column names
@@ -180,7 +171,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
                 f"DAG expects columns: {required_features}, but got: {list(X_df.columns)}"
             )
 
-        return X_df[required_features].copy()
+        return X_df[required_features]
 
     def fit(
         self,
@@ -216,11 +207,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         exposure_vars = list(self.causal_graph.get_role("exposure"))
         outcome_vars = list(self.causal_graph.get_role("outcome"))
         adjustment_vars = list(self.causal_graph.get_role("adjustment"))
-        pretreatment_vars = list(
-            self.causal_graph.get_role("pretreatment")
-            if self.causal_graph.has_role("pretreatment")
-            else []
-        )
+        pretreatment_vars = list(self.causal_graph.get_role("pretreatment"))
 
         # Validate exactly one exposure and one outcome variable
         if len(exposure_vars) != 1:
@@ -243,9 +230,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         )
 
         # Step 4: Prepare feature DataFrame
-        X_features = self._prepare_feature_df(
-            X, self.exposure_var_, adjustment_vars, pretreatment_vars
-        )
+        X_features = self._prepare_feature_df(X)
 
         # Step 5: Initialize base estimator
         self.estimator_ = (
