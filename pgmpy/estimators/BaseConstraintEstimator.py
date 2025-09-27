@@ -363,6 +363,7 @@ class BaseConstraintEstimator(StructureEstimator):
         separating_sets: Dict[FrozenSet, Set],
         temporal_ordering: Dict[Hashable, int] = dict(),
         graph_cls: Type = PDAG,  # By default
+        # here this will return the list of tuples
     ) -> PDAG:
         """
         Orient v-structures (colliders) in the given skeleton based on separating sets.
