@@ -364,7 +364,7 @@ class PAG(AncestralBase):
         ValueError
             If there is no edge between u and v.
         """
-        if self.has_edge(u, v):
+        if not self.has_edge(u, v):
             raise ValueError(f"No edge between {u} and {v}")
 
         self.edges[u, v]["marks"][u] = mark_u
@@ -601,12 +601,13 @@ class PAG(AncestralBase):
         pag = self if inplace else self.copy()
 
         for v in pag.nodes:
-            u_candidates = pag.get_neighbors(v, u_type="-", v_type="-")
+            u_candidates = pag.get_neighbors(v, u_type="-", v_type=">")
 
             w_candidates = pag.get_neighbors(v, u_type="o", v_type="o")
 
-            for _, w in product(u_candidates, w_candidates):
-                pag.modify_edge(v, w, mark_u="-", mark_v="-")
+            for u, w in product(u_candidates, w_candidates):
+                if not pag.has_edge(u, w) and pag.is_definite_non_collider(v, (u, w)):
+                    pag.modify_edge(v, w, mark_u=">", mark_v="-")
 
         if not inplace:
             return pag
@@ -633,14 +634,16 @@ class PAG(AncestralBase):
         pag = self if inplace else self.copy()
 
         for v in pag.nodes:
-            u_candidates = pag.get_neighbors(v, "o", "-")
-
-            w_candidates = pag.get_neighbors(v, "o", "o")
+            u_candidates = pag.get_neighbors(v, u_type="o", v_type=">")
+            w_candidates = pag.get_neighbors(v, u_type="o", v_type=">")
             for u, w in product(u_candidates, w_candidates):
-                if pag.has_edge(u, w):
+                if u == w or pag.has_edge(u, w):
                     continue
 
-                pag.modify_edge(v, w, mark_u="-", mark_v="-")
+                x_candidates = pag.get_neighbors(u, u_type="o", v_type="o")
+                for x in x_candidates:
+                    if pag.has_edge(x, v):
+                        pag.modify_edge(x, v, mark_u=">", mark_v="-")
 
         if not inplace:
             return pag
