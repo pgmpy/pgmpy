@@ -5,7 +5,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base.DAG import DAG
-from pgmpy.models.DoubleMLRegressor import DoubleMLRegressor
+from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
 
 
 def make_role_dag(
