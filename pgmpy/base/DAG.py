@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import PDAG
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
@@ -1170,6 +1169,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         undirected_edges = [
             edge for edge, label in edge_labels.items() if label == "reversible"
         ]
+
+        from pgmpy.base import PDAG
+
         return PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,

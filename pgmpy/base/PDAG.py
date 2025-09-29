@@ -3,7 +3,6 @@ from typing import Hashable, Iterable
 
 import networkx as nx
 
-from pgmpy.base import DAG
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
 
@@ -359,7 +358,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
-    def to_dag(self) -> "DAG":
+    def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
 
@@ -385,6 +384,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
+        from pgmpy.base import DAG
+
         dag = DAG()
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
