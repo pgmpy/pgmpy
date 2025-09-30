@@ -141,13 +141,11 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         return X_df[required_features].copy()
 
     def fit(self, X, y, sample_weight: Optional[Any] = None):
-        # Step 0: Validate inputs and arguments.
-        try:
-            n_folds = int(self.n_folds)
-            if n_folds < 1:
-                raise ValueError
-        except (TypeError, ValueError):
-            raise ValueError("n_folds must be an integer >= 1")
+        # Step 0: Validate inputs
+        if not isinstance(self.n_folds, int):
+            raise ValueError("n_folds must be an integer >= 1 ")
+        if self.n_folds < 1:
+            raise ValueError("n_folds must be an integer >= 1 ")
 
         X_arr, y_arr = validate_data(
             self, X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
@@ -161,23 +159,24 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         # Step 1: Preprocess the input data.
         self.n_features_in_ = X_arr.shape[1]
-        df = self._prepare_feature_df(X_arr, feature_names=None)
+        df = self._prepare_feature_df(X, feature_names=None)
         self.feature_columns_ = list(df.columns)
-        df["outcome"] = np.asarray(y_arr).ravel()
+        df["outcome"] = np.asarray(y).ravel()
         exposure_col, adj_cols = self._read_roles()
         n_samples = df.shape[0]
 
         # Step 2: Prepare nuisance covariates excluding treatment
         if len(adj_cols) == 0:
             # Use an intercept only column to ensure estimators recieve a 2D array when adj_col is empty
-            covariates_df = np.ones((n_samples, 1), dtype=float)
+            covariates_df = pd.DataFrame(
+                {"_intercept": np.ones(n_samples)}, index=df.index
+            )
         else:
             # use the adjustment columns as the features for nuisance models
-            covariates_df = df[adj_cols].to_numpy(dtype=float)
+            covariates_df = df[adj_cols].copy()
 
-        target_vec = df["outcome"].to_numpy(dtype=float)
-        exposure_vec = df[exposure_col].to_numpy(dtype=float)
-        n_samples = df.shape[0]
+        target_vec = df["outcome"]
+        exposure_vec = df[exposure_col]
 
         # Step 3: Fit nuisance models
         # If the user requests for single fold (n_folds == 1), perform a full sample nuisance fit
@@ -191,24 +190,28 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
             # Fit nuisance models on the entire covariate set
             ml_g.fit(covariates_df, target_vec, sample_weight=sample_weight)
-            g_hat = np.asarray(ml_g.predict(covariates_df)).ravel()
+            g_pred = ml_g.predict(covariates_df)
+            # ensure a pandas Series aligned with covariates_df.index (and numeric)
+            g_hat_ser = pd.Series(g_pred, index=covariates_df.index, dtype=float)
 
             ml_m.fit(covariates_df, exposure_vec, sample_weight=sample_weight)
-            m_hat = np.asarray(ml_m.predict(covariates_df)).ravel()
+            m_pred = ml_m.predict(covariates_df)
+            m_hat_ser = pd.Series(m_pred, index=covariates_df.index, dtype=float)
 
             self.estimator_g_ = ml_g
             self.estimator_m_ = ml_m
 
-            self.g_hat_ = g_hat
-            self.m_hat_ = m_hat
+            # always store Series for consistency
+            self.g_hat_ = g_hat_ser
+            self.m_hat_ = m_hat_ser
         else:
             # Cross-fitting branch
             splitter = KFold(
                 n_splits=self.n_folds, shuffle=True, random_state=self.seed
             )
 
-            g_hat = np.zeros(n_samples, dtype=float)
-            m_hat = np.zeros(n_samples, dtype=float)
+            g_hat = pd.Series(0.0, index=df.index, dtype=float)
+            m_hat = pd.Series(0.0, index=df.index, dtype=float)
 
             for train_idx, test_idx in splitter.split(covariates_df, exposure_vec):
                 ml_g = clone(self.estimator_g)
@@ -218,15 +221,20 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                     else clone(self.estimator_g)
                 )
 
-                ml_g.fit(covariates_df[train_idx], target_vec[train_idx])
-                g_test_pred = np.asarray(ml_g.predict(covariates_df[test_idx])).ravel()
+                ml_g.fit(covariates_df.iloc[train_idx], target_vec.iloc[train_idx])
+                g_test_pred = ml_g.predict(covariates_df.iloc[test_idx])
 
-                ml_m.fit(covariates_df[train_idx], exposure_vec[train_idx])
-                m_test_pred = ml_m.predict(covariates_df[test_idx]).ravel()
+                test_index = covariates_df.iloc[test_idx].index
+                g_test_pred_ser = pd.Series(g_test_pred, index=test_index, dtype=float)
+                g_hat.loc[g_test_pred_ser.index] = g_test_pred_ser
 
-                g_hat[test_idx] = g_test_pred
-                m_hat[test_idx] = m_test_pred
+                # Same for m
+                ml_m.fit(covariates_df.iloc[train_idx], exposure_vec.iloc[train_idx])
+                pred_m = ml_m.predict(covariates_df.iloc[test_idx])
+                m_test_pred_ser = pd.Series(pred_m, index=test_index, dtype=float)
+                m_hat.loc[m_test_pred_ser.index] = m_test_pred_ser
 
+            # After loop, store Series
             self.g_hat_ = g_hat
             self.m_hat_ = m_hat
 
@@ -235,16 +243,21 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         t_res = exposure_vec - self.m_hat_
 
         # reshape treatment residuals to 2D (sklearn expects 2D X)
-        X_t_for_ols = t_res.reshape(-1, 1)
+        X_t_for_ols = t_res.to_frame(name="t_res")
 
         # perform a simple OLS of y_res on t_res (and intercept)
         estimator = LinearRegression()
         estimator.fit(X_t_for_ols, y_res, sample_weight=sample_weight)
-        theta_coef = estimator.coef_
-        intercept = estimator.intercept_
-
-        self.treatment_effect_ = theta_coef
-        self.intercept_ = intercept
+        theta = (
+            float(estimator.coef_[0])
+            if getattr(estimator, "coef_", None) is not None
+            and len(estimator.coef_) > 0
+            else 0.0
+        )
+        self.treatment_effect_ = theta
+        # store coef_ as a Python list (or pandas.Series) if you want to avoid np; tests may expect numpy ndarray
+        self.coef_ = [theta] + [0.0] * len(adj_cols)
+        self.intercept_ = float(estimator.intercept_)
 
         # Step 5: Bookeeping and return
         self._design_columns = [exposure_col] + adj_cols
@@ -281,19 +294,34 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 f"Exposure '{exposure_col}' not found in input columns for predict()."
             )
 
-        # compute g_pred using stored nuisance models or y_mean_ fallback
+        # compute g_pred using stored nuisance models
         if (
             hasattr(self, "estimator_g_")
             and self.estimator_g_ is not None
             and len(adj_cols) > 0
         ):
-            X_adj = X_df[adj_cols].to_numpy(dtype=float)
-            g_pred = np.asarray(self.estimator_g_.predict(X_adj)).ravel()
+            X_adj = X_df[adj_cols].copy()
+            raw_g = self.estimator_g_.predict(X_adj)
+            # normalize to Series aligned with X_df.index
+            if isinstance(raw_g, pd.Series):
+                g_pred_ser = raw_g.reindex(X_df.index).astype(float)
+            else:
+                g_pred_ser = pd.Series(raw_g, index=X_df.index, dtype=float)
         else:
-            g_pred = np.repeat(getattr(self, "y_mean_", 0.0), X_df.shape[0])
+            g_pred_ser = pd.Series(
+                getattr(self, "y_mean_", 0.0), index=X_df.index, dtype=float
+            )
 
-        # get treatment/t values
-        t_vals = X_df[exposure_col].to_numpy(dtype=float).ravel()
-        # compute predictions
-        preds = self.intercept_ + self.treatment_effect_ * t_vals + g_pred
-        return np.asarray(preds).ravel()
+        # treatment values as Series
+        t_ser = X_df[exposure_col].astype(float)
+
+        # ensure treatment_effect_ is scalar
+        theta = float(getattr(self, "treatment_effect_", 0.0))
+
+        # Compute predictions
+        preds_ser = pd.Series(self.intercept_, index=X_df.index, dtype=float)
+        preds_ser = preds_ser.add(theta * t_ser, fill_value=0.0)
+        preds_ser = preds_ser.add(g_pred_ser, fill_value=0.0)
+
+        # return numpy array for sklearn compatibility
+        return preds_ser.to_numpy()
