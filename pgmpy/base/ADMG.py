@@ -465,6 +465,83 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
 
         return dag_instance
 
+    def to_daggity(self) -> str:
+
+        """
+        Convert the ADMG to a DAGitty syntax representation.
+
+        - Directed edges are written as `X -> Y`
+        - Bidirected edges are written as `X <-> Y` (one line per unordered pair)
+        - Latent/unobserved nodes are annotated with `[unobserved]`
+        - Roles assigned via _GraphRolesMixin (e.g., "exposure", "outcome", "adjusted")
+        are emitted as node attributes too:  X [exposure], Y [outcome], etc.
+        - Isolated nodes (no incident edges) are included; if they have attributes,
+        they appear with an attribute block, otherwise just the node id.
+
+        (essentially turns an ADMG Object --> string using (->) and (<->) to represent relationship)
+        
+        Returns 
+        ------- 
+        str String representation of the DAG in dagitty syntax format.
+        """
+
+        directed = set()
+        bidirected = set()
+
+        #Collect directed and bidirected edges
+
+        for u, v, data in self.edges(keys=False, data=True):
+            etype = data.get("type")
+            if etype == "directed":
+                directed.add((str(u), str(v)))
+            elif etype == "bidirected":
+                a, b = sorted((str(u), str(v)))
+                bidirected.add((a, b))
+
+        #prepare the node attribute blocks
+        latents = set(map(str, getattr(self, "latents", set())))
+
+        roles_map = {}
+        for role, nodes in getattr(self, "_roles", {}).items():
+            for n in nodes:
+                roles_map.setdefault(str(n), set()).add(str(role).lower())
+
+        # build a final attribute token set per node
+        node_attr_tokens = {}
+        for n in map(str, self.nodes()):
+            tokens = set()
+            if n in latents:
+                tokens.add("unobserved")
+            if n in roles_map:
+                tokens |= roles_map[n]
+            if tokens:
+                node_attr_tokens[n] = tokens
+
+        #Compose statements (edges first, then nodes)
+        statements = []
+
+        # for directed edges
+        for u, v in sorted(directed, key=lambda e: (e[0], e[1])):
+            statements.append(f"{u} -> {v}")
+
+        # for bidirected edges 
+        for a, b in sorted(bidirected, key=lambda e: (e[0], e[1])):
+            statements.append(f"{a} <-> {b}")
+
+        isolated = set(map(str, nx.isolates(self)))
+        with_attrs = set(node_attr_tokens.keys())
+
+        for n in sorted(with_attrs):
+            attrs_str = " ".join(sorted(node_attr_tokens[n]))
+            statements.append(f"{n} [{attrs_str}]")
+
+        for n in sorted(isolated - with_attrs):
+            statements.append(n)
+
+        #Wrap into dagitty block
+        content = "\n".join(statements)
+        return f"dag {{\n{content}\n}}" if content else "dag {\n}"
+        
     def is_mseparated(
         self,
         nodes_u,
