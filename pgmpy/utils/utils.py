@@ -1,5 +1,6 @@
 import gzip
 import json
+import math
 
 import pandas as pd
 
@@ -188,7 +189,7 @@ def get_example_model(model: str):
         cpds = []
         for node, cpd_info in cpds_data.items():
             coefficients = cpd_info["coefficients"]
-            std = cpd_info["variance"][0]
+            var = cpd_info["variance"][0]
             parents = cpd_info["parents"]
 
             # Extract the intercept
@@ -201,7 +202,7 @@ def get_example_model(model: str):
             cpd = LinearGaussianCPD(
                 variable=node,
                 beta=[intercept] + parent_coeffs,
-                std=std,
+                std=math.sqrt(var),
                 evidence=parents,
             )
             cpds.append(cpd)
