@@ -12,20 +12,82 @@ from pgmpy.base.DAG import DAG
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
-    Double-ML skeleton (single-exposure) with cross-fitting and explicit feature_names support.
+    Double Machine Learning (DoubleML) Regressor (single-exposure) with cross-fitting and explicit feature_names
+    support.
+
+    This estimator implements the DoubleML algorithm with cross-fitting, supporting compatibility with scikit-learn's
+    estimator API. It estimates the causal effect of a single treatment (exposure) variable on an outcome, adjusting for
+    confounders specified in a user-supplied DAG.
+
+    Mathematical Description
+    -----------------------
+    Given data (Y, T, X), where:
+        Y : outcome variable
+        T : treatment (exposure) variable
+        X : adjustment (confounder) variables
+
+    The DoubleML procedure estimates the treatment effect θ as follows:
+
+    1. Nuisance Estimation:
+        - Fit a model g(X) to predict Y from X (outcome nuisance model).
+        - Fit a model m(X) to predict T from X (treatment nuisance model).
+        - If cross-fitting (n_folds > 1), use K-fold splits to avoid overfitting:
+            For each fold, fit g and m on training data, predict on held-out data, and aggregate predictions.
+
+    2. Orthogonalization:
+        - Compute residuals:
+            y_res = Y - g_hat(X)
+            t_res = T - m_hat(X)
+        - These residuals remove variation explained by X, isolating the effect of T on Y.
+
+    3. Final Estimation:
+        - Fit a linear regression of y_res on t_res:
+            y_res = θ * t_res + ε
+        - The estimated coefficient θ is the causal effect of T on Y, orthogonal to confounders X.
+
+    Prediction
+    ----------
+    For new data (T_new, X_new), the predicted outcome is:
+        Y_pred = intercept + θ * T_new + g_hat(X_new)
+    where g_hat(X_new) is the predicted outcome nuisance value for the new adjustment variables.
 
     Parameters
     ----------
     causal_graph : DAG, PDAG, ADMG, MAG, or PAG
-        Causal graph with defined variable roles.
+        Causal graph with defined variable roles (exposure, adjustment, etc.).
     estimator_g : estimator-like
         Outcome nuisance model prototype (must implement fit/predict).
     estimator_m : estimator-like or None
         Treatment nuisance model prototype (if None, estimator_g is used for both).
-    n_folds : int
-        Number of folds for cross-fitting (>0).
+    n_folds : int, default=5
+        Number of folds for cross-fitting. If 1, fits nuisance models on the full sample
     seed : int or None
-        Random seed for folding.
+        Random seed for cross-fitting splits.
+
+    Attributes
+    ----------
+    n_features_in_ : int
+        Number of features seen during fit.
+    feature_columns_ : list of str
+        Names of features used in the model.
+    estimator_g_ : estimator-like
+        Fitted outcome nuisance model.
+    estimator_m_ : estimator-like
+        Fitted treatment nuisance model.
+    g_hat_ : pd.Series
+        Predicted outcome nuisance values.
+    m_hat_ : pd.Series
+        Predicted treatment nuisance values.
+    ols_estimator_ : LinearRegression
+        Fitted final OLS estimator for treatment effect.
+    treatment_effect_ : float
+        Estimated causal effect of the treatment variable.
+    coef_ : list of float
+        Coefficients from the final OLS regression.
+    intercept_ : float
+        Intercept from the final OLS regression.
+    is_fitted_ : bool
+        Whether the estimator has been fitted.
 
     Examples
     --------
@@ -33,7 +95,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     References
     ----------
-    TO:DO
+    Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen, C., Newey, W., & Robins, J. (2018).
+    Double/debiased machine learning for treatment and structural parameters. The Econometrics Journal, 21(1), C1-C68.
 
     """
 
