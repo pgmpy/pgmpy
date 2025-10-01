@@ -488,7 +488,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         directed = set()
         bidirected = set()
 
-        #Collect directed and bidirected edges
+        # Collect directed and bidirected edges
 
         for u, v, data in self.edges(keys=False, data=True):
             etype = data.get("type")
@@ -498,7 +498,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
                 a, b = sorted((str(u), str(v)))
                 bidirected.add((a, b))
 
-        #prepare the node attribute blocks
+        # Prepare the node attribute blocks
         latents = set(map(str, getattr(self, "latents", set())))
 
         roles_map = {}
@@ -506,7 +506,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             for n in nodes:
                 roles_map.setdefault(str(n), set()).add(str(role).lower())
 
-        # build a final attribute token set per node
+        # Build a final attribute token set per node
         node_attr_tokens = {}
         for n in map(str, self.nodes()):
             tokens = set()
@@ -517,14 +517,14 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             if tokens:
                 node_attr_tokens[n] = tokens
 
-        #Compose statements (edges first, then nodes)
+        # Compose statements (edges first, then nodes)
         statements = []
 
-        # for directed edges
+        # For directed edges
         for u, v in sorted(directed, key=lambda e: (e[0], e[1])):
             statements.append(f"{u} -> {v}")
 
-        # for bidirected edges 
+        # For bidirected edges 
         for a, b in sorted(bidirected, key=lambda e: (e[0], e[1])):
             statements.append(f"{a} <-> {b}")
 
@@ -538,7 +538,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         for n in sorted(isolated - with_attrs):
             statements.append(n)
 
-        #Wrap into dagitty block
+        # Wrap into dagitty block
         content = "\n".join(statements)
         return f"dag {{\n{content}\n}}" if content else "dag {\n}"
         
