@@ -9,7 +9,7 @@ from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
 
 
 def make_role_dag(
-    node_names=("x0", "x1", "x2"), exposure="x0", adjustments=("x1", "x2"), outcome="y"
+    node_names=("0", "1", "2"), exposure="0", adjustments=("1", "2"), outcome="y"
 ):
     """
     Creates a pgmpy.DAG and assign roles:
@@ -40,8 +40,8 @@ def make_estimator_for_checks():
     Important: passes feature_names so sklearn's tests (which passes ndarrays) can map columns.
     """
     G = make_role_dag(
-        node_names=("x0", "x1", "x2"),
-        exposure="x0",
+        node_names=("0", "1", "2"),
+        exposure="0",
         adjustments=(),
         outcome="y",
     )
@@ -51,7 +51,6 @@ def make_estimator_for_checks():
         estimator_m=LinearRegression(),
         n_folds=1,
         seed=0,
-        allow_array_unnamed=False,
     )
     return est
 
@@ -115,7 +114,6 @@ def test_doubleml_recovers_theta_on_simple_plr():
         estimator_m=LinearRegression(),
         n_folds=3,
         seed=0,
-        allow_array_unnamed=False,
     )
 
     est.fit(df, y)

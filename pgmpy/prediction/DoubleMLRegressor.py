@@ -24,12 +24,18 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     estimator_m : estimator-like or None
         Treatment nuisance model prototype (if None, estimator_g is used for both).
     n_folds : int
-        Number of folds for cross-fitting (>=2).
-    random_state : int or None
+        Number of folds for cross-fitting (>0).
+    seed : int or None
         Random seed for folding.
-    allow_array_unnamed : bool
-        If True, allow NumPy arrays without feature_names by automatically naming columns
-        'x0','x1',... (unsafe for real causal work). Default False.
+
+    Examples
+    --------
+    TO:DO
+
+    References
+    ----------
+    TO:DO
+
     """
 
     def __init__(
@@ -39,7 +45,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         estimator_m: Optional[Any] = None,
         n_folds: int = 5,
         seed: Optional[int] = None,
-        allow_array_unnamed: bool = False,
     ):
 
         self.dag = dag
@@ -47,7 +52,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.estimator_m = estimator_m
         self.n_folds = n_folds
         self.seed = seed
-        self.allow_array_unnamed = allow_array_unnamed
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -58,13 +62,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
         """
-        Converts input data X to a pandas DataFrame with appropriate column names.
+        Converts input data X to a pandas DataFrame.
 
-        - If X is a DataFrame and its columns are unnamed integers (e.g., [0, 1, 2, ...]),
-          renames columns to 'x0', 'x1', ... for sklearn compatibility.
-        - If X is not a DataFrame, converts it to a DataFrame.
-          If X is 1D, reshapes it to 2D.
-          If feature_names are not provided, generates names as 'x0', 'x1', ... based on number of columns.
+        - If X is a DataFrame: return a copy and coerce column names to strings.
+        - If X is array-like: reshape 1-D to (n_samples, 1), then:
+            * if feature_names provided, uses them
+            * else use string column names '0','1','2'....
 
         Parameters
         ----------
@@ -78,19 +81,31 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         pd.DataFrame
             DataFrame with named columns suitable for downstream processing.
         """
-        if isinstance(X, pd.DataFrame):
-            # Handle sklearn compatibility.
-            if all(X.columns == range(X.shape[1])):
-                X.columns = [f"x{i}" for i in range(X.shape[1])]
-            return X
 
+        if isinstance(X, pd.DataFrame):
+            X_df = X.copy()
+            X_df.columns = [str(c) for c in X_df.columns]
+            return X_df
+
+        # Convert array-like to ndarray and ensure 2D
+        arr = np.asarray(X)
+        if arr.ndim == 1:
+            arr = arr.reshape(-1, 1)
+
+        n_cols = arr.shape[1]
+
+        # If user provided explicit feature_names, use those (and verify length)
+        if feature_names is not None:
+            if len(feature_names) != n_cols:
+                raise ValueError(
+                    f"feature_names has length {len(feature_names)} but input has {n_cols} columns"
+                )
+            columns = [str(c) for c in feature_names]
         else:
-            arr = np.asarray(X)
-            if arr.ndim == 1:
-                arr = arr.reshape(-1, 1)
-            if feature_names is None:
-                feature_names = [f"x{i}" for i in range(arr.shape[1])]
-            return pd.DataFrame(arr, columns=feature_names)
+            # Default: integer column names 0,1,2,... to match sklearn-style DataFrames
+            columns = [str(i) for i in range(n_cols)]
+
+        return pd.DataFrame(arr, columns=columns)
 
     def _read_roles(self) -> Tuple[str, List[str]]:
         """
@@ -248,6 +263,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # perform a simple OLS of y_res on t_res (and intercept)
         estimator = LinearRegression()
         estimator.fit(X_t_for_ols, y_res, sample_weight=sample_weight)
+        self.ols_estimator_ = estimator
+
         theta = (
             float(estimator.coef_[0])
             if getattr(estimator, "coef_", None) is not None
@@ -272,16 +289,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # ensure estimator is fitted
         check_is_fitted(self, "n_features_in_")
 
-        X_arr = validate_data(
-            self, X, reset=False, ensure_2d=True, force_all_finite=True
-        )
-        found = X_arr.shape[1]
-        expected = getattr(self, "n_features_in_", None)
-        if expected is not None and found != expected:
-            raise ValueError(
-                f"Found array with {found} feature(s) (shape[1]={found}) while "
-                f"{self.__class__.__name__} is expecting {expected} features as input."
-            )
+        # Handle sklearn compatibility checks
+        validate_data(self, X, reset=False, ensure_2d=True, force_all_finite=True)
 
         # Map to DAG role columns (this will rename generic features to role names)
         X_df = self._prepare_feature_df(X, feature_names=None)
@@ -316,7 +325,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         t_ser = X_df[exposure_col].astype(float)
 
         # ensure treatment_effect_ is scalar
-        theta = float(getattr(self, "treatment_effect_", 0.0))
+        theta = float(self.ols_estimator_.coef_[0])
 
         # Compute predictions
         preds_ser = pd.Series(self.intercept_, index=X_df.index, dtype=float)
