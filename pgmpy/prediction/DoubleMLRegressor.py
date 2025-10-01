@@ -16,8 +16,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     Parameters
     ----------
-    dag : object
-        DAG object
+    causal_graph : DAG, PDAG, ADMG, MAG, or PAG
+        Causal graph with defined variable roles.
     estimator_g : estimator-like
         Outcome nuisance model prototype (must implement fit/predict).
     estimator_m : estimator-like or None
@@ -39,14 +39,14 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     def __init__(
         self,
-        dag: DAG,
+        causal_graph,
         estimator_g: Any,
         estimator_m: Optional[Any] = None,
         n_folds: int = 5,
         seed: Optional[int] = None,
     ):
 
-        self.dag = dag
+        self.causal_graph = causal_graph
         self.estimator_g = estimator_g
         self.estimator_m = estimator_m
         self.n_folds = n_folds
@@ -110,9 +110,9 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         """
         Read roles from DAG without mutating the original user-supplied DAG.
         """
-        if not isinstance(self.dag, DAG):
+        if not isinstance(self.causal_graph, DAG):
             raise ValueError("causal_graph must be an instance of pgmpy's DAG class.")
-        dag_copy = self.dag.copy()
+        dag_copy = self.causal_graph.copy()
         dag_copy.is_valid_causal_structure()
 
         exposure = dag_copy.get_role("exposure")

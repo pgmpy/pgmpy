@@ -16,7 +16,7 @@ def make_estimator_for_checks():
     )
 
     est = DoubleMLRegressor(
-        dag=G,
+        causal_graph=G,
         estimator_g=LinearRegression(),
         estimator_m=LinearRegression(),
         n_folds=1,
@@ -59,7 +59,7 @@ def test_doubleml_recovers_theta_on_simple_plr():
     )
 
     est = DoubleMLRegressor(
-        dag=G,
+        causal_graph=G,
         estimator_g=LinearRegression(),
         estimator_m=LinearRegression(),
         n_folds=3,
