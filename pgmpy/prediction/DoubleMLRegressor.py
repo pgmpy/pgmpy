@@ -1,4 +1,3 @@
-import copy
 from typing import Any, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -113,7 +112,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         """
         if not isinstance(self.dag, DAG):
             raise ValueError("causal_graph must be an instance of pgmpy's DAG class.")
-        dag_copy = copy.deepcopy(self.dag)
+        dag_copy = self.dag.copy()
         dag_copy.is_valid_causal_structure()
 
         exposure = dag_copy.get_role("exposure")
