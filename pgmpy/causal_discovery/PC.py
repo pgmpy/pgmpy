@@ -9,7 +9,6 @@ from typing import (
     Union,
 )
 
-import numpy as np
 import pandas as pd
 from sklearn.utils.validation import validate_data
 
@@ -67,10 +66,6 @@ class PC(BaseConstraintCausalDiscovery):
         then the v-structure is oriented as `u`->`z` , `v`->`z`.
     """
 
-    def _has_constant_columns(self, X):
-        """Check if any columns have zero variance."""
-        return np.any(np.var(X, axis=0) < 1e-8)
-
     def __init__(
         self,
         variant: str = "parallel",
@@ -124,13 +119,7 @@ class PC(BaseConstraintCausalDiscovery):
         )
 
         X = X.astype(float, copy=False)
-        if n_samples < n_features or self._has_constant_columns(X):
-            X = X + np.random.RandomState(0).normal(0, 1e-10, X.shape)
-        # if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X, columns=_nodes)
-
-        # self.n_features_in_ = X.shape[1]
-        # self.feature_names_in_ = list(X.columns)
 
         # CI test
         ci_test = get_callable_ci_test(self.ci_test, data=X)
