@@ -1,18 +1,12 @@
-import unittest
-
-from sklearn.utils.estimator_checks import check_estimator
+from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import PC
 
 
-class TestPCEstimatorClass(unittest.TestCase):
-    def setUp(self):
-        return super().setUp()
+def make_estimator():
+    return PC()
 
-    def test_sklearn_compatibiltity(self):
-        pc_estimator = PC()
 
-        try:
-            check_estimator(pc_estimator)
-        except Exception as e:
-            self.fail(f"PC estimator is not an sklearn-type Estimator: {e}")
+@parametrize_with_checks([make_estimator()])
+def test_pc_compatibility(estimator, check):
+    check(estimator)

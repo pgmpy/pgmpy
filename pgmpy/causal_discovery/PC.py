@@ -9,16 +9,17 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import pandas as pd
-from sklearn.utils.validation import check_array
+from sklearn.utils.validation import validate_data
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery.base import BaseCausalEstimator
+from pgmpy.causal_discovery.base import BaseConstraintCausalDiscovery
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import get_callable_ci_test
 
 
-class PC(BaseCausalEstimator):
+class PC(BaseConstraintCausalDiscovery):
     """
     Constraint-based estimation of DAGs using the PC algorithm.
 
@@ -50,7 +51,25 @@ class PC(BaseCausalEstimator):
 
     show_progress : bool, default=True
         Whether to show progress bar.
+
+    Methods
+    -------
+    _fit()
+        Fit data (`X`) and independence relations (optional) to a causal graph. The method
+        builds an initial skeleton graph (undirected) based on conditional independence tests.
+        Then, the v-structures are oriented based on the separating sets between non-adjacent
+        nodes. Finally, Meek's rules are applied to orient as many remaining edges as possible.
+
+    orient_colliders()
+        Orients the edges that form v-structures in a graph skeleton based on
+        the `separating_sets` to form a PDAG. For each pair of non adjacent
+        nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
+        then the v-structure is oriented as `u`->`z` , `v`->`z`.
     """
+
+    def _has_constant_columns(self, X):
+        """Check if any columns have zero variance."""
+        return np.any(np.var(X, axis=0) < 1e-8)
 
     def __init__(
         self,
@@ -80,20 +99,6 @@ class PC(BaseCausalEstimator):
         y=None,
         independencies=None,
     ):
-        # Handle cases like complex data, sparse arrays etc. first
-
-        X_arr = check_array(  # noqa: F841
-            X,
-            dtype="numeric",
-            accept_sparse=False,
-            force_all_finite=True,
-            copy=True,
-        )
-
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-
-        self.n_features_in_ = X.shape[1]
         n_samples, n_features = X.shape
 
         if n_features == 0:
@@ -103,12 +108,38 @@ class PC(BaseCausalEstimator):
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
-        self.feature_names_in_ = list(X.columns)
+        # Handle cases like complex data, sparse arrays etc. first
+        if isinstance(X, pd.DataFrame):
+            _nodes = X.columns
+        else:
+            _nodes = [f"x{i}" for i in range(X.shape[1])]
+
+        X = validate_data(
+            self,
+            X=X,
+            dtype="numeric",
+            accept_sparse=False,
+            ensure_all_finite="allow-nan",
+            reset=True,  # reset=True in fit, reset=False in predict/transform
+        )
+
+        X = X.astype(float, copy=False)
+        if n_samples < n_features or self._has_constant_columns(X):
+            X = X + np.random.RandomState(0).normal(0, 1e-10, X.shape)
+        # if not isinstance(X, pd.DataFrame):
+        X = pd.DataFrame(X, columns=_nodes)
+
+        # self.n_features_in_ = X.shape[1]
+        # self.feature_names_in_ = list(X.columns)
 
         # CI test
         ci_test = get_callable_ci_test(self.ci_test, data=X)
 
-        expert_knowledge = self.expert_knowledge or ExpertKnowledge()
+        if self.expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        else:
+            expert_knowledge = self.expert_knowledge
+
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(X.columns)
 
