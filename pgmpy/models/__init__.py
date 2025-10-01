@@ -16,7 +16,6 @@ __all__ = [
     "DiscreteBayesianNetwork",
     "BayesianNetwork",
     "DiscreteMarkovNetwork",
-    "DoubleMLRegressor",
     "MarkovNetwork",
     "FactorGraph",
     "JunctionTree",
