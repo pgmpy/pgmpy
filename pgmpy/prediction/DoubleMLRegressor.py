@@ -163,8 +163,9 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             raise ValueError("n_folds must be an integer >= 1 ")
 
         X_arr, y_arr = validate_data(
-            self, X, y, accept_sparse=False, ensure_2d=True, force_all_finite=True
+            self, X, y, accept_sparse=False, ensure_2d=True, ensure_all_finite=True
         )
+
         if sample_weight is not None:
             sample_weight = np.asarray(sample_weight)
             if sample_weight.ndim != 1:
@@ -290,7 +291,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         check_is_fitted(self, "n_features_in_")
 
         # Handle sklearn compatibility checks
-        validate_data(self, X, reset=False, ensure_2d=True, force_all_finite=True)
+        validate_data(self, X, reset=False, ensure_2d=True, ensure_all_finite=True)
 
         # Map to DAG role columns (this will rename generic features to role names)
         X_df = self._prepare_feature_df(X, feature_names=None)
