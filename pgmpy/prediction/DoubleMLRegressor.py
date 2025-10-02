@@ -90,12 +90,13 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     Examples
     --------
+    >>> # Example 1: With adjustments and cross-fitting
     >>> import numpy as np
     >>> import pandas as pd
     >>> from sklearn.linear_model import LinearRegression
     >>> from pgmpy.base.DAG import DAG
     >>> from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
-
+    >>>
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
     ... )
@@ -110,8 +111,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     ...     [("U1", "X"), ("U2", "X"), ("X", "Y"), ("U1", "Y"), ("U2", "Y")],
     ...     roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
     ... )
-
-    # Fit DoubleMLRegressor
+    >>>
+    >>> # Fit DoubleMLRegressor
     >>> dml = DoubleMLRegressor(
     ...     causal_graph=dag,
     ...     estimator_g=LinearRegression(),
@@ -120,13 +121,54 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     ...     seed=42,
     ... )
     >>> _ = dml.fit(df, y)
-
+    >>>
     >>> bool(np.isclose(float(dml.treatment_effect_), 1.5, atol=0.15))
     True
     >>> # Predict on new rows (preserves the required columns)
     >>> preds = dml.predict(df.iloc[:5])
     >>> preds.shape
     (5,)
+
+    >>> # Example 2: no adjustments, full-sample nuisance fit (n_folds=1)
+    >>> import math
+    >>> import numpy as _np
+    >>> import pandas as pd
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from pgmpy.base.DAG import DAG
+    >>> from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
+    >>>
+    >>> rng = _np.random.RandomState(0)
+    >>> n = 200
+    >>> theta_true = 1.25
+    >>> # treatment and outcome (no confounders)
+    >>> T = rng.normal(size=n)
+    >>> Y = theta_true * T + rng.normal(scale=0.5, size=n)
+    >>> # X must include the exposure column (no adjustment columns required)
+    >>> X_df = pd.DataFrame({"T": T})
+    >>> y = pd.Series(Y, name="Y")
+    >>>
+    >>> # DAG with no adjustment variables (adjustment = ())
+    >>> dag = DAG(
+    ...     [("T", "Y")], roles={"exposure": "T", "adjustment": (), "outcome": "Y"}
+    ... )
+    >>>
+    >>> # single-fold: nuisance learners are fit on the whole sample (in-sample predictions).
+    >>> dml = DoubleMLRegressor(
+    ...     causal_graph=dag,
+    ...     estimator_g=LinearRegression(),
+    ...     estimator_m=LinearRegression(),
+    ...     n_folds=1,  # single fold = no cross-fitting
+    ...     seed=0,
+    ... )
+    >>> _ = dml.fit(X_df, y)
+    >>> # estimator produced a numeric treatment effect
+    >>> bool(np.isclose(float(dml.treatment_effect_), 1.5, atol=0.3))
+    True
+    >>> # predictions preserve expected length/shape
+    >>> preds = dml.predict(X_df.iloc[:4])
+    >>> preds.shape
+    (4,)
+
 
     References
     ----------
