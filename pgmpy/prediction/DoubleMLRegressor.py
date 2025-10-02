@@ -12,8 +12,7 @@ from pgmpy.base.DAG import DAG
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
-    Double Machine Learning (DoubleML) Regressor (single-exposure) with cross-fitting and explicit feature_names
-    support.
+    Double Machine Learning (DoubleML) Regressor (single-exposure) with cross-fitting.
 
     This estimator implements the DoubleML algorithm with cross-fitting, supporting compatibility with scikit-learn's
     estimator API. It estimates the causal effect of a single treatment (exposure) variable on an outcome, adjusting for
@@ -91,7 +90,43 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     Examples
     --------
-    TO:DO
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from pgmpy.base.DAG import DAG
+    >>> from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
+
+    >>> lgbn = DAG.from_dagitty(
+    ...     "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
+    ... )
+    >>> data = lgbn.simulate(
+    ...     100, seed=42
+    ... )  # returns a pandas.DataFrame with columns ['U1','U2','X','Y']
+    >>> # prepare features (exposure + adjustments) and outcome
+    >>> df = data[["X", "U1", "U2"]]
+    >>> y = data["Y"]
+    >>> # construct a DAG (roles must match DataFrame column names)
+    >>> dag = DAG(
+    ...     [("U1", "X"), ("U2", "X"), ("X", "Y"), ("U1", "Y"), ("U2", "Y")],
+    ...     roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
+    ... )
+
+    # Fit DoubleMLRegressor
+    >>> dml = DoubleMLRegressor(
+    ...     causal_graph=dag,
+    ...     estimator_g=LinearRegression(),
+    ...     estimator_m=LinearRegression(),
+    ...     n_folds=3,
+    ...     seed=42,
+    ... )
+    >>> _ = dml.fit(df, y)
+
+    >>> bool(np.isclose(float(dml.treatment_effect_), 1.5, atol=0.15))
+    True
+    >>> # Predict on new rows (preserves the required columns)
+    >>> preds = dml.predict(df.iloc[:5])
+    >>> preds.shape
+    (5,)
 
     References
     ----------
