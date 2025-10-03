@@ -1,0 +1,476 @@
+from typing import Any, List, Optional, Sequence, Tuple
+
+import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold
+from sklearn.utils.validation import check_is_fitted, validate_data
+
+from pgmpy.base.DAG import DAG
+
+
+class DoubleMLRegressor(RegressorMixin, BaseEstimator):
+    """
+    Double Machine Learning (DoubleML) Regressor (single-exposure) with cross-fitting.
+
+    This estimator implements the DoubleML algorithm with cross-fitting, supporting compatibility with scikit-learn's
+    estimator API. It estimates the causal effect of a single treatment (exposure) variable on an outcome, adjusting for
+    confounders specified in a user-supplied DAG.
+
+    Mathematical Description
+    -----------------------
+    Given data (Y, T, X), where:
+        Y : outcome variable
+        T : treatment (exposure) variable
+        X : adjustment (confounder) variables
+
+    The DoubleML procedure estimates the treatment effect θ as follows:
+
+    1. Nuisance Estimation:
+        - Fit a model g(X) to predict Y from X (outcome nuisance model).
+        - Fit a model m(X) to predict T from X (treatment nuisance model).
+        - If cross-fitting (n_folds > 1), use K-fold splits to avoid overfitting:
+            For each fold, fit g and m on training data, predict on held-out data, and aggregate predictions.
+
+    2. Orthogonalization:
+        - Compute residuals:
+            y_res = Y - g_hat(X)
+            t_res = T - m_hat(X)
+        - These residuals remove variation explained by X, isolating the effect of T on Y.
+
+    3. Final Estimation:
+        - Fit a linear regression of y_res on t_res:
+            y_res = θ * t_res + ε
+        - The estimated coefficient θ is the causal effect of T on Y, orthogonal to confounders X.
+
+    Prediction
+    ----------
+    For new data (T_new, X_new), the predicted outcome is:
+        Y_pred = intercept + θ * T_new + g_hat(X_new)
+    where g_hat(X_new) is the predicted outcome nuisance value for the new adjustment variables.
+
+    Parameters
+    ----------
+    causal_graph : DAG, PDAG, ADMG, MAG, or PAG
+        Causal graph with defined variable roles (exposure, adjustment, etc.).
+    estimator_g : estimator-like
+        Outcome nuisance model prototype (must implement fit/predict).
+    estimator_m : estimator-like or None
+        Treatment nuisance model prototype (if None, estimator_g is used for both).
+    n_folds : int, default=5
+        Number of folds for cross-fitting. If 1, fits nuisance models on the full sample
+    seed : int or None
+        Random seed for cross-fitting splits.
+
+    Attributes
+    ----------
+    n_features_in_ : int
+        Number of features seen during fit.
+    feature_columns_ : list of str
+        Names of features used in the model.
+    estimator_g_ : estimator-like
+        Fitted outcome nuisance model.
+    estimator_m_ : estimator-like
+        Fitted treatment nuisance model.
+    g_hat_ : pd.Series
+        Predicted outcome nuisance values.
+    m_hat_ : pd.Series
+        Predicted treatment nuisance values.
+    ols_estimator_ : LinearRegression
+        Fitted final OLS estimator for treatment effect.
+    treatment_effect_ : float
+        Estimated causal effect of the treatment variable.
+    coef_ : list of float
+        Coefficients from the final OLS regression.
+    intercept_ : float
+        Intercept from the final OLS regression.
+    is_fitted_ : bool
+        Whether the estimator has been fitted.
+
+    Examples
+    --------
+    >>> # Example 1: With adjustments and cross-fitting
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from pgmpy.base.DAG import DAG
+    >>> from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
+    >>>
+    >>> lgbn = DAG.from_dagitty(
+    ...     "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
+    ... )
+    >>> data = lgbn.simulate(
+    ...     100, seed=42
+    ... )  # returns a pandas.DataFrame with columns ['U1','U2','X','Y']
+    >>> # prepare features (exposure + adjustments) and outcome
+    >>> df = data[["X", "U1", "U2"]]
+    >>> y = data["Y"]
+    >>> # construct a DAG (roles must match DataFrame column names)
+    >>> dag = DAG(
+    ...     [("U1", "X"), ("U2", "X"), ("X", "Y"), ("U1", "Y"), ("U2", "Y")],
+    ...     roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
+    ... )
+    >>>
+    >>> # Fit DoubleMLRegressor
+    >>> dml = DoubleMLRegressor(
+    ...     causal_graph=dag,
+    ...     estimator_g=LinearRegression(),
+    ...     estimator_m=LinearRegression(),
+    ...     n_folds=3,
+    ...     seed=42,
+    ... )
+    >>> _ = dml.fit(df, y)
+    >>>
+    >>> bool(np.isclose(float(dml.treatment_effect_), 1.5, atol=0.15))
+    True
+    >>> # Predict on new rows (preserves the required columns)
+    >>> preds = dml.predict(df.iloc[:5])
+    >>> preds.shape
+    (5,)
+
+    >>> # Example 2: no adjustments, full-sample nuisance fit (n_folds=1)
+    >>> import math
+    >>> import numpy as _np
+    >>> import pandas as pd
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from pgmpy.base.DAG import DAG
+    >>> from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
+    >>>
+    >>> rng = _np.random.RandomState(0)
+    >>> n = 200
+    >>> theta_true = 1.25
+    >>> # treatment and outcome (no confounders)
+    >>> T = rng.normal(size=n)
+    >>> Y = theta_true * T + rng.normal(scale=0.5, size=n)
+    >>> # X must include the exposure column (no adjustment columns required)
+    >>> X_df = pd.DataFrame({"T": T})
+    >>> y = pd.Series(Y, name="Y")
+    >>>
+    >>> # DAG with no adjustment variables (adjustment = ())
+    >>> dag = DAG(
+    ...     [("T", "Y")], roles={"exposure": "T", "adjustment": (), "outcome": "Y"}
+    ... )
+    >>>
+    >>> # single-fold: nuisance learners are fit on the whole sample (in-sample predictions).
+    >>> dml = DoubleMLRegressor(
+    ...     causal_graph=dag,
+    ...     estimator_g=LinearRegression(),
+    ...     estimator_m=LinearRegression(),
+    ...     n_folds=1,  # single fold = no cross-fitting
+    ...     seed=0,
+    ... )
+    >>> _ = dml.fit(X_df, y)
+    >>> # estimator produced a numeric treatment effect
+    >>> bool(np.isclose(float(dml.treatment_effect_), 1.5, atol=0.3))
+    True
+    >>> # predictions preserve expected length/shape
+    >>> preds = dml.predict(X_df.iloc[:4])
+    >>> preds.shape
+    (4,)
+
+
+    References
+    ----------
+    Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen, C., Newey, W., & Robins, J. (2018).
+    Double/debiased machine learning for treatment and structural parameters. The Econometrics Journal, 21(1), C1-C68.
+
+    """
+
+    def __init__(
+        self,
+        causal_graph,
+        estimator_g: Any,
+        estimator_m: Optional[Any] = None,
+        n_folds: int = 5,
+        seed: Optional[int] = None,
+    ):
+
+        self.causal_graph = causal_graph
+        self.estimator_g = estimator_g
+        self.estimator_m = estimator_m
+        self.n_folds = n_folds
+        self.seed = seed
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.target_tags.single_output = False
+        tags.regressor_tags.poor_score = True
+        tags.non_deterministic = True
+        return tags
+
+    def _ensure_dataframe(self, X, feature_names=None) -> pd.DataFrame:
+        """
+        Converts input data X to a pandas DataFrame.
+
+        - If X is a DataFrame: return a copy and coerce column names to strings.
+        - If X is array-like: reshape 1-D to (n_samples, 1), then:
+            * if feature_names provided, uses them
+            * else use string column names '0','1','2'....
+
+        Parameters
+        ----------
+        X : array-like or pd.DataFrame
+            Input features.
+        feature_names : list of str, optional
+            Names for the columns. If None, names are auto-generated.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with named columns suitable for downstream processing.
+        """
+
+        if isinstance(X, pd.DataFrame):
+            X_df = X.copy()
+            X_df.columns = [str(c) for c in X_df.columns]
+            return X_df
+
+        # Convert array-like to ndarray and ensure 2D
+        arr = np.asarray(X)
+        if arr.ndim == 1:
+            arr = arr.reshape(-1, 1)
+
+        n_cols = arr.shape[1]
+
+        # If user provided explicit feature_names, use those (and verify length)
+        if feature_names is not None:
+            if len(feature_names) != n_cols:
+                raise ValueError(
+                    f"feature_names has length {len(feature_names)} but input has {n_cols} columns"
+                )
+            columns = [str(c) for c in feature_names]
+        else:
+            # Default: integer column names 0,1,2,... to match sklearn-style DataFrames
+            columns = [str(i) for i in range(n_cols)]
+
+        return pd.DataFrame(arr, columns=columns)
+
+    def _read_roles(self) -> Tuple[str, List[str]]:
+        """
+        Read roles from DAG without mutating the original user-supplied DAG.
+        """
+        if not isinstance(self.causal_graph, DAG):
+            raise ValueError("causal_graph must be an instance of pgmpy's DAG class.")
+        dag_copy = self.causal_graph.copy()
+        dag_copy.is_valid_causal_structure()
+
+        exposure = dag_copy.get_role("exposure")
+        if len(exposure) != 1:
+            raise NotImplementedError(
+                "This estimator supports exactly one exposure variable."
+            )
+        exposure_col = exposure[0]
+
+        adj_list = dag_copy.get_role("adjustment")
+        return exposure_col, adj_list
+
+    def _prepare_feature_df(
+        self, X, feature_names: Optional[Sequence[str]] = None
+    ) -> pd.DataFrame:
+        """
+        Ensure input X is a DataFrame whose columns match the DAG roles required by this estimator.
+
+        Behavior:
+        - If X is a DataFrame with semantic column names (e.g., 'x0','x1','x2'), verify required columns exist and
+            retrun a DataFrame with columns ordered as [exposure] + adjustments + pretreatment_vars (if present).
+        - If X is an ndarray or DataFrame with generic column names (feature_0, feature_1, ... OR integer names),
+            treat the first N columns as corresponding to the required DAG features and rename them to role names.
+        """
+        exposure_col, adj_cols = self._read_roles()
+
+        required_features = [exposure_col] + list(adj_cols)
+
+        # Convert to DataFrame
+        X_df = self._ensure_dataframe(X, feature_names=feature_names)
+
+        # Standard named-columns path: ensure required columns exist
+        missing = set(required_features) - set(X_df.columns)
+        if missing:
+            raise ValueError(
+                f"Missing required columns in input data: {sorted(missing)}. Required columns: {required_features}"
+            )
+
+        # return DataFrame with exact ordering of required features
+        return X_df[required_features].copy()
+
+    def fit(self, X, y, sample_weight: Optional[Any] = None):
+        # Step 0: Validate inputs
+        if not isinstance(self.n_folds, int):
+            raise ValueError("n_folds must be an integer >= 1 ")
+        if self.n_folds < 1:
+            raise ValueError("n_folds must be an integer >= 1 ")
+
+        X_arr, y_arr = validate_data(
+            self, X, y, accept_sparse=False, ensure_2d=True, ensure_all_finite=True
+        )
+
+        if sample_weight is not None:
+            sample_weight = np.asarray(sample_weight)
+            if sample_weight.ndim != 1:
+                raise ValueError("sample_weight must be 1D of shape (n_samples,)")
+            elif sample_weight.shape[0] != X_arr.shape[0]:
+                raise ValueError("sample_weight must have shape (n_samples,)")
+
+        # Step 1: Preprocess the input data.
+        self.n_features_in_ = X_arr.shape[1]
+        df = self._prepare_feature_df(X, feature_names=None)
+        self.feature_columns_ = list(df.columns)
+        df["outcome"] = np.asarray(y).ravel()
+        exposure_col, adj_cols = self._read_roles()
+        n_samples = df.shape[0]
+
+        # Step 2: Prepare nuisance covariates excluding treatment
+        if len(adj_cols) == 0:
+            # Use an intercept only column to ensure estimators recieve a 2D array when adj_col is empty
+            covariates_df = pd.DataFrame(
+                {"_intercept": np.ones(n_samples)}, index=df.index
+            )
+        else:
+            # use the adjustment columns as the features for nuisance models
+            covariates_df = df[adj_cols].copy()
+
+        target_vec = df["outcome"]
+        exposure_vec = df[exposure_col]
+
+        # Step 3: Fit nuisance models
+        # If the user requests for single fold (n_folds == 1), perform a full sample nuisance fit
+        if int(self.n_folds) == 1:
+            ml_g = clone(self.estimator_g)
+            ml_m = (
+                clone(self.estimator_m)
+                if self.estimator_m is not None
+                else clone(self.estimator_g)
+            )
+
+            # Fit nuisance models on the entire covariate set
+            ml_g.fit(covariates_df, target_vec, sample_weight=sample_weight)
+            g_pred = ml_g.predict(covariates_df)
+            # ensure a pandas Series aligned with covariates_df.index (and numeric)
+            g_hat_ser = pd.Series(g_pred, index=covariates_df.index, dtype=float)
+
+            ml_m.fit(covariates_df, exposure_vec, sample_weight=sample_weight)
+            m_pred = ml_m.predict(covariates_df)
+            m_hat_ser = pd.Series(m_pred, index=covariates_df.index, dtype=float)
+
+            self.estimator_g_ = ml_g
+            self.estimator_m_ = ml_m
+
+            # always store Series for consistency
+            self.g_hat_ = g_hat_ser
+            self.m_hat_ = m_hat_ser
+        else:
+            # Cross-fitting branch
+            splitter = KFold(
+                n_splits=self.n_folds, shuffle=True, random_state=self.seed
+            )
+
+            g_hat = pd.Series(0.0, index=df.index, dtype=float)
+            m_hat = pd.Series(0.0, index=df.index, dtype=float)
+
+            for train_idx, test_idx in splitter.split(covariates_df, exposure_vec):
+                ml_g = clone(self.estimator_g)
+                ml_m = (
+                    clone(self.estimator_m)
+                    if self.estimator_m is not None
+                    else clone(self.estimator_g)
+                )
+
+                ml_g.fit(covariates_df.iloc[train_idx], target_vec.iloc[train_idx])
+                g_test_pred = ml_g.predict(covariates_df.iloc[test_idx])
+
+                test_index = covariates_df.iloc[test_idx].index
+                g_test_pred_ser = pd.Series(g_test_pred, index=test_index, dtype=float)
+                g_hat.loc[g_test_pred_ser.index] = g_test_pred_ser
+
+                # Same for m
+                ml_m.fit(covariates_df.iloc[train_idx], exposure_vec.iloc[train_idx])
+                pred_m = ml_m.predict(covariates_df.iloc[test_idx])
+                m_test_pred_ser = pd.Series(pred_m, index=test_index, dtype=float)
+                m_hat.loc[m_test_pred_ser.index] = m_test_pred_ser
+
+            # After loop, store Series
+            self.g_hat_ = g_hat
+            self.m_hat_ = m_hat
+
+        # Step 4: orthogonal estimate (OLS on residuals)
+        y_res = target_vec - self.g_hat_
+        t_res = exposure_vec - self.m_hat_
+
+        # reshape treatment residuals to 2D (sklearn expects 2D X)
+        X_t_for_ols = t_res.to_frame(name="t_res")
+
+        # perform a simple OLS of y_res on t_res (and intercept)
+        estimator = LinearRegression()
+        estimator.fit(X_t_for_ols, y_res, sample_weight=sample_weight)
+        self.ols_estimator_ = estimator
+
+        theta = (
+            float(estimator.coef_[0])
+            if getattr(estimator, "coef_", None) is not None
+            and len(estimator.coef_) > 0
+            else 0.0
+        )
+        self.treatment_effect_ = theta
+        # store coef_ as a Python list (or pandas.Series) if you want to avoid np; tests may expect numpy ndarray
+        self.coef_ = [theta] + [0.0] * len(adj_cols)
+        self.intercept_ = float(estimator.intercept_)
+
+        # Step 5: Bookeeping and return
+        self._design_columns = [exposure_col] + adj_cols
+        self.n_folds_ = self.n_folds
+        self.is_fitted_ = True
+        return self
+
+    def predict(self, X):
+        """
+        Computes final prediction: (intercept + theta*exposure + g_pred)
+        """
+        # ensure estimator is fitted
+        check_is_fitted(self, "n_features_in_")
+
+        # Handle sklearn compatibility checks
+        validate_data(self, X, reset=False, ensure_2d=True, ensure_all_finite=True)
+
+        # Map to DAG role columns (this will rename generic features to role names)
+        X_df = self._prepare_feature_df(X, feature_names=None)
+
+        exposure_col = self.feature_columns_[0]  # stored earlier in fit
+        adj_cols = self.feature_columns_[1:]
+
+        if exposure_col not in X_df.columns:
+            raise ValueError(
+                f"Exposure '{exposure_col}' not found in input columns for predict()."
+            )
+
+        # compute g_pred using stored nuisance models
+        if (
+            hasattr(self, "estimator_g_")
+            and self.estimator_g_ is not None
+            and len(adj_cols) > 0
+        ):
+            X_adj = X_df[adj_cols].copy()
+            raw_g = self.estimator_g_.predict(X_adj)
+            # normalize to Series aligned with X_df.index
+            if isinstance(raw_g, pd.Series):
+                g_pred_ser = raw_g.reindex(X_df.index).astype(float)
+            else:
+                g_pred_ser = pd.Series(raw_g, index=X_df.index, dtype=float)
+        else:
+            g_pred_ser = pd.Series(
+                getattr(self, "y_mean_", 0.0), index=X_df.index, dtype=float
+            )
+
+        # treatment values as Series
+        t_ser = X_df[exposure_col].astype(float)
+
+        # ensure treatment_effect_ is scalar
+        theta = float(self.ols_estimator_.coef_[0])
+
+        # Compute predictions
+        preds_ser = pd.Series(self.intercept_, index=X_df.index, dtype=float)
+        preds_ser = preds_ser.add(theta * t_ser, fill_value=0.0)
+        preds_ser = preds_ser.add(g_pred_ser, fill_value=0.0)
+
+        # return numpy array for sklearn compatibility
+        return preds_ser.to_numpy()
