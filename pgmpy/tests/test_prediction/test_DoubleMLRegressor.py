@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
@@ -16,6 +17,7 @@ def make_estimator_for_checks():
     est = DoubleMLRegressor(
         causal_graph=G,
         nuisance_estimators=(LinearRegression(), LinearRegression()),
+        effect_estimator=LinearRegression(),
         n_folds=1,
         seed=0,
     )
@@ -58,9 +60,10 @@ def test_doubleml_recovers_theta_on_simple_plr():
     est = DoubleMLRegressor(
         causal_graph=G,
         nuisance_estimators=(
-            LinearRegression(),
-            LinearRegression(),
+            RandomForestRegressor(),
+            RandomForestRegressor(),
         ),
+        effect_estimator=LinearRegression(),
         n_folds=3,
         seed=0,
     )
