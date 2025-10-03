@@ -51,10 +51,16 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         the following roles: `exposure`, `outcome`, and `adjustment`.
         Additionally, `pretreatment` can be specified.
 
-    nuisance_estimators: an estimator or a tuple of estimators of size 2.
+    nuisance_estimators: an estimator or a tuple of estimators of size 2 (default=None)
         If a single estimator is provided, it is used for both outcome and treatment nuisance models.
         If a tuple of two estimators is provided, the first is used for the treatment model
         and the second for the outcome model.
+
+        If None, defaults to LinearRegression for both models.
+
+    effect_estimator : estimator-like (default=None)
+        Estimator for the final effect estimation step. Must have a `fit` method
+        and a `predict` method. If None, defaults to LinearRegression.
 
     n_folds : int, default=5
         Number of folds to use for cross-fitting. If 1, doesn't perform
@@ -145,8 +151,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     def __init__(
         self,
         causal_graph,
-        nuisance_estimators,
-        effect_estimator,
+        nuisance_estimators=None,
+        effect_estimator=None,
         n_folds: int = 5,
         seed: Optional[int] = None,
     ):
