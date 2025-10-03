@@ -109,28 +109,26 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     >>> # Simulate data from a linear Gaussian BN that we use to estimate the causal effect from.
     >>> lgbn = DAG.from_dagitty(
-    ...     "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] X -> Y [beta=0.4] }"
+    ...     "dag { X -> T [beta=0.2] X -> Y [beta=0.3] T -> Y [beta=0.4] }"
     ... )
-    >>> data = lgbn.simulate(n_samples=100, seed=42)
-    >>> X = data[["X", "U1", "U2"]]
+    >>> data = lgbn.simulate(n_samples=1000, seed=42)
+    >>> X = data.loc[:, ["X", "T"]]
     >>> y = data["Y"]
 
     >>> # construct a DAG (roles must match DataFrame column names)
     >>> dag = DAG(
-    ...     [("U1", "X"), ("X", "Y"), ("U1", "Y")],
-    ...     roles={"exposure": "X", "adjustment": "U1", "outcome": "Y"},
+    ...     lgbn.edges(), roles={"exposure": "T", "adjustment": "X", "outcome": "Y"}
     ... )
-    >>>
     >>> dml = DoubleMLRegressor(
     ...     causal_graph=dag,
     ...     nuisance_estimators=LinearRegression(),
+    ...     effect_estimator=LinearRegression(),
     ...     n_folds=3,
-    ...     seed=42,
     ... )
-    >>> _ = dml.fit(df, y)
+    >>> _ = dml.fit(X, y)
     >>> dml.effect_estimator_.coef_.round(1)
     array([0.4])
-    >>> # Predict on new rows (preserves the required columns)
+
     >>> preds = dml.predict(X.iloc[:5])
     >>> preds.shape
     (5,)
