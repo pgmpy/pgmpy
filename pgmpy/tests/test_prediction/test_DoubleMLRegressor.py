@@ -33,27 +33,19 @@ def test_sklearn_compatibility(estimator, check):
 def test_doubleml_recovers_theta_on_simple_plr():
     """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery."""
 
-    # DAG in dagitty format: U1,U2 -> X (treatment) and U1,U2 -> Y (confounding), X -> Y (treatment effect)
     lgbn = DAG.from_dagitty(
-        "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
+        "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.2] U2 -> X [beta=0.3] U2 -> Y [beta=0.4] X -> Y [beta=0.6] }"
     )
 
-    # simulate N samples
-    data = lgbn.simulate(200, seed=42)  # returns a pandas DataFrame
+    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
 
-    # choose columns and create DataFrame with expected roles
-    # Here exposure is 'X', adjustments are ['U1','U2'], outcome is 'Y'
-    df = data[["X", "U1", "U2"]].copy()
-    y = data["Y"].copy()
+    df = data.loc[:, ["X", "U1", "U2"]]
+    df = (df - df.mean(axis=0)) / df.std(axis=0)
 
-    # Standardize covariates to keep variances small and comparable
-    df[["X", "U1", "U2"]] = (df[["X", "U1", "U2"]] - df[["X", "U1", "U2"]].mean()) / df[
-        ["X", "U1", "U2"]
-    ].std()
+    y = data["Y"]
 
-    # DAG roles must match column names exactly
     G = DAG(
-        [("X", "Y"), ("U1", "X"), ("U2", "X")],
+        lgbn.edges(),
         roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
     )
 
@@ -70,8 +62,9 @@ def test_doubleml_recovers_theta_on_simple_plr():
 
     est.fit(df, y)
 
-    assert est.effect_estimator_.coef_.round(1)[0] == 1.5
+    assert est.effect_estimator_.coef_.round(1)[0] == 0.6
+
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
     mse = np.mean((preds - y.to_numpy()) ** 2)
-    assert mse < 10.0
+    assert mse < 0.5
