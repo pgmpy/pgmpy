@@ -11,14 +11,11 @@ def make_estimator_for_checks():
     Return an unfitted DoubleMLRegressor instance configured to accept numpy arrays.
     Important: passes feature_names so sklearn's tests (which passes ndarrays) can map columns.
     """
-    G = DAG(
-        [("0", "y"), ("0", "1"), ("0", "2")], roles={"exposure": "0", "outcome": "y"}
-    )
+    G = DAG([(0, 3), (0, 1), (0, 2)], roles={"exposure": [0], "outcome": [3]})
 
     est = DoubleMLRegressor(
         causal_graph=G,
-        estimator_g=LinearRegression(),
-        estimator_m=LinearRegression(),
+        nuisance_estimators=(LinearRegression(), LinearRegression()),
         n_folds=1,
         seed=0,
     )
@@ -60,17 +57,17 @@ def test_doubleml_recovers_theta_on_simple_plr():
 
     est = DoubleMLRegressor(
         causal_graph=G,
-        estimator_g=LinearRegression(),
-        estimator_m=LinearRegression(),
+        nuisance_estimators=(
+            LinearRegression(),
+            LinearRegression(),
+        ),
         n_folds=3,
         seed=0,
     )
 
     est.fit(df, y)
 
-    theta_hat = getattr(est, "treatment_effect_", None)
-    assert theta_hat is not None
-    assert np.isfinite(theta_hat)
+    assert est.effect_estimator_.coef_.round(1)[0] == 1.5
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
     mse = np.mean((preds - y.to_numpy()) ** 2)
