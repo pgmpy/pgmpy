@@ -114,7 +114,7 @@ class PC(BaseConstraintCausalDiscovery):
             X=X,
             dtype="numeric",
             accept_sparse=False,
-            ensure_all_finite="allow-nan",
+            ensure_all_finite=True,
             reset=True,  # reset=True in fit, reset=False in predict/transform
         )
 

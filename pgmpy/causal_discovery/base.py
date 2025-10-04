@@ -68,7 +68,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.input_tags.categorical = True
-        tags.input_tags.allow_nan = True
+        tags.input_tags.allow_nan = False
         tags.input_tags.positive_only = False
         tags.target_tags.required = False
         return tags
