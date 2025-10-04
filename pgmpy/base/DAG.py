@@ -1854,7 +1854,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             Dataset to be used to run the scoring methods/tests
 
         metrics: tuple (Callable or strings)
-            A list of the metrics that are to be run on the model and data
+            A list of the metrics that are to be run on the model and data. A comma separated set of either Callables
+            to metrics defined in pgmpy.metrics.metrics or strings referencing similar metrics can be passed.
+
+            Following are the supported strings and respective Callables that can be passed as elements:
+
+                - "correlation" : correlation_score,
+                - "log-likelihood" : log_likelihood_score,
+                - "aic" : structure_score,
+                - "bic" : structure_score,
+                - "implied-cis" : implied_cis,
+                - "fisher-c" : fisher_c
+
+                For instance ("correlation", log_likelihood_score) is a tuple that can be passed in metrics. This is
+                an example of (string, Callable) type and so on.
+
+                If no value passed all available metrics will be computed based on pgmpy.metrics.metrics.get_metrics().
 
         significance_level: float
             To compare with p-value to count the failing CIs (conditional independencies). A
@@ -1869,59 +1884,92 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         df_result: pandas.Dataframe
             A dataframe of all the metric results run on the given causal model
             using the dataset provided.
+
+        EXAMPLES
+        ----------
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.utils import get_example_model
+        >>> dag = DAG()
+        >>> cancer = get_example_model("cancer")
+        >>> dat = cancer.simulate(int(1e3))
+        >>> dag = cancer
+        >>> dag.validate(dat)
+                            METRIC       RESULT
+        0              Correlation     0.285714
+        1           Log-likelihood -2091.887037
+        2                      AIC -2098.446238
+        3                      BIC -2122.985014
+        4  Failing CIs / Total CIs        0 / 6
+        5         Fisher-C p-value     0.812848
         """
-        # checking if data provided is valid
         if not isinstance(data, pd.DataFrame) or data is None:
             raise ValueError(
                 f"data must be a pandas.DataFrame instance. Got {type(data)}"
+            )
+        elif set(self.nodes) != set(data.columns):
+            raise ValueError(
+                "Missing columns in data. Can't find values for the following variables: "
+                f" {set(self.nodes()) - set(data.columns)}"
             )
 
         from pgmpy.estimators.CITests import get_callable_ci_test
         from pgmpy.metrics.metrics import get_metrics
         from pgmpy.utils import get_dataset_type
 
-        # List of method calls generated according to the metric list provided
         callable_metrics = get_metrics(metrics=metrics)
 
-        # Getting the CI Test method
-        kwargs["ci_test"] = get_callable_ci_test(test=None, data=data)
+        if "ci_test" not in kwargs:
+            kwargs["ci_test"] = get_callable_ci_test(test=None, data=data)
 
-        # To store final results of the tests
-        metric_vals = {}
+        suffix = None
+        if "scoring_method" not in kwargs:
+            var_type = get_dataset_type(data)
+            if var_type == "continuous":
+                suffix = "g"
+            elif var_type == "discrete":
+                suffix = "d"
+            else:
+                suffix = "cg"
 
-        for n, c in callable_metrics.items():
-            sig = inspect.signature(c)
+        metric_vals = pd.DataFrame(columns=["METRIC", "RESULT"])
+
+        index = 0
+
+        for name, metric_fn in callable_metrics.items():
+            sig = inspect.signature(metric_fn)
             valid_params = sig.parameters.keys()
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
 
-            if n in ["aic", "bic"]:
-                var_type = get_dataset_type(data)
-                if var_type == "continuous":
-                    suffix = "g"
-                elif var_type == "discrete":
-                    suffix = "d"
-                else:
-                    suffix = "cg"
-                filtered_kwargs["scoring_method"] = f"{n}-" + suffix
+            if suffix is not None and name in ["aic", "bic"]:
+                filtered_kwargs["scoring_method"] = f"{name}-" + suffix
 
-            result = c(model=self, data=data, **filtered_kwargs)
+            result = metric_fn(model=self, data=data, **filtered_kwargs)
 
-            if n in ["correlation", "log-likelihood", "aic", "bic"]:
-                metric_vals[n.capitalize()] = result
-            elif n == "fisher-c":
+            if name in ["correlation", "log-likelihood"]:
+                metric_vals.loc[index] = [name.capitalize(), result]
+            elif name in ["aic", "bic"]:
+                metric_vals.loc[index] = [name.upper(), result]
+            elif name == "fisher-c":
                 if isinstance(result, tuple):
-                    (metric_vals["Fisher-C p-value"], metric_vals["RMSEA"]) = result
+                    (p_val, rmsea) = result
+                    metric_vals.loc[index] = ["Fisher-C p-value", p_val]
+                    metric_vals.loc[index + 1] = ["RMSEA", rmsea]
+                    index += 1
                 else:
-                    metric_vals["Fisher-C p-value"] = result
-            elif n == "implied-cis":
-                metric_vals["Failing CIs / Total CIs"] = (
-                    f"{(result["p-value"] < significance_level).sum()} / {len(result)}"
-                )
+                    metric_vals.loc[index] = ["Fisher-C p-value", result]
 
-        df_result = pd.DataFrame(
-            {"METRIC": list(metric_vals.keys()), "RESULT": list(metric_vals.values())}
-        )
-        return df_result
+            elif name == "implied-cis":
+                failing = (result["p-value"] < significance_level).sum()
+                total = len(result)
+                display_value = f"{failing} / {total}"
+                metric_vals.loc[index] = ["Failing CIs / Total CIs", display_value]
+
+            index += 1
+
+        metric_vals.set_index("METRIC", inplace=True)
+        metric_vals.index.name = None
+
+        return metric_vals
 
     def __hash__(self):
         """
