@@ -1894,13 +1894,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> dat = cancer.simulate(int(1e3))
         >>> dag = cancer
         >>> dag.validate(dat)
-                            METRIC       RESULT
-        0              Correlation     0.285714
-        1           Log-likelihood -2091.887037
-        2                      AIC -2098.446238
-        3                      BIC -2122.985014
-        4  Failing CIs / Total CIs        0 / 6
-        5         Fisher-C p-value     0.812848
+                                      RESULT
+        Correlation                     0.25
+        Log-likelihood          -2078.649707
+        AIC                     -2085.926617
+        BIC                     -2110.465393
+        Failing CIs / Total CIs        0 / 6
+        Fisher-C p-value            0.846715
         """
         if not isinstance(data, pd.DataFrame) or data is None:
             raise ValueError(
