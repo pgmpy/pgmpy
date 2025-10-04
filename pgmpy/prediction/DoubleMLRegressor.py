@@ -6,8 +6,6 @@ from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.global_vars import config
-
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
@@ -248,9 +246,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.n_samples_ = df.shape[0]
 
         if sample_weight is None:
-            sample_weight = pd.Series(
-                1.0, index=range(df.shape[0]), dtype=config.get_dtype()
-            )
+            sample_weight = pd.Series(1.0, index=range(df.shape[0]))
         df = df.assign(outcome=np.asarray(y))
         exposure_vec = df[self.exposure_var_]
 
@@ -280,8 +276,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 n_splits=self.n_folds, shuffle=True, random_state=self.seed
             )
 
-            outcome_pred = pd.Series(0.0, index=df.index, dtype=config.get_dtype())
-            treatment_pred = pd.Series(0.0, index=df.index, dtype=config.get_dtype())
+            outcome_pred = pd.Series(0.0, index=df.index)
+            treatment_pred = pd.Series(0.0, index=df.index)
 
             self.outcome_est_ = []
             self.treatment_est_ = []
