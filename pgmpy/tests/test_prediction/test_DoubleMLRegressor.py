@@ -9,6 +9,13 @@ from pgmpy.base.DAG import DAG
 from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
 
 
+def make_simple_dag_roles():
+    return DAG(
+        ebunch=[("Z1", "D"), ("Z2", "D"), ("D", "Y"), ("Z1", "Y"), ("Z2", "Y")],
+        roles={"exposure": "D", "adjustment": ("Z1", "Z2"), "outcome": "Y"},
+    )
+
+
 def make_estimator_for_checks():
     """
     Return an unfitted DoubleMLRegressor instance configured to accept numpy arrays.
@@ -37,64 +44,16 @@ def make_simulated_plr(n=500, seed=0, theta=2.5, nuisance_scale=0.5):
     return X, df["Y"], theta
 
 
-def make_simple_dag_roles():
-    return DAG(
-        ebunch=[("Z1", "D"), ("Z2", "D"), ("D", "Y"), ("Z1", "Y"), ("Z2", "Y")],
-        roles={"exposure": "D", "adjustment": ("Z1", "Z2"), "outcome": "Y"},
-    )
-
-
 @parametrize_with_checks([make_estimator_for_checks()])
 def test_sklearn_compatibility(estimator, check):
     """Run sklearn's compatibility checks (one check at a time)."""
     check(estimator)
 
 
-def test_doubleml_recovers_theta_on_simple_plr():
-    """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery."""
-
-    lgbn = DAG.from_dagitty(
-        "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.2] U2 -> X [beta=0.3] U2 -> Y [beta=0.4] X -> Y [beta=0.6] }"
-    )
-
-    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
-
-    df = data.loc[:, ["X", "U1", "U2"]]
-    df = (df - df.mean(axis=0)) / df.std(axis=0)
-
-    y = data["Y"]
-
-    G = DAG(
-        lgbn.edges(),
-        roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
-    )
-
-    est = DoubleMLRegressor(
-        causal_graph=G,
-        nuisance_estimators=(
-            RandomForestRegressor(),
-            RandomForestRegressor(),
-        ),
-        effect_estimator=LinearRegression(),
-        n_folds=3,
-        seed=0,
-    )
-
-    est.fit(df, y)
-
-    assert est.effect_estimator_.coef_.round(1)[0] == 0.6
-
-    preds = est.predict(df)
-    assert preds.shape[0] == df.shape[0]
-    mse = np.mean((preds - y.to_numpy()) ** 2)
-    assert mse < 0.5
-
-
 def test_dataframe_input_for_both_x_and_y():
     """Test that regressor works when both X and y are DataFrames (y as DataFrame column)."""
     X, y, _ = make_simulated_plr(n=1000, seed=1)
-    # make y a DataFrame (one-column) to verify fit handles DataFrame y
-    y_df = y.to_frame(name="Y")
+    y_df = y.to_frame(name="Y").iloc[:, 0]
 
     dag = make_simple_dag_roles()
     model = DoubleMLRegressor(
@@ -116,11 +75,37 @@ def test_dataframe_input_for_both_x_and_y():
     assert list(model.feature_columns_) == ["D", "Z1", "Z2"]
 
 
+def test_numpy_array_input_with_integer_dag_variables():
+    """Test that regressor works with numpy array inputs when DAG uses integer-string column names."""
+    # Construct DAG with stringified integer names to match DataFrame conversion behavior
+    dag = DAG(
+        ebunch=[(1, 0), (1, 2), (0, 2)],
+        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
+    )
+
+    model = DoubleMLRegressor(
+        causal_graph=dag,
+        nuisance_estimators=LinearRegression(),
+        effect_estimator=LinearRegression(),
+        n_folds=1,
+    )
+
+    n_samples = 50
+    # Build array columns: column 0 = exposure (0), column 1 = adjustment (1)
+    X_array = np.random.normal(0, 1, (n_samples, 2))
+    y_array = np.random.normal(0, 1, n_samples)
+
+    _ = model.fit(X_array, y_array)
+    preds = model.predict(X_array)
+    assert len(preds) == n_samples
+    assert model.feature_columns_ == [0, 1]
+
+
 def test_no_adjustment_variables():
     """Test case where there are no adjustment variables (no confounders)."""
     # Create simple DAG D -> Y with no adjustments
     # Use small simulation via dagitty to create data
-    lgbn = DAG.from_dagitty("dag { D -> Y [beta=1.25] }")
+    lgbn = DAG.from_dagitty("dag { D -> Y [beta=0.6] }")
     data = lgbn.simulate(n_samples=200, seed=42)
 
     dag = DAG(
@@ -217,32 +202,6 @@ def test_error_handling_missing_roles_and_multiple_exposure():
         model3.fit(incomplete, [5, 6])
 
 
-def test_numpy_array_input_with_integer_dag_variables():
-    """Test that regressor works with numpy array inputs when DAG uses integer-string column names."""
-    # Construct DAG with stringified integer names to match DataFrame conversion behavior
-    dag = DAG(
-        ebunch=[(1, 0), (1, 2), (0, 2)],
-        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
-    )
-
-    model = DoubleMLRegressor(
-        causal_graph=dag,
-        nuisance_estimators=LinearRegression(),
-        effect_estimator=LinearRegression(),
-        n_folds=1,
-    )
-
-    n_samples = 50
-    # Build array columns: column 0 = exposure (0), column 1 = adjustment (1)
-    X_array = np.random.normal(0, 1, (n_samples, 2))
-    y_array = np.random.normal(0, 1, n_samples)
-
-    _ = model.fit(X_array, y_array)
-    preds = model.predict(X_array)
-    assert len(preds) == n_samples
-    assert model.feature_columns_ == [0, 1]
-
-
 def test_sample_weight_support_and_shapes():
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y, _ = make_simulated_plr(n=150, seed=5)
@@ -302,3 +261,43 @@ def test_dag_roles_validation_and_pretreatment_support():
     df = pd.DataFrame({"D": D, "Z": Z, "P": P})
     _ = model.fit(df, pd.Series(Y, name="Y"))
     assert set(model.feature_columns_) >= {"D", "Z", "P"}
+
+
+def test_doubleml_recovers_theta_with_RF():
+    """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery."""
+
+    lgbn = DAG.from_dagitty(
+        "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.2] U2 -> X [beta=0.3] U2 -> Y [beta=0.4] X -> Y [beta=0.6] }"
+    )
+
+    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+
+    df = data.loc[:, ["X", "U1", "U2"]]
+    df = (df - df.mean(axis=0)) / df.std(axis=0)
+
+    y = data["Y"]
+
+    G = DAG(
+        lgbn.edges(),
+        roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
+    )
+
+    est = DoubleMLRegressor(
+        causal_graph=G,
+        nuisance_estimators=(
+            RandomForestRegressor(),
+            RandomForestRegressor(),
+        ),
+        effect_estimator=LinearRegression(),
+        n_folds=3,
+        seed=0,
+    )
+
+    est.fit(df, y)
+
+    assert est.effect_estimator_.coef_.round(1)[0] == 0.6
+
+    preds = est.predict(df)
+    assert preds.shape[0] == df.shape[0]
+    mse = np.mean((preds - y.to_numpy()) ** 2)
+    assert mse < 0.5
