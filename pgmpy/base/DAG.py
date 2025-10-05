@@ -1748,6 +1748,35 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return strengths
 
+    def _get_non_descendants(self, node) -> list:
+        """
+        Returns a list of the non_descendants of a given node in the model
+        using BFS.
+
+        Parameters
+        ----------
+        node : (Hashable) the node of the DAG for which we want to find
+                non-descendant nodes
+
+        Returns
+        -------
+        list(non_descendants): A list of all the non-descendant nodes for
+                                the given node in the DAG
+        """
+        descendants = set()
+        queue = list(self.successors(node))
+        visited = set()
+        while queue:
+            current = queue.pop(0)
+            if current not in visited:
+                visited.add(current)
+                descendants.add(current)
+                queue.extend(self.successors(current))
+
+        all_nodes = set(self.nodes())
+        non_descendants = all_nodes - descendants - {node}
+        return list(non_descendants)
+
     def __hash__(self):
         """
         Returns a hash value for the DAG object. The hash value is computed based on
