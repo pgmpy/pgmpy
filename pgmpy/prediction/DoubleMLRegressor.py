@@ -9,38 +9,36 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
-    Implements the Double Machine Learning (DoubleML) Regressor[1] with cross-fitting.
+    Implements the Double Machine Learning Regressor[1] with cross-fitting.
 
-    This estimator implements the DoubleML algorithm with cross-fitting,
-    supporting compatibility with scikit-learn's estimator API. It estimates
-    the causal effect of a single treatment (exposure) variable on an outcome,
-    adjusting for confounders specified in a user-supplied DAG.
+    This estimator implements the DoubleML algorithm with cross-fitting in a
+    scikit-learn compatible estimator API. It uses user-specified causal graphs
+    to extract exposure, outcome, and adjustment variables and uses that to
+    fit/predict a DoubleML regressor. The predictions are based on a CATE
+    model. The model is defined as follows:
 
-    Given data (Y, T, X), where:
+    Given data D: (Y, T, X), where:
         Y : outcome variable
         T : treatment (exposure) variable
         X : adjustment (confounder + pretreatment) variables
 
-    The DoubleML procedure estimates the treatment effect theta as follows:
+    The DoubleML fitting procedure consists of three main steps:
 
-    1. Nuisance Estimation:
-        - Fit a model g(X) to predict Y from X (outcome nuisance model).
-        - Fit a model m(X) to predict T from X (treatment nuisance model).
+    1. Fitting two nuisance estimators:
+        - Outcome Model (`outcome_est_`): Predict Y using X.
+        - Treatment Model (`treatment_est_`): Predict T from X.
 
-    2. Orthogonalization:
-        - Compute residuals:
-            y_res = Y - g_hat(X)
-            t_res = T - m_hat(X)
-        - These residuals remove variation explained by X, isolating the effect of T on Y.
+    2. Computing residuals using nuisance estimators to isolate variation not explained by X:
+        - Outcome residuals: Y - outcome_est_.predict(X)
+        - Treatment residuals: T - treatment_est_.predict(X)
 
-    3. Final Estimation:
-        - Fit a effect estimator on y_res on t_res:
-            y_res = theta * t_res + E
-        - The estimated coefficient theta is the causal effect of T on Y, adjusted for confounders X.
+    3. Fitting the effect estimator (`effect_est_`) on the residuals to predict
+       the outcome residuals from the treatment residuals.
 
-    For new data (T_new, X_new), the predicted outcome is:
-        Y_pred = intercept + theta * T_new + g_hat(X_new)
-    where g_hat(X_new) is the predicted outcome nuisance value for the new adjustment variables.
+    Using the fitted models, predictions on new data (X_new, T_new) are computed as:
+
+        res_T_new = T_new - treatment_est_.predict(X_new)
+        Y_pred =  effect_est_(res_T_new) + outcome_est_.predict(X_new)
 
     Parameters
     ----------
@@ -50,9 +48,11 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         Additionally, `pretreatment` can be specified.
 
     nuisance_estimators: an estimator or a tuple of estimators of size 2 (default=None)
-        If a single estimator is provided, it is used for both outcome and treatment nuisance models.
-        If a tuple of two estimators is provided, the first is used for the treatment model
-        and the second for the outcome model.
+        If a single estimator is provided, it is used for both outcome and
+        treatment nuisance models.
+
+        If a tuple of two estimators is provided, the first one is used for the
+        treatment model and the second for the outcome model.
 
         If None, defaults to LinearRegression for both models.
 
@@ -230,15 +230,25 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # Step 1.1: Get roles from the causal graph and assign to attributes.
         exposure_vars = list(self.causal_graph.get_role("exposure"))
         outcome_vars = list(self.causal_graph.get_role("outcome"))
-        adjustment_vars = list(self.causal_graph.get_role("adjustment"))
-        pretreatment_vars = list(self.causal_graph.get_role("pretreatment"))
 
-        self.exposure_var_ = exposure_vars[0]
-        self.outcome_var_ = outcome_vars[0]
-        self.adjustment_vars_ = adjustment_vars
-        self.pretreatment_vars_ = pretreatment_vars
+        if len(exposure_vars) != 1:
+            raise ValueError(
+                f"DoubleMLRegressor only supports a single exposure variable. Found: {len(exposure_vars)}"
+            )
+        else:
+            self.exposure_var_ = exposure_vars[0]
+
+        if len(outcome_vars) != 1:
+            raise ValueError(
+                f"DoubleMLRegressor only supports a single outcome variable. Found: {len(outcome_vars)}"
+            )
+        else:
+            self.outcome_var_ = outcome_vars[0]
+
+        self.adjustment_vars_ = list(self.causal_graph.get_role("adjustment"))
+        self.pretreatment_vars_ = list(self.causal_graph.get_role("pretreatment"))
         self.feature_columns_ = (
-            [self.exposure_var_] + adjustment_vars + pretreatment_vars
+            [self.exposure_var_] + self.adjustment_vars_ + self.pretreatment_vars_
         )
 
         # Step 1.2: Prepare feature dataframe and sample weights.
@@ -250,7 +260,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         df = df.assign(outcome=np.asarray(y))
         exposure_vec = df[self.exposure_var_]
 
-        # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment variables, use intercept only.
+        # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
+        #         variables, use intercept only.
         if len(self.adjustment_vars_ + self.pretreatment_vars_) == 0:
             covariates_df = pd.DataFrame(
                 {"_intercept": np.ones(self.n_samples_)}, index=df.index
@@ -259,7 +270,10 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             covariates_df = df[self.adjustment_vars_ + self.pretreatment_vars_]
 
         # Step 3: Fit nuisance models
-        # Step 3.1: If n_folds = 1, fit nuisance models on full data and compute in-sample predictions.
+        # Step 3.1: If n_folds = 1, fit nuisance models on full data and
+        #           compute in-sample predictions.
+        self.outcome_est_ = []
+        self.treatment_est_ = []
         if int(self.n_folds) == 1:
             outcome_est.fit(covariates_df, df["outcome"], sample_weight=sample_weight)
             outcome_pred = outcome_est.predict(covariates_df)
@@ -267,8 +281,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             treatment_est.fit(covariates_df, exposure_vec, sample_weight=sample_weight)
             treatment_pred = treatment_est.predict(covariates_df)
 
-            self.outcome_est_ = outcome_est
-            self.treatment_est_ = treatment_est
+            self.outcome_est_.append(outcome_est)
+            self.treatment_est_.append(treatment_est)
 
         # Step 3.2: If n_folds > 1, perform cross-fitting and compute out-of-sample predictions.
         else:
@@ -279,8 +293,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             outcome_pred = pd.Series(0.0, index=df.index)
             treatment_pred = pd.Series(0.0, index=df.index)
 
-            self.outcome_est_ = []
-            self.treatment_est_ = []
             for train_idx, test_idx in splitter.split(covariates_df, exposure_vec):
                 outcome_est_kfold = clone(outcome_est)
                 outcome_est_kfold.fit(
@@ -340,29 +352,19 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         else:
             X_new_covariates = X_df[self.adjustment_vars_ + self.pretreatment_vars_]
 
-        # Step 2: Compute and return predictions.
-        # Step 2.1: If single fold, use the predictions from the single fitted
-        #           nuisance model to compute the outcome prediction
-        if self.n_folds_ == 1:
-            res_x_new = X_new_treatment - self.treatment_est_.predict(X_new_covariates)
-            outcome_pred = self.effect_est_.predict(
-                res_x_new.to_frame()
-            ) + self.outcome_est_.predict(X_new_covariates)
+        # Step 2: Compute and return predictions. Average the predictions from
+        #         each fold's nuisance model to compute the outcome prediction.
+        treatment_preds = np.column_stack(
+            [est.predict(X_new_covariates) for est in self.treatment_est_]
+        )
+        treatment_pred_mean = np.mean(treatment_preds, axis=1)
 
-        # Step 2.2: If cross-fitted, average the predictions from each fold's
-        #           nuisance model to compute the outcome prediction.
-        else:
-            treatment_preds = np.column_stack(
-                [est.predict(X_new_covariates) for est in self.treatment_est_]
-            )
-            treatment_pred_mean = np.mean(treatment_preds, axis=1)
+        outcome_preds = np.column_stack(
+            [est.predict(X_new_covariates) for est in self.outcome_est_]
+        )
+        outcome_pred_mean = np.mean(outcome_preds, axis=1)
 
-            outcome_preds = np.column_stack(
-                [est.predict(X_new_covariates) for est in self.outcome_est_]
-            )
-            outcome_pred_mean = np.mean(outcome_preds, axis=1)
-
-            res_x_new = (X_new_treatment - treatment_pred_mean).to_frame().values
-            outcome_pred = self.effect_est_.predict(res_x_new) + outcome_pred_mean
+        res_x_new = (X_new_treatment - treatment_pred_mean).to_frame().values
+        outcome_pred = self.effect_est_.predict(res_x_new) + outcome_pred_mean
 
         return outcome_pred
