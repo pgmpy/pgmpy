@@ -99,7 +99,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     treatment_est_ : estimator-like or list of estimator-like
         Fitted treatment nuisance model(s).
 
-    effect_estimator_ : estimator-like
+    effect_est_ : estimator-like
         Fitted final effect estimator.
 
     Examples
@@ -130,7 +130,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     ...     n_folds=3,
     ... )
     >>> _ = dml.fit(X, y)
-    >>> dml.effect_estimator_.coef_.round(1)
+    >>> dml.effect_est_.coef_.round(1)
     array([0.4])
 
     >>> preds = dml.predict(X.iloc[:5])
@@ -313,7 +313,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         effect_est.fit(
             treatment_res.to_frame(), outcome_res, sample_weight=sample_weight
         )
-        self.effect_estimator_ = effect_est
+        self.effect_est_ = effect_est
 
         return self
 
@@ -322,7 +322,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         Computes final prediction: (intercept + theta*exposure + g_pred)
         """
         # Step 0: Validate inputs and check if fitted
-        check_is_fitted(self, "effect_estimator_")
+        check_is_fitted(self, "effect_est_")
         check_is_fitted(self, "outcome_est_")
         check_is_fitted(self, "treatment_est_")
 
@@ -345,7 +345,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         #           nuisance model to compute the outcome prediction
         if self.n_folds_ == 1:
             res_x_new = X_new_treatment - self.treatment_est_.predict(X_new_covariates)
-            outcome_pred = self.effect_estimator_.predict(
+            outcome_pred = self.effect_est_.predict(
                 res_x_new.to_frame()
             ) + self.outcome_est_.predict(X_new_covariates)
 
@@ -363,6 +363,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             outcome_pred_mean = np.mean(outcome_preds, axis=1)
 
             res_x_new = (X_new_treatment - treatment_pred_mean).to_frame().values
-            outcome_pred = self.effect_estimator_.predict(res_x_new) + outcome_pred_mean
+            outcome_pred = self.effect_est_.predict(res_x_new) + outcome_pred_mean
 
         return outcome_pred

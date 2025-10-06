@@ -30,6 +30,12 @@ def estimator_for_sklearn_checks():
     return est
 
 
+@parametrize_with_checks([estimator_for_sklearn_checks()])
+def test_sklearn_compatibility(estimator, check):
+    """Run sklearn's compatibility checks."""
+    check(estimator)
+
+
 def make_simulated_plr(n=500, effect=0.6, nuisance_scale=0.5, seed=42):
     """Simulate a simple : Z -> D, Z -> Y, and D -> Y with linear relationships."""
     rng = np.random.RandomState(seed)
@@ -40,20 +46,13 @@ def make_simulated_plr(n=500, effect=0.6, nuisance_scale=0.5, seed=42):
     Y = effect * D + 0.6 * Z1 + 0.2 * Z2 + rng.normal(scale=nuisance_scale, size=n)
 
     df = pd.DataFrame({"D": D, "Z1": Z1, "Z2": Z2, "Y": Y})
-    X = df[["D", "Z1", "Z2"]]
-    return X, df["Y"], effect
 
-
-@parametrize_with_checks([estimator_for_sklearn_checks()])
-def test_sklearn_compatibility(estimator, check):
-    """Run sklearn's compatibility checks."""
-    check(estimator)
+    return df.loc[:, ["D", "Z1", "Z2"]], df.loc[:, ["Y"]]
 
 
 def test_dataframe_input_for_both_x_and_y(dag):
     """Test that regressor works when both X and y are DataFrames (y as DataFrame column)."""
-    X, y, _ = make_simulated_plr(n=1000, seed=1)
-    y_df = y.to_frame(name="Y").iloc[:, 0]
+    X, y = make_simulated_plr(n=1000, seed=1)
 
     model = DoubleMLRegressor(
         causal_graph=dag,
@@ -63,15 +62,19 @@ def test_dataframe_input_for_both_x_and_y(dag):
         seed=0,
     )
 
-    # Fit with X (DataFrame) and y as DataFrame
-    _ = model.fit(X, y_df)
+    model.fit(X, y)
     preds = model.predict(X)
+
     assert len(preds) == len(X)
-    # attributes set from DAG roles
+
     assert model.exposure_var_ == "D"
+    assert model.outcome_var_ == "Y"
     assert set(model.adjustment_vars_) == {"Z1", "Z2"}
-    # feature columns used (exposure + adjustments)
-    assert list(model.feature_columns_) == ["D", "Z1", "Z2"]
+    assert set(model.feature_columns_) == {"D", "Z1", "Z2"}
+    assert model.n_samples_ == 1000
+
+    assert len(model.treatment_est_) == 3
+    assert len(model.outcome_est_) == 3
 
 
 def test_numpy_array_input_with_integer_dag_variables():
@@ -123,7 +126,7 @@ def test_no_adjustment_variables():
     assert len(preds) == len(data)
     assert model.adjustment_vars_ == []
     assert list(model.feature_columns_) == ["D"]
-    assert hasattr(model, "effect_estimator_")
+    assert hasattr(model, "effect_est_")
 
 
 def test_multiple_adjustment_variables_and_noise_columns():
@@ -203,7 +206,7 @@ def test_error_handling_missing_roles_and_multiple_exposure():
 
 def test_sample_weight_support_and_shapes(dag):
     """Test that sample_weight parameter is accepted and shape-validated."""
-    X, y, _ = make_simulated_plr(n=150, seed=5)
+    X, y = make_simulated_plr(n=150, seed=5)
     # dag = make_simple_dag_roles()
     model = DoubleMLRegressor(
         causal_graph=dag,
@@ -294,7 +297,7 @@ def test_doubleml_recovers_theta_with_RF():
 
     est.fit(df, y)
 
-    assert est.effect_estimator_.coef_.round(1)[0] == 0.6
+    assert est.effect_est_.coef_.round(1)[0] == 0.6
 
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
