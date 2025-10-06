@@ -220,7 +220,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # Step 0.2: Validate `n_folds`
         if (not isinstance(self.n_folds, int)) or (self.n_folds < 1):
             raise ValueError("n_folds must be an integer >= 1 ")
-        self.n_folds_ = int(self.n_folds)
+        self.n_folds_ = self.n_folds
 
         # Step 0.3: Validate `X`, `y`, and `sample_weight`.
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
