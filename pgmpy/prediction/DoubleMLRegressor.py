@@ -225,26 +225,25 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # Step 0.3: Validate `X`, `y`, and `sample_weight`.
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
-        # Step 1: Initialize data structures and read roles from DAG.
-
-        # Step 1.1: Get roles from the causal graph and assign to attributes.
+        # Step 0.4: Validate single exposure and outcome.
         exposure_vars = list(self.causal_graph.get_role("exposure"))
         outcome_vars = list(self.causal_graph.get_role("outcome"))
 
         if len(exposure_vars) != 1:
             raise ValueError(
-                f"DoubleMLRegressor only supports a single exposure variable. Found: {len(exposure_vars)}"
+                f"DoubleMLRegressor only supports a single exposure variable. Got: {len(exposure_vars)}"
             )
-        else:
-            self.exposure_var_ = exposure_vars[0]
 
         if len(outcome_vars) != 1:
             raise ValueError(
-                f"DoubleMLRegressor only supports a single outcome variable. Found: {len(outcome_vars)}"
+                f"DoubleMLRegressor only supports a single outcome variable. Got: {len(outcome_vars)}"
             )
-        else:
-            self.outcome_var_ = outcome_vars[0]
 
+        # Step 1: Initialize data structures and read roles from DAG.
+
+        # Step 1.1: Get roles from the causal graph and assign to attributes.
+        self.exposure_var_ = exposure_vars[0]
+        self.outcome_var_ = outcome_vars[0]
         self.adjustment_vars_ = list(self.causal_graph.get_role("adjustment"))
         self.pretreatment_vars_ = list(self.causal_graph.get_role("pretreatment"))
         self.feature_columns_ = (
