@@ -42,6 +42,15 @@ torch = [
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
 ]
+optional = [
+  "daft-pgm>=0.1.4",
+  "xgboost>=2.0.3",
+  "litellm==1.61.15",
+  "pyparsing>=3.0",
+  "pygraphviz",
+  "torch>=2.5",
+  "pyro-ppl>=1.9.1",
+]
 tests = [
   "xdoctest>=0.11.0",
   "pytest>=3.3.1",
@@ -52,14 +61,14 @@ tests = [
   "black",
   "pre-commit",
 ]
-optional = [
-  "daft-pgm>=0.1.4",
-  "xgboost>=2.0.3",
-  "litellm==1.61.15",
-  "pyparsing>=3.0",
-  "pygraphviz",
-  "torch>=2.5",
-  "pyro-ppl>=1.9.1",
+docs =[
+  "sphinx>=5.0",
+  "nbsphinx",
+  "numpydoc",
+  "sphinx_rtd_theme",
+  "sphinx-copybutton",
+  "sphinx-design",
+  "sphinxext-opengraph",
 ]
 all = [
   "networkx>=3.0",
