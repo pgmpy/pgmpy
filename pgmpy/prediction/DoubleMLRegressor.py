@@ -218,7 +218,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         effect_est = clone(self.effect_estimator)
 
         # Step 0.2: Validate `n_folds`
-        if (not isinstance(self.n_folds, int)) and (self.n_folds < 1):
+        if (not isinstance(self.n_folds, int)) or (self.n_folds < 1):
             raise ValueError("n_folds must be an integer >= 1 ")
         self.n_folds_ = int(self.n_folds)
 
@@ -260,7 +260,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.n_samples_ = df.shape[0]
 
         if sample_weight is None:
-            sample_weight = pd.Series(1.0, index=range(df.shape[0]))
+            sample_weight = np.ones(self.n_samples_)
 
         # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
         #         variables, use intercept only.
@@ -300,7 +300,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 outcome_est_kfold.fit(
                     covariates_df.iloc[train_idx],
                     outcome_df.iloc[train_idx],
-                    sample_weight=sample_weight.iloc[train_idx],
+                    sample_weight=sample_weight[train_idx],
                 )
                 outcome_pred.iloc[test_idx] = outcome_est_kfold.predict(
                     covariates_df.iloc[test_idx]
@@ -311,7 +311,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 treatment_est_kfold.fit(
                     covariates_df.iloc[train_idx],
                     exposure_df.iloc[train_idx],
-                    sample_weight=sample_weight.iloc[train_idx],
+                    sample_weight=sample_weight[train_idx],
                 )
 
                 treatment_pred.iloc[test_idx] = treatment_est_kfold.predict(
