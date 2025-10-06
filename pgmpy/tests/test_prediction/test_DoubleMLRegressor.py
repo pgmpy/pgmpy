@@ -9,17 +9,15 @@ from pgmpy.base.DAG import DAG
 from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
 
 
-def make_simple_dag_roles():
+@pytest.fixture
+def dag():
     return DAG(
         ebunch=[("Z1", "D"), ("Z2", "D"), ("D", "Y"), ("Z1", "Y"), ("Z2", "Y")],
         roles={"exposure": "D", "adjustment": ("Z1", "Z2"), "outcome": "Y"},
     )
 
 
-def make_estimator_for_checks():
-    """
-    Return an unfitted DoubleMLRegressor instance configured to accept numpy arrays.
-    """
+def estimator_for_sklearn_checks():
     G = DAG([(0, 3), (0, 1), (0, 2)], roles={"exposure": [0], "outcome": [3]})
 
     est = DoubleMLRegressor(
@@ -32,30 +30,31 @@ def make_estimator_for_checks():
     return est
 
 
-def make_simulated_plr(n=500, seed=0, theta=2.5, nuisance_scale=0.5):
-    """Simulate a simple PLR: Z -> D, Z -> Y, and D -> Y with linear relationships."""
+def make_simulated_plr(n=500, effect=0.6, nuisance_scale=0.5, seed=42):
+    """Simulate a simple : Z -> D, Z -> Y, and D -> Y with linear relationships."""
     rng = np.random.RandomState(seed)
     Z1 = rng.normal(size=n)
     Z2 = rng.normal(size=n)
+
     D = 0.4 * Z1 - 0.3 * Z2 + rng.normal(scale=nuisance_scale, size=n)
-    Y = theta * D + 0.6 * Z1 + 0.2 * Z2 + rng.normal(scale=nuisance_scale, size=n)
+    Y = effect * D + 0.6 * Z1 + 0.2 * Z2 + rng.normal(scale=nuisance_scale, size=n)
+
     df = pd.DataFrame({"D": D, "Z1": Z1, "Z2": Z2, "Y": Y})
     X = df[["D", "Z1", "Z2"]]
-    return X, df["Y"], theta
+    return X, df["Y"], effect
 
 
-@parametrize_with_checks([make_estimator_for_checks()])
+@parametrize_with_checks([estimator_for_sklearn_checks()])
 def test_sklearn_compatibility(estimator, check):
-    """Run sklearn's compatibility checks (one check at a time)."""
+    """Run sklearn's compatibility checks."""
     check(estimator)
 
 
-def test_dataframe_input_for_both_x_and_y():
+def test_dataframe_input_for_both_x_and_y(dag):
     """Test that regressor works when both X and y are DataFrames (y as DataFrame column)."""
     X, y, _ = make_simulated_plr(n=1000, seed=1)
     y_df = y.to_frame(name="Y").iloc[:, 0]
 
-    dag = make_simple_dag_roles()
     model = DoubleMLRegressor(
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
@@ -202,10 +201,10 @@ def test_error_handling_missing_roles_and_multiple_exposure():
         model3.fit(incomplete, [5, 6])
 
 
-def test_sample_weight_support_and_shapes():
+def test_sample_weight_support_and_shapes(dag):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y, _ = make_simulated_plr(n=150, seed=5)
-    dag = make_simple_dag_roles()
+    # dag = make_simple_dag_roles()
     model = DoubleMLRegressor(
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
