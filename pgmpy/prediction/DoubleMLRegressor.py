@@ -252,12 +252,15 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         # Step 1.2: Prepare feature dataframe and sample weights.
         df = self._prepare_feature_df(X)
+        df.insert(0, self.outcome_var_, np.asarray(y))
+
+        exposure_df = df[self.exposure_var_]
+        outcome_df = df[self.outcome_var_]
+
         self.n_samples_ = df.shape[0]
 
         if sample_weight is None:
             sample_weight = pd.Series(1.0, index=range(df.shape[0]))
-        df = df.assign(outcome=np.asarray(y))
-        exposure_vec = df[self.exposure_var_]
 
         # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
         #         variables, use intercept only.
@@ -274,10 +277,10 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.outcome_est_ = []
         self.treatment_est_ = []
         if int(self.n_folds) == 1:
-            outcome_est.fit(covariates_df, df["outcome"], sample_weight=sample_weight)
+            outcome_est.fit(covariates_df, outcome_df, sample_weight=sample_weight)
             outcome_pred = outcome_est.predict(covariates_df)
 
-            treatment_est.fit(covariates_df, exposure_vec, sample_weight=sample_weight)
+            treatment_est.fit(covariates_df, exposure_df, sample_weight=sample_weight)
             treatment_pred = treatment_est.predict(covariates_df)
 
             self.outcome_est_.append(outcome_est)
@@ -292,11 +295,11 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             outcome_pred = pd.Series(0.0, index=df.index)
             treatment_pred = pd.Series(0.0, index=df.index)
 
-            for train_idx, test_idx in splitter.split(covariates_df, exposure_vec):
+            for train_idx, test_idx in splitter.split(covariates_df, exposure_df):
                 outcome_est_kfold = clone(outcome_est)
                 outcome_est_kfold.fit(
                     covariates_df.iloc[train_idx],
-                    df["outcome"].iloc[train_idx],
+                    outcome_df.iloc[train_idx],
                     sample_weight=sample_weight.iloc[train_idx],
                 )
                 outcome_pred.iloc[test_idx] = outcome_est_kfold.predict(
@@ -307,7 +310,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 treatment_est_kfold = clone(treatment_est)
                 treatment_est_kfold.fit(
                     covariates_df.iloc[train_idx],
-                    exposure_vec.iloc[train_idx],
+                    exposure_df.iloc[train_idx],
                     sample_weight=sample_weight.iloc[train_idx],
                 )
 
@@ -317,8 +320,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 self.treatment_est_.append(treatment_est_kfold)
 
         # Step 4: Compute the residuals.
-        outcome_res = df["outcome"] - outcome_pred
-        treatment_res = exposure_vec - treatment_pred
+        outcome_res = outcome_df - outcome_pred
+        treatment_res = exposure_df - treatment_pred
 
         # Step 5: Fit the final effect estimator on the residuals.
         effect_est.fit(
