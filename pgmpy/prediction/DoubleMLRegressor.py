@@ -130,7 +130,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     ...     effect_estimator=LinearRegression(),
     ...     n_folds=3,
     ... )
-    >>> _ = dml.fit(X, y)
+    >>> dml.fit(X, y)
     >>> dml.effect_est_.coef_.round(1)
     array([0.4])
 
