@@ -131,12 +131,19 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     ...     n_folds=3,
     ... )
     >>> dml.fit(X, y)
+    >>> dml.effect_est_
+    LinearRegression()
     >>> dml.effect_est_.coef_.round(1)
     array([0.4])
 
     >>> preds = dml.predict(X.iloc[:5])
     >>> preds.shape
     (5,)
+
+    >>> dml.n_folds_
+    3
+    >>> dml.n_samples_
+    1000
 
     References
     ----------
