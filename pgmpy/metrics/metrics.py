@@ -16,7 +16,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 
 def get_metrics(metrics: Optional[tuple[str, Callable]] = None) -> Any:
 
-    metric_call = {
+    name_to_fn = {
         "correlation": correlation_score,
         "log-likelihood": log_likelihood_score,
         "aic": structure_score,
@@ -24,30 +24,35 @@ def get_metrics(metrics: Optional[tuple[str, Callable]] = None) -> Any:
         "implied-cis": implied_cis,
         "fisher-c": fisher_c,
     }
-    callable_metrics = {}
+    fn_to_name = {v: k for k, v in name_to_fn.items()}
 
     if metrics is None:
-        metrics = metric_call.values()
+        return name_to_fn
 
+    callable_metrics = {}
     for metric in metrics:
         if isinstance(metric, str):
             metric = metric.lower()
-            if metric not in metric_call:
+            if metric not in name_to_fn:
                 raise ValueError(
-                    f"Unknown metric method. Available metrics are: {list(metric_call.keys())}"
+                    f"Unknown metric method. Available metrics are: {list(name_to_fn.keys())}"
                 )
 
-            callable_metrics[metric] = metric_call[metric]
+            callable_metrics[metric] = name_to_fn[metric]
 
         elif callable(metric):
-            metric_name = [k for k, v in metric_call.items() if v == metric]
-            for _ in metric_name:
-                callable_metrics[_] = metric
+            if metric not in fn_to_name:
+                raise ValueError(
+                    f"Got unknown metric function {metric}. Available metrics are: {list(fn_to_name.keys())}"
+                )
+            metric_name = fn_to_name.get(metric)
+            callable_metrics[metric_name] = metric
 
         else:
             raise ValueError(
-                f"Got method {metric}. Metric should be one of {list(metric_call.keys())} and of type str or Callable"
+                f"`metric` must be one of {list(name_to_fn.keys())} and of type str or Callable"
             )
+
     return callable_metrics
 
 

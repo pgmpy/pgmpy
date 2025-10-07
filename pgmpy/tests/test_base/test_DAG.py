@@ -972,6 +972,19 @@ class TestDAGValidation(unittest.TestCase):
                 actual_score = result["Correlation"]
                 self.assertIsInstance(actual_score, float)
 
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=("unknown_metric",))
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, ci_test="unknown_test")
+
+        def dummy_metric(*args, **kwargs):
+            return 0.5
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=(dummy_metric,))
+
 
 class TestDoOperator(unittest.TestCase):
     def setUp(self):
