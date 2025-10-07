@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import inspect
 import itertools
 from os import PathLike
@@ -1776,10 +1774,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             Dataset to be used to run the scoring methods/tests
 
         metrics: tuple (Callable or strings)
-            A list of the metrics that are to be run on the model and data. A comma separated set of either Callables
-            to metrics defined in pgmpy.metrics.metrics or strings referencing similar metrics can be passed.
+            A list of the metrics that are to be run on the model and data. A comma separated set of either functions
+            defined in `pgmpy.metrics.metrics` or strings referencing those metrics can be passed.
 
-            Following are the supported strings and respective Callables that can be passed as elements:
+            Following are the supported strings and respective function that can be passed as elements of the tuple:
 
                 - "correlation" : correlation_score,
                 - "log-likelihood" : log_likelihood_score,
@@ -1788,34 +1786,37 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 - "implied-cis" : implied_cis,
                 - "fisher-c" : fisher_c
 
-                For instance ("correlation", log_likelihood_score) is a tuple that can be passed in metrics. This is
-                an example of (string, Callable) type and so on.
+                For instance `("correlation", log_likelihood_score)` is a tuple that can be passed in metrics. This is
+                an example of `(string, Callable)` type and so on.
 
-                If no value passed all available metrics will be computed based on pgmpy.metrics.metrics.get_metrics().
+                If no value is passed, all available metrics in `pgmpy.metrics.metrics` will be run.
 
-        significance_level: float
-            To compare with p-value to count the failing CIs (conditional independencies). A
-            default value of 0.05 is provided which can be overwriteen by user based on need
+        significance_level: float (default: 0.05)
+            A hyperparameter to conditional independence test based metrics. A p-value greater than `significance_level`
+            indicates that the conditional independence holds.
 
         **kwargs:
-            Any parameter that needs to be customized in the call to different metric based methods.
-            This includes all parameters that affect the metric calls in pgmpy.metrics.metrics.
+            Any additional hyperparameter that needs to be passed to the metrics. Please refer to the documentation of
+            `pgmpy.metrics.metrics` for details on which arguments are supported.
 
         Returns
         ----------
-        df_result: pandas.Dataframe
-            A dataframe of all the metric results run on the given causal model
-            using the dataset provided.
+        results: pandas.Dataframe
+            A dataframe containing a summary of the tests run on the model using the data provided.
 
-        EXAMPLES
-        ----------
+        Examples
+        --------
         >>> from pgmpy.base import DAG
         >>> from pgmpy.utils import get_example_model
-        >>> dag = DAG()
+        >>> from pgmpy.metrics import fisher_c
+
+        >>> # Simulate data from the cancer model to test against.
         >>> cancer = get_example_model("cancer")
-        >>> dat = cancer.simulate(int(1e3))
-        >>> dag = cancer
-        >>> dag.validate(dat)
+        >>> df_cancer = cancer.simulate(n_samples=1000)
+
+        >>> # Create a new DAG object, and run all the tests
+        >>> cancer_dag = DAG(cancer.edges())
+        >>> cancer_dag.validate(df_cancer)
                                       RESULT
         Correlation                     0.25
         Log-likelihood          -2078.649707
@@ -1823,10 +1824,17 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         BIC                     -2110.465393
         Failing CIs / Total CIs        0 / 6
         Fisher-C p-value            0.846715
+
+        >>> # Run selected tests
+        >>> dag.validate(df_cancer, metrics=("correlation", fisher_c))
+                                      RESULT
+        Correlation                     0.25
+        Fisher-C p-value            0.846715
         """
-        if not isinstance(data, pd.DataFrame) or data is None:
+        # Step 0: Validate the inputs
+        if (data is None) or (not isinstance(data, pd.DataFrame)):
             raise ValueError(
-                f"data must be a pandas.DataFrame instance. Got {type(data)}"
+                f"`data` must be a pandas.DataFrame instance. Got {type(data)}"
             )
         elif set(self.nodes) != set(data.columns):
             raise ValueError(
@@ -1834,14 +1842,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 f" {set(self.nodes()) - set(data.columns)}"
             )
 
+        # Step 1: Get the metrics to be run
         from pgmpy.estimators.CITests import get_callable_ci_test
         from pgmpy.metrics.metrics import get_metrics
         from pgmpy.utils import get_dataset_type
 
         callable_metrics = get_metrics(metrics=metrics)
-
-        if "ci_test" not in kwargs:
-            kwargs["ci_test"] = get_callable_ci_test(test=None, data=data)
+        kwargs["ci_test"] = get_callable_ci_test(test=kwargs.get("ci_test"), data=data)
 
         suffix = None
         if "scoring_method" not in kwargs:
@@ -1853,43 +1860,36 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             else:
                 suffix = "cg"
 
-        metric_vals = pd.DataFrame(columns=["METRIC", "RESULT"])
+        # Step 2: Run the metrics, compile the results, and return.
+        metric_vals = pd.Series()
 
-        index = 0
-
-        for name, metric_fn in callable_metrics.items():
+        for index, (name, metric_fn) in enumerate(callable_metrics.items()):
             sig = inspect.signature(metric_fn)
             valid_params = sig.parameters.keys()
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
 
-            if suffix is not None and name in ["aic", "bic"]:
-                filtered_kwargs["scoring_method"] = f"{name}-" + suffix
+            if suffix is not None and name.lower() in ["aic", "bic"]:
+                filtered_kwargs["scoring_method"] = f"{name.lower()}-" + suffix
 
             result = metric_fn(model=self, data=data, **filtered_kwargs)
 
             if name in ["correlation", "log-likelihood"]:
-                metric_vals.loc[index] = [name.capitalize(), result]
+                metric_vals[name.capitalize()] = result
             elif name in ["aic", "bic"]:
-                metric_vals.loc[index] = [name.upper(), result]
+                metric_vals[name.upper()] = result
             elif name == "fisher-c":
                 if isinstance(result, tuple):
                     (p_val, rmsea) = result
-                    metric_vals.loc[index] = ["Fisher-C p-value", p_val]
-                    metric_vals.loc[index + 1] = ["RMSEA", rmsea]
-                    index += 1
+                    metric_vals["Fisher-C p-value"] = p_val
+                    metric_vals["RMSEA"] = rmsea
                 else:
-                    metric_vals.loc[index] = ["Fisher-C p-value", result]
+                    metric_vals["Fisher-C p-value"] = result
 
             elif name == "implied-cis":
                 failing = (result["p-value"] < significance_level).sum()
                 total = len(result)
                 display_value = f"{failing} / {total}"
-                metric_vals.loc[index] = ["Failing CIs / Total CIs", display_value]
-
-            index += 1
-
-        metric_vals.set_index("METRIC", inplace=True)
-        metric_vals.index.name = None
+                metric_vals["Failing CIs / Total CIs"] = display_value
 
         return metric_vals
 
