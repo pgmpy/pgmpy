@@ -3,6 +3,7 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -14,7 +15,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     This estimator implements the DoubleML algorithm with cross-fitting in a
     scikit-learn compatible estimator API. It uses user-specified causal graphs
     to extract exposure, outcome, and adjustment variables and uses that to
-    fit/predict a DoubleML regressor. The predictions are based on a CATE
+    fit/predict a Double ML regressor. The predictions are based on a CATE
     model. The model is defined as follows:
 
     Given data D: (Y, T, X), where:
@@ -29,16 +30,16 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         - Treatment Model (`treatment_est_`): Predict T from X.
 
     2. Computing residuals using nuisance estimators to isolate variation not explained by X:
-        - Outcome residuals: Y - outcome_est_.predict(X)
-        - Treatment residuals: T - treatment_est_.predict(X)
+        - Outcome residuals: `Y - outcome_est_.predict(X)`
+        - Treatment residuals: `T - treatment_est_.predict(X)`
 
     3. Fitting the effect estimator (`effect_est_`) on the residuals to predict
        the outcome residuals from the treatment residuals.
 
-    Using the fitted models, predictions on new data (X_new, T_new) are computed as:
+    Using the fitted models, predictions on new data `(X_new, T_new)` are computed as:
 
-        res_T_new = T_new - treatment_est_.predict(X_new)
-        Y_pred =  effect_est_(res_T_new) + outcome_est_.predict(X_new)
+        `res_T_new = T_new - treatment_est_.predict(X_new)`
+        `Y_pred =  effect_est_(res_T_new) + outcome_est_.predict(X_new)`
 
     Parameters
     ----------
@@ -47,7 +48,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         the following roles: `exposure`, `outcome`, and `adjustment`.
         Additionally, `pretreatment` can be specified.
 
-    nuisance_estimators: an estimator or a tuple of estimators of size 2 (default=None)
+    nuisance_estimators: an estimator or a tuple of estimators of size 2 (default=LinearRegression)
         If a single estimator is provided, it is used for both outcome and
         treatment nuisance models.
 
@@ -56,7 +57,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         If None, defaults to LinearRegression for both models.
 
-    effect_estimator : estimator-like (default=None)
+    effect_estimator : estimator-like (default=LinearRegression)
         Estimator for the final effect estimation step. Must have a `fit` method
         and a `predict` method. If None, defaults to LinearRegression.
 
@@ -201,9 +202,32 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         return X_df[required_features]
 
     def fit(self, X, y, sample_weight: Optional[Any] = None):
+        """
+        Fit the DoubleML model using the provided data.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame or numpy.ndarray
+            Feature data containing exposure and adjustment variables.
+            If a numpy array is provided, it is converted to a dataframe with column names starting from 0.
+
+        y : pandas.Series, pandas.DataFrame, or numpy.ndarray
+            Outcome variable. If a DataFrame is provided, it must have a single column.
+
+        sample_weight : array-like of shape (n_samples,), optional
+            Sample weights to be used in fitting the nuisance and effect estimators.
+
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
         # Step 0: Validate inputs
 
         # Step 0.1: Check `nuisance_estimators`, `effect_estimator`, and assign variables.
+        if self.nuisance_estimators is None:
+            self.nuisance_estimators = (LinearRegression(), LinearRegression())
+
         if isinstance(self.nuisance_estimators, tuple):
             if len(self.nuisance_estimators) != 2:
                 raise ValueError(
@@ -215,14 +239,17 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             treatment_est = clone(self.nuisance_estimators)
             outcome_est = clone(self.nuisance_estimators)
 
-        effect_est = clone(self.effect_estimator)
+        if self.effect_estimator is None:
+            self.effect_estimator = LinearRegression()
+        else:
+            effect_est = clone(self.effect_estimator)
 
         # Step 0.2: Validate `n_folds`
         if (not isinstance(self.n_folds, int)) or (self.n_folds < 1):
             raise ValueError("n_folds must be an integer >= 1 ")
         self.n_folds_ = self.n_folds
 
-        # Step 0.3: Validate `X`, `y`, and `sample_weight`.
+        # Step 0.3: Validate `X` and `y`
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 0.4: Validate single exposure and outcome.
@@ -333,7 +360,18 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     def predict(self, X):
         """
-        Computes final prediction: (intercept + theta*exposure + g_pred)
+        Makes conditional interventional predictions using the fitted DoubleML model.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Feature data containing exposure and adjustment variables for which to make predictions.
+
+        Returns
+        -------
+        outcome_pred : numpy.ndarray
+            Predicted outcome values.
+
         """
         # Step 0: Validate inputs and check if fitted
         check_is_fitted(self, "effect_est_")
