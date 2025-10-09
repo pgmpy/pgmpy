@@ -1,5 +1,3 @@
 from .NaiveAdjustmentRegressor import NaiveAdjustmentRegressor
 
-__all__ = [
-    "NaiveAdjustmentRegressor",
-]
+__all__ = ["NaiveAdjustmentRegressor", "NaiveIVRegressor"]
