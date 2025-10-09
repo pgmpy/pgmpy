@@ -233,9 +233,10 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         # Step 0.1: Check `nuisance_estimators`, `effect_estimator`, and assign variables.
         if self.nuisance_estimators is None:
-            self.nuisance_estimators = (LinearRegression(), LinearRegression())
+            treatment_est = LinearRegression()
+            outcome_est = LinearRegression()
 
-        if isinstance(self.nuisance_estimators, tuple):
+        elif isinstance(self.nuisance_estimators, tuple):
             if len(self.nuisance_estimators) != 2:
                 raise ValueError(
                     "If nuisance_estimators is a tuple, it must have exactly two elements."
@@ -247,7 +248,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             outcome_est = clone(self.nuisance_estimators)
 
         if self.effect_estimator is None:
-            self.effect_estimator = LinearRegression()
+            effect_est = LinearRegression()
         else:
             effect_est = clone(self.effect_estimator)
 
