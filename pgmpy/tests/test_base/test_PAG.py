@@ -27,26 +27,53 @@ class TestPAGRules:
     # list of all the rules
 
     def test_rule_1(self):
-        # expected_ebunch = []
-        pag = PAG()
-        expected_pag = PAG()
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "-", "o"),
+                ("a", "d", "-", "-"),
+                ("b", "c", "o", "-"),
+            ]
+        )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),
+                ("a", "d", "-", "-"),
+                ("b", "c", ">", "-"),
+            ]
+        )
+
         for rule in self.all_rules:
             if rule == "rule_1":
-                pag_new = pag.rule_1()
+                pag_new = pag.rule_1(separating_sets=None)
                 assert pag_new == expected_pag
 
             else:
-                pag_new = getattr(pag, rule)()
+                pag_new = getattr(pag, rule)(separating_sets=None)
                 assert pag_new == pag
 
-        # then you are supposed to make sure that the graph does not change when we apply other rules
-
     def test_rule_2(self):
-        pag = PAG()
-        pag = pag.rule_2()
-        expected_pag = PAG()
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),
+                ("b", "c", "-", "o"),
+                ("b", "d", "-", "o"),
+            ]
+        )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),
+                ("b", "c", "-", ">"),
+                ("b", "d", "-", "o"),
+            ]
+        )
+        for rule in self.all_rules:
+            if rule == "rule_2":
+                pag_new = pag.rule_2(separating_sets=None)
+                assert pag_new == expected_pag
 
-        assert pag == expected_pag
+            else:
+                pag_new = getattr(pag, rule)(separating_sets=None)
+                assert pag_new == pag
 
     def test_rule_3(self):
         pass
@@ -97,90 +124,110 @@ class TestPAGRules:
         pag_new = pag.rule_5(separating_sets=None)
         assert pag == pag_new
 
-    # def test_rule_6(self):
-    #     edges = [
-    #         ("u", "v", "-", "-"),
-    #         ("v", "w", "o", "o"),
-    #     ]
+    def test_rule_6(self):
+        pag = PAG(
+            ebunch=[
+                ("u", "v", "-", "-"),
+                ("v", "w", "o", "o"),
+            ]
+        )
+        expected_pag = PAG(
+            ebunch=[
+                ("u", "v", "-", "-"),
+                ("v", "w", ">", "-"),
+            ]
+        )
 
-    #     pag = PAG(ebunch=edges)
-    #     pag_after_rule = pag.rule_6()
+        for rule in self.all_rules:
+            if rule == "rule_6":
+                pag_new = pag.rule_6(separating_sets=None)
+                assert pag_new == expected_pag
 
-    #     edges_required = [
-    #         ("u", "v", "-", "-"),
-    #         ("v", "w", ">", "-"),
-    #     ]
+            else:
+                pag_new = getattr(pag, rule)(separating_sets=None)
+                assert pag_new == pag
 
-    #     pag_new = PAG(ebunch=edges_required)
+    def test_rule_7(self):
+        pag = PAG(
+            ebunch=[
+                ("u", "v", "o", "-"),
+                ("v", "w", "o", "-"),
+                ("u", "x", "o", "o"),
+                ("x", "v", "-", "-"),
+            ]
+        )
 
-    #     assert pag_after_rule == pag_new
+        expected_pag = PAG(
+            ebunch=[
+                ("u", "v", "o", "-"),
+                ("v", "w", "o", "-"),
+                ("u", "x", "o", "o"),
+                ("x", "v", ">", "-"),
+            ]
+        )
 
-    # def test_rule_7(self):
-    #     edges = [
-    #         ("u", "v", "o", "-"),
-    #         ("v", "w", "o", "-"),
-    #         ("u", "x", "o", "o"),
-    #         ("x", "v", "-", "-"),
-    #     ]
+        for rule in self.all_rules:
+            if rule == "rule_7":
+                pag_new = pag.rule_7(separating_sets=None)
+                assert pag_new == expected_pag
 
-    #     pag = PAG(ebunch=edges)
-
-    #     pag_after_rule = pag.rule_7()
-
-    #     edges_required = [
-    #         ("u", "v", "o", "-"),
-    #         ("v", "w", "o", "-"),
-    #         ("u", "x", "o", "o"),
-    #         ("x", "v", ">", "-"),
-    #     ]
-
-    #     pag_new = PAG(ebunch=edges_required)
-
-    #     assert pag_after_rule == pag_new
+            else:
+                pag_new = getattr(pag, rule)(separating_sets=None)
+                assert pag_new == pag
 
     def test_rule_8(self):
-        edges = [
-            ("u", "v", "-", ">"),
-            ("v", "w", "-", ">"),
-            ("u", "w", "o", ">"),
-        ]
+        pag = PAG(
+            ebunch=[
+                ("u", "v", "-", ">"),
+                ("v", "w", "-", ">"),
+                ("u", "w", "o", ">"),
+            ]
+        )
 
-        pag = PAG(ebunch=edges)
+        expected_pag = PAG(
+            ebunch=[
+                ("u", "v", "-", ">"),
+                ("v", "w", "-", ">"),
+                ("u", "w", "-", ">"),
+            ]
+        )
 
-        pag_after_rule = pag.rule_8()
+        for rule in self.all_rules:
+            if rule == "rule_8":
+                pag_new = pag.rule_8(separating_sets=None)
+                assert pag_new == expected_pag
 
-        edges_required = [
-            ("u", "v", "-", ">"),
-            ("v", "w", "-", ">"),
-            ("u", "w", "-", ">"),
-        ]
+            else:
+                pag_new = getattr(pag, rule)(separating_sets=None)
+                assert pag_new == pag
 
-        pag_new = PAG(edges_required)
+    def test_rule_9(self):
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "o", "o"),
+                ("a", "c", "o", "o"),
+                ("b", "d", "o", "o"),
+                ("c", "d", "o", "o"),
+            ]
+        )
 
-        assert pag_after_rule == pag_new
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "o", "o"),
+                ("a", "c", "o", "o"),
+                ("b", "d", "-", ">"),
+                ("c", "d", "-", ">"),
+            ]
+        )
 
-    # def test_rule_9(self):
-    #     edges = [
-    #         ("a", "b", "o", "o"),
-    #         ("a", "c", "o", "o"),
-    #         ("b", "d", "o", "o"),
-    #         ("c", "d", "o", "o"),
-    #     ]
+        for rule in self.all_rules:
+            if rule == "rule_9":
+                pag_new = pag.rule_9(separating_sets=None)
+                assert pag_new == expected_pag
 
-    #     pag = PAG(ebunch=edges)
-
-    #     pag_after_rule = pag.rule_9(pag)
-    #     pag_after_rule = pag_after_rule.rule_9(pag_after_rule)
-
-    #     edges_required = [
-    #         ("a", "b", "o", "o"),
-    #         ("a", "c", "o", "o"),
-    #         ("b", "d", "-", ">"),
-    #         ("c", "d", "-", ">"),
-    #     ]
-    #     pag_new = PAG(edges_required)
-
-    #     assert pag_after_rule == pag_new
+            else:
+                pag_new = getattr(pag, rule)(separating_sets=None)
+                assert pag_new == pag
 
     def test_rule_10(self):
         pass
@@ -239,5 +286,3 @@ class TestPAG:
         assert pag["A"]["B"]["marks"] == {"A": "-", "B": ">"}
         pag.modify_edge("A", "B", mark_u="o", mark_v="o")
         assert pag["A"]["B"]["marks"] == {"A": "o", "B": "o"}
-
-    # Defining the test functions for rules
