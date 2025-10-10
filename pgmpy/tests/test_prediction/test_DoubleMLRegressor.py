@@ -303,3 +303,65 @@ def test_doubleml_recovers_theta_with_RF():
     assert preds.shape[0] == df.shape[0]
     mse = np.mean((preds - y.to_numpy()) ** 2)
     assert mse < 0.5
+
+
+def test_doubleml_recovers_theta_high_dim():
+    """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery in high-dim setting."""
+
+    dag = DAG.from_dagitty(
+        """dag { D -> Y [beta=0.6]
+               Z1 -> D [beta=0.4]
+               Z1 -> Y [beta=0.6]
+               Z2 -> D [beta=-0.3]
+               Z2 -> Y [beta=0.2]
+               Z3 -> D [beta=0.2]
+               Z3 -> Y [beta=0.1]
+               Z4 -> D [beta=-0.1]
+               Z4 -> Y [beta=0.3]
+               Z5 -> D [beta=0.3]
+               Z5 -> Y [beta=-0.2]
+               Z6 -> D [beta=0.1]
+               Z6 -> Y [beta=0.2]
+               Z7 -> D [beta=-0.2]
+               Z7 -> Y [beta=0.1]
+               Z8 -> D [beta=0.3]
+               Z8 -> Y [beta=-0.3]
+               Z9 -> D [beta=0.2]
+               Z9 -> Y [beta=0.2]
+               Z10 -> D [beta=-0.3]
+               Z10 -> Y [beta=0.1]}"""
+    )
+
+    data = dag.simulate(10000, seed=42)
+
+    df = data.loc[:, list(set(dag.nodes()).difference({"Y"}))]
+    df = df - df.mean(axis=0)
+
+    y = data["Y"]
+
+    G = DAG(
+        dag.edges(),
+        roles={
+            "exposure": "D",
+            "adjustment": dag.get_role("adjustment"),
+            "outcome": "Y",
+        },
+    )
+
+    est = DoubleMLRegressor(
+        causal_graph=G,
+        nuisance_estimators=(
+            RandomForestRegressor(),
+            RandomForestRegressor(),
+        ),
+        effect_estimator=LinearRegression(),
+        n_folds=3,
+        seed=0,
+    )
+
+    est.fit(df, y)
+
+    assert est.effect_est_.coef_.round(1)[0] == 0.6
+
+    preds = est.predict(df)
+    assert preds.shape[0] == df.shape[0]
