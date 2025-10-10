@@ -283,7 +283,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
             )
 
         # Step 0.5: Check if n_folds is greater than n_samples.
-        if self.n_folds_ > X.shape[0]:
+        if self.n_folds_ > np.asarray(X).shape[0]:
             raise ValueError(
                 "The number of folds specified is greater than the number of samples."
             )
