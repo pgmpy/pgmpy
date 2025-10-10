@@ -331,9 +331,10 @@ class PAG(AncestralBase):
             for a, b in zip(path, path[1:]):
                 mark_a = self.edges[a, b]["marks"].get(a)
                 mark_b = self.edges[a, b]["marks"].get(b)
-                if (u_type is not None and mark_a != u_type) or (
-                    v_type is not None and mark_b != v_type
-                ):
+                if u_type is not None and mark_a != u_type:
+                    ok = False
+                    break
+                if v_type is not None and mark_b != v_type:
                     ok = False
                     break
             if ok:
@@ -370,7 +371,7 @@ class PAG(AncestralBase):
         self.edges[u, v]["marks"][u] = mark_u
         self.edges[u, v]["marks"][v] = mark_v
 
-    def rule_1(self, inplace=False):
+    def rule_1(self, inplace=False, **kwargs):
         """
         R1: Orient unshielded colliders.
 
@@ -408,7 +409,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_2(self, inplace=False):
+    def rule_2(self, inplace=False, **kwargs):
         """
         R2: Orient chains.
 
@@ -446,7 +447,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_3(self, inplace=False):
+    def rule_3(self, inplace=False, **kwargs):
         """
         R3: Propagation of orientations.
 
@@ -528,58 +529,96 @@ class PAG(AncestralBase):
         if "separating_sets" not in kwargs:
             raise ValueError("Separating Sets is not passed")
 
-        # TO DO
         if not inplace:
             return pag
 
-    def rule_5(self, inplace=False):
+    def rule_5(self, inplace=False, **kwargs):
         """
-        R5: Uncovered circle path.
-
-        If there exists an uncovered path u –o … o– v (all edges circle-circle),
-        and neither u is adjacent to the second-last node nor v to the second node,
-        then orient the entire path as undirected (all edges - -).
-
-        Parameters
-        ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
-
-        Returns
-        -------
-        PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+        R5: Uncovered circle path between two nodes (u, v) connected by an o-o edge.
         """
         pag = self if inplace else self.copy()
 
-        for u, v in pag.edges:
+        # R5 operates on *existing* o-o edges. We iterate over edges to find (u, v) where u o--o v.
+        # We copy the list because we modify the PAG inside the loop.
+        edges_to_check = list(pag.edges)
+        modifications = []
+
+        for u, v in edges_to_check:
+
+            # 1. The rule only applies if the current edge is still o-o
             if (
                 pag.edges[u, v]["marks"].get(u) != "o"
                 or pag.edges[u, v]["marks"].get(v) != "o"
             ):
                 continue
 
+            # Find all paths where all edges are 'o-o'
+            # u_type and v_type are 'o' to ensure the entire path consists of o-o edges
             paths = pag.get_paths_with_marks(u, v, u_type="o", v_type="o")
 
             for path in paths:
-                if len(path) < 3:
+                k = len(path)
+
+                # The path p must be of length >= 2 (at least 3 nodes: u, w, v)
+                # to be distinct from the edge (u, v) itself (length 1).
+                if k <= 2:
                     continue
 
+                # 2. Check Uncovered (no edge between nodes at distance 2)
                 if not pag.is_uncovered(path):
                     continue
 
-                if pag.has_edge(u, path[-2]) or pag.has_edge(v, path[1]):
-                    continue
+                # Path nodes: n1, n2, ..., nk
+                # n1=u, nk=v
+                # n2=w, n_k-1=z
 
-                for a, b in zip(path, path[1:]):
-                    pag.modify_edge(a, b, "-", "-")
+                # w is the second node (gamma)
+                w = path[1]
+
+                # z is the second-to-last node (theta)
+                z = path[k - 2]
+
+                # 3. R5 Adjacency Check: u NOT adjacent to z AND v NOT adjacent to w
+
+                u_adj_z = pag.has_edge(u, z)  # u adjacent to second-to-last?
+                v_adj_w = pag.has_edge(v, w)  # v adjacent to second?
+
+                if not u_adj_z and not v_adj_w:
+                    # Rule 5 is applicable! Orient the entire path and the edge u-v.
+
+                    # Collect all edges on the path for modification
+                    current_path_edges = []
+                    for node1, node2 in zip(path, path[1:]):
+                        # Use sorted tuple to store the edge regardless of direction
+                        current_path_edges.append(tuple(sorted((node1, node2))))
+
+                    # We need to collect the existing edge (u, v) for modification as well,
+                    # though it is already included if the path is the edge itself (which we skip)
+                    # and in this context the entire circle is oriented.
+
+                    # In the case where the rule is applied to an existing edge (u, v)
+                    # based on a path p, all edges on p (including the new edge u-v if it's
+                    # not already oriented) are set to '--'.
+
+                    # Add the edge (u, v) itself (if it's not already in the path list, which
+                    # is true since the path is length >= 2)
+                    current_path_edges.append(tuple(sorted((u, v))))
+
+                    modifications.extend(current_path_edges)
+
+                    # Break and move to the next existing edge (u, v) in edges_to_check,
+                    # as R5 only needs ONE valid path to apply the change.
+                    break
+
+        # Apply all collected modifications
+        for node1, node2 in set(modifications):
+            if pag.has_edge(node1, node2):
+                pag.modify_edge(node1, node2, "-", "-")
 
         if not inplace:
             return pag
 
-    def rule_6(self, inplace=False):
+    def rule_6(self, inplace=False, **kwargs):
         """
         R6: Orientation by definite non-collider.
 
@@ -612,7 +651,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_7(self, inplace=False):
+    def rule_7(self, inplace=False, **kwargs):
         """
         R7: Orient into colliders.
 
@@ -648,7 +687,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_8(self, inplace=False):
+    def rule_8(self, inplace=False, **kwargs):
         """
         R8: Circle propagation.
 
@@ -688,7 +727,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_9(self, inplace=False):
+    def rule_9(self, inplace=False, **kwargs):
         """
         R9: Potentially directed path.
 
@@ -732,7 +771,7 @@ class PAG(AncestralBase):
         if not inplace:
             return pag
 
-    def rule_10(self, inplace=False):
+    def rule_10(self, inplace=False, **kwargs):
         """
         R10: Two-forks rule.
 

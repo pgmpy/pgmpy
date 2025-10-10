@@ -565,24 +565,27 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag1 == mag3
         False
         """
+        # import ipdb
+        # ipdb.set_trace()
         if not isinstance(other, __class__):
             return False
 
-        self_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in self.edges(data=True)
-        }
-        other_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in other.edges(data=True)
-        }
+        # self_edges = {
+        #     (u, v, frozenset(data["marks"].items()))
+        #     for u, v, data in self.edges(data=True)
+        # }
+        # other_edges = {
+        #     (u, v, frozenset(data["marks"].items()))
+        #     for u, v, data in other.edges(data=True)
+        # }
 
-        return (
-            set(self.nodes()) == set(other.nodes())
-            and self_edges == other_edges
-            and self.latents == other.latents
-            and self.get_role_dict() == other.get_role_dict()
-        )
+        # return (
+        #     set(self.nodes()) == set(other.nodes())
+        #     and self_edges == other_edges
+        #     and self.latents == other.latents
+        #     and self.get_role_dict() == other.get_role_dict()
+        # )
+        return nx.utils.misc.graphs_equal(self, other)
 
     def copy(self):
         """
