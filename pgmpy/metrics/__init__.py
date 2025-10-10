@@ -15,4 +15,5 @@ __all__ = [
     "implied_cis",
     "fisher_c",
     "SHD",
+    "BayesianModelProbability",
 ]

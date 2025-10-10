@@ -116,35 +116,27 @@ class TestNETWriter(unittest.TestCase):
 }
 node asia{
     states = ("yes"  "no");
-    weight = None;
 }
 node bronc{
     states = ("yes"  "no");
-    weight = None;
 }
 node dysp{
     states = ("yes"  "no");
-    weight = None;
 }
 node either{
     states = ("yes"  "no");
-    weight = None;
 }
 node lung{
     states = ("yes"  "no");
-    weight = None;
 }
 node smoke{
     states = ("yes"  "no");
-    weight = None;
 }
 node tub{
     states = ("yes"  "no");
-    weight = None;
 }
 node xray{
     states = ("yes"  "no");
-    weight = None;
 }
 potential (asia |){
  data = (0.01 0.99);
@@ -531,35 +523,27 @@ class TestNETWriterTorch(unittest.TestCase):
 }
 node asia{
     states = ("yes"  "no");
-    weight = None;
 }
 node bronc{
     states = ("yes"  "no");
-    weight = None;
 }
 node dysp{
     states = ("yes"  "no");
-    weight = None;
 }
 node either{
     states = ("yes"  "no");
-    weight = None;
 }
 node lung{
     states = ("yes"  "no");
-    weight = None;
 }
 node smoke{
     states = ("yes"  "no");
-    weight = None;
 }
 node tub{
     states = ("yes"  "no");
-    weight = None;
 }
 node xray{
     states = ("yes"  "no");
-    weight = None;
 }
 potential (asia |){
  data = (0.01 0.99);
