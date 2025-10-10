@@ -10,13 +10,12 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     """
-    Implements the Double Machine Learning Regressor[1] with cross-fitting.
+    Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
 
     This estimator implements the DoubleML algorithm with cross-fitting in a
     scikit-learn compatible estimator API. It uses user-specified causal graphs
     to extract exposure, outcome, and adjustment variables and uses that to
-    fit/predict a Double ML regressor. The predictions are based on a CATE
-    model. The model is defined as follows:
+    fit/predict a Double ML regressor. The model is defined as follows:
 
     Given data D: (Y, T, X), where:
         Y : outcome variable
@@ -25,16 +24,18 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     The DoubleML fitting procedure consists of three main steps:
 
-    1. Fitting two nuisance estimators:
-        - Outcome Model (`outcome_est_`): Predict Y using X.
-        - Treatment Model (`treatment_est_`): Predict T from X.
+    1. Sample splitting into `n_folds` folds for cross-fitting.
+    2. Fitting two nuisance estimators on each fold:
+        - Outcome Models (`outcome_est_`): Predict Y using X.
+        - Treatment Models (`treatment_est_`): Predict T from X.
 
-    2. Computing residuals using nuisance estimators to isolate variation not explained by X:
+    2. Computing residuals using nuisance estimators on each fold.
         - Outcome residuals: `Y - outcome_est_.predict(X)`
         - Treatment residuals: `T - treatment_est_.predict(X)`
 
-    3. Fitting the effect estimator (`effect_est_`) on the residuals to predict
-       the outcome residuals from the treatment residuals.
+    3. Stack the residuals from the folds together and fit the effect estimator
+    (`effect_est_`) to predict the outcome residuals from the treatment
+    residuals.
 
     Using the fitted models, predictions on new data `(X_new, T_new)` are computed as:
 
@@ -144,6 +145,13 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     3
     >>> dml.n_samples_
     1000
+
+    Notes
+    -----
+    While the implementations allows the effect estimator to be any sklearn
+    compatible estimator, the theoretical guarantees for DoubleML hold when the
+    effect estimator is a linear model (such as LinearRegression). Using
+    non-linear effect estimators may lead to biased estimates.
 
     References
     ----------
@@ -274,6 +282,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
                 f"DoubleMLRegressor only supports a single outcome variable. Got: {len(outcome_vars)}"
             )
 
+        # Step 0.5: Check if n_folds is greater than n_samples.
+        if self.n_folds_ > X.shape[0]:
+            raise ValueError(
+                "The number of folds specified is greater than the number of samples."
+            )
+
         # Step 1: Initialize data structures and read roles from DAG.
 
         # Step 1.1: Get roles from the causal graph and assign to attributes.
@@ -368,12 +382,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
     def predict(self, X):
         """
-        Makes conditional interventional predictions using the fitted DoubleML model.
+        Makes conditional interventional (CATE) predictions using the fitted DoubleML model.
 
         Parameters
         ----------
         X : pandas.DataFrame
-            Feature data containing exposure and adjustment variables for which to make predictions.
+            Feature data containing data for exposure and adjustment variables for which to make predictions.
 
         Returns
         -------
