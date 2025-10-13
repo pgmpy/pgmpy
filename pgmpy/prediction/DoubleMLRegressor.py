@@ -406,7 +406,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         # Step 1: Prepare feature DataFrame
         X_df = self._prepare_feature_df(X)
-        X_new_treatment = X_df[self.exposure_var_]
+        X_intervention = X_df.loc[:, [self.exposure_var_]]
         if len(self.adjustment_vars_ + self.pretreatment_vars_) == 0:
             X_new_covariates = pd.DataFrame(
                 {"_intercept": np.ones(X_df.shape[0])}, index=X_df.index
@@ -416,17 +416,11 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
 
         # Step 2: Compute and return predictions. Average the predictions from
         #         each fold's nuisance model to compute the outcome prediction.
-        treatment_preds = np.column_stack(
-            [est.predict(X_new_covariates) for est in self.treatment_est_]
-        )
-        treatment_pred_mean = np.mean(treatment_preds, axis=1)
-
         outcome_preds = np.column_stack(
             [est.predict(X_new_covariates) for est in self.outcome_est_]
         )
         outcome_pred_mean = np.mean(outcome_preds, axis=1)
 
-        res_x_new = (X_new_treatment - treatment_pred_mean).to_frame().values
-        outcome_pred = self.effect_est_.predict(res_x_new) + outcome_pred_mean
+        outcome_pred = self.effect_est_.predict(X_intervention) + outcome_pred_mean
 
         return outcome_pred
