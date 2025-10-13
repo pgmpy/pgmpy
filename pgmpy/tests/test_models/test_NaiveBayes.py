@@ -1,11 +1,11 @@
 import unittest
 
 import networkx as nx
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from pgmpy.models import NaiveBayes
 from pgmpy.independencies import Independencies
+from pgmpy.models import NaiveBayes
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -162,12 +162,10 @@ class TestNaiveBayesMethods(unittest.TestCase):
         )
 
     def test_get_ancestors_of(self):
-        self.assertListEqual(sorted(self.G1._get_ancestors_of("b")), ["a", "b"])
-        self.assertListEqual(sorted(self.G1._get_ancestors_of("e")), ["a", "e"])
-        self.assertListEqual(sorted(self.G1._get_ancestors_of("a")), ["a"])
-        self.assertListEqual(
-            sorted(self.G1._get_ancestors_of(["b", "e"])), ["a", "b", "e"]
-        )
+        self.assertListEqual(sorted(self.G1.ancestors("b")), ["a", "b"])
+        self.assertListEqual(sorted(self.G1.ancestors("e")), ["a", "e"])
+        self.assertListEqual(sorted(self.G1.ancestors("a")), ["a"])
+        self.assertListEqual(sorted(self.G1.ancestors(["b", "e"])), ["a", "b", "e"])
 
     def tearDown(self):
         del self.G1

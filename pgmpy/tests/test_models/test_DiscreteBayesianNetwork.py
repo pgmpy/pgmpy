@@ -220,15 +220,15 @@ class TestBayesianNetworkMethods(unittest.TestCase):
             )
 
     def test_get_ancestors_of_success(self):
-        ancestors1 = self.G2._get_ancestors_of("g")
-        ancestors2 = self.G2._get_ancestors_of("d")
-        ancestors3 = self.G2._get_ancestors_of(["i", "l"])
+        ancestors1 = self.G2.ancestors("g")
+        ancestors2 = self.G2.ancestors("d")
+        ancestors3 = self.G2.ancestors(["i", "l"])
         self.assertEqual(ancestors1, {"d", "i", "g"})
         self.assertEqual(ancestors2, {"d"})
         self.assertEqual(ancestors3, {"g", "i", "l", "d"})
 
     def test_get_ancestors_of_failure(self):
-        self.assertRaises(ValueError, self.G2._get_ancestors_of, "h")
+        self.assertRaises(ValueError, self.G2.ancestors, "h")
 
     def test_get_cardinality(self):
         self.assertDictEqual(
