@@ -4,4 +4,4 @@ from .JointProbabilityDistribution import JointProbabilityDistribution
 from .NoisyOR import NoisyORCPD
 from .CI import BinaryInfluenceModel, MultilevelInfluenceModel
 
-__all__ = ["TabularCPD", "State", "DiscreteFactor", "NoisyOR"]
+__all__ = ["TabularCPD", "State", "DiscreteFactor", "NoisyOR", "BinaryInfluenceModel", "MultilevelInfluenceModel"]
