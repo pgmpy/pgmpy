@@ -9,16 +9,13 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     """
     Naive Instrumental Variable (IV) regressor (single exposure, single instrument).
-    Closed-form estimator for scalar X and scalar instrument Z:
-        beta_hat = Cov(Z, Y) / Cov(Z, X)
-    Intercept is estimated as: intercept = mean(Y) - beta_hat * mean(X)
+
     TO : DO
 
     Parameters
     ----------
-    causal_graph : optional
-        If provided, used to get roles 'exposure', 'outcome', and 'instrument' via
-        causal_graph.get_role(role_name). If not provided, `instrument` must be set.
+    causal_graph :  DAG, PDAG, ADMG, MAG, or PAG
+        Causal graph with defined variable roles
     stage1_estimator : optional, sklearn regressor
         Estimator for stage 1 regression of exposure on instrument(s) and pretreatment covariates.
         Must implement fit() and predict() methods. Default is None.
@@ -47,6 +44,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
+        tags.regressor_tags.poor_score = True
         return tags
 
     def _prepare_feature_df(self, X) -> pd.DataFrame:
@@ -54,6 +52,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         Accept a numpy/pandas dataframe and returns pandas df
         If numpy array is passed, it converts to pandas df
         """
+        # Step 1: Get required feature columns
         required_features = self.feature_columns_
 
         # Step 2: Convert input to DataFrame format
@@ -86,15 +85,13 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         and pretreatment variables, then fits the stage 2 estimator to predict the outcome
         variable from the predicted exposure and pretreatment variables.
         """
-        validate_data(accept_sparse=False, ensure_2d=True, dtype="numeric")
-
-        X_df = self._prepare_feature_df(X)
-        y_arr = np.asarray(y).ravel()
+        validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
+        stage1_estimator = clone(self.stage1_estimator)
+        stage2_estimator = clone(self.stage2_estimator)
 
         exposure_vars = list(self.causal_graph.get_role("exposure"))
         outcome_vars = list(self.causal_graph.get_role("outcome"))
         instrument_vars = list(self.causal_graph.get_role("instrument"))
-        pretreatment_vars = list(self.causal_graph.get_role("pretreatment"))
 
         if len(exposure_vars) != 1:
             raise ValueError(
@@ -102,71 +99,48 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
             )
         if len(outcome_vars) != 1:
             raise ValueError(
-                f"NaiveIVRegresso requires exactly one outcome; got {len(outcome_vars)}"
+                f"NaiveIVRegressor requires exactly one outcome; got {len(outcome_vars)}"
             )
         if len(instrument_vars) < 1:
             raise ValueError(
-                "NaiveIVRegresso requires at least one instrument variable in the causal graph."
+                f"NaiveIVRegressor requires at least one instrument; got {len(instrument_vars)}"
             )
 
         self.exposure_var_ = exposure_vars[0]
         self.outcome_var_ = outcome_vars[0]
-        self.instrument_var_ = instrument_vars
-        self.pretreatment_var_ = pretreatment_vars
-
-        required_cols = (
-            [self.exposure_var_]
-            + list(self.instrument_vars_)
-            + list(self.pretreatment_vars_)
-        )
-        missing = [v for v in required_cols if v not in X_df.columns]
-        if missing:
-            raise ValueError(
-                f"Missing required columns in X for NaiveIVRegressor: {missing}"
-            )
-        pretreatment_df = X_df[self.pretreatment_vars_]
-
-        stage1_estimator = clone(self.stage1_estimator)
-        stage2_estimator = clone(self.stage2_estimator)
-
-        n = X_df.shape[0]
-        x_arr = X_df[self.exposure_var_].to_numpy().ravel()
-        z_df = X_df[self.instrument_vars_]
-
-        stage1_X_df = pd.concat(
-            [z_df.reset_index(drop=True), pretreatment_df.reset_index(drop=True)],
-            axis=1,
+        self.instrument_vars_ = instrument_vars
+        self.pretreatment_vars_ = list(self.causal_graph.get_role("pretreatment"))
+        self.feature_columns_ = (
+            [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
         )
 
-        # fit stage1: X ~ Z + W
-        if sample_weight is None:
-            stage1_estimator.fit(stage1_X_df, x_arr)
-        else:
-            stage1_estimator.fit(stage1_X_df, x_arr, sample_weight=sample_weight)
+        # Handles sklearn n_features_in_ check by raising appropriate msg
+        X_arr = np.array(X)
+        n_features = 1 if X_arr.ndim == 1 else X_arr.shape[1]
+        self.n_features_in_ = n_features
+        # Handle sklearn single-feature check
+        if n_features == 1 and len(self.feature_columns_) > 1:
+            raise ValueError("1 feature(s) (n_features = 1)")
 
-        x_hat = stage1_estimator.predict(stage1_X_df)
+        df = self._prepare_feature_df(X)
 
-        stage2_X_df = pd.concat(
-            [
-                pd.Series(x_hat, name=self.exposure_var_).reset_index(drop=True),
-                pretreatment_vars.reset_index(drop=True),
-            ],
-            axis=1,
-        )
+        exposure_df = df[self.exposure_var_]
+        instrument_df = df[self.instrument_vars_]
+        pretreatment_df = df[self.pretreatment_vars_]
 
-        # fit stage2: Y ~ X_hat
-        if sample_weight is None:
-            stage2_estimator.fit(stage2_X_df, y_arr)
-        else:
-            stage2_estimator.fit(stage2_X_df, y_arr, sample_weight=sample_weight)
+        # fit stage1: E ~ Z
+        stage1_estimator.fit(instrument_df, exposure_df, sample_weight=sample_weight)
+        t_hat = stage1_estimator.predict(instrument_df)
+
+        # fit stage2: Y ~ t_hat + X
+        t_hat_2d = pd.DataFrame(t_hat.reshape(-1, 1))
+        covariates_df = pd.concat([t_hat_2d, pretreatment_df], axis=1)
+        stage2_estimator.fit(covariates_df, y, sample_weight=sample_weight)
 
         # store
         self.stage1_est_ = stage1_estimator
         self.stage2_est_ = stage2_estimator
-        self.coef_ = np.asarray(stage2_estimator.coef_).ravel()
-        self.intercept_ = float(stage2_estimator.intercept_)
-        self.n_samples_ = n
-        self.stage2_feature_names_in_ = list(stage2_X_df.columns)
+
         return self
 
     def predict(self, X):
@@ -179,27 +153,11 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
 
         X_df = self._prepare_feature_df(X)
 
-        # ensure needed columns present
-        missing = [
-            v
-            for v in [self.exposure_var_] + self.instrument_vars_ + self.control_vars_
-            if v not in X_df.columns
-        ]
-        if missing:
-            raise ValueError(f"Missing required columns in X for prediction: {missing}")
+        instrument_df = X_df[self.instrument_vars_]
+        pre_treatment = X_df[self.pretreatment_vars_]
 
-        z_df = X_df[self.instrument_vars_].reset_index(drop=True)
-        if len(self.control_vars_) == 0:
-            pretreatment_vars = pd.DataFrame(
-                {"_intercept": np.ones(X_df.shape[0])}, index=X_df.index
-            ).reset_index(drop=True)
-        else:
-            pretreatment_vars = X_df[self.control_vars_].reset_index(drop=True)
-
-        stage1_X_df = pd.concat([z_df, pretreatment_vars], axis=1)
-        x_hat = self.stage1_est_.predict(stage1_X_df)
-
-        stage2_X_df = pd.concat(
-            [pd.Series(x_hat, name=self.exposure_var_), pretreatment_vars], axis=1
-        )
-        return self.stage2_est_.predict(stage2_X_df)
+        T_hat = self.stage1_est_.predict(instrument_df)
+        t_hat_2d = pd.DataFrame(T_hat.reshape(-1, 1))
+        covariates_df = pd.concat([t_hat_2d, pre_treatment], axis=1)
+        y_pred = self.stage2_est_.predict(covariates_df)
+        return y_pred
