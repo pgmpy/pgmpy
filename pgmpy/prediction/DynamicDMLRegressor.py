@@ -45,11 +45,17 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
     n_periods : int or None, default=None
         Number of treatment periods. If None, inferred from unique values in groups.
 
-    discrete_treatment : bool, default=False
+    discrete_treatment : bool or None, default=None
         Whether treatments are discrete (affects automatic model selection when model_t='auto').
+        If None, automatically inferred from treatment data type during fit:
+        - Integer dtype → discrete (uses RandomForestRegressor)
+        - Float dtype → continuous (uses LinearRegression)
 
-    discrete_outcome : bool, default=False
+    discrete_outcome : bool or None, default=None
         Whether outcome is discrete (affects automatic model selection when model_y='auto').
+        If None, automatically inferred from outcome data type during fit:
+        - Integer dtype → discrete (uses RandomForestRegressor)
+        - Float dtype → continuous (uses LinearRegression)
 
     random_state : int, RandomState instance or None, default=None
         Controls randomness of cross-fitting splits.
@@ -130,8 +136,8 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
         model_t="auto",
         cv=2,
         n_periods=None,
-        discrete_treatment=False,
-        discrete_outcome=False,
+        discrete_treatment=None,
+        discrete_outcome=None,
         random_state=None,
     ):
         self.causal_graph = causal_graph
@@ -307,20 +313,31 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
         else:
             self.n_periods_ = self.n_periods
 
-        # STEP 5: Select models if 'auto'
-        self.model_y_ = self._select_model(self.model_y, self.discrete_outcome)
-        self.model_t_ = self._select_model(self.model_t, self.discrete_treatment)
+        # STEP 5: Infer discrete_treatment and discrete_outcome if None
+        if self.discrete_treatment is None:
+            self.discrete_treatment_ = self._infer_discrete(T)
+        else:
+            self.discrete_treatment_ = self.discrete_treatment
 
-        # STEP 6: STAGE 1 - Cross-fitted nuisance estimation
+        if self.discrete_outcome is None:
+            self.discrete_outcome_ = self._infer_discrete(y)
+        else:
+            self.discrete_outcome_ = self.discrete_outcome
+
+        # STEP 6: Select models if 'auto'
+        self.model_y_ = self._select_model(self.model_y, self.discrete_outcome_)
+        self.model_t_ = self._select_model(self.model_t, self.discrete_treatment_)
+
+        # STEP 7: STAGE 1 - Cross-fitted nuisance estimation
         self._fit_nuisances(X, T, y, groups)
 
-        # STEP 7: STAGE 2 - Backward recursive parameter estimation
+        # STEP 8: STAGE 2 - Backward recursive parameter estimation
         self._fit_parameters()
 
-        # STEP 8: Compute asymptotic covariance
+        # STEP 9: Compute asymptotic covariance
         self._compute_covariance()
 
-        # STEP 9: Set sklearn-required attributes
+        # STEP 10: Set sklearn-required attributes
         self.n_features_in_ = X.shape[1]  # Number of features (columns)
         self.n_samples_ = X.shape[0]  # Number of samples (rows)
 
@@ -549,6 +566,34 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
             raise ValueError(f"y must be 1D, got shape {y.shape}")
         if T.ndim not in [1, 2]:
             raise ValueError(f"T must be 1D or 2D, got shape {T.shape}")
+
+    def _infer_discrete(self, data):
+        """
+        Infer whether data is discrete or continuous based on dtype.
+
+        Parameters
+        ----------
+        data : array-like
+            Data to check.
+
+        Returns
+        -------
+        is_discrete : bool
+            True if data appears discrete, False otherwise.
+
+        Notes
+        -----
+        Uses heuristic: integer dtype → discrete, float dtype → continuous.
+        For ambiguous cases (e.g., float with few unique values), defaults to continuous.
+        """
+        data = np.asarray(data)
+
+        # Check if dtype is integer subtype
+        if np.issubdtype(data.dtype, np.integer):
+            return True
+
+        # Otherwise assume continuous (float types)
+        return False
 
     def _select_model(self, model, is_discrete):
         """
