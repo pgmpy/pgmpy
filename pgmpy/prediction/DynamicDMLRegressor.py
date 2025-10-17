@@ -48,14 +48,14 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
     discrete_treatment : bool or None, default=None
         Whether treatments are discrete (affects automatic model selection when model_t='auto').
         If None, automatically inferred from treatment data type during fit:
-        - Integer dtype → discrete (uses RandomForestRegressor)
-        - Float dtype → continuous (uses LinearRegression)
+        - Integer dtype - discrete (uses RandomForestRegressor)
+        - Float dtype - continuous (uses LinearRegression)
 
     discrete_outcome : bool or None, default=None
         Whether outcome is discrete (affects automatic model selection when model_y='auto').
         If None, automatically inferred from outcome data type during fit:
-        - Integer dtype → discrete (uses RandomForestRegressor)
-        - Float dtype → continuous (uses LinearRegression)
+        - Integer dtype - discrete (uses RandomForestRegressor)
+        - Float dtype - continuous (uses LinearRegression)
 
     random_state : int, RandomState instance or None, default=None
         Controls randomness of cross-fitting splits.
