@@ -6,11 +6,12 @@ Dynamic Double/Debiased Machine Learning for Sequential Treatment Effects.
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_array, check_is_fitted
 
 
@@ -38,8 +39,8 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
         If 'auto': LinearRegression for continuous treatments, RandomForestClassifier for discrete.
 
     cv : int, default=2
-        Number of cross-fitting folds (minimum 2). Internally uses GroupKFold to respect
-        panel structure when groups parameter is provided.
+        Number of cross-fitting folds (minimum 2) for within-period cross-validation.
+        Uses KFold with shuffle=True to create folds within each time period separately.
 
     n_periods : int or None, default=None
         Number of treatment periods. If None, inferred from unique values in groups.
@@ -167,20 +168,15 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
         """
         # If no causal graph return as-is (will be validated elsewhere)
         if self.causal_graph is None:
-            try:
-                import pandas as pd
-
-                if isinstance(X, pd.DataFrame):
-                    return X
-            except ImportError:
-                pass
-
-            X_arr = np.asarray(X)
-            if X_arr.ndim == 1:
-                raise ValueError(
-                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
-                )
-            return X_arr
+            if isinstance(X, pd.DataFrame):
+                return X
+            else:
+                X_arr = np.asarray(X)
+                if X_arr.ndim == 1:
+                    raise ValueError(
+                        "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
+                    )
+                return pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
 
         # Get required feature columns from causal graph
         required_features = self.feature_columns_
@@ -590,9 +586,9 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
 
         ALGORITHM:
         For each period t = 1, ..., m:
-            1. Create GroupKFold cross-validator with groups
-            2. Initialize storage for predictions
-            3. For each fold (train_idx, test_idx):
+            1. Extract data for period t (isolate by period groups)
+            2. Create KFold cross-validator for within-period cross-fitting
+            3. For each fold (train_idx, test_idx) within period t:
                 a. Fit outcome model on train fold: model_y.fit(X[train_idx], y[train_idx])
                 b. Predict on test fold: y_pred[test_idx] = model_y.predict(X[test_idx])
                 c. For each future period j >= t:
@@ -629,7 +625,7 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
         # Setup cross-validator
         if self.cv < 2:
             raise ValueError("cv must be at least 2 for cross-fitting")
-        kfold = GroupKFold(n_splits=self.cv)
+        kfold = KFold(n_splits=self.cv, shuffle=True, random_state=self.random_state)
 
         # Loop over periods
         for t in range(self.n_periods_):
@@ -645,9 +641,9 @@ class DynamicDMLRegressor(RegressorMixin, BaseEstimator):
             # Clone fresh models for this period
             period_models_t = []
 
-            # Cross-fit
+            # Cross-fit within this period's data
             fold_idx = 0
-            for train_idx, test_idx in kfold.split(X_t, y_t, groups[period_mask]):
+            for train_idx, test_idx in kfold.split(X_t):
                 # Fit outcome model
                 model_y_fold = clone(self.model_y_)
                 model_y_fold.fit(X_t[train_idx], y_t[train_idx])
