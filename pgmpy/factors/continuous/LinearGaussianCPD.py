@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 import numpy as np
-import pandas as pd
-from scipy.stats import multivariate_normal
 
 from pgmpy.factors.base import BaseFactor
 
@@ -57,13 +54,15 @@ class LinearGaussianCPD(BaseFactor):
     # To represent the conditional distribution, P(Y| X1, X2, X3) = N(0.2 - 2*x1 + 3*x2 + 7*x3 ; 9.6), we can write:
 
     >>> from pgmpy.factors.continuous import LinearGaussianCPD
-    >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
+    >>> cpd = LinearGaussianCPD(
+    ...     variable="Y", beta=[0.2, -2, 3, 7], std=9.6, evidence=["X1", "X2", "X3"]
+    ... )
     >>> cpd.variable
     'Y'
     >>> cpd.evidence
-    ['x1', 'x2', 'x3']
-    >>> cpd.beta_vector
-    [0.2, -2, 3, 7]
+    ['X1', 'X2', 'X3']
+    >>> cpd.beta
+    array([ 0.2, -2. ,  3. ,  7. ])
     """
 
     def __init__(self, variable, beta, std, evidence=[]):
@@ -91,7 +90,9 @@ class LinearGaussianCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
-        >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
+        >>> cpd = LinearGaussianCPD(
+        ...     variable="Y", beta=[0.2, -2, 3, 7], std=9.6, evidence=["X1", "X2", "X3"]
+        ... )
         >>> copy_cpd = cpd.copy()
         >>> copy_cpd.variable
         'Y'
@@ -166,9 +167,14 @@ class LinearGaussianCPD(BaseFactor):
         Examples
         --------
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
-        >>> LinearGaussianCPD.get_random(variable='Income', evidence=['Age', 'Experience'],
-        ...            loc=2.0, scale=0.5, seed=5)
-        <LinearGaussianCPD: P(Income | Age, Experience) = N(1.338*Age + 1.876*Experience + 1.599; 2.21) at 0x1795561e0
+        >>> LinearGaussianCPD.get_random(
+        ...     variable="Income",
+        ...     evidence=["Age", "Experience"],
+        ...     loc=2.0,
+        ...     scale=0.5,
+        ...     seed=5,
+        ... )
+        <LinearGaussianCPD: P(Income | Age, Experience) = N(1.338*Age + 1.876*Experience + 1.599; 2.21) at 0x...
         """
         rng = np.random.default_rng(seed=seed)
 

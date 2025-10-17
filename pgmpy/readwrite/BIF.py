@@ -1,6 +1,5 @@
 import collections
 import re
-from copy import copy
 from itertools import product
 from string import Template
 
@@ -17,18 +16,17 @@ try:
         Suppress,
         Word,
         ZeroOrMore,
-        alphanums,
         cppStyleComment,
         nums,
         printables,
     )
 except ImportError as e:
     raise ImportError(
-        e.msg
-        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -436,11 +434,11 @@ class BIFWriter(object):
     ---------
     >>> from pgmpy.readwrite import BIFWriter
     >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model('asia')
+    >>> asia = get_example_model("asia")
     >>> writer = BIFWriter(asia)
     >>> writer
     <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
-    >>> writer.write_bif('asia.bif')
+    >>> writer.write("asia.bif")
     """
 
     def __init__(self, model, round_values=None):
@@ -540,8 +538,9 @@ $values
                 cpd = self.model.get_cpds(var)
                 cpd_values_transpose = cpd.get_values().T
 
+                # Get the sanitized state names for parents from self.variable_states
                 parent_states = product(
-                    *[cpd.state_names[var] for var in cpd.variables[1:]]
+                    *[self.variable_states[var] for var in cpd.variables[1:]]
                 )
                 all_cpd = ""
                 for index, state in enumerate(parent_states):
@@ -576,7 +575,7 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> model = BIFReader("dog-problem.bif").get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_variables()
         ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
@@ -586,7 +585,7 @@ $values
 
     def get_states(self):
         """
-        Add states to variable of BIF
+        Add states to variable of BIF, handling commas in state names by replacing them with underscores.
 
         Returns
         -------
@@ -595,7 +594,7 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> model = BIFReader("dog-problem.bif").get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_states()
         {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
@@ -610,7 +609,15 @@ $values
             variable = cpd.variable
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
-                variable_states[variable].append(str(state))
+                state_str = str(state)
+
+                # Warn users if any commas in state names
+                if "," in state_str:
+                    logger.warning(
+                        f"State name '{state_str}' for variable '{variable}' contains commas. "
+                        "This may cause issues when loading the file. Consider removing any special characters."
+                    )
+                variable_states[variable].append(state_str)
         return variable_states
 
     def get_properties(self):
@@ -624,7 +631,7 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> model = BIFReader("dog-problem.bif").get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_properties()
         {'bowel-problem': ['position = (335, 99)'],
@@ -654,7 +661,7 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> model = BIFReader("dog-problem.bif").get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_parents()
         {'bowel-problem': [],
@@ -680,7 +687,7 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> model = BIFReader("dog-problem.bif").get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_cpds()
         {'bowel-problem': array([ 0.01,  0.99]),
@@ -697,7 +704,7 @@ $values
             )
         return tables
 
-    def write_bif(self, filename):
+    def write(self, filename):
         """
         Writes the BIF data into a file
 
@@ -709,10 +716,16 @@ $values
         -------
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = get_example_model('asia')
+        >>> asia = get_example_model("asia")
         >>> writer = BIFWriter(asia)
-        >>> writer.write_bif(filename='asia.bif')
+        >>> writer.write(filename="asia.bif")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_bif(self, filename):
+        logger.warn(
+            "The `BIFWriter.write_bif` has been deprecated. Please use `BIFWriter.write` instead."
+        )
+        self.write(filename)

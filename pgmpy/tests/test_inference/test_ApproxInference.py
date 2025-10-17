@@ -1,5 +1,7 @@
 import unittest
 
+from skbase.utils.dependencies import _check_soft_dependencies
+
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
@@ -187,6 +189,10 @@ class TestApproxInferenceDBN(unittest.TestCase):
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestApproxInferenceBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -312,6 +318,10 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestApproxInferenceDBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

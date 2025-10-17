@@ -1,6 +1,6 @@
 import gzip
 import json
-import os
+import math
 
 import pandas as pd
 
@@ -21,25 +21,32 @@ def get_example_model(model: str):
     Parameter
     ---------
     model: str
-        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository) and dagitty (https://www.dagitty.net/)
+        Any model from bnlearn repository (http://www.bnlearn.com/bnrepository)
+          and dagitty (https://www.dagitty.net/)
         Discrete Bayesian Network Options:
             Small Networks: asia, cancer, earthquake, sachs, survey
             Medium Networks: alarm, barley, child, insurance, mildew, water
             Large Networks: hailfinder, hepar2, win95pts
-            Very Large Networks: andes, diabetes, link, munin1, munin2, munin3, munin4, pathfinder, pigs, munin
-        Gaussian Bayesian Network Options: ecoli70, magic-niab, magic-irri, arth150
+            Very Large Networks: andes, diabetes, link, munin1, munin2, munin3,
+            munin4, pathfinder, pigs, munin
+        Gaussian Bayesian Network Options: ecoli70,
+        magic-niab, magic-irri, arth150
         Conditional Linear Gaussian Bayesian Network Options: sangiovese, mehra
-        DAG Options: M-bias, confounding, mediator, paths, Sebastiani_2005, Polzer_2012, Schipf_2010, Shrier_2008, Acid_1996, Thoemmes_2013, Kampen_2014, Didelez_2010
+        DAG Options: M-bias, confounding, mediator, paths,
+          Sebastiani_2005, Polzer_2012,
+          Schipf_2010, Shrier_2008, Acid_1996,
+            Thoemmes_2013, Kampen_2014, Didelez_2010
 
     Example
     -------
     >>> from pgmpy.data import get_example_model
-    >>> model = get_example_model(model='asia')
+    >>> model = get_example_model(model="asia")
     >>> model
 
     Returns
     -------
-    pgmpy.models instance: An instance of one of the model classes in pgmpy.models
+    pgmpy.models instance: An instance of
+      one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
     cat_models = {
@@ -81,7 +88,9 @@ def get_example_model(model: str):
         "mehra",
     }
 
-    # Took the shorthand names from https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd + year
+    # Took the shorthand names from
+    #  https://github.com/jtextor/dagitty/blob/master/r/man/getExample.Rd +
+    #  year
     dag_models = {
         "M-bias",
         "confounding",
@@ -144,7 +153,8 @@ def get_example_model(model: str):
 
     if model not in filenames:
         raise ValueError(
-            f"Unknown model name: {model}. Please refer documentation for valid model names."
+            f"Unknown model name: {model}. Please refer"
+            " documentation for valid model names."
         )
 
     path = filenames[model]
@@ -179,7 +189,7 @@ def get_example_model(model: str):
         cpds = []
         for node, cpd_info in cpds_data.items():
             coefficients = cpd_info["coefficients"]
-            std = cpd_info["variance"][0]
+            var = cpd_info["variance"][0]
             parents = cpd_info["parents"]
 
             # Extract the intercept
@@ -192,7 +202,7 @@ def get_example_model(model: str):
             cpd = LinearGaussianCPD(
                 variable=node,
                 beta=[intercept] + parent_coeffs,
-                std=std,
+                std=math.sqrt(var),
                 evidence=parents,
             )
             cpds.append(cpd)
@@ -229,8 +239,12 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
         each variable in the discretized dataframe.
 
     method: rounding or quantile
-        If rounding, equal width bins are created and data is discretized into these bins. Refer pandas.cut for more details.
-        If quantile, creates bins such that each bin has an equal number of datapoints. Refer pandas.qcut for more details.
+        If rounding, equal width bins are created and
+          data is discretized into these bins.
+          Refer pandas.cut for more details.
+        If quantile, creates bins such that each
+          bin has an equal number of datapoints.
+            Refer pandas.qcut for more details.
 
     Examples
     --------
@@ -241,7 +255,15 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     >>> Y = 0.2 * X + rng.standard_normal(1000)
     >>> Z = 0.4 * X + 0.5 * Y + rng.standard_normal(1000)
     >>> df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    >>> df_disc = discretize(df, cardinality={'X': 3, 'Y': 3, 'Z': 3}, labels={'X': ['low', 'mid', 'high'], 'Y': ['low', 'mid', 'high'], 'Z': ['low', 'mid', 'high']})
+    >>> df_disc = discretize(
+    ...     df,
+    ...     cardinality={"X": 3, "Y": 3, "Z": 3},
+    ...     labels={
+    ...         "X": ["low", "mid", "high"],
+    ...         "Y": ["low", "mid", "high"],
+    ...         "Z": ["low", "mid", "high"],
+    ...     },
+    ... )
     >>> df_disc.head()
         X    Y    Z
     0   mid  mid  mid
@@ -281,7 +303,8 @@ def llm_pairwise_orient(
     **kwargs,
 ):
     """
-    Asks a Large Language Model (LLM) for the orientation of an edge between `x` and `y`.
+    Asks a Large Language Model (LLM) for the
+     orientation of an edge between `x` and `y`.
 
     Parameters
     ----------
@@ -292,13 +315,15 @@ def llm_pairwise_orient(
         The second variable's name
 
     description: dict
-        A dict of the form {variable: description} containing text description of the variables.
+        A dict of the form {variable: description}
+          containing text description of the variables.
 
     system_prompt: str
         A system prompt to give the LLM.
 
     llm_model: str (default: gemini/gemini-pro)
-        The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
+        The LLM model to use. Please refer to litellm
+          documentation (https://docs.litellm.ai/docs/providers)
         for available model options. Default is gemini-pro.
 
     kwargs: kwargs
@@ -313,14 +338,16 @@ def llm_pairwise_orient(
         from litellm import completion
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". litellm is required for using LLM based pairwise orientation. Please install using: pip install litellm"
+            f"{e}. litellm is required for using"
+            " LLM based pairwise orientation. "
+            "Please install using: pip install litellm"
         ) from None
 
     if system_prompt is None:
         system_prompt = "You are an expert in Causal Inference"
 
-    prompt = f""" {system_prompt}. You are given two variables with the following descriptions:
+    prompt = f""" {system_prompt}. You are
+      given two variables with the following descriptions:
         <A>: {descriptions[x]}
         <B>: {descriptions[y]}
 
@@ -328,9 +355,9 @@ def llm_pairwise_orient(
         1. <A> causes <B>
         2. <B> causes <A>
 
-        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
+        Do not add any formatting in the answer.
         """
-
     response = completion(
         model=llm_model, messages=[{"role": "user", "content": prompt}]
     )
@@ -348,7 +375,8 @@ def llm_pairwise_orient(
 
 def manual_pairwise_orient(x, y):
     """
-    Generates a prompt for the user to input the direction between the variables.
+    Generates a prompt for the user to
+      input the direction between the variables.
 
     Parameters
     ----------
@@ -364,7 +392,9 @@ def manual_pairwise_orient(x, y):
         Returns a tuple (source, target) representing the edge direction.
     """
     user_input = input(
-        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n 3. No edge \n Please enter 1, 2 or 3: "
+        f"Select the edge direction between"
+        f" {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"
+        "3. No edge \n Please enter 1, 2 or 3: "
     )
     if user_input == "1":
         return (x, y)
@@ -378,7 +408,8 @@ def preprocess_data(df):
     """
     Tries to figure out the data type of each variable `df`.
 
-    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes
+    Assigns one of (numerical, categorical unordered,
+      categorical ordered) datatypes
     to each column in `df`. Also changes any object datatypes to categorical.
 
     Parameters
@@ -388,7 +419,8 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and
+      a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}
@@ -408,10 +440,59 @@ def preprocess_data(df):
                 dtypes[col] = "C"
         else:
             raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. Try specifying the appropriate datatype to the column."
+                f"Couldn't infer datatype of column: {col} from data. "
+                "Try specifying the appropriate datatype to the column."
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered, O=Categorical Ordered) inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
+        f"inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
+
+
+def _heuristic_categorical_detection(df, dtypes):
+    """
+    Creates a warning if numerical values are detected for a categorical variable.
+    """
+    # credit: https://stackoverflow.com/a/35827646
+    potential_categorical = []
+    for var in df.columns:
+        if dtypes[var] == "N":
+            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
+                potential_categorical.append(var)
+    if len(potential_categorical) > 0:
+        logger.warning(
+            f"Variables: {potential_categorical} are likely categorical, but using numerical values. Please set the"
+            " dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+        )
+
+
+def get_dataset_type(data: pd.DataFrame) -> str:
+    """
+    Returns continuous, discrete or mixed depending on the type of variable
+    data in the given dataset.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        DataFrame to analyze
+
+    Returns
+    -------
+    str
+        `continuous`, `discrete` or `mixed`.
+    """
+
+    df, dtypes = preprocess_data(data)
+    dtypes_set = set(dtypes.values())
+
+    if "N" in dtypes_set:
+        _heuristic_categorical_detection(df, dtypes)
+
+    if len(dtypes_set) == 1:
+        if "N" in dtypes_set:
+            return "continuous"
+        elif "C" in dtypes_set:
+            return "discrete"
+    return "mixed"

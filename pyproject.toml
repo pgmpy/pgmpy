@@ -22,23 +22,35 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Bio-Informatics"
 ]
-# core dependencies of pgmpy
-# this set should be kept minimal!
+
 dependencies = [
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",
   "scikit-learn>=1.2",
   "pandas>=1.5",
-  "torch>=2.5",
-  "statsmodels>=0.13",
+  "statsmodels>=0.14.5",
   "tqdm>=4.64",
+  "pyparsing>=3.0",
   "joblib>=1.2",
   "opt_einsum>=3.3",
-  "pyro-ppl>=1.9.1"
+  "scikit-base>=0.12.4",
 ]
 
 [project.optional-dependencies]
+torch = [
+  "torch>=2.5",
+  "pyro-ppl>=1.9.1",
+]
+optional = [
+  "daft-pgm>=0.1.4",
+  "xgboost>=2.0.3",
+  "litellm==1.61.15",
+  "pyparsing>=3.0",
+  "pygraphviz",
+  "torch>=2.5",
+  "pyro-ppl>=1.9.1",
+]
 tests = [
   "xdoctest>=0.11.0",
   "pytest>=3.3.1",
@@ -47,13 +59,16 @@ tests = [
   "coverage>=4.3.4",
   "mock",
   "black",
-  "pre-commit"
+  "pre-commit",
 ]
-optional = [
-  "daft-pgm>=0.1.4",
-  "xgboost>=2.0.3",
-  "litellm==1.61.15",
-  "pyparsing>=3.0"
+docs =[
+  "sphinx>=5.0",
+  "nbsphinx",
+  "numpydoc",
+  "sphinx_rtd_theme",
+  "sphinx-copybutton",
+  "sphinx-design",
+  "sphinxext-opengraph",
 ]
 all = [
   "networkx>=3.0",
@@ -70,7 +85,7 @@ all = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
   "litellm==1.61.15",
-  "pyparsing>=3.0"
+  "pyparsing>=3.0",
 ]
 
 [project.urls]
@@ -95,3 +110,74 @@ pgmpy = [
 [tool.setuptools]
 include-package-data = true
 
+[tool.pytest.ini_options]
+addopts = "-p no:doctest"
+norecursedirs = [".git", "ignore", "build", "__pycache__"]
+filterwarnings = ["default"]
+
+[tool.isort]
+skip = ["pgmpy/identification/__init__.py"]
+
+[tool.ruff]
+line-length = 120
+exclude = [".git", "examples/*"]
+target-version = "py311"
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = [
+  # https://pypi.org/project/pycodestyle
+  "D",
+  "E",
+  "W",
+  # https://pypi.org/project/pyflakes
+  "F",
+  # https://pypi.org/project/flake8-bandit
+  "S",
+  # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+  "UP",
+  "I002",    # Missing required imports
+  "UP008",   # Super calls with redundant arguments passed.
+  "G010",    # Deprecated log warn.
+  "PLR1722", # Use sys.exit() instead of exit() and quit().
+  "PT014",   # pytest-duplicate-parametrize-test-cases.
+  "PT006",   # Checks for the type of parameter names passed to pytest.mark.parametrize.
+  "PT007",   # Checks for the type of parameter values passed to pytest.mark.parametrize.
+  "PT018",   # Checks for assertions that combine multiple independent condition
+  "RUF001", # Checks for non unicode string literals
+  "RUF002", # Checks for non unicode string literals
+  "RUF003", # Checks for non unicode string literals
+]
+
+extend-select = [
+  "I", # isort
+  "C4", # https://pypi.org/project/flake8-comprehensions
+]
+ignore=[
+  "E203", # Whitespace-before-punctuation.
+  "E402", # Module-import-not-at-top-of-file.
+  "E731", # Do not assign a lambda expression, use a def.
+  "RET504", # Unnecessary variable assignment before `return` statement.
+  "S101", # Use of `assert` detected.
+  "RUF100", # https://docs.astral.sh/ruff/rules/unused-noqa/
+  "C408", # Unnecessary dict call - rewrite as a literal.
+  "UP031", # Use format specifier instead of %
+  "S102", # Use of excec
+  "C414", # Unnecessary `list` call within `sorted()`
+  "S301", # pickle and modules that wrap it can be unsafe
+  "C416", # Unnecessary list comprehension - rewrite as a generator
+  "S310", # Audit URL open for permitted schemes
+  "S202", # Uses of `tarfile.extractall()`
+  "S307", # Use of possibly insecure function
+  "C417", # Unnecessary `map` usage (rewrite using a generator expression)
+  "S605", # Starting a process with a shell, possible injection detected
+  "E741", # Ambiguous variable name
+  "S107", # Possible hardcoded password
+  "S105", # Possible hardcoded password
+  "PT018", # Checks for assertions that combine multiple independent condition
+  "S602", # sub process call with shell=True unsafe
+  "C419", # Unnecessary list comprehension, some are flagged yet are not
+  "C409", # Unnecessary `list` literal passed to `tuple()` (rewrite as a `tuple` literal)
+  "S113", # Probable use of httpx call without timeout
+]
+allowed-confusables=["σ"]

@@ -25,16 +25,15 @@
 
 """Pretty-print tabular data."""
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
+
+import re
 from collections import namedtuple
 from platform import python_version_tuple
-import re
-
 
 if python_version_tuple()[0] < "3":
-    from itertools import izip_longest
     from functools import partial
+    from itertools import izip_longest
 
     _none_type = type(None)
     _int_type = int
@@ -42,8 +41,8 @@ if python_version_tuple()[0] < "3":
     _text_type = unicode
     _binary_type = str
 else:
+    from functools import partial, reduce
     from itertools import zip_longest as izip_longest
-    from functools import reduce, partial
 
     _none_type = type(None)
     _int_type = int
@@ -271,7 +270,7 @@ def simple_separated_format(separator):
     r"""Construct a simple TableFormat with columns separated by a separator.
 
     >>> tsv = simple_separated_format("\t")
-    >>> tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == 'foo \t 1\nspam\t23'
+    >>> tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == "foo \t 1\nspam\t23"
     True
 
     """
@@ -330,9 +329,9 @@ def _type(string, has_invisible=True):
     True
     >>> _type("1") is type(1)
     True
-    >>> _type('\x1b[31m42\x1b[0m') is type(42)
+    >>> _type("\x1b[31m42\x1b[0m") is type(42)
     True
-    >>> _type('\x1b[31m42\x1b[0m') is type(42)
+    >>> _type("\x1b[31m42\x1b[0m") is type(42)
     True
 
     """
@@ -386,7 +385,7 @@ def _afterpoint(string):
 def _padleft(width, s, has_invisible=True):
     """Flush right.
 
-    >>> _padleft(6, '\u044f\u0439\u0446\u0430') == '  \u044f\u0439\u0446\u0430'
+    >>> _padleft(6, "\u044f\u0439\u0446\u0430") == "  \u044f\u0439\u0446\u0430"
     True
 
     """
@@ -398,7 +397,7 @@ def _padleft(width, s, has_invisible=True):
 def _padright(width, s, has_invisible=True):
     """Flush left.
 
-    >>> _padright(6, '\u044f\u0439\u0446\u0430') == '\u044f\u0439\u0446\u0430  '
+    >>> _padright(6, "\u044f\u0439\u0446\u0430") == "\u044f\u0439\u0446\u0430  "
     True
 
     """
@@ -410,7 +409,7 @@ def _padright(width, s, has_invisible=True):
 def _padboth(width, s, has_invisible=True):
     """Center string.
 
-    >>> _padboth(6, '\u044f\u0439\u0446\u0430') == ' \u044f\u0439\u0446\u0430 '
+    >>> _padboth(6, "\u044f\u0439\u0446\u0430") == " \u044f\u0439\u0446\u0430 "
     True
 
     """
@@ -430,7 +429,7 @@ def _strip_invisible(s):
 def _visible_width(s):
     """Visible width of a printed string. ANSI color codes are removed.
 
-    >>> _visible_width('\x1b[31mhello\x1b[0m'), _visible_width("world")
+    >>> _visible_width("\x1b[31mhello\x1b[0m"), _visible_width("world")
     (5, 5)
 
     """
@@ -443,10 +442,18 @@ def _visible_width(s):
 def _align_column(strings, alignment, minwidth=0, has_invisible=True):
     """[string] -> [padded_string]
 
-    >>> list(map(str,_align_column(["12.345", "-1234.5", "1.23", "1234.5", "1e+234", "1.0e234"], "decimal")))
+    >>> list(
+    ...     map(
+    ...         str,
+    ...         _align_column(
+    ...             ["12.345", "-1234.5", "1.23", "1234.5", "1e+234", "1.0e234"],
+    ...             "decimal",
+    ...         ),
+    ...     )
+    ... )
     ['   12.345  ', '-1234.5    ', '    1.23   ', ' 1234.5    ', '    1e+234 ', '    1.0e234']
 
-    >>> list(map(str,_align_column(['123.4', '56.7890'], None)))
+    >>> list(map(str, _align_column(["123.4", "56.7890"], None)))
     ['123.4', '56.7890']
 
     """
@@ -493,14 +500,14 @@ def _column_type(strings, has_invisible=True):
     True
     >>> _column_type(["1", "2.3", "four"]) is _text_type
     True
-    >>> _column_type(["four", '\u043f\u044f\u0442\u044c']) is _text_type
+    >>> _column_type(["four", "\u043f\u044f\u0442\u044c"]) is _text_type
     True
     >>> _column_type([None, "brux"]) is _text_type
     True
     >>> _column_type([1, 2, None]) is _int_type
     True
     >>> import datetime as dt
-    >>> _column_type([dt.datetime(1991,2,19), dt.time(17,35)]) is _text_type
+    >>> _column_type([dt.datetime(1991, 2, 19), dt.time(17, 35)]) is _text_type
     True
 
     """
@@ -513,12 +520,9 @@ def _format(val, valtype, floatfmt, missingval=""):
 
     Unicode is supported:
 
-    >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430']
-    >>> tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]]
-    >>> good_result = '\u0431\u0443\u043a\u0432\u0430      \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437             2\n\u0431\u0443\u043a\u0438           4'
-    >>> tabulate(tbl, headers=hrow) == good_result
-    True
-
+    >>> hrow = ["\u0431\u0443\u043a\u0432\u0430", "\u0446\u0438\u0444\u0440\u0430"]
+    >>> tbl = [["\u0430\u0437", 2], ["\u0431\u0443\u043a\u0438", 4]]
+    >>> tabulate(tbl, headers=hrow)
     """
     if val is None:
         return missingval
@@ -694,8 +698,12 @@ def tabulate(
     are supposed to be names of the last columns. This is consistent
     with the plain-text format of R and Pandas' dataframes.
 
-    >>> print(tabulate([["sex","age"],["Alice","F",24],["Bob","M",19]],
-    ...       headers="firstrow"))
+    >>> print(
+    ...     tabulate(
+    ...         [["sex", "age"], ["Alice", "F", 24], ["Bob", "M", 19]],
+    ...         headers="firstrow",
+    ...     )
+    ... )
            sex      age
     -----  -----  -----
     Alice  F         24
@@ -721,9 +729,12 @@ def tabulate(
 
     `None` values are replaced with a `missingval` string:
 
-    >>> print(tabulate([["spam", 1, None],
-    ...                 ["eggs", 42, 3.14],
-    ...                 ["other", None, 2.7]], missingval="?"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 1, None], ["eggs", 42, 3.14], ["other", None, 2.7]],
+    ...         missingval="?",
+    ...     )
+    ... )
     -----  --  ----
     spam    1  ?
     eggs   42  3.14
@@ -738,8 +749,11 @@ def tabulate(
     "plain" format doesn't use any pseudographics to draw tables,
     it separates columns with a double space:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                 ["strings", "numbers"], "plain"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "plain"
+    ...     )
+    ... )
     strings      numbers
     spam         41.9999
     eggs        451
@@ -750,8 +764,11 @@ def tabulate(
 
     "simple" format is like Pandoc simple_tables:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                 ["strings", "numbers"], "simple"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "simple"
+    ...     )
+    ... )
     strings      numbers
     ---------  ---------
     spam         41.9999
@@ -766,8 +783,11 @@ def tabulate(
     "grid" is similar to tables produced by Emacs table.el package or
     Pandoc grid_tables:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                ["strings", "numbers"], "grid"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "grid"
+    ...     )
+    ... )
     +-----------+-----------+
     | strings   |   numbers |
     +===========+===========+
@@ -786,8 +806,11 @@ def tabulate(
     "pipe" is like tables in PHP Markdown Extra extension or Pandoc
     pipe_tables:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                ["strings", "numbers"], "pipe"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "pipe"
+    ...     )
+    ... )
     | strings   |   numbers |
     |:----------|----------:|
     | spam      |   41.9999 |
@@ -803,8 +826,11 @@ def tabulate(
     define column alignment, and using a "+" sign to indicate line
     intersections:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                ["strings", "numbers"], "orgtbl"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "orgtbl"
+    ...     )
+    ... )
     | strings   |   numbers |
     |-----------+-----------|
     | spam      |   41.9999 |
@@ -818,8 +844,11 @@ def tabulate(
     "rst" is like a simple table format from reStructuredText; please
     note that reStructuredText accepts also "grid" tables:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]],
-    ...                ["strings", "numbers"], "rst"))
+    >>> print(
+    ...     tabulate(
+    ...         [["spam", 41.9999], ["eggs", "451.0"]], ["strings", "numbers"], "rst"
+    ...     )
+    ... )
     =========  =========
     strings      numbers
     =========  =========
@@ -836,8 +865,13 @@ def tabulate(
     "mediawiki" produces a table markup used in Wikipedia and on other
     MediaWiki-based sites:
 
-    >>> print(tabulate([["strings", "numbers"], ["spam", 41.9999], ["eggs", "451.0"]],
-    ...                headers="firstrow", tablefmt="mediawiki"))
+    >>> print(
+    ...     tabulate(
+    ...         [["strings", "numbers"], ["spam", 41.9999], ["eggs", "451.0"]],
+    ...         headers="firstrow",
+    ...         tablefmt="mediawiki",
+    ...     )
+    ... )
     {| class="wikitable" style="text-align: left;"
     |+ <!-- caption -->
     |-

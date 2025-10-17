@@ -6,11 +6,11 @@ try:
     from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
 except ImportError as e:
     raise ImportError(
-        e.msg
-        + ". pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
+        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
@@ -30,7 +30,7 @@ class UAIReader(object):
     Examples
     --------
     >>> from pgmpy.readwrite import UAIReader
-    >>> reader = UAIReader('TestUai.uai')
+    >>> reader = UAIReader("TestUai.uai")
     >>> model = reader.get_model()
 
     Reference
@@ -116,7 +116,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_network_type()
         'MARKOV'
         """
@@ -137,7 +137,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_variables()
         ['var_0', 'var_1', 'var_2']
         """
@@ -159,7 +159,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_domain()
         {'var_0': '2', 'var_1': '2', 'var_2': '3'}
         """
@@ -180,7 +180,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_edges()
         {('var_0', 'var_1'), ('var_0', 'var_2'), ('var_1', 'var_2')}
         """
@@ -214,7 +214,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_tables()
         [(['var_0', 'var_1'], ['4.000', '2.400', '1.000', '0.000']),
          (['var_0', 'var_1', 'var_2'],
@@ -255,7 +255,7 @@ class UAIReader(object):
         Examples
         --------
         >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader = UAIReader("TestUAI.uai")
         >>> reader.get_model()
         """
         if self.network_type == "BAYES":
@@ -318,9 +318,9 @@ class UAIWriter(object):
     --------
     >>> from pgmpy.readwrite import UAIWriter
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model('asia')
+    >>> model = get_example_model("asia")
     >>> writer = UAIWriter(asia)
-    >>> writer.write_uai('asia.uai')
+    >>> writer.write("asia.uai")
     """
 
     def __init__(self, model, round_values=None):
@@ -479,7 +479,7 @@ class UAIWriter(object):
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
 
-    def write_uai(self, filename):
+    def write(self, filename):
         """
         Write the xml data into the file.
 
@@ -491,10 +491,16 @@ class UAIWriter(object):
         --------
         >>> from pgmpy.readwrite import UAIWriter
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> writer = UAIWriter(asia)
-        >>> writer.write_uai('asia.uai')
+        >>> writer.write("asia.uai")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_uai(self, filename):
+        logger.warning(
+            "The `UAIWriter.write_uai` has been deprecated. Please use `UAIWriter.write` instead."
+        )
+        self.write(filename)

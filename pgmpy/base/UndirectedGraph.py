@@ -32,12 +32,12 @@ class UndirectedGraph(nx.Graph):
 
     Add one node at a time:
 
-    >>> G.add_node('a')
+    >>> G.add_node("a")
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(['a', 'b'])
+    >>> G.add_nodes_from(["a", "b"])
 
     **Edges:**
 
@@ -45,11 +45,11 @@ class UndirectedGraph(nx.Graph):
 
     Add one edge,
 
-    >>> G.add_edge('a', 'b')
+    >>> G.add_edge("a", "b")
 
     a list of edges,
 
-    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+    >>> G.add_edges_from([("a", "b"), ("b", "c")])
 
     If some edges connect nodes not yet in the model, the nodes
     are added automatically.  There are no errors when adding
@@ -59,7 +59,7 @@ class UndirectedGraph(nx.Graph):
 
     Many common graph features allow python syntax for speed reporting.
 
-    >>> 'a' in G     # check if node in graph
+    >>> "a" in G  # check if node in graph
     True
     >>> len(G)  # number of nodes in graph
     3
@@ -67,90 +67,6 @@ class UndirectedGraph(nx.Graph):
 
     def __init__(self, ebunch=None):
         super(UndirectedGraph, self).__init__(ebunch)
-
-    def add_node(self, node, weight=None):
-        """
-        Add a single node to the Graph.
-
-        Parameters
-        ----------
-        node: str, int, or any hashable python object.
-            The node to add to the graph.
-
-        weight: int, float
-            The weight of the node.
-
-        Examples
-        --------
-        >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph()
-        >>> G.add_node(node='A')
-        >>> G.nodes()
-        NodeView(('A',))
-
-        Adding a node with some weight.
-        >>> G.add_node(node='B', weight=0.3)
-
-        The weight of these nodes can be accessed as:
-        >>> G.nodes['B']
-        {'weight': 0.3}
-        >>> G.nodes['A']
-        {'weight': None}
-        """
-        # Check for networkx 2.0 syntax
-        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
-            node, attrs = node
-            if attrs.get("weight", None) is not None:
-                attrs["weight"] = weight
-        else:
-            attrs = {"weight": weight}
-        super(UndirectedGraph, self).add_node(node, weight=weight)
-
-    def add_nodes_from(self, nodes, weights=None):
-        """
-        Add multiple nodes to the Graph.
-
-        **The behaviour of adding weights is different than in networkx.
-
-        Parameters
-        ----------
-        nodes: iterable container
-            A container of nodes (list, dict, set, or any hashable python
-            object).
-
-        weights: list, tuple (default=None)
-            A container of weights (int, float). The weight value at index i
-            is associated with the variable at index i.
-
-        Examples
-        --------
-        >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
-        >>> G.nodes()
-        NodeView(('A', 'B', 'C'))
-
-        Adding nodes with weights:
-        >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
-        >>> G.nodes['D']
-        {'weight': 0.3}
-        >>> G.nodes['E']
-        {'weight': 0.6}
-        >>> G.nodes['A']
-        {'weight': None}
-        """
-        nodes = list(nodes)
-
-        if weights:
-            if len(nodes) != len(weights):
-                raise ValueError(
-                    "The number of elements in nodes and weights" "should be equal."
-                )
-            for index in range(len(nodes)):
-                self.add_node(node=nodes[index], weight=weights[index])
-        else:
-            for node in nodes:
-                self.add_node(node=node)
 
     def add_edge(self, u, v, weight=None):
         """
@@ -171,23 +87,23 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
-        >>> G.add_edge(u='Alice', v='Bob')
+        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_edge(u="Alice", v="Bob")
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
         EdgeView([('Alice', 'Bob')])
 
         When the node is not already present in the graph:
-        >>> G.add_edge(u='Alice', v='Ankur')
+        >>> G.add_edge(u="Alice", v="Ankur")
         >>> G.nodes()
         NodeView('Alice', 'Ankur', 'Bob', 'Charles'))
         >>> G.edges()
         EdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
-        >>> G.add_edge('Ankur', 'Maria', weight=0.1)
-        >>> G.edge['Ankur']['Maria']
+        >>> G.add_edge("Ankur", "Maria", weight=0.1)
+        >>> G.edge["Ankur"]["Maria"]
         {'weight': 0.1}
         """
         super(UndirectedGraph, self).add_edge(u, v, weight=weight)
@@ -216,26 +132,27 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
-        >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_edges_from(ebunch=[("Alice", "Bob"), ("Bob", "Charles")])
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
         EdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
 
         When the node is not already in the model:
-        >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
+        >>> G.add_edges_from(ebunch=[("Alice", "Ankur")])
         >>> G.nodes()
         NodeView(('Alice', 'Ankur', 'Charles', 'Bob'))
         >>> G.edges()
         EdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
 
         Adding edges with weights:
-        >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
-        ...                  weights=[0.3, 0.5])
-        >>> G.edge['Ankur']['Maria']
+        >>> G.add_edges_from(
+        ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
+        ... )
+        >>> G.edge["Ankur"]["Maria"]
         {'weight': 0.3}
-        >>> G.edge['Maria']['Mason']
+        >>> G.edge["Maria"]["Mason"]
         {'weight': 0.5}
         """
         ebunch = list(ebunch)
@@ -263,17 +180,26 @@ class UndirectedGraph(nx.Graph):
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'),
-                                        ('B', 'E'), ('D', 'E'), ('E', 'F'),
-                                        ('D', 'F'), ('B', 'F')])
-        >>> G.is_clique(nodes=['A', 'B', 'C', 'D'])
+        >>> G = UndirectedGraph(
+        ...     ebunch=[
+        ...         ("A", "B"),
+        ...         ("C", "B"),
+        ...         ("B", "D"),
+        ...         ("B", "E"),
+        ...         ("D", "E"),
+        ...         ("E", "F"),
+        ...         ("D", "F"),
+        ...         ("B", "F"),
+        ...     ]
+        ... )
+        >>> G.is_clique(nodes=["A", "B", "C", "D"])
         False
-        >>> G.is_clique(nodes=['B', 'D', 'E', 'F'])
+        >>> G.is_clique(nodes=["B", "D", "E", "F"])
         True
 
         Since B, D, E and F are clique, any subset of these should also
         be clique.
-        >>> G.is_clique(nodes=['D', 'E', 'B'])
+        >>> G.is_clique(nodes=["D", "E", "B"])
         True
         """
         for node1, node2 in itertools.combinations(nodes, 2):
@@ -293,11 +219,12 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_edges_from(ebunch=[('x1', 'x2'), ('x1', 'x3'),
-        ...                          ('x2', 'x4'), ('x3', 'x4')])
+        >>> G.add_edges_from(
+        ...     ebunch=[("x1", "x2"), ("x1", "x3"), ("x2", "x4"), ("x3", "x4")]
+        ... )
         >>> G.is_triangulated()
         False
-        >>> G.add_edge(u='x1', v='x4')
+        >>> G.add_edge(u="x1", v="x4")
         >>> G.is_triangulated()
         True
         """

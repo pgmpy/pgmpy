@@ -10,7 +10,7 @@ from pgmpy.global_vars import logger
 from pgmpy.utils.parser import parse_lavaan
 
 
-class SEMGraph(DAG):
+class SEMGraph:
     """
     Base class for graphical representation of Structural Equation Models(SEMs).
 
@@ -44,23 +44,38 @@ class SEMGraph(DAG):
     Defining a model (Union sentiment model[1]) without setting any paramaters:
 
     >>> from pgmpy.models import SEMGraph
-    >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
-    ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
-    ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
-    ...                latents=[],
-    ...                err_corr=[('yrsmill', 'age')],
-    ...                err_var={})
+    >>> sem = SEMGraph(
+    ...     ebunch=[
+    ...         ("deferenc", "unionsen"),
+    ...         ("laboract", "unionsen"),
+    ...         ("yrsmill", "unionsen"),
+    ...         ("age", "deferenc"),
+    ...         ("age", "laboract"),
+    ...         ("deferenc", "laboract"),
+    ...     ],
+    ...     latents=[],
+    ...     err_corr=[("yrsmill", "age")],
+    ...     err_var={},
+    ... )
 
     Defining a model (Education [2]) with all the parameters set. For not setting any
     parameter `np.nan` can be explicitly passed.
 
-    >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
-    ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
-    ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
-    ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
-    ...                    latents=['intelligence', 'academic'],
-    ...                    err_corr=[],
-    ...                    err_var={'intelligence': 1})
+    >>> sem_edu = SEMGraph(
+    ...     ebunch=[
+    ...         ("intelligence", "academic", 0.8),
+    ...         ("intelligence", "scale_1", 0.7),
+    ...         ("intelligence", "scale_2", 0.64),
+    ...         ("intelligence", "scale_3", 0.73),
+    ...         ("intelligence", "scale_4", 0.82),
+    ...         ("academic", "SAT_score", 0.98),
+    ...         ("academic", "High_school_gpa", 0.75),
+    ...         ("academic", "ACT_score", 0.87),
+    ...     ],
+    ...     latents=["intelligence", "academic"],
+    ...     err_corr=[],
+    ...     err_var={"intelligence": 1},
+    ... )
 
     References
     ----------
@@ -132,6 +147,15 @@ class SEMGraph(DAG):
 
         self.full_graph_struct = self._get_full_graph_struct()
 
+    def _variable_name_contains_non_string(self):
+        """
+        Checks if the variable names contain any non-string values. Used only for CausalInference class.
+        """
+        for node in list(self.graph.nodes()):
+            if not isinstance(node, str):
+                return (node, type(node))
+        return False
+
     def _get_full_graph_struct(self):
         """
         Creates a directed graph by joining `self.graph` and `self.err_graph`.
@@ -147,11 +171,18 @@ class SEMGraph(DAG):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
-        ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
-        ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
-        ...                latents=[],
-        ...                err_corr=[('yrsmill', 'age')])
+        >>> sem = SEMGraph(
+        ...     ebunch=[
+        ...         ("deferenc", "unionsen"),
+        ...         ("laboract", "unionsen"),
+        ...         ("yrsmill", "unionsen"),
+        ...         ("age", "deferenc"),
+        ...         ("age", "laboract"),
+        ...         ("deferenc", "laboract"),
+        ...     ],
+        ...     latents=[],
+        ...     err_corr=[("yrsmill", "age")],
+        ... )
         >>> sem._get_full_graph_struct()
         """
         full_graph = self.graph.copy()
@@ -173,9 +204,16 @@ class SEMGraph(DAG):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
-        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
-        ...                  latents=['xi1', 'eta1'])
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("xi1", "eta1"),
+        ...         ("xi1", "x1"),
+        ...         ("xi1", "x2"),
+        ...         ("eta1", "y1"),
+        ...         ("eta1", "y2"),
+        ...     ],
+        ...     latents=["xi1", "eta1"],
+        ... )
         >>> model.get_scaling_indicators()
         {'xi1': 'x1', 'eta1': 'y1'}
 
@@ -217,12 +255,19 @@ class SEMGraph(DAG):
         Examples
         --------
         >>> from pgmpy.models import SEM
-        >>> model = SEMGraph(ebunch=[('yrsmill', 'unionsen'), ('age', 'laboract'),
-        ...                          ('age', 'deferenc'), ('deferenc', 'laboract'),
-        ...                          ('deferenc', 'unionsen'), ('laboract', 'unionsen')],
-        ...                  latents=[],
-        ...                  err_corr=[('yrsmill', 'age')])
-        >>> model.active_trail_nodes('age')
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("yrsmill", "unionsen"),
+        ...         ("age", "laboract"),
+        ...         ("age", "deferenc"),
+        ...         ("deferenc", "laboract"),
+        ...         ("deferenc", "unionsen"),
+        ...         ("laboract", "unionsen"),
+        ...     ],
+        ...     latents=[],
+        ...     err_corr=[("yrsmill", "age")],
+        ... )
+        >>> model.active_trail_nodes("age")
 
         Returns
         -------
@@ -346,7 +391,9 @@ class SEMGraph(DAG):
             nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})
         ).copy()
 
-        # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+        # Optimization: Remove all error nodes which don't
+        #  have any correlation as it doesn't add any new path.
+        #  If not removed it can create a lot of
         # extra paths resulting in a much higher runtime.
         err_nodes_to_remove = set(self.err_graph.nodes()) - set(
             [node for edge in self.err_graph.edges() for node in edge]
@@ -384,7 +431,7 @@ class SEMGraph(DAG):
             return None
 
     def to_lisrel(self):
-        """
+        r"""
         Converts the model from a graphical representation to an equivalent algebraic
         representation. This converts the model into a Reticular Action Model (RAM) model
         representation which is implemented by `pgmpy.models.SEMAlg` class.
@@ -396,12 +443,19 @@ class SEMGraph(DAG):
         Examples
         --------
         >>> from pgmpy.models import SEM
-        >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
-        ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
-        ...                              ('age', 'laboract'), ('deferenc', 'laboract')],
-        ...                      latents=[],
-        ...                      err_corr=[('yrsmill', 'age')],
-        ...                      err_var={})
+        >>> sem = SEM.from_graph(
+        ...     ebunch=[
+        ...         ("deferenc", "unionsen"),
+        ...         ("laboract", "unionsen"),
+        ...         ("yrsmill", "unionsen"),
+        ...         ("age", "deferenc"),
+        ...         ("age", "laboract"),
+        ...         ("deferenc", "laboract"),
+        ...     ],
+        ...     latents=[],
+        ...     err_corr=[("yrsmill", "age")],
+        ...     err_var={},
+        ... )
         >>> sem.to_lisrel()
         # TODO: Complete this.
 
@@ -442,7 +496,7 @@ class SEMGraph(DAG):
 
     @staticmethod
     def __standard_lisrel_masks(graph, err_graph, weight, var):
-        """
+        r"""
         This method is called by `get_fixed_masks` and `get_masks` methods.
 
         Parameters
@@ -939,23 +993,38 @@ class SEM(SEMGraph):
         Defining a model (Union sentiment model[1]) without setting any paramaters.
 
         >>> from pgmpy.models import SEM
-        >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
-        ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
-        ...                              ('age', 'laboract'), ('deferenc', 'laboract')],
-        ...                      latents=[],
-        ...                      err_corr=[('yrsmill', 'age')],
-        ...                      err_var={})
+        >>> sem = SEM.from_graph(
+        ...     ebunch=[
+        ...         ("deferenc", "unionsen"),
+        ...         ("laboract", "unionsen"),
+        ...         ("yrsmill", "unionsen"),
+        ...         ("age", "deferenc"),
+        ...         ("age", "laboract"),
+        ...         ("deferenc", "laboract"),
+        ...     ],
+        ...     latents=[],
+        ...     err_corr=[("yrsmill", "age")],
+        ...     err_var={},
+        ... )
 
         Defining a model (Education [2]) with all the parameters set. For not setting any
         parameter `np.nan` can be explicitly passed.
 
-        >>> sem_edu = SEM.from_graph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
-        ...                                  ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
-        ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
-        ...                                  ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
-        ...                          latents=['intelligence', 'academic'],
-        ...                          err_corr=[],
-        ...                          err_var={})
+        >>> sem_edu = SEM.from_graph(
+        ...     ebunch=[
+        ...         ("intelligence", "academic", 0.8),
+        ...         ("intelligence", "scale_1", 0.7),
+        ...         ("intelligence", "scale_2", 0.64),
+        ...         ("intelligence", "scale_3", 0.73),
+        ...         ("intelligence", "scale_4", 0.82),
+        ...         ("academic", "SAT_score", 0.98),
+        ...         ("academic", "High_school_gpa", 0.75),
+        ...         ("academic", "ACT_score", 0.87),
+        ...     ],
+        ...     latents=["intelligence", "academic"],
+        ...     err_corr=[],
+        ...     err_var={},
+        ... )
 
         References
         ----------

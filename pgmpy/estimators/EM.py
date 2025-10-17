@@ -1,5 +1,6 @@
 from itertools import chain, product
 from math import log
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,11 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
+from pgmpy.estimators import (
+    BayesianEstimator,
+    MaximumLikelihoodEstimator,
+    ParameterEstimator,
+)
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
@@ -45,13 +50,22 @@ class ExpectationMaximization(ParameterEstimator):
     >>> import pandas as pd
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.estimators import ExpectationMaximization
-    >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-    ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(low=0, high=2, size=(1000, 5)),
+    ...     columns=["A", "B", "C", "D", "E"],
+    ... )
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+    ... )
     >>> estimator = ExpectationMaximization(model, data)
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Union[DAG, DiscreteBayesianNetwork],
+        data: pd.DataFrame,
+        **kwargs,
+    ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork"
@@ -83,13 +97,14 @@ class ExpectationMaximization(ParameterEstimator):
 
         if dropped_rows_count:
             logger.warning(
-                f"{dropped_rows_count} rows with missing values in partially missing columns were dropped from the dataset."
+                f"{dropped_rows_count} rows with missing values in partially "
+                "missing columns were dropped from the dataset."
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
-    def _get_log_likelihood(self, datapoint):
+    def _get_log_likelihood(self, datapoint: Dict[str, Any]) -> float:
         """
         Computes the likelihood of a given datapoint. Goes through each
         CPD matching the combination of states to get the value and multiplies
@@ -113,10 +128,14 @@ class ExpectationMaximization(ParameterEstimator):
         return likelihood
 
     def _parallel_compute_weights(
-        self, data_unique, latent_card, n_counts, offset, batch_size
-    ):
-        cache = []
-
+        self,
+        data_unique: pd.DataFrame,
+        latent_card: Dict[str, int],
+        n_counts: Dict[Tuple, int],
+        offset: int,
+        batch_size: int,
+    ) -> pd.DataFrame:
+        cache: List[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
@@ -135,7 +154,12 @@ class ExpectationMaximization(ParameterEstimator):
 
         return pd.concat(cache, copy=False)
 
-    def _compute_weights(self, n_jobs, latent_card, batch_size):
+    def _compute_weights(
+        self,
+        n_jobs: int,
+        latent_card: Dict[str, int],
+        batch_size: int,
+    ) -> pd.DataFrame:
         """
         For each data point, creates extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
@@ -155,7 +179,11 @@ class ExpectationMaximization(ParameterEstimator):
 
         return pd.concat(cache, copy=False)
 
-    def _is_converged(self, new_cpds, atol=1e-08):
+    def _is_converged(
+        self,
+        new_cpds: List[TabularCPD],
+        atol: float = 1e-08,
+    ) -> bool:
         """
         Checks if the values of `new_cpds` is within tolerance limits of current
         model cpds.
@@ -167,15 +195,17 @@ class ExpectationMaximization(ParameterEstimator):
 
     def get_parameters(
         self,
-        latent_card=None,
-        max_iter=100,
-        atol=1e-08,
-        n_jobs=1,
-        batch_size=1000,
-        seed=None,
-        init_cpds={},
-        show_progress=True,
-    ):
+        latent_card: Optional[Dict[str, int]] = None,
+        apply_smoothing: bool = False,
+        max_iter: int = 100,
+        atol: float = 1e-08,
+        n_jobs: int = 1,
+        batch_size: int = 1000,
+        seed: Optional[int] = None,
+        init_cpds: Union[Dict[str, TabularCPD], str] = {},
+        show_progress: bool = True,
+        **kwargs,
+    ) -> List[TabularCPD]:
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -185,6 +215,12 @@ class ExpectationMaximization(ParameterEstimator):
             A dictionary of the form {latent_var: cardinality} specifying the
             cardinality (number of states) of each latent variable. If None,
             assumes `2` states for each latent variable.
+
+        apply_smoothing: bool (default: False)
+            If True, `prior_type` and any additional arguments related to it
+            needs to be specified. Please refer
+            `BayesianEstimator.get_parameters` method for more details on which
+            arguments need to be specified.
 
         max_iter: int (default: 100)
             The maximum number of iterations the algorithm is allowed to run for.
@@ -228,15 +264,21 @@ class ExpectationMaximization(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
-        >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
-        ...                       columns=['A', 'C', 'D'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 3)),
+        ...     columns=["A", "C", "D"],
+        ... )
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
+        ... )
         >>> estimator = EM(model, data)
-        >>> estimator.get_parameters(latent_card={'B': 3})
-        [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
-        <TabularCPD representing P(B:3 | C:2, A:2) at 0x7f7b4dfd4da0>,
-        <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
-        <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
+        >>> params = estimator.get_parameters(latent_card={"B": 3})
+        >>> # Sorting the CPDs by variable name to ensure consistent order for doctest comparison
+        >>> sorted(params, key=lambda cpd: cpd.variable)
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
+         <TabularCPD representing P(C:2) at 0x...>,
+         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
         # Step 1: Parameter checks
         if latent_card is None:
@@ -300,13 +342,19 @@ class ExpectationMaximization(ParameterEstimator):
             - set(init_cpds.keys())
         )
 
-        mle = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
-        mle.model = self.model
-        mle.data = self.data
-        mle.state_names = self.state_names
+        if apply_smoothing:
+            estimator = BayesianEstimator.__new__(BayesianEstimator)
+            estimator.model = self.model
+            estimator.data = self.data
+            estimator.state_names = self.state_names
+        else:
+            estimator = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
+            estimator.model = self.model
+            estimator.data = self.data
+            estimator.state_names = self.state_names
 
         for var in fixed_cpd_vars:
-            fixed_cpds.append(mle.estimate_cpd(var))
+            fixed_cpds.append(estimator.estimate_cpd(var))
 
         # Step 3.2: Randomly initialize the CPDs involving latent variables if init_cpds is not specified.
         latent_cpds = []
@@ -336,7 +384,7 @@ class ExpectationMaximization(ParameterEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
 
-        mle.model = self.model_copy
+        estimator.model = self.model_copy
         # Step 4: Run the EM algorithm.
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
@@ -344,9 +392,9 @@ class ExpectationMaximization(ParameterEstimator):
             weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = fixed_cpds.copy()
-            mle.data = weighted_data
+            estimator.data = weighted_data
             for var in vars_with_latents.union(set(init_cpds.keys())):
-                new_cpds.append(mle.estimate_cpd(var, weighted=True))
+                new_cpds.append(estimator.estimate_cpd(var, weighted=True, **kwargs))
 
             # Step 4.3: Check of convergence and max_iter
             if self._is_converged(new_cpds, atol=atol):

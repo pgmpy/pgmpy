@@ -69,7 +69,8 @@ class XDSLReader(object):
         for var in variables:
             if isinstance(var, str) and (" " in var):
                 raise ValueError(
-                    f"XDSLReader does not support models with node names that contain whitespaces. Failed to process node: {var}"
+                    f"XDSLReader does not support models with node names"
+                    f" that contain whitespaces. Failed to process node: {var}"
                 )
 
         return variables
@@ -257,9 +258,9 @@ class XDSLWriter(object):
     ---------
     >>> from pgmpy.readwrite import XDSLWriter
     >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model('asia')
+    >>> asia = get_example_model("asia")
     >>> writer = XDSLWriter(asia)
-    >>> writer.write_xdsl('asia.xdsl')
+    >>> writer.write("asia.xdsl")
 
     Reference
     ---------
@@ -321,7 +322,7 @@ class XDSLWriter(object):
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
                 logger.warning(
-                    f" Node '{var}' contains whitespaces. This could cause issues, especially when using pgmpy.readwrite.XDSLReader"
+                    f" Node '{var}' contains whitespaces. This can create issues when loading the model. "
                 )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
@@ -358,8 +359,15 @@ class XDSLWriter(object):
             cpt_elem = self.variables[var]
             states = cpd.state_names[cpd.variable]
 
+            # Check for commas in state names and warn if found
             for st in states:
-                etree.SubElement(cpt_elem, "state", {"id": str(st)})
+                st_str = str(st)
+                if "," in st_str:
+                    logger.warning(
+                        f"State name '{st_str}' for variable '{var}' contains commas. "
+                        "This may cause issues when loading the file. Consider removing any special characters."
+                    )
+                etree.SubElement(cpt_elem, "state", {"id": st_str})
 
             evidence = cpd.variables
             if len(evidence) > 1:
@@ -371,7 +379,8 @@ class XDSLWriter(object):
             probs_elem = etree.SubElement(cpt_elem, "probabilities")
             values = cpd.get_values()
 
-            # Flatten in column-major order so that for each parent configuration the probabilities for all states are listed.
+            # Flatten in column-major order so that for each parent
+            #  configuration the probabilities for all states are listed.
             flat_values = compat_fns.ravel_f(values)
             probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
 
@@ -415,7 +424,7 @@ class XDSLWriter(object):
             # Provide random position to each node.
             pos_x, pos_y = random.randint(0, 100), random.randint(0, 100)
             pos_elem = etree.SubElement(node_elem, "position")
-            pos_elem.text = f"{pos_x} {pos_y} {pos_x+72} {pos_y+48}"
+            pos_elem.text = f"{pos_x} {pos_y} {pos_x + 72} {pos_y + 48}"
 
             etree.SubElement(
                 node_elem,
@@ -423,7 +432,7 @@ class XDSLWriter(object):
                 {"active": "true", "width": "128", "height": "128"},
             )
 
-    def write_xdsl(self, filename=None):
+    def write(self, filename=None):
         """
         Write the xdsl data into the file.
 
@@ -435,9 +444,9 @@ class XDSLWriter(object):
         --------
         >>> from pgmpy.readwrite import XDSLWriter
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+        >>> model = get_example_model("asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.write_xdsl('asia.xdsl')
+        >>> writer.write("asia.xdsl")
         """
         xml_str = etree.tostring(self.root, encoding=self.encoding)
         parsed = md.parseString(xml_str)
@@ -446,3 +455,9 @@ class XDSLWriter(object):
         if filename is not None:
             with open(filename, "wb") as f:
                 f.write(pretty_xml_str)
+
+    def write_xdsl(self, filename):
+        logger.warning(
+            "The `XDSLWriter.write_xdsl` has been deprecated. Please use `XDSLWriter.write` instead."
+        )
+        self.write(filename)

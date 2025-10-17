@@ -13,13 +13,17 @@ class StateNameMixin:
         -------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> sn = {'speed': ['low', 'medium', 'high'],
-        ...       'switch': ['on', 'off'],
-        ...       'time': ['day', 'night']}
-        >>> phi = DiscreteFactor(variables=['speed', 'switch', 'time'],
-        ...                      cardinality=[3, 2, 2],
-        ...                      values=np.ones(12),
-        ...                      state_names=sn)
+        >>> sn = {
+        ...     "speed": ["low", "medium", "high"],
+        ...     "switch": ["on", "off"],
+        ...     "time": ["day", "night"],
+        ... }
+        >>> phi = DiscreteFactor(
+        ...     variables=["speed", "switch", "time"],
+        ...     cardinality=[3, 2, 2],
+        ...     values=np.ones(12),
+        ...     state_names=sn,
+        ... )
         >>> print(phi.state_names)
         """
         if state_names:
@@ -73,7 +77,8 @@ class StateNameMixin:
                 return self.name_to_no[var][state_name]
             except KeyError:
                 raise KeyError(
-                    f"state: {state_name} is an unknown for variable: {var}. It must be one of {list(self.name_to_no[var].keys())}"
+                    f"state: {state_name} is an unknown for variable: {var}."
+                    f" It must be one of {list(self.name_to_no[var].keys())}"
                 )
         else:
             return state_name

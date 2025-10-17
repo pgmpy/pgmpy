@@ -2,8 +2,10 @@
 
 import numbers
 from itertools import chain
+from typing import Any, Dict, Hashable, List, Optional, Union
 
 import numpy as np
+import pandas as pd
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
@@ -19,7 +21,12 @@ class BayesianEstimator(ParameterEstimator):
     See `MaximumLikelihoodEstimator` for constructor parameters.
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Union[DAG, DiscreteBayesianNetwork],
+        data: pd.DataFrame,
+        **kwargs,
+    ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for DAG or DiscreteBayesianNetwork"
@@ -28,23 +35,26 @@ class BayesianEstimator(ParameterEstimator):
         else:
             if len(model.latents) != 0:
                 raise ValueError(
-                    f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+                    f"Bayesian Parameter Estimation works only "
+                    f"on models with all observed variables. Found latent variables: {model.latents}"
                 )
 
             elif isinstance(model, DAG):
-                model = DiscreteBayesianNetwork(model.edges())
-                model.add_nodes_from(model.nodes())
+                edges = model.edges()
+                nodes = model.nodes()
+                model = DiscreteBayesianNetwork(edges)
+                model.add_nodes_from(nodes)
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(
         self,
-        prior_type="BDeu",
-        equivalent_sample_size=5,
-        pseudo_counts=None,
-        n_jobs=1,
-        weighted=False,
-    ):
+        prior_type: str = "BDeu",
+        equivalent_sample_size: Union[int, Dict[Any, int]] = 5,
+        pseudo_counts: Optional[Union[int, Dict[Any, np.ndarray]]] = None,
+        n_jobs: int = 1,
+        weighted: bool = False,
+    ) -> List[TabularCPD]:
         """
         Method to estimate the model parameters (CPDs).
 
@@ -92,18 +102,21 @@ class BayesianEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = DiscreteBayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
+        >>> np.random.seed(42)
+        >>> values = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...     columns=["A", "B", "C", "D"],
+        ... )
+        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = BayesianEstimator(model, values)
-        >>> estimator.get_parameters(prior_type='BDeu', equivalent_sample_size=5)
-        [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
-        <TabularCPD representing P(B:2 | C:2, A:2) at 0x7f7b4dfd4da0>,
-        <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
-        <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
+        >>> estimator.get_parameters(prior_type="BDeu", equivalent_sample_size=5)
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
+         <TabularCPD representing P(C:2) at 0x...>,
+         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
 
-        def _get_node_param(node):
+        def _get_node_param(node: Hashable) -> TabularCPD:
             _equivalent_sample_size = (
                 equivalent_sample_size[node]
                 if isinstance(equivalent_sample_size, dict)
@@ -133,12 +146,12 @@ class BayesianEstimator(ParameterEstimator):
 
     def estimate_cpd(
         self,
-        node,
-        prior_type="BDeu",
-        pseudo_counts=[],
-        equivalent_sample_size=5,
-        weighted=False,
-    ):
+        node: Hashable,
+        prior_type: str = "BDeu",
+        pseudo_counts: Union[List[List[float]], np.ndarray, float, int] = [],
+        equivalent_sample_size: Union[int, float] = 5,
+        weighted: bool = False,
+    ) -> TabularCPD:
         """
         Method to estimate the CPD for a given variable.
 
@@ -177,23 +190,24 @@ class BayesianEstimator(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
-        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([('A', 'C'), ('B', 'C')])
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
         >>> estimator = BayesianEstimator(model, data)
-        >>> cpd_C = estimator.estimate_cpd('C', prior_type="dirichlet",
-        ...                                pseudo_counts=[[1, 1, 1, 1],
-        ...                                               [2, 2, 2, 2]])
+        >>> cpd_C = estimator.estimate_cpd(
+        ...     node="C",
+        ...     prior_type="dirichlet",
+        ...     pseudo_counts=[[1, 1, 1, 1], [2, 2, 2, 2]],
+        ... )
         >>> print(cpd_C)
-        ╒══════╤══════╤══════╤══════╤════════════════════╕
-        │ A    │ A(0) │ A(0) │ A(1) │ A(1)               │
-        ├──────┼──────┼──────┼──────┼────────────────────┤
-        │ B    │ B(0) │ B(1) │ B(0) │ B(1)               │
-        ├──────┼──────┼──────┼──────┼────────────────────┤
-        │ C(0) │ 0.25 │ 0.25 │ 0.5  │ 0.3333333333333333 │
-        ├──────┼──────┼──────┼──────┼────────────────────┤
-        │ C(1) │ 0.75 │ 0.75 │ 0.5  │ 0.6666666666666666 │
-        ╘══════╧══════╧══════╧══════╧════════════════════╛
-
+        +------+------+------+------+--------------------+
+        | A    | A(0) | A(0) | A(1) | A(1)               |
+        +------+------+------+------+--------------------+
+        | B    | B(0) | B(1) | B(0) | B(1)               |
+        +------+------+------+------+--------------------+
+        | C(0) | 0.25 | 0.25 | 0.5  | 0.3333333333333333 |
+        +------+------+------+------+--------------------+
+        | C(1) | 0.75 | 0.75 | 0.5  | 0.6666666666666666 |
+        +------+------+------+------+--------------------+
         """
         node_cardinality = len(self.state_names[node])
         parents = sorted(self.model.get_parents(node))
@@ -211,7 +225,8 @@ class BayesianEstimator(ParameterEstimator):
             and (prior_type != "dirichlet")
         ):
             logger.warning(
-                f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
+                f"pseudo count specified with {prior_type} prior. It will be ignored, "
+                "use dirichlet prior for specifying pseudo_counts"
             )
 
         if prior_type == "k2":

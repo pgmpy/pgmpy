@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from itertools import chain, combinations, product
+from itertools import chain, product
 
 import networkx as nx
 import numpy as np
@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.global_vars import logger
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -34,9 +35,7 @@ class CausalInference(object):
     Create a small Bayesian Network.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> game = DiscreteBayesianNetwork([('X', 'A'),
-    ...                                 ('A', 'Y'),
-    ...                                 ('A', 'B')])
+    >>> game = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
 
     Load the graph into the CausalInference object to make causal queries.
 
@@ -69,7 +68,10 @@ class CausalInference(object):
         bad_variable = model._variable_name_contains_non_string()
         if bad_variable != False:
             raise NotImplementedError(
-                f"Causal Inference is only implemented for a model with variable names with string type. Found {bad_variable[0]} with type {bad_variable[1]}. Convert them to string to proceed."
+                f"Causal Inference is only implemented for a model with "
+                "variable names with string type. "
+                f"Found {bad_variable[0]} with type {bad_variable[1]}. "
+                "Convert them to string to proceed."
             )
 
         # Initialize data structures.
@@ -123,13 +125,16 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> inference = CausalInference(game1)
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
+        )
+
         Z_ = _variable_or_iterable_to_set(Z)
 
         observed = [X] + list(Z_)
@@ -142,7 +147,8 @@ class CausalInference(object):
         """
         Returns a list of all adjustment sets per the back-door criterion.
 
-        A set of variables Z satisfies the back-door criterion relative to an ordered pair of variabies (Xi, Xj) in a DAG G if:
+        A set of variables Z satisfies the back-door criterion relative
+          to an ordered pair of variabies (Xi, Xj) in a DAG G if:
             (i) no node in Z is a descendant of Xi; and
             (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
 
@@ -163,13 +169,16 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Adjustment class instead."
+        )
+
         try:
             assert X in self.observed_variables
             assert Y in self.observed_variables
@@ -219,6 +228,10 @@ class CausalInference(object):
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
+        )
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
@@ -273,6 +286,10 @@ class CausalInference(object):
         -------
         frozenset: a frozenset of frozensets
         """
+        logger.warning(
+            "Deprecation Warning: This method will be deprecated in future releases. "
+            "Please use pgmpy.identification.Frontdoor class instead."
+        )
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
@@ -297,9 +314,16 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
-        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
-        ...                  latents=['xi1', 'eta1'])
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("xi1", "eta1"),
+        ...         ("xi1", "x1"),
+        ...         ("xi1", "x2"),
+        ...         ("eta1", "y1"),
+        ...         ("eta1", "y2"),
+        ...     ],
+        ...     latents=["xi1", "eta1"],
+        ... )
         >>> model.get_scaling_indicators()
         {'xi1': 'x1', 'eta1': 'y1'}
 
@@ -341,11 +365,19 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
-        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
-        ...                  latents=['xi1', 'eta1'])
-        >>> model._iv_transformations('xi1', 'eta1',
-        ...                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
+        >>> model = SEMGraph(
+        ...     ebunch=[
+        ...         ("xi1", "eta1"),
+        ...         ("xi1", "x1"),
+        ...         ("xi1", "x2"),
+        ...         ("eta1", "y1"),
+        ...         ("eta1", "y2"),
+        ...     ],
+        ...     latents=["xi1", "eta1"],
+        ... )
+        >>> model._iv_transformations(
+        ...     "xi1", "eta1", scaling_indicators={"xi1": "x1", "eta1": "y1"}
+        ... )
         """
         full_graph = self.dag.copy()
 
@@ -400,10 +432,10 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y')],
-        ...                  latents=[],
-        ...                  err_corr=[('X', 'Y')])
-        >>> model.get_ivs('X', 'Y')
+        >>> model = SEMGraph(
+        ...     ebunch=[("I", "X"), ("X", "Y")], latents=[], err_corr=[("X", "Y")]
+        ... )
+        >>> model.get_ivs("X", "Y")
         {'I'}
         """
         if not scaling_indicators:
@@ -470,10 +502,12 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
-        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y'), ('W', 'I')],
-        ...                  latents=[],
-        ...                  err_corr=[('W', 'Y')])
-        >>> model.get_ivs('X', 'Y')
+        >>> model = SEMGraph(
+        ...     ebunch=[("I", "X"), ("X", "Y"), ("W", "I")],
+        ...     latents=[],
+        ...     err_corr=[("W", "Y")],
+        ... )
+        >>> model.get_ivs("X", "Y")
         [('I', {'W'})]
         """
         if not scaling_indicators:
@@ -623,7 +657,9 @@ class CausalInference(object):
         ).copy()
 
         if isinstance(self.model, SEMGraph):
-            # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+            # Optimization: Remove all error nodes which don't have
+            #  any correlation as it doesn't add any new path.
+            #  If not removed it can create a lot of
             # extra paths resulting in a much higher runtime.
             err_nodes_to_remove = set(self.model.err_graph.nodes()) - set(
                 [node for edge in self.model.err_graph.edges() for node in edge]
@@ -730,10 +766,10 @@ class CausalInference(object):
         Examples
         --------
         >>> import pandas as pd
-        >>> game1 = DiscreteBayesianNetwork([('X', 'A'),
-        ...                          ('A', 'Y'),
-        ...                          ('A', 'B')])
-        >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
+        >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"]
+        ... )
         >>> inference = CausalInference(model=game1)
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         """
@@ -794,15 +830,19 @@ class CausalInference(object):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
-        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        ... )
         >>> c_infer = CausalInference(model)
         >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7fba501ad940>
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+         "Complete graphical characterization and construction of
+         adjustment sets in Markov equivalence classes of ancestral graphs."
+           The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         if isinstance(X, str):
             X = [X]
@@ -849,15 +889,21 @@ class CausalInference(object):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = DiscreteBayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
-        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        ... )
         >>> c_infer = CausalInference(model)
-        >>> c_infer.is_valid_adjustment_set(X=['x1', 'x2'], Y=['y1', 'y2'], adjustment_set=['z1', 'z2'])
+        >>> c_infer.is_valid_adjustment_set(
+        ...     X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
+        ... )
         True
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+          "Complete graphical characterization and construction of
+            adjustment sets in Markov equivalence classes of ancestral graphs."
+              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         if isinstance(X, str):
             X = [X]
@@ -900,7 +946,10 @@ class CausalInference(object):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        [1] Perkovic, Emilija, et al.
+          "Complete graphical characterization and construction of
+            adjustment sets in Markov equivalence classes of ancestral graphs."
+              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)
@@ -956,9 +1005,9 @@ class CausalInference(object):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('alarm')
+        >>> model = get_example_model("alarm")
         >>> infer = CausalInference(model)
-        >>> infer.query(['HISTORY'], do={'CVP': 'LOW'}, evidence={'HR': 'LOW'})
+        >>> infer.query(["HISTORY"], do={"CVP": "LOW"}, evidence={"HR": "LOW"})
         <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.
@@ -968,7 +1017,7 @@ class CausalInference(object):
             )
         elif not all([node in self.model.nodes() for node in variables]):
             raise ValueError(
-                f"Some of the variables in `variables` are not in the model."
+                "Some of the variables in `variables` are not in the model."
             )
         else:
             variables = list(variables)
@@ -990,8 +1039,10 @@ class CausalInference(object):
             for var, do_var in product(variables, do):
                 if do_var in nx.descendants(self.dag, var):
                     raise ValueError(
-                        f"Invalid causal query: There is a direct edge from the query variable '{var}' to the intervention variable '{do_var}'. "
-                        f"In causal inference, you can typically only query the effect on variables that are descendants of the intervention."
+                        f"Invalid causal query: There is a direct edge from the query variable"
+                        f" '{var}' to the intervention variable '{do_var}'. "
+                        f"In causal inference, you can typically only query the effect on variables"
+                        f" that are descendants of the intervention."
                     )
 
         from pgmpy.inference import Inference
@@ -1006,7 +1057,8 @@ class CausalInference(object):
             inference_algo = BeliefPropagation
         elif not isinstance(inference_algo, Inference):
             raise ValueError(
-                f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
+                f"inference_algo must be one of: 've', 'bp', or an "
+                f"instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.

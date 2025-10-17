@@ -1,8 +1,13 @@
+import os
+import tempfile
 import unittest
 
 import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import NETReader, NETWriter
 from pgmpy.utils import compat_fns, get_example_model
 
@@ -111,35 +116,27 @@ class TestNETWriter(unittest.TestCase):
 }
 node asia{
     states = ("yes"  "no");
-    weight = None;
 }
 node bronc{
     states = ("yes"  "no");
-    weight = None;
 }
 node dysp{
     states = ("yes"  "no");
-    weight = None;
 }
 node either{
     states = ("yes"  "no");
-    weight = None;
 }
 node lung{
     states = ("yes"  "no");
-    weight = None;
 }
 node smoke{
     states = ("yes"  "no");
-    weight = None;
 }
 node tub{
     states = ("yes"  "no");
-    weight = None;
 }
 node xray{
     states = ("yes"  "no");
-    weight = None;
 }
 potential (asia |){
  data = (0.01 0.99);
@@ -179,6 +176,47 @@ potential (xray | either){
 }
 """
         self.assertEqual(str(self.writer), net)
+
+    def test_comma_state_name_warning(self):
+        # Create a minimal model with state names containing commas
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": ["state,1", "state,2"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["yes", "no"], "A": ["state,1", "state,2"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
+        # Test that warning is raised when writing
+        with self.assertLogs("pgmpy", level="WARNING") as cm:
+            writer = NETWriter(model)
+            with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
+                tmp_path = tmp.name
+            try:
+                writer.write_net(tmp_path)
+
+                # Verify the warning was logged
+                self.assertIn(
+                    "State name 'state,1' for variable 'A' contains commas. "
+                    "This may cause issues when loading the file. Consider removing any special characters.",
+                    cm.output[0],
+                )
+
+                # Verify that loading fails due to commas in state names
+                with self.assertRaises(ValueError):
+                    NETReader(tmp_path).get_model()
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
 
 
 class TestNETReader(unittest.TestCase):
@@ -384,6 +422,10 @@ class TestNETReader(unittest.TestCase):
         pass
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -481,35 +523,27 @@ class TestNETWriterTorch(unittest.TestCase):
 }
 node asia{
     states = ("yes"  "no");
-    weight = None;
 }
 node bronc{
     states = ("yes"  "no");
-    weight = None;
 }
 node dysp{
     states = ("yes"  "no");
-    weight = None;
 }
 node either{
     states = ("yes"  "no");
-    weight = None;
 }
 node lung{
     states = ("yes"  "no");
-    weight = None;
 }
 node smoke{
     states = ("yes"  "no");
-    weight = None;
 }
 node tub{
     states = ("yes"  "no");
-    weight = None;
 }
 node xray{
     states = ("yes"  "no");
-    weight = None;
 }
 potential (asia |){
  data = (0.01 0.99);
@@ -554,7 +588,11 @@ potential (xray | either){
         config.set_backend("numpy")
 
 
-class TestNETReader(unittest.TestCase):
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
+class TestNETReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 

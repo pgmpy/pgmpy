@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -7,7 +10,63 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.global_vars import logger
 from pgmpy.independencies import IndependenceAssertion
+from pgmpy.utils import get_dataset_type
 from pgmpy.utils.ci_test_utils import *
+
+
+def get_callable_ci_test(
+    test: Union[str, None, Callable], data: Optional[pd.DataFrame] = None
+) -> Callable:
+    # Step 0: If test is a callable, return itself.
+    if callable(test):
+        return test
+
+    # Step 1: Initialize some data structures.
+    supported_tests = {
+        "continuous": {
+            "pearsonr": pearsonr,
+            "gcm": gcm,
+        },
+        "discrete": {
+            "chi_square": chi_square,
+            "g_sq": g_sq,
+            "log_likelihood": log_likelihood,
+            "modified_log_likelihood": modified_log_likelihood,
+            "power_divergence": power_divergence,
+        },
+        "mixed": {
+            "pillai": pillai_trace,
+            "independence_match": independence_match,
+        },
+    }
+
+    flattened_supported_methods = {
+        key: value
+        for subdict in supported_tests.values()
+        for key, value in subdict.items()
+    }
+
+    # Step 2: If test is not specified, try to infer data type and return a suitable test
+    if test is None:
+        if data is not None:
+            var_type = get_dataset_type(data)
+            test = list(supported_tests[var_type].keys())[0]
+            return flattened_supported_methods[test]
+        else:
+            raise ValueError(
+                "Cannot determine a suitable CI test as data is None.",
+                "Please specify CI test to use",
+            )
+
+    # Step 3: If test is a string, check if it is a valid test and return the function.
+    elif isinstance(test, str):
+        test = test.lower()
+        if test not in list(flattened_supported_methods.keys()):
+            raise ValueError(
+                f"`ci_test` must either be one of {list(flattened_supported_methods.keys())}, or a callable. Got:{test}"
+            )
+        else:
+            return flattened_supported_methods[test]
 
 
 def hall_buckley_eagleson(eigenvalues, test_stat):
@@ -550,46 +609,7 @@ def rcot(
         return p_value >= significance_level
     else:
         return Sta, p_value
-
-
-def get_ci_test(test, full=False, data=None, independencies=None):
-    if callable(test):
-        return test
-
-    test = test.lower()
-    supported_tests = {
-        "chi_square": chi_square,
-        "g_sq": g_sq,
-        "log_likelihood": log_likelihood,
-        "modified_log_likelihood": modified_log_likelihood,
-        "pearsonr": pearsonr,
-        "pillai": pillai_trace,
-        "gcm": gcm,
-        "rcit": rcit,
-        "rcot": rcot,
-    }
-    if full:
-        supported_tests["power_divergence"] = power_divergence
-        supported_tests["independence_match"] = independence_match
-
-    if test not in supported_tests.keys():
-        raise ValueError(
-            f"ci_test must either be one of {list(supported_tests.keys())}, or a function. Got: {test}"
-        )
-
-    if full:
-        if test == "independence_match":
-            if independencies is None:
-                raise ValueError(
-                    "For using independence_match, independencies argument must be specified"
-                )
-        elif data is None:
-            raise ValueError(
-                "For using Chi Square or Pearsonr, data argument must be specified"
-            )
-
-    return supported_tests[test]
-
+      
 
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
@@ -667,14 +687,21 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> chi_square(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs
@@ -727,14 +754,19 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> g_sq(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> g_sq(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> g_sq(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> g_sq(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> g_sq(X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> g_sq(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -786,14 +818,23 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> log_likelihood(
+    ...     X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> log_likelihood(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> log_likelihood(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -841,14 +882,23 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> modified_log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> modified_log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> modified_log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> modified_log_likelihood(
+    ...     X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> modified_log_likelihood(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> modified_log_likelihood(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X,
@@ -913,20 +963,28 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     References
     ----------
-    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
+    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests."
+      Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
 
     Examples
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> chi_square(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
@@ -1066,8 +1124,7 @@ def _get_predictions(X, Y, Z, data, **kwargs):
         from xgboost import XGBClassifier, XGBRegressor
     except ImportError as e:
         raise ImportError(
-            e.msg
-            + ". xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
+            f"{e}. xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
         ) from None
 
     # Step 1: Check if any of the conditional variables are categorical
@@ -1159,9 +1216,16 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
-    [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for Covariates. Journal of the American Statistical Association.
-    [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate general linear hypothesis. Computational Statistics & Data Analysis.
+    [1] Ankan, Ankur, and Johannes Textor.
+        "A simple unified approach to testing high-dimensional"
+        "conditional independences for categorical and ordinal data."
+        Proceedings of the AAAI Conference on Artificial Intelligence.
+    [2] Li, C.; and Shepherd, B. E. 2010.
+      Test of Association Between Two Ordinal Variables While Adjusting for Covariates.
+      Journal of the American Statistical Association.
+    [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power
+      in testing the multivariate general linear hypothesis.
+      Computational Statistics & Data Analysis.
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -1270,7 +1334,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
 
     References
-        ----------
+    ----------
     [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised Covariance Measure".
     """
     # Step 1: Test if the inputs are correct
