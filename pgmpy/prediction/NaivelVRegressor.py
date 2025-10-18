@@ -8,7 +8,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     """
-    Naive Instrumental Variable (IV) regressor (single exposure, single instrument).
+    Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
 
     TO : DO
 
@@ -85,7 +85,15 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         and pretreatment variables, then fits the stage 2 estimator to predict the outcome
         variable from the predicted exposure and pretreatment variables.
         """
-        validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
+        validate_data(
+            self,
+            X,
+            y,
+            accept_sparse=False,
+            ensure_2d=True,
+            ensure_min_features=2,
+            dtype="numeric",
+        )
         stage1_estimator = clone(self.stage1_estimator)
         stage2_estimator = clone(self.stage2_estimator)
 
@@ -102,25 +110,15 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
                 f"NaiveIVRegressor requires exactly one outcome; got {len(outcome_vars)}"
             )
         if len(instrument_vars) < 1:
-            raise ValueError(
-                f"NaiveIVRegressor requires at least one instrument; got {len(instrument_vars)}"
-            )
+            raise ValueError("NaiveIVRegressor requires at least one instrument.")
 
         self.exposure_var_ = exposure_vars[0]
         self.outcome_var_ = outcome_vars[0]
         self.instrument_vars_ = instrument_vars
-        self.pretreatment_vars_ = list(self.causal_graph.get_role("pretreatment"))
+        self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
         self.feature_columns_ = (
             [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
         )
-
-        # Handles sklearn n_features_in_ check by raising appropriate msg
-        X_arr = np.array(X)
-        n_features = 1 if X_arr.ndim == 1 else X_arr.shape[1]
-        self.n_features_in_ = n_features
-        # Handle sklearn single-feature check
-        if n_features == 1 and len(self.feature_columns_) > 1:
-            raise ValueError("1 feature(s) (n_features = 1)")
 
         df = self._prepare_feature_df(X)
 
@@ -153,11 +151,8 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
 
         X_df = self._prepare_feature_df(X)
 
-        instrument_df = X_df[self.instrument_vars_]
+        exposure = X_df[self.exposure_var_]
         pre_treatment = X_df[self.pretreatment_vars_]
 
-        T_hat = self.stage1_est_.predict(instrument_df)
-        t_hat_2d = pd.DataFrame(T_hat.reshape(-1, 1))
-        covariates_df = pd.concat([t_hat_2d, pre_treatment], axis=1)
-        y_pred = self.stage2_est_.predict(covariates_df)
+        y_pred = self.stage2_est_.predict(pd.concat([exposure, pre_treatment], axis=1))
         return y_pred
