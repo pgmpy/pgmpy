@@ -259,6 +259,13 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
 
+    def get_edge_marks(self, u, v):
+
+        if self.has_edge(u, v):
+            return self.edges[u, v]["marks"]
+        else:
+            raise ValueError(f"There is no edge between {u} and {v}.")
+
     def get_neighbors(self, node, u_type=None, v_type=None):
         """
         Get neighbors of a node with optional edge mark constraints.
