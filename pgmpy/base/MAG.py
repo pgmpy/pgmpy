@@ -375,6 +375,7 @@ class MAG(AncestralBase):
 
         Examples
         --------
+        >>> from pgmpy.base import MAG
         >>> dag_str = '''dag {
         ... L -> A
         ... B -> C
@@ -447,7 +448,7 @@ class MAG(AncestralBase):
         for role, nodes in roles.items():
             if isinstance(nodes, list) and len(nodes) == 1:
                 roles[role] = nodes[0]
-        print(ebunch, latents, roles)
+
         return cls(ebunch=ebunch, latents=latents, roles=roles)
 
     def lower_manipulation(self, X, inplace=False):
