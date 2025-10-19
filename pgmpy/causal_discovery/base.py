@@ -37,32 +37,6 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
 
     independencies: pgmpy.independencies.Independencies
         Prior independence assertions between nodes of the learned causal graph.
-
-    Methods
-    -------
-    fit()
-        Fit data (`X`) and independence relations (optional) to a causal graph. The method
-        calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
-
-    build_skeleton()
-        Estimates a graph skeleton (UndirectedGraph) from a set of independencies
-        using (the first part of) the PC algorithm. The independencies can either be
-        provided as an instance of the `Independencies`-class or by passing a
-        decision function that decides any conditional independency assertion.
-        Returns a tuple `(skeleton, separating_sets)`.
-
-        If an Independencies-instance is passed, the contained IndependenceAssertions
-        have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-separations of some Bayesian network or
-        if the independence assertions are closed under the semi-graphoid axioms.
-        Otherwise, the procedure may fail to identify the correct structure.
-
-    _get_potential_subsets()
-        Method to find the temporally consistent superset of separating set of nodes `u`, `v`.
-        The temporal order (if specified) of the superset can only be smaller
-        ("earlier") than a particular node. The neighbors of `u` satisfying
-        this condition are returned.
     """
 
     def __sklearn_tags__(self):
@@ -79,7 +53,10 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         y=None,
         independencies: Independencies = None,
     ):
-        """Fit data to a causal graph."""
+        """Fit data (`X`) and independence relations (optional) to a causal graph. The method
+        calls the `_fit` method, which must be implemented separately in any causal
+        discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
+        """
         return self._fit(X, independencies, y)
 
     def _fit(
@@ -90,7 +67,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
     ):
         raise NotImplementedError()
 
-    def build_skeleton(
+    def _build_skeleton(
         self,
         data,
         independencies=None,
@@ -105,7 +82,18 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         **kwargs,
     ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
         """
-        Estimates a graph skeleton (UndirectedGraph) using the first part of the PC algorithm.
+        Estimates a graph skeleton (UndirectedGraph) from a set of independencies
+        using (the first part of) the PC algorithm.
+
+        The independencies can either be provided as an instance of the
+        `Independencies`-class or by passing a decision function that decides any
+        conditional independency assertion. Returns a tuple `(skeleton, separating_sets)`.
+
+        If an Independencies-instance is passed, the contained IndependenceAssertions
+        have to admit a faithful BN representation. This is the case if
+        they are obtained as a set of d-separations of some Bayesian network or
+        if the independence assertions are closed under the semi-graphoid axioms.
+        Otherwise, the procedure may fail to identify the correct structure.
 
         Parameters
         ----------
@@ -328,7 +316,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
             pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
 
-        self.skeleton_, self.separating_set_ = graph, separating_sets
+        self.skeleton_, self.separating_sets_ = graph, separating_sets
         return graph, separating_sets
 
     @staticmethod
@@ -340,7 +328,11 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         lim_neighbors: int,
     ) -> Collection[Tuple]:
         """
-        Return the temporally consistent superset of separating set of u, v.
+        Return the temporally consistent superset of separating set of `u`, `v`.
+
+        The temporal order (if specified) of the superset can only be smaller
+        ("earlier") than a particular node. The neighbors of `u` satisfying
+        this condition are returned.
 
         Parameters
         ----------

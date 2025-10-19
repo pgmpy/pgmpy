@@ -51,19 +51,18 @@ class PC(BaseConstraintCausalDiscovery):
     show_progress : bool, default=True
         Whether to show progress bar.
 
-    Methods
-    -------
-    _fit()
-        Fit data (`X`) and independence relations (optional) to a causal graph. The method
-        builds an initial skeleton graph (undirected) based on conditional independence tests.
-        Then, the v-structures are oriented based on the separating sets between non-adjacent
-        nodes. Finally, Meek's rules are applied to orient as many remaining edges as possible.
+    Attributes
+    ----------
+    skeleton_ : UndirectedGraph
+        An estimate for the undirected graph skeleton of the BN underlying the data.
 
-    orient_colliders()
-        Orients the edges that form v-structures in a graph skeleton based on
-        the `separating_sets` to form a PDAG. For each pair of non adjacent
-        nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
-        then the v-structure is oriented as `u`->`z` , `v`->`z`.
+    separating_sets_ : dict
+            A dict containing for each pair of not directly connected nodes a
+            separating set ("witnessing set") of variables that makes them
+            conditionally independent. (needed for edge orientation procedures)\
+
+    graph_ : PDAG
+        The learned causal graph.
     """
 
     def __init__(
@@ -94,6 +93,12 @@ class PC(BaseConstraintCausalDiscovery):
         y=None,
         independencies=None,
     ):
+        """
+        Fit data (`X`) and independence relations (optional) to a causal graph. The method
+        builds an initial skeleton graph (undirected) based on conditional independence tests.
+        Then, the v-structures are oriented based on the separating sets between non-adjacent
+        nodes. Finally, Meek's rules are applied to orient as many remaining edges as possible.
+        """
         n_samples, n_features = X.shape
 
         if n_features == 0:
@@ -133,7 +138,7 @@ class PC(BaseConstraintCausalDiscovery):
             expert_knowledge.limit_search_space(X.columns)
 
         # Step 1: skeleton
-        skel, separating_sets = self.build_skeleton(
+        skel, separating_sets = self._build_skeleton(
             data=X,
             independencies=independencies,
             variant=self.variant,
@@ -147,11 +152,11 @@ class PC(BaseConstraintCausalDiscovery):
         )
 
         if self.return_type == "skeleton":
-            self.graph_ = (skel, separating_sets)
+            self.graph_ = skel
             return self
 
         # Step 2: orient colliders
-        pdag = self.orient_colliders(
+        pdag = self._orient_colliders(
             skel, separating_sets, expert_knowledge.temporal_ordering
         )
 
@@ -180,14 +185,16 @@ class PC(BaseConstraintCausalDiscovery):
         return self
 
     @staticmethod
-    def orient_colliders(
+    def _orient_colliders(
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
         temporal_ordering: Dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
-        Orients the edges that form v-structures in a graph skeleton
-        based on information from `separating_sets` to form a DAG pattern (PDAG).
+        Orients the edges that form v-structures in a graph skeleton based on
+        the `separating_sets` to form a PDAG. For each pair of non adjacent
+        nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
+        then the v-structure is oriented as `u`->`z` , `v`->`z`.
 
         Parameters
         ----------
@@ -225,7 +232,7 @@ class PC(BaseConstraintCausalDiscovery):
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
         >>> c = PC(data)
-        >>> pdag = c.orient_colliders(*c.build_skeleton())
+        >>> pdag = c._orient_colliders(*c._build_skeleton())
         >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
         OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
