@@ -1075,7 +1075,7 @@ class DynamicBayesianNetwork(DAG):
 
     @staticmethod
     def to_different_representation(
-        df: pd.DataFrame, representation: str = "panel", include_meta: bool = True
+        df: pd.DataFrame, representation: str = "panel", return_metadata: bool = True
     ):
         """
         takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
@@ -1130,7 +1130,7 @@ class DynamicBayesianNetwork(DAG):
         elif representation == "pd-list":
             # return the list of dataframes, one per time series
             panel = x.stack("time")
-            panel.index.set_names(["instance", "time"], inplace=True)  # <-- fixed here
+            panel.index.set_names(["instance", "time"], inplace=True)
             panel = panel.sort_index()
             panel.columns = panel.columns.get_level_values("variable")
 
@@ -1145,7 +1145,7 @@ class DynamicBayesianNetwork(DAG):
         else:
             raise ValueError(f"Unknown representation: {representation}")
 
-        if not include_meta:
+        if not return_metadata:
             return panel
 
         return panel, {
@@ -1167,7 +1167,7 @@ class DynamicBayesianNetwork(DAG):
         seed=None,
         show_progress=True,
         representation="none",
-        include_meta=False,
+        return_metadata=False,
     ):
         """
         Simulates time-series data from the specified model.
@@ -1368,13 +1368,13 @@ class DynamicBayesianNetwork(DAG):
             sampled = self._postprocess(sampled)
             sampled = sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
             return self.to_different_representation(
-                df=sampled, representation=representation, include_meta=include_meta
+                df=sampled, representation=representation, return_metadata=return_metadata
             )
 
         elif n_time_slices == 2:
             sampled = self._postprocess(sampled)
             return self.to_different_representation(
-                df=sampled, representation=representation, include_meta=include_meta
+                df=sampled, representation=representation, return_metadata=return_metadata
             )
 
         # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
@@ -1407,7 +1407,7 @@ class DynamicBayesianNetwork(DAG):
         sampled = self._postprocess(sampled)
 
         return self.to_different_representation(
-            df=sampled, representation=representation, include_meta=include_meta
+            df=sampled, representation=representation, return_metadata=return_metadata
         )
 
     @property
