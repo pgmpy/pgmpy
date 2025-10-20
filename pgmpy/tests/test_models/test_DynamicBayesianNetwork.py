@@ -1463,6 +1463,459 @@ class TestDBNSampling(unittest.TestCase):
                         )
                     )
 
+    def test_simulate_3d_representation_one_slice(self):
+        # firstly try without returning metadata
+        timeslices = 1
+
+        samples = self.dbn.simulate(n_samples=10, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", include_meta=False, seed = None)
+
+        # check the shapes
+        # should return 3D numpy array, with shape of 10 x 3 x 1
+        assert len(samples.shape) == 3, "return from numpy3D should be 3"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert samples.shape == (10, 3, 1), "return from numpy3D should be of size (10, 3, 1)"
+
+        # try now with more samples and with metadata
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", seed = seed)
+
+        samples, metadata = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", seed=seed, include_meta=True)
+
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (n_samples, 3, 1), f"return from numpy3D should be of size ({n_samples}, 3, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+        # check the metadata
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == n_samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "numpy3d", "'representation' should be numpy3d"
+
+    def test_simulate_3d_representation_two_slices(self):
+        # firstly try without returning metadata
+        timeslices = 2
+        samples = self.dbn.simulate(n_samples=10, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", include_meta=False)
+
+        # should return 3D numpy array, with shape of 10 x 3 x 2
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3"
+        assert samples.shape == (10, 3, 2), "return from numpy3D should be of size (10, 3, 2)"
+
+        # try now with more samples and with metadata
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", seed = seed)
+
+        samples, metadata = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", seed=seed, include_meta=True)
+
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (n_samples, 3, timeslices), f"return from numpy3D should be of size ({n_samples}, 3, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+        # check the metadata
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == n_samples, f"'number_of_samples' should be {n_samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "numpy3d", "'representation' should be numpy3d"
+
+    def test_simulate_3d_representation_more_slices(self):
+        # firstly try without returning metadata
+        timeslices = 10
+        samples = self.dbn.simulate(n_samples=10, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", include_meta=False)
+
+        # should return 3D numpy array, with shape of 10 x 3 x 10
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3"
+        assert samples.shape == (10, 3, timeslices), "return from numpy3D should be of size (10, 3, 10)"
+
+        # try now with more samples and with metadata
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", seed = seed)
+
+        samples, metadata = self.dbn.simulate(n_samples=n_samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="numpy3D", seed=seed, include_meta=True)
+
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (n_samples, 3, timeslices), f"return from numpy3D should be of size ({n_samples}, 3, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+        # check the metadata
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == n_samples, f"'number_of_samples' should be {n_samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "numpy3d", "'representation' should be numpy3d"
+
+    def test_simulate_pd_multiindex_representation_one_slice(self):
+        # firstly try without returning metadata
+        timeslices = 1
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="pd-multiindex", include_meta=False, seed = None)
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == ["instance", "timestep"], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 20
+
+        panel,metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                           representation="pd-multiindex", include_meta=True, seed = seed)
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-multiindex", "'representation' should be pd-multiindex"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed = seed)
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_multiindex_representation_two_slices(self):
+        # firstly try without returning metadata
+        timeslices = 2
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="pd-multiindex", include_meta=False, seed = None)
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == ["instance", "timestep"], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 20
+        panel,metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                           representation="pd-multiindex", include_meta=True, seed = seed)
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-multiindex", "'representation' should be pd-multiindex"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed = seed)
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_multiindex_representation_more_slices(self):
+        # firstly try without returning metadata
+        timeslices = 5
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="pd-multiindex", include_meta=False, seed = None)
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == ["instance", "timestep"], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 25
+        panel,metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                           representation="pd-multiindex", include_meta=True, seed = seed)
+
+        # check the shape
+        assert panel.shape == (samples * timeslices, n_vars), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-multiindex", "'representation' should be pd-multiindex"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed = seed)
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_representation_one_slice(self):
+        # firstly try without returning metadata
+        timeslices = 1
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                    representation="pd-list", include_meta=False, seed = None)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 20
+
+        panel,metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                           representation="pd-list", include_meta=True, seed = seed)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-list", "'representation' should be pd-list"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed = seed)
+
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_representation_two_slices(self):
+        # firstly try without returning metadata
+        timeslices = 2
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                  representation="pd-list", include_meta=False, seed=None)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 20
+
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="pd-list", include_meta=True, seed=seed)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-list", "'representation' should be pd-list"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed=seed)
+
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are the same
+        for i in range(samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_representation_more_slices(self):
+        # firstly try without returning metadata
+        timeslices = 10
+        samples = 10
+        n_vars = 3
+
+        panel = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                  representation="pd-list", include_meta=False, seed=None)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        samples = 20
+
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="pd-list", include_meta=True, seed=seed)
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (timeslices, n_vars), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == 3, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "pd-list", "'representation' should be pd-list"
+
+        # compare with wide
+        wide = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                 representation="none", include_meta=False, seed=seed)
+
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are the same
+        for i in range(samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_sorted_representation_two_slices(self):
+        # firstly try with single timeslice
+        timeslices = 2
+        samples = 25
+        n_vars = 3
+
+        # test without metadata
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="sorted", include_meta=True, seed=None)
+
+        # check the columns
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
+
+        # test columns and metadata
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="sorted", include_meta=True, seed=None)
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == n_vars, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "sorted", "'representation' should be sorted"
+
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
+
+    def test_simulate_sorted_representation_more_slices(self):
+        # firstly try with single timeslice
+        timeslices = 10
+        samples = 25
+        n_vars = 3
+
+        # test without metadata
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="sorted", include_meta=True, seed=None)
+
+        # check the columns
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
+
+        # test columns and metadata
+        panel, metadata = self.dbn.simulate(n_samples=samples, n_time_slices=timeslices, show_progress=False,
+                                            representation="sorted", include_meta=True, seed=None)
+
+        assert metadata["number_of_timesteps"] == timeslices, f"'number_of_timesteps' should be {timeslices}"
+        assert metadata["number_of_samples"] == samples, f"'number_of_samples' should be {samples}"
+        assert metadata["number_of_variables"] == n_vars, " 'number_of_variables' should be 3"
+        assert metadata["representation"] == "sorted", "'representation' should be sorted"
+
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
+
 
 class TestDBNWithStateName(unittest.TestCase):
     def setUp(self):
