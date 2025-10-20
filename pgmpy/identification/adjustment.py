@@ -172,7 +172,7 @@ class Adjustment(BaseIdentification):
             exposure = causal_graph.get_role("exposure")[0]
             outcome = causal_graph.get_role("outcome")[0]
 
-            ancestors = causal_graph._get_ancestors_of([exposure, outcome])
+            ancestors = causal_graph.get_ancestors([exposure, outcome])
             # Remove any variables on the path from exposure to outcome (these cannot be in the adjustment set)
             ancestors -= set(
                 itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome))
