@@ -1074,26 +1074,26 @@ class DynamicBayesianNetwork(DAG):
         return df
 
     @staticmethod
-    def to_different_representation(df : pd.DataFrame,
-                                    representation : str = "panel",
-                                    include_meta : bool = True):
+    def to_different_representation(
+        df: pd.DataFrame, representation: str = "panel", include_meta: bool = True
+    ):
         """
-            takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
-            traces.
+        takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
+        traces.
 
-            representation:
-                "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
-                            represents variable, third dimension represent timestep
+        representation:
+            "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
+                        represents variable, third dimension represent timestep
 
-                "pd-multiindex" : returns the pandas multindex DataFrame, with indexes of ("Variable name", timestep)"
+            "pd-multiindex" : returns the pandas multindex DataFrame, with indexes of ("Variable name", timestep)"
 
-                "pd-list" : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
-                            contain timestep and columns represent variables
+            "pd-list" : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
+                        contain timestep and columns represent variables
 
-                "sorted" : makes sure that the represntation of [sample, ("variable", "timestep")] is sorted, which
-                           makes further processing easier
+            "sorted" : makes sure that the represntation of [sample, ("variable", "timestep")] is sorted, which
+                       makes further processing easier
 
-                "none" : returns default representation of pandas dataframe with columns of ("Variable, "timestep")
+            "none" : returns default representation of pandas dataframe with columns of ("Variable, "timestep")
 
         """
 
@@ -1101,12 +1101,12 @@ class DynamicBayesianNetwork(DAG):
 
         # normalize the columns to multiindex
         if not isinstance(x.columns, pd.MultiIndex):
-            x.columns = pd.MultiIndex.from_tuples(x.columns, names=['variable', 'timestep'])
+            x.columns = pd.MultiIndex.from_tuples(x.columns, names=["variable", "time"])
         else:
-            x.columns = x.columns.set_names(['variable', 'timestep'])
+            x.columns = x.columns.set_names(["variable", "time"])
 
         unique_variables = x.columns.get_level_values("variable").unique().tolist()
-        timesteps = sorted(x.columns.get_level_values("timestep").unique().tolist())
+        timesteps = sorted(x.columns.get_level_values("time").unique().tolist())
         N, D, T = len(x), len(unique_variables), len(timesteps)
 
         # sort the columns, to make the ordering easier
@@ -1122,15 +1122,15 @@ class DynamicBayesianNetwork(DAG):
             panel = panel.reshape(N, D, T)
 
         elif representation == "pd-multiindex":
-            panel = x.stack("timestep")
-            panel.index.set_names(["instance", "timestep"], inplace=True)
+            panel = x.stack("time")
+            panel.index.set_names(["instance", "time"], inplace=True)
             panel = panel.sort_index()
             panel.columns = panel.columns.get_level_values("variable")
 
         elif representation == "pd-list":
             # return the list of dataframes, one per time series
-            panel = x.stack("timestep")
-            panel.index.set_names(["instance", "timestep"], inplace=True)
+            panel = x.stack("time")
+            panel.index.set_names(["instance", "time"], inplace=True)  # <-- fixed here
             panel = panel.sort_index()
             panel.columns = panel.columns.get_level_values("variable")
 
@@ -1148,9 +1148,12 @@ class DynamicBayesianNetwork(DAG):
         if not include_meta:
             return panel
 
-        return panel, {"number_of_timesteps" : T, "number_of_samples" : N, "number_of_variables" : D,
-                       "representation" : representation}
-
+        return panel, {
+            "number_of_timesteps": T,
+            "number_of_samples": N,
+            "number_of_variables": D,
+            "representation": representation,
+        }
 
     def simulate(
         self,
@@ -1164,7 +1167,7 @@ class DynamicBayesianNetwork(DAG):
         seed=None,
         show_progress=True,
         representation="none",
-        include_meta=False
+        include_meta=False,
     ):
         """
         Simulates time-series data from the specified model.
@@ -1308,8 +1311,6 @@ class DynamicBayesianNetwork(DAG):
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0
         """
-        from pgmpy.sampling import BayesianModelSampling
-
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=n_time_slices * len(self._nodes()))
 
@@ -1365,16 +1366,16 @@ class DynamicBayesianNetwork(DAG):
         )
         if n_time_slices == 1:
             sampled = self._postprocess(sampled)
-            sampled =  sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
-            return self.to_different_representation(df=sampled,
-                                                    representation=representation,
-                                                    include_meta=include_meta)
+            sampled = sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+            return self.to_different_representation(
+                df=sampled, representation=representation, include_meta=include_meta
+            )
 
         elif n_time_slices == 2:
             sampled = self._postprocess(sampled)
-            return self.to_different_representation(df=sampled,
-                                                    representation=representation,
-                                                    include_meta=include_meta)
+            return self.to_different_representation(
+                df=sampled, representation=representation, include_meta=include_meta
+            )
 
         # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
         for t_slice in range(1, n_time_slices - 1):
@@ -1405,9 +1406,9 @@ class DynamicBayesianNetwork(DAG):
 
         sampled = self._postprocess(sampled)
 
-        return self.to_different_representation(df=sampled,
-                                                representation=representation,
-                                                include_meta=include_meta)
+        return self.to_different_representation(
+            df=sampled, representation=representation, include_meta=include_meta
+        )
 
     @property
     def states(self):
