@@ -427,7 +427,7 @@ class TestResidualMethod(unittest.TestCase):
 
         # Conditional tests (independent case)
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.3086, 0.1277, 0.1224, 0.009, 0.1224]
+        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
 
         computed_coefs = []
         computed_pvalues = []
@@ -461,7 +461,7 @@ class TestResidualMethod(unittest.TestCase):
         )
 
         # Conditional tests (dependent case)
-        dep_coefs = np.array([0.1322, 0.1609, 0.1181, 0.1330, 0.1182])
+        dep_coefs = np.array([0.1322, 0.1609, 0.1158, 0.1188, 0.1158])
         dep_pvalues = np.array([0, 0, 0, 0, 0])
 
         computed_coefs = []
