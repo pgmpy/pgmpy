@@ -246,8 +246,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2]",
-        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }",
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] "
+        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
         ... )
 
         Creating a Linear Gaussian Bayesian network from dagitty:
