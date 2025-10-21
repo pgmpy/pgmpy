@@ -57,7 +57,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
         """
-        return self._fit(X, independencies, y)
+        return self._fit(X, y, independencies)
 
     def _fit(
         self,
