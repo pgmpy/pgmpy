@@ -912,7 +912,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
         else:
             observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
+        ancestors_list = self.get_ancestors(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -949,7 +949,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(
+    def get_ancestors(
         self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]
     ) -> set[Hashable]:
         """
@@ -965,9 +965,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> model = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "L")])
-        >>> model._get_ancestors_of("G")
+        >>> model.get_ancestors("G")
         {'D', 'G', 'I'}
-        >>> model._get_ancestors_of(["G", "I"])
+        >>> model.get_ancestors(["G", "I"])
         {'D', 'G', 'I'}
         """
         if not isinstance(nodes, (list, tuple)):
@@ -1183,7 +1183,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> anc_dag.edges()
         OutEdgeView([('D', 'A'), ('D', 'B')])
         """
-        return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
+        return self.subgraph(nodes=self.get_ancestors(nodes=nodes))
 
     def to_daft(
         self,
