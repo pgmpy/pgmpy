@@ -6,7 +6,6 @@ from itertools import chain, combinations
 import networkx as nx
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
@@ -1085,7 +1084,7 @@ class DynamicBayesianNetwork(DAG):
             "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
                         represents variable, third dimension represent timestep
 
-            "pd-multiindex" : returns the pandas multindex DataFrame, with indexes of ("Variable name", timestep)"
+            "pd-multiindex" : returns the pandas multindex DataFrame, with indexes of ("Variable name", "timestep")
 
             "pd-list" : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
                         contain timestep and columns represent variables
@@ -1096,7 +1095,6 @@ class DynamicBayesianNetwork(DAG):
             "none" : returns default representation of pandas dataframe with columns of ("Variable, "timestep")
 
         """
-
         x = df.copy()
 
         # normalize the columns to multiindex
@@ -1311,8 +1309,6 @@ class DynamicBayesianNetwork(DAG):
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0
         """
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=n_time_slices * len(self._nodes()))
 
         # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do
@@ -1368,13 +1364,17 @@ class DynamicBayesianNetwork(DAG):
             sampled = self._postprocess(sampled)
             sampled = sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
             return self.to_different_representation(
-                df=sampled, representation=representation, return_metadata=return_metadata
+                df=sampled,
+                representation=representation,
+                return_metadata=return_metadata,
             )
 
         elif n_time_slices == 2:
             sampled = self._postprocess(sampled)
             return self.to_different_representation(
-                df=sampled, representation=representation, return_metadata=return_metadata
+                df=sampled,
+                representation=representation,
+                return_metadata=return_metadata,
             )
 
         # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
