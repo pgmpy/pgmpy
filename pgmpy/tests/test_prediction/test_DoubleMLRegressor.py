@@ -231,7 +231,12 @@ def test_sample_weight_support_and_shapes(dag):
 def test_dag_roles_validation_and_pretreatment_support():
     """Test role extraction and pretreatment variable handling."""
     dag = DAG(
-        ebunch=[("P", "D"), ("Z", "D"), ("Z", "Y"), ("D", "Y")],
+        ebunch=[
+            ("Z", "D"),
+            ("Z", "Y"),
+            ("D", "Y"),
+            ("P", "Y"),
+        ],
         roles={
             "exposure": "D",
             "outcome": "Y",
