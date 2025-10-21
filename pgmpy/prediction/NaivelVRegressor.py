@@ -47,18 +47,18 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         tags.regressor_tags.poor_score = True
         return tags
 
-    def _prepare_feature_df(self, X) -> pd.DataFrame:
+    def _prepare_feature_df(self, X, required_features=None) -> pd.DataFrame:
         """
         Accept a numpy/pandas dataframe and returns pandas df
         If numpy array is passed, it converts to pandas df
         """
-        # Step 1: Get required feature columns
-        required_features = self.feature_columns_
+
+        if required_features is None:
+            required_features = self.feature_columns_fit_
 
         # Step 2: Convert input to DataFrame format
         if isinstance(X, pd.DataFrame):
             X_df = X
-
         else:
             # For numpy arrays, use range index as column names
             X_arr = np.asarray(X)
@@ -116,11 +116,13 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         self.outcome_var_ = outcome_vars[0]
         self.instrument_vars_ = instrument_vars
         self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
-        self.feature_columns_ = (
+        feature_columns_fit_ = (
             [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
         )
 
-        df = self._prepare_feature_df(X)
+        df = self._prepare_feature_df(X, required_features=feature_columns_fit_)
+
+        self.feature_columns_predict_ = [self.exposure_var_] + self.pretreatment_vars_
 
         exposure_df = df[self.exposure_var_]
         instrument_df = df[self.instrument_vars_]
@@ -131,7 +133,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         t_hat = stage1_estimator.predict(instrument_df)
 
         # fit stage2: Y ~ t_hat + X
-        t_hat_2d = pd.DataFrame(t_hat.reshape(-1, 1))
+        t_hat_2d = pd.DataFrame(t_hat.reshape(-1, 1), columns=[self.exposure_var_])
         covariates_df = pd.concat([t_hat_2d, pretreatment_df], axis=1)
         stage2_estimator.fit(covariates_df, y, sample_weight=sample_weight)
 
@@ -149,7 +151,9 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
             self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False
         )
 
-        X_df = self._prepare_feature_df(X)
+        X_df = self._prepare_feature_df(
+            X, required_features=self.feature_columns_predict_
+        )
 
         exposure = X_df[self.exposure_var_]
         pre_treatment = X_df[self.pretreatment_vars_]
