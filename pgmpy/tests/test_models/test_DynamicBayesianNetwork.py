@@ -672,7 +672,8 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
     def setUp(self):
         self.cancer_model = DBN()
-        #########################    1    ######################
+
+        # Model 1
         self.cpd_poll = TabularCPD(
             variable=("Pollution", 0), variable_card=2, values=[[0.9], [0.1]]
         )
@@ -701,7 +702,7 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
             evidence_card=[2],
         )
 
-        #########################    2    ######################
+        # Model 2
         self.cpd_poll2 = TabularCPD(
             variable=("Pollution", 1),
             variable_card=2,
@@ -1088,10 +1089,10 @@ class TestDBNSampling(unittest.TestCase):
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             # DBN query only works for variables > evidence time
-            if node[1] > 0:
-                dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
-                    node
-                ]
+            # if node[1] > 0:
+            #     dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
+            #         node
+            #     ]
             # Query can't have same node in variables and evidence
             if node != ("D", 0):
                 bn_infer_cpd = self.bn_infer.query(
@@ -1404,10 +1405,6 @@ class TestDBNSampling(unittest.TestCase):
             TabularCPD(("D", 0), 2, [[0], [1]]),
             TabularCPD(("D", 2), 2, [[1], [0]]),
         ]
-        bn_virtual_intervention = [
-            TabularCPD("D0", 2, [[0], [1]]),
-            TabularCPD("D2", 2, [[1], [0]]),
-        ]
 
         samples = self.dbn.simulate(
             n_samples=int(1e5),
@@ -1479,7 +1476,7 @@ class TestDBNSampling(unittest.TestCase):
 
         # check the shapes
         # should return 3D numpy array, with shape of 10 x 3 x 1
-        assert len(samples.shape) == 3, f"return from numpy3D should be 3 dimensional"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
         assert isinstance(
             samples, np.ndarray
         ), "return from numpy3D should be numpy array"
