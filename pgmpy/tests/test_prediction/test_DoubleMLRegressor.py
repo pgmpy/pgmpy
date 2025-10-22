@@ -207,7 +207,7 @@ def test_error_handling_missing_roles_and_multiple_exposure():
 def test_sample_weight_support_and_shapes(dag):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y = make_simulated_plr(n=150, seed=5)
-    # dag = make_simple_dag_roles()
+
     model = DoubleMLRegressor(
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
