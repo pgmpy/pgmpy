@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.utils.parser import parse_dagitty
 
 
 class AncestralBase(nx.Graph, _GraphRolesMixin):
@@ -643,63 +644,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         else:
             raise ValueError("Either `filename` or `dagitty_str` need to be specified")
 
-        dagitty_lines = [
-            line for line in dagitty_lines if line != "" and line not in ["dag {", "}"]
-        ]
-
-        ebunch = []
-        latents = set()
-        roles = {}
-
-        for line in dagitty_lines:
-            line = line.strip()
-            if not line:
-                continue
-
-            if "[" in line and "]" in line:
-                parts = line.split("[")
-                node = parts[0].strip()
-                role = parts[1].replace("]", "").strip()
-
-                if role == "latents":
-                    latents.add(node)
-                else:
-                    if role not in roles:
-                        roles[role] = []
-                    if isinstance(roles[role], list):
-                        roles[role].append(node)
-                    else:
-                        roles[role] = [roles[role], node]
-
-            elif "<->" in line:
-                parts = line.split("<->")
-                u = parts[0].strip()
-                v = parts[1].strip()
-                ebunch.append((u, v, ">", ">"))
-
-            elif "->" in line:
-                parts = line.split("->")
-                u = parts[0].strip()
-                v = parts[1].strip()
-                ebunch.append((u, v, "-", ">"))
-
-            elif "<-" in line:
-                parts = line.split("<-")
-                u = parts[0].strip()
-                v = parts[1].strip()
-                ebunch.append((u, v, ">", "-"))
-
-            elif "--" in line:
-                parts = line.split("--")
-                u = parts[0].strip()
-                v = parts[1].strip()
-                ebunch.append((u, v, "-", "-"))
-
-        for role, nodes in roles.items():
-            if isinstance(nodes, list) and len(nodes) == 1:
-                roles[role] = nodes[0]
-
-        return cls(ebunch=ebunch, latents=latents, roles=roles)
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_lines, target_type=cls.__name__)
+        return cls(ebunch=ebunch, roles=roles)
 
     def __eq__(self, other):
         """

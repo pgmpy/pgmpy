@@ -270,9 +270,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
+        latents = roles["latents"]
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, latents=latents)
+            dag = cls(ebunch=ebunch, roles=roles)
             dag.add_nodes_from(nodes)
             return dag
         else:
