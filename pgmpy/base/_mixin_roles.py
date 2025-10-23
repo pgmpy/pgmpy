@@ -222,3 +222,87 @@ class _GraphRolesMixin:
             return nodes - set(self.get_role("latents"))
         else:
             return nodes
+
+    @property
+    def exposures(self):
+        """
+        Property
+        --------
+        exposures : set of nodes (default: empty set)
+            A set of exposure variables in the graph. These are the variables
+            that represent the treatment or intervention being studied in a
+            causal analysis.
+
+        Examples
+        --------
+        Create a DAG with exposures and check the exposures value.
+
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("a", "b")], roles={"exposure": "a"})
+        >>> G.exposures
+        {'a'}
+        """
+        if self.has_role("exposure"):
+            return set(self.get_role("exposure"))
+        else:
+            return set()
+
+    @exposures.setter
+    def exposures(self, variables):
+        """
+        Replace the `exposures` nodes.
+
+        Parameters
+        ----------
+        variables: set of nodes (default: empty set)
+            A set of exposure variables in the graph. These are the variables
+            that represent the treatment or intervention being studied in a
+            causal analysis.
+        """
+        if self.has_role("exposure"):
+            self.without_role(
+                role="exposure", variables=self.get_role("exposure"), inplace=True
+            )
+        self.with_role(role="exposure", variables=variables, inplace=True)
+
+    @property
+    def outcomes(self):
+        """
+        Property
+        --------
+        outcomes : set of nodes (default: empty set)
+            A set of outcome variables in the graph. These are the variables
+            that represent the response or dependent variables being studied
+            in a causal analysis.
+
+        Examples
+        --------
+        Create a DAG with outcomes and check the outcomes value.
+
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("a", "b")], roles={"outcome": "b"})
+        >>> G.outcomes
+        {'b'}
+        """
+        if self.has_role("outcome"):
+            return set(self.get_role("outcome"))
+        else:
+            return set()
+
+    @outcomes.setter
+    def outcomes(self, variables):
+        """
+        Replace the `outcomes` nodes.
+
+        Parameters
+        ----------
+        variables: set of nodes (default: empty set)
+            A set of outcome variables in the graph. These are the variables
+            that represent the response or dependent variables being studied
+            in a causal analysis.
+        """
+        if self.has_role("outcome"):
+            self.without_role(
+                role="outcome", variables=self.get_role("outcome"), inplace=True
+            )
+        self.with_role(role="outcome", variables=variables, inplace=True)

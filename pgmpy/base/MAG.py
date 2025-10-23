@@ -26,6 +26,8 @@ class MAG(AncestralBase):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
         """
@@ -38,6 +40,12 @@ class MAG(AncestralBase):
 
         latents : set, default=set()
             Set of latent (unobserved) variables.
+
+        exposures : set, default=set()
+            Set of exposure variables in the graph.
+
+        outcomes : set, default=set()
+            Set of outcome variables in the graph.
 
         roles : dict, optional (default: None)
             A dictionary mapping roles to node names.
@@ -95,7 +103,7 @@ class MAG(AncestralBase):
                         "MAGs only allow directed ('-', '>'), reverse directed ('>', '-'), "
                         "bidirected ('>', '>'), and undirected ('-', '-') edges."
                     )
-        super().__init__(ebunch=ebunch, latents=latents, roles=roles)
+        super().__init__(ebunch=ebunch, latents=latents, exposures=exposures, outcomes=outcomes, roles=roles)
 
     def _is_collider(self, u, c, v):
         """
