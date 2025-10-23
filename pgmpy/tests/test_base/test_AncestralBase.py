@@ -179,11 +179,7 @@ class TestAncestralBase:
 
     def test_init_with_exposures_and_outcomes(self):
         edges = [("A", "B", "-", ">"), ("B", "C", "-", ">")]
-        graph = AncestralBase(
-            ebunch=edges,
-            exposures={"A"},
-            outcomes={"C"}
-        )
+        graph = AncestralBase(ebunch=edges, exposures={"A"}, outcomes={"C"})
 
         assert graph.exposures == {"A"}
         assert graph.outcomes == {"C"}
@@ -228,11 +224,7 @@ class TestAncestralBase:
 
     def test_copy_preserves_exposures_and_outcomes(self):
         edges = [("A", "B", "-", ">"), ("B", "C", "-", ">")]
-        graph = AncestralBase(
-            ebunch=edges,
-            exposures={"A"},
-            outcomes={"C"}
-        )
+        graph = AncestralBase(ebunch=edges, exposures={"A"}, outcomes={"C"})
         new_graph = graph.copy()
 
         assert new_graph.exposures == {"A"}
@@ -246,7 +238,10 @@ class TestAncestralBase:
         graph.exposures = {"B", "C"}
 
         assert graph.exposures == {"B", "C"}
-        assert "role" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("role") != "exposure"
+        assert (
+            "role" not in graph.nodes.get("A", {})
+            or graph.nodes["A"].get("role") != "exposure"
+        )
         assert graph.nodes["B"]["role"] == "exposure"
         assert graph.nodes["C"]["role"] == "exposure"
 
@@ -256,6 +251,9 @@ class TestAncestralBase:
         graph.outcomes = {"B", "C"}
 
         assert graph.outcomes == {"B", "C"}
-        assert "role" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("role") != "outcome"
+        assert (
+            "role" not in graph.nodes.get("A", {})
+            or graph.nodes["A"].get("role") != "outcome"
+        )
         assert graph.nodes["B"]["role"] == "outcome"
         assert graph.nodes["C"]["role"] == "outcome"

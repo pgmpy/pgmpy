@@ -103,7 +103,13 @@ class MAG(AncestralBase):
                         "MAGs only allow directed ('-', '>'), reverse directed ('>', '-'), "
                         "bidirected ('>', '>'), and undirected ('-', '-') edges."
                     )
-        super().__init__(ebunch=ebunch, latents=latents, exposures=exposures, outcomes=outcomes, roles=roles)
+        super().__init__(
+            ebunch=ebunch,
+            latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
+        )
 
     def _is_collider(self, u, c, v):
         """
