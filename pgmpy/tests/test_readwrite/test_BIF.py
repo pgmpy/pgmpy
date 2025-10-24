@@ -206,11 +206,11 @@ class TestBIFReader(unittest.TestCase):
             "light-on": {},
         }
         node_expected = {
-            "bowel-problem": {"weight": None, "position": "(335, 99)"},
-            "dog-out": {"weight": None, "position": "(300, 195)"},
-            "family-out": {"weight": None, "position": "(257, 99)"},
-            "hear-bark": {"weight": None, "position": "(296, 268)"},
-            "light-on": {"weight": None, "position": "(218, 195)"},
+            "bowel-problem": {"position": "(335, 99)"},
+            "dog-out": {"position": "(300, 195)"},
+            "family-out": {"position": "(257, 99)"},
+            "hear-bark": {"position": "(296, 268)"},
+            "light-on": {"position": "(218, 195)"},
         }
         cpds_expected = [
             TabularCPD(
@@ -418,32 +418,26 @@ class TestBIFWriter(unittest.TestCase):
 variable bowel-problem {
     type discrete [ 2 ] { 0, 1 };
     property position = (335, 99) ;
-    property weight = None ;
 }
 variable dog-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (300, 195) ;
-    property weight = None ;
 }
 variable family-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (257, 99) ;
-    property weight = None ;
 }
 variable hear-bark {
     type discrete [ 2 ] { 0, 1 };
     property position = (296, 268) ;
-    property weight = None ;
 }
 variable kid {
     type discrete [ 2 ] { 0, 1 };
     property position = (100, 165) ;
-    property weight = None ;
 }
 variable light-on {
     type discrete [ 2 ] { 0, 1 };
     property position = (218, 195) ;
-    property weight = None ;
 }
 probability ( bowel-problem ) {
     table 0.01, 0.99 ;
@@ -728,11 +722,11 @@ class TestBIFReaderTorch(unittest.TestCase):
             "light-on": {},
         }
         node_expected = {
-            "bowel-problem": {"weight": None, "position": "(335, 99)"},
-            "dog-out": {"weight": None, "position": "(300, 195)"},
-            "family-out": {"weight": None, "position": "(257, 99)"},
-            "hear-bark": {"weight": None, "position": "(296, 268)"},
-            "light-on": {"weight": None, "position": "(218, 195)"},
+            "bowel-problem": {"position": "(335, 99)"},
+            "dog-out": {"position": "(300, 195)"},
+            "family-out": {"position": "(257, 99)"},
+            "hear-bark": {"position": "(296, 268)"},
+            "light-on": {"position": "(218, 195)"},
         }
         cpds_expected = [
             TabularCPD(
@@ -947,32 +941,26 @@ class TestBIFWriterTorch(unittest.TestCase):
 variable bowel-problem {
     type discrete [ 2 ] { 0, 1 };
     property position = (335, 99) ;
-    property weight = None ;
 }
 variable dog-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (300, 195) ;
-    property weight = None ;
 }
 variable family-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (257, 99) ;
-    property weight = None ;
 }
 variable hear-bark {
     type discrete [ 2 ] { 0, 1 };
     property position = (296, 268) ;
-    property weight = None ;
 }
 variable kid {
     type discrete [ 2 ] { 0, 1 };
     property position = (100, 165) ;
-    property weight = None ;
 }
 variable light-on {
     type discrete [ 2 ] { 0, 1 };
     property position = (218, 195) ;
-    property weight = None ;
 }
 probability ( bowel-problem ) {
     table 0.01, 0.99 ;
