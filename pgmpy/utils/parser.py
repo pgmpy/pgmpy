@@ -1,7 +1,7 @@
 def parse_lavaan(lines):
     # Step 0: Check if pyparsing is installed
     try:
-        from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
+        from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums
     except ImportError as e:
         raise ImportError(
             f"{e}. pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
@@ -76,9 +76,9 @@ def parse_dagitty(lines):
         if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(
             edge_stat
         ) > 3:
-            l = len(edge_stat)
+            length = len(edge_stat)
             start_i = 0
-            while start_i < l - 1:
+            while start_i < length - 1:
                 # Parse {a -> b -> c}
                 if edge_stat[start_i + 1] in ["->", "<-", "<->"]:
                     end_i = start_i + 2
@@ -92,7 +92,9 @@ def parse_dagitty(lines):
                     )
                 )
                 # Parse `edge` [beta=float]
-                if end_i + 1 < l and isinstance(edge_stat[end_i + 1], ParseResults):
+                if end_i + 1 < length and isinstance(
+                    edge_stat[end_i + 1], ParseResults
+                ):
                     if (
                         isinstance(edge_stat[end_i + 1][0], str)
                         and edge_stat[end_i + 1][0] == "beta"
@@ -109,8 +111,8 @@ def parse_dagitty(lines):
 
             return all_vars
 
-        l = len(edge_stat)
-        right_i = 1 if l == 2 else 2
+        length = len(edge_stat)
+        right_i = 1 if length == 2 else 2
         # length is three. Now check if any node is a subgraph
         left_vars = handle_edge_stat(edge_stat[0], latents, ebunch, betas)
         right_vars = handle_edge_stat(edge_stat[right_i], latents, ebunch, betas)
@@ -118,7 +120,7 @@ def parse_dagitty(lines):
         all_vars.update(right_vars)
 
         # No edges created for subgraph {X Y}
-        if l == 2:
+        if length == 2:
             return all_vars
 
         # Now connect the every pair of left and right vars with the given edge for {X <- Y}
@@ -181,7 +183,7 @@ def parse_dagitty(lines):
     # Reference: https://www.dagitty.net/manual-3.x.pdf#page=3.58
     # Drawing and Analyzing Causal DAGs with DAGitty by Johannes Textor
     # Variable name like X.1, a_b, 123. Double-quote if with special characters
-    var = Word(alphanums + "_" + ".") ^ QuotedString('"')
+    var = Word(alphanums + "_" + ".") ^ QuotedString('"') ^ QuotedString("'")
     # Exposure, outcome, latent, adjusted
     option = nestedExpr("[", "]")
     # The variable statements: variable name + list of option(s)

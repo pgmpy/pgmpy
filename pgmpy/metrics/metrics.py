@@ -1,5 +1,6 @@
 import math
 from itertools import combinations
+from typing import Any, Callable, Optional
 
 import networkx as nx
 import numpy as np
@@ -11,6 +12,48 @@ from tqdm import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork
+
+
+def get_metrics(metrics: Optional[tuple[str, Callable]] = None) -> Any:
+
+    name_to_fn = {
+        "correlation": correlation_score,
+        "log-likelihood": log_likelihood_score,
+        "aic": structure_score,
+        "bic": structure_score,
+        "implied-cis": implied_cis,
+        "fisher-c": fisher_c,
+    }
+    fn_to_name = {v: k for k, v in name_to_fn.items()}
+
+    if metrics is None:
+        return name_to_fn
+
+    callable_metrics = {}
+    for metric in metrics:
+        if isinstance(metric, str):
+            metric = metric.lower()
+            if metric not in name_to_fn:
+                raise ValueError(
+                    f"Unknown metric method. Available metrics are: {list(name_to_fn.keys())}"
+                )
+
+            callable_metrics[metric] = name_to_fn[metric]
+
+        elif callable(metric):
+            if metric not in fn_to_name:
+                raise ValueError(
+                    f"Got unknown metric function {metric}. Available metrics are: {list(fn_to_name.keys())}"
+                )
+            metric_name = fn_to_name.get(metric)
+            callable_metrics[metric_name] = metric
+
+        else:
+            raise ValueError(
+                f"`metric` must be one of {list(name_to_fn.keys())} and of type str or Callable"
+            )
+
+    return callable_metrics
 
 
 def correlation_score(
@@ -158,7 +201,7 @@ def log_likelihood_score(model, data):
     -103818.57516969478
     """
     # Step 1: Check the inputs
-    if not isinstance(model, DiscreteBayesianNetwork):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
