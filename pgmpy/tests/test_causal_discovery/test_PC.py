@@ -3,11 +3,15 @@ import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import PC
+from pgmpy.estimators import ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.sampling import BayesianModelSampling
+from pgmpy.utils import get_example_model
 
 
 def make_estimator():
@@ -17,6 +21,12 @@ def make_estimator():
 @parametrize_with_checks([make_estimator()])
 def test_pc_compatibility(estimator, check):
     check(estimator)
+
+
+@pytest.fixture(autouse=True)
+def cleanup_executor():
+    yield
+    get_reusable_executor().shutdown(wait=True)
 
 
 def fake_ci_t(X, Y, Z=[], **kwargs):
@@ -59,13 +69,13 @@ def fake_data():
 
 @pytest.mark.parametrize("variant", ["orig", "stable"])
 def test_build_skeleton(fake_data, variant):
-    skel, sep_set = PC()._build_skeleton(fake_data, ci_test=fake_ci_t, variant=variant)
+    skel, _ = PC()._build_skeleton(fake_data, ci_test=fake_ci_t, variant=variant)
     expected_edges = {("A", "C"), ("A", "D")}
     for u, v in skel.edges():
         assert ((u, v) in expected_edges) or ((v, u) in expected_edges)
 
     # Test with 0 conditional vars
-    skel, sep_set = PC()._build_skeleton(
+    skel, _ = PC()._build_skeleton(
         fake_data,
         ci_test=fake_ci_t,
         max_cond_vars=0,
@@ -251,7 +261,360 @@ def test_estimate_dag(variant):
     )
 
 
-@pytest.fixture(autouse=True)
-def cleanup_executor():
-    yield
-    get_reusable_executor().shutdown(wait=True)
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_build_skeleton_chi_square(variant):
+
+    # Fake dataset no: 1
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randint(0, 2, size=(10000, 5)), columns=list("ABCDE"))
+    data["F"] = data["A"] + data["B"] + data["C"]
+    est = PC(
+        variant=variant,
+        ci_test="chi_square",
+        return_type="skeleton",
+        significance_level=0.005,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
+    expected_sepsets = {
+        frozenset(("D", "F")): tuple(),
+        frozenset(("D", "B")): tuple(),
+        frozenset(("A", "C")): tuple(),
+        frozenset(("D", "E")): tuple(),
+        frozenset(("E", "F")): tuple(),
+        frozenset(("E", "C")): tuple(),
+        frozenset(("E", "B")): tuple(),
+        frozenset(("D", "C")): tuple(),
+        frozenset(("A", "B")): tuple(),
+        frozenset(("A", "E")): tuple(),
+        frozenset(("B", "C")): tuple(),
+        frozenset(("A", "D")): tuple(),
+    }
+    for u, v in est.skeleton_.edges():
+        assert ((u, v) in expected_edges) or ((v, u) in expected_edges)
+    assert est.separating_sets_ == expected_sepsets
+
+    # Fake dataset no: 2 Expected structure X <- Z -> Y
+    def fake_ci(X, Y, Z=tuple(), **kwargs):
+        if X == "X" and Y == "Y" and Z == ("Z",):
+            return True
+        elif X == "Y" and Y == "X" and Z == ("Z",):
+            return True
+        else:
+            return False
+
+    np.random.seed(42)
+    fake_data = pd.DataFrame(
+        np.random.randint(low=0, high=2, size=(10000, 3)),
+        columns=["X", "Y", "Z"],
+    )
+    est = PC(
+        variant=variant,
+        ci_test=fake_ci,
+        return_type="skeleton",
+        show_progress=False,
+    )
+    est.fit(X=fake_data)
+    expected_edges = {("X", "Z"), ("Y", "Z")}
+    expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
+    for u, v in est.skeleton_.edges():
+        assert ((u, v) in expected_edges) or ((v, u) in expected_edges)
+    assert est.separating_sets_ == expected_sepsets
+
+
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_build_skeleton_discrete(variant):
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randint(0, 2, size=(10000, 5)), columns=list("ABCDE"))
+    data["F"] = data["A"] + data["B"] + data["C"]
+
+    for test in [
+        "g_sq",
+        "log_likelihood",
+        "modified_log_likelihood",
+        "power_divergence",
+    ]:
+        est = PC(
+            variant=variant,
+            ci_test=test,
+            return_type="skeleton",
+            significance_level=0.005,
+            n_jobs=2,
+            show_progress=False,
+        )
+        est.fit(X=data)
+
+
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_build_dag_discrete(variant):
+
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randint(0, 3, size=(10000, 3)), columns=list("XYZ"))
+    data["sum"] = data.sum(axis=1)
+    est = PC(
+        variant=variant,
+        ci_test="chi_square",
+        return_type="dag",
+        significance_level=0.001,
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
+    assert set(est.graph_.edges()) == expected_edges
+
+
+def test_search_space():
+    adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+
+    search_space = [
+        ("Age", "Education"),
+        ("Education", "HoursPerWeek"),
+        ("Education", "Income"),
+        ("HoursPerWeek", "Income"),
+        ("Age", "Income"),
+    ]
+
+    expert_knowledge = ExpertKnowledge(search_space=search_space)
+
+    est = PC(
+        expert_knowledge=expert_knowledge,
+        enforce_expert_knowledge=True,
+        show_progress=False,
+    )
+
+    est.fit(X=adult_data)
+    # assert if dag is a subset of search_space
+    for edge in est.graph_.edges():
+        assert edge in search_space
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("xgboost", severity="none"),
+    reason="execute only if required dependency present",
+)
+@pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_build_skeleton_continuous(ci_test, variant):
+
+    # Fake dataset no: 1
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
+    data["F"] = data["A"] + data["B"] + data["C"]
+    est = PC(
+        variant=variant,
+        ci_test=ci_test,
+        return_type="skeleton",
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
+    expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
+    expected_sepsets = {
+        frozenset(("D", "F")): tuple(),
+        frozenset(("D", "B")): tuple(),
+        frozenset(("A", "C")): tuple(),
+        frozenset(("D", "E")): tuple(),
+        frozenset(("E", "F")): tuple(),
+        frozenset(("E", "C")): tuple(),
+        frozenset(("E", "B")): tuple(),
+        frozenset(("D", "C")): tuple(),
+        frozenset(("A", "B")): tuple(),
+        frozenset(("A", "E")): tuple(),
+        frozenset(("B", "C")): tuple(),
+        frozenset(("A", "D")): tuple(),
+        # This one is only for stable version.
+        frozenset(("C", "B")): tuple(),
+    }
+    for u, v in est.skeleton_.edges():
+        assert ((u, v) in expected_edges_stable) or ((v, u) in expected_edges_stable)
+
+    for key, value in est.separating_sets_.items():
+        assert est.separating_sets_[key] == expected_sepsets[key]
+
+    # Fake dataset no: 2. Expected model structure X <- Z -> Y
+    def fake_ci(X, Y, Z=tuple(), **kwargs):
+        if X == "X" and Y == "Y" and Z == ("Z",):
+            return True
+        elif X == "Y" and Y == "X" and Z == ("Z",):
+            return True
+        else:
+            return False
+
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
+    est = PC(
+        variant=variant,
+        ci_test=fake_ci,
+        return_type="skeleton",
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    expected_edges = {("X", "Z"), ("Y", "Z")}
+    expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
+
+    for u, v in est.skeleton_.edges():
+        assert ((u, v) in expected_edges) or ((v, u) in expected_edges)
+    assert est.separating_sets_ == expected_sepsets
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("xgboost", severity="none"),
+    reason="execute only if required dependency present",
+)
+@pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_build_dag_continuous(ci_test, variant):
+    np.random.seed(42)
+    data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
+    data["sum"] = data.sum(axis=1)
+    est = PC(
+        variant=variant,
+        ci_test=ci_test,
+        return_type="dag",
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+
+    expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
+    assert set(est.graph_.edges()) == expected_edges
+
+
+def test_pc_alarm():
+    alarm_model = get_example_model("alarm")
+    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
+    est = PC(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
+    est.fit(X=data)
+
+
+def test_pc_asia(caplog):
+    asia_model = get_example_model("asia")
+    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    req_edges = [("xray", "either")]
+    background = ExpertKnowledge(required_edges=req_edges)
+    est = PC(
+        variant="stable",
+        max_cond_vars=4,
+        expert_knowledge=background,
+        n_jobs=2,
+        show_progress=False,
+    )
+
+    with caplog.at_level("WARNING"):
+        est.fit(X=data)
+    expected_warning = (
+        "Specified expert knowledge conflicts with learned structure."
+        " Ignoring edge xray->either from required edges"
+    )
+
+    assert any(expected_warning in message for message in caplog.messages)
+
+
+def test_pc_asia_expert():
+    asia_model = get_example_model("asia")
+    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    est = PC(
+        variant="stable",
+        max_cond_vars=2,
+        expert_knowledge=ExpertKnowledge(
+            required_edges=[
+                ("lung", "either"),
+                ("tub", "either"),
+                ("bronc", "dysp"),
+            ]
+        ),
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    pdag = est.graph_
+    if ("lung", "either") in pdag.edges() or ("either", "lung") in pdag.edges():
+        assert ("lung", "either") in pdag.directed_edges
+    if ("tub", "either") in pdag.edges() or ("either", "tub") in pdag.edges():
+        assert ("tub", "either") in pdag.directed_edges
+    if ("bronc", "dysp") in pdag.edges() or ("dysp", "bronc") in pdag.edges():
+        assert ("bronc", "dysp") in pdag.directed_edges
+
+
+def test_temporal_pc_cancer():
+    cancer_model = get_example_model("cancer")
+    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+
+    background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
+        temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
+        max_cond_vars=4,
+    )
+    est = PC(
+        variant="stable",
+        expert_knowledge=background,
+        n_jobs=2,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    pdag = est.graph_
+    assert set(pdag.edges()) == set(
+        [
+            ("Cancer", "Xray"),
+            ("Cancer", "Dyspnoea"),
+            ("Smoker", "Cancer"),
+            ("Pollution", "Cancer"),
+        ]
+    )
+
+
+def test_temporal_pc_sachs():
+    temporal_order = [
+        ["PKC", "Plcg"],
+        [
+            "PKA",
+            "Raf",
+            "Jnk",
+            "P38",
+            "PIP3",
+            "PIP2",
+            "Mek",
+            "Erk",
+        ],
+        ["Akt"],
+    ]
+    temporal_forbidden_edges = set(
+        [
+            ("PKA", "PKC"),
+            ("PKA", "Plcg"),
+            ("Raf", "PKC"),
+            ("Raf", "Plcg"),
+            ("Jnk", "PKC"),
+            ("Jnk", "Plcg"),
+            ("P38", "PKC"),
+            ("P38", "Plcg"),
+            ("PIP3", "PKC"),
+            ("PIP3", "Plcg"),
+            ("PIP2", "PKC"),
+            ("PIP2", "Plcg"),
+            ("Mek", "PKC"),
+            ("Mek", "Plcg"),
+            ("Erk", "PKC"),
+            ("Erk", "Plcg"),
+            ("Akt", "PKC"),
+            ("Akt", "Plcg"),
+            ("Akt", "PKA"),
+            ("Akt", "Raf"),
+            ("Akt", "Jnk"),
+            ("Akt", "P38"),
+            ("Akt", "PIP3"),
+            ("Akt", "PIP2"),
+            ("Akt", "Mek"),
+            ("Akt", "Erk"),
+        ]
+    )
+
+    model = get_example_model("sachs")
+    df = model.simulate(int(1e3))
+
+    expert = ExpertKnowledge(temporal_order=temporal_order)
+    pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).graph_
+    assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))

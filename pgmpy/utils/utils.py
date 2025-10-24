@@ -432,7 +432,12 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_object_dtype(df[col]):
             dtypes[col] = "C"
-            df[col] = df[col].astype("category")
+            try:
+                df[col] = df[col].astype("category")
+            except TypeError as err:
+                raise TypeError(
+                    f"argument must be a string, number, or hashable type: {err}"
+                )
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
             if df[col].dtype.ordered:
                 dtypes[col] = "O"

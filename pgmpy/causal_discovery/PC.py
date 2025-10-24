@@ -117,13 +117,13 @@ class PC(BaseConstraintCausalDiscovery):
         X = validate_data(
             self,
             X=X,
-            dtype="numeric",
+            dtype=None,
             accept_sparse=False,
             ensure_all_finite=True,
             reset=True,  # reset=True in fit, reset=False in predict/transform
         )
 
-        X = X.astype(float, copy=False)
+        # X = X.astype(float, copy=False)
         X = pd.DataFrame(X, columns=_nodes)
 
         # CI test
