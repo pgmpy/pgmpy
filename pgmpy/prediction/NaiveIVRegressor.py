@@ -97,9 +97,9 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         stage1_estimator = clone(self.stage1_estimator)
         stage2_estimator = clone(self.stage2_estimator)
 
-        exposure_vars = list(self.causal_graph.get_role("exposure"))
-        outcome_vars = list(self.causal_graph.get_role("outcome"))
-        instrument_vars = list(self.causal_graph.get_role("instrument"))
+        exposure_vars = self.causal_graph.get_role("exposure")
+        outcome_vars = self.causal_graph.get_role("outcome")
+        instrument_vars = self.causal_graph.get_role("instrument")
 
         if len(exposure_vars) != 1:
             raise ValueError(
@@ -116,11 +116,11 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         self.outcome_var_ = outcome_vars[0]
         self.instrument_vars_ = instrument_vars
         self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
-        feature_columns_fit_ = (
+        self.feature_columns_fit_ = (
             [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
         )
 
-        df = self._prepare_feature_df(X, required_features=feature_columns_fit_)
+        df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
 
         self.feature_columns_predict_ = [self.exposure_var_] + self.pretreatment_vars_
 
@@ -140,6 +140,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         # store
         self.stage1_est_ = stage1_estimator
         self.stage2_est_ = stage2_estimator
+        self.coef_ = self.stage2_est_.coef_
 
         return self
 
