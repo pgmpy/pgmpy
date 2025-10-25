@@ -2,7 +2,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
@@ -21,12 +20,6 @@ def make_estimator():
 @parametrize_with_checks([make_estimator()])
 def test_pc_compatibility(estimator, check):
     check(estimator)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_executor():
-    yield
-    get_reusable_executor().shutdown(wait=True)
 
 
 def fake_ci_t(X, Y, Z=[], **kwargs):
