@@ -97,7 +97,7 @@ def test_numpy_array_input_with_integer_dag_variables():
     )
 
     n_samples = 50
-    # Build array columns: column 0 = exposure (0), column 1 = adjustment (1)
+    # Build array columns: column 0 = exposure (0), column 1 = instrument (1)
     X_array = np.random.normal(0, 1, (n_samples, 2))
     y_array = np.random.normal(0, 1, n_samples)
 
@@ -237,7 +237,7 @@ def test_error_handling_missing_roles_():
 
 
 def test_multiple_instrument_variables_and_noise_columns():
-    """Test with multiple adjustment variables and extra noise columns in X."""
+    """Test with multiple instrument variables and extra noise columns in X."""
     lgbn = DAG.from_dagitty(
         "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.3] U4 -> X [beta=0.4] X -> Y [beta=0.6] }"
     )
@@ -264,7 +264,8 @@ def test_multiple_instrument_variables_and_noise_columns():
     # check attributes
     assert model.exposure_var_ == "X"
     assert set(model.instrument_vars_) == {"U1", "U2"}
-    # feature_columns_ should include exposure + adjustments + pretreatment (if any)
+    # feature_columns_fit_ should include exposure + adjustments + pretreatment (if any)
+    # feature columns_predict_ should include exposure + pretreatment (if any)
     assert model.feature_columns_fit_[:3] == ["X", "U1", "U2"]
     assert model.feature_columns_predict_[0] == "X"
     # n_features_in_ counts total columns passed to fit
