@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
@@ -270,3 +271,53 @@ def test_multiple_instrument_variables_and_noise_columns():
     assert model.feature_columns_predict_[0] == "X"
     # n_features_in_ counts total columns passed to fit
     assert model.n_features_in_ == X_with_noise.shape[1]
+
+
+def test_naiveiv_recovers_theta_high_dim():
+    """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery in high-dim setting."""
+
+    dag = DAG.from_dagitty(
+        """dag { D -> Y [beta=0.6]
+               Z1 -> D [beta=0.4]
+               Z2 -> D [beta=-0.3]
+               Z3 -> D [beta=0.2]
+               Z4 -> D [beta=-0.1]
+               Z5 -> D [beta=0.3]
+               Z6 -> D [beta=0.1]
+               Z7 -> D [beta=-0.2]
+               Z8 -> D [beta=0.3]
+               Z9 -> D [beta=0.2]
+               Z10 -> D [beta=-0.3]}"""
+    )
+
+    data = dag.simulate(10000, seed=42)
+
+    df = data.loc[:, list(set(dag.nodes()).difference({"Y"}))]
+    df = df - df.mean(axis=0)
+
+    y = data["Y"]
+
+    G = DAG(
+        dag.edges(),
+        roles={
+            "exposure": "D",
+            "instrument": [(f"Z{i}") for i in range(1, 11)],
+            "outcome": "Y",
+        },
+    )
+
+    est = NaiveIVRegressor(
+        causal_graph=G,
+        stage1_estimator=RandomForestRegressor(),
+        stage2_estimator=LinearRegression(),
+    )
+
+    est.fit(df, y)
+
+    assert est.stage2_est_.coef_.round(1)[0] == 0.8
+
+    preds = est.predict(df)
+    assert preds.shape[0] == df.shape[0]
+
+    mse = np.mean((preds - y.to_numpy()) ** 2)
+    assert mse < 1.04
