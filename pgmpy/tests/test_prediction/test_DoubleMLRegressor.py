@@ -251,10 +251,10 @@ def test_dag_roles_validation_and_pretreatment_support():
         n_folds=1,
     )
     # Before fit the roles are accessible via DAG; check that role lists are non-empty
-    exposure_vars = list(model.causal_graph.get_role("exposure"))
-    outcome_vars = list(model.causal_graph.get_role("outcome"))
-    adjustment_vars = list(model.causal_graph.get_role("adjustment"))
-    pretreat_vars = list(model.causal_graph.get_role("pretreatment"))
+    exposure_vars = model.causal_graph.get_role("exposure")
+    outcome_vars = model.causal_graph.get_role("outcome")
+    adjustment_vars = model.causal_graph.get_role("adjustment")
+    pretreat_vars = model.causal_graph.get_role("pretreatment")
     assert exposure_vars and outcome_vars
     assert adjustment_vars == ["Z"]
     assert pretreat_vars == ["P"]
