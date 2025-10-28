@@ -348,7 +348,7 @@ def test_doubleml_recovers_theta_high_dim():
         dag.edges(),
         roles={
             "exposure": "D",
-            "adjustment": dag.get_role("adjustment"),
+            "adjustment": [f"Z{i}" for i in range(1, 11)],
             "outcome": "Y",
         },
     )
