@@ -375,7 +375,7 @@ def test_empty_adjustment_role_explicit():
 def test_pretreatment_variables():
     """Test support for pretreatment variables."""
     dag = DAG(
-        ebunch=[("P", "X"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
+        ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y"), ("P", "Y")],
         roles={
             "exposure": "X",
             "outcome": "Y",
