@@ -16,7 +16,7 @@ class BaseIdentification:
     ...
     ...     def _identify(self, causal_graph):
     ...         outcome_parents = causal_graph.predecessors(
-    ...             causal_graph.get_role("exposure")
+    ...             causal_graph.get_role("exposures")
     ...         )
     ...         identified_cg = causal_graph.with_role("adjustment", outcome_parents)
     ...         return identified_cg, True
