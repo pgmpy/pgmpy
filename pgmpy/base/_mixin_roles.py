@@ -139,20 +139,20 @@ class _GraphRolesMixin:
 
     def is_valid_causal_structure(self) -> bool:
         """Validate that the causal structure makes sense."""
-        has_exposure = self.has_role("exposure")
-        has_outcome = self.has_role("outcome")
+        has_exposure = self.has_role("exposures")
+        has_outcome = self.has_role("outcomes")
         valid = has_exposure and has_outcome
 
         problem_str = []
         if not has_exposure:
-            problem_str.append("no 'exposure' role was defined")
+            problem_str.append("no 'exposures' role was defined")
         if not has_outcome:
-            problem_str.append("no 'outcome' role was defined")
+            problem_str.append("no 'outcomes' role was defined")
         problem_str = ", and ".join(problem_str)
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposure' and one 'outcome' "
+                f"{type(self)} must have at least one 'exposures' and one 'outcomes' "
                 f"role defined, but {problem_str}."
             )
         return True
@@ -238,12 +238,12 @@ class _GraphRolesMixin:
         Create a DAG with exposures and check the exposures value.
 
         >>> from pgmpy.base import DAG
-        >>> G = DAG(ebunch=[("a", "b")], roles={"exposure": "a"})
+        >>> G = DAG(ebunch=[("a", "b")], exposures="a")
         >>> G.exposures
         {'a'}
         """
-        if self.has_role("exposure"):
-            return set(self.get_role("exposure"))
+        if self.has_role("exposures"):
+            return set(self.get_role("exposures"))
         else:
             return set()
 
@@ -259,11 +259,11 @@ class _GraphRolesMixin:
             that represent the treatment or intervention being studied in a
             causal analysis.
         """
-        if self.has_role("exposure"):
+        if self.has_role("exposures"):
             self.without_role(
-                role="exposure", variables=self.get_role("exposure"), inplace=True
+                role="exposures", variables=self.get_role("exposures"), inplace=True
             )
-        self.with_role(role="exposure", variables=variables, inplace=True)
+        self.with_role(role="exposures", variables=variables, inplace=True)
 
     @property
     def outcomes(self):
@@ -280,12 +280,12 @@ class _GraphRolesMixin:
         Create a DAG with outcomes and check the outcomes value.
 
         >>> from pgmpy.base import DAG
-        >>> G = DAG(ebunch=[("a", "b")], roles={"outcome": "b"})
+        >>> G = DAG(ebunch=[("a", "b")], outcomes="b")
         >>> G.outcomes
         {'b'}
         """
-        if self.has_role("outcome"):
-            return set(self.get_role("outcome"))
+        if self.has_role("outcomes"):
+            return set(self.get_role("outcomes"))
         else:
             return set()
 
@@ -301,8 +301,8 @@ class _GraphRolesMixin:
             that represent the response or dependent variables being studied
             in a causal analysis.
         """
-        if self.has_role("outcome"):
+        if self.has_role("outcomes"):
             self.without_role(
-                role="outcome", variables=self.get_role("outcome"), inplace=True
+                role="outcomes", variables=self.get_role("outcomes"), inplace=True
             )
-        self.with_role(role="outcome", variables=variables, inplace=True)
+        self.with_role(role="outcomes", variables=variables, inplace=True)
