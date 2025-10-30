@@ -1,4 +1,3 @@
-from typing import Hashable, List, Dict, Optional
 import numpy as np
 from itertools import product
 from pgmpy.factors.discrete import TabularCPD
