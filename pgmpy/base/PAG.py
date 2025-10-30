@@ -182,11 +182,11 @@ class PAG(AncestralBase):
         return False
 
     def is_uncovered(self, path):
-        """
+        r"""
         Check whether a path is uncovered.
 
-        A path is uncovered if no node in the path has a shortcut connection
-        to a non-consecutive node (i.e., no edges between nodes at distance 2).
+        a path :math:`p = (V_0 , \cdots , V_n)` is said to be uncovered if for every :math:`1 \le i \le n-1, V_{i-1}
+        `and` V_{i+1}` are not adjacent, i.e., if every consecutive triple on the path is unshielded.
 
         Parameters
         ----------
@@ -209,12 +209,11 @@ class PAG(AncestralBase):
 
         return True
 
-    def get_potentially_directed(self, start, end):
-        """
-        Find all potentially directed paths between two nodes.
-
-        A potentially directed path is one where no edge has an arrowhead
-        pointing backward toward the source.
+    def get_potentially_directed_paths(self, start, end):
+        r"""
+        A path :math: `p = (V_0 , \cdots , V_n)` is said to be potentially directed (abbreviated as p.d.)
+        from :math:`V_0 \text{to} V_n \text{if for every} 0 \le i \le n-1, \text{the edge between}
+        V_{i} \text{and} V_{i+1} \text{is not into} V_{i} \text{or out of} V_{i+1}`.
 
         Parameters
         ----------
@@ -237,7 +236,8 @@ class PAG(AncestralBase):
             for i in range(len(path) - 1):
                 x = path[i]
                 y = path[i + 1]
-                if self.edges[x, y]["marks"][x] == ">":
+                edge_marks = self.get_edge_marks(x, y)
+                if not edge_marks[x] == ">" or not edge_marks[y] == "-":
                     is_pd = False
                     break
 
@@ -345,6 +345,7 @@ class PAG(AncestralBase):
     def modify_edge(self, u, v, mark_u=None, mark_v=None):
         """
         Modify the marks on an existing edge between two nodes.
+        If the edge mark is None, it remains unchanged.
 
         Parameters
         ----------
@@ -354,11 +355,11 @@ class PAG(AncestralBase):
         v : Hashable
             Second node.
 
-        mark_u : str
-            New mark at node u (one of '-', '>', 'o').
+        mark_u : str, default=None
+            New mark at node u (one of '-', '>', 'o'). If the mark is None, it remains unchanged.
 
-        mark_v : str
-            New mark at node v (one of '-', '>', 'o').
+        mark_v : str, default=None
+            New mark at node v (one of '-', '>', 'o'). If the mark is None, it remains unchanged.
 
         Raises
         ------
@@ -446,7 +447,7 @@ class PAG(AncestralBase):
         Returns
         -------
         PAG or None
-            A new graph with    ations applied if inplace=False,
+            A new graph with orientations applied if inplace=False,
             otherwise None.
         """
         pag = self if inplace else self.copy()
@@ -527,7 +528,7 @@ class PAG(AncestralBase):
             return pag
 
     def rule_5(self, inplace=False, **kwargs):
-        """
+        r"""
         R5: Uncovered circle path between two nodes (u, v) connected by an o-o edge.
         """
         pag = self if inplace else self.copy()
@@ -538,37 +539,8 @@ class PAG(AncestralBase):
             return pag
 
     def rule_6(self, inplace=False, **kwargs):
-        """
-        If u -- v o–-* w and u and w may or may not be adjacent, then orient v o--* w as v -–* w.
-
-        Parameters
-        ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
-
-        Returns
-        -------
-        PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
-        """
-        pag = self if inplace else self.copy()
-
-        for v in pag.nodes:
-            u_candidates = pag.get_neighbors(v, u_type="-", v_type=">")
-
-            w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
-
-            for _, w in product(u_candidates, w_candidates):
-                pag.modify_edge(v, w, mark_u=">", mark_v=None)
-
-        if not inplace:
-            return pag
-
-    def rule_7(self, inplace=False, **kwargs):
-        """
-        If u --o v o--* w, u and w are non-adjacent, then orient v o--* w as v -–* w.
+        r"""
+        If u -- v o--* w and u and w may or may not be adjacent, then orient v o--* w as v --* w.
 
         Parameters
         ----------
@@ -586,6 +558,36 @@ class PAG(AncestralBase):
 
         for v in pag.nodes:
             u_candidates = pag.get_neighbors(v, u_type="-", v_type="-")
+
+            w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
+
+            if len(u_candidates) > 0:
+                for w in w_candidates:
+                    pag.modify_edge(v, w, mark_u="-", mark_v=None)
+
+        if not inplace:
+            return pag
+
+    def rule_7(self, inplace=False, **kwargs):
+        r"""
+        If u --o v o--* w, u and w are non-adjacent, then orient v o--* w as v -–* w.
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, works on and returns a copy.
+
+        Returns
+        -------
+        PAG or None
+            A new graph with orientations applied if inplace=False,
+            otherwise None.
+        """
+        pag = self if inplace else self.copy()
+
+        for v in pag.nodes:
+            u_candidates = pag.get_neighbors(v, u_type="o", v_type="-")
             w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
             for u, w in product(u_candidates, w_candidates):
                 if u == w or pag.has_edge(u, w):
@@ -597,9 +599,8 @@ class PAG(AncestralBase):
             return pag
 
     def rule_8(self, inplace=False, **kwargs):
-        """
-        If u o-> v and there exists a directed path v -> … -> w such that
-        u and w are adjacent by u o– w, then orient u -> w.
+        r"""
+        if u --> v --> w or u --o v --> w, and u o--> w, then orient u o--> w as u --> w.
 
         Parameters
         ----------
@@ -615,27 +616,22 @@ class PAG(AncestralBase):
         """
         pag = self if inplace else self.copy()
         for v in pag.nodes:
-            u_candidates = (pag.get_neighbors(v, u_type=">", v_type="-")) or (
-                pag.get_neighbors(v, u_type="o", v_type="-")
-            )
-
+            u_candidates = pag.get_neighbors(
+                v, u_type=">", v_type="-"
+            ) or pag.get_neighbors(v, u_type="o", v_type="-")
             w_candidates = pag.get_neighbors(v, u_type="-", v_type=">")
 
             for u, w in product(u_candidates, w_candidates):
-                if not pag.has_edge(u, w):
-                    continue
-
-                if (
-                    self.get_edge_marks(u, w)[u] == "o"
-                    and self.get_edge_marks(u, v)[w] == ">"
-                ):
-                    pag.modify_edge(u, w, mark_u="-", mark_v=">")
+                if pag.has_edge(u, w):
+                    marks_uw = pag.get_edge_marks(u, w)
+                    if marks_uw[u] == "o" and marks_uw[w] == ">":
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         if not inplace:
             return pag
 
     def rule_9(self, inplace=False, **kwargs):
-        """
+        r"""
         If u o-> w and there exists an uncovered potentially directed path
         ⟨u, v, …, w⟩ with w and v non-adjacent, then orient u -> w.
 
@@ -654,35 +650,27 @@ class PAG(AncestralBase):
         pag = self if inplace else self.copy()
 
         for u, w in list(pag.edges):
-            if not (
-                pag.has_edge(u, w)
-                and pag.edges[u, w]["marks"].get(u) == "o"
-                and pag.edges[u, w]["marks"].get(w) == ">"
-            ):
-                continue
+            marks = pag.get_edge_marks(u, w)
+            if marks[u] == "o" and marks[w] == ">":
+                pd_paths = pag.get_potentially_directed_paths(start=u, end=w)
 
-            pd_paths = pag.get_potentially_directed(start=u, end=w)
+                for path in pd_paths:
+                    if len(path) >= 4 and pag.is_uncovered(path=path):
+                        v = path[1]
 
-            for path in pd_paths:
-                if not pag.is_uncovered(path=path):
-                    continue
-
-                v = path[1]
-
-                if not pag.has_edge(v, w):
-                    pag.modify_edge(u, w, mark_u="-", mark_v=">")
-                    break
+                        if not pag.has_edge(v, w):
+                            pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         if not inplace:
             return pag
 
     def rule_10(self, inplace=False, **kwargs):
-        """
+        r"""
         If u o-> w, and there exist two nodes v -> w <- x such that:
         - there is an uncovered potentially directed path from u to v,
         - there is an uncovered potentially directed path from u to x,
-        - the first neighbors μ and ω on those paths (after u) are distinct,
-        - and μ, ω are not adjacent,
+        - the first neighbors mu and omega on those paths (after u) are distinct,
+        - and mu, omega are not adjacent,
         then orient u -> w.
 
         Parameters
