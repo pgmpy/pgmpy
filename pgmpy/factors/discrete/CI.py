@@ -72,7 +72,6 @@ class BinaryInfluenceModel(TabularCPD):
         if self.isleaky and not (0 <= self.leak[0] <= 1):
             raise ValueError("Leak value must be in [0, 1].")
 
-        # Setup state names for pgmpy TabularCPD
         variable_card = 2
         state_names = {}
         full_variables = [variable] + list(self.evidence)
@@ -160,6 +159,9 @@ class MultilevelInfluenceModel(TabularCPD):
             for val, probs in influence_tables[parent].items():
                 self._validate_probs(probs, f"influence[{parent}={val}]")
 
+        if self.isleaky:
+            self._validate_probs(self.leak, name="leak")
+
         self.cumulative_tables = {
             p: {v: np.cumsum(probs) for v, probs in table.items()}
             for p, table in influence_tables.items()
@@ -183,7 +185,7 @@ class MultilevelInfluenceModel(TabularCPD):
             values=values,
             evidence=evidence,
             evidence_card=[len(st) for st in parent_states],
-            state_names=state_names
+            state_names=state_names if state_names is not None else {},
         )
 
     def _validate_probs(self, arr, name="probabilities"):
