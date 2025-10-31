@@ -13,6 +13,7 @@ from pgmpy.base import DAG, PDAG
 from pgmpy.estimators.CITests import pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+from pgmpy.utils import get_example_model
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -893,6 +894,96 @@ class TestDAGMoralization(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestDAGValidation(unittest.TestCase):
+    def setUp(self):
+        self.model = get_example_model("cancer")
+        self.data = self.model.simulate(n_samples=int(1e3), seed=1000)
+
+    def test_all_metrics(self):
+        result = self.model.validate(data=self.data, compute_rmsea=True)
+        expected_metric_names = [
+            "Correlation",
+            "Log-likelihood",
+            "AIC",
+            "BIC",
+            "Fisher-C p-value",
+            "RMSEA",
+            "Failing CIs / Total CIs",
+        ]
+        self.assertEqual(set(expected_metric_names), set(result.index))
+        self.assertEqual(result.shape[0], len(expected_metric_names))
+
+    def test_single_metric(self):
+        metrics_to_test = {
+            "correlation": ["Correlation"],
+            "log-likelihood": ["Log-likelihood"],
+            "aic": ["AIC"],
+            "bic": ["BIC"],
+            "fisher-c": ["Fisher-C p-value", "RMSEA"],
+            "implied-cis": ["Failing CIs / Total CIs"],
+        }
+        for metric, expected_rows in metrics_to_test.items():
+            with self.subTest(metric=metric):
+                result = self.model.validate(
+                    data=self.data, metrics=(metric,), compute_rmsea=True
+                )
+                for name in expected_rows:
+                    self.assertIn(name, result.index)
+
+                self.assertEqual(result.shape[0], len(expected_rows))
+
+    def test_output_datatypes(self):
+        result = self.model.validate(data=self.data, compute_rmsea=True)
+        expected_dtypes = {
+            "Correlation": float,
+            "Log-likelihood": float,
+            "AIC": float,
+            "BIC": float,
+            "Fisher-C p-value": float,
+            "RMSEA": float,
+            "Failing CIs / Total CIs": str,
+        }
+        for metric, dtype in expected_dtypes.items():
+            self.assertEqual(type(result[metric]), dtype)
+
+    def test_validate_parameters(self):
+        from pgmpy.estimators.CITests import (
+            g_sq,
+            log_likelihood,
+            modified_log_likelihood,
+        )
+
+        correlation_test_params = [
+            "g_sq",
+            "log_likelihood",
+            "modified_log_likelihood",
+            g_sq,
+            log_likelihood,
+            modified_log_likelihood,
+        ]
+
+        for test_param in correlation_test_params:
+            with self.subTest(test_param=test_param):
+                result = self.model.validate(
+                    data=self.data, metrics=("correlation",), ci_test=test_param
+                )
+                actual_score = result["Correlation"]
+                self.assertIsInstance(actual_score, float)
+
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=("unknown_metric",))
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, ci_test="unknown_test")
+
+        def dummy_metric(*args, **kwargs):
+            return 0.5
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=(dummy_metric,))
 
 
 class TestDoOperator(unittest.TestCase):
