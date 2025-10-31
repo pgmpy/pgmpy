@@ -203,7 +203,6 @@ class TestMultilevelInfluenceModel:
 
     def test_init_noisy_max_leak(self):
         leak_dist = [0.8, 0.1, 0.1]
-        leak_cum = np.array([0.8, 0.9, 1.0])
         cpd = MultilevelInfluenceModel(
             variable=self.variable,
             evidence=self.evidence,
