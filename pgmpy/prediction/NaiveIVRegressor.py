@@ -8,21 +8,55 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     """
-    Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
+    Implements Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
 
-    TO : DO
+    This estimator implements a simple two-stage least squares style procedure
+    for the case of a single exposure and a single outcome with one or more
+    instrumental variables. The first stage fits `exposure ~ instrument`
+    using `stage1_estimator`. The second stage fits
+    `outcome ~ predicted_exposure (+ pretreatment covariates)` using `stage2_estimator`.
 
     Parameters
     ----------
-    causal_graph :  DAG, PDAG, ADMG, MAG, or PAG
+    causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles
+    
     stage1_estimator : optional, sklearn regressor
         Estimator for stage 1 regression of exposure on instrument(s) and pretreatment covariates.
         Must implement fit() and predict() methods. Default is None.
+    
     stage2_estimator : optional, sklearn regressor
         Estimator for stage 2 regression of outcome on predicted exposure and pretreatment covariates.
-    TO : DO
 
+    Attributes
+    ----------
+    exposure_var_ : str
+        Name of the exposure variable (single).
+    
+    outcome_var_ : str
+        Name of the outcome variable (single).
+    
+    instrument_vars_ : list of str
+        Names of instrument variables extracted from the causal graph
+    
+    pretreatment_vars_ : list of str
+        Names of pretreatment covariates extracted from the causal graph. 
+    
+    feature_columns_fit_ : list of str
+        Names of features used during 'fit'
+    
+    feature_columns_predict_ : list of str
+        Names of features used during `predict`.
+    
+    stage1_est_ : estimator
+        Fitted first-stage estimator.
+    
+    stage2_est_ : estimator
+        Fitted second-stage estimator.
+    
+    coef_ : array-like
+        Coefficients from the fitted `stage2_estimator` (if available).
+    
     Examples
     --------
     TO : DO
@@ -81,12 +115,12 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     def fit(self, X, y, sample_weight: Optional[Any] = None):
         """
         This method performs two-stage least squares regression using the specified causal graph.
-        It first fits the stage 1 estimator to predict the exposure variable from the instrument
-        and pretreatment variables, then fits the stage 2 estimator to predict the outcome
-        variable from the predicted exposure and pretreatment variables.
+        It first fits the stage 1 estimator to predict the exposure variable from the instrument,
+        then fits the stage 2 estimator to predict the outcome variable from the predicted exposure 
+        and pretreatment variables.
         """
-        # Step 0: validate Inputs
 
+        # Step 0: validate Inputs
         validate_data(
             self,
             X,
@@ -98,7 +132,6 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         )
 
         # Step 1: Initialize data structures and read roles from DAG.
-
         stage1_estimator = clone(self.stage1_estimator)
         stage2_estimator = clone(self.stage2_estimator)
 
