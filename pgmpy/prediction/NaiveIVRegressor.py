@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.utils.validation import check_is_fitted, validate_data
-
+from sklearn.linear_model import LinearRegression
 
 class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     """
@@ -21,12 +21,11 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles
     
-    stage1_estimator : optional, sklearn regressor
-        Estimator for stage 1 regression of exposure on instrument(s) and pretreatment covariates.
-        Must implement fit() and predict() methods. Default is None.
+    stage1_estimator : optional, sklearn regressor (default = LinearRegression())
+        Estimator for stage 1 regression of exposure on instrument(s)
     
-    stage2_estimator : optional, sklearn regressor
-        Estimator for stage 2 regression of outcome on predicted exposure and pretreatment covariates.
+    stage2_estimator : optional, sklearn regressor (default = LinearRegression())
+        Estimator for stage 2 regression of outcome on predicted exposure and pretreatment covariates (if any).
 
     Attributes
     ----------
@@ -132,6 +131,12 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         )
 
         # Step 1: Initialize data structures and read roles from DAG.
+
+        if self.stage1_estimator is None:
+            self.stage1_estimator = LinearRegression()
+        if self.stage2_estimator is None:
+            self.stage2_estimator = LinearRegression()
+   
         stage1_estimator = clone(self.stage1_estimator)
         stage2_estimator = clone(self.stage2_estimator)
 
