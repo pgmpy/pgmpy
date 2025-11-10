@@ -1,4 +1,4 @@
-import os
+import sys
 import unittest
 
 import numpy as np
@@ -19,7 +19,6 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 np.random.seed(42)
-ON_GITHUB_RUNNER = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 class TestPearsonr(unittest.TestCase):
@@ -256,6 +255,7 @@ class TestDiscreteTests(unittest.TestCase):
             np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
+@unittest.skipIf(sys.version_info < (3, 12), "Requires Python 3.12 or higher")
 class TestResidualMethod(unittest.TestCase):
     def setUp(self):
         # Create a combination of mixed data types
