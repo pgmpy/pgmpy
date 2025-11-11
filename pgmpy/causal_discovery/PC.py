@@ -70,44 +70,60 @@ class PC(BaseConstraintCausalDiscovery):
 
     Parameters
     ----------
-    variant: str (default="parallel")
+    variant: str, default="parallel"
         The variant of PC algorithm to run.
 
-        - "orig": The original PC algorithm. Might not give the same
-                  results in different runs but does less independence
-                  tests compared to stable.
-        - "stable": Gives the same result in every run but does needs to
-                  do more statistical independence tests.
-        - "parallel": Parallel version of PC Stable. Can run on multiple
-                  cores with the same result on each run.
+        - "orig": The original PC algorithm. Might not give the same results in different runs but does less
+                  independence tests compared to stable.
+        - "stable": Gives the same result in every run but does needs to do more statistical independence tests.
+        - "parallel": Parallel version of PC Stable. Can run on multiple cores with the same result on each run.
 
     ci_test : str or callable, default=None
-        The conditional independence (CI) test to use for finding (conditional)
-        independences in the data. This can be any of the CI test implemented
-        in :mod:`pgmpy.estimators.CITests` or a custom function that follows
-        the signature of the built-in CI tests.
+        The conditional independence (CI) test to use for finding (conditional) independences in the data. This can be
+        any of the CI test implemented in :mod:`pgmpy.estimators.CITests` or a custom function that follows the
+        signature of the built-in CI tests.
+
         If None, the appropriate CI test will be chosen based on the data type.
 
     return_type : str, default="pdag"
-        One of {"dag", "cpdag", "pdag"}. Type of graph to return.
+        The type of structure to return. Can be one of: `pdag`, `cpdag`, `dag`.
+
+        - If `return_type=pdag` or `return_type=cpdag`: a partially directed structure is returned.
+        - If `return_type=dag`, a fully directed structure is returned. This DAG is one of the possible orientations of
+          the PDAG learned by the PC algorithm.
 
     significance_level : float, default=0.01
-        Threshold for independence tests.
+        The p-value threshold to use for the statistical independence tests. If the p-value of a test is greater than
+        `significance_level`, then the variables are considered independent.
 
     max_cond_vars : int, default=5
-        Max conditioning set size.
+        The maximum number conditional variables to consider while performing conditional independence tests.
 
-    expert_knowledge : ExpertKnowledge or None, default=None
-        Prior knowledge about required/forbidden edges.
+    expert_knowledge : :class:`pgmpy.estimators.ExpertKnowledge`, optional
+        Expert knowledge to be used in the causal graph construction. This needs to be an instance of
+        :class:`pgmpy.estimators.ExpertKnowledge`. Users can specify knowledge in the form of required/forbidden edges,
+        temporal information, or restrict the search space.
 
     enforce_expert_knowledge : bool, default=False
-        Whether to enforce expert knowledge during search.
+        If True, the expert knowledge will be strictly enforced. This implies the following:
+
+        - For every edge (u, v) specified in `forbidden_edges`, there will be no edge between u and v.
+        - For every edge (u, v) specified in `required_edges`, one of the following would be present in the final model:
+          u -> v, u <- v, or u - v (if CPDAG is returned).
+
+        If False, the algorithm attempts to make the edge orientations as specified by expert knowledge after learning
+        the skeleton. This implies the following:
+
+        - For every edge (u, v) specified in `forbidden_edges`, the final graph would have either v <- u or no edge
+          except if u -> v is part of a collider structure in the learned skeleton.
+        - For every edge (u, v) specified in `required_edges`, the final graph would either have u -> v or no edge
+          except if v <- u is part of a collider structure in the learned skeleton.
 
     n_jobs : int, default=-1
-        Number of parallel jobs.
+        The number of jobs to run in parallel. This is only used when `variant="parallel"`.
 
     show_progress : bool, default=True
-        Whether to show progress bar.
+        If True, shows a progress bar while learning the causal structure.
 
     Attributes
     ----------
