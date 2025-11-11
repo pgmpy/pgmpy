@@ -57,15 +57,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
         """
-        return self._fit(X, y, independencies)
-
-    def _fit(
-        self,
-        X: pd.DataFrame,
-        y=None,
-        independencies: Independencies = None,
-    ):
-        raise NotImplementedError()
+        return self._fit(X, independencies)
 
     def _build_skeleton(
         self,
@@ -316,7 +308,6 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
             pbar.update(max_cond_vars - lim_neighbors)
             pbar.close()
 
-        self.skeleton_, self.separating_sets_ = graph, separating_sets
         return graph, separating_sets
 
     @staticmethod

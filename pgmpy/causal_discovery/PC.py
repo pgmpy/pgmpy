@@ -20,18 +20,76 @@ from pgmpy.estimators.CITests import get_callable_ci_test
 
 class PC(BaseConstraintCausalDiscovery):
     """
-    Constraint-based estimation of DAGs using the PC algorithm.
+    The PC algorithm for causal discovery / structure learning.
+
+    This class implements the PC algorithm [1] for causal discovery. Given a
+    tabular dataset, the PC algorithm estimates the causal structure among the
+    variables in the data in a Directed Acyclic Graph (DAG) or Partially
+    Directed Acyclic Graph (PDAG). The algorithm works by identifying
+    (conditional) dependencies in data set using statistical independence tests
+    and estimates a DAG pattern that satisfies the identified dependencies.
+
+    When used with expert knowledge, the following flowchart can help you figure
+    out the expected results based on different choices of parameters and the
+    structure learned from the data.
+
+                                        ┌──────────────────┐    No      ┌─────────────┐
+                                        │ Expert Knowledge ├──────────► │  Normal PC  │
+                                        │    specified?    │            │    run      │
+                                        └────────┬─────────┘            └─────────────┘
+                                                 │
+                                            Yes  │
+                                                 │
+                                                 ▼
+                                        ┌──────────────────┐
+                                        │  Enforce expert  │
+                                        │    knowledge?    │
+                                        └────────┬─────────┘
+                                                 │
+                                                 │
+                                Yes              │                No
+                       ┌─────────────────────────┴───────────────────────┐
+                       │                                                 │
+                       ▼                                                 ▼
+        ┌──────────────────────────────┐                     ┌─────────────────────────┐
+        │                              │                     │                         │
+        │ 1) Forbidden edges are       │                     │ Conflicts with learned  │
+        │    removed from the skeleton │                     │   structure (opposite   │
+        │                              │                     │  edge orientations)?    │
+        │ 2) Required edges will be    │                     │                         │
+        │    present in the final      │                     └───────────┬─────────────┘
+        │    model (but direction is   │                                 │
+        │    not guaranteed)           │                ┌────────────────┴──────────────────┐
+        │                              │            Yes │                                   │ No
+        └──────────────────────────────┘                │                                   │
+                                                        ▼                                   ▼
+                                            ┌───────────────────┐                ┌──────────────────┐
+                                            │ Conflicting edges │                │ Expert knowledge │
+                                            │    are ignored    │                │  applied fully   │
+                                            └───────────────────┘                └──────────────────┘
 
     Parameters
     ----------
-    variant : str, default="parallel"
-        PC algorithm variant: {"orig", "stable", "parallel"}.
+    variant: str (default="parallel")
+        The variant of PC algorithm to run.
+
+        - "orig": The original PC algorithm. Might not give the same
+                  results in different runs but does less independence
+                  tests compared to stable.
+        - "stable": Gives the same result in every run but does needs to
+                  do more statistical independence tests.
+        - "parallel": Parallel version of PC Stable. Can run on multiple
+                  cores with the same result on each run.
 
     ci_test : str or callable, default=None
-        Conditional independence test to use.
+        The conditional independence (CI) test to use for finding (conditional)
+        independences in the data. This can be any of the CI test implemented
+        in :mod:`pgmpy.estimators.CITests` or a custom function that follows
+        the signature of the built-in CI tests.
+        If None, the appropriate CI test will be chosen based on the data type.
 
     return_type : str, default="pdag"
-        One of {"dag", "cpdag", "pdag", "skeleton"}.
+        One of {"dag", "cpdag", "pdag"}. Type of graph to return.
 
     significance_level : float, default=0.01
         Threshold for independence tests.
@@ -53,16 +111,54 @@ class PC(BaseConstraintCausalDiscovery):
 
     Attributes
     ----------
-    skeleton_ : UndirectedGraph
-        An estimate for the undirected graph skeleton of the BN underlying the data.
+    causal_graph_ : :class:`~pgmpy.base.DAG` or :class: `~pgmpy.base.PDAG`
+        The learned causal graph.
+
+        - If `return_type="pdag"`, this will be a PDAG instance.
+        - If `return_type="dag"`, this will be a DAG instance.
+
+    adjacency_matrix_ : pd.DataFrame
+        Adjacency matrix representation of the learned causal graph, i.e. `causal_graph_`.
+
+    skeleton_ : :class:`~pgmpy.base.UndirectedGraph`
+        An estimate for the undirected graph skeleton of the DAG underlying the data.
 
     separating_sets_ : dict
             A dict containing for each pair of not directly connected nodes a
             separating set ("witnessing set") of variables that makes them
-            conditionally independent. (needed for edge orientation procedures)\
+            conditionally independent. (needed for edge orientation procedures)
 
-    graph_ : PDAG
-        The learned causal graph.
+    Examples
+    --------
+    Simulate some data to use for causal discovery:
+
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model("alarm")
+    >>> df = model.simulate(n_samples=1000, seed=42)
+
+    Use the PC algorithm to learn the causal structure from data:
+
+    >>> from pgmpy.estimators import PC
+    >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
+    >>> pc.fit(df)
+    >>> pc.causal_graph_.edges()
+
+    Specify expert knowledge:
+
+    References
+    ----------
+    .. [1] Spirtes, P., Glymour, C., & Scheines, R. (2001). Causation, prediction, and search.
+           doi:10.7551/mitpress/1754.001.0001
+    .. [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
+           http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    .. [3] Original PC: P. Spirtes, C. Glymour, and R. Scheines, Causation, Prediction, and Search, 2nd ed.
+           Cambridge, MA: MIT Press, 2000.
+    .. [4] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm yielding order-independent
+           skeletons,” ArXiv e-prints, Nov. 2012.
+    .. [5] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal discovery with multi-core
+           PCs." IEEE/ACM transactions on computational biology and bioinformatics (2016).
+    .. [6] Expert Knowledge: Meek, Christopher. "Causal inference and causal explanation with background knowledge."
+           arXiv preprint arXiv:1302.4972 (2013).
     """
 
     def __init__(
@@ -87,12 +183,7 @@ class PC(BaseConstraintCausalDiscovery):
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
-    def _fit(
-        self,
-        X: pd.DataFrame,
-        y=None,
-        independencies=None,
-    ):
+    def _fit(self, X: pd.DataFrame, independencies=None):
         """
         Fit data (`X`) and independence relations (optional) to a causal graph. The method
         builds an initial skeleton graph (undirected) based on conditional independence tests.
@@ -138,7 +229,7 @@ class PC(BaseConstraintCausalDiscovery):
             expert_knowledge.limit_search_space(X.columns)
 
         # Step 1: skeleton
-        skel, separating_sets = self._build_skeleton(
+        self.skeleton_, self.separating_sets_ = self._build_skeleton(
             data=X,
             independencies=independencies,
             variant=self.variant,
@@ -151,13 +242,9 @@ class PC(BaseConstraintCausalDiscovery):
             show_progress=self.show_progress,
         )
 
-        if self.return_type == "skeleton":
-            self.graph_ = skel
-            return self
-
         # Step 2: orient colliders
         pdag = self._orient_colliders(
-            skel, separating_sets, expert_knowledge.temporal_ordering
+            self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering
         )
 
         # Step 3: apply rules / expert knowledge
@@ -174,9 +261,9 @@ class PC(BaseConstraintCausalDiscovery):
         pdag.add_nodes_from(set(X.columns) - set(pdag.nodes()))
 
         if self.return_type in ("pdag", "cpdag"):
-            self.graph_ = pdag
+            self.causal_graph_ = pdag
         elif self.return_type == "dag":
-            self.graph_ = pdag.to_dag()
+            self.causal_graph_ = pdag.to_dag()
         else:
             raise ValueError(
                 f"return_type must be one of: dag, pdag, cpdag, skeleton. Got: {self.return_type}"

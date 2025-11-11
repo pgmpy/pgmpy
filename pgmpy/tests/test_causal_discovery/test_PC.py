@@ -91,7 +91,7 @@ def test_build_skeleton_from_ind(variant):
     estimator = PC(
         variant=variant,
         ci_test="independence_match",
-        return_type="skeleton",
+        return_type="pdag",
         n_jobs=2,
         show_progress=False,
     )
@@ -115,7 +115,7 @@ def test_build_skeleton_from_ind(variant):
     estimator = PC(
         variant=variant,
         ci_test="independence_match",
-        return_type="skeleton",
+        return_type="pdag",
         n_jobs=2,
         show_progress=False,
     )
@@ -128,7 +128,7 @@ def test_build_skeleton_from_ind(variant):
         independencies=model.get_independencies(),
     )
 
-    expected_edges = estimator.graph_.edges()
+    expected_edges = estimator.causal_graph_.edges()
     expected_sepsets1 = {
         frozenset(("D", "C")): ("B",),
         frozenset(("E", "B")): ("C",),
@@ -232,7 +232,7 @@ def test_estimate_dag(variant):
     ).fit(data, independencies=ind)
 
     expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
-    assert estimator.graph_.edges() == expected_edges
+    assert estimator.causal_graph_.edges() == expected_edges
 
     model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
     cols_ = ["A", "B", "C", "D", "E"]
@@ -247,10 +247,10 @@ def test_estimate_dag(variant):
         show_progress=False,
     ).fit(data, independencies=model.get_independencies())
 
-    expected_edges_1 = set(estimator.graph_.edges())
+    expected_edges_1 = set(estimator.causal_graph_.edges())
     expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
-    assert (set(estimator.graph_.edges()) == expected_edges_1) or (
-        set(estimator.graph_.edges()) == expected_edges_2
+    assert (set(estimator.causal_graph_.edges()) == expected_edges_1) or (
+        set(estimator.causal_graph_.edges()) == expected_edges_2
     )
 
 
@@ -264,7 +264,7 @@ def test_build_skeleton_chi_square(variant):
     est = PC(
         variant=variant,
         ci_test="chi_square",
-        return_type="skeleton",
+        return_type="pdag",
         significance_level=0.005,
         show_progress=False,
     )
@@ -305,7 +305,7 @@ def test_build_skeleton_chi_square(variant):
     est = PC(
         variant=variant,
         ci_test=fake_ci,
-        return_type="skeleton",
+        return_type="pdag",
         show_progress=False,
     )
     est.fit(X=fake_data)
@@ -331,7 +331,7 @@ def test_build_skeleton_discrete(variant):
         est = PC(
             variant=variant,
             ci_test=test,
-            return_type="skeleton",
+            return_type="pdag",
             significance_level=0.005,
             n_jobs=2,
             show_progress=False,
@@ -355,7 +355,7 @@ def test_build_dag_discrete(variant):
     )
     est.fit(X=data)
     expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
-    assert set(est.graph_.edges()) == expected_edges
+    assert set(est.causal_graph_.edges()) == expected_edges
 
 
 def test_search_space():
@@ -379,7 +379,7 @@ def test_search_space():
 
     est.fit(X=adult_data)
     # assert if dag is a subset of search_space
-    for edge in est.graph_.edges():
+    for edge in est.causal_graph_.edges():
         assert edge in search_space
 
 
@@ -398,7 +398,7 @@ def test_build_skeleton_continuous(ci_test, variant):
     est = PC(
         variant=variant,
         ci_test=ci_test,
-        return_type="skeleton",
+        return_type="pdag",
         n_jobs=2,
         show_progress=False,
     )
@@ -441,7 +441,7 @@ def test_build_skeleton_continuous(ci_test, variant):
     est = PC(
         variant=variant,
         ci_test=fake_ci,
-        return_type="skeleton",
+        return_type="pdag",
         n_jobs=2,
         show_progress=False,
     )
@@ -474,7 +474,7 @@ def test_build_dag_continuous(ci_test, variant):
     est.fit(X=data)
 
     expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
-    assert set(est.graph_.edges()) == expected_edges
+    assert set(est.causal_graph_.edges()) == expected_edges
 
 
 def test_pc_alarm():
@@ -524,7 +524,7 @@ def test_pc_asia_expert():
         show_progress=False,
     )
     est.fit(X=data)
-    pdag = est.graph_
+    pdag = est.causal_graph_
     if ("lung", "either") in pdag.edges() or ("either", "lung") in pdag.edges():
         assert ("lung", "either") in pdag.directed_edges
     if ("tub", "either") in pdag.edges() or ("either", "tub") in pdag.edges():
@@ -548,7 +548,7 @@ def test_temporal_pc_cancer():
         show_progress=False,
     )
     est.fit(X=data)
-    pdag = est.graph_
+    pdag = est.causal_graph_
     assert set(pdag.edges()) == set(
         [
             ("Cancer", "Xray"),
@@ -609,5 +609,5 @@ def test_temporal_pc_sachs():
     df = model.simulate(int(1e3))
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
-    pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).graph_
+    pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).causal_graph_
     assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
