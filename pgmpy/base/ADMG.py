@@ -466,7 +466,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return dag_instance
 
     def to_daggity(self) -> str:
-
         """
         Convert the ADMG to a DAGitty syntax representation.
 
@@ -479,9 +478,9 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         they appear with an attribute block, otherwise just the node id.
 
         (essentially turns an ADMG Object --> string using (->) and (<->) to represent relationship)
-        
-        Returns 
-        ------- 
+
+        Returns
+        -------
         str String representation of the DAG in dagitty syntax format.
         """
 
@@ -524,7 +523,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         for u, v in sorted(directed, key=lambda e: (e[0], e[1])):
             statements.append(f"{u} -> {v}")
 
-        # For bidirected edges 
+        # For bidirected edges
         for a, b in sorted(bidirected, key=lambda e: (e[0], e[1])):
             statements.append(f"{a} <-> {b}")
 
@@ -541,7 +540,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         # Wrap into dagitty block
         content = "\n".join(statements)
         return f"dag {{\n{content}\n}}" if content else "dag {\n}"
-        
+
     def is_mseparated(
         self,
         nodes_u,
