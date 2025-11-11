@@ -1,5 +1,7 @@
-import numpy as np
 from itertools import product
+
+import numpy as np
+
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -37,11 +39,11 @@ class BinaryInfluenceModel(TabularCPD):
     Examples
     --------
     >>> cav = BinaryInfluenceModel(
-    ...     variable='Disease',
-    ...     evidence=['Fever', 'Cough', 'Fatigue'],
+    ...     variable="Disease",
+    ...     evidence=["Fever", "Cough", "Fatigue"],
     ...     activation_magnitude=[0.6, 0.4, 0.2],
     ...     leak=0.05,
-    ...     mode='OR'
+    ...     mode="OR",
     ... )
     >>> # The created object is a TabularCPD
     """
@@ -66,7 +68,9 @@ class BinaryInfluenceModel(TabularCPD):
         self.evidence = evidence
 
         if len(self.activation_magnitude) != len(evidence):
-            raise ValueError("Number of activation magnitudes must match number of evidence variables.")
+            raise ValueError(
+                "Number of activation magnitudes must match number of evidence variables."
+            )
         if np.any((self.activation_magnitude < 0) | (self.activation_magnitude > 1)):
             raise ValueError("All activation probabilities must be in [0, 1].")
         if self.isleaky and not (0 <= self.leak[0] <= 1):
@@ -90,7 +94,7 @@ class BinaryInfluenceModel(TabularCPD):
             cols.append(probs)
 
         cpd_values = np.array(cols).T
-        
+
         super().__init__(
             variable=variable,
             variable_card=variable_card,
@@ -106,10 +110,14 @@ class BinaryInfluenceModel(TabularCPD):
         given a specific evidence instantiation.
         """
         if set(evidence_instantiate.keys()) != set(self.evidence):
-            raise ValueError(f"Evidence mismatch. Expected {self.evidence}, got {list(evidence_instantiate.keys())}")
+            raise ValueError(
+                f"Evidence mismatch. Expected {self.evidence}, got {list(evidence_instantiate.keys())}"
+            )
 
         active_key = True if self.isboolean_style else 1
-        active_mask = np.array([evidence_instantiate[e] == active_key for e in self.evidence])
+        active_mask = np.array(
+            [evidence_instantiate[e] == active_key for e in self.evidence]
+        )
         probs = self.activation_magnitude[active_mask]
 
         if self.mode == "OR":
@@ -144,11 +152,20 @@ class MultilevelInfluenceModel(TabularCPD):
         Leak distribution for spontaneous activation.
     """
 
-    def __init__(self, variable, evidence, influence_tables, levels, leak=None, mode="MAX", state_names=None):
+    def __init__(
+        self,
+        variable,
+        evidence,
+        influence_tables,
+        levels,
+        leak=None,
+        mode="MAX",
+        state_names=None,
+    ):
         self.mode = mode.upper()
         if self.mode not in {"MAX", "MIN"}:
             raise ValueError("mode must be 'MAX' or 'MIN'")
-            
+
         self.levels = levels
         self.influence_tables = influence_tables
         self.leak = np.array(leak) if leak is not None else None
@@ -166,9 +183,7 @@ class MultilevelInfluenceModel(TabularCPD):
             p: {v: np.cumsum(probs) for v, probs in table.items()}
             for p, table in influence_tables.items()
         }
-        self.cumulative_leak = (
-            np.cumsum(leak) if leak is not None else np.ones(levels)
-        )
+        self.cumulative_leak = np.cumsum(leak) if leak is not None else np.ones(levels)
 
         parent_states = [list(self.influence_tables[p].keys()) for p in self.evidence]
         cols = []
@@ -178,7 +193,7 @@ class MultilevelInfluenceModel(TabularCPD):
             cols.append(probs)
 
         values = np.vstack(cols).T
-        
+
         super().__init__(
             variable=variable,
             variable_card=self.levels,
@@ -199,7 +214,9 @@ class MultilevelInfluenceModel(TabularCPD):
     def _evaluate(self, evidence_instantiate: dict) -> np.ndarray:
         """Compute P(X | evidence)."""
         if set(evidence_instantiate.keys()) != set(self.evidence):
-            raise ValueError(f"Evidence mismatch. Expected {self.evidence}, got {list(evidence_instantiate)}")
+            raise ValueError(
+                f"Evidence mismatch. Expected {self.evidence}, got {list(evidence_instantiate)}"
+            )
 
         if self.mode == "MAX":
             cum_prob = np.ones(self.levels)
@@ -213,9 +230,9 @@ class MultilevelInfluenceModel(TabularCPD):
             complement_prod = np.ones(self.levels)
             for parent, val in evidence_instantiate.items():
                 theta = self.cumulative_tables[parent][val]
-                complement_prod *= (1 - theta)
+                complement_prod *= 1 - theta
             if self.isleaky:
-                complement_prod *= (1 - self.cumulative_leak)
+                complement_prod *= 1 - self.cumulative_leak
             cum_prob = 1 - complement_prod
 
         else:

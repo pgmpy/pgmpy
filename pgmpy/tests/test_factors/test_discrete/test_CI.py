@@ -1,13 +1,16 @@
-import pytest
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 # Assuming the classes are in pgmpy.factors.discrete.CI
 # Adjust this import if your file structure is different.
-from pgmpy.factors.discrete import BinaryInfluenceModel, MultilevelInfluenceModel
-from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.discrete import (
+    BinaryInfluenceModel,
+    MultilevelInfluenceModel,
+    TabularCPD,
+)
 from pgmpy.inference import VariableElimination
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 class TestBinaryInfluenceModel:
@@ -138,7 +141,7 @@ class TestBinaryInfluenceModel:
         model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
         cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
         cpd_b = TabularCPD("B", 2, [[0.7], [0.3]])
-        
+
         # P(C=1 | A=0, B=0) = 0.1 (leak)
         # P(C=1 | A=0, B=1) = 1 - (1-0.4)*(1-0.1) = 0.46
         # P(C=1 | A=1, B=0) = 1 - (1-0.6)*(1-0.1) = 0.64
@@ -148,12 +151,12 @@ class TestBinaryInfluenceModel:
             evidence=["A", "B"],
             activation_magnitude=[0.6, 0.4],
             mode="OR",
-            leak=0.1
+            leak=0.1,
         )
         model.add_cpds(cpd_a, cpd_b, cpd_c)
 
         infer = VariableElimination(model)
-        
+
         # P(C=1) = P(C=1|0,0)P(A=0)P(B=0) + P(C=1|0,1)P(A=0)P(B=1) + ...
         # P(C=1) = (0.1 * 0.2 * 0.7) + (0.46 * 0.2 * 0.3) + (0.64 * 0.8 * 0.7) + (0.784 * 0.8 * 0.3)
         # P(C=1) = 0.014 + 0.0276 + 0.3584 + 0.18816 = 0.58816
@@ -217,10 +220,10 @@ class TestMultilevelInfluenceModel:
         # cum_prob_with_leak = [0.08, 0.56, 1.0] * [0.8, 0.9, 1.0] = [0.064, 0.504, 1.0]
         # -> probs = [0.064, 0.44, 0.496]
         expected_probs_11 = [0.064, 0.44, 0.496]
-        
+
         # Test one column
         npt.assert_allclose(cpd.get_values()[:, 3], expected_probs_11)
-        
+
         # Test (X1=0, X2=0):
         # cum_prob_no_leak = [1.0, 1.0, 1.0]
         # cum_prob_with_leak = [1.0, 1.0, 1.0] * [0.8, 0.9, 1.0] = [0.8, 0.9, 1.0]
@@ -238,12 +241,12 @@ class TestMultilevelInfluenceModel:
         # Cumulative tables (1-F(x))
         # X1: { 0: [0.0, 0.0, 0.0], 1: [0.8, 0.3, 0.0] }
         # X2: { 0: [0.0, 0.0, 0.0], 1: [0.6, 0.2, 0.0] }
-        
+
         # Note: The implementation calculates 1 - PROD(1 - F_i(x))
         # F_i(x) are the cumulative tables from setup_method
         # F_X1_1 = [0.2, 0.7, 1.0] -> (1 - F) = [0.8, 0.3, 0.0]
         # F_X2_1 = [0.4, 0.8, 1.0] -> (1 - F) = [0.6, 0.2, 0.0]
-        
+
         # Case (X1=1, X2=1):
         # complement_prod = [0.8, 0.3, 0.0] * [0.6, 0.2, 0.0] = [0.48, 0.06, 0.0]
         # cum_prob = 1 - complement_prod = [0.52, 0.94, 1.0]
@@ -261,21 +264,15 @@ class TestMultilevelInfluenceModel:
 
     def test_init_errors(self):
         with pytest.raises(ValueError, match="mode must be 'MAX' or 'MIN'"):
-            MultilevelInfluenceModel(
-                "Y", ["X1"], {}, 3, mode="AVG"
-            )
+            MultilevelInfluenceModel("Y", ["X1"], {}, 3, mode="AVG")
 
         with pytest.raises(ValueError, match="must sum to 1"):
             bad_table = {"X1": {0: [1.0, 0.0, 0.0], 1: [0.5, 0.5, 0.5]}}
-            MultilevelInfluenceModel(
-                "Y", ["X1"], bad_table, 3
-            )
-            
+            MultilevelInfluenceModel("Y", ["X1"], bad_table, 3)
+
         with pytest.raises(ValueError, match="must be between 0 and 1"):
             bad_table = {"X1": {0: [1.0, 0.0, 0.0], 1: [1.5, -0.5, 0.0]}}
-            MultilevelInfluenceModel(
-                "Y", ["X1"], bad_table, 3
-            )
+            MultilevelInfluenceModel("Y", ["X1"], bad_table, 3)
 
         with pytest.raises(ValueError, match="must sum to 1"):
             MultilevelInfluenceModel(
