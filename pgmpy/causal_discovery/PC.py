@@ -76,7 +76,9 @@ class PC(BaseConstraintCausalDiscovery):
         - "orig": The original PC algorithm. Might not give the same results in different runs but does less
                   independence tests compared to stable.
         - "stable": Gives the same result in every run but does needs to do more statistical independence tests.
-        - "parallel": Parallel version of PC Stable. Can run on multiple cores with the same result on each run.
+        - "parallel": Parallel version of PC Stable. Can run on multiple cores with the same result on each run. The
+          parallel version would be faster only on datasets with large number of variables or samples. For smaller
+          datasets, it might be slower due to the overhead of managing multiple processes.
 
     ci_test : str or callable, default=None
         The conditional independence (CI) test to use for finding (conditional) independences in the data. This can be
