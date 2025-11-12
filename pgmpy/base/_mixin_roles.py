@@ -160,6 +160,8 @@ class _GraphRolesMixin:
     @property
     def latents(self):
         """
+        Returns the set of latent variables in the causal model.
+
         Property
         --------
         latents : set of nodes (default: empty set)
@@ -184,7 +186,7 @@ class _GraphRolesMixin:
     @latents.setter
     def latents(self, variables):
         """
-        Replace the `latents` nodes.
+        Sets the latent variables in the model. If latents already exist, they will be replaced.
 
         Parameters
         ----------
@@ -202,6 +204,8 @@ class _GraphRolesMixin:
     @property
     def observed(self):
         """
+        Returns the set of observed variables in the causal model.
+
         Property
         --------
         observed: set of nodes (default: empty set)
@@ -226,6 +230,8 @@ class _GraphRolesMixin:
     @property
     def exposures(self):
         """
+        Returns the set of exposure variables in the causal model.
+
         Property
         --------
         exposures : set of nodes (default: empty set)
@@ -250,14 +256,13 @@ class _GraphRolesMixin:
     @exposures.setter
     def exposures(self, variables):
         """
-        Replace the `exposures` nodes.
+        Sets the exposure variables in the model. If exposure variables are already defined, they will be replaced.
 
         Parameters
         ----------
         variables: set of nodes (default: empty set)
-            A set of exposure variables in the graph. These are the variables
-            that represent the treatment or intervention being studied in a
-            causal analysis.
+            A set of exposure variables in the graph. These are the variables that represent the treatment or
+            intervention being studied in a causal analysis.
         """
         if self.has_role("exposures"):
             self.without_role(
@@ -268,6 +273,8 @@ class _GraphRolesMixin:
     @property
     def outcomes(self):
         """
+        Returns the set of outcome variables in the causal model.
+
         Property
         --------
         outcomes : set of nodes (default: empty set)
@@ -292,7 +299,7 @@ class _GraphRolesMixin:
     @outcomes.setter
     def outcomes(self, variables):
         """
-        Replace the `outcomes` nodes.
+        Sets the outcome variables in the model. If outcome variables are already defined, they will be replaced.
 
         Parameters
         ----------
