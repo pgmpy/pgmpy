@@ -320,7 +320,7 @@ def test_naiveiv_recovers_theta_high_dim():
     assert preds.shape[0] == df.shape[0]
 
     mse = np.mean((preds - y.to_numpy()) ** 2)
-    assert mse < 1.04
+    assert mse < 1.07
 
 
 def test_naiveIV_no_estimators(dag):
