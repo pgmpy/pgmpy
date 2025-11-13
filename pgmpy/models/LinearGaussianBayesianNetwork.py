@@ -663,12 +663,16 @@ class LinearGaussianBayesianNetwork(DAG):
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
         Predicts the conditional distribution of missing variables
-        Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
+
+        Predicts the distribution of the missing variable (i.e. missing
+        columns) in the given dataset and returns its mean and covariance.
+
         Parameters
         ----------
         data: pandas.DataFrame
             DataFrame with a subset of model variables observed.
             The dataframe with missing variable which to predict.
+
         Returns
         -------
         variables: list
@@ -681,6 +685,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
         cov: np.array
             The covariance of the conditional joint distribution over the missing variables.
+
         Examples
         --------
         >>> # Drop a column you want to predict (avoid inplace=True to keep return value)
