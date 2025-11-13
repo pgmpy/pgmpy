@@ -98,7 +98,7 @@ class NaiveBayes(DiscreteBayesianNetwork):
         for u, v in ebunch:
             self.add_edge(u, v)
 
-    def _get_ancestors_of(self, obs_nodes_list):
+    def get_ancestors(self, obs_nodes_list):
         """
         Returns a list of all ancestors of all the observed nodes.
 
