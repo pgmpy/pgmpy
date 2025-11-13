@@ -314,7 +314,7 @@ def test_naiveiv_recovers_theta_high_dim():
 
     est.fit(df, y)
 
-    assert np.isclose(est.stage2_est_.coef_.round(1)[0], 0.7, rtol= 0.2)
+    assert np.isclose(est.stage2_est_.coef_.round(1)[0], 0.7, rtol=0.2)
 
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
@@ -322,15 +322,16 @@ def test_naiveiv_recovers_theta_high_dim():
     mse = np.mean((preds - y.to_numpy()) ** 2)
     assert mse < 1.04
 
+
 def test_naiveIV_no_estimators(dag):
-    """Test that NaiveIVRegressor works when no estimators are provided (defaults to LinearRegression)."""
+    """Test whether NaiveIVRegressor works when no estimators are provided (defaults to LinearRegression)."""
     X, y = make_simulated_plr(n=150, seed=5)
-    
+
     model = NaiveIVRegressor(
         causal_graph=dag,
     )
 
-    model.fit(X,y)
+    model.fit(X, y)
 
     assert hasattr(model, "stage1_est_")
     assert hasattr(model, "stage2_est_")
@@ -342,5 +343,5 @@ def test_naiveIV_no_estimators(dag):
 
     preds = model.predict(X)
     assert len(preds) == len(X)
-    
+
     assert model.n_features_in_ == X.shape[1]
