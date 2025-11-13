@@ -277,14 +277,14 @@ def test_dag_roles_validation():
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
-    exposure_vars = list(regressor.causal_graph.get_role("exposure"))
-    outcome_vars = list(regressor.causal_graph.get_role("outcome"))
-    adjustment_vars = list(regressor.causal_graph.get_role("adjustment"))
-    pretreatment_vars = list(
-        regressor.causal_graph.get_role("pretreatment")
-        if regressor.causal_graph.has_role("pretreatment")
-        else []
-    )
+    exposure_vars = regressor.causal_graph.get_role("exposure")
+    outcome_vars = regressor.causal_graph.get_role("outcome")
+    adjustment_vars = regressor.causal_graph.get_role("adjustment")
+
+    if regressor.causal_graph.has_role("pretreatment"):
+        pretreatment_vars = regressor.causal_graph.get_role("pretreatment")
+    else:
+        pretreatment_vars = []
 
     assert len(exposure_vars) == 1, f"Expected 1 exposure, got {len(exposure_vars)}"
     assert len(outcome_vars) == 1, f"Expected 1 outcome, got {len(outcome_vars)}"
@@ -297,8 +297,8 @@ def test_dag_roles_validation():
     dag_no_roles = DAG(ebunch=[("X", "Y")])
     regressor_invalid = NaiveAdjustmentRegressor(causal_graph=dag_no_roles)
 
-    exposure_vars_invalid = list(regressor_invalid.causal_graph.get_role("exposure"))
-    outcome_vars_invalid = list(regressor_invalid.causal_graph.get_role("outcome"))
+    exposure_vars_invalid = regressor_invalid.causal_graph.get_role("exposure")
+    outcome_vars_invalid = regressor_invalid.causal_graph.get_role("outcome")
     assert len(exposure_vars_invalid) == 0
     assert len(outcome_vars_invalid) == 0
 
@@ -375,7 +375,7 @@ def test_empty_adjustment_role_explicit():
 def test_pretreatment_variables():
     """Test support for pretreatment variables."""
     dag = DAG(
-        ebunch=[("P", "X"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
+        ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y"), ("P", "Y")],
         roles={
             "exposure": "X",
             "outcome": "Y",
