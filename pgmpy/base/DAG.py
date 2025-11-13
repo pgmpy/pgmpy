@@ -273,7 +273,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
         latents = roles["latents"]
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, roles=roles)
+            if cls.__name__ == "DAG":
+                dag = cls(ebunch=ebunch, roles=roles)
+            else:
+                dag = cls(ebunch=ebunch, latents=latents)
             dag.add_nodes_from(nodes)
             return dag
         else:

@@ -67,7 +67,7 @@ def parse_lavaan(lines):
     return ebunch, latents, err_corr, err_var
 
 
-def parse_dagitty(lines, target_type="DAG"):
+def parse_dagitty(lines):
     def handle_edge_stat(edge_stat, latents, ebunch, betas):
         all_vars = set()
         # ParseResults type is resolved at call time (ParseResults imported later)
@@ -82,7 +82,15 @@ def parse_dagitty(lines, target_type="DAG"):
             start_i = 0
             while start_i < length - 1:
                 # Parse {a -> b -> c} or {a <- b <- c} etc
-                if edge_stat[start_i + 1] in ["->", "<-", "<->", "o->", "<-o", "o-o"]:
+                if edge_stat[start_i + 1] in [
+                    "->",
+                    "<-",
+                    "<->",
+                    "o->",
+                    "<-o",
+                    "o-o",
+                    "--",
+                ]:
                     end_i = start_i + 2
                 else:
                     # subgraph/list of variables {a b c}
@@ -136,6 +144,9 @@ def parse_dagitty(lines, target_type="DAG"):
             # '<' means an arrowhead at that endpoint (visual '<' -> mark '>')
             if c == "<":
                 return ">"
+            # Dagitty can use '@' to represent circle endpoints for PAG; map to 'o'
+            if c == "@":
+                return "o"
             if c in (">", "o", "-"):
                 return c
             # fallback (shouldn't happen)
@@ -145,7 +156,7 @@ def parse_dagitty(lines, target_type="DAG"):
         # For DAG we keep the old behavior (u, v) and create artificial latent for <->.
         for left_var in list(left_vars):
             for right_var in list(right_vars):
-                if target_type.upper() in ("MAG", "PAG"):
+                if target_type.upper() in ("MAG", "PAG", "PDAG"):
                     t = str(token)
                     left_mark = char_to_mark(t[0])
                     right_mark = char_to_mark(t[-1])
@@ -215,6 +226,22 @@ def parse_dagitty(lines, target_type="DAG"):
             f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
         ) from None
 
+    # Infer graph type from header (e.g. "dag {", "mag {", "pag {") if present.
+    # If header is present, override target_type to follow the file.
+    import re
+
+    first_nonempty = None
+    for ln in lines:
+        if isinstance(ln, str) and ln.strip():
+            first_nonempty = ln.strip()
+            break
+    if first_nonempty is not None:
+        m = re.match(r"^\s*(\w+)", first_nonempty, flags=re.IGNORECASE)
+        if m:
+            hdr = m.group(1).lower()
+            if hdr in ("dag", "mag", "pag"):
+                target_type = hdr.upper()
+
     # Step 1: DAGitty Grammar in pyparsing
     # Variable name like X.1, a_b, 123. Support single or double quoted names with spaces
     var = Word(alphanums + "_" + ".") ^ QuotedString('"') ^ QuotedString("'")
@@ -223,8 +250,8 @@ def parse_dagitty(lines, target_type="DAG"):
     subgraph = nestedExpr("{", "}")
     var_or_subgraph = subgraph ^ var
 
-    # include 'o' in edge characters when parsing PAG
-    edge_chars = "><-o" if target_type.upper() == "PAG" else "><-"
+    # include '@' (Dagitty's circle character) when parsing PAG; map later to 'o'
+    edge_chars = "><-@" if target_type.upper() == "PAG" else "><-"
     edge = Word(edge_chars)
 
     beta = (
@@ -258,9 +285,13 @@ def parse_dagitty(lines, target_type="DAG"):
         first_line = lines.pop(0).strip()
         if first_line:
             if not cleaned_dag:
-                assert first_line[:3].lower() == "dag"
-                cleaned_dag = True
-                first_line = first_line[3:]
+                # Accept headers "dag", "mag", or "pag" (case insensitive).
+                # Remove the header token (whatever it is) instead of assuming "dag".
+                m_hdr = re.match(r"^\s*(\w+)", first_line, flags=re.IGNORECASE)
+                if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag"):
+                    cleaned_dag = True
+                    # remove the header token from the start so the "{" is handled below
+                    first_line = first_line[m_hdr.end() :]
             start_loc = first_line.find("{")
             if start_loc >= 0:
                 first_line = first_line[start_loc + 1 :].strip()
@@ -271,6 +302,9 @@ def parse_dagitty(lines, target_type="DAG"):
         last_line = lines.pop().strip()
         if last_line:
             assert last_line[-1] == "}", "dag { }"
+            assert last_line[-1] == "}", "mag { }"
+            assert last_line[-1] == "}", "pag { }"
+            assert last_line[-1] == "}", "pdag { }"
             lines.append(last_line[:-1])
             break
 

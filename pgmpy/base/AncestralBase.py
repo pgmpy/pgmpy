@@ -532,6 +532,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
     def to_dagitty(self) -> str:
         """
         Convert the MAG to a Dagitty string representation.
+
         Returns
         -------
         str
@@ -544,7 +545,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag.add_edge("X", "Y", "-", ">")
         >>> mag.add_edge("Z", "Y", "-", ">")
         >>> print(mag.to_dagitty())
-        dag {
+        mag {
         X -> Y
         Z -> Y
         }
@@ -553,7 +554,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag2.add_edge("A", "B", ">", ">")
         >>> mag2.add_edge("C", "D", "-", "-")
         >>> print(mag2.to_dagitty())
-        dag {
+        mag {
         A <-> B
         C -- D
         }
@@ -566,7 +567,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag3 = mag3.with_role("exposure", "X")
         >>> mag3 = mag3.with_role("outcome", "Y")
         >>> print(mag3.to_dagitty())
-        dag {
+        mag {
         L -> X
         X -> Y
         L [latents]
@@ -574,17 +575,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         X [exposure]
         }
 
-        Notes
-        -----
-        - Node names are converted to string representations.
-        - If node names contain spaces or special characters, they will be used as-is.
-        - Users should ensure node names are valid in R/dagitty context if needed.
-
         References
         ----------
         dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
         """
-        dagitty_str = "dag {\n"
+        target_type = self.__class__.__name__
+        dagitty_str = f"{target_type.lower()} {{\n"
         for u, v in self.edges:
             marks = self.edges[u, v]["marks"]
             if marks[u] == "-" and marks[v] == ">":
@@ -644,7 +640,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         else:
             raise ValueError("Either `filename` or `dagitty_str` need to be specified")
 
-        ebunch, roles, _, nodes = parse_dagitty(dagitty_lines, target_type=cls.__name__)
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_lines)
         return cls(ebunch=ebunch, roles=roles)
 
     def __eq__(self, other):
