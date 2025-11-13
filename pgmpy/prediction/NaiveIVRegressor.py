@@ -94,7 +94,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     >>> from sklearn.linear_model import LinearRegression
     >>> from pgmpy.prediction import NaiveIVRegressor
     >>>
-    >>> # Simulate data from a linear Gaussian Bayesian network
+    >>> # Simulate data from a linear Gaussian Bayesian Network
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.1] "
     ...     "U4 -> X [beta=0.2] X -> Y [beta=0.6] P -> Y [beta=0.2] }"
