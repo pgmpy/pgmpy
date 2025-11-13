@@ -3,8 +3,9 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
-from sklearn.utils.validation import check_is_fitted, validate_data
 from sklearn.linear_model import LinearRegression
+from sklearn.utils.validation import check_is_fitted, validate_data
+
 
 class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     """
@@ -20,10 +21,10 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     ----------
     causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles
-    
+
     stage1_estimator : optional, sklearn regressor (default = LinearRegression())
         Estimator for stage 1 regression of exposure on instrument(s)
-    
+
     stage2_estimator : optional, sklearn regressor (default = LinearRegression())
         Estimator for stage 2 regression of outcome on predicted exposure and pretreatment covariates (if any).
 
@@ -31,31 +32,31 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     ----------
     exposure_var_ : str
         Name of the exposure variable (single).
-    
+
     outcome_var_ : str
         Name of the outcome variable (single).
-    
+
     instrument_vars_ : list of str
         Names of instrument variables extracted from the causal graph
-    
+
     pretreatment_vars_ : list of str
-        Names of pretreatment covariates extracted from the causal graph. 
-    
+        Names of pretreatment covariates extracted from the causal graph.
+
     feature_columns_fit_ : list of str
         Names of features used during 'fit'
-    
+
     feature_columns_predict_ : list of str
         Names of features used during `predict`.
-    
+
     stage1_est_ : estimator
         Fitted first-stage estimator.
-    
+
     stage2_est_ : estimator
         Fitted second-stage estimator.
-    
+
     coef_ : array-like
         Coefficients from the fitted `stage2_estimator` (if available).
-    
+
     Examples
     --------
     >>> # Example 1: Basic usage with LinearRegression estimators
@@ -76,7 +77,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     ...     lgbn.edges(),
     ...     roles={"exposure": "X", "instrument": ("Z1", "Z2"), "outcome": "Y"},
     ... )
-    >>> 
+    >>>
     >>> model = NaiveIVRegressor(
     ...     causal_graph=G,
     ...     stage1_estimator=LinearRegression(),
@@ -100,11 +101,23 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     ...     "U4 -> X [beta=0.2] X -> Y [beta=0.6] P -> Y [beta=0.2] }"
     ... )
     >>> data = lgbn.simulate(300, seed=42)
-    >>> df = data.loc[:,["X", "U1", "U2", "U3", "P"]]
+    >>> df = data.loc[:, ["X", "U1", "U2", "U3", "P"]]
     >>>
     >>> dag = DAG(
-    ...     ebunch = [("U1", "X"), ("U2", "X"), ("U3", "X"), ("U4", "X"), ("X", "Y"), ("P", "Y")],
-    ...     roles={"exposure": "X", "instrument": ("U1", "U2", "U3"), "outcome": "Y", "pretreatment": ["P"]},
+    ...     ebunch=[
+    ...         ("U1", "X"),
+    ...         ("U2", "X"),
+    ...         ("U3", "X"),
+    ...         ("U4", "X"),
+    ...         ("X", "Y"),
+    ...         ("P", "Y"),
+    ...     ],
+    ...     roles={
+    ...         "exposure": "X",
+    ...         "instrument": ("U1", "U2", "U3"),
+    ...         "outcome": "Y",
+    ...         "pretreatment": ["P"],
+    ...     },
     ... )
     >>> model = NaiveIVRegressor(
     ...     causal_graph=dag,
@@ -125,20 +138,20 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     >>> from pgmpy.prediction import NaiveIVRegressor
     >>>
     >>> dag = DAG(
-    ...    ebunch = [(1,0),(0,2)],
-    ...    roles = {"exposure": [0], "outcome": [2], "instrument": [1]},
+    ...     ebunch=[(1, 0), (0, 2)],
+    ...     roles={"exposure": [0], "outcome": [2], "instrument": [1]},
     ... )
     >>> model = NaiveIVRegressor(
-    ...     causal_graph = dag,
-    ...     stage1_estimator = RandomForestRegressor(),
-    ...     stage2_estimator = LinearRegression(),
+    ...     causal_graph=dag,
+    ...     stage1_estimator=RandomForestRegressor(),
+    ...     stage2_estimator=LinearRegression(),
     ... )
     >>>
     >>> # Simulate some random data
     >>> n_samples = 50
-    >>> X_array = np.random.normal(0, 1 , (n_samples, 2))
+    >>> X_array = np.random.normal(0, 1, (n_samples, 2))
     >>> y_array = np.random.normal(0, 1, n_samples)
-    >>> 
+    >>>
     >>> # Fit the model and make predictions
     >>> _ = model.fit(X_array, y_array)
     >>> preds = model.predict(X_array)
@@ -196,7 +209,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         """
         This method performs two-stage least squares regression using the specified causal graph.
         It first fits the stage 1 estimator to predict the exposure variable from the instrument,
-        then fits the stage 2 estimator to predict the outcome variable from the predicted exposure 
+        then fits the stage 2 estimator to predict the outcome variable from the predicted exposure
         and pretreatment variables.
         """
 
@@ -217,7 +230,7 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
             self.stage1_estimator = LinearRegression()
         if self.stage2_estimator is None:
             self.stage2_estimator = LinearRegression()
-   
+
         stage1_estimator = clone(self.stage1_estimator)
         stage2_estimator = clone(self.stage2_estimator)
 
