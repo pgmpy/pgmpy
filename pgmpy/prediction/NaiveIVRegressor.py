@@ -148,11 +148,11 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         # Step 1.2: Validate that exactly one exposure, one outcome and atleast one instrument are specified.
         if len(exposure_vars) != 1:
             raise ValueError(
-                f"NaiveIVRegressor requires exactly one exposure; got {len(exposure_vars)}"
+                f"The current implementation only works for a single exposure; got {len(exposure_vars)}"
             )
         if len(outcome_vars) != 1:
             raise ValueError(
-                f"NaiveIVRegressor requires exactly one outcome; got {len(outcome_vars)}"
+                f"The current implementation only works for a single outcome; got {len(outcome_vars)}"
             )
         if len(instrument_vars) < 1:
             raise ValueError("NaiveIVRegressor requires at least one instrument.")
