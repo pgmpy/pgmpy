@@ -204,10 +204,10 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 2: Extract and validate causal graph roles
-        exposure_vars = list(self.causal_graph.get_role("exposure"))
-        outcome_vars = list(self.causal_graph.get_role("outcome"))
-        adjustment_vars = list(self.causal_graph.get_role("adjustment"))
-        pretreatment_vars = list(self.causal_graph.get_role("pretreatment"))
+        exposure_vars = self.causal_graph.get_role("exposure")
+        outcome_vars = self.causal_graph.get_role("outcome")
+        adjustment_vars = self.causal_graph.get_role("adjustment")
+        pretreatment_vars = self.causal_graph.get_role("pretreatment")
 
         # Validate exactly one exposure and one outcome variable
         if len(exposure_vars) != 1:
