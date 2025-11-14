@@ -5,7 +5,6 @@ Naive Adjustment Regressor in sklearn Compatible Design.
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import (
@@ -13,8 +12,10 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
+from pgmpy.prediction.BaseCausalPrediction import BaseCausalPrediction
 
-class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
+
+class NaiveAdjustmentRegressor(RegressorMixin, BaseCausalPrediction):
     """
     Naive adjustment regressor using causal graph roles for feature selection.
 
@@ -142,37 +143,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         tags.regressor_tags.poor_score = True
         return tags
 
-    def _prepare_feature_df(self, X) -> pd.DataFrame:
-        """
-        Convert input to DataFrame and validate that column names exactly match DAG variables.
-        No column renaming/mapping - strict validation only.
-        """
-        # Step 1: Get required feature columns
-        required_features = self.feature_columns_
-
-        # Step 2: Convert input to DataFrame format
-        if isinstance(X, pd.DataFrame):
-            X_df = X
-
-        else:
-            # For numpy arrays, use range index as column names
-            X_arr = np.asarray(X)
-            if X_arr.ndim == 1:
-                raise ValueError(
-                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
-                )
-            X_df = pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
-
-        # Step 3: STRICT validation: column names must exactly match DAG variables
-        missing_columns = set(required_features) - set(X_df.columns)
-        if missing_columns:
-            raise ValueError(
-                f"Missing required columns in input data: {list(missing_columns)}. "
-                f"DAG expects columns: {required_features}, but got: {list(X_df.columns)}"
-            )
-
-        return X_df[required_features]
-
     def fit(
         self,
         X,
@@ -225,7 +195,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
         self.outcome_var_ = outcome_vars[0]
         self.adjustment_vars_ = adjustment_vars
         self.pretreatment_vars_ = pretreatment_vars
-        self.feature_columns_ = (
+        self.feature_columns_fit_ = (
             [self.exposure_var_] + adjustment_vars + pretreatment_vars
         )
 
@@ -289,4 +259,4 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseEstimator):
     def get_feature_names_out(self, input_features=None):
         """Get output feature names for transformation."""
         check_is_fitted(self, "estimator_")
-        return np.array(self.feature_columns_, dtype=str)
+        return np.array(self.feature_columns_fit_, dtype=str)

@@ -243,7 +243,7 @@ def test_numpy_array_input():
     predictions = regressor.predict(X_array)
 
     assert len(predictions) == n_samples
-    assert regressor.feature_columns_ == [0, 1]  # exposure + adjustment
+    assert regressor.feature_columns_fit_ == [0, 1]  # exposure + adjustment
 
 
 def test_sample_weight_support():
@@ -392,5 +392,5 @@ def test_pretreatment_variables():
 
     regressor.fit(data[["X", "Z", "P"]], data["Y"])
 
-    assert set(regressor.feature_columns_) == {"X", "Z", "P"}
+    assert set(regressor.feature_columns_fit_) == {"X", "Z", "P"}
     assert regressor.pretreatment_vars_ == ["P"]
