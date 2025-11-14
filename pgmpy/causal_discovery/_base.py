@@ -69,6 +69,7 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+            self.feature_names_in_ = X.columns
 
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")

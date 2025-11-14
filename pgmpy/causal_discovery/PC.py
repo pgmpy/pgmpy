@@ -9,6 +9,7 @@ from typing import (
     Union,
 )
 
+import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
@@ -145,6 +146,12 @@ class PC(_BaseConstraintCausalDiscovery):
             separating set ("witnessing set") of variables that makes them
             conditionally independent. (needed for edge orientation procedures)
 
+    n_features_in_ : int
+        The number of features in the data used to learn the causal graph.
+
+    feature_names_in_ : np.ndarray
+        The feature names in the data used to learn the causal graph.
+
     Examples
     --------
     Simulate some data to use for causal discovery:
@@ -254,8 +261,12 @@ class PC(_BaseConstraintCausalDiscovery):
             self.causal_graph_ = pdag.to_dag()
         else:
             raise ValueError(
-                f"return_type must be one of: dag, pdag, cpdag, skeleton. Got: {self.return_type}"
+                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
             )
+
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(
+            self.causal_graph_, weight=1, dtype="int"
+        )
 
         return self
 
