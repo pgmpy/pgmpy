@@ -157,6 +157,10 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
     >>> preds = model.predict(X_array)
     >>> preds.shape[0]
     50
+
+    References
+    ----------
+    [1] “Instrumental Variables Estimation.” Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
     """
 
     def __init__(
