@@ -1343,3 +1343,20 @@ class TestEstimator(unittest.TestCase):
         self.assertAlmostEqual(
             infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1
         )
+
+
+class TestQueryWithVirtualEvidence(unittest.TestCase):
+    def setUp(self):
+        self.model = DiscreteBayesianNetwork([('A', 'B')])
+        cpd_a = TabularCPD('A', 2, [[0.5], [0.5]])
+        cpd_b = TabularCPD('B', 2, [[0.6, 0.4], [0.4, 0.6]], evidence=['A'], evidence_card=[2])
+        self.model.add_cpds(cpd_a, cpd_b)
+        self.inference = CausalInference(self.model)
+
+    def test_query_with_virtual_evidence(self):
+        virtual_evidence = [TabularCPD('A', 2, [[0.8], [0.2]])]
+        query_result = self.inference.query(variables=['B'], virtual_evidence=virtual_evidence)
+        # Expected result is P(B|A=0)*P(A=0) + P(B|A=1)*P(A=1) with virtual evidence
+        # P(B=0) = 0.6 * 0.8 + 0.4 * 0.2 = 0.48 + 0.08 = 0.56
+        # P(B=1) = 0.4 * 0.8 + 0.6 * 0.2 = 0.32 + 0.12 = 0.44
+        np_test.assert_array_almost_equal(query_result.values, np.array([0.56, 0.44]))

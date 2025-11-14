@@ -1076,12 +1076,12 @@ class CausalInference(object):
 
         # Step 3.1: If no do variable specified, do a normal probabilistic inference.
         if do == {}:
-            return infer.query(variables, evidence, show_progress=False)
+            return infer.query(variables, evidence, show_progress=False, **kwargs)
         # Step 3.2: If no adjustment is required, do a normal probabilistic
         #           inference with do variables as the evidence.
         elif len(adjustment_set) == 0:
             evidence = {**evidence, **do}
-            return infer.query(variables, evidence, show_progress=False)
+            return infer.query(variables, evidence, show_progress=False, **kwargs)
 
         # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
         values = []
@@ -1095,7 +1095,7 @@ class CausalInference(object):
             if var in adjustment_set.intersection(evidence.keys())
         }
         if len(evidence_adj_inter) != 0:
-            p_z = infer.query(adjustment_set, show_progress=False).reduce(
+            p_z = infer.query(adjustment_set, show_progress=False, **kwargs).reduce(
                 [(key, value) for key, value in evidence_adj_inter.items()],
                 inplace=False,
             )
@@ -1114,7 +1114,9 @@ class CausalInference(object):
                     },
                 )
         else:
-            p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
+            p_z = infer.query(
+                adjustment_set, evidence=evidence, show_progress=False, **kwargs
+            )
 
         adj_states = []
         for var in adjustment_set:
@@ -1133,7 +1135,7 @@ class CausalInference(object):
             }
             evidence = {**do, **adj_evidence}
             values.append(
-                infer.query(variables, evidence=evidence, show_progress=False)
+                infer.query(variables, evidence=evidence, show_progress=False, **kwargs)
                 * p_z.get_value(**adj_evidence)
             )
 
