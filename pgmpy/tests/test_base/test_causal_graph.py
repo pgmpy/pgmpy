@@ -6,7 +6,7 @@ from pgmpy.base import DAG
 @pytest.fixture
 def cg():
     edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
-    roles = {"exposure": "X", "outcome": "Y"}
+    roles = {"exposures": "X", "outcomes": "Y"}
     return DAG(ebunch=edges, roles=roles)
 
 
@@ -14,7 +14,7 @@ def cg():
 def cg2():
     cg2 = DAG(
         ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-        roles={"adjustment": {"U", "M"}, "exposure": "X"},
+        roles={"adjustment": {"U", "M"}, "exposures": "X"},
     )
     return cg2
 
@@ -27,14 +27,14 @@ def edges():
 class TestDAG:
 
     def test_init_with_edges_and_roles(self, cg):
-        assert cg.get_role("exposure") == ["X"]
-        assert cg.get_role("outcome") == ["Y"]
+        assert cg.get_role("exposures") == ["X"]
+        assert cg.get_role("outcomes") == ["Y"]
         assert set(cg.nodes()) == {"U", "X", "M", "Y"}
 
     def test_roles_dict_and_kwargs(self, cg2):
         cg = cg2
         assert set(cg.get_role("adjustment")) == {"U", "M"}
-        assert set(cg.get_role("exposure")) == {"X"}
+        assert set(cg.get_role("exposures")) == {"X"}
 
     def test_with_role_and_without_role(self, cg):
         cg2 = cg.with_role("adjustment", {"U", "M"})
@@ -45,18 +45,18 @@ class TestDAG:
     def test_get_roles(self, edges):
         cg = DAG(
             ebunch=edges,
-            roles={"exposure": "X", "outcome": "Y", "adjustment": {"U", "M"}},
+            roles={"exposures": "X", "outcomes": "Y", "adjustment": {"U", "M"}},
         )
         roles = cg.get_roles()
-        assert set(roles) == {"exposure", "outcome", "adjustment"}
+        assert set(roles) == {"exposures", "outcomes", "adjustment"}
 
     def test_get_role_dict(self, cg):
         role_dict = cg.get_role_dict()
-        assert role_dict == {"exposure": ["X"], "outcome": ["Y"]}
+        assert role_dict == {"exposures": ["X"], "outcomes": ["Y"]}
 
     def test_get_role_dict2(self, cg2):
         role_dict = cg2.get_role_dict()
-        assert role_dict == {"adjustment": ["U", "M"], "exposure": ["X"]}
+        assert role_dict == {"adjustment": ["U", "M"], "exposures": ["X"]}
 
     def test_with_role_invalid_variable(self, cg):
         with pytest.raises(ValueError):
@@ -78,7 +78,7 @@ class TestDAG:
         assert cg.is_valid_causal_structure()
         cg2 = DAG(
             ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-            roles={"target": "Y", "exposure": {"M", "X"}},
+            roles={"target": "Y", "exposures": {"M", "X"}},
         )
         with pytest.raises(ValueError):
             cg2.is_valid_causal_structure()
