@@ -30,7 +30,7 @@ class Frontdoor(BaseIdentification):
     ...         ("U", "X"),
     ...         ("U", "Y"),
     ...     ],
-    ...     roles={"exposure": "X", "outcome": "Y"},
+    ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
     >>> dag_with_adj, is_identified = FrontdoorIdentification().identify(dag)
     >>> dag_with_adj.roles
@@ -44,8 +44,8 @@ class Frontdoor(BaseIdentification):
         self.variant = variant
 
     def _identify(self, causal_graph):
-        exposure = causal_graph.get_role("exposure")
-        outcome = causal_graph.get_role("outcome")
+        exposure = causal_graph.get_role("exposures")
+        outcome = causal_graph.get_role("outcomes")
 
         possible_frontdoor_vars = (
             set(causal_graph.observed) - set(exposure) - set(outcome)
@@ -67,20 +67,20 @@ class Frontdoor(BaseIdentification):
     @staticmethod
     def _is_valid_adjustment_set(causal_graph, X, Y, Z):
         causal_graph_copy = causal_graph.copy()
-        causal_graph_copy.without_role("exposure", inplace=True)
-        causal_graph_copy.without_role("outcome", inplace=True)
+        causal_graph_copy.without_role("exposures", inplace=True)
+        causal_graph_copy.without_role("outcomes", inplace=True)
         causal_graph_copy.without_role("adjustment", inplace=True)
 
-        causal_graph_copy.with_role("exposure", X, inplace=True)
-        causal_graph_copy.with_role("outcome", Y, inplace=True)
+        causal_graph_copy.with_role("exposures", X, inplace=True)
+        causal_graph_copy.with_role("outcomes", Y, inplace=True)
         causal_graph_copy.with_role("adjustment", Z, inplace=True)
 
         return Adjustment().validate(causal_graph_copy)
 
     def _validate(self, causal_graph):
         """ """
-        exposure = causal_graph.get_role("exposure")[0]
-        outcome = causal_graph.get_role("outcome")[0]
+        exposure = causal_graph.get_role("exposures")[0]
+        outcome = causal_graph.get_role("outcomes")[0]
         Z = causal_graph.get_role("frontdoor")
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
