@@ -30,7 +30,7 @@ class ExpertKnowledge:
             Refer to the algorithm documentation for details on how the
             argument is handled.
 
-    temporal order: iterator (default: None)
+    temporal_order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list/structure in the (2 dimensional) iterator contains
             variables with the same temporal significance; the more prior
@@ -50,35 +50,38 @@ class ExpertKnowledge:
     **Required and forbidden edges**
 
     >>> forb_edges = [("tub", "asia"), ("lung", "smoke")]
-    >>> req_edges = [("smoke","bronc")]
+    >>> req_edges = [("smoke", "bronc")]
     >>> expert_knowledge = ExpertKnowledge(
-    ...        required_edges=req_edges,
-    ...        forbidden_edges=forb_edges
-    ...        )
+    ...     required_edges=req_edges, forbidden_edges=forb_edges
+    ... )
 
     **Use during structure learning**
 
     >>> data = BayesianModelSampling(asia_model).forward_sample(size=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
-    ...         variant="stable",
-    ...         expert_knowledge=expert_knowledge,
-    ...         show_progress=False,
-    ...     )
+    ...     variant="stable",
+    ...     expert_knowledge=expert_knowledge,
+    ...     show_progress=False,
+    ... )
+    <pgmpy.base.DAG.PDAG object at 0x...>
 
     **Temporal order**
 
-    >>> expert_knowledge = ExpertKnowledge(temporal_order=[["Pollution", "Smoker"], ["Cancer"], ["Dyspnoea", "Xray"]])
+    >>> expert_knowledge = ExpertKnowledge(
+    ...     temporal_order=[["Pollution", "Smoker"], ["Cancer"], ["Dyspnoea", "Xray"]]
+    ... )
 
     **Use during structure learning**
 
     >>> data = cancer_model.simulate(n_samples=int(1e4))
     >>> est = PC(data)
     >>> est.estimate(
-    ...         variant="stable",
-    ...         expert_knowledge=expert_knowledge,
-    ...         show_progress=False,
-    ...     )
+    ...     variant="stable",
+    ...     expert_knowledge=expert_knowledge,
+    ...     show_progress=False,
+    ... )
+    <pgmpy.base.DAG.PDAG object at 0x...>
     """
 
     def __init__(

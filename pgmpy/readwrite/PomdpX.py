@@ -39,12 +39,12 @@ class PomdpXReader(object):
 
         Examples
         --------
-        >>> reader = PomdpXReader('Test_Pomdpx.xml')
+        >>> reader = PomdpXReader("Test_Pomdpx.xml")
         >>> reader.get_description()
         'RockSample problem for map size 1 x 3.
         Rock is at 0, Rover’s initial position is at 1.
         Exit is at 2.'
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_description()
         'RockSample problem for map size 1 x 3.
          Rock is at 0, Rover’s initial position is at 1.
@@ -58,7 +58,7 @@ class PomdpXReader(object):
 
         Example
         --------
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_discount()
         0.95
         """
@@ -137,7 +137,7 @@ class PomdpXReader(object):
 
         Examples
         --------
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_initial_beliefs()
         [{'Var': 'rover_0',
           'Parent': ['null'],
@@ -173,7 +173,7 @@ class PomdpXReader(object):
 
         Example
         --------
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_state_transition_function()
         [{'Var': 'rover_1',
           'Parent': ['action_rover', 'rover_0'],
@@ -209,7 +209,7 @@ class PomdpXReader(object):
 
         Example
         --------
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_obs_function()
         [{'Var': 'obs_sensor',
               'Parent': ['action_rover', 'rover_1', 'rock_1'],
@@ -243,7 +243,7 @@ class PomdpXReader(object):
 
         Example
         --------
-        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_reward_function()
         [{'Var': 'reward_rover',
               'Parent': ['action_rover', 'rover_0', 'rock_0'],

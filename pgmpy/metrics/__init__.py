@@ -17,6 +17,4 @@ __all__ = [
     "fisher_c",
     "SHD",
     "BayesianModelProbability",
-    "permutation_t",
-    "falsify_graph",
 ]

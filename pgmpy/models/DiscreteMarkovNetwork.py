@@ -41,12 +41,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
     Add one node at a time:
 
-    >>> G.add_node('a')
+    >>> G.add_node("a")
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(['a', 'b'])
+    >>> G.add_nodes_from(["a", "b"])
 
     **Edges:**
 
@@ -54,11 +54,11 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
     Add one edge,
 
-    >>> G.add_edge('a', 'b')
+    >>> G.add_edge("a", "b")
 
     a list of edges,
 
-    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+    >>> G.add_edges_from([("a", "b"), ("b", "c")])
 
     If some edges connect nodes not yet in the model, the nodes
     are added automatically.  There are no errors when adding
@@ -68,7 +68,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
     Many common graph features allow python syntax for speed reporting.
 
-    >>> 'a' in G     # check if node in graph
+    >>> "a" in G  # check if node in graph
     True
     >>> len(G)  # number of nodes in graph
     3
@@ -97,8 +97,8 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> G = DiscreteMarkovNetwork()
-        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
-        >>> G.add_edge('Alice', 'Bob')
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
+        >>> G.add_edge("Alice", "Bob")
         """
         # check that there is no self loop.
         if u != v:
@@ -125,10 +125,17 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
-        ...                 values=np.random.rand(6))
+        >>> student = DiscreteMarkovNetwork(
+        ...     [
+        ...         ("Alice", "Bob"),
+        ...         ("Bob", "Charles"),
+        ...         ("Charles", "Debbie"),
+        ...         ("Debbie", "Alice"),
+        ...     ]
+        ... )
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[3, 2], values=np.random.rand(6)
+        ... )
         >>> student.add_factors(factor)
         """
         for factor in factors:
@@ -153,16 +160,18 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor1 = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                          values=np.random.rand(4))
-        >>> factor2 = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 3],
-        ...                          values=np.ones(6))
-        >>> student.add_factors(factor1,factor2)
+        >>> student = DiscreteMarkovNetwork([("Alice", "Bob"), ("Bob", "Charles")])
+        >>> factor1 = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+        ... )
+        >>> factor2 = DiscreteFactor(
+        ...     ["Bob", "Charles"], cardinality=[2, 3], values=np.ones(6)
+        ... )
+        >>> student.add_factors(factor1, factor2)
         >>> student.get_factors()
         [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>,
         <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x7f8a0e9bf5f8>]
-        >>> student.get_factors('Alice')
+        >>> student.get_factors("Alice")
         [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>]
         """
         if node:
@@ -184,9 +193,10 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 values=np.random.rand(4))
+        >>> student = DiscreteMarkovNetwork([("Alice", "Bob"), ("Bob", "Charles")])
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+        ... )
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
@@ -210,11 +220,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 values=np.random.rand(4))
+        >>> student = DiscreteMarkovNetwork([("Alice", "Bob"), ("Bob", "Charles")])
+        >>> factor = DiscreteFactor(
+        ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
+        ... )
         >>> student.add_factors(factor)
-        >>> student.get_cardinality(node='Alice')
+        >>> student.get_cardinality(node="Alice")
         2
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
@@ -288,9 +299,9 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> student = DiscreteMarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor1 = DiscreteFactor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
-        >>> factor2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
+        >>> student = DiscreteMarkovNetwork([("Alice", "Bob"), ("Bob", "Charles")])
+        >>> factor1 = DiscreteFactor(["Alice", "Bob"], [3, 2], np.random.rand(6))
+        >>> factor2 = DiscreteFactor(["Bob", "Charles"], [2, 2], np.random.rand(4))
         >>> student.add_factors(factor1, factor2)
         >>> factor_graph = student.to_factor_graph()
         """
@@ -354,11 +365,22 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = DiscreteMarkovNetwork()
-        >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                   ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> G.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> G.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()
+        ... ]
         >>> G.add_factors(*phi)
         >>> G_chordal = G.triangulate()
         """
@@ -509,11 +531,22 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()
+        ... ]
         >>> mm.add_factors(*phi)
         >>> junction_tree = mm.to_junction_tree()
         """
@@ -613,16 +646,25 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> mm.markov_blanket('x1')
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> mm.markov_blanket("x1")
         """
         return self.neighbors(node)
 
     def get_local_independencies(self, latex=False):
-        """
+        r"""
         Returns all the local independencies present in the markov model.
 
         Local independencies are the independence assertion in the form of
@@ -639,10 +681,19 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         --------
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
         >>> mm.get_local_independencies()
         """
         local_independencies = Independencies()
@@ -679,11 +730,22 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> mm = DiscreteMarkovNetwork()
-        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> mm.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()
+        ... ]
         >>> mm.add_factors(*phi)
         >>> bm = mm.to_bayesian_model()
         """
@@ -736,7 +798,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         return final_bm
 
     def get_partition_function(self):
-        """
+        r"""
         Returns the partition function for a given undirected graph.
 
         A partition function is defined as
@@ -751,11 +813,22 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = DiscreteMarkovNetwork()
-        >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
-        >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
-        ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
-        ...                   ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> G.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> G.add_edges_from(
+        ...     [
+        ...         ("x1", "x3"),
+        ...         ("x1", "x4"),
+        ...         ("x2", "x4"),
+        ...         ("x2", "x5"),
+        ...         ("x3", "x6"),
+        ...         ("x4", "x6"),
+        ...         ("x4", "x7"),
+        ...         ("x5", "x7"),
+        ...     ]
+        ... )
+        >>> phi = [
+        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()
+        ... ]
         >>> G.add_factors(*phi)
         >>> G.get_partition_function()
         """
@@ -783,15 +856,16 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> G = DiscreteMarkovNetwork()
-        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
-        >>> G.add_edge(('a', 'b'), ('b', 'c'))
+        >>> G.add_nodes_from([("a", "b"), ("b", "c")])
+        >>> G.add_edge(("a", "b"), ("b", "c"))
         >>> G_copy = G.copy()
         >>> G_copy.edges()
         EdgeView([(('a', 'b'), ('b', 'c'))])
         >>> G_copy.nodes()
         [('a', 'b'), ('b', 'c')]
-        >>> factor = DiscreteFactor([('a', 'b')], cardinality=[3],
-        ...                 values=np.random.rand(3))
+        >>> factor = DiscreteFactor(
+        ...     [("a", "b")], cardinality=[3], values=np.random.rand(3)
+        ... )
         >>> G.add_factors(factor)
         >>> G.get_factors()
         [<DiscreteFactor representing phi(('a', 'b'):3) at 0x...>]

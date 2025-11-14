@@ -12,15 +12,13 @@ from pgmpy.utils import get_dataset_type
 
 
 def get_callable_ci_test(
-    test: Union[str, None, Callable],
-    full=False,
-    data: Optional[pd.DataFrame] = None,
-    independencies=None,
+    test: Union[str, None, Callable], data: Optional[pd.DataFrame] = None
 ) -> Callable:
-    # renamed to specify you are obtaining a Callable
+    # Step 0: If test is a callable, return itself.
     if callable(test):
         return test
 
+    # Step 1: Initialize some data structures.
     supported_tests = {
         "continuous": {
             "pearsonr": pearsonr,
@@ -31,51 +29,41 @@ def get_callable_ci_test(
             "g_sq": g_sq,
             "log_likelihood": log_likelihood,
             "modified_log_likelihood": modified_log_likelihood,
+            "power_divergence": power_divergence,
         },
         "mixed": {
             "pillai": pillai_trace,
+            "independence_match": independence_match,
         },
     }
+
     flattened_supported_methods = {
         key: value
         for subdict in supported_tests.values()
         for key, value in subdict.items()
     }
 
-    if isinstance(test, type(None)):
+    # Step 2: If test is not specified, try to infer data type and return a suitable test
+    if test is None:
         if data is not None:
-            # Automatically determine method
             var_type = get_dataset_type(data)
             test = list(supported_tests[var_type].keys())[0]
+            return flattened_supported_methods[test]
         else:
             raise ValueError(
-                "Cannot determine a suitable CI test for the data. "
-                "Please specify CI test to use"
+                "Cannot determine a suitable CI test as data is None.",
+                "Please specify CI test to use",
             )
 
-    test = test.lower()
-
-    if full:
-        flattened_supported_methods["power_divergence"] = power_divergence
-        flattened_supported_methods["independence_match"] = independence_match
-
-    if test not in list(flattened_supported_methods.keys()):
-        raise ValueError(
-            f"ci_test must either be one of {list(flattened_supported_methods.keys())}, or a function. Got: {test}"
-        )
-
-    if full:
-        if test == "independence_match":
-            if independencies is None:
-                raise ValueError(
-                    "For using independence_match, independencies argument must be specified"
-                )
-        elif data is None:
+    # Step 3: If test is a string, check if it is a valid test and return the function.
+    elif isinstance(test, str):
+        test = test.lower()
+        if test not in list(flattened_supported_methods.keys()):
             raise ValueError(
-                "For using Chi Square or Pearsonr, data argument must be specified"
+                f"`ci_test` must either be one of {list(flattened_supported_methods.keys())}, or a callable. Got:{test}"
             )
-
-    return flattened_supported_methods[test]
+        else:
+            return flattened_supported_methods[test]
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):
@@ -154,14 +142,21 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> chi_square(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs
@@ -214,14 +209,19 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> g_sq(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> g_sq(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> g_sq(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> g_sq(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> g_sq(X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> g_sq(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -274,14 +274,23 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> log_likelihood(
+    ...     X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> log_likelihood(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> log_likelihood(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
@@ -329,14 +338,23 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> modified_log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> modified_log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> modified_log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> modified_log_likelihood(
+    ...     X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> modified_log_likelihood(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> modified_log_likelihood(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     return power_divergence(
         X=X,
@@ -408,14 +426,21 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-    >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-    True
-    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-    False
+    >>> np.random.seed(42)
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ... )
+    >>> data["E"] = data["A"] + data["B"] + data["C"]
+    >>> chi_square(X="A", Y="C", Z=[], data=data, boolean=True, significance_level=0.05)
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.True_
+    >>> chi_square(
+    ...     X="A", Y="B", Z=["D", "E"], data=data, boolean=True, significance_level=0.05
+    ... )
+    np.False_
     """
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):

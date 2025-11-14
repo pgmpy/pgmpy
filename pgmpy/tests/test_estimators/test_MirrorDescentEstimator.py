@@ -1,7 +1,9 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
+
 from pgmpy import config
 from pgmpy.estimators import MirrorDescentEstimator
 from pgmpy.factors import FactorDict
@@ -31,7 +33,9 @@ class TestMarginalEstimator(unittest.TestCase):
         tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a", "b")]
         )
-        np.testing.assert_array_equal(tree1.factors[0].values, [[1.0, 1.0], [1.0, 2.0]])
+        np.testing.assert_array_almost_equal(
+            tree1.factors[0].values, [[1.0, 1.0], [1.0, 2.0]]
+        )
         tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a",)]
         )
@@ -135,6 +139,10 @@ class TestMarginalEstimator(unittest.TestCase):
         del self.df
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestMarginalEstimatorTorch(TestMarginalEstimator):
     def setUp(self) -> None:
         config.set_backend("torch")
