@@ -200,7 +200,9 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseCausalPrediction):
         )
 
         # Step 4: Prepare feature DataFrame
-        X_features = self._prepare_feature_df(X)
+        X_features = self._prepare_feature_df(
+            X, required_features=self.feature_columns_fit_
+        )
 
         # Step 5: Initialize base estimator
         self.estimator_ = (
@@ -250,7 +252,9 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseCausalPrediction):
             dtype="numeric",
             reset=False,
         )
-        X_filtered = self._prepare_feature_df(X)
+        X_filtered = self._prepare_feature_df(
+            X, required_features=self.feature_columns_fit_
+        )
 
         # Step 2: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_filtered)
