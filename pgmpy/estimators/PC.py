@@ -91,8 +91,8 @@ class PC(BaseConstraintEstimator):
         **kwargs,
     ) -> None:
         logger.warning(
-            "The PC class is deprecated and will be removed in a future release. "
-            "Please use the new sklearn compatible PC class from the pgmpy.causal_discovery module instead."
+            "DeprecationWarning: This PC class will be removed in a future release. Please use the new sklearn"
+            " compatible PC class from the pgmpy.causal_discovery module instead."
         )
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
