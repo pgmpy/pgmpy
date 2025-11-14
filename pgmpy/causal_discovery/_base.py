@@ -14,6 +14,7 @@ import networkx as nx
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
+from sklearn.utils.validation import validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -24,19 +25,11 @@ from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
 
-class BaseConstraintCausalDiscovery(BaseEstimator):
-    """Abstract base class for constraint-based causal discovery estimators.
+class _BaseCausalDiscovery(BaseEstimator):
+    """
+    Base class for all causal discovery estimators in pgmpy.
 
-    Parameters
-    ----------
-    X : pd.DataFrame
-        The data to be used for causal discovery.
-
-    y : None
-        Causal discovery algorithms are unsupervised, so y is None.
-
-    independencies: pgmpy.independencies.Independencies
-        Prior independence assertions between nodes of the learned causal graph.
+    Sets the sklearn tags and defines a method to check the input data for fitting.
     """
 
     def __sklearn_tags__(self):
@@ -46,6 +39,47 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         tags.input_tags.positive_only = False
         tags.target_tags.required = False
         return tags
+
+    def _check_fit_data(self, X):
+        """Check the input data for fitting the causal discovery algorithm.
+
+        Parameters
+        ----------
+        X: pd.DataFrame
+            The data to fit the causal discovery algorithm on.
+        """
+        n_samples, n_features = X.shape
+
+        if n_features == 0:
+            raise ValueError(
+                f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required."
+            )
+        if n_samples < 2:
+            raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
+
+        # Handle cases like complex data, sparse arrays etc. first
+        validate_data(
+            self,
+            X=X,
+            dtype=None,
+            accept_sparse=False,
+            ensure_all_finite=True,
+            reset=True,
+        )
+
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+
+        if not all([isinstance(x, Hashable) for x in X.values.flat]):
+            raise TypeError("argument must be a string, number, or hashable object.")
+
+        return X
+
+
+class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
+    """
+    Base class for all constraint-based causal discovery estimators.
+    """
 
     def fit(
         self,
@@ -57,6 +91,7 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
         """
+        X = self._check_fit_data(X)
         return self._fit(X, independencies)
 
     def _build_skeleton(
@@ -366,9 +401,3 @@ class BaseConstraintCausalDiscovery(BaseEstimator):
             combinations(separating_set_u, lim_neighbors),
             combinations(separating_set_v, lim_neighbors),
         )
-
-    def get_structure(self):
-        """Return learned causal graph."""
-        if not hasattr(self, "graph_"):
-            raise AttributeError("No structure learned. Call fit first.")
-        return self.graph_

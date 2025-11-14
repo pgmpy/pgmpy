@@ -408,9 +408,8 @@ def preprocess_data(df):
     """
     Tries to figure out the data type of each variable `df`.
 
-    Assigns one of (numerical, categorical unordered,
-      categorical ordered) datatypes
-    to each column in `df`. Also changes any object datatypes to categorical.
+    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
+    changes any object datatypes to categorical.
 
     Parameters
     ----------
@@ -419,8 +418,7 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and
-      a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}
@@ -432,12 +430,7 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_object_dtype(df[col]):
             dtypes[col] = "C"
-            try:
-                df[col] = df[col].astype("category")
-            except TypeError as err:
-                raise TypeError(
-                    f"argument must be a string, number, or hashable type: {err}"
-                )
+            df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
             if df[col].dtype.ordered:
                 dtypes[col] = "O"

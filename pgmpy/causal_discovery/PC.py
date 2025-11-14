@@ -10,15 +10,14 @@ from typing import (
 )
 
 import pandas as pd
-from sklearn.utils.validation import validate_data
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery.base import BaseConstraintCausalDiscovery
+from pgmpy.causal_discovery import _BaseConstraintCausalDiscovery
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import get_callable_ci_test
 
 
-class PC(BaseConstraintCausalDiscovery):
+class PC(_BaseConstraintCausalDiscovery):
     """
     The PC algorithm for causal discovery / structure learning.
 
@@ -203,37 +202,8 @@ class PC(BaseConstraintCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame, independencies=None):
         """
-        Fit data (`X`) and independence relations (optional) to a causal graph. The method
-        builds an initial skeleton graph (undirected) based on conditional independence tests.
-        Then, the v-structures are oriented based on the separating sets between non-adjacent
-        nodes. Finally, Meek's rules are applied to orient as many remaining edges as possible.
+        The fitting procedure for the PC algorithm.
         """
-        n_samples, n_features = X.shape
-
-        if n_features == 0:
-            raise ValueError(
-                f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required."
-            )
-        if n_samples < 2:
-            raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
-
-        # Handle cases like complex data, sparse arrays etc. first
-        if isinstance(X, pd.DataFrame):
-            _nodes = X.columns
-        else:
-            _nodes = [f"x{i}" for i in range(X.shape[1])]
-
-        X = validate_data(
-            self,
-            X=X,
-            dtype=None,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=True,  # reset=True in fit, reset=False in predict/transform
-        )
-
-        # X = X.astype(float, copy=False)
-        X = pd.DataFrame(X, columns=_nodes)
 
         # CI test
         ci_test = get_callable_ci_test(self.ci_test, data=X)
@@ -246,7 +216,7 @@ class PC(BaseConstraintCausalDiscovery):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(X.columns)
 
-        # Step 1: skeleton
+        # Step 1: Build the skeleton
         self.skeleton_, self.separating_sets_ = self._build_skeleton(
             data=X,
             independencies=independencies,
@@ -260,12 +230,12 @@ class PC(BaseConstraintCausalDiscovery):
             show_progress=self.show_progress,
         )
 
-        # Step 2: orient colliders
+        # Step 2: Use separating sets to orient colliders
         pdag = self._orient_colliders(
             self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering
         )
 
-        # Step 3: apply rules / expert knowledge
+        # Step 3: apply orientation rules and expert knowledge
         if expert_knowledge.temporal_order != [[]]:
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = pdag.apply_meeks_rules(apply_r4=True)
