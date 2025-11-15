@@ -5,11 +5,16 @@ from pgmpy.base import DAG  # if #2402 be merged, change DAG to _CoreGraph class
 
 class Test_GraphRolesMixin:
     def test_init(self):
+        """test init"""
+        ...
+
+    def test_init_replacing(self):
+        """Test maximum of one role per node."""
         edges = [("A", "B", "->"), ("B", "C", "->"), ("C", "D", "oo")]
         exposures = ["A"]
         outcomes = ["C"]
         latents = ["D"]
-        roles = {"test_role": ["A", "B"]}
+        roles = {"replacing_role": ["A", "B"]}
 
         graph = DAG(  # if #2402 be merged, change DAG to _CoreGraph class.
             ebunch=edges,
@@ -19,12 +24,10 @@ class Test_GraphRolesMixin:
             roles=roles,
         )
 
-        assert graph.get_role_dict() == {
-            "exposures": ["A"],
-            "latents": ["D"],
-            "outcomes": ["C"],
-            "test_role": ["A", "B"],
-        }
+        assert graph.nodes["A"]["role"] == "replacing_role"
+        assert graph.nodes["B"]["role"] == "replacing_role"
+        assert graph.nodes["C"]["role"] == "outcomes"
+        assert graph.nodes["D"]["role"] == "latents"
 
     def test_get_role(self):
         """Test the `get_role` method."""
@@ -54,14 +57,28 @@ class Test_GraphRolesMixin:
         graph.exposures = exposures
         graph.outcomes = outcomes
         graph.latents = latents
-        graph.with_role("test_role", ["A", "B"], inplace=True)
 
-        assert graph.get_role_dict() == {
-            "exposures": ["A"],
-            "latents": ["D"],
-            "outcomes": ["C"],
-            "test_role": ["A", "B"],
-        }
+        assert graph.nodes["A"]["role"] == "exposures"
+
+    def test_with_role_replacing(self):
+        """Test maximum of one role per node with `with_role` method."""
+        edges = [("A", "B", "->"), ("B", "C", "->"), ("C", "D", "oo")]
+        exposures = ["A"]
+        outcomes = ["C"]
+        latents = ["D"]
+
+        graph = DAG()  # if #2402 be merged, change DAG to _CoreGraph class.
+        graph.add_edges_from(ebunch=edges)
+        graph.exposures = exposures
+        graph.outcomes = outcomes
+        graph.latents = latents
+
+        graph.with_role("replacing_role", ["A", "B"], inplace=True)
+
+        assert graph.nodes["A"]["role"] == "replacing_role"
+        assert graph.nodes["B"]["role"] == "replacing_role"
+        assert graph.nodes["C"]["role"] == "outcomes"
+        assert graph.nodes["D"]["role"] == "latents"
 
     def test_without_role(self):
         """Test the `without_role` method."""
