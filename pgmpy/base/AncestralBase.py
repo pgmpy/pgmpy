@@ -604,13 +604,13 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         return dagitty_str
 
     @classmethod
-    def from_dagitty(cls, dagitty_str: str = None, filename: str = None):
+    def from_dagitty(cls, string: str = None, filename: str = None):
         """
         Populate the MAG from a Dagitty string representation.
 
         Parameters
         ----------
-        dagitty_str : str
+        string : str
             A string in dagitty format representing the MAG.
         filename : str, optional
             Path to file containing Dagitty format string.
@@ -635,10 +635,10 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         if filename:
             with open(filename, "r") as f:
                 dagitty_lines = [line.strip() for line in f.readlines()]
-        elif dagitty_str:
-            dagitty_lines = [line.strip() for line in dagitty_str.split("\n")]
+        elif string:
+            dagitty_lines = [line.strip() for line in string.split("\n")]
         else:
-            raise ValueError("Either `filename` or `dagitty_str` need to be specified")
+            raise ValueError("Either `filename` or `string` need to be specified")
 
         ebunch, roles, _, nodes = parse_dagitty(dagitty_lines)
         return cls(ebunch=ebunch, roles=roles)

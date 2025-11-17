@@ -165,6 +165,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             roles = {}
         elif not isinstance(roles, dict):
             raise TypeError("Roles must be provided as a dictionary.")
+        else:
+            self.latents = self.latents.union(roles.get("latents", set()))
 
         # set the roles to the vertices as networkx attributes
         for role, vars in roles.items():
@@ -274,7 +276,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         latents = roles["latents"]
         if len(coefs) == 0:
             if cls.__name__ == "DAG":
-                dag = cls(ebunch=ebunch, roles=roles)
+                dag = cls(ebunch=ebunch, roles=roles, latents=latents)
             else:
                 dag = cls(ebunch=ebunch, latents=latents)
             dag.add_nodes_from(nodes)

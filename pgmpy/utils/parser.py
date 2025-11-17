@@ -74,6 +74,14 @@ def parse_dagitty(lines):
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
             return set([edge_stat.strip('"')])
 
+        length = len(edge_stat)
+
+        # Handle wrapper group { a } or { X -> Y }
+        # These parse as ['a'] or [['X', '->', 'Y']], both have length 1.
+        if length == 1:
+            # This is a group with one item; recurse on the item itself.
+            return handle_edge_stat(edge_stat[0], latents, ebunch, betas)
+
         # If longer than 3, split into smaller edge/stat parts and handle recursively
         if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(
             edge_stat
@@ -272,6 +280,7 @@ def parse_dagitty(lines):
     statement = (
         edge_relation.setResultsName("edge_stat*")
         ^ var_stat.setResultsName("var_stat*")
+        ^ subgraph.setResultsName("edge_stat*")  # <-- Add subgraph as a valid statement
         ^ bb_re
         ^ pos_re
     )
@@ -282,6 +291,8 @@ def parse_dagitty(lines):
     lines = split_at_betas(lines)
     cleaned_dag = False
     while True:
+        if not lines:  # === MODIFICATION ===: Handle empty input
+            break
         first_line = lines.pop(0).strip()
         if first_line:
             if not cleaned_dag:
@@ -299,13 +310,16 @@ def parse_dagitty(lines):
                 break
 
     while True:
+        if not lines:  # === MODIFICATION ===: Handle empty input
+            break
         last_line = lines.pop().strip()
         if last_line:
-            assert last_line[-1] == "}", "dag { }"
-            assert last_line[-1] == "}", "mag { }"
-            assert last_line[-1] == "}", "pag { }"
-            assert last_line[-1] == "}", "pdag { }"
-            lines.append(last_line[:-1])
+            end_loc = last_line.rfind("}")
+            if end_loc != -1:
+                last_line = last_line[:end_loc]
+                lines.append(last_line)
+            else:
+                lines.append(last_line)
             break
 
     # Step 3: Parse lines
@@ -325,17 +339,13 @@ def parse_dagitty(lines):
                     name = name.strip("\"'")
                 nodes.add(name)
                 if len(var_stat) == 2:
-                    option = str(var_stat[1][0]).lower()
-                    # latent markers: 'latent', 'latents', 'l', 'l,'
-                    if (
-                        option.startswith("latent")
-                        or option == "l"
-                        or option.startswith("l,")
-                    ):
+                    option = str(var_stat[1][0]).rstrip(",").lower()
+                    # latent markers: 'latent', 'latents', 'l'
+                    if option.startswith("latent") or option == "l":
                         roles["latents"].append(name)
-                    elif option.startswith("outcome"):
+                    elif option.startswith("outcome") or option.startswith("o"):
                         roles["outcome"].append(name)
-                    elif option.startswith("exposure"):
+                    elif option.startswith("exposure") or option.startswith("e"):
                         roles["exposure"].append(name)
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch, betas)
