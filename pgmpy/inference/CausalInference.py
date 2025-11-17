@@ -1095,7 +1095,7 @@ class CausalInference(object):
             if var in adjustment_set.intersection(evidence.keys())
         }
         if len(evidence_adj_inter) != 0:
-            p_z = infer.query(adjustment_set, show_progress=False, **kwargs).reduce(
+            p_z = infer.query(adjustment_set, show_progress=False).reduce(
                 [(key, value) for key, value in evidence_adj_inter.items()],
                 inplace=False,
             )
@@ -1115,7 +1115,7 @@ class CausalInference(object):
                 )
         else:
             p_z = infer.query(
-                adjustment_set, evidence=evidence, show_progress=False, **kwargs
+                adjustment_set, evidence=evidence, show_progress=False
             )
 
         adj_states = []
