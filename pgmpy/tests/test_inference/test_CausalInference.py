@@ -1364,3 +1364,73 @@ class TestQueryWithVirtualEvidence(unittest.TestCase):
         # P(B=0) = 0.6 * 0.8 + 0.4 * 0.2 = 0.48 + 0.08 = 0.56
         # P(B=1) = 0.4 * 0.8 + 0.6 * 0.2 = 0.32 + 0.12 = 0.44
         np_test.assert_array_almost_equal(query_result.values, np.array([0.56, 0.44]))
+
+
+class TestQueryWithConfoundingAndCollider(unittest.TestCase):
+    def setUp(self):
+        # Create a model with confounding and collider variables as suggested:
+        # A -> B, A <- X -> B, A -> C <- B
+        # This creates a structure where:
+        # - X is a confounder for A and B (X -> A -> B and X -> B)
+        # - C is a collider for A and B (A -> C <- B)
+        self.model = DiscreteBayesianNetwork(
+            [("X", "A"), ("X", "B"), ("A", "B"), ("A", "C"), ("B", "C")]
+        )
+
+        # Add CPDs
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]])
+        cpd_a = TabularCPD(
+            "A", 2, [[0.7, 0.3], [0.3, 0.7]], evidence=["X"], evidence_card=[2]
+        )
+        cpd_b = TabularCPD(
+            "B", 2, [[0.8, 0.6, 0.4, 0.2], [0.2, 0.4, 0.6, 0.8]],
+            evidence=["X", "A"], evidence_card=[2, 2]
+        )
+        cpd_c = TabularCPD(
+            "C", 2, [[0.9, 0.7, 0.6, 0.1], [0.1, 0.3, 0.4, 0.9]],
+            evidence=["A", "B"], evidence_card=[2, 2]
+        )
+
+        self.model.add_cpds(cpd_x, cpd_a, cpd_b, cpd_c)
+        self.inference = CausalInference(self.model)
+
+    def test_query_with_virtual_evidence_and_adjustment(self):
+        # Test with virtual evidence on confounder X
+        virtual_evidence = [TabularCPD("X", 2, [[0.9], [0.1]])]
+
+        # Query P(B) with intervention do(A=1) and virtual evidence on X
+        query_result = self.inference.query(
+            variables=["B"],
+            do={"A": 1},
+            virtual_evidence=virtual_evidence
+        )
+
+        # The result should be properly computed considering both the intervention
+        # and the virtual evidence, while correctly handling the adjustment set
+        # We're not checking specific values here but ensuring the computation works
+        self.assertIsNotNone(query_result)
+        self.assertEqual(len(query_result.values), 2)  # Binary variable B
+
+        # Test with collider in the adjustment set
+        # When C is in the adjustment set, it should open the path X -> A -> C <- B
+        # which would introduce bias, but our algorithm should handle this correctly
+        query_result_with_adjustment = self.inference.query(
+            variables=["B"],
+            do={"A": 1},
+            adjustment_set={"C"},
+            virtual_evidence=virtual_evidence
+        )
+
+        self.assertIsNotNone(query_result_with_adjustment)
+        self.assertEqual(len(query_result_with_adjustment.values), 2)
+
+        # Test with confounder in adjustment set
+        query_result_with_confounder = self.inference.query(
+            variables=["B"],
+            do={"A": 1},
+            adjustment_set={"X"},
+            virtual_evidence=virtual_evidence
+        )
+
+        self.assertIsNotNone(query_result_with_confounder)
+        self.assertEqual(len(query_result_with_confounder.values), 2)
