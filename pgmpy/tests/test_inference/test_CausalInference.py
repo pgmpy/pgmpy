@@ -1383,12 +1383,18 @@ class TestQueryWithConfoundingAndCollider(unittest.TestCase):
             "A", 2, [[0.7, 0.3], [0.3, 0.7]], evidence=["X"], evidence_card=[2]
         )
         cpd_b = TabularCPD(
-            "B", 2, [[0.8, 0.6, 0.4, 0.2], [0.2, 0.4, 0.6, 0.8]],
-            evidence=["X", "A"], evidence_card=[2, 2]
+            "B",
+            2,
+            [[0.8, 0.6, 0.4, 0.2], [0.2, 0.4, 0.6, 0.8]],
+            evidence=["X", "A"],
+            evidence_card=[2, 2],
         )
         cpd_c = TabularCPD(
-            "C", 2, [[0.9, 0.7, 0.6, 0.1], [0.1, 0.3, 0.4, 0.9]],
-            evidence=["A", "B"], evidence_card=[2, 2]
+            "C",
+            2,
+            [[0.9, 0.7, 0.6, 0.1], [0.1, 0.3, 0.4, 0.9]],
+            evidence=["A", "B"],
+            evidence_card=[2, 2],
         )
 
         self.model.add_cpds(cpd_x, cpd_a, cpd_b, cpd_c)
@@ -1400,9 +1406,7 @@ class TestQueryWithConfoundingAndCollider(unittest.TestCase):
 
         # Query P(B) with intervention do(A=1) and virtual evidence on X
         query_result = self.inference.query(
-            variables=["B"],
-            do={"A": 1},
-            virtual_evidence=virtual_evidence
+            variables=["B"], do={"A": 1}, virtual_evidence=virtual_evidence
         )
 
         # The result should be properly computed considering both the intervention
@@ -1418,7 +1422,7 @@ class TestQueryWithConfoundingAndCollider(unittest.TestCase):
             variables=["B"],
             do={"A": 1},
             adjustment_set={"C"},
-            virtual_evidence=virtual_evidence
+            virtual_evidence=virtual_evidence,
         )
 
         self.assertIsNotNone(query_result_with_adjustment)
@@ -1429,7 +1433,7 @@ class TestQueryWithConfoundingAndCollider(unittest.TestCase):
             variables=["B"],
             do={"A": 1},
             adjustment_set={"X"},
-            virtual_evidence=virtual_evidence
+            virtual_evidence=virtual_evidence,
         )
 
         self.assertIsNotNone(query_result_with_confounder)

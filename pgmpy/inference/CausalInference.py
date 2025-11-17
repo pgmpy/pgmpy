@@ -1114,9 +1114,7 @@ class CausalInference(object):
                     },
                 )
         else:
-            p_z = infer.query(
-                adjustment_set, evidence=evidence, show_progress=False
-            )
+            p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
 
         adj_states = []
         for var in adjustment_set:
