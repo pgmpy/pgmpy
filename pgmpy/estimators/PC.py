@@ -17,6 +17,7 @@ from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
 
@@ -89,6 +90,10 @@ class PC(BaseConstraintEstimator):
         independencies: Optional[Independencies] = None,
         **kwargs,
     ) -> None:
+        logger.warning(
+            "DeprecationWarning: This PC class will be removed in a future release. Please use the new sklearn"
+            " compatible PC class from the pgmpy.causal_discovery module instead."
+        )
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(

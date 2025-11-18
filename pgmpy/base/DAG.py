@@ -27,17 +27,27 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Parameters
     ----------
-    ebunch : input graph (optional, default: None)
+    ebunch : input graph, optional
         Data to initialize graph. If None (default) an empty
         graph is created.  The data can be any format that is supported
         by the to_networkx_graph() function, currently including edge list,
         dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
         sparse matrix, or PyGraphviz graph.
 
-    latents : set of nodes (default: empty set)
+    latents : set of nodes, default=set()
         A set of latent variables in the graph. These are not observed
         variables but are used to represent unobserved confounding or
         other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
 
     roles : dict, optional (default: None)
         A dictionary mapping roles to node names.
@@ -120,15 +130,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         initialization or by assigning the "latents" role to nodes. The
         `latents` parameter is a convenient shortcut for `roles={'latents': ...}`.
 
-    Create a graph with initial latent variables 'U' and 'V':
+    Create a graph with initial latent variables 'U' and 'V', and exposure 'X':
 
     >>> from pgmpy.base import DAG
     >>> G = DAG(
     ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y"), ("V", "M")],
     ...     latents={"U", "V"},
+    ...     exposures={"X"},
     ... )
     >>> sorted(G.latents)
     ['U', 'V']
+    >>> G.exposures
+    {'X'}
 
     Add a new latent variable 'Z' using the role system:
 
@@ -153,6 +166,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
         super().__init__(ebunch)
@@ -160,6 +175,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self._check_cycles()
 
         self.latents = set(latents)
+        self.exposures = set(exposures)
+        self.outcomes = set(outcomes)
 
         if roles is None:
             roles = {}

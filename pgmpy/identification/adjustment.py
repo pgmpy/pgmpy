@@ -37,7 +37,7 @@ class Adjustment(BaseIdentification):
     ...         ("z2", "x2"),
     ...         ("y2", "z2"),
     ...     ],
-    ...     roles={"exposure": "x1", "outcome": "y1"},
+    ...     roles={"exposures": "x1", "outcomes": "y1"},
     ... )
     >>> dag_with_adj = Adjustment(variant="minimal").identify(dag)
     >>> dag_with_adj.roles
@@ -90,7 +90,7 @@ class Adjustment(BaseIdentification):
         ...         ("z2", "x2"),
         ...         ("y2", "z2"),
         ...     ],
-        ...     roles={"exposure": "x1", "outcome": "y1"},
+        ...     roles={"exposures": "x1", "outcomes": "y1"},
         ... )
         >>> dag_proper = Adjustment()._get_proper_backdoor_graph(dag, inplace=False)
         >>> list(dag_proper.edges())
@@ -105,9 +105,9 @@ class Adjustment(BaseIdentification):
         # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()
         edges_to_remove = []
-        for source in causal_graph.get_role("exposure"):
+        for source in causal_graph.get_role("exposures"):
             paths = nx.all_simple_edge_paths(
-                causal_graph, source, causal_graph.get_role("outcome")
+                causal_graph, source, causal_graph.get_role("outcomes")
             )
             for path in paths:
                 edges_to_remove.append(path[0])
@@ -134,17 +134,17 @@ class Adjustment(BaseIdentification):
         # Step 1: If variant = "minimal", use the algorithm from [1]. Get the
         #         proper backdoor graph and compute the adjustment set.
         if self.variant == "minimal":
-            if len(causal_graph.get_role("exposure")) != 1:
+            if len(causal_graph.get_role("exposures")) != 1:
                 raise NotImplementedError(
                     "Backdoor identification is only implemented for single exposure variable."
                 )
-            if len(causal_graph.get_role("outcome")) != 1:
+            if len(causal_graph.get_role("outcomes")) != 1:
                 raise NotImplementedError(
                     "Backdoor identification is only implemented for single outcome variable."
                 )
 
-            exposure = causal_graph.get_role("exposure")[0]
-            outcome = causal_graph.get_role("outcome")[0]
+            exposure = causal_graph.get_role("exposures")[0]
+            outcome = causal_graph.get_role("outcomes")[0]
 
             backdoor_graph = self._get_proper_backdoor_graph(
                 causal_graph, inplace=False
@@ -169,8 +169,8 @@ class Adjustment(BaseIdentification):
         # Step 3: If variant = "all", iterate over all possible sets of adjustment
         #         variables, and return all that are valid.
         elif self.variant == "all":
-            exposure = causal_graph.get_role("exposure")[0]
-            outcome = causal_graph.get_role("outcome")[0]
+            exposure = causal_graph.get_role("exposures")[0]
+            outcome = causal_graph.get_role("outcomes")[0]
 
             ancestors = causal_graph.get_ancestors([exposure, outcome])
             # Remove any variables on the path from exposure to outcome (these cannot be in the adjustment set)
@@ -208,8 +208,8 @@ class Adjustment(BaseIdentification):
         bool:
             True if the `adjustment` set is valid, False otherwise.
         """
-        exposure = causal_graph.get_role("exposure")
-        outcome = causal_graph.get_role("outcome")
+        exposure = causal_graph.get_role("exposures")
+        outcome = causal_graph.get_role("outcomes")
         adjustment_vars = causal_graph.get_role("adjustment")
 
         conditional_vars = exposure + adjustment_vars

@@ -1,4 +1,3 @@
-import sys
 import unittest
 
 import numpy as np
@@ -255,10 +254,10 @@ class TestDiscreteTests(unittest.TestCase):
             np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
-@unittest.skipIf(sys.version_info < (3, 12), "Requires Python 3.12 or higher")
-class TestResidualMethod(unittest.TestCase):
+class TestResidualMethods(unittest.TestCase):
     def setUp(self):
         # Create a combination of mixed data types
+        np.random.seed(42)
 
         self.model_indep = LinearGaussianBayesianNetwork(
             [
