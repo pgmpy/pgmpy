@@ -37,6 +37,14 @@ class ExpertKnowledge:
             (parental) variables are at the start while the priority decreases
             as we go move towards the end of the structure (iterator).
 
+    root_nodes: iterable (default: None)
+            The set of variables that are known to be root nodes (exogenous
+            variables). Root nodes cannot have incoming edges. For example,
+            in a dataset about people, Age is typically a root node since no
+            other variable can modify a person's age. When specified, all
+            possible incoming edges to these nodes are automatically added to
+            the forbidden_edges set.
+
     Examples
     --------
     Import an example model from pgmpy.utils
@@ -82,6 +90,11 @@ class ExpertKnowledge:
     ...     show_progress=False,
     ... )
     <pgmpy.base.DAG.PDAG object at 0x...>
+
+    **Root nodes**
+
+    >>> expert_knowledge = ExpertKnowledge(root_nodes=["Age"])
+    >>> # Age will have no incoming edges in the learned structure
     """
 
     def __init__(
@@ -90,6 +103,7 @@ class ExpertKnowledge:
         required_edges=None,
         temporal_order=None,
         search_space=None,
+        root_nodes=None,
         **kwargs,
     ):
         self.forbidden_edges = (
@@ -110,12 +124,14 @@ class ExpertKnowledge:
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
+        self.root_nodes = set(root_nodes) if root_nodes is not None else set()
+
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(
                 f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
-        elif type(edge_list) != set:
+        elif not isinstance(edge_list, set):
             return set(edge_list)
         else:
             return edge_list
@@ -215,6 +231,36 @@ class ExpertKnowledge:
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
 
+    def _add_root_nodes_forbidden_edges(self, nodes):
+        """
+        Add forbidden edges for root nodes.
+
+        For each root node, all possible incoming edges from other nodes
+        are added to the forbidden_edges set.
+
+        Parameters
+        ----------
+        nodes: iterable
+            A collection of all nodes present in a dataset/graph object.
+        """
+        if not self.root_nodes:
+            return
+
+        forbidden_edges = []
+        for root_node in self.root_nodes:
+            if root_node not in nodes:
+                logger.warning(
+                    f"Root node {root_node} not found in the dataset. Skipping."
+                )
+                continue
+
+            # Add all possible incoming edges to the root node as forbidden
+            for node in nodes:
+                if node != root_node:
+                    forbidden_edges.append((node, root_node))
+
+        self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
+
     def apply_expert_knowledge(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
@@ -241,6 +287,7 @@ class ExpertKnowledge:
         [1] https://doi.org/10.48550/arXiv.2306.01638
         """
         self._validate_temporal_order(pdag.nodes())
+        self._add_root_nodes_forbidden_edges(pdag.nodes())
         self._orient_temporal_forbidden_edges(pdag)
 
         for edge in self.forbidden_edges:
@@ -290,3 +337,6 @@ class ExpertKnowledge:
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges_additive)
+
+        # Also add forbidden edges for root nodes
+        self._add_root_nodes_forbidden_edges(data_coulumn_labels)

@@ -277,3 +277,59 @@ class TestExpertInLoop(unittest.TestCase):
         # Check that specified orientations take precedence
         if ("Income", "Education") in dag.edges():
             assert ("Education", "Income") not in dag.edges()
+
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
+    def test_root_nodes_single(self):
+        """Test that a single root node has no incoming edges."""
+        expert_knowledge = ExpertKnowledge(root_nodes=["Age"])
+
+        # Run the algorithm with a small dataset
+        dag = self.estimator_small.estimate(
+            expert_knowledge=expert_knowledge,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+            show_progress=False,
+        )
+
+        # Check that Age has no incoming edges
+        incoming_edges_to_age = [edge for edge in dag.edges() if edge[1] == "Age"]
+        self.assertEqual(
+            len(incoming_edges_to_age),
+            0,
+            f"Age should have no incoming edges, but found: {incoming_edges_to_age}",
+        )
+
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
+    def test_root_nodes_multiple(self):
+        """Test that multiple root nodes have no incoming edges."""
+        expert_knowledge = ExpertKnowledge(root_nodes=["Age", "Race"])
+
+        # Run the algorithm with a small dataset
+        dag = self.estimator_small.estimate(
+            expert_knowledge=expert_knowledge,
+            pval_threshold=0.1,
+            effect_size_threshold=0.1,
+            show_progress=False,
+        )
+
+        # Check that Age has no incoming edges
+        incoming_edges_to_age = [edge for edge in dag.edges() if edge[1] == "Age"]
+        self.assertEqual(
+            len(incoming_edges_to_age),
+            0,
+            f"Age should have no incoming edges, but found: {incoming_edges_to_age}",
+        )
+
+        # Check that Race has no incoming edges
+        incoming_edges_to_race = [edge for edge in dag.edges() if edge[1] == "Race"]
+        self.assertEqual(
+            len(incoming_edges_to_race),
+            0,
+            f"Race should have no incoming edges, but found: {incoming_edges_to_race}",
+        )
