@@ -13,6 +13,7 @@ from pgmpy.estimators.CITests import (
     log_likelihood,
     modified_log_likelihood,
     pearsonr,
+    pearsonr_equivalence,
     pillai_trace,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -538,3 +539,39 @@ class TestResidualMethods(unittest.TestCase):
 
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
+
+    def test_pearsonr_equivalence(self):
+        # Non-conditional tests
+        coef, p_value = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=[],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+        # self.assertAlmostEqual(round(coef, 3), 11.934)
+        # self.assertAlmostEqual(p_value, 0.0)
+
+        # Conditional tests
+        coef, p_value = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+
+        # self.assertAlmostEqual(round(coef, 3), -1.908)
+        # self.assertEqual(round(p_value, 4), 0.0564)
+
+        # Conditional tests
+        coef, p_value = pearsonr_equivalence(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
+
+        # self.assertAlmostEqual(round(coef, 3), 11.69)
+        # self.assertAlmostEqual(p_value, 0.0)
+
+        assert False, "Needs implementation"
