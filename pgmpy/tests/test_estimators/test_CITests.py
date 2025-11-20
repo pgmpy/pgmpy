@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 import numpy as np
@@ -501,6 +502,10 @@ class TestResidualMethods(unittest.TestCase):
             msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
         )
 
+    @unittest.skipIf(
+        sys.version_info < (3, 12),
+        "Older Python versions result in different statistic values",
+    )
     def test_gcm(self):
         # Non-conditional tests
         coef, p_value = gcm(
