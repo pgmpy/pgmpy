@@ -16,7 +16,7 @@ import pandas as pd
 from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
@@ -240,7 +240,7 @@ class PC(BaseConstraintEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        ci_test = get_callable_ci_test(ci_test, data=self.data)
+        ci_test = ci_registry.get_test(ci_test, data=self.data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

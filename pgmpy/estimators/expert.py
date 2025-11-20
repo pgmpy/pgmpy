@@ -7,7 +7,7 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient
 
@@ -210,7 +210,7 @@ class ExpertInLoop(StructureEstimator):
         dag.add_nodes_from(nodes)
 
         # Get the CI test.
-        ci_test = get_callable_ci_test(test=ci_test, data=self.data)
+        ci_test = ci_registry.get_test(test=ci_test, data=self.data)
 
         # Initialize blacklisted_edges with forbidden_edges from expert knowledge
         blacklisted_edges = []
