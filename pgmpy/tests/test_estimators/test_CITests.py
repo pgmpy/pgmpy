@@ -541,37 +541,54 @@ class TestResidualMethods(unittest.TestCase):
         self.assertAlmostEqual(p_value, 0.0)
 
     def test_pearsonr_equivalence(self):
-        # Non-conditional tests
+        is_independent = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=[],
+            data=self.df_indep,
+            boolean=True,
+            significance_level=0.05,
+            delta_th=0.1,
+        )
         coef, p_value = pearsonr_equivalence(
             X="X",
             Y="Y",
             Z=[],
             data=self.df_indep,
             boolean=False,
-            seed=42,
+            delta_th=0.1,
         )
-        # self.assertAlmostEqual(round(coef, 3), 11.934)
-        # self.assertAlmostEqual(p_value, 0.0)
+        self.assertGreater(abs(coef), 0.1)
+        self.assertFalse(is_independent)
 
-        # Conditional tests
+        is_independent = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=True,
+            significance_level=0.05,
+            delta_th=0.1,
+        )
         coef, p_value = pearsonr_equivalence(
             X="X",
             Y="Y",
             Z=["Z1", "Z2", "Z3"],
             data=self.df_indep,
             boolean=False,
-            seed=42,
+            delta_th=0.1,
         )
+        self.assertLess(abs(coef), 0.1)
+        self.assertLess(p_value, 0.05)
+        self.assertTrue(is_independent)
 
-        # self.assertAlmostEqual(round(coef, 3), -1.908)
-        # self.assertEqual(round(p_value, 4), 0.0564)
-
-        # Conditional tests
-        coef, p_value = pearsonr_equivalence(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        is_independent = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_dep,
+            boolean=True,
+            significance_level=0.05,
+            delta_th=0.1,
         )
-
-        # self.assertAlmostEqual(round(coef, 3), 11.69)
-        # self.assertAlmostEqual(p_value, 0.0)
-
-        assert False, "Needs implementation"
+        self.assertFalse(is_independent)

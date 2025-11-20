@@ -875,6 +875,11 @@ def pearsonr_equivalence(
     CI Test results: tuple or bool
         If boolean=True, returns True (Independent) if p-value < significance_level.
         If boolean=False, returns (Partial Correlation, p-value).
+
+    References
+    ----------
+    .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
+            arXiv:2404.18232 (2024).
     """
     # Step 1: Input validation
     if not hasattr(Z, "__iter__"):
