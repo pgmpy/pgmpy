@@ -1469,7 +1469,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=10,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
             seed=None,
         )
 
@@ -1493,7 +1493,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -1501,7 +1501,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
             seed=seed,
         )
 
@@ -1535,7 +1535,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=10,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
         )
 
         # should return 3D numpy array, with shape of 10 x 3 x 2
@@ -1557,7 +1557,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -1565,7 +1565,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
             seed=seed,
         )
 
@@ -1597,7 +1597,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=10,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
         )
         n_vars = len(np.unique([k for k, v in self.dbn.states]))
 
@@ -1620,7 +1620,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -1628,7 +1628,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="numpy3D",
+            return_format="numpy3D",
             seed=seed,
         )
 
@@ -1663,7 +1663,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=None,
         )
 
@@ -1692,7 +1692,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=seed,
         )
 
@@ -1707,7 +1707,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(
@@ -1733,7 +1733,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=None,
         )
 
@@ -1761,7 +1761,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=seed,
         )
 
@@ -1776,7 +1776,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(
@@ -1802,7 +1802,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=None,
         )
 
@@ -1830,7 +1830,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-multiindex",
+            return_format="pd-multiindex",
             seed=seed,
         )
 
@@ -1845,7 +1845,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(
@@ -1871,7 +1871,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=None,
         )
 
@@ -1892,7 +1892,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=seed,
         )
 
@@ -1910,7 +1910,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -1937,7 +1937,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=None,
         )
 
@@ -1958,7 +1958,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=seed,
         )
 
@@ -1976,7 +1976,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -2003,7 +2003,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=None,
         )
 
@@ -2024,7 +2024,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="pd-list",
+            return_format="pd-list",
             seed=seed,
         )
 
@@ -2042,7 +2042,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format=None,
+            return_format="wide",
             seed=seed,
         )
 
@@ -2069,7 +2069,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="sorted",
+            return_format="sorted",
             seed=None,
         )
 
@@ -2083,7 +2083,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="sorted",
+            return_format="sorted",
             seed=None,
         )
 
@@ -2101,7 +2101,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=n_samples,
             n_time_slices=timeslices,
             show_progress=False,
-            format="sorted",
+            return_format="sorted",
             seed=None,
         )
 

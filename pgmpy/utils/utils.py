@@ -498,10 +498,10 @@ def get_dataset_type(data: pd.DataFrame) -> str:
     return "mixed"
 
 
-def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
+def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):
     """
     takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
-    traces.
+    traces ( "wide" format) and converts it to different format (chosen by return_format).
 
     Parameters
     ----------
@@ -509,7 +509,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
         input dataframe represented in the wide format (on rows we have samples, on columns, unsorted pairs of
         ("Variable", "timestep")
 
-    format : {'numpy3d', 'pd-multiindex', 'pd-list', 'sorted', None}
+    return_format : {'numpy3d', 'pd-multiindex', 'pd-list', 'sorted'}
         Controls the return representation
 
         "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
@@ -525,7 +525,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
 
     Returns
     -------
-    depends on "format" variable. "numpy3d" returns a numpy array (np.ndarray), while rest of the representations
+    depends on "return_format" variable. "numpy3d" returns a numpy array (np.ndarray), while rest of the representations
     return a pandas DataFrame.
 
     Examples
@@ -537,7 +537,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
     0      1      1      0      0      0      0      0      1      0
     1      0      2      0      1      1      1      1      1      1
 
-    >>> to_different_format(df, format="numpy3d")
+    >>> to_timeseries_format(df, return_format="numpy3d")
     return will be : [[[1 0 0]
                        [1 0 0]
                        [0 1 0]]
@@ -545,7 +545,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
                       [2 1 1]
                       [0 1 1]]]
 
-    >>> to_different_format(df, format="pd-multiindex")
+    >>> to_timeseries_format(df, return_format="pd-multiindex")
     return will look like :
 
     variable       D  G  I
@@ -557,7 +557,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
              1     1  1  1
              2     1  1  1
 
-    >>> to_different_format(df, format="pd-list")
+    >>> to_timeseries_format(df, return_format="pd-list")
     return will be array of two pandas DataFrames. The first element will be :
 
     variable  D  G  I
@@ -573,7 +573,7 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
     1         1  1  1
     2         1  1  1
 
-    >>> to_different_format(df, format="sorted")
+    >>> to_timeseries_format(df, return_format="sorted")
     return will look like :
             (D,0), (D,1), (D,2), (G,0), (G,1), (G,2), (I,0), (I,1), (I,2)
     0         1      0      0      1      0      0      0      1      0
@@ -597,20 +597,20 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
 
     # cast to different representation
     panel = x
-    format = format.lower()
+    return_format = return_format.lower()
 
-    if format == "numpy3d":
+    if return_format == "numpy3d":
         # no guarantee that there will be order, which complicates the 3D tensor creation
         panel = panel.to_numpy()
         panel = panel.reshape(N, D, T)
 
-    elif format == "pd-multiindex":
+    elif return_format == "pd-multiindex":
         panel = x.stack("time")
         panel.index.set_names(["instance", "time"], inplace=True)
         panel = panel.sort_index()
         panel.columns = panel.columns.get_level_values("variable")
 
-    elif format == "pd-list":
+    elif return_format == "pd-list":
         # return the list of dataframes, one per time series
         panel = x.stack("time")
         panel.index.set_names(["instance", "time"], inplace=True)
@@ -619,10 +619,10 @@ def to_different_format(df: pd.DataFrame, format: str = "pd-multiindex"):
 
         panel = [pd.DataFrame(panel.loc[i]) for i in range(df.shape[0])]
 
-    elif format == "sorted":
+    elif return_format == "sorted":
         panel.sort_index(inplace=True, axis=1)
 
     else:
-        raise ValueError(f"Unknown representation: {format}")
+        raise ValueError(f"Unknown representation: {return_format}")
 
     return panel
