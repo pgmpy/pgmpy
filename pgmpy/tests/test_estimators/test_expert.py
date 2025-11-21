@@ -147,8 +147,7 @@ class TestExpertInLoop(unittest.TestCase):
             effect_size_threshold=0.1,
             orientations=orientations,
             descriptions={
-                key: self.descriptions[key]
-                for key in self.estimator_small.data.columns
+                key: self.descriptions[key] for key in self.estimator_small.data.columns
             },
         )
         self.assertEqual(orientations, set(dag.edges()))
@@ -167,8 +166,7 @@ class TestExpertInLoop(unittest.TestCase):
             pval_threshold=0.1,
             effect_size_threshold=0.1,
             descriptions={
-                key: self.descriptions[key]
-                for key in self.estimator_small.data.columns
+                key: self.descriptions[key] for key in self.estimator_small.data.columns
             },
         )
         self.assertEqual(self.orientations_small, set(dag.edges()))
