@@ -15,7 +15,7 @@ import pandas as pd
 from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.causal_discovery import _BaseConstraintCausalDiscovery
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 
 
 class PC(_BaseConstraintCausalDiscovery):
@@ -213,7 +213,7 @@ class PC(_BaseConstraintCausalDiscovery):
         """
 
         # CI test
-        ci_test = get_callable_ci_test(self.ci_test, data=X)
+        ci_test = ci_registry.get_test(self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
