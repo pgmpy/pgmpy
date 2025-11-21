@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import warnings
+from pgmpy.global_vars import logger
 
 __all__ = ["_GraphRolesMixin"]
 
@@ -99,9 +99,8 @@ class _GraphRolesMixin:
                 else:
                     existing_role = new_graph.nodes(data=True)[var].get("role", None)
                     if existing_role is not None:
-                        warnings.warn(
-                            f"⚠️ Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'.",
-                            UserWarning,
+                        logger.warning(
+                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
                         )
                     new_graph.add_node(var, role=role)
         else:
@@ -111,9 +110,8 @@ class _GraphRolesMixin:
                 else:
                     existing_role = new_graph.nodes(data=True)[var].get("role", None)
                     if existing_role is not None:
-                        warnings.warn(
-                            f"⚠️ Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'.",
-                            UserWarning,
+                        logger.warning(
+                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
                         )
                     new_graph.add_node(var, role=role)
         return new_graph
