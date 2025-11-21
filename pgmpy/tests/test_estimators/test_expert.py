@@ -146,6 +146,10 @@ class TestExpertInLoop(unittest.TestCase):
             pval_threshold=0.1,
             effect_size_threshold=0.1,
             orientations=orientations,
+            descriptions={
+                key: self.descriptions[key]
+                for key in self.estimator_small.data.columns
+            },
         )
         self.assertEqual(orientations, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
@@ -162,6 +166,10 @@ class TestExpertInLoop(unittest.TestCase):
             use_cache=True,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
+            descriptions={
+                key: self.descriptions[key]
+                for key in self.estimator_small.data.columns
+            },
         )
         self.assertEqual(self.orientations_small, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
@@ -241,6 +249,7 @@ class TestExpertInLoop(unittest.TestCase):
             expert_knowledge=expert_knowledge,
             effect_size_threshold=0.0001,
             show_progress=False,
+            descriptions=self.descriptions,
         )
 
         # Check forbidden edges
@@ -271,6 +280,7 @@ class TestExpertInLoop(unittest.TestCase):
             orientations=orientations,
             effect_size_threshold=0.0001,
             show_progress=False,
+            descriptions=self.descriptions,
         )
 
         # Check that specified orientations take precedence
@@ -285,9 +295,15 @@ class TestExpertInLoop(unittest.TestCase):
         """Test that a single root node has no incoming edges."""
         expert_knowledge = ExpertKnowledge(root_nodes=["Age"])
 
+        # Simple orientation function for testing
+        def simple_orient(var1, var2, **kwargs):
+            # Orient alphabetically
+            return (var1, var2) if var1 < var2 else (var2, var1)
+
         # Run the algorithm with a small dataset
         dag = self.estimator_small.estimate(
             expert_knowledge=expert_knowledge,
+            orientation_fn=simple_orient,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
             show_progress=False,
@@ -309,9 +325,15 @@ class TestExpertInLoop(unittest.TestCase):
         """Test that multiple root nodes have no incoming edges."""
         expert_knowledge = ExpertKnowledge(root_nodes=["Age", "Race"])
 
+        # Simple orientation function for testing
+        def simple_orient(var1, var2, **kwargs):
+            # Orient alphabetically
+            return (var1, var2) if var1 < var2 else (var2, var1)
+
         # Run the algorithm with a small dataset
         dag = self.estimator_small.estimate(
             expert_knowledge=expert_knowledge,
+            orientation_fn=simple_orient,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
             show_progress=False,

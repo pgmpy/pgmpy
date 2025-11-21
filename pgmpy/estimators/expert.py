@@ -215,6 +215,8 @@ class ExpertInLoop(StructureEstimator):
         # Initialize blacklisted_edges with forbidden_edges from expert knowledge
         blacklisted_edges = []
         if expert_knowledge is not None:
+            # Add forbidden edges for root nodes if specified
+            expert_knowledge._add_root_nodes_forbidden_edges(nodes)
             blacklisted_edges = list(expert_knowledge.forbidden_edges)
             # Add required edges to the DAG
             if expert_knowledge.required_edges:
