@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
@@ -217,7 +217,7 @@ class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = get_callable_ci_test(ci_test, data=data)
+        ci_test = ci_registry.get_test(ci_test, data=data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
