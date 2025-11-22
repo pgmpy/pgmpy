@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import math
 from itertools import permutations
 
 import networkx as nx
@@ -10,52 +9,69 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import chi_square, pearsonr
+from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork, FunctionalBayesianNetwork, LinearGaussianBayesianNetwork
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.global_vars import logger
 
 
 def permutation_t(
-    model,
+    dag,
     data,
-    ci_test="chi_square",
     significance_level=0.05,
     n_permutations=None,
-    return_summary=False,
-    show_progress=True,
+    ci_test="chi_square",    
+    return_summary=True,
 ):
     """
     Permutation-based test for falsifying causal graphs using observational data.
 
-    This method implements the permutation-based falsification test from Eulig et al. (2025).
-    It tests whether a given DAG is significantly better than random node permutations
-    by comparing Local Markov Condition (LMC) violations.
+    For a given DAG, the test checks whether the DAG has fewer Local Markov Condition
+    (LMC) violations than a baseline. The baseline has the same causal structure as the DAG.
+    This baseline is chosen to be the node permutations of the given DAG. Fewer LMC
+    violations mean that the DAG is more consistent/robust than a 'random' guess.
 
     The test performs two evaluations:
-    1. Falsifiability: Whether the graph is informative enough to be falsifiable
-    2. Falsification: Whether the graph performs significantly better than random
+    1. Falsifiability: Whether the DAG is informative enough to be falsifiable. This is 
+    judged using the fraction of DAGs in the node perumations that are Markov equivalent to
+    given DAG
+    2. Falsification: Whether the DAG performs significantly better than the node perumations,
+    in terms of fewer LMC violations.
 
     Parameters
     ----------
-    model : pgmpy.base.DAG or pgmpy.models.DiscreteDiscreteDiscreteBayesianNetwork
+    model : pgmpy.base.DAG or any BayesianNetwork from pgmpy.models
         The causal graph to test for falsification.
 
     data : pandas.DataFrame
         Observational data to test the graph against. Should contain all variables
         present in the model.
 
-    ci_test : str, default='chi_square'
-        The conditional independence test to use for testing Local Markov Conditions.
-        Options: 'chi_square' (for discrete data), 'pearsonr' (for continuous data).
-
     significance_level : float, default=0.05
         Significance level for conditional independence tests. Lower values make
-        the test more conservative.
+        the test more conservative for accepting the null hypothesis.
 
     n_permutations : int, optional
         Number of random node permutations to generate for the baseline.
         If None, uses max(20, int(1/significance_level)).
+    
+    ci_test : str or fun
+        The statistical test to use for testing conditional independence in
+        the dataset. If `str` values should be one of:
+            "independence_match": If using this option, an additional parameter
+                    `independencies` must be specified.
+            "chi_square": Uses the Chi-Square independence test. This works
+                    only for discrete datasets.
+            "pearsonr": Uses the partial correlation based on pearson
+                    correlation coefficient to test independence. This works
+                    only for continuous datasets.
+            "g_sq": G-test. Works only for discrete datasets.
+            "log_likelihood": Log-likelihood test. Works only for discrete dataset.
+            "freeman_tuckey": Freeman Tuckey test. Works only for discrete dataset.
+            "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
+            "neyman": Neyman test. Works only for discrete variables.
+            "cressie_read": Cressie Read test. Works only for discrete variables.
 
-    return_summary : bool, default=False
+    return_summary : bool, default=True
         If True, returns detailed information about the test including
         individual LMC violations and permutation results.
 
@@ -114,9 +130,18 @@ def permutation_t(
 
     # Validate inputs
     if not isinstance(data, pd.DataFrame):
-        raise TypeError("Data must be a pandas DataFrame")
+        raise TypeError(f"Data should be a pandas DataFrame. Got: {type(data)}")
 
-    model_nodes = set(model.nodes())
+    if isinstance(dag, (DAG,DiscreteBayesianNetwork, DynamicBayesianNetwork, FunctionalBayesianNetwork, LinearGaussianBayesianNetwork )):
+        if len(dag.latents) > 0:
+                    raise ValueError(
+                        f"Found latent variables: {dag.latents}. "
+                        "permutation_t does not support latent variables."
+                    )
+    else:
+       raise TypeError(f"DAG should be a pgmpy.base.DAG or Bayesian Network from pgmpy.models. Got: {type(dag)}") 
+
+    model_nodes = set(dag.nodes())
     data_columns = set(data.columns)
 
     if not model_nodes.issubset(data_columns):
@@ -128,39 +153,34 @@ def permutation_t(
         n_permutations = max(20, int(1 / significance_level))
 
     # Initialize CI test function
-    if ci_test == "chi_square":
-        ci_test_func = chi_square
-    elif ci_test == "pearsonr":
-        ci_test_func = pearsonr
-    else:
-        raise ValueError(
-            f"Unsupported CI test: {ci_test}. Use 'chi_square' or 'pearsonr'"
-        )
+    ci_test_func = get_callable_ci_test(ci_test, data=data)
 
     logger.info(
         f"Starting permutation-based falsification test with {n_permutations} permutations"
     )
-    # Step 1: Count LMC violations in the given graph
+    # Step 1: Count Local Markov Condition violations in the given graph
     lmc_violations_given = _count_lmc_violations(
-        model, data, ci_test_func, significance_level
+        dag, data, ci_test_func, significance_level
     )
 
     # Step 2: Generate permutations and test them
-    nodes = list(model.nodes())
+    nodes = list(dag.nodes())
     permutation_violations = []
     same_mec_count = 0
 
     # Set up progress bar
-    if show_progress and config.SHOW_PROGRESS:
-        pbar = tqdm(total=n_permutations, desc="Testing permutations")
+    if config.SHOW_PROGRESS:
+        pbar = tqdm(total=n_permutations, desc="Constructing Null Distribution")
+    else:
+        pbar = range(n_permutations)
 
-    for i in range(n_permutations):
+    for i in pbar:
         # Generate random permutation
         perm = np.random.permutation(nodes)
         perm_mapping = dict(zip(nodes, perm))
 
         # Create permuted graph
-        permuted_model = _create_permuted_graph(model, perm_mapping)
+        permuted_model = _create_permuted_graph(dag, perm_mapping)
 
         # Count LMC violations in permuted graph
         lmc_violations_perm = _count_lmc_violations(
@@ -172,12 +192,6 @@ def permutation_t(
         # Check if in same Markov equivalence class (0 violations = same structure)
         if lmc_violations_perm == 0:
             same_mec_count += 1
-
-        if show_progress and config.SHOW_PROGRESS:
-            pbar.update(1)
-
-    if show_progress and config.SHOW_PROGRESS:
-        pbar.close()
 
     # Step 3: Compute test results
 
@@ -314,7 +328,3 @@ def _create_permuted_graph(model, perm_mapping):
     permuted_model.add_edges_from(new_edges)
 
     return permuted_model
-
-
-# Alias for shorter function name
-falsify_graph = permutation_t
