@@ -269,8 +269,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 0.4: Validate single exposure and outcome.
-        exposure_vars = list(self.causal_graph.get_role("exposure"))
-        outcome_vars = list(self.causal_graph.get_role("outcome"))
+        exposure_vars = self.causal_graph.get_role("exposure")
+        outcome_vars = self.causal_graph.get_role("outcome")
 
         if len(exposure_vars) != 1:
             raise ValueError(
@@ -293,8 +293,8 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         # Step 1.1: Get roles from the causal graph and assign to attributes.
         self.exposure_var_ = exposure_vars[0]
         self.outcome_var_ = outcome_vars[0]
-        self.adjustment_vars_ = list(self.causal_graph.get_role("adjustment"))
-        self.pretreatment_vars_ = list(self.causal_graph.get_role("pretreatment"))
+        self.adjustment_vars_ = self.causal_graph.get_role("adjustment")
+        self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
         self.feature_columns_ = (
             [self.exposure_var_] + self.adjustment_vars_ + self.pretreatment_vars_
         )

@@ -207,7 +207,7 @@ def test_error_handling_missing_roles_and_multiple_exposure():
 def test_sample_weight_support_and_shapes(dag):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y = make_simulated_plr(n=150, seed=5)
-    # dag = make_simple_dag_roles()
+
     model = DoubleMLRegressor(
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
@@ -231,7 +231,12 @@ def test_sample_weight_support_and_shapes(dag):
 def test_dag_roles_validation_and_pretreatment_support():
     """Test role extraction and pretreatment variable handling."""
     dag = DAG(
-        ebunch=[("P", "D"), ("Z", "D"), ("Z", "Y"), ("D", "Y")],
+        ebunch=[
+            ("Z", "D"),
+            ("Z", "Y"),
+            ("D", "Y"),
+            ("P", "Y"),
+        ],
         roles={
             "exposure": "D",
             "outcome": "Y",
@@ -246,10 +251,10 @@ def test_dag_roles_validation_and_pretreatment_support():
         n_folds=1,
     )
     # Before fit the roles are accessible via DAG; check that role lists are non-empty
-    exposure_vars = list(model.causal_graph.get_role("exposure"))
-    outcome_vars = list(model.causal_graph.get_role("outcome"))
-    adjustment_vars = list(model.causal_graph.get_role("adjustment"))
-    pretreat_vars = list(model.causal_graph.get_role("pretreatment"))
+    exposure_vars = model.causal_graph.get_role("exposure")
+    outcome_vars = model.causal_graph.get_role("outcome")
+    adjustment_vars = model.causal_graph.get_role("adjustment")
+    pretreat_vars = model.causal_graph.get_role("pretreatment")
     assert exposure_vars and outcome_vars
     assert adjustment_vars == ["Z"]
     assert pretreat_vars == ["P"]
@@ -343,7 +348,7 @@ def test_doubleml_recovers_theta_high_dim():
         dag.edges(),
         roles={
             "exposure": "D",
-            "adjustment": dag.get_role("adjustment"),
+            "adjustment": [f"Z{i}" for i in range(1, 11)],
             "outcome": "Y",
         },
     )

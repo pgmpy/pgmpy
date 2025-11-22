@@ -408,9 +408,8 @@ def preprocess_data(df):
     """
     Tries to figure out the data type of each variable `df`.
 
-    Assigns one of (numerical, categorical unordered,
-      categorical ordered) datatypes
-    to each column in `df`. Also changes any object datatypes to categorical.
+    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
+    changes any object datatypes to categorical.
 
     Parameters
     ----------
@@ -419,8 +418,7 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and
-      a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}

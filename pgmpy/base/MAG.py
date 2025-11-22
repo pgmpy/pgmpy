@@ -17,71 +17,74 @@ class MAG(AncestralBase):
     that the graph is "maximal," meaning no additional edges can be added
     without changing the set of implied conditional independence relations.
 
+
+    Parameters
+    ----------
+    ebunch : iterable of tuples, optional
+        A list or iterable of edges to add at initialization.
+
+    latents : set, default=set()
+        Set of latent (unobserved) variables.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    >>> from pgmpy.base import MAG
+    >>> mag = MAG(ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")], latents={"L"})
+    >>> sorted(mag.nodes())
+    ['A', 'B', 'C', 'L']
+
+    Roles can be assigned to nodes in the graph at construction or using methods.
+
+    At construction:
+
+    >>> mag = MAG(
+    ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+    ...     latents={"L"},
+    ...     exposures={"A"},
+    ...     outcomes={"B"},
+    ... )
+
+    Roles can also be assigned after creation using ``with_role`` method.
+
+    >>> mag = mag.with_role("adjustment", {"L", "C"})
+
+    Vertices of a specific role can be retrieved using ``get_role`` method.
+
+    >>> mag.get_role("exposures")
+    ["A"]
+    >>> mag.get_role("adjustment")
+    ["L", "C"]
+
     References
     ----------
-    [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
+    .. [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
     """
 
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
-        """
-        Initialize a Maximal Ancestral Graph
-
-        Parameters
-        ----------
-        ebunch : iterable of tuples, optional
-            A list or iterable of edges to add at initialization.
-
-        latents : set, default=set()
-            Set of latent (unobserved) variables.
-
-        roles : dict, optional (default: None)
-            A dictionary mapping roles to node names.
-            The keys are roles, and the values are role names (strings or iterables of str).
-            If provided, this will automatically assign roles to the nodes in the graph.
-            Passing a key-value pair via ``roles`` is equivalent to calling
-            ``with_role(role, variables)`` for each key-value pair in the dictionary.
-
-        Returns
-        -------
-        MAG
-            A new instance of a Maximal Ancestral Graph.
-
-        Examples
-        --------
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG(
-        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")], latents={"L"}
-        ... )
-        >>> sorted(mag.nodes())
-        ['A', 'B', 'C', 'L']
-
-        Roles can be assigned to nodes in the graph at construction or using methods.
-
-        At construction:
-
-        >>> mag = MAG(
-        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
-        ...     latents={"L"},
-        ...     roles={"exposure": "A", "outcome": "B"},
-        ... )
-
-        Roles can also be assigned after creation using ``with_role`` method.
-
-        >>> mag = mag.with_role("adjustment", {"L", "C"})
-
-        Vertices of a specific role can be retrieved using ``get_role`` method.
-
-        >>> mag.get_role("exposure")
-        ["A"]
-        >>> mag.get_role("adjustment")
-        ["L", "C"]
-
-        """
         if ebunch:
             for _, _, u_mark, v_mark in ebunch:
                 if (u_mark, v_mark) not in {
@@ -95,7 +98,13 @@ class MAG(AncestralBase):
                         "MAGs only allow directed ('-', '>'), reverse directed ('>', '-'), "
                         "bidirected ('>', '>'), and undirected ('-', '-') edges."
                     )
-        super().__init__(ebunch=ebunch, latents=latents, roles=roles)
+        super().__init__(
+            ebunch=ebunch,
+            latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
+        )
 
     def _is_collider(self, u, c, v):
         """
