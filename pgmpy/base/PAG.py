@@ -185,8 +185,9 @@ class PAG(AncestralBase):
         r"""
         Check whether a path is uncovered.
 
-        a path :math:`p = (V_0 , \cdots , V_n)` is said to be uncovered if for every :math:`1 \le i \le n-1, V_{i-1}
-        `and` V_{i+1}` are not adjacent, i.e., if every consecutive triple on the path is unshielded.
+        a path :math:`p = (V_0 , \cdots , V_n)` is said to be uncovered if
+        for every :math:`1 \le i \le n-1, V_{i-1} `and` V_{i+1}` are not adjacent, i.e.,
+        if every consecutive triple on the path is unshielded.
 
         Parameters
         ----------
@@ -211,6 +212,8 @@ class PAG(AncestralBase):
 
     def get_potentially_directed_paths(self, start, end):
         r"""
+        Return all potentially directed paths between two nodes.
+
         A path :math: `p = (V_0 , \cdots , V_n)` is said to be potentially directed (abbreviated as p.d.)
         from :math:`V_0 \text{to} V_n \text{if for every} 0 \le i \le n-1, \text{the edge between}
         V_{i} \text{and} V_{i+1} \text{is not into} V_{i} \text{or out of} V_{i+1}`.
@@ -248,27 +251,28 @@ class PAG(AncestralBase):
 
     def is_valid_fork_configuration(self, u, w, forks):
         """
-        Check whether there exist two forks v, x -> w such that
-        there are uncovered potentially directed paths u -> ... -> v
-        and u -> ... -> x, with distinct first neighbors mu, omega
-        that are not adjacent.
+        Check whether a pair of forks supports the R10 orientation condition.
+
+        This verifies that there exist nodes `v` and `x` such that both point into `w`
+        (i.e., `v --> w` and `x --> w`), and there are uncovered, potentially directed
+        paths from `u` to each of them. The first neighbors after `u` on these paths
+        (`mu` and `omega`) must be different and must not be adjacent.
 
         Parameters
         ----------
         u : Hashable
-            Source node with edge u o-> w.
+            The source node with an edge `u o--> w`.
 
         w : Hashable
-            Target node of edge u o-> w.
+            The endpoint of the edge `u o--> w`.
 
         forks : list
-            List of nodes v such that v -> w.
+            Nodes that have edges pointing into `w` (i.e., all `v` such that `v --> w`).
 
         Returns
         -------
         bool
-            True if the fork configuration satisfies R10 condition,
-            False otherwise.
+            True if the configuration satisfies the R10 condition, otherwise False.
         """
         for (
             v,
@@ -296,31 +300,34 @@ class PAG(AncestralBase):
 
     def get_paths_with_marks(self, u, v, u_type=None, v_type=None):
         """
-        Find all simple paths between u and v where each traversed edge
-        satisfies the specified mark constraints.
+        Find all simple paths between two nodes that satisfy given edge-mark constraints.
+
+        A valid path is one where every traversed edge matches the required mark
+        on the current node (`u_type`) and on the neighbor (`v_type`). If either
+        constraint is None, that side of the edge is unrestricted.
 
         Parameters
         ----------
         u, v : Hashable
-            Start and end nodes (must be distinct).
+            The start and end nodes. They must be different.
 
-        u_type : str or None, default=None
-            Required mark at the current node for each traversed edge.
-            If None, allow any mark.
+        u_type : str or None, default None
+            The required mark on the current node for each step along the path.
+            If None, any mark is allowed.
 
-        v_type : str or None, default=None
-            Required mark at the neighbor node for each traversed edge.
-            If None, allow any mark.
+        v_type : str or None, default None
+            The required mark on the neighboring node for each step.
+            If None, any mark is allowed.
 
         Returns
         -------
         list[list[Hashable]]
-            All valid paths from u to v.
+            All simple paths from `u` to `v` that satisfy the mark conditions.
 
         Raises
         ------
         ValueError
-            If u == v.
+            If `u` and `v` are the same node.
         """
         if u == v:
             raise ValueError("Start and end nodes must differ (path length >= 2).")
@@ -345,26 +352,30 @@ class PAG(AncestralBase):
     def modify_edge(self, u, v, mark_u=None, mark_v=None):
         """
         Modify the marks on an existing edge between two nodes.
-        If the edge mark is None, it remains unchanged.
+
+        This updates the marks on the edge `u--v`. Any mark set to None is left
+        unchanged, so only the marks you explicitly provide will be updated.
 
         Parameters
         ----------
         u : Hashable
-            First node.
+            One endpoint of the edge.
 
         v : Hashable
-            Second node.
+            The other endpoint of the edge.
 
-        mark_u : str, default=None
-            New mark at node u (one of '-', '>', 'o'). If the mark is None, it remains unchanged.
+        mark_u : str, default None
+            The new mark at node `u` (allowed values: '-', '>', 'o').
+            If None, the existing mark at `u` is preserved.
 
-        mark_v : str, default=None
-            New mark at node v (one of '-', '>', 'o'). If the mark is None, it remains unchanged.
+        mark_v : str, default None
+            The new mark at node `v` (allowed values: '-', '>', 'o').
+            If None, the existing mark at `v` is preserved.
 
         Raises
         ------
         ValueError
-            If there is no edge between u and v.
+            If no edge exists between `u` and `v`.
         """
         if not self.has_edge(u, v):
             raise ValueError(f"No edge between {u} and {v}")
@@ -373,9 +384,28 @@ class PAG(AncestralBase):
         if mark_v is not None:
             self.edges[u, v]["marks"][v] = mark_v
 
-    def has_discriminating_path(self, x, y, v):
-        # node is a non end point and adjacent to y
-        # x and y are not adjacent
+    def get_discriminating_path(self, x, y, v):
+        r"""
+        Check whether there exists a discriminating path for node `v` between `x` and `y`.
+
+        A path \( p = (X, \ldots, W, V, Y) \) in a MAG is a *discriminating path*
+        for `V` if it meets the following conditions:
+
+        - The path has at least three edges.
+        - `V` is an internal (non-endpoint) node on the path and is adjacent to `Y`
+        along that path.
+        - `X` is not adjacent to `Y`.
+        - Every node between `X` and `V` is a collider on the path and is also
+        a parent of `Y`.
+
+        The function returns all such discriminating paths, if any exist.
+
+        Returns
+        -------
+        list[list[Hashable]]
+            All discriminating paths for `v` between `x` and `y`.
+            Returns an empty list if none exist.
+        """
 
         if x == y:
             raise ValueError("`x` and `y` cannot be the same nodes.")
@@ -400,25 +430,28 @@ class PAG(AncestralBase):
 
             discriminating_paths.append(path)
 
-        return discriminating_paths if discriminating_paths else False
+        return discriminating_paths
 
     def rule_1(self, inplace=False, **kwargs):
         """
-        If we have a triple u *-> v o-* w such that:
-        - u and w are non-adjacent,
-        then orient them as u *-> v -> w.
+        Orient a triple of nodes when the middle node forms a specific mixed pattern.
+
+        If the graph contains a configuration of the form
+        `u *--> v o--* w`
+        and `u` and `w` are not adjacent, then the edges are oriented as
+        `u *--> v --> w`.
 
         Parameters
         ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
+        inplace : bool, default False
+            If True, apply the orientation directly to the graph.
+            If False, return a modified copy and leave the original graph unchanged.
 
         Returns
         -------
         PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+            The updated graph if `inplace=False`. Returns None when applying
+            changes in place.
         """
         pag = self if inplace else self.copy()
 
@@ -436,7 +469,7 @@ class PAG(AncestralBase):
 
     def rule_2(self, inplace=False, **kwargs):
         """
-        If u -> v *-> w or u *-> v -> w and u *-o w, then orient u *-> w .
+        If u --> v *--> w or u *--> v --> w and u *--o w, then orient u *--> w .
 
         Parameters
         ----------
@@ -475,23 +508,28 @@ class PAG(AncestralBase):
 
     def rule_3(self, inplace=False, **kwargs):
         """
-        If u *-> v <-* w,
-        u *-o z o-* w,
-        u and w are not adjacent,
-        and z *-o v,
-        then orient the edge z *-o v as z*-> v.
+        Orient the edge `z *--o v` when it is supported by the surrounding structure.
+
+        This rule applies when the following configuration is present:
+
+        - `u *--> v <--* w`
+        - `u *--o z o--* w`
+        - `u` and `w` are not adjacent
+        - `z *--o v` is an existing edge
+
+        When all these conditions hold, the edge `z *--o v` is oriented as `z *-> v`.
 
         Parameters
         ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
+        inplace : bool, default False
+            If True, apply the orientation directly to the current graph.
+            If False, operate on and return a modified copy.
 
         Returns
         -------
         PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+            The updated graph if `inplace=False`. Returns None when changes
+            are applied in place.
         """
 
         pag = self if inplace else self.copy()
@@ -516,24 +554,117 @@ class PAG(AncestralBase):
 
     def rule_4(self, inplace=False, **kwargs):
         """
-        If u = (θ, . . . , α , β, γ) is a discriminating path between θ and γ
-        for β , and β◦−−∗ γ ; then if β ∈ Sepset(θ, γ ), orient
-        β◦−−∗ γ as β → γ ; otherwise orient the triple (α , β, γ ) as α ↔ β ↔ γ .
+        Orient edges using discriminating paths.
+
+        This rule examines each node `v` and looks for nodes `y` connected to `v`
+        with an `o` mark at `v`. For each such pair `(v, y)`, it checks every
+        other node `x` to determine whether a discriminating path exists for
+        the triple `(x, y, v)`.
+
+        For each discriminating path found:
+
+        - If `v` is in the separating set for the pair `(x, y)`,
+        the edge between `v` and `y` is oriented as `v > y`.
+
+        - If `v` is *not* in the separating set for that pair,
+        the edge connecting the predecessor of `v` on the path (i.e., `path[-3]`)
+        is oriented as `path[-3] --> v`, and the edge `v`--`y` is oriented as `v --> y`.
+
+        A dictionary of separating sets must be provided via the `separating_sets`
+        keyword argument. Keys should be `(x, y)` tuples, and values should be
+        sets of conditioning nodes.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, update the current graph directly.
+            If False, return a modified copy and leave the original graph unchanged.
+
+        **kwargs
+            separating_sets : dict
+                A mapping from `(x, y)` node pairs to the set of nodes that
+                separate them. This argument is required.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph when `inplace=False`. Returns None when changes
+            are applied in place.
+
+        Raises
+        ------
+        ValueError
+            If `separating_sets` is not provided.
+
         """
         pag = self if inplace else self.copy()
         if "separating_sets" not in kwargs:
             raise ValueError("Separating Sets is not passed")
+
+        for v in pag.nodes:
+            potential_y = pag.get_neighbors(v, u_type="o", v_type=None)
+            for y in potential_y:
+                for x in pag.nodes:
+
+                    if x == v or x == y:
+                        continue
+                    discriminating_paths = pag.get_discriminating_path(x, y, v)
+                    for path in discriminating_paths:
+                        if v in kwargs["separating_sets"].get((x, y), set()):
+                            pag.modify_edge(v, y, mark_u="-", mark_v=">")
+                        else:
+                            pag.modify_edge(path[-3], v, mark_u=">", mark_v=">")
+                            pag.modify_edge(v, y, mark_u=">", mark_v=">")
 
         if not inplace:
             return pag
 
     def rule_5(self, inplace=False, **kwargs):
         r"""
-        R5: Uncovered circle path between two nodes (u, v) connected by an o-o edge.
+        Orient edges along an uncovered circle path.
+
+        This rule is triggered when two nodes `u` and `v` are connected by an `o--o`
+        edge, and there exists an uncovered circle path between them. Specifically:
+
+        - `u` and `v` share an `o--o` edge.
+        - There is a path ⟨u, …, v⟩ of length at least 4 made entirely of `o--o` edges.
+        - The path is uncovered.
+        - The second node and the second-to-last node on the path are not adjacent
+        to the opposite endpoints (i.e., no edge between `path[0]` and `path[-2]`,
+        and none between `path[1]` and `path[-1]`).
+
+        When these conditions are met, the `o–o` edge between `u` and `v` is oriented,
+        and all edges along the uncovered path are oriented as well.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, update the current graph directly.
+            If False, return a modified copy and leave the original untouched.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph when `inplace=False`. Returns None when changes
+            are applied in place.
         """
         pag = self if inplace else self.copy()
 
-        # TO DO the implementation of R5
+        for u, v in pag.edges:
+            edge_marks = pag.get_edge_marks(u, v)
+            if edge_marks[u] == "o" and edge_marks[v] == "o":
+                paths = pag.get_paths(u, v, {("o", "o")})
+                for path in paths:
+                    if len(path) >= 4 and pag.is_uncovered(path):
+                        if not pag.has_edge(path[0], path[-2]) and not pag.has_edge(
+                            path[1], path[-1]
+                        ):
+                            pag.modify_edge(u, v, mark_u="-", mark_v="-")
+
+                            for i in range(1, len(path) - 1):
+                                pag.modify_edge(
+                                    path[i], path[i + 1], mark_u="-", mark_v="-"
+                                )
 
         if not inplace:
             return pag
@@ -632,20 +763,27 @@ class PAG(AncestralBase):
 
     def rule_9(self, inplace=False, **kwargs):
         r"""
-        If u o-> w and there exists an uncovered potentially directed path
-        ⟨u, v, …, w⟩ with w and v non-adjacent, then orient u -> w.
+        Orient the edge `u → w` when an uncovered, potentially directed path supports it.
+
+        This rule applies when:
+
+        - The edge between `u` and `w` is `u o --> w` (circle at `u`, arrow at `w`), and
+        - There exists an uncovered, potentially directed path
+        ⟨u, v, …, w⟩ such that `v` and `w` are not adjacent.
+
+        When these conditions are satisfied, the edge is oriented as `u --> w`.
 
         Parameters
         ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
+        inplace : bool, default False
+            If True, apply the orientation directly to the existing graph.
+            If False, operate on a copy and return the updated graph.
 
         Returns
         -------
         PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+            The updated graph if `inplace=False`. Returns None when applying
+            changes in place.
         """
         pag = self if inplace else self.copy()
 
@@ -666,24 +804,30 @@ class PAG(AncestralBase):
 
     def rule_10(self, inplace=False, **kwargs):
         r"""
-        If u o-> w, and there exist two nodes v -> w <- x such that:
-        - there is an uncovered potentially directed path from u to v,
-        - there is an uncovered potentially directed path from u to x,
-        - the first neighbors mu and omega on those paths (after u) are distinct,
-        - and mu, omega are not adjacent,
-        then orient u -> w.
+        Orient the edge `u -> w` based on uncovered, potentially directed paths.
+
+        This rule applies when there are two nodes `v` and `x` such that
+        `v → w ← x`, and the following conditions hold:
+
+        - There is an uncovered, potentially directed path from `u` to `v`.
+        - There is an uncovered, potentially directed path from `u` to `x`.
+        - The first neighbors after `u` on these paths (call them `mu` and `omega`)
+        are different.
+        - `mu` and `omega` are not adjacent.
+
+        When these conditions are met, the edge `u --> w` is oriented accordingly.
 
         Parameters
         ----------
-        inplace : bool, default=False
-            If True, modifies the graph in place.
-            If False, works on and returns a copy.
+        inplace : bool, default False
+            If True, apply the orientation directly to the existing graph.
+            If False, operate on a copy and return the updated graph.
 
         Returns
         -------
         PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+            The updated graph if `inplace=False`. Returns None when changes
+            are applied in place.
         """
         pag = self if inplace else self.copy()
 
@@ -730,7 +874,7 @@ class PAG(AncestralBase):
             "R1": pag.rule_1,
             "R2": pag.rule_2,
             "R3": pag.rule_3,
-            # R4 ; TO DO
+            "R4": pag.rule_4,
             "R5": pag.rule_5,
             "R6": pag.rule_6,
             "R7": pag.rule_7,
