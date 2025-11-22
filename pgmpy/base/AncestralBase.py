@@ -260,7 +260,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             self.add_edge(u, v, u_mark, v_mark)
 
     def get_edge_marks(self, u, v):
-
+        """ """
         if self.has_edge(u, v):
             return self.edges[u, v]["marks"]
         else:
@@ -486,6 +486,36 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
                 descendants.add(current)
                 queue.extend(self.get_children(current))
         return descendants
+
+    def get_paths(self, u, v, allowed_types):
+        """
+        Returns a list of paths with allowed edge types between nodes u and v.
+
+        Parameters
+        ----------
+        u : Hashable
+            The starting node.
+
+        v : Hashable
+            The ending node.
+
+        allowed_types : iterable of tuple
+            Allowed edge types as tuples of (u_mark, v_mark).
+        """
+
+        paths = nx.all_simple_paths(self, u, v)
+        valid_paths = []
+        for path in paths:
+            for i in range(len(path) - 1):
+                is_valid = True
+                edge_marks = self.get_edge_marks(path[i], path[i + 1])
+                edge_type = (edge_marks[path[i]], edge_marks[path[i + 1]])
+                if edge_type not in allowed_types:
+                    is_valid = False
+                    break
+            if is_valid:
+                valid_paths.append(path)
+        return valid_paths
 
     def get_reachable_nodes(self, node, u_type=None, v_type=None):
         """
