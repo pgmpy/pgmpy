@@ -14,6 +14,52 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
     Note: In this class, undirected edges are represented using two edges in both direction i.e.
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
+
+    Parameters
+    ----------
+    directed_ebunch: list, array-like of 2-tuples
+        List of directed edges in the PDAG.
+
+    undirected_ebunch: list, array-like of 2-tuples
+        List of undirected edges in the PDAG.
+
+    latents: list, array-like
+        List of nodes which are latent variables.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    >>> from pgmpy.base import PDAG
+    >>> pdag = PDAG(
+    ...     directed_ebunch=[("A", "C"), ("D", "C")],
+    ...     undirected_ebunch=[("B", "A"), ("B", "D")],
+    ...     latents=["E"],
+    ...     roles={"exposure": ["A"], "outcome": ["C"]},
+    ... )
+    >>> pdag.directed_edges
+    {('A', 'C'), ('D', 'C')}
+    >>> pdag.undirected_edges
+    {('B', 'A'), ('B', 'D')}
+    >>> pdag.latents
+    {'E'}
+    >>> pdag.exposures
+    {'A'}
     """
 
     def __init__(
@@ -21,36 +67,10 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         directed_ebunch: list[tuple[Hashable, Hashable]] = [],
         undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
         latents: Iterable[Hashable] = [],
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
-        """
-        Initializes a PDAG class.
-
-        Parameters
-        ----------
-        directed_ebunch: list, array-like of 2-tuples
-            List of directed edges in the PDAG.
-
-        undirected_ebunch: list, array-like of 2-tuples
-            List of undirected edges in the PDAG.
-
-        latents: list, array-like
-            List of nodes which are latent variables.
-
-        roles : dict, optional (default: None)
-            A dictionary mapping roles to node names.
-            The keys are roles, and the values are role names (strings or iterables of str).
-            If provided, this will automatically assign roles to the nodes in the graph.
-            Passing a key-value pair via ``roles`` is equivalent to calling
-            ``with_role(role, variables)`` for each key-value pair in the dictionary.
-
-        Returns
-        -------
-        An instance of the PDAG object.
-
-        Examples
-        --------
-        """
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
@@ -60,6 +80,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             )
         )
         self.latents = set(latents)
+        self.exposures = set(exposures)
+        self.outcomes = set(outcomes)
 
         if roles is None:
             roles = {}

@@ -1,6 +1,7 @@
+import inspect
 import itertools
 from os import PathLike
-from typing import Hashable, Iterable, Optional, Sequence
+from typing import Callable, Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
@@ -26,17 +27,27 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Parameters
     ----------
-    ebunch : input graph (optional, default: None)
+    ebunch : input graph, optional
         Data to initialize graph. If None (default) an empty
         graph is created.  The data can be any format that is supported
         by the to_networkx_graph() function, currently including edge list,
         dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
         sparse matrix, or PyGraphviz graph.
 
-    latents : set of nodes (default: empty set)
+    latents : set of nodes, default=set()
         A set of latent variables in the graph. These are not observed
         variables but are used to represent unobserved confounding or
         other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
 
     roles : dict, optional (default: None)
         A dictionary mapping roles to node names.
@@ -119,15 +130,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         initialization or by assigning the "latents" role to nodes. The
         `latents` parameter is a convenient shortcut for `roles={'latents': ...}`.
 
-    Create a graph with initial latent variables 'U' and 'V':
+    Create a graph with initial latent variables 'U' and 'V', and exposure 'X':
 
     >>> from pgmpy.base import DAG
     >>> G = DAG(
     ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y"), ("V", "M")],
     ...     latents={"U", "V"},
+    ...     exposures={"X"},
     ... )
     >>> sorted(G.latents)
     ['U', 'V']
+    >>> G.exposures
+    {'X'}
 
     Add a new latent variable 'Z' using the role system:
 
@@ -152,6 +166,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
         super().__init__(ebunch)
@@ -159,6 +175,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         self._check_cycles()
 
         self.latents = set(latents)
+        self.exposures = set(exposures)
+        self.outcomes = set(outcomes)
 
         if roles is None:
             roles = {}
@@ -245,8 +263,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2]",
-        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }",
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] "
+        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
         ... )
 
         Creating a Linear Gaussian Bayesian network from dagitty:
@@ -911,7 +929,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
         else:
             observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
+        ancestors_list = self.get_ancestors(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -948,7 +966,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(
+    def get_ancestors(
         self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]
     ) -> set[Hashable]:
         """
@@ -964,9 +982,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> model = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "L")])
-        >>> model._get_ancestors_of("G")
+        >>> model.get_ancestors("G")
         {'D', 'G', 'I'}
-        >>> model._get_ancestors_of(["G", "I"])
+        >>> model.get_ancestors(["G", "I"])
         {'D', 'G', 'I'}
         """
         if not isinstance(nodes, (list, tuple)):
@@ -1182,7 +1200,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> anc_dag.edges()
         OutEdgeView([('D', 'A'), ('D', 'B')])
         """
-        return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
+        return self.subgraph(nodes=self.get_ancestors(nodes=nodes))
 
     def to_daft(
         self,
@@ -1776,6 +1794,149 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         all_nodes = set(self.nodes())
         non_descendants = all_nodes - descendants - {node}
         return list(non_descendants)
+    def validate(
+        self,
+        data,
+        metrics: Optional[tuple[str | Callable]] = None,
+        significance_level=0.05,
+        **kwargs,
+    ):
+        """
+        Returns a table of the compiled results of the tests run on the DAG using the data provided. The
+        tests are available in pgmpy.metrics.metrics. This method includes support for:
+
+        - Correlation Score
+        - Log Likelihood Score
+        - AIC Score
+        - BIC Score
+        - Fisher-C p-value
+        - RMSEA based on the Fisher-C statistic
+        - Measure of failing vs. total CIs based on DAG and data fit
+
+        Parameters
+        ----------
+        data: pandas.Dataframe
+            Dataset to be used to run the scoring methods/tests
+
+        metrics: tuple (Callable or strings)
+            A list of the metrics that are to be run on the model and data. A comma separated set of either functions
+            defined in `pgmpy.metrics.metrics` or strings referencing those metrics can be passed.
+
+            Following are the supported strings and respective function that can be passed as elements of the tuple:
+
+                - "correlation" : correlation_score,
+                - "log-likelihood" : log_likelihood_score,
+                - "aic" : structure_score,
+                - "bic" : structure_score,
+                - "implied-cis" : implied_cis,
+                - "fisher-c" : fisher_c
+
+                For instance `("correlation", log_likelihood_score)` is a tuple that can be passed in metrics. This is
+                an example of `(string, Callable)` type and so on.
+
+                If no value is passed, all available metrics in `pgmpy.metrics.metrics` will be run.
+
+        significance_level: float (default: 0.05)
+            A hyperparameter to conditional independence test based metrics. A p-value greater than `significance_level`
+            indicates that the conditional independence holds.
+
+        **kwargs:
+            Any additional hyperparameter that needs to be passed to the metrics. Please refer to the documentation of
+            `pgmpy.metrics.metrics` for details on which arguments are supported.
+
+        Returns
+        ----------
+        results: pandas.Dataframe
+            A dataframe containing a summary of the tests run on the model using the data provided.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.metrics import fisher_c
+
+        >>> # Simulate data from the cancer model to test against.
+        >>> cancer = get_example_model("cancer")
+        >>> df_cancer = cancer.simulate(n_samples=1000)
+
+        >>> # Create a new DAG object, and run all the tests
+        >>> cancer_dag = DAG(cancer.edges())
+        >>> cancer_dag.validate(df_cancer)
+                                      RESULT
+        Correlation                     0.25
+        Log-likelihood          -2078.649707
+        AIC                     -2085.926617
+        BIC                     -2110.465393
+        Failing CIs / Total CIs        0 / 6
+        Fisher-C p-value            0.846715
+
+        >>> # Run selected tests
+        >>> dag.validate(df_cancer, metrics=("correlation", fisher_c))
+                                      RESULT
+        Correlation                     0.25
+        Fisher-C p-value            0.846715
+        """
+        # Step 0: Validate the inputs
+        if (data is None) or (not isinstance(data, pd.DataFrame)):
+            raise ValueError(
+                f"`data` must be a pandas.DataFrame instance. Got {type(data)}"
+            )
+        elif set(self.nodes) != set(data.columns):
+            raise ValueError(
+                "Missing columns in data. Can't find values for the following variables: "
+                f" {set(self.nodes()) - set(data.columns)}"
+            )
+
+        # Step 1: Get the metrics to be run
+        from pgmpy.estimators.CITests import ci_registry
+        from pgmpy.metrics.metrics import get_metrics
+        from pgmpy.utils import get_dataset_type
+
+        callable_metrics = get_metrics(metrics=metrics)
+        kwargs["ci_test"] = ci_registry.get_test(test=kwargs.get("ci_test"), data=data)
+
+        suffix = None
+        if "scoring_method" not in kwargs:
+            var_type = get_dataset_type(data)
+            if var_type == "continuous":
+                suffix = "g"
+            elif var_type == "discrete":
+                suffix = "d"
+            else:
+                suffix = "cg"
+
+        # Step 2: Run the metrics, compile the results, and return.
+        metric_vals = pd.Series()
+
+        for index, (name, metric_fn) in enumerate(callable_metrics.items()):
+            sig = inspect.signature(metric_fn)
+            valid_params = sig.parameters.keys()
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+
+            if suffix is not None and name.lower() in ["aic", "bic"]:
+                filtered_kwargs["scoring_method"] = f"{name.lower()}-" + suffix
+
+            result = metric_fn(model=self, data=data, **filtered_kwargs)
+
+            if name in ["correlation", "log-likelihood"]:
+                metric_vals[name.capitalize()] = result
+            elif name in ["aic", "bic"]:
+                metric_vals[name.upper()] = result
+            elif name == "fisher-c":
+                if isinstance(result, tuple):
+                    (p_val, rmsea) = result
+                    metric_vals["Fisher-C p-value"] = p_val
+                    metric_vals["RMSEA"] = rmsea
+                else:
+                    metric_vals["Fisher-C p-value"] = result
+
+            elif name == "implied-cis":
+                failing = (result["p-value"] < significance_level).sum()
+                total = len(result)
+                display_value = f"{failing} / {total}"
+                metric_vals["Failing CIs / Total CIs"] = display_value
+
+        return metric_vals
 
     def __hash__(self):
         """
