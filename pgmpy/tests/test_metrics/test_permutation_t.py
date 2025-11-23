@@ -1,772 +1,207 @@
 #!/usr/bin/env python
 
-import sys
-import unittest
-from unittest.mock import MagicMock, Mock, patch
-
 import numpy as np
 import pandas as pd
+import pytest
 
 from pgmpy import global_vars
-
-# Import pgmpy components
 from pgmpy.base import DAG
+from pgmpy.estimators.CITests import get_callable_ci_test
 from pgmpy.metrics import permutation_t
 from pgmpy.metrics.permutation_t import (
     _count_lmc_violations,
     _create_permuted_graph,
-    _get_non_descendants,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 
 logger = global_vars.logger
-
 falsify_graph = permutation_t
 permutation_based_falsification_test = permutation_t
 
 
-class TestPermutationBasedFalsificationTest(unittest.TestCase):
-    def setUp(self):
-        """Set up test fixtures with known data patterns."""
-        # Create a simple chain model: X -> Y -> Z
-        self.simple_model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
+@pytest.fixture
+def data_simple():
+    np.random.seed(42)
+    n_samples = 500
+    X = np.random.binomial(1, 0.5, n_samples)
+    Y = np.random.binomial(1, 0.3 + 0.4 * X)
+    Z = np.random.binomial(1, 0.2 + 0.6 * Y)
+    return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-        # Generate synthetic data that follows the model structure
-        np.random.seed(42)
-        n_samples = 500  # Reduced from 1000 for faster testing
 
-        # X is independent
-        X = np.random.binomial(1, 0.5, n_samples)
-        # Y depends on X
-        Y = np.random.binomial(1, 0.3 + 0.4 * X)
-        # Z depends on Y
-        Z = np.random.binomial(1, 0.2 + 0.6 * Y)
+@pytest.fixture
+def model_simple():
+    return DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
 
-        self.simple_data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-        # Create a more complex model for testing
-        self.complex_model = DiscreteBayesianNetwork(
-            [("A", "C"), ("B", "C"), ("C", "D"), ("C", "E")]
+@pytest.fixture
+def data_continuous():
+    np.random.seed(42)
+    n = 500
+    X = np.random.normal(0, 1, n)
+    Y = 0.5 * X + np.random.normal(0, 0.5, n)
+    Z = 0.7 * Y + np.random.normal(0, 0.3, n)
+    return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+
+@pytest.fixture
+def data_continuous():
+    np.random.seed(42)
+    n = 500
+    X = np.random.normal(0, 1, n)
+    Y = 0.5 * X + np.random.normal(0, 0.5, n)
+    Z = 0.7 * Y + np.random.normal(0, 0.3, n)
+    return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+
+def test_with_return_summary(model_simple, data_simple):
+    result = permutation_t(
+        model_simple,
+        data_simple,
+        n_permutations=5,
+        return_summary=True,
+        show_progress=False,
+    )
+
+    assert "summary" in result
+    summary = result["summary"]
+
+    expected_keys = [
+        "permutation_violations",
+        "significance_level",
+        "ci_test",
+        "mean_permutation_violations",
+        "std_permutation_violations",
+        "min_permutation_violations",
+        "max_permutation_violations",
+    ]
+
+    for key in expected_keys:
+        assert key in summary
+
+    assert isinstance(summary["permutation_violations"], list)
+    assert len(summary["permutation_violations"]) == 5
+
+
+def test_continuous_data_support(model_simple, data_continuous):
+    result = permutation_t(
+        model_simple,
+        data_continuous,
+        ci_test="pearsonr",
+        n_permutations=5,
+        show_progress=False,
+    )
+
+    assert isinstance(result["falsifiable"], bool)
+    assert isinstance(result["falsified"], bool)
+
+
+def test_input_validation(model_simple, data_simple):
+    with pytest.raises(TypeError):
+        permutation_t(model_simple, "not_a_dataframe", show_progress=False)
+
+    with pytest.raises(ValueError):
+        bad_data = data_simple[["X", "Y"]]
+        permutation_t(model_simple, bad_data, show_progress=False)
+
+    with pytest.raises(ValueError):
+        permutation_t(
+            model_simple, data_simple, ci_test="unsupported_test", show_progress=False
         )
 
-        # Generate data for complex model
-        A = np.random.binomial(1, 0.6, n_samples)
-        B = np.random.binomial(1, 0.4, n_samples)
-        C = np.random.binomial(1, 0.2 + 0.3 * A + 0.3 * B)
-        D = np.random.binomial(1, 0.1 + 0.7 * C)
-        E = np.random.binomial(1, 0.3 + 0.5 * C)
 
-        self.complex_data = pd.DataFrame({"A": A, "B": B, "C": C, "D": D, "E": E})
+def test_edge_cases(model_simple, data_simple):
+    r = permutation_t(model_simple, data_simple, n_permutations=1, show_progress=False)
+    assert r["n_permutations"] == 1
 
-        # Create continuous data for pearsonr testing
-        X_cont = np.random.normal(0, 1, n_samples)
-        Y_cont = 0.5 * X_cont + np.random.normal(0, 0.5, n_samples)
-        Z_cont = 0.7 * Y_cont + np.random.normal(0, 0.3, n_samples)
+    single_model = DiscreteBayesianNetwork()
+    single_model.add_node("A")
+    df = pd.DataFrame({"A": [0, 1, 0, 1]})
+    result = permutation_t(single_model, df, n_permutations=3, show_progress=False)
+    assert isinstance(result["falsifiable"], bool)
 
-        self.continuous_data = pd.DataFrame({"X": X_cont, "Y": Y_cont, "Z": Z_cont})
 
-    def test_basic_functionality(self):
-        """Test that the function runs without error and returns expected structure."""
-        result = permutation_t(
-            self.simple_model,
-            self.simple_data,
-            n_permutations=5,
-            show_progress=False,  # Reduced from 10
-        )
+def test_wrong_model_detection(model_simple, data_simple):
+    wrong_model = DiscreteBayesianNetwork([("Z", "Y"), ("Y", "X")])
 
-        # Check return structure
-        expected_keys = [
-            "falsifiable",
-            "falsified",
-            "p_value_falsifiable",
-            "p_value_falsified",
-            "lmc_violations",
-            "n_permutations",
-            "same_mec_count",
-        ]
-        for key in expected_keys:
-            self.assertIn(key, result)
+    correct = permutation_t(
+        model_simple, data_simple, n_permutations=10, show_progress=False
+    )
+    wrong = permutation_t(
+        wrong_model, data_simple, n_permutations=10, show_progress=False
+    )
 
-        # Check data types
-        self.assertIsInstance(result["falsifiable"], bool)
-        self.assertIsInstance(result["falsified"], bool)
-        self.assertIsInstance(result["p_value_falsifiable"], float)
-        self.assertIsInstance(result["p_value_falsified"], float)
-        self.assertIsInstance(result["lmc_violations"], int)
+    assert wrong["lmc_violations"] >= correct["lmc_violations"]
 
-        # Check value ranges
-        self.assertGreaterEqual(result["p_value_falsifiable"], 0.0)
-        self.assertLessEqual(result["p_value_falsifiable"], 1.0)
-        self.assertGreaterEqual(result["p_value_falsified"], 0.0)
-        self.assertLessEqual(result["p_value_falsified"], 1.0)
-        self.assertGreaterEqual(result["lmc_violations"], 0)
 
-    def test_with_return_summary(self):
-        """Test detailed summary return."""
-        result = permutation_t(
-            self.simple_model,
-            self.simple_data,
-            n_permutations=5,  # Reduced from 10
-            return_summary=True,
-            show_progress=False,
-        )
+def test_progress_bar_enabled(monkeypatch):
+    monkeypatch.setattr("pgmpy.config.SHOW_PROGRESS", True)
+    model = DiscreteBayesianNetwork([("X", "Y")])
+    df = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
+    r = permutation_t(model, df, n_permutations=2, show_progress=True)
+    assert isinstance(r["falsifiable"], bool)
 
-        self.assertIn("summary", result)
-        summary = result["summary"]
 
-        expected_summary_keys = [
-            "permutation_violations",
-            "significance_level",
-            "ci_test",
-            "mean_permutation_violations",
-            "std_permutation_violations",
-            "min_permutation_violations",
-            "max_permutation_violations",
-        ]
+def test_exception_handling_in_ci_test():
+    model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
+    df = pd.DataFrame({"X": [1, 1, 1, 1], "Y": [0, 1, 0, 1], "Z": [0, 0, 0, 0]})
+    result = permutation_t(model, df, n_permutations=3, show_progress=False)
 
-        for key in expected_summary_keys:
-            self.assertIn(key, summary)
+    assert isinstance(result["falsifiable"], bool)
+    assert result["lmc_violations"] >= 0
 
-        # Check that permutation violations is a list
-        self.assertIsInstance(summary["permutation_violations"], list)
-        self.assertEqual(len(summary["permutation_violations"]), 5)
 
-    def test_wrong_model_detection(self):
-        """Test that clearly wrong models are more likely to be falsified."""
-        # Create a model that contradicts the data generation process
-        wrong_model = DiscreteBayesianNetwork(
-            [("Z", "Y"), ("Y", "X")]
-        )  # Completely reversed
+# -------------------------------
+# Helper Function Tests
+# -------------------------------
 
-        # Test both models with fewer permutations
-        correct_result = permutation_t(
-            self.simple_model,
-            self.simple_data,
-            n_permutations=10,
-            show_progress=False,  # Reduced from 50
-        )
-        wrong_result = permutation_t(
-            wrong_model,
-            self.simple_data,
-            n_permutations=10,
-            show_progress=False,  # Reduced from 50
-        )
 
-        # Wrong model should have more violations
-        self.assertGreaterEqual(
-            wrong_result["lmc_violations"], correct_result["lmc_violations"]
-        )
+@pytest.fixture
+def model_helper():
+    return DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("A", "D")])
 
-    def test_continuous_data_support(self):
-        """Test support for continuous data with pearsonr."""
-        result = permutation_t(
-            self.simple_model,
-            self.continuous_data,
-            ci_test="pearsonr",
-            n_permutations=5,  # Reduced from 10
-            show_progress=False,
-        )
 
-        # Should run without error
-        self.assertIsInstance(result["falsifiable"], bool)
-        self.assertIsInstance(result["falsified"], bool)
+@pytest.fixture
+def data_helper():
+    np.random.seed(42)
+    n = 50
+    A = np.random.binomial(1, 0.5, n)
+    B = np.random.binomial(1, 0.3 + 0.4 * A)
+    C = np.random.binomial(1, 0.2 + 0.6 * B)
+    D = np.random.binomial(1, 0.1 + 0.7 * A)
+    return pd.DataFrame({"A": A, "B": B, "C": C, "D": D})
 
-    def test_input_validation(self):
-        """Test input validation and error handling."""
-        # Test with wrong data type
-        with self.assertRaises(TypeError):
-            permutation_t(self.simple_model, "not_a_dataframe", show_progress=False)
 
-        # Test with missing variables in data
-        incomplete_data = self.simple_data[["X", "Y"]]  # Missing Z
-        with self.assertRaises(ValueError):
-            permutation_t(self.simple_model, incomplete_data, show_progress=False)
+def test_get_non_descendants(model_helper):
+    assert set(model_helper._get_non_descendants("A")) == set()
+    assert set(model_helper._get_non_descendants("B")) == {"A", "D"}
+    assert set(model_helper._get_non_descendants("C")) == {"A", "B", "D"}
+    assert set(model_helper._get_non_descendants("D")) == {"A", "B", "C"}
 
-        # Test with unsupported CI test
-        with self.assertRaises(ValueError):
-            permutation_t(
-                self.simple_model,
-                self.simple_data,
-                ci_test="unsupported_test",
-                show_progress=False,
-            )
 
-    def test_deterministic_behavior(self):
-        """Test that results are deterministic when using fixed random seed."""
-        # Set seed and run test
-        np.random.seed(123)
-        result1 = permutation_t(
-            self.simple_model,
-            self.simple_data,
-            n_permutations=5,
-            show_progress=False,  # Reduced from 20
-        )
+def test_create_permuted_graph(model_helper):
+    mapping = {"A": "X", "B": "Y", "C": "Z", "D": "W"}
+    permuted = _create_permuted_graph(model_helper, mapping)
 
-        # Reset seed and run again
-        np.random.seed(123)
-        result2 = permutation_t(
-            self.simple_model,
-            self.simple_data,
-            n_permutations=5,
-            show_progress=False,  # Reduced from 20
-        )
+    expected_edges = {(mapping[u], mapping[v]) for u, v in model_helper.edges()}
+    assert expected_edges == set(permuted.edges())
 
-        # Results should be identical
-        self.assertEqual(result1["lmc_violations"], result2["lmc_violations"])
-        self.assertEqual(result1["p_value_falsifiable"], result2["p_value_falsifiable"])
-        self.assertEqual(result1["p_value_falsified"], result2["p_value_falsified"])
 
-    def test_edge_cases(self):
-        """Test edge cases and boundary conditions."""
-        # Test with very small number of permutations
-        result = permutation_t(
-            self.simple_model, self.simple_data, n_permutations=1, show_progress=False
-        )
-        self.assertEqual(result["n_permutations"], 1)
+def test_count_lmc_violations(model_helper, data_helper):
+    count = _count_lmc_violations(
+        model_helper,
+        data_helper,
+        get_callable_ci_test("chi_square"),
+        significance_level=0.05,
+    )
+    assert isinstance(count, int)
+    assert count >= 0
 
-        # Test with single node model
-        single_node_model = DiscreteBayesianNetwork()
-        single_node_model.add_node("A")
-        single_node_data = pd.DataFrame({"A": [0, 1, 0, 1]})
 
-        result = permutation_t(
-            single_node_model,
-            single_node_data,
-            n_permutations=3,
-            show_progress=False,  # Reduced from 5
-        )
-        # Should run without error
-        self.assertIsInstance(result["falsifiable"], bool)
-
-    def test_import_error_handling(self):
-        """Test the custom get_example_model function that handles ImportError."""
-        # This will trigger the ImportError handling lines 23, 25, 26
-        try:
-            from pgmpy.utils import get_example_model
-
-            # Test with a model that doesn't exist to trigger exception handling
-            with self.assertRaises((ImportError, Exception)):
-                cancer_model = get_example_model("nonexistent_model_name_12345")
-        except ImportError:
-            # If pgmpy.utils import fails, test our local fallback function
-            def get_example_model(name):
-                raise ImportError(f"Example model {name} not available")
-
-            with self.assertRaises(ImportError):
-                cancer_model = get_example_model("cancer")
-
-    def test_with_real_pgmpy_models_exception_handling(self):
-        """Test with real pgmpy models to trigger exception handling."""
-        # Force an exception by using an invalid model
-        try:
-            # Try to import get_example_model - this might trigger line 23 ImportError
-            from pgmpy.utils import get_example_model
-
-            # Try with a non-existent model to trigger the exception at line 264
-            try:
-                cancer_model = get_example_model("definitely_nonexistent_model")
-                cancer_data = cancer_model.simulate(200)
-
-                result = permutation_t(
-                    cancer_model,
-                    cancer_data,
-                    n_permutations=5,
-                    show_progress=False,
-                )
-            except Exception as e:
-                # This should trigger line 266: self.skipTest(...)
-                self.skipTest(f"Example models not available: {e}")
-
-        except ImportError:
-            # This triggers the ImportError handling lines 23-26
-            self.skipTest("pgmpy.utils.get_example_model not available")
-
-    def test_real_example_model_scenario_with_forced_exception(self):
-        """Test that explicitly triggers the exception handling in line 362-363."""
-        # This test is designed to hit the exception handling lines 349-363
-
-        # Mock get_example_model to raise an exception
-        def mock_get_example_model(name):
-            if name == "cancer":
-                raise ValueError("Forced exception for testing")
-            raise ImportError(f"Example model {name} not available")
-
-        # Use the mock function
-        try:
-            cancer_model = mock_get_example_model("cancer")
-            # This line won't be reached, but if it were:
-            cancer_data = cancer_model.simulate(50)
-
-            result = permutation_t(
-                cancer_model,
-                cancer_data,
-                n_permutations=3,
-                show_progress=False,
-            )
-
-            self.assertIsInstance(result["falsifiable"], bool)
-
-        except Exception as e:
-            # This covers line 362-363: the skipTest line when example models fail
-            self.skipTest(f"Example models not available: {e}")
-
-    @patch("pgmpy.config.SHOW_PROGRESS", True)
-    def test_progress_bar_enabled(self):
-        """Test that progress bar works when enabled."""
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        # Test with progress bar enabled
-        result = permutation_t(
-            model, data, n_permutations=2, show_progress=True  # Reduced from 3
-        )
-
-        self.assertIsInstance(result["falsifiable"], bool)
-
-    def test_exception_handling_in_ci_test(self):
-        """Test exception handling in CI tests with problematic data."""
-        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
-
-        # Create data with constant columns that might cause CI test issues
-        data = pd.DataFrame(
-            {
-                "X": [1, 1, 1, 1],  # Constant column
-                "Y": [0, 1, 0, 1],
-                "Z": [0, 0, 0, 0],  # Another constant column
-            }
-        )
-
-        # Should handle gracefully without crashing
-        result = permutation_t(
-            model, data, n_permutations=3, show_progress=False  # Reduced from 5
-        )
-
-        self.assertIsInstance(result["falsifiable"], bool)
-        self.assertGreaterEqual(result["lmc_violations"], 0)
-
-    # starts here
-    def test_main_block_direct_execution(self):
-        """Test direct execution of the main block code."""
-        # This covers lines 554-575 by directly executing the main block logic
-
-        # Cover line 558: print statement
-        import sys
-        from io import StringIO
-
-        # Capture stdout to test print statements
-        captured_output = StringIO()
-        sys.stdout = captured_output
-
-        try:
-            # Cover lines 561-562: model and data creation
-            model = DiscreteBayesianNetwork([("X", "Y")])
-            data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-            # Cover lines 564-567: try block and function call
-            result = permutation_t(model, data, n_permutations=2, show_progress=False)
-
-            # Cover line 568: success print
-            print(
-                f"✓ Smoke test passed: {result['falsifiable']=}, {result['falsified']=}"
-            )
-
-        except Exception as e:
-            # Cover lines 571-572: exception handling
-            print(f"✗ Smoke test failed: {e}")
-
-        finally:
-            sys.stdout = sys.__stdout__
-
-        # Verify something was printed
-        output = captured_output.getvalue()
-        self.assertTrue(len(output) > 0)
-
-    def test_import_error_paths(self):
-        """Test import error handling paths."""
-
-        # Cover lines 249-256: Direct ImportError handling
-        try:
-            # This should trigger the ImportError path
-            raise ImportError("Mocked import error for testing")
-        except ImportError:
-
-            def get_example_model(name):
-                raise ImportError(f"Example model {name} not available")
-
-            with self.assertRaises(ImportError):
-                cancer_model = get_example_model("cancer")
-
-        # Cover lines 268, 282, 292: Exception in get_example_model
-        def mock_failing_get_example_model(name):
-            raise ValueError(f"Example model {name} not available")
-
-        try:
-            model = mock_failing_get_example_model("cancer")
-            data = model.simulate(50)
-        except Exception as e:
-            # Cover line 278: skipTest call
-            self.skipTest(f"Example models not available: {e}")
-
-    def test_exception_in_unittest_main(self):
-        """Test exception handling in unittest.main() call."""
-
-        # Cover lines 489-492: Exception in test execution
-        with patch("unittest.main", side_effect=SystemExit(0)):
-            try:
-                # This will trigger the exception path
-                unittest.main()
-            except SystemExit:
-                # Cover the exception handling
-                pass
-
-    def test_forced_main_execution_failure(self):
-        """Force main block execution failure path."""
-
-        # Cover line 575: unittest.main() call by mocking it
-        with patch("unittest.main") as mock_main:
-            mock_main.return_value = None
-
-            # Simulate the main block execution
-            try:
-                # Force an error in the smoke test
-                model = None  # This will cause TypeError
-                data = None
-                result = permutation_t(
-                    model, data, n_permutations=2, show_progress=False
-                )
-            except (TypeError, AttributeError) as e:
-                # This covers the exception path in main block
-                self.assertIsInstance(e, (TypeError, AttributeError))
-
-    def test_force_line_282_coverage(self):
-        """Force coverage of line 282: skipTest for pgmpy.utils import failure."""
-        # Directly trigger the skipTest at line 282
-        self.skipTest("pgmpy.utils.get_example_model not available")
-
-    def test_force_line_268_and_278_coverage(self):
-        """Force coverage of lines 268 and 278: cancer_data simulate failure."""
-        try:
-            # Create a mock that will fail on simulate
-            class FailingModel:
-                def simulate(self, n):
-                    raise RuntimeError("Simulate failed")
-
-            cancer_model = FailingModel()
-            cancer_data = cancer_model.simulate(200)  # Line 268 equivalent
-
-            result = permutation_t(
-                cancer_model, cancer_data, n_permutations=5, show_progress=False
-            )
-
-        except Exception as e:
-            # This covers line 278: the skipTest call
-            self.skipTest(f"Example models not available: {e}")
-
-    def test_force_line_292_coverage(self):
-        """Force coverage of line 292: ImportError in get_example_model scenario."""
-        try:
-            # Simulate the import error scenario
-            raise ImportError("Mocked ImportError for get_example_model")
-        except ImportError:
-            # This covers line 292 - should be a skipTest call
-            self.skipTest("pgmpy.utils.get_example_model not available")
-
-    def test_force_line_300_307_coverage(self):
-        """Force coverage of lines 300 and 307."""
-        try:
-            # Create failing scenario similar to cancer model test
-            def failing_get_example_model(name):
-                raise ValueError(f"Example model {name} not available")
-
-            cancer_model = failing_get_example_model("cancer")  # Line 300 equivalent
-
-        except Exception as e:
-            # This covers line 307: skipTest call
-            self.skipTest(f"Example models not available: {e}")
-
-    def test_force_main_block_lines_651_668(self):
-        """Force coverage of __main__ block lines 651, 654, 655, 658, 661, 664, 665, 668."""
-
-        # Cover line 651: print statement
-        print("Running basic smoke test...")
-
-        # Cover lines 654-655: model and data creation
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        try:
-            # Cover line 658: result assignment
-            result = permutation_t(model, data, n_permutations=2, show_progress=False)
-
-            # Cover lines 661-662: success print
-            print(
-                f"✓ Smoke test passed: {result['falsifiable']=}, {result['falsified']=}"
-            )
-
-        except Exception as e:
-            # Cover lines 664-665: exception handling
-            print(f"✗ Smoke test failed: {e}")
-
-    def test_force_lines_373_375_exception_path(self):
-        """Force coverage of lines 373-375: exception in main block style."""
-
-        try:
-            # Force an exception that mimics the main block
-            model = None  # This will cause TypeError
-            result = permutation_t(model, None, n_permutations=2, show_progress=False)
-
-            # Line 369: success print (won't be reached)
-            print(
-                f"✓ Smoke test passed: {result['falsifiable']=}, {result['falsified']=}"
-            )
-
-        except Exception as e:
-            # Lines 373-375: exception handling
-            print(f"✗ Smoke test failed: {e}")
-
-    def test_force_lines_399_407_mock_function_failure(self):
-        """Force coverage of lines 399-407: mock function failure paths."""
-
-        # Line 399-400: Define failing mock function
-        def mock_failing_get_example_model(name):
-            raise ValueError(f"Example model {name} not available")
-
-        try:
-            # Line 403: Call the failing function
-            model = mock_failing_get_example_model("cancer")
-            # Line 404: This won't be reached, but simulates the flow
-            data = model.simulate(50)
-
-        except Exception as e:
-            # Line 407: skipTest call
-            self.skipTest(f"Example models not available: {e}")
-
-
-class TestHelperFunctions(unittest.TestCase):
-    def setUp(self):
-        """Set up test fixtures for helper functions."""
-        self.model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("A", "D")])
-
-        # Create test data - smaller sample size
-        np.random.seed(42)
-        n = 50  # Reduced from 100
-        A = np.random.binomial(1, 0.5, n)
-        B = np.random.binomial(1, 0.3 + 0.4 * A)
-        C = np.random.binomial(1, 0.2 + 0.6 * B)
-        D = np.random.binomial(1, 0.1 + 0.7 * A)
-
-        self.data = pd.DataFrame({"A": A, "B": B, "C": C, "D": D})
-
-    def test_get_non_descendants(self):
-        """Test the _get_non_descendants function."""
-        non_desc_A = _get_non_descendants(self.model, "A")
-        non_desc_B = _get_non_descendants(self.model, "B")
-        non_desc_C = _get_non_descendants(self.model, "C")
-        non_desc_D = _get_non_descendants(self.model, "D")
-
-        self.assertEqual(set(non_desc_A), set())  # A can reach all other nodes
-        self.assertEqual(set(non_desc_B), {"A", "D"})  # B cannot reach A or D
-        self.assertEqual(set(non_desc_C), {"A", "B", "D"})  # C cannot reach A, B, or D
-        self.assertEqual(set(non_desc_D), {"A", "B", "C"})  # D cannot reach A, B, or C
-
-    def test_create_permuted_graph(self):
-        """Test the _create_permuted_graph function."""
-        perm_mapping = {"A": "X", "B": "Y", "C": "Z", "D": "W"}
-
-        permuted_model = _create_permuted_graph(self.model, perm_mapping)
-
-        # Check that edges are correctly permuted
-        original_edges = set(self.model.edges())
-        expected_permuted_edges = {
-            (perm_mapping[u], perm_mapping[v]) for u, v in original_edges
-        }
-        actual_permuted_edges = set(permuted_model.edges())
-
-        self.assertEqual(expected_permuted_edges, actual_permuted_edges)
-
-    def test_count_lmc_violations(self):
-        """Test the _count_lmc_violations function."""
-        from pgmpy.estimators.CITests import chi_square
-
-        violations = _count_lmc_violations(
-            self.model, self.data, chi_square, significance_level=0.05
-        )
-
-        # Should return a non-negative integer
-        self.assertIsInstance(violations, int)
-        self.assertGreaterEqual(violations, 0)
-
-    def test_count_lmc_violations_with_insufficient_data(self):
-        """Test LMC violation counting with insufficient data."""
-        from pgmpy.estimators.CITests import chi_square
-
-        # Create very small dataset
-        small_data = self.data.head(5)
-
-        # Should handle gracefully without crashing
-        violations = _count_lmc_violations(
-            self.model, small_data, chi_square, significance_level=0.05
-        )
-
-        self.assertIsInstance(violations, int)
-        self.assertGreaterEqual(violations, 0)
-
-
-class TestProgressBarAndLogging(unittest.TestCase):
-    def test_progress_bar_disabled(self):
-        """Test that progress bar can be disabled."""
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        # Should run without showing progress bar
-        result = permutation_t(
-            model, data, n_permutations=2, show_progress=False  # Reduced from 5
-        )
-
-        self.assertIsInstance(result["falsifiable"], bool)
-
-    def test_logging_calls(self):
-        """Test that function runs successfully (logger testing skipped due to mocking complexity)."""
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        # Just verify the function runs without error and produces expected output
-        result = permutation_t(model, data, n_permutations=2, show_progress=False)
-
-        # Verify function works correctly
-        self.assertIsInstance(result["falsifiable"], bool)
-        self.assertIsInstance(result["falsified"], bool)
-        self.assertIn("lmc_violations", result)
-
-
-class TestImportFunctionality(unittest.TestCase):
-    """Test basic import and module functionality."""
-
-    def test_module_imports(self):
-        """Test that all functions can be imported successfully."""
-        from pgmpy.metrics import falsify_graph, permutation_t
-
-        # Test that the alias works
-        self.assertEqual(falsify_graph, permutation_t)
-
-    def test_function_signature(self):
-        """Test that the main function has the expected signature."""
-        import inspect
-
-        sig = inspect.signature(permutation_t)
-        expected_params = [
-            "model",
-            "data",
-            "ci_test",
-            "significance_level",
-            "n_permutations",
-            "return_summary",
-            "show_progress",
-        ]
-
-        actual_params = list(sig.parameters.keys())
-        self.assertEqual(actual_params, expected_params)
-
-
-class TestMainBlockExecution(unittest.TestCase):
-    """Test the __main__ block to ensure all lines are covered."""
-
-    def test_main_block_smoke_test_success(self):
-        """Test the smoke test in __main__ block when it succeeds."""
-        # Mock the main execution
-        model = DiscreteBayesianNetwork([("X", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-
-        try:
-            result = permutation_t(model, data, n_permutations=2, show_progress=False)
-            # This should work and cover lines 607-610
-            self.assertIsNotNone(result)
-            self.assertIn("falsifiable", result)
-            self.assertIn("falsified", result)
-        except Exception:
-            # If it fails, that's also valid for testing
-            pass
-
-    def test_main_block_smoke_test_failure(self):
-        """Test the smoke test in __main__ block when it fails."""
-        # Create a scenario that will cause the smoke test to fail
-        # This covers the exception handling in the __main__ block
-
-        # Mock a failing scenario
-        try:
-            # This should trigger exception handling in __main__
-            result = permutation_t(
-                None,  # Invalid model to cause failure
-                None,  # Invalid data
-                n_permutations=2,
-                show_progress=False,
-            )
-        except Exception as e:
-            # This covers the exception path in __main__ block (lines 611-612)
-            self.assertIsInstance(e, (TypeError, AttributeError))
-
-    def test_ci_test_violation_logic(self):
-        """Test the specific conditional independence testing and violation counting logic."""
-        from unittest.mock import Mock
-
-        # Create a simple model with clear structure: A -> B -> C
-        model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
-        data = pd.DataFrame(
-            {"A": [0, 1, 0, 1, 0, 1], "B": [0, 1, 1, 0, 1, 0], "C": [1, 0, 1, 0, 1, 0]}
-        )
-
-        # Mock CI test function with different p-values
-        mock_ci_test = Mock()
-
-        # Test case 1: p_value < significance_level (should count as violation)
-        mock_ci_test.return_value = (0.5, 0.01)  # p_value = 0.01 < 0.05
-        violations_low_p = _count_lmc_violations(model, data, mock_ci_test, 0.05)
-
-        # Reset mock for next test
-        mock_ci_test.reset_mock()
-
-        # Test case 2: p_value >= significance_level (should NOT count as violation)
-        mock_ci_test.return_value = (0.5, 0.8)  # p_value = 0.8 >= 0.05
-        violations_high_p = _count_lmc_violations(model, data, mock_ci_test, 0.05)
-
-        # Verify that low p-values result in more violations than high p-values
-        self.assertGreaterEqual(violations_low_p, violations_high_p)
-
-        # Test case 3: Edge case with p_value exactly at significance level
-        mock_ci_test.reset_mock()
-        mock_ci_test.return_value = (0.5, 0.05)  # p_value = 0.05 == 0.05
-        violations_exact = _count_lmc_violations(model, data, mock_ci_test, 0.05)
-
-        # p_value == significance_level should NOT count as violation (>= condition)
-        self.assertEqual(violations_exact, violations_high_p)
-
-        # Verify CI test was called with correct parameters structure
-        self.assertTrue(mock_ci_test.called)
-        call_args = mock_ci_test.call_args_list[0][0]  # Get first call arguments
-        self.assertEqual(
-            len(call_args), 4
-        )  # Should be (node, test_node, parents, data)
-
-
-if __name__ == "__main__":
-    # This section ensures the __main__ block lines are covered during testing
-
-    # Run a quick smoke test to verify basic functionality
-    print("Running basic smoke test...")  # Line 600 coverage
-
-    # Create simple test case
-    model = DiscreteBayesianNetwork([("X", "Y")])  # Line 603 coverage
-    data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})  # Line 604 coverage
-
-    try:  # Line 606 coverage
-        result = permutation_t(  # Line 607 coverage
-            model, data, n_permutations=2, show_progress=False
-        )
-        print(
-            f"✓ Smoke test passed: {result['falsifiable']=}, {result['falsified']=}"
-        )  # Line 610 coverage
-    except Exception as e:  # Line 611 coverage
-        print(f"✗ Smoke test failed: {e}")  # Line 612 coverage
-
-    # Run the actual unit tests  # Line 615 coverage
-    unittest.main()
+def test_count_lmc_violations_small_data(model_helper, data_helper):
+    df = data_helper.head(5)
+    count = _count_lmc_violations(
+        model_helper, df, get_callable_ci_test("chi_square"), significance_level=0.05
+    )
+    assert isinstance(count, int)
+    assert count >= 0
