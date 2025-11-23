@@ -12,10 +12,10 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
-from pgmpy.prediction.BaseCausalPrediction import BaseCausalPrediction
+from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
 
 
-class NaiveAdjustmentRegressor(RegressorMixin, BaseCausalPrediction):
+class NaiveAdjustmentRegressor(RegressorMixin, _BaseCausalPrediction):
     """
     Naive adjustment regressor using causal graph roles for feature selection.
 
@@ -50,7 +50,7 @@ class NaiveAdjustmentRegressor(RegressorMixin, BaseCausalPrediction):
         List of pretreatment variable names extracted from causal graph.
     `outcome_var_` : str
         Name of outcome variable extracted from causal graph.
-    `feature_columns_` : list
+    `feature_columns_fit_` : list
         List of feature column names used (exposure + adjustment + pretreatment).
     `explanation_` : str
         Formatted description of the fitted model.

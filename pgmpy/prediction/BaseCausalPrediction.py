@@ -3,13 +3,13 @@ import pandas as pd
 from sklearn.base import BaseEstimator
 
 
-class BaseCausalPrediction(BaseEstimator):
+class _BaseCausalPrediction(BaseEstimator):
     """
-    Base class for causal prediction models in pgmpy. Provides common
+    Base class for causal prediction algorithms in pgmpy. Provides common
     functionality for preparing and validating feature dataframes.
     """
 
-    def _prepare_feature_df(self, X, required_features=None) -> pd.DataFrame:
+    def _prepare_feature_df(self, X, required_features) -> pd.DataFrame:
         """
         Convert input (either numpy array or dataframe) to a DataFrame and
         validate that column names exactly match DAG variables.
@@ -22,9 +22,8 @@ class BaseCausalPrediction(BaseEstimator):
         X : array-like or DataFrame
             Input features.
 
-        required_features : list[int] or None
-            Column indices expected from the DAG. If None, uses
-            `self.feature_columns_fit_`.
+        required_features : list[int]
+            Column indices expected from the DAG.
 
         Returns
         -------
@@ -32,9 +31,9 @@ class BaseCausalPrediction(BaseEstimator):
             DataFrame containing only required columns.
         """
 
-        # Step 1: Determine required features
+        # Step 1: Check required features is provided
         if required_features is None:
-            required_features = self.feature_columns_fit_
+            raise ValueError("required_features must be provided.")
 
         # Step 2: Convert input to DataFrame format
         if isinstance(X, pd.DataFrame):
