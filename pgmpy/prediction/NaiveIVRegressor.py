@@ -160,7 +160,8 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
 
     References
     ----------
-    [1] “Instrumental Variables Estimation.” Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
+    .. [1] “Instrumental Variables Estimation.”
+           Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
     """
 
     def __init__(
@@ -215,6 +216,22 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         It first fits the stage 1 estimator to predict the exposure variable from the instrument,
         then fits the stage 2 estimator to predict the outcome variable from the predicted exposure
         and pretreatment variables.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame or numpy ndarray
+            Feature data containing exposure, instrument, and pretreatment variables.
+
+        y : pandas.Series, pandas.DataFrame, or numpy.ndarray
+            Outcome variable.
+
+        sample_weight : array-like, optional
+            Sample weights for fitting the estimators.
+
+        Returns
+        -------
+        self : object
+            Fitted estimator.
         """
 
         # Step 0: validate Inputs
