@@ -1860,12 +1860,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
 
         # Step 1: Get the metrics to be run
-        from pgmpy.estimators.CITests import get_callable_ci_test
+        from pgmpy.estimators.CITests import ci_registry
         from pgmpy.metrics.metrics import get_metrics
         from pgmpy.utils import get_dataset_type
 
         callable_metrics = get_metrics(metrics=metrics)
-        kwargs["ci_test"] = get_callable_ci_test(test=kwargs.get("ci_test"), data=data)
+        kwargs["ci_test"] = ci_registry.get_test(test=kwargs.get("ci_test"), data=data)
 
         suffix = None
         if "scoring_method" not in kwargs:
