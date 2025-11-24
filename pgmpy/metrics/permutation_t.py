@@ -1,9 +1,6 @@
 #!/usr/bin/env python
-
-from itertools import permutations
 from typing import Callable
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -21,94 +18,46 @@ from pgmpy.models import (
 )
 
 
-def _count_lmc_violations(
-    model, data, implied_CIs, ci_test_func, significance_level=0.05
-):
+def _count_lmc_violations(data, implied_CIs, ci_test_func, significance_level=0.05):
     """
     Count violations of Local Markov Conditions in the given model.
 
-    For each node X with parents Pa(X), tests if X ⊥ NonDesc(X) \ Pa(X) | Pa(X)
+    For each node X with parents Pa(X), tests if X ⊥ NonDesc(X) \\ Pa(X) | Pa(X)
     where NonDesc(X) are all non-descendants of X.
     """
-    violations = 0
-    nodes = list(model.nodes())
+    ci_violations = 0
 
-    for node in nodes:
-        parents = list(model.predecessors(node))
+    for _, row in implied_CIs.iterrows():
+        result = ci_test_func(row["u"], row["v"], row["cond_vars"], data, boolean=False)
+        if len(result) == 2:
+            _, p_value = result
+        else:
+            _, p_value, _ = result
+        if p_value <= significance_level:
+            ci_violations += 1
 
-        non_descendants = model._get_non_descendants(node)
-
-        # Test independence with each non-descendant that is not a parent
-        test_nodes = [nd for nd in non_descendants if nd not in parents and nd != node]
-
-        for test_node in test_nodes:
-            try:
-                _, p_value = ci_test_func(node, test_node, parents, data)
-
-                if p_value <= significance_level:
-                    violations += 1
-
-            except Exception as e:
-                # Handle edge cases (e.g., insufficient data, constant columns)
-                logger.debug(
-                    f"CI test failed for {node} ⊥ {test_node} | {parents}: {e}"
-                )
-                continue
-
-    return violations
-
-
-def _create_permuted_graph(model, perm_mapping):
-    """
-    Create a new graph with permuted node labels.
-
-    Parameters
-    ----------
-    model : DAG or DiscreteDiscreteBayesianNetwork
-        Original graph
-    perm_mapping : dict
-        Mapping from original node names to permuted names
-
-    Returns
-    -------
-    permuted_model : DAG
-        New DAG with permuted node labels
-    """
-    # Create new edges with permuted labels
-    new_edges = []
-    for edge in model.edges():
-        new_source = perm_mapping[edge[0]]
-        new_target = perm_mapping[edge[1]]
-        new_edges.append((new_source, new_target))
-
-    # Create new DAG
-    permuted_model = DAG()
-    permuted_model.add_edges_from(new_edges)
-
-    return permuted_model
+    return ci_violations
 
 
 def _create_permuted_CIs(valid_CIs, perm_mapping):
     """
-    Create a new graph with permuted node labels.
+    Create a new dataframe with new implied Conditional Independence statements.
 
     Parameters
     ----------
-    model : DAG or DiscreteDiscreteBayesianNetwork
-        Original graph
+    valid_CIs : pd.DataFrame
+        Conditional Independence statments from original graph
     perm_mapping : dict
         Mapping from original node names to permuted names
 
     Returns
     -------
-    permuted_model : DAG
-        New DAG with permuted node labels
+    permuted_CIs : pd.DataFrame
+        The implied Conditional Independencies, changed according to node permutation.
     """
 
-    # Create new edges with permuted labels
     def apply_mapping(node):
-
-        if type(node) == list:
+        if isinstance(node, list):
             return [perm_mapping[n] for n in node]
         else:
             return perm_mapping[node]
@@ -121,12 +70,13 @@ def _create_permuted_CIs(valid_CIs, perm_mapping):
     return new_CIs
 
 
-def d_separated_triples(model, ci_test_func: Callable, data, significance_level=0.05):
-
-    CIs_dif = implied_cis(model, data, ci_test_func)
-    valid_CIs = CIs_dif[CIs_dif["p-value"] >= significance_level]
+def d_separated_triples(
+    data, implied_CIs, ci_test_func: Callable, significance_level=0.05
+):
+    # CIs_dif = implied_cis(model, data, ci_test_func)
+    # valid_CIs = CIs_dif[CIs_dif["p-value"] > significance_level]
     dsep_triples = set()
-    for _, row in valid_CIs.iterrows():
+    for _, row in implied_CIs.iterrows():
         dsep_triples.add((row["u"], row["v"], frozenset(row["cond_vars"])))
 
     return dsep_triples
@@ -291,20 +241,21 @@ def permutation_t(
         f"Starting permutation-based falsification test with {n_permutations} permutations"
     )
 
-    # Step 2: Generate permutations and test them
+    # Step 1: Perform calculations for original DAG and generate permutations
     nodes = list(dag.nodes())
     permutation_violations = []
     same_mec_count = 0
 
-    original_dsep_triples = d_separated_triples(
-        dag, ci_test_func, data, significance_level
-    )
     orginal_CIs = implied_cis(dag, data, ci_test_func)
-    valid_CIs = orginal_CIs[orginal_CIs["p-value"] >= significance_level]
+    valid_CIs = orginal_CIs[orginal_CIs["p-value"] > significance_level]
 
-    # Step 1: Count Local Markov Condition violations in the given graph
+    original_dsep_triples = d_separated_triples(
+        data, valid_CIs, ci_test_func, significance_level
+    )
+
+    # Step 2: Count Local Markov Condition violations in the given graph
     lmc_violations_given = _count_lmc_violations(
-        dag, data, valid_CIs, ci_test_func, significance_level
+        data, valid_CIs, ci_test_func, significance_level
     )
 
     # Set up progress bar
@@ -318,20 +269,17 @@ def permutation_t(
         perm = np.random.permutation(nodes)
         perm_mapping = dict(zip(nodes, perm))
 
-        # Create permuted graph
-        permuted_model = _create_permuted_graph(dag, perm_mapping)
+        # Create permuted CIs
         permuted_CIs = _create_permuted_CIs(valid_CIs, perm_mapping)
 
-        # Count LMC violations in permuted graph
         lmc_violations_perm = _count_lmc_violations(
-            permuted_model, data, permuted_CIs, ci_test_func, significance_level
+            data, permuted_CIs, ci_test_func, significance_level
         )
-
         permutation_violations.append(lmc_violations_perm)
 
         # Check if in same Markov equivalence class (d separations identical = same structure)
         permuted_dsep_triples = d_separated_triples(
-            permuted_model, ci_test_func, data, significance_level
+            data, permuted_CIs, ci_test_func, significance_level
         )
 
         if original_dsep_triples == permuted_dsep_triples:
@@ -349,7 +297,7 @@ def permutation_t(
     )
 
     p_value_falsified = count_less_violations / n_permutations
-    falsified = falsifiable and (p_value_falsified < significance_level)
+    falsified = falsifiable and (p_value_falsified > significance_level)
 
     result = {
         "falsifiable": falsifiable,

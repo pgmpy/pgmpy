@@ -5,12 +5,10 @@ import pandas as pd
 import pytest
 
 from pgmpy import global_vars
-from pgmpy.base import DAG
 from pgmpy.estimators.CITests import get_callable_ci_test
-from pgmpy.metrics import permutation_t
+from pgmpy.metrics import implied_cis, permutation_t
 from pgmpy.metrics.permutation_t import (
     _count_lmc_violations,
-    _create_permuted_graph,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -32,16 +30,6 @@ def data_simple():
 @pytest.fixture
 def model_simple():
     return DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
-
-
-@pytest.fixture
-def data_continuous():
-    np.random.seed(42)
-    n = 500
-    X = np.random.normal(0, 1, n)
-    Y = 0.5 * X + np.random.normal(0, 0.5, n)
-    Z = 0.7 * Y + np.random.normal(0, 0.3, n)
-    return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
 
 @pytest.fixture
@@ -179,19 +167,12 @@ def test_get_non_descendants(model_helper):
     assert set(model_helper._get_non_descendants("D")) == {"A", "B", "C"}
 
 
-def test_create_permuted_graph(model_helper):
-    mapping = {"A": "X", "B": "Y", "C": "Z", "D": "W"}
-    permuted = _create_permuted_graph(model_helper, mapping)
-
-    expected_edges = {(mapping[u], mapping[v]) for u, v in model_helper.edges()}
-    assert expected_edges == set(permuted.edges())
-
-
 def test_count_lmc_violations(model_helper, data_helper):
+    ci_test_chosen = get_callable_ci_test("chi_square", data=data_helper)
     count = _count_lmc_violations(
-        model_helper,
         data_helper,
-        get_callable_ci_test("chi_square"),
+        implied_cis(model_helper, data_helper, ci_test=ci_test_chosen),
+        ci_test_chosen,
         significance_level=0.05,
     )
     assert isinstance(count, int)
@@ -200,8 +181,12 @@ def test_count_lmc_violations(model_helper, data_helper):
 
 def test_count_lmc_violations_small_data(model_helper, data_helper):
     df = data_helper.head(5)
+    ci_test_chosen = get_callable_ci_test("gcm", data=df)
     count = _count_lmc_violations(
-        model_helper, df, get_callable_ci_test("chi_square"), significance_level=0.05
+        df,
+        implied_cis(model_helper, df, ci_test=ci_test_chosen),
+        ci_test_chosen,
+        significance_level=0.05,
     )
     assert isinstance(count, int)
     assert count >= 0
