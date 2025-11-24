@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
+from pgmpy.prediction._base import _BaseCausalPrediction
 
 
 class DoubleMLRegressor(_BaseCausalPrediction):

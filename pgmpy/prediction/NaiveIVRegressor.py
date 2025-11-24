@@ -5,7 +5,7 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
+from pgmpy.prediction._base import _BaseCausalPrediction
 
 
 class NaiveIVRegressor(_BaseCausalPrediction):

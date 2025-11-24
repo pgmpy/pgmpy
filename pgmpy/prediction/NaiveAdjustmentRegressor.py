@@ -12,7 +12,7 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
-from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
+from pgmpy.prediction._base import _BaseCausalPrediction
 
 
 class NaiveAdjustmentRegressor(_BaseCausalPrediction):
