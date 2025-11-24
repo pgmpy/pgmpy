@@ -139,7 +139,7 @@ class Abalone(BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/cmu-phil/example-causal-datasets/main/real/abalone/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/abalone/"
 
     VARIANT_URLS = {
         "continuous": base_url + "data/abalone.continuous.txt",
@@ -205,7 +205,7 @@ class Sachs(BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/cmu-phil/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
 
     VARIANT_URLS = {
         "continuous": base_url + "data/sachs.2005.continuous.txt",
