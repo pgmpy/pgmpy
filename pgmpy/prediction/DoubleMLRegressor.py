@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.base import RegressorMixin, clone
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
@@ -10,7 +10,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
 
 
-class DoubleMLRegressor(RegressorMixin, _BaseCausalPrediction):
+class DoubleMLRegressor(_BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
 
@@ -178,11 +178,6 @@ class DoubleMLRegressor(RegressorMixin, _BaseCausalPrediction):
         self.effect_estimator = effect_estimator
         self.n_folds = n_folds
         self.seed = seed
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.regressor_tags.poor_score = True
-        return tags
 
     def fit(self, X, y, sample_weight: Optional[Any] = None):
         """

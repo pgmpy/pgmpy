@@ -5,7 +5,7 @@ Naive Adjustment Regressor in sklearn Compatible Design.
 from typing import Optional
 
 import numpy as np
-from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.base import BaseEstimator, clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import (
     check_is_fitted,
@@ -15,7 +15,7 @@ from sklearn.utils.validation import (
 from pgmpy.prediction.BaseCausalPrediction import _BaseCausalPrediction
 
 
-class NaiveAdjustmentRegressor(RegressorMixin, _BaseCausalPrediction):
+class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     """
     Naive adjustment regressor using causal graph roles for feature selection.
 
@@ -134,14 +134,6 @@ class NaiveAdjustmentRegressor(RegressorMixin, _BaseCausalPrediction):
     ):
         self.causal_graph = causal_graph
         self.estimator = estimator
-
-    def __sklearn_tags__(self):
-        """Tags for sklearn compatibility."""
-        tags = super().__sklearn_tags__()
-        tags.target_tags.required = True
-        tags.input_tags.allow_nan = False
-        tags.regressor_tags.poor_score = True
-        return tags
 
     def fit(
         self,

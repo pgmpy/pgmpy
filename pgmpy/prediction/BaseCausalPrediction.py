@@ -1,13 +1,18 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, RegressorMixin
 
 
-class _BaseCausalPrediction(BaseEstimator):
+class _BaseCausalPrediction(RegressorMixin, BaseEstimator):
     """
     Base class for causal prediction algorithms in pgmpy. Provides common
     functionality for preparing and validating feature dataframes.
     """
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.regressor_tags.poor_score = True
+        return tags
 
     def _prepare_feature_df(self, X, required_features) -> pd.DataFrame:
         """
