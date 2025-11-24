@@ -1,4 +1,5 @@
 import typing
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import chain, combinations
@@ -140,6 +141,7 @@ class DynamicBayesianNetwork(DAG):
     add_edges
     add_edges_from
     add_cpds
+    log_likelihood
     initialize_initial_state
     inter_slice
     intra_slice
@@ -532,6 +534,241 @@ class DynamicBayesianNetwork(DAG):
                 raise ValueError("CPD defined on variable not in the model", cpd)
 
         self.cpds.extend(cpds)
+
+    def log_likelihood(self, data, show_progress=False):
+        """
+        Compute the log-likelihood of the given data under the current
+        Dynamic Bayesian Network model.
+
+        The log-likelihood measures how well the model explains the observed data.
+        It is computed as the sum of log-probabilities of all variables at each
+        time slice given their parents (evidence variables). Lower values indicate
+        less probable observations under the current model parameters.
+
+        This method works with discrete Dynamic Bayesian Networks and supports
+        data across multiple time slices. The computation considers:
+        - Variables in the first time slice (t=0) use their marginal probabilities
+        - Variables in subsequent time slices (t>0) use conditional probabilities
+          given their parents from the same and previous time slices
+
+        Parameters
+        ----------
+        data: pd.DataFrame instance
+            The dataset against which to score the model.
+            Each column should represent a variable in the form of (node_name, time_slice).
+
+        show_progress : bool, default=False
+            Whether to display a progress bar during computation.
+
+        Returns
+        -------
+        float
+            The total log-likelihood score for the entire dataset. This is the
+            sum of log-likelihood scores for all individual data points.
+            More negative values indicate worse fit to the data.
+
+        Raises
+        ------
+        ValueError
+            If data is not a pandas DataFrame, contains missing values,
+            has incorrect column structure, or contains values not present
+            in the model's CPD state names.
+
+        Examples
+        --------
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>>
+        >>> # Create a simple DBN with temporal dependencies
+        >>> model = DBN(
+        ...     [(("A", 0), ("B", 0)), (("A", 0), ("A", 1)), (("B", 0), ("B", 1))]
+        ... )
+        >>>
+        >>> # Generate sample data with 4 variables across 3 time slices
+        >>> data = np.random.randint(low=0, high=2, size=(100, 6))
+        >>> colnames = [("A", 0), ("B", 0), ("A", 1), ("B", 1), ("A", 2), ("B", 2)]
+        >>> df = pd.DataFrame(data, columns=colnames)
+        >>>
+        >>> # Fit model and compute log-likelihood
+        >>> model.fit(df)
+        >>> ll_score = model.log_likelihood(df)
+        >>> print(f"Log-likelihood: {ll_score:.2f}")
+        Log-likelihood: -138.62
+        """
+
+        # Input validation
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(
+                f"Data must be a pandas.DataFrame instance. Got: {type(data)}"
+            )
+
+        if data.dropna().empty:
+            raise ValueError("DataFrame is empty.")
+
+        for col in data.columns:
+            if not isinstance(col, tuple) or len(col) != 2:
+                raise ValueError(
+                    "Data column names must be tuples of the form (node_name, time_slice). "
+                    f"Got column type {type(col)} of length {len(col) if isinstance(col, tuple) else 'N/A'}"
+                )
+            if not isinstance(col[1], int) or col[1] < 0:
+                raise ValueError(
+                    "Time slice in data column names must be a non-negative integer."
+                )
+
+        if min(data.columns, key=lambda x: x[1])[1] != 0:
+            raise ValueError("Data column names must start from time slice 0.")
+
+        if set(self.nodes()) - set(data.columns):
+            raise ValueError(
+                f"Missing columns in data. Can't find values for the following variables: "
+                f" {set(self.nodes()) - set(data.columns)}"
+            )
+
+        if set(data.columns) - set(self.nodes()):
+            warnings.warn(
+                f"Data contains columns not present in the model: {set(data.columns) - set(self.nodes())}",
+                UserWarning,
+            )
+
+        # Check for missing values
+        if data.isnull().any().any():
+            raise ValueError(
+                "Data contains missing values. Log-likelihood computation "
+                "requires complete observations."
+            )
+
+        self.check_model()
+
+        # Create mapping from node to CPD for efficient lookup
+        node_to_cpd = {cpd.variable: cpd for cpd in self.get_cpds()}
+
+        if not node_to_cpd:
+            raise ValueError("No CPDs found in the model.")
+
+        # Initialize computation variables
+        total_log_likelihood = 0.0
+        n_samples = len(data)
+        nodes = list(self.nodes())
+        time_slices = self._timeslices()
+
+        # Process each data sample
+        for i in tqdm(
+            range(n_samples),
+            desc="Computing log-likelihood",
+            disable=not (show_progress and config.SHOW_PROGRESS),
+        ):
+            sample_log_likelihood = 0.0
+
+            # Process each time slice
+            for t in sorted(time_slices):
+                # Get nodes in current time slice
+                nodes_t = [node for node in nodes if node[1] == t]
+
+                # Compute log-probability for each node in this time slice
+                for node in nodes_t:
+                    try:
+                        cpd = node_to_cpd[node]
+                    except KeyError:
+                        raise KeyError(f"CPD for node {node} not found in the model.")
+
+                    node_log_prob = self._log_likelihood_node(node, data.iloc[i], cpd)
+                    sample_log_likelihood += node_log_prob
+
+            total_log_likelihood += sample_log_likelihood
+
+        return total_log_likelihood
+
+    def _log_likelihood_node(self, node, sample_data, cpd):
+        """
+        Compute the log-probability of a specific node given the sample data.
+
+        This helper method calculates the contribution of a single node to the
+        overall log-likelihood by retrieving the appropriate probability from
+        the node's Conditional Probability Distribution (CPD) and computing
+        its logarithm.
+
+        Parameters
+        ----------
+        node : tuple
+            Node identifier in format (variable_name, time_slice).
+
+        sample_data : pd.Series
+            Single data sample containing values for all variables.
+            Index should contain tuples of (variable_name, time_slice).
+
+        cpd : pgmpy.factors.discrete.TabularCPD
+            Conditional Probability Distribution for the node.
+            Must contain state names matching the observed values.
+
+        Returns
+        -------
+        float
+            Log-probability of the node given the evidence.
+            Value will be <= 0, with values closer to 0 indicating
+            higher probability.
+
+        Raises
+        ------
+        ValueError
+            If observed value is not found in CPD state names,
+            if parent values are not found in CPD state names,
+            or if required parent nodes are missing from sample data.
+        """
+
+        # Get the observed value for this node
+        observed_value = sample_data[(node[0], node[1])]
+
+        # Convert observed value to state index according to CPD
+        try:
+            observed_state_idx = cpd.state_names[node].index(observed_value)
+        except (ValueError, IndexError):
+            raise ValueError(
+                f"Observed value '{observed_value}' for node {node} "
+                f"not found in CPD state names: {cpd.state_names[node]}"
+            )
+
+        # Get parents (evidence variables) for this node
+        parents = self.get_parents(node)
+
+        if not parents:
+            # No parents - use marginal probability
+            prob = cpd.values[observed_state_idx]
+        else:
+            # Has parents - use conditional probability
+            evidence_indices = []
+
+            # Get evidence values for all parents
+            for parent in parents:
+                if (parent[0], parent[1]) in sample_data.index:
+                    parent_value = sample_data[(parent[0], parent[1])]
+
+                    # Convert parent value to state index
+                    try:
+                        parent_state_idx = cpd.state_names[parent].index(parent_value)
+                    except (ValueError, IndexError):
+                        raise ValueError(
+                            f"Parent value '{parent_value}' for node {parent} "
+                            f"not found in CPD state names: {cpd.state_names[parent]}"
+                        )
+
+                    evidence_indices.append(parent_state_idx)
+                else:
+                    raise ValueError(
+                        f"Parent node {parent} not found in sample data. "
+                        "Ensure all parent nodes are included in the dataset."
+                    )
+
+            prob = cpd.values[observed_state_idx][tuple(evidence_indices)]
+
+        # Ensure probability is not zero for numerical stability
+        # (with a small epsilon to avoid log(0))
+        prob = max(prob, 1e-10)
+
+        return np.log(prob)
 
     def get_cpds(self, node=None, time_slice=None):
         """
@@ -1224,10 +1461,9 @@ class DynamicBayesianNetwork(DAG):
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0
         """
-        from pgmpy.sampling import BayesianModelSampling
 
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=n_time_slices * len(self._nodes()))
+            _ = tqdm(total=n_time_slices * len(self._nodes()))
 
         # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do

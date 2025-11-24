@@ -672,7 +672,7 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
     def setUp(self):
         self.cancer_model = DBN()
-        #########################    1    ######################
+        # ########################    1    ######################
         self.cpd_poll = TabularCPD(
             variable=("Pollution", 0), variable_card=2, values=[[0.9], [0.1]]
         )
@@ -701,7 +701,7 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
             evidence_card=[2],
         )
 
-        #########################    2    ######################
+        # ########################    2    ######################
         self.cpd_poll2 = TabularCPD(
             variable=("Pollution", 1),
             variable_card=2,
@@ -1089,9 +1089,8 @@ class TestDBNSampling(unittest.TestCase):
             samples_cpd = sample_marginals[node]
             # DBN query only works for variables > evidence time
             if node[1] > 0:
-                dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
-                    node
-                ]
+                # dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
+                _ = self.dbn_infer.query([node], evidence={("D", 0): 1})[node]
             # Query can't have same node in variables and evidence
             if node != ("D", 0):
                 bn_infer_cpd = self.bn_infer.query(
@@ -1404,7 +1403,8 @@ class TestDBNSampling(unittest.TestCase):
             TabularCPD(("D", 0), 2, [[0], [1]]),
             TabularCPD(("D", 2), 2, [[1], [0]]),
         ]
-        bn_virtual_intervention = [
+        # bn_virtual_intervention = [
+        _ = [
             TabularCPD("D0", 2, [[0], [1]]),
             TabularCPD("D2", 2, [[1], [0]]),
         ]
@@ -1633,3 +1633,166 @@ class TestDBNWithStateName(unittest.TestCase):
                 "G_3": ["A", "B", "C"],
             },
         )
+
+
+class TestLogLikelihood(unittest.TestCase):
+    def setUp(self):
+        """Set up a simple but realistic DBN for testing."""
+        # Create consistent test structure: A->B, A->C, B->D, C->D with temporal connections
+        self.model = DBN(
+            [
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("C", 0)),
+                (("B", 0), ("D", 0)),
+                (("C", 0), ("D", 0)),
+                (("A", 0), ("A", 1)),
+                (("B", 0), ("B", 1)),
+                (("C", 0), ("C", 1)),
+                (("D", 0), ("D", 1)),
+            ]
+        )
+
+        columns = [
+            ("A", 0),
+            ("B", 0),
+            ("C", 0),
+            ("D", 0),
+            ("A", 1),
+            ("B", 1),
+            ("C", 1),
+            ("D", 1),
+        ]
+
+        # Generate training data with consistent patterns
+        np.random.seed(42)
+        training_data = np.random.choice(
+            [0, 1], size=(1000, len(columns)), p=[0.7, 0.3]
+        )
+
+        self.training_df = pd.DataFrame(training_data, columns=columns)
+
+        # Fit the model once for all tests
+        self.model.fit(self.training_df)
+
+    def tearDown(self):
+        """Clean up test artifacts."""
+        del self.model
+        del self.training_df
+
+    def test_empty_data(self):
+        """Test log_likelihood handles empty data correctly."""
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(pd.DataFrame())
+
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(pd.DataFrame({("A", 0): [], ("B", 0): [np.nan]}))
+
+    def test_column_format(self):
+        """Test log_likelihood handles incorrect column formats correctly."""
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(pd.DataFrame({"A": [0, 1], "B": [1, 0]}))
+
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(
+                pd.DataFrame({("A", -1): [0, 1], ("B", -2): [1, 0]})
+            )
+
+    def test_extra_columns_warn(self):
+        columns = [
+            ("A", 0),
+            ("B", 0),
+            ("C", 0),
+            ("D", 0),
+            ("E", 0),
+            ("A", 1),
+            ("B", 1),
+            ("C", 1),
+            ("D", 1),
+            ("E", 1),
+        ]
+
+        # Generate training data with consistent patterns
+        np.random.seed(42)
+        data = np.random.choice([0, 1], size=(10, len(columns)), p=[0.7, 0.3])
+        with self.assertWarns(UserWarning):
+            self.model.log_likelihood(pd.DataFrame(data, columns=columns))
+
+    def test_invalid_input(self):
+        """Test log_likelihood handles invalid input types correctly."""
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood([[0, 1], [1, 0]])
+
+        with self.assertRaises(ValueError):
+            self.model.log_likelihood(np.array([[0, 1], [1, 0]]))
+
+    def test_consistency(self):
+        """Test that log_likelihood gives consistent results for same data."""
+        test_data = pd.DataFrame(
+            {
+                ("A", 0): [0, 1, 0],
+                ("B", 0): [0, 1, 1],
+                ("C", 0): [0, 1, 1],
+                ("D", 0): [0, 1, 0],
+                ("A", 1): [1, 0, 1],
+                ("B", 1): [1, 0, 0],
+                ("C", 1): [1, 0, 0],
+                ("D", 1): [0, 1, 1],
+            }
+        )
+
+        ll1 = self.model.log_likelihood(test_data)
+        ll2 = self.model.log_likelihood(test_data)
+        ll3 = self.model.log_likelihood(test_data, show_progress=True)
+
+        self.assertEqual(ll1, ll2)
+        self.assertEqual(ll1, ll3)
+
+    def test_log_likelihood(self):
+        """Test log_likelihood with realistic scenario: good vs anomalous data."""
+        # Create a realistic DBN structure
+        model = DBN(
+            [
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("C", 0)),
+                (("B", 0), ("D", 0)),
+                (("C", 0), ("D", 0)),
+                (("A", 0), ("A", 1)),
+                (("B", 0), ("B", 1)),
+                (("C", 0), ("C", 1)),
+                (("D", 0), ("D", 1)),
+            ]
+        )
+
+        # Generate training data with consistent patterns (biased toward 0)
+        np.random.seed(42)
+        training_data = np.random.choice([0, 1], size=(5000, 16), p=[0.7, 0.3])
+        colnames = []
+        for t in range(4):
+            colnames.extend([("A", t), ("B", t), ("C", t), ("D", t)])
+        training_df = pd.DataFrame(training_data, columns=colnames)
+
+        # Fit the model
+        model.fit(training_df)
+
+        # Use a subset of training data as "good" data (same distribution)
+        good_df = training_df.iloc[:1000].copy()
+
+        # Generate highly anomalous data (completely opposite pattern)
+        np.random.seed(456)
+        anomalous_data = np.random.choice([0, 1], size=(1000, 16), p=[0.1, 0.9])
+        anomalous_df = pd.DataFrame(anomalous_data, columns=colnames)
+
+        # Compute log-likelihoods
+        ll_good = model.log_likelihood(good_df)
+        ll_anomalous = model.log_likelihood(anomalous_df)
+
+        # Assertions
+        self.assertIsInstance(ll_good, float)
+        self.assertIsInstance(ll_anomalous, float)
+        self.assertGreater(
+            ll_good,
+            ll_anomalous,
+            "Expected higher log-likelihood for normal data compared to anomalous data",
+        )
+        self.assertLess(ll_good, 0, "Log-likelihood should be negative")
+        self.assertLess(ll_anomalous, 0, "Log-likelihood should be negative")
