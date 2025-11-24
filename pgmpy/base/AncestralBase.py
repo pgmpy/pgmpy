@@ -12,6 +12,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
         latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
         roles=None,
     ):
         """
@@ -39,6 +41,16 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         latents : set, optional
             Set of latent (unobserved) variables in the graph. Default is
             an empty set.
+
+        exposures : set, optional
+            Set of exposure variables in the graph. These are the variables
+            that represent the treatment or intervention being studied in a
+            causal analysis. Default is an empty set.
+
+        outcomes : set, optional
+            Set of outcome variables in the graph. These are the variables
+            that represent the response or dependent variables being studied
+            in a causal analysis. Default is an empty set.
 
         roles : dict, optional (default: None)
             A dictionary mapping roles to node names.
@@ -68,7 +80,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> g = AncestralBase(
         ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
         ...     latents={"L"},
-        ...     roles={"exposure": "A", "outcome": "B"},
+        ...     exposures={"A"},
+        ...     outcomes={"B"},
         ... )
 
         Roles can also be assigned after creation using ``with_role`` method.
@@ -87,6 +100,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         if ebunch:
             self.add_edges_from(ebunch)
         self.latents = set(latents)
+        self.exposures = set(exposures)
+        self.outcomes = set(outcomes)
 
         if roles is None:
             roles = {}
@@ -600,6 +615,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ancestral_base = self.__class__(
             ebunch=ebunch,
             latents=self.latents.copy(),
+            exposures=self.exposures.copy(),
+            outcomes=self.outcomes.copy(),
         )
 
         for role, vars in self.get_role_dict().items():
