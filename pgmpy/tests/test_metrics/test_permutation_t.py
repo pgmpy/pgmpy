@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from pgmpy import global_vars
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.metrics import implied_cis, permutation_t
 from pgmpy.metrics.permutation_t import (
     _count_lmc_violations,
@@ -168,7 +168,7 @@ def test_get_non_descendants(model_helper):
 
 
 def test_count_lmc_violations(model_helper, data_helper):
-    ci_test_chosen = get_callable_ci_test("chi_square", data=data_helper)
+    ci_test_chosen = ci_registry.get_test("chi_square", data=data_helper)
     count = _count_lmc_violations(
         data_helper,
         implied_cis(model_helper, data_helper, ci_test=ci_test_chosen),
@@ -181,7 +181,7 @@ def test_count_lmc_violations(model_helper, data_helper):
 
 def test_count_lmc_violations_small_data(model_helper, data_helper):
     df = data_helper.head(5)
-    ci_test_chosen = get_callable_ci_test("gcm", data=df)
+    ci_test_chosen = ci_registry.get_test("gcm", data=df)
     count = _count_lmc_violations(
         df,
         implied_cis(model_helper, df, ci_test=ci_test_chosen),

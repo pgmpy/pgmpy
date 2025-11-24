@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.metrics import implied_cis
 from pgmpy.models import (
@@ -235,7 +235,7 @@ def permutation_t(
         n_permutations = max(20, int(1 / significance_level))
 
     # Initialize CI test function
-    ci_test_func = get_callable_ci_test(ci_test, data=data)
+    ci_test_func = ci_registry.get_test(ci_test, data=data)
 
     logger.info(
         f"Starting permutation-based falsification test with {n_permutations} permutations"
