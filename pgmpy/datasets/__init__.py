@@ -1,4 +1,4 @@
-from .datasets import BaseDataset, load_abalone, load_dataset, load_sachs
+from .datasets import BaseDataset, load_dataset
 from .registry import DATASETS, dataset_class
 
 __all__ = [
@@ -6,6 +6,4 @@ __all__ = [
     "dataset_class",
     "BaseDataset",
     "load_dataset",
-    "load_abalone",
-    "load_sachs",
 ]
