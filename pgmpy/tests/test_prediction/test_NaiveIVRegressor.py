@@ -207,7 +207,7 @@ def test_dag_roles_validation_and_pretreatment_support():
 
     df = pd.DataFrame({"E": E, "Z": Z, "P": P})
     _ = model.fit(df, pd.Series(Y, name="Y"))
-    assert set(model.feature_columns_predict_) >= {"E", "P"}
+    assert set(model.feature_columns_predict_) == {"E", "P"}
 
 
 def test_error_handling_missing_roles_():

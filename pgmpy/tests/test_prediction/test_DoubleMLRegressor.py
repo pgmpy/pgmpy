@@ -267,7 +267,7 @@ def test_dag_roles_validation_and_pretreatment_support():
     Y = 1.2 * D + 0.3 * Z + rng.normal(scale=0.2, size=50)
     df = pd.DataFrame({"D": D, "Z": Z, "P": P})
     _ = model.fit(df, pd.Series(Y, name="Y"))
-    assert set(model.feature_columns_fit_) >= {"D", "Z", "P"}
+    assert set(model.feature_columns_fit_) == {"D", "Z", "P"}
 
 
 def test_doubleml_recovers_theta_with_RF():
