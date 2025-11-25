@@ -17,5 +17,5 @@ __all__ = [
     "fisher_c",
     "SHD",
     "BayesianModelProbability",
-    "permutation_t"
+    "permutation_t",
 ]
