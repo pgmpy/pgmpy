@@ -7,6 +7,7 @@ from .metrics import (
     log_likelihood_score,
     structure_score,
 )
+from .permutation_t import permutation_t
 
 __all__ = [
     "correlation_score",
@@ -16,4 +17,5 @@ __all__ = [
     "fisher_c",
     "SHD",
     "BayesianModelProbability",
+    "permutation_t"
 ]
