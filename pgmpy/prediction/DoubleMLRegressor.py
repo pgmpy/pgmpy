@@ -2,13 +2,15 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
+from pgmpy.prediction._base import _BaseCausalPrediction
 
-class DoubleMLRegressor(RegressorMixin, BaseEstimator):
+
+class DoubleMLRegressor(_BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
 
@@ -92,7 +94,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
     pretreatment_vars_ : list of str
         Names of pretreatment variables.
 
-    feature_columns_ : list of str
+    feature_columns_fit_ : list of str
         Names of features used in the model.
 
     outcome_est_ : estimator-like or list of estimator-like
@@ -177,45 +179,6 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.n_folds = n_folds
         self.seed = seed
 
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.regressor_tags.poor_score = True
-        return tags
-
-    def _prepare_feature_df(self, X) -> pd.DataFrame:
-        """
-        Convert input (either numpy array or dataframe) to a DataFrame and
-        validate that column names exactly match DAG variables.
-
-        If a numpy array is provided, it is converted to a DataFrame with
-        range index column names (0, 1, ..., n_features-1).
-        """
-        # Step 1: Get required feature columns
-        required_features = self.feature_columns_
-
-        # Step 2: Convert input to DataFrame format
-        if isinstance(X, pd.DataFrame):
-            X_df = X
-
-        else:
-            # For numpy arrays, use range index as column names
-            X_arr = np.asarray(X)
-            if X_arr.ndim == 1:
-                raise ValueError(
-                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
-                )
-            X_df = pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
-
-        # Step 3: Validation: column names must exactly match DAG variables
-        missing_columns = set(required_features) - set(X_df.columns)
-        if missing_columns:
-            raise ValueError(
-                f"Missing required columns in input data: {list(missing_columns)}. "
-                f"DAG expects columns: {required_features}, but got: {list(X_df.columns)}"
-            )
-
-        return X_df[required_features]
-
     def fit(self, X, y, sample_weight: Optional[Any] = None):
         """
         Fit the DoubleML model using the provided data.
@@ -295,12 +258,12 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         self.outcome_var_ = outcome_vars[0]
         self.adjustment_vars_ = self.causal_graph.get_role("adjustment")
         self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
-        self.feature_columns_ = (
+        self.feature_columns_fit_ = (
             [self.exposure_var_] + self.adjustment_vars_ + self.pretreatment_vars_
         )
 
         # Step 1.2: Prepare feature dataframe and sample weights.
-        df = self._prepare_feature_df(X)
+        df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
         df.insert(0, self.outcome_var_, np.asarray(y))
 
         exposure_df = df[self.exposure_var_]
@@ -405,7 +368,7 @@ class DoubleMLRegressor(RegressorMixin, BaseEstimator):
         )
 
         # Step 1: Prepare feature DataFrame
-        X_df = self._prepare_feature_df(X)
+        X_df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
         X_intervention = X_df.loc[:, [self.exposure_var_]]
         if len(self.adjustment_vars_ + self.pretreatment_vars_) == 0:
             X_new_covariates = pd.DataFrame(
