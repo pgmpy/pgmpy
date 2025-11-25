@@ -498,17 +498,19 @@ def get_dataset_type(data: pd.DataFrame) -> str:
 
 def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):
     """
-    takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
-    traces ( "wide" format) and converts it to different format (chosen by return_format).
+    Converts given wide format dataframe to different time series formats.
+
+    Takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
+    traces ( "wide" format) and converts it to different format as specified in `return_format` argument.
 
     Parameters
     ----------
     df : pd.DataFrame
-        input dataframe represented in the wide format (on rows we have samples, on columns, unsorted pairs of
+        Input dataframe represented in the wide format (on rows we have samples, on columns, unsorted pairs of
         ("Variable", "timestep")
 
-    return_format : {'numpy3d', 'pd-multiindex', 'pd-list', 'sorted'}
-        Controls the return representation
+    return_format : {'pd-multiindex', 'numpy3d', 'pd-list', 'sorted'}
+        Controls the return representation. The options are:
 
         "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
                     represents variable, third dimension represent timestep
@@ -523,8 +525,9 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
 
     Returns
     -------
-    depends on "return_format" variable. "numpy3d" returns a numpy array (np.ndarray), while rest of the representations
-    return a pandas DataFrame.
+    np.ndarray or pd.DataFrame or list of pd.DataFrame:
+        Depends on `return_format` variable. `numpy3d` returns a numpy array (`np.ndarray`), while rest of the
+        representations return a pandas DataFrame.
 
     Examples
     --------
@@ -536,16 +539,14 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     1      0      2      0      1      1      1      1      1      1
 
     >>> to_timeseries_format(df, return_format="numpy3d")
-    return will be : [[[1 0 0]
-                       [1 0 0]
-                       [0 1 0]]
-                     [[0 1 1]
-                      [2 1 1]
-                      [0 1 1]]]
+    [[[1 0 0]
+      [1 0 0]
+      [0 1 0]]
+     [[0 1 1]
+      [2 1 1]
+      [0 1 1]]]
 
     >>> to_timeseries_format(df, return_format="pd-multiindex")
-    return will look like :
-
     variable       D  G  I
     instance time
     0        0     1  1  0
@@ -556,23 +557,18 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
              2     1  1  1
 
     >>> to_timeseries_format(df, return_format="pd-list")
-    return will be array of two pandas DataFrames. The first element will be :
-
-    variable  D  G  I
-    time
-    0         1  1  0
-    1         0  0  1
-    2         0  0  0
-
-    While the second element will be :
-    variable  D  G  I
-    time
-    0         0  2  0
-    1         1  1  1
-    2         1  1  1
+    [variable  D  G  I
+     time
+     0         1  1  0
+     1         0  0  1
+     2         0  0  0,
+     variable  D  G  I
+     time
+     0         0  2  0
+     1         1  1  1
+     2         1  1  1]
 
     >>> to_timeseries_format(df, return_format="sorted")
-    return will look like :
             (D,0), (D,1), (D,2), (G,0), (G,1), (G,2), (I,0), (I,1), (I,2)
     0         1      0      0      1      0      0      0      1      0
     1         0      1      1      2      1      1      0      1      1
@@ -621,6 +617,9 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         panel.sort_index(inplace=True, axis=1)
 
     else:
-        raise ValueError(f"Unknown representation: {return_format}")
+        raise ValueError(
+            f"Unknown representation: {return_format}. Supported `return_types`"
+            "are: numpy3d, pd-multiindex, pd-list, sorted"
+        )
 
     return panel

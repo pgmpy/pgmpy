@@ -1123,8 +1123,11 @@ class DynamicBayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        return_format: {'numpy3d', 'pd-multiindex', 'pd-list', 'sorted', "wide"} (default: "wide")
+        return_format: {"wide", "numpy3d", "pd-multiindex", "pd-list", "sorted"}
             Controls the return representation
+
+            - "wide" : Default option : wide format, where on rows we have samples, and on columns we have (potentially
+                       unsorted)  ("variable", "timestep)
 
             - 'numpy3d' : returns a 3D numpy array, where first dimension represents trace, second dimension
                         represents variable, third dimension represent timestep
@@ -1137,13 +1140,12 @@ class DynamicBayesianNetwork(DAG):
             - 'sorted' : makes sure that the representation of [sample, ("variable", "timestep")] is sorted, which
                        makes further processing easier
 
-            - "wide" : Default option : wide format, where on rows we have samples, and on columns we have (potentially
-                       unsorted)  ("variable", "timestep)
 
         Returns
         -------
-        depends on "return_format" variable. "numpy3d" returns a numpy array (np.ndarray), while rest of the
-        representations return a pandas DataFrame.
+        np.ndarray or pandas.DataFrame
+            Depends on `return_format` argument. `numpy3d` returns a numpy array (np.ndarray), while rest of the
+            representations return a pandas DataFrame.
 
         Examples
         --------
@@ -1242,30 +1244,14 @@ class DynamicBayesianNetwork(DAG):
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0
 
-        different format outputs ( see `to_timeseries_format` from utils.utils for more information what the output will
-        look like.
+        Return format selection using `return_format` argument.
+        `return_format="wide"` returns the data in standard format.
 
         >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="wide")
 
-        will return the data in standard, 'wide' format.
-
-        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="numpy3d")
-
-        will return a 3d numpy array, with first axis being sample/trace, second representing variable, and
-        third timestep.
+        `return_format="pd-multiindex"` returns pandas dataframe with indexes of ("Variable name", "timestep").
 
         >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="pd-multiindex")
-
-        it will return a pandas dataframe with indexes of ("Variable name", "timestep").
-
-        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="pd-list")
-
-        return will be array of two pandas DataFrames.
-
-        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="sorted")
-
-        it will return the wide format, however it will make sure, that the columns are sorted (which can make
-        processing easier).
         """
 
         # Step 1: Create some data structures for easily accessing values
