@@ -1,13 +1,14 @@
 from typing import Any, Optional
 
-import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_is_fitted, validate_data
 
+from pgmpy.prediction._base import _BaseCausalPrediction
 
-class NaiveIVRegressor(RegressorMixin, BaseEstimator):
+
+class NaiveIVRegressor(_BaseCausalPrediction):
     """
     Implements Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
 
@@ -173,42 +174,6 @@ class NaiveIVRegressor(RegressorMixin, BaseEstimator):
         self.causal_graph = causal_graph
         self.stage1_estimator = stage1_estimator
         self.stage2_estimator = stage2_estimator
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.regressor_tags.poor_score = True
-        return tags
-
-    def _prepare_feature_df(self, X, required_features=None) -> pd.DataFrame:
-        """
-        Accept a numpy/pandas dataframe and returns pandas df
-        If numpy array is passed, it converts to pandas df
-        """
-
-        if required_features is None:
-            required_features = self.feature_columns_fit_
-
-        # Step 2: Convert input to DataFrame format
-        if isinstance(X, pd.DataFrame):
-            X_df = X
-        else:
-            # For numpy arrays, use range index as column names
-            X_arr = np.asarray(X)
-            if X_arr.ndim == 1:
-                raise ValueError(
-                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
-                )
-            X_df = pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
-
-        # Step 3: Validation: column names must exactly match DAG variables
-        missing_columns = set(required_features) - set(X_df.columns)
-        if missing_columns:
-            raise ValueError(
-                f"Missing required columns in input data: {list(missing_columns)}. "
-                f"DAG expects columns: {required_features}, but got: {list(X_df.columns)}"
-            )
-
-        return X_df[required_features]
 
     def fit(self, X, y, sample_weight: Optional[Any] = None):
         """
