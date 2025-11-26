@@ -1,5 +1,5 @@
 from itertools import combinations
-from typing import Callable, Hashable, Optional, Set, Tuple
+from typing import Callable, Hashable, Optional, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -275,15 +275,15 @@ class ExpertInLoop(StructureEstimator):
             #    - Validate that it returns a valid edge direction tuple
             #    - Cache the orientation and add the edge to the DAG
 
-            if (
-                expert_knowledge is not None 
-                and (selected_edge.u, selected_edge.v) in getattr(expert_knowledge, "orientations", {})
-            ):
+            if expert_knowledge is not None and (
+                selected_edge.u,
+                selected_edge.v,
+            ) in getattr(expert_knowledge, "orientations", {}):
                 edge_direction = (selected_edge.u, selected_edge.v)
-            elif (
-                expert_knowledge is not None
-                and (selected_edge.v, selected_edge.u) in getattr(expert_knowledge, "orientations", {})
-            ):
+            elif expert_knowledge is not None and (
+                selected_edge.v,
+                selected_edge.u,
+            ) in getattr(expert_knowledge, "orientations", {}):
                 edge_direction = (selected_edge.v, selected_edge.u)
             elif expert_knowledge is not None and expert_knowledge.temporal_ordering:
                 # Check if temporal order can determine the direction
