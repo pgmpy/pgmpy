@@ -239,7 +239,6 @@ class PC(BaseConstraintEstimator):
             show_progress=show_progress,
             **kwargs,
         )
-
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
