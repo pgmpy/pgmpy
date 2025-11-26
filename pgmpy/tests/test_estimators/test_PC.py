@@ -396,7 +396,6 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
         dag = est.estimate(
             scoring_method="k2",
             expert_knowledge=expert_knowledge,
-            enforce_expert_knowledge=True,
             show_progress=False,
         )
         # assert if dag is a subset of search_space
