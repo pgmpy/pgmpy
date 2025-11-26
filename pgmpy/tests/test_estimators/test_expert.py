@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import networkx as nx
@@ -143,10 +142,11 @@ class TestExpertInLoop(unittest.TestCase):
     )
     def test_estimate_with_orientations(self):
         orientations = self.orientations_small
+        expert_knowledge = ExpertKnowledge(orientations=orientations)
         dag = self.estimator_small.estimate(
             pval_threshold=0.1,
             effect_size_threshold=0.1,
-            orientations=orientations,
+            expert_knowledge=expert_knowledge,
         )
         self.assertEqual(orientations, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))

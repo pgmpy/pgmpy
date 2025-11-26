@@ -512,9 +512,7 @@ class TestPCRealModels(unittest.TestCase):
         alarm_model = get_example_model("alarm")
         data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
         est = PC(data)
-        dag = est.estimate(
-            variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False
-        )
+        est.estimate(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
@@ -523,7 +521,7 @@ class TestPCRealModels(unittest.TestCase):
         req_edges = [("xray", "either")]
         background = ExpertKnowledge(required_edges=req_edges)
         with self.assertLogs(level="WARNING") as cm:
-            dag = est.estimate(
+            est.estimate(
                 variant="stable",
                 max_cond_vars=4,
                 expert_knowledge=background,
