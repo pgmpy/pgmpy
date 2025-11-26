@@ -16,7 +16,7 @@ def test_get_scaling_indicators():
         roles={
             "exposures": "x1",
             "outcomes": "y1",
-            "observed": ("x1", "y1", "x2", "y2"),
+            # "observed": ("x1", "y1", "x2", "y2"),
             "latents": ("xi1", "eta1"),
         },
     )
@@ -25,8 +25,8 @@ def test_get_scaling_indicators():
     scaling_indicators = iv._get_scaling_indicators(model)
 
     assert scaling_indicators == {
-        "xi1": "x1",
         "eta1": "y1",
+        "xi1": "x1",
     }
 
 
@@ -42,7 +42,7 @@ def test_iv_transformations():
         roles={
             "exposures": "x1",
             "outcomes": "y1",
-            "observed": ("x1", "y1", "x2", "y2"),
+            # "observed": ("x1", "y1", "x2", "y2"),
             "latents": ("xi1", "eta1"),
         },
     )
@@ -70,7 +70,7 @@ def test_iv_transformations():
     assert dependent_var == "y1"
 
 
-def test_get_ivs():
+def test_get_ivs_without_scaling_indicators():
     iv_model = DAG(
         [("X", "Y"), ("I", "X"), ("U", "X"), ("U", "Y")],
         roles={
@@ -79,7 +79,25 @@ def test_get_ivs():
             "latents": "U",
         },
     )
-    iv = InstrumentVariables(variant=None)
+    iv = InstrumentVariables(
+        variant=None,
+    )
+    graph_with_iv, ok = iv._identify(iv_model)
+    assert ok is True
+    expected_iv = {"I"}
+    assert set(graph_with_iv.get_role("instrument")) == expected_iv
+
+
+def test_get_ivs_with_scaling_indicators():
+    iv_model = DAG(
+        [("X", "Y"), ("I", "X"), ("U", "X"), ("U", "Y")],
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+            "latents": "U",
+        },
+    )
+    iv = InstrumentVariables(variant=None, scaling_indicators={"U": "X"})
     graph_with_iv, ok = iv._identify(iv_model)
     assert ok is True
     expected_iv = {"I"}

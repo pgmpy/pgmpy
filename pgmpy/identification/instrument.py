@@ -1,19 +1,21 @@
 from pgmpy.base import DAG
+from pgmpy.global_vars import logger
 from pgmpy.identification import BaseIdentification
 
 
 class InstrumentVariables(BaseIdentification):
 
-    def __init__(self, variant=None):
+    def __init__(self, variant=None, scaling_indicators=None):
         self.supported_graph_types = DAG
         self.variant = variant
+        self.scaling_indicators = scaling_indicators
 
     def _get_scaling_indicators(self, causal_graph):
-        latent_nodes = causal_graph.get_role("latents")
-        observed_nodes = set(causal_graph.get_role("observed"))
+        latent_variables = causal_graph.get_role("latents")
+        observed_nodes = (causal_graph.nodes) - (latent_variables)
 
         scaling_indicators = {}
-        for node in latent_nodes:
+        for node in latent_variables:
             for neighbour in causal_graph.neighbors(node):
                 if neighbour in observed_nodes:
                     scaling_indicators[node] = neighbour
@@ -21,22 +23,29 @@ class InstrumentVariables(BaseIdentification):
 
         return scaling_indicators
 
-    def _iv_transformations(self, X, Y, causal_graph, scaling_indicators={}):
-        full_graph = causal_graph.copy()
-        print("full graph:", full_graph.edges())
+    def _iv_transformations(self, X, Y, causal_graph, scaling_indicators=None):
+        full_graph_ = causal_graph.copy()
 
-        exposures = full_graph.get_role("exposures")
-        observed = full_graph.get_role("observed")
-        latent_variables = set(full_graph.get_role("latents"))
+        exposures = full_graph_.get_role("exposures")
+        latent_variables = full_graph_.get_role("latents")
+        all_nodes = causal_graph.nodes
+        observed = all_nodes - (latent_variables)
 
-        if not full_graph.has_edge(X, Y):
+        if self.scaling_indicators is None:
+            scaling_indicators = self._get_scaling_indicators(causal_graph)
+        else:
+            scaling_indicators = self.scaling_indicators
+
+        if not full_graph_.has_edge(X, Y):
             raise ValueError(f"The edge from {X} -> {Y} does not exist in the graph")
 
-        if (X in exposures) and (Y in observed):
-            full_graph.remove_edge(X, Y)
+        if (X in exposures) and (Y in list(observed)):
+            if full_graph_.has_edge(X, Y):
+                full_graph_.remove_edge(X, Y)
+            dependent_var = Y
 
         elif Y in latent_variables:
-            full_graph.add_edge("." + Y, scaling_indicators[Y])
+            full_graph_.add_edge("." + Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
 
         else:
@@ -47,23 +56,32 @@ class InstrumentVariables(BaseIdentification):
         ]
 
         for parent_y in variable_parents:
-            full_graph.remove_edge(parent_y, Y)
+            if full_graph_.has_edge(X, Y):
+                full_graph_.remove_edge(X, Y)
             if parent_y in latent_variables:
-                full_graph.add_edge("." + scaling_indicators[parent_y], dependent_var)
+                full_graph_.add_edge("." + scaling_indicators[parent_y], dependent_var)
 
-        return full_graph, dependent_var
+        return full_graph_, dependent_var
 
     def _identify(self, causal_graph):
         exposure = causal_graph.get_role("exposures")[0]
         outcome = causal_graph.get_role("outcomes")[0]
-        # observed = causal_graph.get_role("observed")
-        latent_variables = set(causal_graph.get_role("latents"))
-        scaling_indicators = self._get_scaling_indicators(causal_graph)
 
-        # if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-        #     logger.warning(
-        #         f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
-        #     )
+        latent_variables = set(causal_graph.get_role("latents"))
+
+        if self.scaling_indicators is None:
+            scaling_indicators = self._get_scaling_indicators(causal_graph)
+        else:
+            scaling_indicators = self.scaling_indicators
+
+        print(scaling_indicators)
+
+        if (exposure in scaling_indicators.keys()) and (
+            scaling_indicators[exposure] == outcome
+        ):
+            logger.warning(
+                f"{outcome} is the scaling indicator of {exposure}. Please specify `scaling_indicators`"
+            )
 
         transformed_graph, dependent_var = self._iv_transformations(
             exposure, outcome, causal_graph, scaling_indicators=scaling_indicators
