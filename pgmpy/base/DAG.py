@@ -1925,3 +1925,46 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 ),
             )
         )
+
+
+class SimpleCausalModel(DAG):
+    """
+    A specialized DAG class for simple causal models.
+
+    """
+
+    def __init__(
+        self, exposure, outcome, adjustment=None, instrument=None, latents=None
+    ):
+        super(SimpleCausalModel, self).__init__(latents=latents)
+
+        def to_list(var):
+            if isinstance(var, str):
+                return [var]
+            elif isinstance(var, int):
+                return [f"Var_{var}"]
+            elif var is None:
+                return []
+            return list(var)
+
+        self.exposure = to_list(exposure)
+        self.outcome = to_list(outcome)
+        self.adjustment = to_list(adjustment)
+        self.instrument = to_list(instrument)
+
+        # Add edges from exposure variables to outcome variables
+        for exp in self.exposure:
+            for out in self.outcome:
+                self.add_edge(exp, out)
+
+        # Add edges from adjustment variables to exposure and outcome variables
+        for adj in self.adjustment:
+            for exp in self.exposure:
+                self.add_edge(adj, exp)
+            for out in self.outcome:
+                self.add_edge(adj, out)
+
+        # Add edges from instrument variables to exposure variables
+        for inst in self.instrument:
+            for exp in self.exposure:
+                self.add_edge(inst, exp)

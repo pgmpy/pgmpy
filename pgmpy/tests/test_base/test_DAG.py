@@ -9,7 +9,7 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import DAG, PDAG, SimpleCausalModel
 from pgmpy.estimators.CITests import pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
@@ -2216,3 +2216,73 @@ TGFBR3.8 -> TGFBR3.9
             self.assertIn(
                 expected_edge_str, dagitty_output, f"Missing edge: {expected_edge_str}"
             )
+
+
+class TestSimpleCausalModel(unittest.TestCase):
+    def test_simple_string_variables(self):
+        model = SimpleCausalModel(
+            exposure="X", outcome="Y", adjustment="Z", instrument="I"
+        )
+        self.assertEqual(set(model.nodes()), {"X", "Y", "Z", "I"})
+        self.assertEqual(
+            set(model.edges()), {("X", "Y"), ("Z", "X"), ("Z", "Y"), ("I", "X")}
+        )
+
+    def test_list_variables(self):
+        model = SimpleCausalModel(
+            exposure=["X1", "X2"],
+            outcome=["Y1", "Y2"],
+            adjustment=["Z"],
+            instrument=["I"],
+        )
+        expected_edges = {
+            ("X1", "Y1"),
+            ("X1", "Y2"),
+            ("X2", "Y1"),
+            ("X2", "Y2"),
+            ("Z", "X1"),
+            ("Z", "X2"),
+            ("Z", "Y1"),
+            ("Z", "Y2"),
+            ("I", "X1"),
+            ("I", "X2"),
+        }
+        self.assertEqual(set(model.edges()), expected_edges)
+
+    def test_integer_variables(self):
+        model = SimpleCausalModel(exposure=1, outcome=2, adjustment=3, instrument=4)
+        self.assertEqual(set(model.nodes()), {"Var_1", "Var_2", "Var_3", "Var_4"})
+        self.assertEqual(
+            set(model.edges()),
+            {
+                ("Var_1", "Var_2"),
+                ("Var_3", "Var_1"),
+                ("Var_3", "Var_2"),
+                ("Var_4", "Var_1"),
+            },
+        )
+
+    def test_missing_optional_args(self):
+        model = SimpleCausalModel(exposure="X", outcome="Y")
+        self.assertEqual(set(model.edges()), {("X", "Y")})
+
+    def test_empty_adjustment_instrument(self):
+        model = SimpleCausalModel(
+            exposure="X", outcome="Y", adjustment=None, instrument=[]
+        )
+        self.assertEqual(set(model.edges()), {("X", "Y")})
+
+    def test_multiple_exposures_outcomes(self):
+        model = SimpleCausalModel(exposure=["X1", "X2"], outcome=["Y1", "Y2"])
+        expected_edges = {("X1", "Y1"), ("X1", "Y2"), ("X2", "Y1"), ("X2", "Y2")}
+        self.assertEqual(set(model.edges()), expected_edges)
+
+    def test_latents(self):
+        model = SimpleCausalModel(exposure="X", outcome="Y", latents=["L"])
+        self.assertIn("L", model.latents)
+
+    def test_is_dag(self):
+        model = SimpleCausalModel(
+            exposure="X", outcome="Y", adjustment="Z", instrument="I"
+        )
+        self.assertTrue(nx.is_directed_acyclic_graph(model))
