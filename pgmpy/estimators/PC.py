@@ -104,6 +104,7 @@ class PC(BaseConstraintEstimator):
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge: Optional[ExpertKnowledge] = None,
+        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -173,6 +174,25 @@ class PC(BaseConstraintEstimator):
             information about the variables etc. Please refer
             pgmpy.estimators.ExpertKnowledge class for more details.
 
+        enforce_expert_knowledge: boolean (default: False)
+            If True, the algorithm modifies the search space according to the
+            edges specified in expert knowledge object. This implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, there will
+                    be no edge between u and v.
+                2. For every edge (u, v) specified in `required_edges`, one of the
+                    following would be present in the final model: u -> v, u <-
+                    v, or u - v (if CPDAG is returned).
+
+            If False, the algorithm attempts to make the edge orientations as
+            specified by expert knowledge after learning the skeleton. This
+            implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, the final
+                    graph would have either v <- u or no edge except if u -> v is part
+                    of a collider structure in the learned skeleton.
+                2. For every edge (u, v) specified in `required_edges`, the final graph
+                    would either have u -> v or no edge except if v <- u is part of a
+                    collider structure in the learned skeleton.
+
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
 
@@ -235,10 +255,12 @@ class PC(BaseConstraintEstimator):
             significance_level=significance_level,
             max_cond_vars=max_cond_vars,
             expert_knowledge=expert_knowledge,
+            enforce_expert_knowledge=enforce_expert_knowledge,
             n_jobs=n_jobs,
             show_progress=show_progress,
             **kwargs,
         )
+
         if return_type.lower() == "skeleton":
             return skel, separating_sets
 
@@ -252,9 +274,12 @@ class PC(BaseConstraintEstimator):
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
             pdag = pdag.apply_meeks_rules(apply_r4=True)
 
-        else:
+        elif not enforce_expert_knowledge:
             pdag = pdag.apply_meeks_rules(apply_r4=False)
             pdag = expert_knowledge.apply_expert_knowledge(pdag)
+            pdag = pdag.apply_meeks_rules(apply_r4=True)
+
+        else:
             pdag = pdag.apply_meeks_rules(apply_r4=False)
 
         if self.data is not None:
