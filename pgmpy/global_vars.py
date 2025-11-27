@@ -38,6 +38,7 @@ class Config:
         self.DTYPE = "float64"
         self.DEVICE = None
         self.SHOW_PROGRESS = True
+        self.MAX_CACHE_SIZE = 128
 
     def set_device(self, device=None):
         """

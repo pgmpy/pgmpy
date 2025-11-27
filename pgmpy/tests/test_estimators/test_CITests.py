@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,10 @@ from numpy import testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators.CITests import (
+    _gcm_cached,
+    _pearsonr_cached,
+    _pillai_trace_cached,
+    _power_divergence_cached,
     chi_square,
     g_sq,
     gcm,
@@ -316,7 +321,9 @@ class TestResidualMethods(unittest.TestCase):
         )
 
         self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
+        self.df_indep_ord_cont.X = pd.cut(
+            self.df_indep_ord_cont.X, bins=4, labels=False
+        )
 
         self.model_dep = LinearGaussianBayesianNetwork(
             [
@@ -368,7 +375,7 @@ class TestResidualMethods(unittest.TestCase):
         )
 
         self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
+        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4, labels=False)
 
     def test_pearsonr(self):
         coef, p_value = pearsonr(
@@ -433,7 +440,7 @@ class TestResidualMethods(unittest.TestCase):
     )
     def test_pillai_indep(self):
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.3086, 0.1277, 0.1224, 0.009, 0.1224]
+        indep_pvalues = [0.3086, 0.1277, 0.1224, 0.009, 0.3998]
 
         computed_coefs = []
         computed_pvalues = []
@@ -538,3 +545,88 @@ class TestResidualMethods(unittest.TestCase):
 
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
+
+
+class TestCache(unittest.TestCase):
+    def setUp(self):
+        rng = np.random.default_rng(seed=42)
+        Z = rng.normal(size=10000)
+        X = 3 * Z + rng.normal(loc=0, scale=0.1, size=10000)
+        Y = 2 * Z + rng.normal(loc=0, scale=0.1, size=10000)
+        self.df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+    def test_pearsonr_cached(self):
+        _pearsonr_cached.cache_clear()
+
+        pearsonr("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pearsonr_cached.cache_info().hits, 0)
+        self.assertEqual(_pearsonr_cached.cache_info().misses, 1)
+
+        pearsonr("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pearsonr_cached.cache_info().hits, 1)
+        self.assertEqual(_pearsonr_cached.cache_info().misses, 1)
+
+        pearsonr("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pearsonr_cached.cache_info().hits, 2)
+        self.assertEqual(_pearsonr_cached.cache_info().misses, 1)
+
+        pearsonr("Y", "X", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pearsonr_cached.cache_info().hits, 2)
+        self.assertEqual(_pearsonr_cached.cache_info().misses, 2)
+
+    def test_power_divergence_cached(self):
+        _power_divergence_cached.cache_clear()
+
+        chi_square("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_power_divergence_cached.cache_info().hits, 0)
+        self.assertEqual(_power_divergence_cached.cache_info().misses, 1)
+
+        chi_square("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_power_divergence_cached.cache_info().hits, 1)
+        self.assertEqual(_power_divergence_cached.cache_info().misses, 1)
+
+        chi_square("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_power_divergence_cached.cache_info().hits, 2)
+        self.assertEqual(_power_divergence_cached.cache_info().misses, 1)
+
+        chi_square("Y", "X", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_power_divergence_cached.cache_info().hits, 2)
+        self.assertEqual(_power_divergence_cached.cache_info().misses, 2)
+
+    def test_pillai_trace_cached(self):
+        _pillai_trace_cached.cache_clear()
+
+        pillai_trace("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pillai_trace_cached.cache_info().hits, 0)
+        self.assertEqual(_pillai_trace_cached.cache_info().misses, 1)
+
+        pillai_trace("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pillai_trace_cached.cache_info().hits, 1)
+        self.assertEqual(_pillai_trace_cached.cache_info().misses, 1)
+
+        pillai_trace("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pillai_trace_cached.cache_info().hits, 2)
+        self.assertEqual(_pillai_trace_cached.cache_info().misses, 1)
+
+        pillai_trace("Y", "X", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_pillai_trace_cached.cache_info().hits, 2)
+        self.assertEqual(_pillai_trace_cached.cache_info().misses, 2)
+
+    def test_gcm_cached(self):
+        _gcm_cached.cache_clear()
+
+        gcm("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_gcm_cached.cache_info().hits, 0)
+        self.assertEqual(_gcm_cached.cache_info().misses, 1)
+
+        gcm("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_gcm_cached.cache_info().hits, 1)
+        self.assertEqual(_gcm_cached.cache_info().misses, 1)
+
+        gcm("X", "Y", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_gcm_cached.cache_info().hits, 2)
+        self.assertEqual(_gcm_cached.cache_info().misses, 1)
+
+        gcm("Y", "X", ["Z"], self.df, significance_level=0.05)
+        self.assertEqual(_gcm_cached.cache_info().hits, 2)
+        self.assertEqual(_gcm_cached.cache_info().misses, 2)

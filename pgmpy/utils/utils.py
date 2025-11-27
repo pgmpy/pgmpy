@@ -623,3 +623,10 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         )
 
     return panel
+
+
+def _df_to_tuple(df):
+    """
+    Converts a pandas DataFrame into a hashable tuple of tuples.
+    """
+    return tuple(map(tuple, df.values))

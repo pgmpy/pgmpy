@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from functools import lru_cache
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -6,9 +7,10 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from pgmpy.global_vars import logger
+from pgmpy.global_vars import config, logger
 from pgmpy.independencies import IndependenceAssertion
 from pgmpy.utils import get_dataset_type
+from pgmpy.utils.utils import _df_to_tuple
 
 
 class CITestRegistry:
@@ -177,12 +179,28 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
     else:
-        Z = list(Z)
+        Z = tuple(Z)
 
     if not isinstance(data, pd.DataFrame):
         raise ValueError(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
+
+    all_vars = [X, Y] + list(Z)
+    data_tuple = _df_to_tuple(data[all_vars])
+
+    return _pearsonr_cached(
+        X, Y, Z, data_tuple, tuple(all_vars), boolean=boolean, **kwargs
+    )
+
+
+@lru_cache(maxsize=config.MAX_CACHE_SIZE)
+def _pearsonr_cached(X, Y, Z, data_tuple, columns, boolean=True, **kwargs):
+    data = pd.DataFrame.from_records(data_tuple, columns=columns)
+    for col in data.columns:
+        if data[col].dtype == "object":
+            data[col] = data[col].astype("category")
+    Z = list(Z)
 
     # Step 2: If Z is empty compute a non-conditional test.
     if len(Z) == 0:
@@ -284,7 +302,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     """
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
-        Z = list(Z)
+        Z = tuple(Z)
     else:
         raise (f"Z must be an iterable. Got object type: {type(Z)}")
 
@@ -292,6 +310,32 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         raise ValueError(
             f"The variables X or Y can't be in Z. Found {X if X in Z else Y} in Z."
         )
+
+    all_vars = [X, Y] + list(Z)
+    data_tuple = _df_to_tuple(data[all_vars])
+
+    return _power_divergence_cached(
+        X,
+        Y,
+        Z,
+        data_tuple,
+        tuple(all_vars),
+        boolean=boolean,
+        lambda_=lambda_,
+        **kwargs,
+    )
+
+
+@lru_cache(maxsize=config.MAX_CACHE_SIZE)
+def _power_divergence_cached(
+    X, Y, Z, data_tuple, columns, boolean=True, lambda_="cressie-read", **kwargs
+):
+    data = pd.DataFrame.from_records(data_tuple, columns=columns)
+    for col in data.columns:
+        if data[col].dtype == "object":
+            data[col] = data[col].astype("category")
+
+    Z = list(Z)
 
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
@@ -703,13 +747,29 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
     else:
-        Z = list(Z)
+        Z = tuple(Z)
 
     if not isinstance(data, pd.DataFrame):
         raise ValueError(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
+    all_vars = [X, Y] + list(Z)
+    data_tuple = _df_to_tuple(data[all_vars])
+
+    return _pillai_trace_cached(
+        X, Y, Z, data_tuple, tuple(all_vars), boolean=boolean, **kwargs
+    )
+
+
+@lru_cache(maxsize=config.MAX_CACHE_SIZE)
+def _pillai_trace_cached(X, Y, Z, data_tuple, columns, boolean=True, **kwargs):
+    data = pd.DataFrame.from_records(data_tuple, columns=columns)
+    for col in data.columns:
+        if data[col].dtype == "object":
+            data[col] = data[col].astype("category")
+
+    Z = list(Z)
     # Step 1.1: If no conditional variables are specified, use a constant value.
     if len(Z) == 0:
         Z = ["cont_Z"]
@@ -807,12 +867,26 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
     else:
-        Z = list(Z)
+        Z = tuple(Z)
 
     if not isinstance(data, pd.DataFrame):
         raise ValueError(
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
+
+    all_vars = [X, Y] + list(Z)
+    data_tuple = _df_to_tuple(data[all_vars])
+
+    return _gcm_cached(X, Y, Z, data_tuple, tuple(all_vars), boolean=boolean, **kwargs)
+
+
+@lru_cache(maxsize=config.MAX_CACHE_SIZE)
+def _gcm_cached(X, Y, Z, data_tuple, columns, boolean=True, **kwargs):
+    data = pd.DataFrame.from_records(data_tuple, columns=columns)
+    for col in data.columns:
+        if data[col].dtype == "object":
+            data[col] = data[col].astype("category")
+    Z = list(Z)
 
     # Step 1.1: Add another column with constant values to handle intercepts.
     Z_aug = Z + ["intercept"]
