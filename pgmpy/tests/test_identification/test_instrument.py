@@ -102,3 +102,20 @@ def test_get_ivs_with_scaling_indicators():
     assert ok is True
     expected_iv = {"I"}
     assert set(graph_with_iv.get_role("instrument")) == expected_iv
+
+
+def test_no_ivs_found():
+    iv_model = DAG(
+        [("X", "Y"), ("U", "X"), ("U", "Y")],
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+            "latents": "U",
+        },
+    )
+    iv = InstrumentVariables(variant=None)
+    retruned_graph, ok = iv._identify(iv_model)
+    assert ok is False
+    expected_iv = set()
+    assert set(retruned_graph.get_role("instrument")) == expected_iv
+    assert not retruned_graph.has_role("instrument")

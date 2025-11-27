@@ -107,7 +107,7 @@ class InstrumentVariables(BaseIdentification):
             d_connected_x - d_connected_y - {dependent_var, explanatory_var}
         )
 
-        if identified_instruments is None:
+        if bool(identified_instruments) is False:
             return causal_graph, False
         else:
             return (
