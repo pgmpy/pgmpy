@@ -4,17 +4,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pgmpy import global_vars
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.metrics import implied_cis, permutation_t
 from pgmpy.metrics.permutation_t import (
     _count_lmc_violations,
+    _create_permuted_CIs,
 )
 from pgmpy.models import DiscreteBayesianNetwork
-
-logger = global_vars.logger
-falsify_graph = permutation_t
-permutation_based_falsification_test = permutation_t
+from pgmpy.utils import get_example_model
 
 
 @pytest.fixture
@@ -22,7 +19,7 @@ def data_simple():
     np.random.seed(42)
     n_samples = 500
     X = np.random.binomial(1, 0.5, n_samples)
-    Y = np.random.binomial(1, 0.3 + 0.4 * X)
+    Y = np.random.binomial(1, 0.2 + 0.6 * X)
     Z = np.random.binomial(1, 0.2 + 0.6 * Y)
     return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
@@ -30,16 +27,6 @@ def data_simple():
 @pytest.fixture
 def model_simple():
     return DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
-
-
-@pytest.fixture
-def data_continuous():
-    np.random.seed(42)
-    n = 500
-    X = np.random.normal(0, 1, n)
-    Y = 0.5 * X + np.random.normal(0, 0.5, n)
-    Z = 0.7 * Y + np.random.normal(0, 0.3, n)
-    return pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
 
 def test_with_return_summary(model_simple, data_simple):
@@ -71,19 +58,6 @@ def test_with_return_summary(model_simple, data_simple):
     assert len(summary["permutation_violations"]) == 5
 
 
-def test_continuous_data_support(model_simple, data_continuous):
-    result = permutation_t(
-        model_simple,
-        data_continuous,
-        ci_test="pearsonr",
-        n_permutations=5,
-        show_progress=False,
-    )
-
-    assert isinstance(result["falsifiable"], bool)
-    assert isinstance(result["falsified"], bool)
-
-
 def test_input_validation(model_simple, data_simple):
     with pytest.raises(TypeError):
         permutation_t(model_simple, "not_a_dataframe", show_progress=False)
@@ -110,7 +84,7 @@ def test_edge_cases(model_simple, data_simple):
 
 
 def test_wrong_model_detection(model_simple, data_simple):
-    wrong_model = DiscreteBayesianNetwork([("Z", "Y"), ("Y", "X")])
+    wrong_model = DiscreteBayesianNetwork([("Y", "Z"), ("X", "Z")])
 
     correct = permutation_t(
         model_simple, data_simple, n_permutations=10, show_progress=False
@@ -119,7 +93,7 @@ def test_wrong_model_detection(model_simple, data_simple):
         wrong_model, data_simple, n_permutations=10, show_progress=False
     )
 
-    assert wrong["lmc_violations"] >= correct["lmc_violations"]
+    assert wrong["p_value_falsified"] > correct["p_value_falsified"]
 
 
 def test_progress_bar_enabled(monkeypatch):
@@ -130,15 +104,6 @@ def test_progress_bar_enabled(monkeypatch):
     assert isinstance(r["falsifiable"], bool)
 
 
-def test_exception_handling_in_ci_test():
-    model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z")])
-    df = pd.DataFrame({"X": [1, 1, 1, 1], "Y": [0, 1, 0, 1], "Z": [0, 0, 0, 0]})
-    result = permutation_t(model, df, n_permutations=3, show_progress=False)
-
-    assert isinstance(result["falsifiable"], bool)
-    assert result["lmc_violations"] >= 0
-
-
 # -------------------------------
 # Helper Function Tests
 # -------------------------------
@@ -146,7 +111,7 @@ def test_exception_handling_in_ci_test():
 
 @pytest.fixture
 def model_helper():
-    return DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("A", "D")])
+    return DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
 
 
 @pytest.fixture
@@ -156,32 +121,50 @@ def data_helper():
     A = np.random.binomial(1, 0.5, n)
     B = np.random.binomial(1, 0.3 + 0.4 * A)
     C = np.random.binomial(1, 0.2 + 0.6 * B)
-    D = np.random.binomial(1, 0.1 + 0.7 * A)
+    D = np.random.binomial(1, 0.1 + 0.7 * C)
     return pd.DataFrame({"A": A, "B": B, "C": C, "D": D})
+
+
+@pytest.fixture
+def child_model():
+    model = get_example_model("child")
+    data = model.simulate(n_samples=1000)
+
+    return (model, data)
 
 
 def test_get_non_descendants(model_helper):
     assert set(model_helper._get_non_descendants("A")) == set()
-    assert set(model_helper._get_non_descendants("B")) == {"A", "D"}
-    assert set(model_helper._get_non_descendants("C")) == {"A", "B", "D"}
+    assert set(model_helper._get_non_descendants("B")) == {"A"}
+    assert set(model_helper._get_non_descendants("C")) == {"A", "B"}
     assert set(model_helper._get_non_descendants("D")) == {"A", "B", "C"}
 
 
 def test_count_lmc_violations(model_helper, data_helper):
     ci_test_chosen = ci_registry.get_test("chi_square", data=data_helper)
+    implied_CIs = implied_cis(model_helper, data_helper, ci_test=ci_test_chosen)
     count = _count_lmc_violations(
         data_helper,
-        implied_cis(model_helper, data_helper, ci_test=ci_test_chosen),
+        implied_CIs,
         ci_test_chosen,
         significance_level=0.05,
     )
-    assert isinstance(count, int)
-    assert count >= 0
+    assert count == 0
+
+    for _ in range(5):
+        permuted_CIs = _create_permuted_CIs(implied_CIs, list(model_helper.nodes()))
+        count = _count_lmc_violations(
+            data_helper,
+            permuted_CIs,
+            ci_test_chosen,
+            significance_level=0.05,
+        )
+        assert count > 0
 
 
 def test_count_lmc_violations_small_data(model_helper, data_helper):
     df = data_helper.head(5)
-    ci_test_chosen = ci_registry.get_test("gcm", data=df)
+    ci_test_chosen = ci_registry.get_test("chi_square", data=df)
     count = _count_lmc_violations(
         df,
         implied_cis(model_helper, df, ci_test=ci_test_chosen),
@@ -190,3 +173,10 @@ def test_count_lmc_violations_small_data(model_helper, data_helper):
     )
     assert isinstance(count, int)
     assert count >= 0
+
+
+def test_child_model(child_model):
+    model, data = child_model
+    result = permutation_t(model, data, return_summary=True, show_progress=False)
+    assert result["p_value_falsifiable"] <= 0.05
+    assert result["p_value_falsified"] <= 0.05

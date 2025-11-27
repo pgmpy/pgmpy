@@ -3,22 +3,22 @@ from typing import Callable
 
 import numpy as np
 import pandas as pd
+import statsmodels.stats.proportion as proportion
 from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 from pgmpy.metrics import implied_cis
-from pgmpy.models import (
-    DiscreteBayesianNetwork,
-    DynamicBayesianNetwork,
-    FunctionalBayesianNetwork,
-    LinearGaussianBayesianNetwork,
-)
+from pgmpy.models import DynamicBayesianNetwork
 
 
-def _count_lmc_violations(data, implied_CIs, ci_test_func, significance_level=0.05):
+def _count_lmc_violations(
+    data: pd.DataFrame,
+    implied_CIs: pd.DataFrame,
+    ci_test_func: Callable,
+    significance_level: float = 0.05,
+):
     """
     Count violations of Local Markov Conditions in the given model.
 
@@ -39,7 +39,7 @@ def _count_lmc_violations(data, implied_CIs, ci_test_func, significance_level=0.
     return ci_violations
 
 
-def _create_permuted_CIs(valid_CIs, perm_mapping):
+def _create_permuted_CIs(valid_CIs: pd.DataFrame, nodes: list):
     """
     Create a new dataframe with new implied Conditional Independence statements.
 
@@ -47,7 +47,7 @@ def _create_permuted_CIs(valid_CIs, perm_mapping):
     ----------
     valid_CIs : pd.DataFrame
         Conditional Independence statments from original graph
-    perm_mapping : dict
+    nodes : list
         Mapping from original node names to permuted names
 
     Returns
@@ -62,6 +62,9 @@ def _create_permuted_CIs(valid_CIs, perm_mapping):
         else:
             return perm_mapping[node]
 
+    perm = np.random.permutation(nodes)
+    perm_mapping = dict(zip(nodes, perm))
+
     new_CIs = valid_CIs.copy()
     new_CIs["u"] = valid_CIs["u"].apply(lambda x: apply_mapping(x))
     new_CIs["v"] = valid_CIs["v"].apply(lambda x: apply_mapping(x))
@@ -70,8 +73,8 @@ def _create_permuted_CIs(valid_CIs, perm_mapping):
     return new_CIs
 
 
-def d_separated_triples(
-    data, implied_CIs, ci_test_func: Callable, significance_level=0.05
+def _d_separated_triples(
+    implied_CIs: pd.DataFrame,
 ):
     # CIs_dif = implied_cis(model, data, ci_test_func)
     # valid_CIs = CIs_dif[CIs_dif["p-value"] > significance_level]
@@ -83,10 +86,10 @@ def d_separated_triples(
 
 
 def permutation_t(
-    dag,
-    data,
+    dag: DAG,
+    data: pd.DataFrame,
     significance_level: float = 0.05,
-    n_permutations: int = None,
+    n_permutations: int = 100,
     ci_test: str = "chi_square",
     return_summary: bool = True,
     show_progress: bool = True,
@@ -182,7 +185,7 @@ def permutation_t(
     Examples
     --------
     >>> from pgmpy.models import DiscreteDiscreteBayesianNetwork
-    >>> from pgmpy.metrics import permutation_based_falsification_test
+    >>> from pgmpy.metrics import permutation_t
     >>> from pgmpy.utils import get_example_model
 
     >>> # Test with a known model
@@ -203,25 +206,15 @@ def permutation_t(
     if not isinstance(data, pd.DataFrame):
         raise TypeError(f"Data should be a pandas DataFrame. Got: {type(data)}")
 
-    if isinstance(
-        dag,
-        (
-            DAG,
-            DiscreteBayesianNetwork,
-            DynamicBayesianNetwork,
-            FunctionalBayesianNetwork,
-            LinearGaussianBayesianNetwork,
-        ),
-    ):
-        if len(dag.latents) > 0:
-            raise ValueError(
-                f"Found latent variables: {dag.latents}. "
-                "permutation_t does not support latent variables."
+    if not isinstance(dag, DAG):
+        if isinstance(dag, DynamicBayesianNetwork):
+            raise TypeError(
+                "DAG cannot be an instance of pgmpy.models.DynamicBayesianNetwork."
             )
-    else:
-        raise TypeError(
-            f"DAG should be a pgmpy.base.DAG or Bayesian Network from pgmpy.models. Got: {type(dag)}"
-        )
+        else:
+            raise TypeError(
+                f"DAG should be a pgmpy.base.DAG or Bayesian Network from pgmpy.models. Got: {type(dag)}"
+            )
 
     model_nodes = set(dag.nodes())
     data_columns = set(data.columns)
@@ -230,16 +223,8 @@ def permutation_t(
         missing_vars = model_nodes - data_columns
         raise ValueError(f"Data missing variables present in model: {missing_vars}")
 
-    # Set default number of permutations
-    if n_permutations is None:
-        n_permutations = max(20, int(1 / significance_level))
-
     # Initialize CI test function
     ci_test_func = ci_registry.get_test(ci_test, data=data)
-
-    logger.info(
-        f"Starting permutation-based falsification test with {n_permutations} permutations"
-    )
 
     # Step 1: Perform calculations for original DAG and generate permutations
     nodes = list(dag.nodes())
@@ -249,9 +234,7 @@ def permutation_t(
     orginal_CIs = implied_cis(dag, data, ci_test_func)
     valid_CIs = orginal_CIs[orginal_CIs["p-value"] > significance_level]
 
-    original_dsep_triples = d_separated_triples(
-        data, valid_CIs, ci_test_func, significance_level
-    )
+    original_dsep_triples = _d_separated_triples(valid_CIs)
 
     # Step 2: Count Local Markov Condition violations in the given graph
     lmc_violations_given = _count_lmc_violations(
@@ -266,11 +249,9 @@ def permutation_t(
 
     for _ in pbar:
         # Generate random permutation
-        perm = np.random.permutation(nodes)
-        perm_mapping = dict(zip(nodes, perm))
 
         # Create permuted CIs
-        permuted_CIs = _create_permuted_CIs(valid_CIs, perm_mapping)
+        permuted_CIs = _create_permuted_CIs(valid_CIs, nodes)
 
         lmc_violations_perm = _count_lmc_violations(
             data, permuted_CIs, ci_test_func, significance_level
@@ -278,9 +259,7 @@ def permutation_t(
         permutation_violations.append(lmc_violations_perm)
 
         # Check if in same Markov equivalence class (d separations identical = same structure)
-        permuted_dsep_triples = d_separated_triples(
-            data, permuted_CIs, ci_test_func, significance_level
-        )
+        permuted_dsep_triples = _d_separated_triples(permuted_CIs)
 
         if original_dsep_triples == permuted_dsep_triples:
             same_mec_count += 1
@@ -309,6 +288,17 @@ def permutation_t(
         "same_mec_count": same_mec_count,
     }
 
+    count = int(p_value_falsified * n_permutations)
+
+    ci_lower, ci_upper = proportion.proportion_confint(
+        count,
+        n_permutations,
+        alpha=significance_level,
+        method="wilson",
+    )
+
+    print(f"95% CI: [{ci_lower:.4f}, {ci_upper:.4f}]")
+
     if return_summary:
         result["summary"] = {
             "permutation_violations": permutation_violations,
@@ -319,7 +309,5 @@ def permutation_t(
             "min_permutation_violations": np.min(permutation_violations),
             "max_permutation_violations": np.max(permutation_violations),
         }
-
-    logger.info(f"Test completed. Falsifiable: {falsifiable}, Falsified: {falsified}")
 
     return result
