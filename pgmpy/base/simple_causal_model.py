@@ -107,12 +107,12 @@ class SimpleCausalModel(DAG):
         edges += [(exp, med) for exp in exposures for med in mediators]
         edges += [(med, out) for med in mediators for out in outcomes]
 
-        super().__init__(edges, latents=latents)
+        super().__init__(edges)
 
-        # Add latent nodes if not already present
-        for latent in latents:
-            if latent not in self.nodes:
-                self.add_node(latent)
+        # Add latent nodes and set the latents attribute
+        if latents:
+            self.add_nodes_from(latents)
+            self.latents = set(latents)
 
         self.variable_roles = {
             "exposure": set(exposures),
@@ -121,3 +121,19 @@ class SimpleCausalModel(DAG):
             "mediator": set(mediators),
             "instrument": set(instruments),
         }
+
+    def get_role(self, role):
+        """
+        Returns the set of variables for a given role.
+
+        Parameters
+        ----------
+        role: str
+            The role to query (e.g., "exposure", "outcome", "covariate", "mediator", "instrument").
+
+        Returns
+        -------
+        set
+            A set of variable names associated with the role.
+        """
+        return self.variable_roles.get(role, set())
