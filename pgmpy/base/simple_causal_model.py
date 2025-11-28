@@ -51,7 +51,7 @@ class SimpleCausalModel(DAG):
     ...     exposures="X", outcomes="Y", covariates="Z", mediators="M", instruments="I"
     ... )
     >>> model.edges()
-    OutEdgeView([('X', 'Y'), ('Z', 'X'), ('Z', 'Y'), ('I', 'X'), ('X', 'M'), ('M', 'Y')
+    OutEdgeView([('X', 'Y'), ('Z', 'X'), ('Z', 'Y'), ('I', 'X'), ('X', 'M'), ('M', 'Y')])
         If any of the `exposures`, `outcomes`, `covariates`, `mediators`, or `instruments` arguments are
         provided as integers, they will be automatically converted to variable names in the format "Var_<int>".
     >>> model2 = SimpleCausalModel(
@@ -106,12 +106,12 @@ class SimpleCausalModel(DAG):
         edges += [(exp, med) for exp in exposures for med in mediators]
         edges += [(med, out) for med in mediators for out in outcomes]
 
-        variable_roles = {
+        super().__init__(edges, latents=latents)
+
+        self.variable_roles = {
             "exposure": set(exposures),
             "outcome": set(outcomes),
             "covariate": set(covariates),
             "mediator": set(mediators),
             "instrument": set(instruments),
         }
-
-        super().__init__(edges, latents=latents, variable_roles=variable_roles)
