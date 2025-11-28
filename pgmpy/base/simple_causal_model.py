@@ -109,10 +109,11 @@ class SimpleCausalModel(DAG):
 
         super().__init__(edges)
 
-        # Always set self.latents as a set, and add latent nodes if any
-        self.latents = set(latents)
-        if latents:
-            self.add_nodes_from(latents)
+        # Add latent nodes to the graph and set the latents attribute.
+        latents_set = set(latents) if latents else set()
+        if latents_set:
+            self.add_nodes_from(latents_set)
+        self.latents = latents_set
 
         self.variable_roles = {
             "exposure": set(exposures),
