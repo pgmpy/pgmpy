@@ -114,4 +114,4 @@ class SimpleCausalModel(DAG):
             "instrument": set(instruments),
         }
 
-        super().__init__(edges=edges, latents=latents, variable_roles=variable_roles)
+        super().__init__(edges, latents=latents, variable_roles=variable_roles)
