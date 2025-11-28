@@ -67,12 +67,12 @@ class SimpleCausalModel(DAG):
 
     @staticmethod
     def _to_list(var):
-        if isinstance(var, str):
+        if var is None:
+            return []
+        elif isinstance(var, str):
             return [var]
         elif isinstance(var, int):
             return [f"Var_{var}"]
-        elif var is None:
-            return []
         return list(var)
 
     def __init__(
@@ -89,6 +89,7 @@ class SimpleCausalModel(DAG):
         covariates = self._to_list(covariates)
         mediators = self._to_list(mediators)
         instruments = self._to_list(instruments)
+        latents = list(latents) if latents is not None else []
 
         edges = []
 
@@ -107,6 +108,11 @@ class SimpleCausalModel(DAG):
         edges += [(med, out) for med in mediators for out in outcomes]
 
         super().__init__(edges, latents=latents)
+
+        # Add latent nodes if not already present
+        for latent in latents:
+            if latent not in self.nodes:
+                self.add_node(latent)
 
         self.variable_roles = {
             "exposure": set(exposures),
