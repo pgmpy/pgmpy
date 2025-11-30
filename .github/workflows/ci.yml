@@ -70,6 +70,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get latest commit SHA from dev branch
+        id: get-parent-sha
+        run: |
+          git fetch origin dev
+          DEV_SHA=$(git rev-parse origin/dev)
+          echo "parent_sha=$DEV_SHA" >> "$GITHUB_OUTPUT"
+
       - name: Setup Python ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -109,6 +116,7 @@ jobs:
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_PARENT: ${{ steps.get-parent-sha.outputs.parent_sha }}
 
       - name: Upload test results
         uses: codecov/test-results-action@v1
