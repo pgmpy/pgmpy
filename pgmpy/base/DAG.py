@@ -165,8 +165,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             roles = {}
         elif not isinstance(roles, dict):
             raise TypeError("Roles must be provided as a dictionary.")
-        else:
-            self.latents = self.latents.union(roles.get("latents", set()))
 
         # set the roles to the vertices as networkx attributes
         for role, vars in roles.items():
@@ -273,19 +271,20 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
 
         ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
-        latents = roles["latents"]
         if len(coefs) == 0:
             if cls.__name__ == "DAG":
-                dag = cls(ebunch=ebunch, roles=roles, latents=latents)
+                dag = cls(ebunch=ebunch, roles=roles)
             else:
-                dag = cls(ebunch=ebunch, latents=latents)
+                dag = cls(ebunch=ebunch, latents=roles["latents"])
             dag.add_nodes_from(nodes)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn = LinearGaussianBayesianNetwork(
+                ebunch=ebunch, latents=roles["latents"]
+            )
             lgbn.add_nodes_from(nodes)
 
             std = 1
