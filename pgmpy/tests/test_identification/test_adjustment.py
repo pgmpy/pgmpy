@@ -10,7 +10,7 @@ def dag_multiple_exposure_outcome():
     # Ancestral Graphs" (UAI 2014).
     return DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
-        roles={"exposure": {"x1", "x2"}, "outcome": {"y1", "y2"}},
+        roles={"exposures": {"x1", "x2"}, "outcomes": {"y1", "y2"}},
     )
 
 
@@ -18,7 +18,7 @@ def dag_multiple_exposure_outcome():
 def dag_single_exposure_outcome():
     return DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
-        roles={"exposure": "x1", "outcome": "y1"},
+        roles={"exposures": "x1", "outcomes": "y1"},
     )
 
 
@@ -55,8 +55,8 @@ def test_is_valid_adjustment_set():
     dag = DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
         roles={
-            "exposure": {"x1", "x2"},
-            "outcome": {"y1", "y2"},
+            "exposures": {"x1", "x2"},
+            "outcomes": {"y1", "y2"},
             "adjustment": {"z1", "z2"},
         },
     )
@@ -64,19 +64,27 @@ def test_is_valid_adjustment_set():
 
     dag = DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
-        roles={"exposure": "x1", "outcome": "y1", "adjustment": {"z1", "z2"}},
+        roles={"exposures": "x1", "outcomes": "y1", "adjustment": {"z1", "z2"}},
     )
     assert Adjustment(variant="minimal").validate(dag)
 
     dag = DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
-        roles={"exposure": {"x1", "x2"}, "outcome": {"y1", "y2"}, "adjustment": {"z1"}},
+        roles={
+            "exposures": {"x1", "x2"},
+            "outcomes": {"y1", "y2"},
+            "adjustment": {"z1"},
+        },
     )
     assert not Adjustment(variant="minimal").validate(dag)
 
     dag = DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
-        roles={"exposure": {"x1", "x2"}, "outcome": {"y1", "y2"}, "adjustment": {"z2"}},
+        roles={
+            "exposures": {"x1", "x2"},
+            "outcomes": {"y1", "y2"},
+            "adjustment": {"z2"},
+        },
     )
     assert Adjustment(variant="minimal").validate(dag)
 
@@ -84,7 +92,7 @@ def test_is_valid_adjustment_set():
 def test_get_minimal_adjustment_set():
     # Without latent variables
     dag1 = DAG(
-        [("X", "Y"), ("Z", "X"), ("Z", "Y")], roles={"exposure": "X", "outcome": "Y"}
+        [("X", "Y"), ("Z", "X"), ("Z", "Y")], roles={"exposures": "X", "outcomes": "Y"}
     )
     dag1_iden, success = Adjustment(variant="minimal").identify(dag1)
     assert success
@@ -93,7 +101,7 @@ def test_get_minimal_adjustment_set():
     # M graph
     dag2 = DAG(
         [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")],
-        roles={"exposure": "X", "outcome": "Y"},
+        roles={"exposures": "X", "outcomes": "Y"},
     )
     dag2_iden, success = Adjustment(variant="minimal").identify(dag2)
     assert success
@@ -103,7 +111,7 @@ def test_get_minimal_adjustment_set():
     dag_lat1 = DAG(
         [("X", "Y"), ("Z", "X"), ("Z", "Y")],
         latents={"Z"},
-        roles={"exposure": "X", "outcome": "Y"},
+        roles={"exposures": "X", "outcomes": "Y"},
     )
     dag_lat1_iden, success = Adjustment(variant="minimal").identify(dag_lat1)
     assert not success
@@ -121,7 +129,7 @@ def test_get_minimal_adjustment_set():
             ("Z3", "Z2"),
         ],
         latents={"U"},
-        roles={"exposure": "X", "outcome": "Y"},
+        roles={"exposures": "X", "outcomes": "Y"},
     )
     dag_lat2_iden, success = Adjustment(variant="minimal").identify(dag_lat2)
     assert success
@@ -137,11 +145,11 @@ class TestBackdoorPaths:
     def test_game1_bn(self):
         game1 = DAG(
             [("X", "A"), ("A", "Y"), ("A", "B")],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
         game1_adj, success = Adjustment(variant="minimal").identify(game1)
         assert success
-        assert game1_adj.get_role_dict() == {"exposure": ["X"], "outcome": ["Y"]}
+        assert game1_adj.get_role_dict() == {"exposures": ["X"], "outcomes": ["Y"]}
 
     def test_game2_bn(self):
         game2 = DAG(
@@ -154,7 +162,7 @@ class TestBackdoorPaths:
                 ("D", "B"),
                 ("D", "E"),
             ],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
 
         success = Adjustment(variant="all").validate(game2)
@@ -162,34 +170,34 @@ class TestBackdoorPaths:
 
         game2_adjs, success = Adjustment(variant="minimal").identify(game2)
         assert success
-        assert game2_adjs.get_role_dict() == {"exposure": ["X"], "outcome": ["Y"]}
+        assert game2_adjs.get_role_dict() == {"exposures": ["X"], "outcomes": ["Y"]}
 
     def test_game3_bn(self):
         game3 = DAG(
             [("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
         game3_adj, success = Adjustment(variant="minimal").identify(game3)
         assert success
         assert game3_adj.get_role_dict() == {
-            "exposure": ["X"],
-            "outcome": ["Y"],
+            "exposures": ["X"],
+            "outcomes": ["Y"],
             "adjustment": ["B"],
         }
 
     def test_game4_bn(self):
         game4 = DAG(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y")],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
         game4_adj, success = Adjustment(variant="minimal").identify(game4)
         assert success
-        assert game4_adj.get_role_dict() == {"exposure": ["X"], "outcome": ["Y"]}
+        assert game4_adj.get_role_dict() == {"exposures": ["X"], "outcomes": ["Y"]}
 
     def test_game5_bn(self):
         game5 = DAG(
             [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
         game5_adj, success = Adjustment(variant="minimal").identify(game5)
         assert success
@@ -224,7 +232,7 @@ class TestBackdoorPaths:
                 ("E", "Y"),
                 ("F", "Y"),
             ],
-            roles={"exposure": "X", "outcome": "Y"},
+            roles={"exposures": "X", "outcomes": "Y"},
         )
         game6_adj, success = Adjustment(variant="minimal").identify(game6)
         assert success
