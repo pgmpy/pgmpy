@@ -115,9 +115,10 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
+        with:
+          commit_parent: ${{ steps.get-parent-sha.outputs.parent_sha }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          CODECOV_PARENT: ${{ steps.get-parent-sha.outputs.parent_sha }}
 
       - name: Upload test results
         uses: codecov/test-results-action@v1
