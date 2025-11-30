@@ -72,6 +72,7 @@ jobs:
 
       - name: Get latest commit SHA from dev branch
         id: get-parent-sha
+        shell: bash
         run: |
           git fetch origin dev
           DEV_SHA=$(git rev-parse origin/dev)
