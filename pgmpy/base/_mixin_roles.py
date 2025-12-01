@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pgmpy.global_vars import logger
 
 __all__ = ["_GraphRolesMixin"]
 
@@ -96,12 +97,22 @@ class _GraphRolesMixin:
                 if var not in new_graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
+                    existing_role = new_graph.nodes(data=True)[var].get("role", None)
+                    if existing_role is not None:
+                        logger.warning(
+                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
+                        )
                     new_graph.add_node(var, role=role)
         else:
             for var in variables:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
+                    existing_role = new_graph.nodes(data=True)[var].get("role", None)
+                    if existing_role is not None:
+                        logger.warning(
+                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
+                        )
                     new_graph.add_node(var, role=role)
         return new_graph
 
