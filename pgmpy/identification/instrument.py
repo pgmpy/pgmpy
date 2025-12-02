@@ -13,8 +13,11 @@ class InstrumentVariables(BaseIdentification):
     def _get_scaling_indicators(self, causal_graph):
         latent_variables = causal_graph.get_role("latents")
         observed_nodes = list(set(causal_graph.nodes) - set(latent_variables))
-
         scaling_indicators = {}
+
+        if self.scaling_indicators is not None:
+            return self.scaling_indicators
+
         for node in latent_variables:
             for neighbour in causal_graph.neighbors(node):
                 if neighbour in observed_nodes:
@@ -30,10 +33,7 @@ class InstrumentVariables(BaseIdentification):
         latent_variables = full_graph_.get_role("latents")
         all_nodes = set(causal_graph.nodes)
         observed = list(all_nodes - set(latent_variables))
-        if self.scaling_indicators is None:
-            scaling_indicators = self._get_scaling_indicators(causal_graph)
-        else:
-            scaling_indicators = self.scaling_indicators
+        scaling_indicators = self._get_scaling_indicators(causal_graph)
 
         if not full_graph_.has_edge(X, Y):
             raise ValueError(f"The edge from {X} -> {Y} does not exist in the graph")
@@ -67,11 +67,7 @@ class InstrumentVariables(BaseIdentification):
         outcome = causal_graph.get_role("outcomes")[0]
 
         latent_variables = causal_graph.get_role("latents")
-
-        if self.scaling_indicators is None:
-            scaling_indicators = self._get_scaling_indicators(causal_graph)
-        else:
-            scaling_indicators = self.scaling_indicators
+        scaling_indicators = self._get_scaling_indicators(causal_graph)
 
         if (exposure in scaling_indicators.keys()) and (
             scaling_indicators[exposure] == outcome
@@ -81,7 +77,7 @@ class InstrumentVariables(BaseIdentification):
             )
 
         transformed_graph, dependent_var = self._iv_transformations(
-            exposure, outcome, causal_graph, scaling_indicators=scaling_indicators
+            exposure, outcome, causal_graph, scaling_indicators
         )
 
         if exposure in latent_variables:
