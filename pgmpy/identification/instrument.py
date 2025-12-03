@@ -6,7 +6,7 @@ from pgmpy.identification import BaseIdentification
 from pgmpy.inference.CausalInference import CausalInference
 
 
-class InstrumentVariables(BaseIdentification):
+class InstrumentalVariables(BaseIdentification):
 
     def __init__(self, variant=None, scaling_indicators=None):
         self.supported_graph_types = DAG

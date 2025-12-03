@@ -1,5 +1,5 @@
 from pgmpy.base import DAG
-from pgmpy.identification import InstrumentVariables
+from pgmpy.identification import InstrumentalVariables
 
 
 def test_get_scaling_indicators():
@@ -20,7 +20,7 @@ def test_get_scaling_indicators():
             "latents": ("xi1", "eta1"),
         },
     )
-    iv = InstrumentVariables(variant=None)
+    iv = InstrumentalVariables(variant=None)
 
     scaling_indicators = iv._get_scaling_indicators(model)
 
@@ -46,7 +46,7 @@ def test_iv_transformations():
             "latents": ("xi1", "eta1"),
         },
     )
-    iv = InstrumentVariables(variant=None)
+    iv = InstrumentalVariables(variant=None)
 
     scaling_indicators = iv._get_scaling_indicators(model)
 
@@ -79,7 +79,7 @@ def test_get_ivs_without_scaling_indicators():
             "latents": "U",
         },
     )
-    iv = InstrumentVariables(
+    iv = InstrumentalVariables(
         variant=None,
     )
     graph_with_iv, ok = iv._identify(iv_model)
@@ -97,7 +97,7 @@ def test_get_ivs_with_scaling_indicators():
             "latents": "U",
         },
     )
-    iv = InstrumentVariables(variant=None, scaling_indicators={"U": "X"})
+    iv = InstrumentalVariables(variant=None, scaling_indicators={"U": "X"})
     graph_with_iv, ok = iv._identify(iv_model)
     assert ok is True
     expected_iv = {"I"}
@@ -113,7 +113,7 @@ def test_no_ivs_found():
             "latents": "U",
         },
     )
-    iv = InstrumentVariables(variant=None)
+    iv = InstrumentalVariables(variant=None)
     retruned_graph, ok = iv._identify(iv_model)
     assert ok is False
     expected_iv = set()
@@ -129,7 +129,7 @@ def test_conditional_ivs():
             "outcomes": "Y",
         },
     )
-    iv = iv = InstrumentVariables(variant="conditional")
+    iv = iv = InstrumentalVariables(variant="conditional")
     retruned_graph, ok = iv._identify(conditional_iv_model)
     assert ok is True
     expected_iv = ("I", "W")
@@ -141,7 +141,7 @@ def test_conditional_ivs_with_latents():
         [("U", "X"), ("U", "Y"), ("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
         roles={"exposures": "X", "outcomes": "Y", "latents": "U"},
     )
-    iv = iv = InstrumentVariables(variant="conditional")
+    iv = iv = InstrumentalVariables(variant="conditional")
     retruned_graph, ok = iv._identify(conditional_iv_model)
     assert ok is True
     expected_iv = ("I", "W")
