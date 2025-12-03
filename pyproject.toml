@@ -116,7 +116,8 @@ norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
 [tool.isort]
-skip = ["pgmpy/identification/__init__.py"]
+skip = ["pgmpy/identification/__init__.py",
+	"pgmpy/factors/discrete/__init__.py"]
 
 [tool.ruff]
 line-length = 120
