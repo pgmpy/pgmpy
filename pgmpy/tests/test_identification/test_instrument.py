@@ -119,3 +119,30 @@ def test_no_ivs_found():
     expected_iv = set()
     assert set(retruned_graph.get_role("instrument")) == expected_iv
     assert not retruned_graph.has_role("instrument")
+
+
+def test_conditional_ivs():
+    conditional_iv_model = DAG(
+        [("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+        },
+    )
+    iv = iv = InstrumentVariables(variant="conditional")
+    retruned_graph, ok = iv._identify(conditional_iv_model)
+    assert ok is True
+    expected_iv = ("I", "W")
+    assert (retruned_graph.get_role("instrument")) == list(expected_iv)
+
+
+def test_conditional_ivs_with_latents():
+    conditional_iv_model = DAG(
+        [("U", "X"), ("U", "Y"), ("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
+        roles={"exposures": "X", "outcomes": "Y", "latents": "U"},
+    )
+    iv = iv = InstrumentVariables(variant="conditional")
+    retruned_graph, ok = iv._identify(conditional_iv_model)
+    assert ok is True
+    expected_iv = ("I", "W")
+    assert (retruned_graph.get_role("instrument")) == list(expected_iv)

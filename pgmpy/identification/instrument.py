@@ -1,6 +1,9 @@
+from networkx.algorithms.dag import descendants
+
 from pgmpy.base import DAG
 from pgmpy.global_vars import logger
 from pgmpy.identification import BaseIdentification
+from pgmpy.inference.CausalInference import CausalInference
 
 
 class InstrumentVariables(BaseIdentification):
@@ -65,6 +68,7 @@ class InstrumentVariables(BaseIdentification):
     def _identify(self, causal_graph):
         exposure = causal_graph.get_role("exposures")[0]
         outcome = causal_graph.get_role("outcomes")[0]
+        observed = set(causal_graph.nodes) - set(causal_graph.get_role("latents"))
 
         latent_variables = causal_graph.get_role("latents")
         scaling_indicators = self._get_scaling_indicators(causal_graph)
@@ -80,35 +84,67 @@ class InstrumentVariables(BaseIdentification):
             exposure, outcome, causal_graph, scaling_indicators
         )
 
-        if exposure in latent_variables:
-            explanatory_var = scaling_indicators[exposure]
+        if self.variant == "conditional":
+            if (exposure, outcome) in transformed_graph.edges:
+                G_c = transformed_graph.remove_edge(exposure, outcome)
+            else:
+                G_c = transformed_graph
+
+            instruments = []
+            for Z in observed - {exposure, outcome}:
+                W = CausalInference(G_c)._nearest_separator(G_c, outcome, Z)
+                if not W:
+                    continue
+                W = {
+                    v for v in W if not str(v).startswith(".")
+                }  # There seems to be a spurious node .X getting added from _nearest_separator
+                # Condition to check if W d-separates Y from Z
+                if (W.intersection(descendants(G_c, outcome))) or (exposure in W):
+                    continue
+
+                # Condition to check if X d-connected to I after conditioning on W.
+                elif exposure in (causal_graph.active_trail_nodes([Z], observed=W))[Z]:
+                    instruments.append(Z)
+                    instruments.extend(list(W))
+                else:
+                    continue
+            if bool(instruments):
+                for i in instruments:
+                    causal_graph.with_role("instrument", i, inplace=True)
+                return causal_graph, True
+            else:
+                return causal_graph, False
+
         else:
-            explanatory_var = exposure
+            if exposure in latent_variables:
+                explanatory_var = scaling_indicators[exposure]
+            else:
+                explanatory_var = exposure
 
-        d_connected_x = transformed_graph.active_trail_nodes([explanatory_var])[
-            explanatory_var
-        ]
+            d_connected_x = transformed_graph.active_trail_nodes([explanatory_var])[
+                explanatory_var
+            ]
 
-        # Compute the d-connected nodes to Y except any variable connected through X.
-        transformed_graph_copy = transformed_graph.copy()
-        transformed_graph_copy.remove_edges_from(
-            list(transformed_graph_copy.in_edges(explanatory_var))
-        )
-        d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[
-            dependent_var
-        ]
-
-        # Remove {X, Y} because they can't be IV for X -> Y
-        identified_instruments = (
-            d_connected_x - d_connected_y - {dependent_var, explanatory_var}
-        )
-
-        if bool(identified_instruments) is False:
-            return causal_graph, False
-        else:
-            return (
-                causal_graph.with_role(
-                    "instrument", identified_instruments, inplace=False
-                ),
-                True,
+            # Compute the d-connected nodes to Y except any variable connected through X.
+            transformed_graph_copy = transformed_graph.copy()
+            transformed_graph_copy.remove_edges_from(
+                list(transformed_graph_copy.in_edges(explanatory_var))
             )
+            d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[
+                dependent_var
+            ]
+
+            # Remove {X, Y} because they can't be IV for X -> Y
+            identified_instruments = (
+                d_connected_x - d_connected_y - {dependent_var, explanatory_var}
+            )
+
+            if bool(identified_instruments) is False:
+                return causal_graph, False
+            else:
+                return (
+                    causal_graph.with_role(
+                        "instrument", identified_instruments, inplace=False
+                    ),
+                    True,
+                )
