@@ -17,44 +17,52 @@ class SimpleCausalModel(DAG):
         - Exposures -> Mediators
         - Mediators -> Outcomes
 
-    Diagram
-    -------
-    If mediators are present:
-        Covariates   Instruments
-           |             |
-           v             v
-        Exposures ---> Mediators
-           |              |
-           v              v
-        Outcomes <--------
+    If you want more control over the model structure, use the DAG class directly.
+
+    Notes
+    -----
+    A standard causal diagram (with mediators):
+
+        I ---> E ---> M ---> O
+               ^             ^
+               |             |
+               X-------------+
+
+    Where:
+        I: Instrument
+        E: Exposure
+        M: Mediator
+        O: Outcome
+        X: Covariate (affects both E and O)
+
 
     If no mediators:
-        Covariates   Instruments
-           |             |
-           v             v
-        Exposures ------> Outcomes
+        I ---> E ---> O
+               ^      ^
+               |      |
+               X------+
 
     Parameters
     ----------
     exposures: str, int, or iterable
-        The exposure variable(s). If an int ``n`` is provided, ``n`` variables
+        The exposure variable(s). If an int 'n' is provided, 'n' variables
         will be generated with role-based prefixes: ``E_0, E_1, ..., E_{n-1}``.
 
     outcomes: str, int, or iterable
-        The outcome variable(s). If an int ``n`` is provided, ``n`` variables
+        The outcome variable(s). If an int 'n' is provided, 'n' variables
         will be generated with role-based prefixes: ``O_0, O_1, ..., O_{n-1}``.
 
     covariates: str, int, iterable, or None (default: None)
-        The covariate (confounder) variable(s). If an int ``n`` is provided,
-        ``n`` variables will be generated with role-based prefixes:
+        The covariate (confounder) variable(s). If an int 'n' is provided,
+        'n' variables will be generated with role-based prefixes:
         ``X_0, X_1, ..., X_{n-1}``.
 
     mediators: str, int, iterable, or None (default: None)
-        The mediator variable(s). If an int ``n`` is provided, ``n`` variables
+        The mediator variable(s). If an int 'n' is provided, 'n' variables
         will be generated with role-based prefixes: ``M_0, M_1, ..., M_{n-1}``.
 
     instruments: str, int, iterable, or None (default: None)
-        The instrumental variable(s). If an int ``n`` is provided, ``n`` variables
+        The instrumental variable(s). If an int 'n' is provided, 'n' variables
         will be generated with role-based prefixes: ``I_0, I_1, ..., I_{n-1}``.
 
     latents: iterable or None (default: None)
@@ -105,14 +113,7 @@ class SimpleCausalModel(DAG):
             }.get(role, "Var_")
             return [f"{prefix}{i}" for i in range(var)]
         elif isinstance(var, Iterable):
-            prefix = {
-                "exposures": "E_",
-                "outcomes": "O_",
-                "covariates": "X_",
-                "mediators": "M_",
-                "instruments": "I_",
-            }.get(role, "Var_")
-            return [f"{prefix}{v}" if isinstance(v, int) else str(v) for v in var]
+            return [str(v) for v in var]
         return list(var)
 
     def __init__(
@@ -157,7 +158,3 @@ class SimpleCausalModel(DAG):
         }
         latents_set = set(latents) if latents else set()
         super().__init__(edges, latents=latents_set, roles=roles)
-
-        if latents_set:
-            self.add_nodes_from(latents_set)
-            self.latents = latents_set

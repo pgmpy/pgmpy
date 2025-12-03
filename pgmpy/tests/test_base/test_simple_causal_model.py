@@ -47,7 +47,12 @@ def test_list_variables():
 
 def test_integer_variables():
     model = SimpleCausalModel(
-        exposures=1, outcomes=2, covariates=3, mediators=4, instruments=5
+        exposures=1,
+        outcomes=2,
+        covariates=3,
+        mediators=4,
+        instruments=5,
+        latents=["L_0", "L_1"],
     )
     expected_nodes = {
         "E_0",
@@ -65,6 +70,8 @@ def test_integer_variables():
         "I_2",
         "I_3",
         "I_4",
+        "L_0",
+        "L_1",
     }
     assert set(model.nodes()) == expected_nodes
     assert ("E_0", "O_0") not in set(model.edges())
@@ -80,6 +87,7 @@ def test_integer_variables():
     assert set(model.get_role("covariates")) == {"X_0", "X_1", "X_2"}
     assert set(model.get_role("mediators")) == {"M_0", "M_1", "M_2", "M_3"}
     assert set(model.get_role("instruments")) == {"I_0", "I_1", "I_2", "I_3", "I_4"}
+    assert set(model.latents) == {"L_0", "L_1"}
 
 
 def test_missing_optional_args():
