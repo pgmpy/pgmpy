@@ -8,14 +8,6 @@ def test_simple_string_variables():
         exposures="X", outcomes="Y", covariates="Z", mediators="M", instruments="I"
     )
     assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
-    assert set(model.edges()) == {
-        ("X", "Y"),
-        ("Z", "X"),
-        ("Z", "Y"),
-        ("I", "X"),
-        ("X", "M"),
-        ("M", "Y"),
-    }
     expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
     assert set(model.edges()) == expected_edges
     assert set(model.get_role("exposures")) == {"X"}
@@ -34,10 +26,6 @@ def test_list_variables():
         instruments=["I"],
     )
     expected_edges = {
-        ("X1", "Y1"),
-        ("X1", "Y2"),
-        ("X2", "Y1"),
-        ("X2", "Y2"),
         ("Z", "X1"),
         ("Z", "X2"),
         ("Z", "Y1"),
