@@ -157,4 +157,8 @@ class SimpleCausalModel(DAG):
             "instruments": set(instruments),
         }
         latents_set = set(latents) if latents else set()
-        super().__init__(edges, latents=latents_set, roles=roles)
+        super().__init__(edges, latents=set(), roles=roles)
+
+        if latents_set:
+            self.add_nodes_from(latents_set)
+            self.latents = latents_set
