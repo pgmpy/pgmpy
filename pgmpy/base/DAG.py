@@ -206,6 +206,32 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
+    def _get_non_descendants(self, node) -> list:
+        """
+        Get all non-descendants of a node in the DAG.
+
+        Non-descendants are all nodes that are not reachable from the given node
+        by following directed edges.
+        """
+        descendants = set()
+
+        # Use BFS to find all descendants
+        queue = list(self.successors(node))
+        visited = set()
+
+        while queue:
+            current = queue.pop(0)
+            if current not in visited:
+                visited.add(current)
+                descendants.add(current)
+                queue.extend(self.successors(current))
+
+        # Non-descendants are all nodes except descendants and the node itself
+        all_nodes = set(self.nodes())
+        non_descendants = all_nodes - descendants - {node}
+
+        return list(non_descendants)
+
     @classmethod
     def from_lavaan(
         cls,
