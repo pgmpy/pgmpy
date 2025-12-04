@@ -20,23 +20,19 @@ def _count_lmc_violations(
     significance_level: float = 0.05,
 ):
     """
-    Count violations of Local Markov Conditions in the given model.
-
-    For each node X with parents Pa(X), tests if X ⊥ NonDesc(X) \\ Pa(X) | Pa(X)
-    where NonDesc(X) are all non-descendants of X.
+    Given `implied_CIs` and `data`, counts the number of CIs that fail when tested on `data`.
     """
-    ci_violations = 0
-
+    n_violations = 0
     for _, row in implied_CIs.iterrows():
-        result = ci_test_func(row["u"], row["v"], row["cond_vars"], data, boolean=False)
-        if len(result) == 2:
-            _, p_value = result
-        else:
-            _, p_value, _ = result
-        if p_value <= significance_level:
-            ci_violations += 1
-
-    return ci_violations
+        n_violations += not ci_test_func(
+            X=row["u"],
+            Y=row["v"],
+            Z=row["cond_vars"],
+            data=data,
+            boolean=True,
+            significance_level=significance_level,
+        )
+    return n_violations
 
 
 def _create_permuted_CIs(valid_CIs: pd.DataFrame, nodes: list):
@@ -47,6 +43,7 @@ def _create_permuted_CIs(valid_CIs: pd.DataFrame, nodes: list):
     ----------
     valid_CIs : pd.DataFrame
         Conditional Independence statments from original graph
+
     nodes : list
         Mapping from original node names to permuted names
 
@@ -97,26 +94,23 @@ def permutation_test(
     """
     Permutation-based test for falsifying causal graphs using observational data.
 
-    For a given DAG, the test checks whether the DAG has fewer Local Markov Condition
-    (LMC) violations than a baseline. The baseline has the same causal structure as the DAG.
-    This baseline is chosen to be the node permutations of the given DAG. Fewer LMC
-    violations mean that the DAG is more consistent/robust than a 'random' guess.
+    For a given DAG, the test checks whether the DAG has fewer Local Markov Condition (LMC) violations than a baseline.
+    The baseline has the same causal structure as the DAG. This baseline is chosen to be the node permutations of the
+    given DAG. Fewer LMC violations mean that the DAG is more consistent/robust than a 'random' guess.
 
     The test performs two evaluations:
-    1. Falsifiability: Whether the DAG is informative enough to be falsifiable. This is
-    judged using the fraction of DAGs in the node perumations that are Markov equivalent to
-    given DAG
-    2. Falsification: Whether the given DAG performs significantly better than the node perumations,
-    in terms of fewer LMC violations.
+    1. Falsifiability: Whether the DAG is informative enough to be falsifiable. This is judged using the fraction of
+    DAGs in the node perumations that are Markov equivalent to given DAG
+    2. Falsification: Whether the given DAG performs significantly better than the node perumations, in terms of fewer
+    LMC violations.
 
     Parameters
     ----------
-    model : pgmpy.base.DAG or any BayesianNetwork from pgmpy.models
-        The causal graph to test for falsification.
+    model : pgmpy.base.DAG
+        The causal graph to test.
 
     data : pandas.DataFrame
-        Observational data to test the graph against. Should contain all variables
-        present in the model.
+        Data to test the graph against. The column names of the DataFrame must match the variable names in the `model`.
 
     significance_level : float, default=0.05
         Significance level for conditional independence tests. Lower values make
@@ -126,22 +120,11 @@ def permutation_test(
         Number of random node permutations to generate for the baseline.
         If None, uses max(20, int(1/significance_level)).
 
-    ci_test : str or fun
-        The statistical test to use for testing conditional independence in
-        the dataset. If `str` values should be one of:
-            "independence_match": If using this option, an additional parameter
-                    `independencies` must be specified.
-            "chi_square": Uses the Chi-Square independence test. This works
-                    only for discrete datasets.
-            "pearsonr": Uses the partial correlation based on pearson
-                    correlation coefficient to test independence. This works
-                    only for continuous datasets.
-            "g_sq": G-test. Works only for discrete datasets.
-            "log_likelihood": Log-likelihood test. Works only for discrete dataset.
-            "freeman_tuckey": Freeman Tuckey test. Works only for discrete dataset.
-            "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
-            "neyman": Neyman test. Works only for discrete variables.
-            "cressie_read": Cressie Read test. Works only for discrete variables.
+    ci_test : {"pillai_trace", "chi_square", "pearsonr", "gcm", "g_sq", "log_likelihood", "freeman_tuckey",
+    "modified_log_likelihood", "neyman", "cressie_read"}
+
+        The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
+        See :class:`pgmpy.estimators.CITests` for more details.
 
     return_summary : bool, default=True
         If True, returns detailed information about the test including
@@ -149,7 +132,6 @@ def permutation_test(
 
     show_progress : bool, default=True
         Whether to show progress bar during permutation testing.
-
 
     Returns
     -------
@@ -178,9 +160,8 @@ def permutation_test(
 
     References
     ----------
-    Eulig, E., Mastakouri, A. A., Blöbaum, P., Hardt, M., & Janzing, D. (2025).
-    Toward falsifying causal graphs using a permutation-based test.
-    Proceedings of the AAAI Conference on Artificial Intelligence, 39(25), 26778-26786.
+    .. [1] Eulig, E., Mastakouri, A. A., Blöbaum, P., Hardt, M., & Janzing, D. (2025). Toward falsifying causal graphs
+    using a permutation-based test. Proceedings of the AAAI Conference on Artificial Intelligence, 39(25), 26778-26786.
 
     Examples
     --------
