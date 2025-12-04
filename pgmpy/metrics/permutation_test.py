@@ -52,7 +52,7 @@ def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
     permuted_CIs : pd.DataFrame with columns 'u', 'v', and 'cond_vars'.
         The implied Conditional Independences, changed according to node permutation.
     """
-    permuted_nodes = np.random.permutation(list(nodes))
+    permuted_nodes = np.random.permutation(nodes)
     perm_mapping = dict(zip(nodes, permuted_nodes))
 
     new_cis = pd.DataFrame(columns=["u", "v", "cond_vars"])
@@ -200,91 +200,77 @@ def permutation_test(
     if not isinstance(dag, DAG) or isinstance(dag, DynamicBayesianNetwork):
         raise TypeError(f"DAG must be a `pgmpy.base.DAG` object. Got: {type(dag)}")
 
-    nodes = set(dag.nodes())
+    nodes = list(dag.nodes())
     data_columns = set(data.columns)
 
-    if not nodes.issubset(data_columns):
-        missing_vars = nodes - data_columns
+    if not set(nodes).issubset(data_columns):
+        missing_vars = set(nodes) - data_columns
         raise ValueError(f"Data missing variables present in model: {missing_vars}")
 
     ci_test = ci_registry.get_test(ci_test, data=data)
-
-    # Step 1: Perform calculations for original DAG and generate permutations
-    # nodes = list(dag.nodes())
     permutation_violations = []
     n_within_mec = 0
 
-    orginal_CIs = implied_cis(dag, data, ci_test)
-    valid_CIs = orginal_CIs[orginal_CIs["p-value"] > significance_level]
-
-    # Step 2: Count Local Markov Condition violations in the given graph
-    n_lmc_violations = _count_lmc_violations(
-        data, valid_CIs, ci_test, significance_level
+    # Step 1: Compute LMC violations for the given DAG.
+    original_CIs = implied_cis(
+        model=dag, data=data, ci_test=ci_test, show_progress=False
     )
+    valid_CIs = original_CIs[original_CIs["p-value"] > significance_level]
+    n_lmc_violations = original_CIs.shape[0] - valid_CIs.shape[0]
 
-    # Set up progress bar
+    # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
     if show_progress and config.SHOW_PROGRESS:
         pbar = tqdm(range(n_permutations), desc="Constructing Null Distribution")
     else:
         pbar = range(n_permutations)
 
     for _ in pbar:
-        # Generate random permutation
-
-        # Create permuted CIs
+        # TODO: Check if this is correct - should the LMC violations be computed on all implied CIs or only valid ones?
         permuted_CIs = _create_permuted_CIs(valid_CIs, nodes)
-
-        lmc_violations_perm = _count_lmc_violations(
+        n_violations_perm = _count_lmc_violations(
             data, permuted_CIs, ci_test, significance_level
         )
-        permutation_violations.append(lmc_violations_perm)
+        permutation_violations.append(n_violations_perm)
 
-        # Check if in same Markov equivalence class (d separations identical = same structure)
+        # TODO: This is wrong - need to compare all implied CIs, not just valid ones. Maybe use is_iequivalent method
+        # from pgmpy.base.DAG?
         if _compare_CIs(valid_CIs, permuted_CIs):
             n_within_mec += 1
 
-    # Step 3: Compute test results
+    # Step 3: Compute test statistics and p-values.
 
-    # Falsifiability test: fraction of permutations in same MEC
+    # Step 3.1: Falsifiability test
     p_value_falsifiable = n_within_mec / n_permutations
-    falsifiable = p_value_falsifiable <= significance_level
 
-    # Falsification test: fraction of permutations with lesser violations
+    # Step 3.2: Falsification test
     count_less_violations = sum(
         1 for v in permutation_violations if v <= n_lmc_violations
     )
-
     p_value_falsified = count_less_violations / n_permutations
-    falsified = falsifiable and (p_value_falsified > significance_level)
 
-    result = {
-        "falsifiable": falsifiable,
-        "falsified": falsified,
-        "p_value_falsifiable": p_value_falsifiable,
-        "p_value_falsified": p_value_falsified,
-        "n_lmc_violations": n_lmc_violations,
-        "n_permutations": n_permutations,
-        "n_within_mec": n_within_mec,
-    }
-
-    count = int(p_value_falsified * n_permutations)
-
+    # Step 3.3: Confidence intervals for the falsification p-value
     ci_lower, ci_upper = proportion_confint(
-        count,
+        count_less_violations,
         n_permutations,
         alpha=significance_level,
         method="wilson",
     )
+
+    # Step 4: Compile results and return
+    result = {
+        "p_value_falsifiable": p_value_falsifiable,
+        "p_value_falsified": p_value_falsified,
+        "n_lmc_violations": n_lmc_violations,
+        "n_within_mec": n_within_mec,
+        "ci_lower_falsified": ci_lower,
+        "ci_upper_falsified": ci_upper,
+    }
 
     if return_summary:
         result["summary"] = {
             "permutation_violations": permutation_violations,
             "significance_level": significance_level,
             "ci_test": ci_test,
-            "mean_permutation_violations": np.mean(permutation_violations),
-            "std_permutation_violations": np.std(permutation_violations),
-            "min_permutation_violations": np.min(permutation_violations),
-            "max_permutation_violations": np.max(permutation_violations),
         }
 
     return result
