@@ -297,8 +297,6 @@ def permutation_test(
         method="wilson",
     )
 
-    print(f"95% CI: [{ci_lower:.4f}, {ci_upper:.4f}]")
-
     if return_summary:
         result["summary"] = {
             "permutation_violations": permutation_violations,
