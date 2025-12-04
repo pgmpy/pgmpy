@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.metrics import implied_cis, permutation_t
-from pgmpy.metrics.permutation_t import (
+from pgmpy.metrics import implied_cis, permutation_test
+from pgmpy.metrics.permutation_test import (
     _count_lmc_violations,
     _create_permuted_CIs,
 )
@@ -30,7 +30,7 @@ def model_simple():
 
 
 def test_with_return_summary(model_simple, data_simple):
-    result = permutation_t(
+    result = permutation_test(
         model_simple,
         data_simple,
         n_permutations=5,
@@ -60,36 +60,38 @@ def test_with_return_summary(model_simple, data_simple):
 
 def test_input_validation(model_simple, data_simple):
     with pytest.raises(TypeError):
-        permutation_t(model_simple, "not_a_dataframe", show_progress=False)
+        permutation_test(model_simple, "not_a_dataframe", show_progress=False)
 
     with pytest.raises(ValueError):
         bad_data = data_simple[["X", "Y"]]
-        permutation_t(model_simple, bad_data, show_progress=False)
+        permutation_test(model_simple, bad_data, show_progress=False)
 
     with pytest.raises(ValueError):
-        permutation_t(
+        permutation_test(
             model_simple, data_simple, ci_test="unsupported_test", show_progress=False
         )
 
 
 def test_edge_cases(model_simple, data_simple):
-    r = permutation_t(model_simple, data_simple, n_permutations=1, show_progress=False)
+    r = permutation_test(
+        model_simple, data_simple, n_permutations=1, show_progress=False
+    )
     assert r["n_permutations"] == 1
 
     single_model = DiscreteBayesianNetwork()
     single_model.add_node("A")
     df = pd.DataFrame({"A": [0, 1, 0, 1]})
-    result = permutation_t(single_model, df, n_permutations=3, show_progress=False)
+    result = permutation_test(single_model, df, n_permutations=3, show_progress=False)
     assert isinstance(result["falsifiable"], bool)
 
 
 def test_wrong_model_detection(model_simple, data_simple):
     wrong_model = DiscreteBayesianNetwork([("Y", "Z"), ("X", "Z")])
 
-    correct = permutation_t(
+    correct = permutation_test(
         model_simple, data_simple, n_permutations=10, show_progress=False
     )
-    wrong = permutation_t(
+    wrong = permutation_test(
         wrong_model, data_simple, n_permutations=10, show_progress=False
     )
 
@@ -100,7 +102,7 @@ def test_progress_bar_enabled(monkeypatch):
     monkeypatch.setattr("pgmpy.config.SHOW_PROGRESS", True)
     model = DiscreteBayesianNetwork([("X", "Y")])
     df = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 1, 0, 0]})
-    r = permutation_t(model, df, n_permutations=2, show_progress=True)
+    r = permutation_test(model, df, n_permutations=2, show_progress=True)
     assert isinstance(r["falsifiable"], bool)
 
 
@@ -177,6 +179,6 @@ def test_count_lmc_violations_small_data(model_helper, data_helper):
 
 def test_child_model(child_model):
     model, data = child_model
-    result = permutation_t(model, data, return_summary=True, show_progress=False)
+    result = permutation_test(model, data, return_summary=True, show_progress=False)
     assert result["p_value_falsifiable"] <= 0.05
     assert result["p_value_falsified"] <= 0.05

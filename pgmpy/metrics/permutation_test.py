@@ -85,7 +85,7 @@ def _d_separated_triples(
     return dsep_triples
 
 
-def permutation_t(
+def permutation_test(
     dag: DAG,
     data: pd.DataFrame,
     significance_level: float = 0.05,
@@ -185,20 +185,20 @@ def permutation_t(
     Examples
     --------
     >>> from pgmpy.models import DiscreteDiscreteBayesianNetwork
-    >>> from pgmpy.metrics import permutation_t
+    >>> from pgmpy.metrics import permutation_test
     >>> from pgmpy.utils import get_example_model
 
     >>> # Test with a known model
     >>> model = get_example_model("cancer")
     >>> data = model.simulate(1000)
-    >>> result = permutation_based_falsification_test(model, data)
+    >>> result = permutation_test(model, data)
     >>> print(f"Falsifiable: {result['falsifiable']}, Falsified: {result['falsified']}")
 
     >>> # Test with wrong model (should be falsified)
     >>> wrong_model = DiscreteDiscreteBayesianNetwork(
     ...     [("Cancer", "Smoker"), ("Smoker", "Pollution")]
     ... )
-    >>> result_wrong = permutation_based_falsification_test(wrong_model, data)
+    >>> result_wrong = permutation_test(wrong_model, data)
     >>> print(f"Wrong model falsified: {result_wrong['falsified']}")
     """
 
