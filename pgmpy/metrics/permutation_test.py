@@ -225,8 +225,7 @@ def permutation_test(
         pbar = range(n_permutations)
 
     for _ in pbar:
-        # TODO: Check if this is correct - should the LMC violations be computed on all implied CIs or only valid ones?
-        permuted_CIs = _create_permuted_CIs(valid_CIs, nodes)
+        permuted_CIs = _create_permuted_CIs(original_CIs, nodes)
         n_violations_perm = _count_lmc_violations(
             data, permuted_CIs, ci_test, significance_level
         )
@@ -234,7 +233,7 @@ def permutation_test(
 
         # TODO: This is wrong - need to compare all implied CIs, not just valid ones. Maybe use is_iequivalent method
         # from pgmpy.base.DAG?
-        if _compare_CIs(valid_CIs, permuted_CIs):
+        if _compare_CIs(original_CIs, permuted_CIs):
             n_within_mec += 1
 
     # Step 3: Compute test statistics and p-values.
