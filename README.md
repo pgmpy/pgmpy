@@ -65,7 +65,7 @@ dag = PC(data=alarm_df).estimate(ci_test="chi_square", return_type="dag")
 from pgmpy.models import DiscreteBayesianNetwork
 
 discrete_bn = DiscreteBayesianNetwork(dag.edges())
-dag_fitted = dag.fit(alarm_df)
+dag_fitted = discrete_bn.fit(alarm_df)
 dag_fitted.get_cpds()
 
 # Drop a column and predict using the learned model.
