@@ -35,39 +35,34 @@ def _count_lmc_violations(
     return n_violations
 
 
-def _create_permuted_CIs(valid_CIs: pd.DataFrame, nodes: list):
+def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
     """
-    Create a new dataframe with new implied Conditional Independence statements.
+    Given the `ci_df`, creates a new dataframe of CIs with the nodes permuted randomly.
 
     Parameters
     ----------
-    valid_CIs : pd.DataFrame
-        Conditional Independence statments from original graph
+    ci_df: pd.DataFrame
+        A DataFrame containing the Conditional Independences with columns 'u', 'v', and 'cond_vars'.
 
     nodes : list
-        Mapping from original node names to permuted names
+        List of all the nodes/variables in the graph/data.
 
     Returns
     -------
-    permuted_CIs : pd.DataFrame
-        The implied Conditional Independencies, changed according to node permutation.
+    permuted_CIs : pd.DataFrame with columns 'u', 'v', and 'cond_vars'.
+        The implied Conditional Independences, changed according to node permutation.
     """
-
-    def apply_mapping(node):
-        if isinstance(node, list):
-            return [perm_mapping[n] for n in node]
-        else:
-            return perm_mapping[node]
-
     perm = np.random.permutation(nodes)
     perm_mapping = dict(zip(nodes, perm))
 
-    new_CIs = valid_CIs.copy()
-    new_CIs["u"] = valid_CIs["u"].apply(lambda x: apply_mapping(x))
-    new_CIs["v"] = valid_CIs["v"].apply(lambda x: apply_mapping(x))
-    new_CIs["cond_vars"] = valid_CIs["cond_vars"].apply(lambda x: apply_mapping(x))
+    new_cis = pd.DataFrame(columns=["u", "v", "cond_vars"])
+    new_cis["u"] = ci_df["u"].apply(perm_mapping.get)
+    new_cis["v"] = ci_df["v"].apply(perm_mapping.get)
+    new_cis["cond_vars"] = ci_df["cond_vars"].apply(
+        lambda t: [perm_mapping[x] for x in t]
+    )
 
-    return new_CIs
+    return new_cis
 
 
 def _d_separated_triples(
