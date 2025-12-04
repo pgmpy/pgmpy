@@ -65,16 +65,32 @@ def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
     return new_cis
 
 
-def _d_separated_triples(
-    implied_CIs: pd.DataFrame,
-):
-    # CIs_dif = implied_cis(model, data, ci_test_func)
-    # valid_CIs = CIs_dif[CIs_dif["p-value"] > significance_level]
-    dsep_triples = set()
-    for _, row in implied_CIs.iterrows():
-        dsep_triples.add((row["u"], row["v"], frozenset(row["cond_vars"])))
+def _compare_CIs(cis1: pd.DataFrame, cis2: pd.DataFrame):
+    """Compares two DataFrames of Conditional Independences for equality.
 
-    return dsep_triples
+    Parameters
+    ----------
+    cis1, cis2 : pd.DataFrame
+        First DataFrame of Conditional Independences with columns 'u', 'v', and 'cond_vars'.
+
+    Returns
+    -------
+    bool
+        True if both DataFrames represent the same set of Conditional Independences, False otherwise.
+    """
+
+    if len(cis1) != len(cis2):
+        return False
+
+    set1 = set()
+    for _, row in cis1.iterrows():
+        set1.add((row["u"], row["v"], frozenset(row["cond_vars"])))
+
+    set2 = set()
+    for _, row in cis2.iterrows():
+        set2.add((row["u"], row["v"], frozenset(row["cond_vars"])))
+
+    return set1 == set2
 
 
 def permutation_test(
@@ -101,7 +117,7 @@ def permutation_test(
 
     Parameters
     ----------
-    model : pgmpy.base.DAG
+    dag: pgmpy.base.DAG
         The causal graph to test.
 
     data : pandas.DataFrame
@@ -210,8 +226,6 @@ def permutation_test(
     orginal_CIs = implied_cis(dag, data, ci_test_func)
     valid_CIs = orginal_CIs[orginal_CIs["p-value"] > significance_level]
 
-    original_dsep_triples = _d_separated_triples(valid_CIs)
-
     # Step 2: Count Local Markov Condition violations in the given graph
     lmc_violations_given = _count_lmc_violations(
         data, valid_CIs, ci_test_func, significance_level
@@ -235,9 +249,7 @@ def permutation_test(
         permutation_violations.append(lmc_violations_perm)
 
         # Check if in same Markov equivalence class (d separations identical = same structure)
-        permuted_dsep_triples = _d_separated_triples(permuted_CIs)
-
-        if original_dsep_triples == permuted_dsep_triples:
+        if _compare_CIs(valid_CIs, permuted_CIs):
             same_mec_count += 1
 
     # Step 3: Compute test results

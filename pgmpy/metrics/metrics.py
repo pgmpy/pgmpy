@@ -369,7 +369,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
 
     for u, v in comb_iter:
         if not ((u in model[v]) or (v in model[u])):
-            Z = list(model.minimal_dseparator(u, v))
+            Z = set(model.minimal_dseparator(u, v))
             test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
             cis.append([u, v, Z, test_results[1]])
     cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
