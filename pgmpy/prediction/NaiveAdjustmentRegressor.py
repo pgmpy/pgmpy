@@ -83,8 +83,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     >>>
     >>> # Fit the regressor
     >>> regressor = NaiveAdjustmentRegressor(causal_graph=dag)
-    >>> regressor.fit(data[["X", "Z"]], data["Y"])
-    NaiveAdjustmentRegressor(...)
+    >>> _ = regressor.fit(data[["X", "Z"]], data["Y"])
     >>>
     >>> # Make predictions
     >>> predictions = regressor.predict(data[["X", "Z"]])
@@ -100,8 +99,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     ...     causal_graph=dag,
     ...     estimator=RandomForestRegressor(n_estimators=10, random_state=42),
     ... )
-    >>> rf_regressor.fit(data[["X", "Z"]], data["Y"])
-    NaiveAdjustmentRegressor(...)
+    >>> _ = rf_regressor.fit(data[["X", "Z"]], data["Y"])
 
     Example with pretreatment variables:
 
@@ -123,8 +121,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     >>> data_with_P = lgbn_with_P.simulate(100, seed=42)
     >>>
     >>> regressor_with_P = NaiveAdjustmentRegressor(causal_graph=dag_with_pretreatment)
-    >>> regressor_with_P.fit(data_with_P[["X", "Z", "P"]], data_with_P["Y"])
-    NaiveAdjustmentRegressor(...)
+    >>> _ = regressor_with_P.fit(data_with_P[["X", "Z", "P"]], data_with_P["Y"])
     """
 
     def __init__(
