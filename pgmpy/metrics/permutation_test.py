@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-import statsmodels.stats.proportion as proportion
+from statsmodels.stats.proportion import proportion_confint
 from tqdm import tqdm
 
 from pgmpy import config
@@ -16,7 +16,7 @@ from pgmpy.models import DynamicBayesianNetwork
 def _count_lmc_violations(
     data: pd.DataFrame,
     implied_CIs: pd.DataFrame,
-    ci_test_func: Callable,
+    ci_test: Callable,
     significance_level: float = 0.05,
 ):
     """
@@ -24,7 +24,7 @@ def _count_lmc_violations(
     """
     n_violations = 0
     for _, row in implied_CIs.iterrows():
-        n_violations += not ci_test_func(
+        n_violations += not ci_test(
             X=row["u"],
             Y=row["v"],
             Z=row["cond_vars"],
@@ -52,7 +52,7 @@ def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
     permuted_CIs : pd.DataFrame with columns 'u', 'v', and 'cond_vars'.
         The implied Conditional Independences, changed according to node permutation.
     """
-    permuted_nodes = np.random.permutation(nodes)
+    permuted_nodes = np.random.permutation(list(nodes))
     perm_mapping = dict(zip(nodes, permuted_nodes))
 
     new_cis = pd.DataFrame(columns=["u", "v", "cond_vars"])
@@ -98,7 +98,7 @@ def permutation_test(
     data: pd.DataFrame,
     significance_level: float = 0.05,
     n_permutations: int = 100,
-    ci_test: str = "chi_square",
+    ci_test: Optional[str] = None,
     return_summary: bool = True,
     show_progress: bool = True,
 ):
@@ -193,42 +193,33 @@ def permutation_test(
     >>> result_wrong = permutation_test(wrong_model, data)
     >>> print(f"Wrong model falsified: {result_wrong['falsified']}")
     """
-
-    # Validate inputs
+    # Step 0: Initialize variables and validate inputs.
     if not isinstance(data, pd.DataFrame):
         raise TypeError(f"Data should be a pandas DataFrame. Got: {type(data)}")
 
-    if not isinstance(dag, DAG):
-        if isinstance(dag, DynamicBayesianNetwork):
-            raise TypeError(
-                "DAG cannot be an instance of pgmpy.models.DynamicBayesianNetwork."
-            )
-        else:
-            raise TypeError(
-                f"DAG should be a pgmpy.base.DAG or Bayesian Network from pgmpy.models. Got: {type(dag)}"
-            )
+    if not isinstance(dag, DAG) or isinstance(dag, DynamicBayesianNetwork):
+        raise TypeError(f"DAG must be a `pgmpy.base.DAG` object. Got: {type(dag)}")
 
-    model_nodes = set(dag.nodes())
+    nodes = set(dag.nodes())
     data_columns = set(data.columns)
 
-    if not model_nodes.issubset(data_columns):
-        missing_vars = model_nodes - data_columns
+    if not nodes.issubset(data_columns):
+        missing_vars = nodes - data_columns
         raise ValueError(f"Data missing variables present in model: {missing_vars}")
 
-    # Initialize CI test function
-    ci_test_func = ci_registry.get_test(ci_test, data=data)
+    ci_test = ci_registry.get_test(ci_test, data=data)
 
     # Step 1: Perform calculations for original DAG and generate permutations
-    nodes = list(dag.nodes())
+    # nodes = list(dag.nodes())
     permutation_violations = []
-    same_mec_count = 0
+    n_within_mec = 0
 
-    orginal_CIs = implied_cis(dag, data, ci_test_func)
+    orginal_CIs = implied_cis(dag, data, ci_test)
     valid_CIs = orginal_CIs[orginal_CIs["p-value"] > significance_level]
 
     # Step 2: Count Local Markov Condition violations in the given graph
-    lmc_violations_given = _count_lmc_violations(
-        data, valid_CIs, ci_test_func, significance_level
+    n_lmc_violations = _count_lmc_violations(
+        data, valid_CIs, ci_test, significance_level
     )
 
     # Set up progress bar
@@ -244,23 +235,23 @@ def permutation_test(
         permuted_CIs = _create_permuted_CIs(valid_CIs, nodes)
 
         lmc_violations_perm = _count_lmc_violations(
-            data, permuted_CIs, ci_test_func, significance_level
+            data, permuted_CIs, ci_test, significance_level
         )
         permutation_violations.append(lmc_violations_perm)
 
         # Check if in same Markov equivalence class (d separations identical = same structure)
         if _compare_CIs(valid_CIs, permuted_CIs):
-            same_mec_count += 1
+            n_within_mec += 1
 
     # Step 3: Compute test results
 
     # Falsifiability test: fraction of permutations in same MEC
-    p_value_falsifiable = same_mec_count / n_permutations
+    p_value_falsifiable = n_within_mec / n_permutations
     falsifiable = p_value_falsifiable <= significance_level
 
     # Falsification test: fraction of permutations with lesser violations
     count_less_violations = sum(
-        1 for v in permutation_violations if v <= lmc_violations_given
+        1 for v in permutation_violations if v <= n_lmc_violations
     )
 
     p_value_falsified = count_less_violations / n_permutations
@@ -271,14 +262,14 @@ def permutation_test(
         "falsified": falsified,
         "p_value_falsifiable": p_value_falsifiable,
         "p_value_falsified": p_value_falsified,
-        "lmc_violations": lmc_violations_given,
+        "n_lmc_violations": n_lmc_violations,
         "n_permutations": n_permutations,
-        "same_mec_count": same_mec_count,
+        "n_within_mec": n_within_mec,
     }
 
     count = int(p_value_falsified * n_permutations)
 
-    ci_lower, ci_upper = proportion.proportion_confint(
+    ci_lower, ci_upper = proportion_confint(
         count,
         n_permutations,
         alpha=significance_level,
