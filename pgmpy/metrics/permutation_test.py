@@ -52,8 +52,8 @@ def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
     permuted_CIs : pd.DataFrame with columns 'u', 'v', and 'cond_vars'.
         The implied Conditional Independences, changed according to node permutation.
     """
-    perm = np.random.permutation(nodes)
-    perm_mapping = dict(zip(nodes, perm))
+    permuted_nodes = np.random.permutation(nodes)
+    perm_mapping = dict(zip(nodes, permuted_nodes))
 
     new_cis = pd.DataFrame(columns=["u", "v", "cond_vars"])
     new_cis["u"] = ci_df["u"].apply(perm_mapping.get)
