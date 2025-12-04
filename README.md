@@ -90,7 +90,7 @@ dag = PC(data=ecoli_df).estimate(ci_test="pearsonr", return_type="dag")
 # Learn the parameters from the data.
 from pgmpy.models import LinearGaussianBayesianNetwork
 
-gaussian_bn = LinearGausianBayesianNetwork(dag.edges())
+gaussian_bn = LinearGaussianBayesianNetwork(dag.edges())
 dag_fitted = gaussian_bn.fit(ecoli_df)
 dag_fitted.get_cpds()
 
