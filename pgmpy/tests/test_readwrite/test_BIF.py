@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -205,11 +206,11 @@ class TestBIFReader(unittest.TestCase):
             "light-on": {},
         }
         node_expected = {
-            "bowel-problem": {"weight": None, "position": "(335, 99)"},
-            "dog-out": {"weight": None, "position": "(300, 195)"},
-            "family-out": {"weight": None, "position": "(257, 99)"},
-            "hear-bark": {"weight": None, "position": "(296, 268)"},
-            "light-on": {"weight": None, "position": "(218, 195)"},
+            "bowel-problem": {"position": "(335, 99)"},
+            "dog-out": {"position": "(300, 195)"},
+            "family-out": {"position": "(257, 99)"},
+            "hear-bark": {"position": "(296, 268)"},
+            "light-on": {"position": "(218, 195)"},
         }
         cpds_expected = [
             TabularCPD(
@@ -417,32 +418,26 @@ class TestBIFWriter(unittest.TestCase):
 variable bowel-problem {
     type discrete [ 2 ] { 0, 1 };
     property position = (335, 99) ;
-    property weight = None ;
 }
 variable dog-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (300, 195) ;
-    property weight = None ;
 }
 variable family-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (257, 99) ;
-    property weight = None ;
 }
 variable hear-bark {
     type discrete [ 2 ] { 0, 1 };
     property position = (296, 268) ;
-    property weight = None ;
 }
 variable kid {
     type discrete [ 2 ] { 0, 1 };
     property position = (100, 165) ;
-    property weight = None ;
 }
 variable light-on {
     type discrete [ 2 ] { 0, 1 };
     property position = (218, 195) ;
-    property weight = None ;
 }
 probability ( bowel-problem ) {
     table 0.01, 0.99 ;
@@ -527,6 +522,10 @@ probability ( light-on | family-out ) {
                 os.unlink(tmp_path)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -723,11 +722,11 @@ class TestBIFReaderTorch(unittest.TestCase):
             "light-on": {},
         }
         node_expected = {
-            "bowel-problem": {"weight": None, "position": "(335, 99)"},
-            "dog-out": {"weight": None, "position": "(300, 195)"},
-            "family-out": {"weight": None, "position": "(257, 99)"},
-            "hear-bark": {"weight": None, "position": "(296, 268)"},
-            "light-on": {"weight": None, "position": "(218, 195)"},
+            "bowel-problem": {"position": "(335, 99)"},
+            "dog-out": {"position": "(300, 195)"},
+            "family-out": {"position": "(257, 99)"},
+            "hear-bark": {"position": "(296, 268)"},
+            "light-on": {"position": "(218, 195)"},
         }
         cpds_expected = [
             TabularCPD(
@@ -850,6 +849,10 @@ class TestBIFReaderTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -938,32 +941,26 @@ class TestBIFWriterTorch(unittest.TestCase):
 variable bowel-problem {
     type discrete [ 2 ] { 0, 1 };
     property position = (335, 99) ;
-    property weight = None ;
 }
 variable dog-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (300, 195) ;
-    property weight = None ;
 }
 variable family-out {
     type discrete [ 2 ] { 0, 1 };
     property position = (257, 99) ;
-    property weight = None ;
 }
 variable hear-bark {
     type discrete [ 2 ] { 0, 1 };
     property position = (296, 268) ;
-    property weight = None ;
 }
 variable kid {
     type discrete [ 2 ] { 0, 1 };
     property position = (100, 165) ;
-    property weight = None ;
 }
 variable light-on {
     type discrete [ 2 ] { 0, 1 };
     property position = (218, 195) ;
-    property weight = None ;
 }
 probability ( bowel-problem ) {
     table 0.01, 0.99 ;

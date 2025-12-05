@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -11,6 +12,10 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, Junctio
 from pgmpy.utils import compat_fns
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestVariableEliminationTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -357,6 +362,10 @@ class TestVariableEliminationTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestSnowNetworkTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -627,6 +636,10 @@ class TestSnowNetworkTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -652,6 +665,10 @@ class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -892,6 +909,10 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBeliefPropagation(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

@@ -2,16 +2,26 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import pyro
-import pyro.distributions as dist
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
+from pgmpy.utils._safe_import import _safe_import
+
+dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
+torch = _safe_import("torch")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFCPD(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
     def test_class_init(self):
         """
         Test the initialization of the FunctionalCPD class.
@@ -150,7 +160,6 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # Test parent sample none vectorized
     def test_vectorized_without_parent(self):
         """
         Test FunctionalCPD with vectorized sampling without parents.
@@ -164,7 +173,6 @@ class TestFCPD(unittest.TestCase):
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
 
-    # Test parent sample none iterative
     def test_iterative_without_parent(self):
         """
         Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
@@ -177,3 +185,6 @@ class TestFCPD(unittest.TestCase):
         samples = cpd.sample(n_samples=1000)
         self.assertEqual(len(samples), 1000)
         self.assertTrue(np.isfinite(samples).all())
+
+    def tearDown(self):
+        config.set_backend("numpy")

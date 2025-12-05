@@ -1,13 +1,13 @@
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.identification import BaseIdentification
 
 
 @pytest.fixture
 def cg():
     edges = [("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")]
-    roles = {"exposure": "X", "outcome": "Y"}
+    roles = {"exposures": "X", "outcomes": "Y"}
     return DAG(ebunch=edges, roles=roles)
 
 
@@ -18,13 +18,15 @@ class DummyIdentification(BaseIdentification):
 
     def __init__(self, variant=None):
         self.variant = variant
+        self.supported_graph_types = (DAG, PDAG)
 
     def _identify(self, causal_graph):
         if self.variant == "first":
             adjustment_node = sorted(
                 set(causal_graph.nodes())
                 - set(
-                    causal_graph.get_role("exposure") + causal_graph.get_role("outcome")
+                    causal_graph.get_role("exposures")
+                    + causal_graph.get_role("outcomes")
                 )
             )[0]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
@@ -32,7 +34,8 @@ class DummyIdentification(BaseIdentification):
             adjustment_node = sorted(
                 set(causal_graph.nodes())
                 - set(
-                    causal_graph.get_role("exposure") + causal_graph.get_role("outcome")
+                    causal_graph.get_role("exposures")
+                    + causal_graph.get_role("outcomes")
                 )
             )[-1]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
@@ -47,8 +50,8 @@ class TestBaseIdentification:
 
         assert is_identified == True
         assert identified_cg.get_role_dict() == {
-            "exposure": ["X"],
-            "outcome": ["Y"],
+            "exposures": ["X"],
+            "outcomes": ["Y"],
             "adjustment": ["M"],
         }
 
@@ -58,8 +61,8 @@ class TestBaseIdentification:
 
         assert is_identified == True
         assert identified_cg.get_role_dict() == {
-            "exposure": ["X"],
-            "outcome": ["Y"],
+            "exposures": ["X"],
+            "outcomes": ["Y"],
             "adjustment": ["U"],
         }
 
@@ -68,4 +71,4 @@ class TestBaseIdentification:
         identified_cg, is_identified = identifier(causal_graph=cg)
 
         assert is_identified == False
-        assert identified_cg.get_role_dict() == {"exposure": ["X"], "outcome": ["Y"]}
+        assert identified_cg.get_role_dict() == {"exposures": ["X"], "outcomes": ["Y"]}

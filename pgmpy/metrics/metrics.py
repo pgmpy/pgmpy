@@ -1,5 +1,6 @@
 import math
 from itertools import combinations
+from typing import Any, Callable, Optional
 
 import networkx as nx
 import numpy as np
@@ -11,6 +12,48 @@ from tqdm import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork
+
+
+def get_metrics(metrics: Optional[tuple[str, Callable]] = None) -> Any:
+
+    name_to_fn = {
+        "correlation": correlation_score,
+        "log-likelihood": log_likelihood_score,
+        "aic": structure_score,
+        "bic": structure_score,
+        "implied-cis": implied_cis,
+        "fisher-c": fisher_c,
+    }
+    fn_to_name = {v: k for k, v in name_to_fn.items()}
+
+    if metrics is None:
+        return name_to_fn
+
+    callable_metrics = {}
+    for metric in metrics:
+        if isinstance(metric, str):
+            metric = metric.lower()
+            if metric not in name_to_fn:
+                raise ValueError(
+                    f"Unknown metric method. Available metrics are: {list(name_to_fn.keys())}"
+                )
+
+            callable_metrics[metric] = name_to_fn[metric]
+
+        elif callable(metric):
+            if metric not in fn_to_name:
+                raise ValueError(
+                    f"Got unknown metric function {metric}. Available metrics are: {list(fn_to_name.keys())}"
+                )
+            metric_name = fn_to_name.get(metric)
+            callable_metrics[metric_name] = metric
+
+        else:
+            raise ValueError(
+                f"`metric` must be one of {list(name_to_fn.keys())} and of type str or Callable"
+            )
+
+    return callable_metrics
 
 
 def correlation_score(
@@ -80,7 +123,7 @@ def correlation_score(
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
     0.911957950065703
     """
-    from pgmpy.estimators.CITests import get_callable_ci_test
+    from pgmpy.estimators.CITests import ci_registry
 
     # Step 1: Checks for input arguments.
     if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
@@ -95,7 +138,7 @@ def correlation_score(
             f" {set(model.nodes()) - set(data.columns)}"
         )
 
-    supported_test = get_callable_ci_test(test)
+    ci_test = ci_registry.get_test(test=test, data=data)
 
     if not callable(score):
         raise ValueError(
@@ -105,7 +148,7 @@ def correlation_score(
     # Step 2: Create a dataframe of every 2 combination of variables
     results = []
     for i, j in combinations(model.nodes(), 2):
-        test_result = supported_test(
+        test_result = ci_test(
             X=i,
             Y=j,
             Z=[],
@@ -158,7 +201,7 @@ def log_likelihood_score(model, data):
     -103818.57516969478
     """
     # Step 1: Check the inputs
-    if not isinstance(model, DiscreteBayesianNetwork):
+    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
         raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
@@ -333,7 +376,7 @@ def implied_cis(model, data, ci_test, show_progress=True):
     return cis
 
 
-def fisher_c(model, data, ci_test, show_progress=True):
+def fisher_c(model, data, ci_test, compute_rmsea=False, show_progress=True):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.
@@ -355,14 +398,22 @@ def fisher_c(model, data, ci_test, show_progress=True):
         The function for statistical test. Can be either any of the tests in
         pgmpy.estimators.CITests or any custom function of the same form.
 
+    compute_rmsea: bool (default: False)
+        While calculating Fisher C statistic if RMSEA value required should be
+        included in method call as True. Returns a tuple of (p-value, rmsea) if
+        True otherwise only the p-value.
+
     show_progress: bool (default: True)
         Whether to show the progress of testing.
 
     Returns
     -------
-    float: The p-value for the fit of the model structure to the data. A low
+    float (default): The p-value for the fit of the model structure to the data. A low
         p-value (e.g. <0.05) represents that the model structure doesn't fit the
-        data well.
+        data well. This is returned if the compute_rmsea parameter is False.
+
+    tuple: A (float, float) tuple packing p-value and rmsea value is returned if RMSEA
+            computation is necessary, i.e., compute_rmsea is True in the method call
 
     Examples
     --------
@@ -403,6 +454,15 @@ def fisher_c(model, data, ci_test, show_progress=True):
 
     C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
+    rmsea = np.nan
+
+    if compute_rmsea:
+        if len(data) != 1 and len(cis) != 0:
+            rmsea = np.sqrt(
+                max((C - 2 * len(cis)) / (2 * len(cis) * (len(data) - 1)), 0)
+            )
+        return (p_value, rmsea)
+
     return p_value
 
 

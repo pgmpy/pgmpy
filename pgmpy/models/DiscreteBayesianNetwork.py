@@ -593,6 +593,78 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+        """
+        Estimates the CPD for each variable based on a given data set.
+
+        Parameters
+        ----------
+        data: pandas DataFrame object
+            DataFrame object with column names identical to the variable names of the network.
+            (If some values in the data are missing the data cells should be set to `numpy.nan`.
+            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+
+        estimator: Estimator class
+            One of:
+            - MaximumLikelihoodEstimator (default)
+            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
+            or 'equivalent_sample_size' as additional keyword arguments.
+            See `BayesianEstimator.get_parameters()` for usage.
+            - ExpectationMaximization
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
+
+        Returns
+        -------
+        Fitted Model: DiscreteBayesianNetwork
+            Returns a DiscreteBayesianNetwork object with learned CPDs.
+            The DAG structure is preserved, and parameters (CPDs) are added.
+            This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.base import DAG
+        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DAG([("A", "C"), ("B", "C")])
+        >>> fitted_model = model.fit(data)
+        >>> fitted_model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x17945372c30>,
+        <TabularCPD representing P(B:2) at 0x17945a19760>,
+        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
+        """
+        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
+        from pgmpy.models import DiscreteBayesianNetwork
+
+        if isinstance(self, DiscreteBayesianNetwork):
+            bn = self
+        else:
+            bn = DiscreteBayesianNetwork(self.edges())
+            bn.add_nodes_from(self.nodes())
+
+        if estimator is None:
+            estimator = MaximumLikelihoodEstimator
+        else:
+            if not issubclass(estimator, BaseEstimator):
+                raise TypeError("Estimator object should be a valid pgmpy estimator.")
+
+        _estimator = estimator(
+            bn,
+            data,
+            state_names=state_names,
+        )
+        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
+        bn.add_cpds(*cpds_list)
+        return bn
+
     def fit_update(
         self, data: pd.DataFrame, n_prev_samples: Optional[int] = None, n_jobs: int = 1
     ) -> None:
@@ -1332,11 +1404,11 @@ class DiscreteBayesianNetwork(DAG):
         evidence: Optional[Dict[Hashable, Hashable]] = None,
         virtual_evidence: Optional[List[TabularCPD]] = None,
         virtual_intervention: Optional[List[TabularCPD]] = None,
+        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         include_latents: bool = False,
         partial_samples: Optional[pd.DataFrame] = None,
         seed: Optional[int] = None,
         show_progress: bool = True,
-        missing_prob: Optional[Union[TabularCPD, List[TabularCPD]]] = None,
         return_full: bool = False,
     ) -> pd.DataFrame:
         """
@@ -1366,6 +1438,19 @@ class DiscreteBayesianNetwork(DAG):
             of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
             intervention probabilities.
 
+        missing_prob: TabularCPD, list of TabularCPDs (default: None)
+            Used to define the missingness mechanism in the simulated data. For
+            each variable with missing values, provide a TabularCPD defining
+            the probability of a value being missing given the variable's value
+            (Missing at Random) and optionally its parents' values (Missing Not
+            at Random).
+
+            TabularCPD format: The variable name of each TabularCPD should end
+              with the name of node in DiscreteBayesianNetwork with * at the end
+              of the name. The state names of each TabularCPD should be the same
+              as the state names of the corresponding node in
+              DiscreteBayesianNetwork.
+
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
@@ -1380,15 +1465,6 @@ class DiscreteBayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
-        missing_prob: TabularCPD, list  (default: None)
-            The probability of missing value for the variable of TabularCPD.
-            In case of missing value for more than one variable, provide list of TabularCPD.
-            The variable name of each TabularCPD should
-              end with the name of node in DiscreteBayesianNetwork
-                with * at the end of the name.
-            The state names of each TabularCPD should be the same
-              as the state names of the corresponding
-                node in DiscreteBayesianNetwork.
 
         return_full: bool (default: False)
             If True, return both full samples and samples with missing values (if performed).
@@ -1629,8 +1705,8 @@ class DiscreteBayesianNetwork(DAG):
 
     def save(self, filename: str, filetype: str = "bif") -> None:
         """
-        Writes the model to a file. Plese avoid using any special characters or
-        spaces in variable or state names.
+        Writes the model to a file. Please avoid using any special characters or
+        spaces in variable names or state names in the model.
 
         Parameters
         ----------
@@ -1639,7 +1715,7 @@ class DiscreteBayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif, xdsl.
+            the following: bif, uai, xmlbif, xdsl, net.
 
         Examples
         --------
@@ -1647,33 +1723,30 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm = get_example_model("alarm")
         >>> alarm.save("alarm.bif", filetype="bif")
         """
-        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
-        if filename.split(".")[-1].lower() in supported_formats:
-            filetype = filename.split(".")[-1].lower()
+        from pgmpy.readwrite import (
+            BIFWriter,
+            NETWriter,
+            UAIWriter,
+            XDSLWriter,
+            XMLBIFWriter,
+        )
 
-        if filetype == "bif":
-            from pgmpy.readwrite import BIFWriter
+        supported_formats_writer_map = {
+            "bif": BIFWriter,
+            "uai": UAIWriter,
+            "xmlbif": XMLBIFWriter,
+            "xdsl": XDSLWriter,
+            "net": NETWriter,
+        }
+        if filetype not in supported_formats_writer_map.keys():
+            raise ValueError(f"Unsupported file format: {filetype}")
 
-            writer = BIFWriter(self)
-            writer.write_bif(filename=filename)
+        parsed_filetype = filename.split(".")[-1].lower()
+        if parsed_filetype in supported_formats_writer_map.keys():
+            filetype = parsed_filetype
 
-        elif filetype == "uai":
-            from pgmpy.readwrite import UAIWriter
-
-            writer = UAIWriter(self)
-            writer.write_uai(filename=filename)
-
-        elif filetype == "xmlbif":
-            from pgmpy.readwrite import XMLBIFWriter
-
-            writer = XMLBIFWriter(self)
-            writer.write_xmlbif(filename=filename)
-
-        elif filetype == "xdsl":
-            from pgmpy.readwrite import XDSLWriter
-
-            writer = XDSLWriter(self)
-            writer.write_xdsl(filename=filename)
+        writer_class = supported_formats_writer_map[filetype]
+        writer_class(self).write(filename=filename)
 
     @staticmethod
     def load(
@@ -1689,7 +1762,7 @@ class DiscreteBayesianNetwork(DAG):
 
         filetype: str (default: bif)
             The format of the model file. Can be one of
-            the following: bif, uai, xmlbif, xdsl.
+            the following: bif, uai, xmlbif, xdsl, net.
 
         kwargs: kwargs
             Any additional arguments for the reader class or get_model method.
@@ -1702,40 +1775,37 @@ class DiscreteBayesianNetwork(DAG):
         >>> alarm.save("alarm.bif", filetype="bif")
         >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
         """
-        supported_formats = {"bif", "uai", "xmlbif", "xdsl"}
-        if filename.split(".")[-1].lower() in supported_formats:
-            filetype = filename.split(".")[-1].lower()
+        from pgmpy.readwrite import (
+            BIFReader,
+            NETReader,
+            UAIReader,
+            XDSLReader,
+            XMLBIFReader,
+        )
+
+        supported_formats_reader_map = {
+            "bif": BIFReader,
+            "uai": UAIReader,
+            "xmlbif": XMLBIFReader,
+            "xdsl": XDSLReader,
+            "net": NETReader,
+        }
+
+        if filetype not in supported_formats_reader_map.keys():
+            raise ValueError(f"Unsupported file format: {filetype}")
+
+        parsed_filetype = filename.split(".")[-1].lower()
+        if parsed_filetype in supported_formats_reader_map.keys():
+            filetype = parsed_filetype
+
+        reader_class = supported_formats_reader_map[filetype]
 
         if filetype == "bif":
-            from pgmpy.readwrite import BIFReader
-
-            if "n_jobs" in kwargs:
-                n_jobs = kwargs["n_jobs"]
-            else:
-                n_jobs = -1
-
-            if "state_name_type" in kwargs:
-                state_name_type = kwargs["state_name_type"]
-            else:
-                state_name_type = str
-
-            reader = BIFReader(path=filename, n_jobs=n_jobs)
+            n_jobs = kwargs.get("n_jobs", -1)
+            state_name_type = kwargs.get("state_name_type", str)
+            reader = reader_class(path=filename, n_jobs=n_jobs)
             return reader.get_model(state_name_type=state_name_type)
 
-        elif filetype == "uai":
-            from pgmpy.readwrite import UAIReader
-
-            reader = UAIReader(path=filename)
-            return reader.get_model()
-
-        elif filetype == "xmlbif":
-            from pgmpy.readwrite import XMLBIFReader
-
-            reader = XMLBIFReader(path=filename)
-            return reader.get_model()
-
-        elif filetype == "xdsl":
-            from pgmpy.readwrite import XDSLReader
-
-            reader = XDSLReader(path=filename)
+        else:
+            reader = reader_class(path=filename)
             return reader.get_model()

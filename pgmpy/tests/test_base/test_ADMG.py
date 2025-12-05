@@ -1,7 +1,7 @@
 import pytest
-import networkx as nx
 
 from pgmpy.base.ADMG import ADMG
+from pgmpy.base.DAG import DAG
 
 
 class TestADMGInitialization:
@@ -13,6 +13,7 @@ class TestADMGInitialization:
         assert len(admg.nodes) == 0
         assert len(admg.edges) == 0
         assert len(admg.latents) == 0
+        assert len(admg.get_roles()) == 0
 
     def test_initialization_with_directed_edges(self):
         """Test initialization with directed edges."""
@@ -39,10 +40,86 @@ class TestADMGInitialization:
 
     def test_initialization_with_latents(self):
         """Test initialization with latent variables."""
+        bidirected_edges = [("L1", "L2")]
         latents = ["L1", "L2"]
-        admg = ADMG(latents=latents)
+        admg = ADMG(bidirected_ebunch=bidirected_edges, latents=latents)
 
         assert admg.latents == {"L1", "L2"}
+
+    def test_initialization_with_roles(self):
+        """Test initialization with roles variables."""
+        directed_edges = [("A", "C"), ("B", "C")]
+        roles = {"exposure": ("A", "B"), "outcome": ["C"]}
+        admg = ADMG(directed_ebunch=directed_edges, roles=roles)
+
+        assert set(admg.get_role("exposure")) == set(["A", "B"])
+        assert admg.get_role("outcome") == ["C"]
+        assert set(admg.get_roles()) == set(["exposure", "outcome"])
+        assert admg.get_role_dict() == {"exposure": ["A", "B"], "outcome": ["C"]}
+
+    def test_latents_with_role(self):
+        admg = ADMG(
+            directed_ebunch=[("X", "Y")],
+            bidirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A"],
+            roles={"exposure": "X", "outcome": "Y", "latents": "B"},
+        )
+        admg.with_role(role="latents", variables="C", inplace=True)
+        admg.with_role(role="latents", variables=["D", "E", "F"], inplace=True)
+
+        assert admg.latents == {"A", "B", "C", "D", "E", "F"}
+        assert set(admg.get_role("latents")) == {"A", "B", "C", "D", "E", "F"}
+
+        with pytest.raises(ValueError, match="Variable 'G' not found in the graph."):
+            admg.with_role(role="latents", variables="G", inplace=True)
+
+    def test_latents_without_role(self):
+        admg = ADMG(
+            directed_ebunch=[("X", "Y")],
+            bidirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A", "B", "C"],
+            roles={"exposure": "X", "outcome": "Y", "latents": ("D", "E", "F")},
+        )
+
+        admg.without_role(role="latents", variables="A", inplace=True)
+        admg.without_role(
+            role="latents", variables=["B", "C", "D", "E", "F"], inplace=True
+        )
+
+        assert admg.latents == set()
+        assert set(admg.get_role("latents")) == set()
+
+
+class TestADMGNodeOperations:
+    """Test node addition and validation."""
+
+    def test_add_node(self):
+        """Test adding a single node."""
+        admg = ADMG()
+        admg.add_node("A")
+        admg.add_node("B")
+
+        assert set(admg.nodes()) == {"A", "B"}
+
+    def test_add_nodes_from(self):
+        """Test adding multiple nodes at once."""
+        admg = ADMG()
+        admg.add_nodes_from(["A", "B"])
+        admg.add_nodes_from(set(["C", "D"]))
+
+        assert set(admg.nodes()) == {"A", "B", "C", "D"}
 
 
 class TestADMGEdgeOperations:
@@ -208,6 +285,9 @@ class TestADMGGraphOperations:
         self.admg = ADMG()
         self.admg.add_directed_edges([("A", "B"), ("B", "C"), ("D", "E")])
         self.admg.add_bidirected_edges([("A", "D"), ("B", "E")])
+        self.admg.add_node("F", latent=True)
+        self.admg.with_role(role="exposure", variables={"A"}, inplace=True)
+        self.admg.with_role(role="outcome", variables={"C"}, inplace=True)
 
     def test_get_ancestral_graph(self):
         """Test getting ancestral graph of a subset of nodes."""
@@ -248,6 +328,75 @@ class TestADMGGraphOperations:
 
         assert isinstance(dag, pgmpy_DAG)
 
+    def test_admg_equality(self):
+        """
+        Test the `__eq__` method
+        which compares both graph structure and variable-role mappings to allow comparison of two models.
+        """
+        # ToDo:
+        # If issue #2306 is resolved,
+        # `admg` should be deleted.
+        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
+        admg = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["D"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+
+        # Case1: When the models are the same
+        other1 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["D"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case2: When the models differ
+        other2 = DAG(
+            ebunch=[("A", "C"), ("D", "C")],
+            latents=["D"],
+            roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
+        )
+        # Case3: When the directed_ebunch variables differ between models
+        other3 = ADMG(
+            directed_ebunch=[("A", "C"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["D"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case4: When the bidirected_ebunch variables differ between models
+        other4 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "E"), ("B", "E")],
+            latents=["D"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case5: When the latents variables differ between models
+        other5 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["B"],
+            roles={"exposure": ["A"], "outcome": ["C"]},
+        )
+        # Case6: When the roles variables differ between models
+        other6 = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            latents=["D"],
+            roles={"exposure": ["A"], "adjustment": "D", "outcome": ["C"]},
+        )
+
+        # ToDo:
+        # If issue #2306 is resolved,
+        # `admg.__eq__(other_number)` should be changed to `self.admg.__eq__(other_number)`.
+        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
+        assert admg.__eq__(other1) is True
+        assert admg.__eq__(other2) is False
+        assert admg.__eq__(other3) is False
+        assert admg.__eq__(other4) is False
+        assert admg.__eq__(other5) is False
+        assert admg.__eq__(other6) is False
+
 
 class TestADMGSeparation:
     """Test m-separation and m-connection."""
@@ -264,7 +413,8 @@ class TestADMGSeparation:
         assert not self.admg.is_mseparated("A", "B")
 
         # Test with conditional set
-        separated = self.admg.is_mseparated("A", "D", conditional_set={"C"})
+        assert self.admg.is_mseparated("A", "D", conditional_set={"C"}) is True
+        assert self.admg.is_mseparated("A", "D", conditional_set=set()) is False
         # This depends on the specific graph structure and d-separation rules
 
     def test_is_m_connected(self):

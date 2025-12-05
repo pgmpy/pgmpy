@@ -2,9 +2,20 @@
 from copy import deepcopy
 
 import numpy as np
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
+
+from pgmpy.utils._safe_import import _safe_import
+
+torch = _safe_import("torch")
 
 from pgmpy import config
+
+
+def _is_torch_tensor(obj):
+    if not _check_soft_dependencies("torch", severity="none"):
+        return False
+
+    return isinstance(obj, torch.Tensor)
 
 
 def size(arr):
@@ -71,7 +82,7 @@ def stack(arr_iter):
 
 
 def to_numpy(arr, decimals=None):
-    if isinstance(arr, torch.Tensor):
+    if _is_torch_tensor(arr):
         if arr.device.type.startswith("cuda"):
             arr = arr.cpu().detach().numpy()
         else:
@@ -102,6 +113,8 @@ def get_compute_backend():
     if config.get_backend() == "numpy":
         return np
     else:
+        import torch
+
         return torch
 
 

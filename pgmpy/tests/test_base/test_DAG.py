@@ -6,19 +6,14 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    ExpectationMaximization,
-    MaximumLikelihoodEstimator,
-)
 from pgmpy.estimators.CITests import pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+from pgmpy.utils import get_example_model
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -79,17 +74,11 @@ class TestDAGCreation(unittest.TestCase):
         self.assertListEqual(list(self.graph.nodes()), ["a"])
         self.assertEqual(self.graph.latents, set())
 
-        self.graph = DAG()
-        self.graph.add_node("a", latent=True)
-        self.assertListEqual(list(self.graph.nodes()), ["a"])
-        self.assertEqual(self.graph.latents, set(["a"]))
-
     def test_add_node_nonstring(self):
         self.graph = DAG()
         self.graph.add_node(1)
-
-        self.graph = DAG()
-        self.graph.add_node(1, latent=True)
+        self.assertListEqual(sorted(self.graph.nodes()), [1])
+        self.assertEqual(self.graph.latents, set())
 
     def test_add_nodes_from_string(self):
         self.graph = DAG()
@@ -97,64 +86,17 @@ class TestDAGCreation(unittest.TestCase):
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
         self.assertEqual(self.graph.latents, set())
 
-        self.graph = DAG()
-        self.graph.add_nodes_from(["a", "b", "c", "d"], latent=True)
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
-        self.assertEqual(self.graph.latents, set(["a", "b", "c", "d"]))
-
-        self.graph = DAG()
-        self.graph.add_nodes_from(
-            ["a", "b", "c", "d"], latent=[True, False, True, False]
-        )
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
-        self.assertEqual(self.graph.latents, set(["a", "c"]))
-
     def test_add_nodes_from_non_string(self):
         self.graph = DAG()
         self.graph.add_nodes_from([1, 2, 3, 4])
-
-        self.graph = DAG()
-        self.graph.add_nodes_from([1, 2, 3, 4], latent=True)
-
-        self.graph = DAG()
-        self.graph.add_nodes_from([1, 2, 3, 4], latent=[True, False, False, False])
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2, 3, 4])
+        self.assertEqual(self.graph.latents, set())
 
     def test_add_node_weight(self):
         self.graph = DAG()
         self.graph.add_node("weighted_a", weight=0.3)
         self.assertEqual(self.graph.nodes["weighted_a"]["weight"], 0.3)
         self.assertEqual(self.graph.latents, set())
-
-        self.graph = DAG()
-        self.graph.add_node("weighted_a", weight=0.3, latent=True)
-        self.assertEqual(self.graph.nodes["weighted_a"]["weight"], 0.3)
-        self.assertEqual(self.graph.latents, set(["weighted_a"]))
-
-    def test_add_nodes_from_weight(self):
-        self.graph = DAG()
-        self.graph.add_nodes_from(["weighted_b", "weighted_c"], weights=[0.5, 0.6])
-        self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
-        self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
-
-        self.graph = DAG()
-        self.graph.add_nodes_from(
-            ["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=True
-        )
-        self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
-        self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
-        self.assertEqual(self.graph.latents, set(["weighted_b", "weighted_c"]))
-
-        self.graph = DAG()
-        self.graph.add_nodes_from(
-            ["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=[True, False]
-        )
-        self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
-        self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
-        self.assertEqual(self.graph.latents, set(["weighted_b"]))
-
-        self.graph.add_nodes_from(["e", "f"])
-        self.assertEqual(self.graph.nodes["e"]["weight"], None)
-        self.assertEqual(self.graph.nodes["f"]["weight"], None)
 
     def test_add_edge_string(self):
         self.graph.add_edge("d", "e")
@@ -168,6 +110,8 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edge_nonstring(self):
         self.graph.add_edge(1, 2)
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [[1, 2]])
 
     def test_add_edges_from_string(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
@@ -185,6 +129,8 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_edges_from_nonstring(self):
         self.graph.add_edges_from([(1, 2), (2, 3)])
+        self.assertListEqual(sorted(self.graph.nodes()), [1, 2, 3])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [[1, 2], [2, 3]])
 
     def test_add_edge_weight(self):
         self.graph.add_edge("a", "b", weight=0.3)
@@ -372,6 +318,10 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         dag.to_daft(node_pos="circular")
@@ -425,72 +375,13 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
-    def test_dag_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        for model in [DAG(edge_list), DiscreteBayesianNetwork(edge_list)]:
-            data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertEqual(
-                fitted_model_bayesian.get_cpds("B"),
-                TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
-            )
-
-            fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
-
-            self.assertEqual(
-                fitted_model_mle.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-            fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
-
-            self.assertEqual(
-                fitted_model_em.get_cpds("B"),
-                TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
-            )
-
-    def test_dag_with_independent_node_fit(self):
-        edge_list = [("A", "C"), ("B", "C")]
-        dag = DAG(edge_list)
-        dag.add_node("D")
-        dbn = DiscreteBayesianNetwork(edge_list)
-        dbn.add_node("D")
-        for model in [dag, dbn]:
-            data = pd.DataFrame(
-                data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
-            )
-            pseudo_counts = {
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-                "D": [[9]],
-            }
-
-            fitted_model_bayesian = model.fit(
-                data,
-                estimator=BayesianEstimator,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
-            )
-            self.assertTrue(fitted_model_bayesian.check_model())
-            self.assertEqual(
-                sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"]
-            )
-
     def tearDown(self):
         del self.graph
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_basic(self):
         """Test basic functionality and numerical values using simulated data from LinearGaussianBN"""
         # Create a linear Gaussian Bayesian network
@@ -525,6 +416,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr[0] ** 2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr[0] ** 2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_specific_edge(self):
         """Test computing strength for specific edge using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -554,6 +449,10 @@ class TestDAGCreation(unittest.TestCase):
         xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
         self.assertAlmostEqual(strength_xy[("X", "Y")], xy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_multiple_edges(self):
         """Test computing strength for multiple specific edges using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -586,6 +485,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(strengths[("X", "Y")], xy_corr**2, places=2)
         self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr**2, places=2)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_stored_in_graph(self):
         """Test that edge strengths are stored in the graph after computation using simulated data"""
         # Create a linear Gaussian Bayesian network
@@ -656,6 +559,10 @@ class TestDAGCreation(unittest.TestCase):
             str(context.exception),
         )
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("xgboost", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_skip_latent_edges(self):
         """Test that edge_strength skips edges with latent variables and continues with others"""
         # Create DAG with some latent variables
@@ -703,6 +610,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIn(("X", "Y"), strengths)
         self.assertIn(("W", "Z"), strengths)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_to_daft(self):
         """Test edge strength plotting in to_daft method"""
         dag = DAG([("A", "B"), ("C", "B")])
@@ -724,6 +635,10 @@ class TestDAGCreation(unittest.TestCase):
         daft_plot_default = dag_no_strength.to_daft()
         self.assertIsNotNone(daft_plot_default)
 
+    @unittest.skipUnless(
+        _check_soft_dependencies("daft-pgm", severity="none"),
+        reason="execute only if required dependency present",
+    )
     def test_edge_strength_plotting_with_existing_labels(self):
         """Test edge strength plotting when user provides custom edge labels"""
         dag = DAG([("A", "B")])
@@ -733,6 +648,75 @@ class TestDAGCreation(unittest.TestCase):
             plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}}
         )
         self.assertIsNotNone(daft_plot)
+
+    def test_hash(self):
+        from pgmpy.utils import get_example_model
+
+        dag1 = get_example_model("M-bias")
+        dag2 = get_example_model("M-bias")
+
+        self.assertEqual(hash(dag1), hash(dag2))
+
+        dag1 = dag1.with_role("exposures", "E")
+        self.assertNotEqual(hash(dag1), hash(dag2))
+
+        dag2 = dag2.with_role("exposures", "E")
+        self.assertEqual(hash(dag1), hash(dag2))
+
+        dag1 = dag1.with_role("outcomes", "D")
+        self.assertNotEqual(hash(dag1), hash(dag2))
+
+        dag2 = dag2.with_role("outcomes", "D")
+        self.assertEqual(hash(dag1), hash(dag2))
+
+    def test_latents_with_role(self):
+        self.dag1 = DAG(
+            ebunch=[
+                ("X", "Y"),
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A"],
+            roles={"exposures": "X", "outcomes": "Y", "latents": "B"},
+        )
+        self.dag1.with_role(role="latents", variables="C", inplace=True)
+        self.dag1.with_role(role="latents", variables=["D", "E"], inplace=True)
+        self.dag1 = self.dag1.with_role(role="latents", variables="F", inplace=False)
+
+        self.assertEqual(self.dag1.latents, {"A", "B", "C", "D", "E", "F"})
+        self.assertEqual(
+            set(self.dag1.get_role("latents")), {"A", "B", "C", "D", "E", "F"}
+        )
+
+        with self.assertRaisesRegex(ValueError, "Variable 'G' not found in the graph."):
+            self.dag1.with_role(role="latents", variables="G", inplace=True)
+
+    def test_latents_without_role(self):
+        self.dag1 = DAG(
+            ebunch=[
+                ("X", "Y"),
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A", "B", "C"],
+            roles={"exposures": "X", "outcomes": "Y", "latents": ("D", "E", "F")},
+        )
+
+        self.dag1.without_role(role="latents", variables="A", inplace=True)
+        self.dag1.without_role(role="latents", variables=["B", "C"], inplace=True)
+        self.dag1 = self.dag1.without_role(role="latents", variables="D", inplace=False)
+        self.dag1 = self.dag1.without_role(
+            role="latents", variables=["E", "F"], inplace=False
+        )
+
+        self.assertEqual(self.dag1.latents, set())
+        self.assertEqual(set(self.dag1.get_role("latents")), set())
 
 
 class TestDAGParser(unittest.TestCase):
@@ -912,6 +896,96 @@ class TestDAGMoralization(unittest.TestCase):
         del self.graph
 
 
+class TestDAGValidation(unittest.TestCase):
+    def setUp(self):
+        self.model = get_example_model("cancer")
+        self.data = self.model.simulate(n_samples=int(1e3), seed=1000)
+
+    def test_all_metrics(self):
+        result = self.model.validate(data=self.data, compute_rmsea=True)
+        expected_metric_names = [
+            "Correlation",
+            "Log-likelihood",
+            "AIC",
+            "BIC",
+            "Fisher-C p-value",
+            "RMSEA",
+            "Failing CIs / Total CIs",
+        ]
+        self.assertEqual(set(expected_metric_names), set(result.index))
+        self.assertEqual(result.shape[0], len(expected_metric_names))
+
+    def test_single_metric(self):
+        metrics_to_test = {
+            "correlation": ["Correlation"],
+            "log-likelihood": ["Log-likelihood"],
+            "aic": ["AIC"],
+            "bic": ["BIC"],
+            "fisher-c": ["Fisher-C p-value", "RMSEA"],
+            "implied-cis": ["Failing CIs / Total CIs"],
+        }
+        for metric, expected_rows in metrics_to_test.items():
+            with self.subTest(metric=metric):
+                result = self.model.validate(
+                    data=self.data, metrics=(metric,), compute_rmsea=True
+                )
+                for name in expected_rows:
+                    self.assertIn(name, result.index)
+
+                self.assertEqual(result.shape[0], len(expected_rows))
+
+    def test_output_datatypes(self):
+        result = self.model.validate(data=self.data, compute_rmsea=True)
+        expected_dtypes = {
+            "Correlation": float,
+            "Log-likelihood": float,
+            "AIC": float,
+            "BIC": float,
+            "Fisher-C p-value": float,
+            "RMSEA": float,
+            "Failing CIs / Total CIs": str,
+        }
+        for metric, dtype in expected_dtypes.items():
+            self.assertEqual(type(result[metric]), dtype)
+
+    def test_validate_parameters(self):
+        from pgmpy.estimators.CITests import (
+            g_sq,
+            log_likelihood,
+            modified_log_likelihood,
+        )
+
+        correlation_test_params = [
+            "g_sq",
+            "log_likelihood",
+            "modified_log_likelihood",
+            g_sq,
+            log_likelihood,
+            modified_log_likelihood,
+        ]
+
+        for test_param in correlation_test_params:
+            with self.subTest(test_param=test_param):
+                result = self.model.validate(
+                    data=self.data, metrics=("correlation",), ci_test=test_param
+                )
+                actual_score = result["Correlation"]
+                self.assertIsInstance(actual_score, float)
+
+    def test_errors(self):
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=("unknown_metric",))
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, ci_test="unknown_test")
+
+        def dummy_metric(*args, **kwargs):
+            return 0.5
+
+        with self.assertRaises(ValueError):
+            self.model.validate(data=self.data, metrics=(dummy_metric,))
+
+
 class TestDoOperator(unittest.TestCase):
     def setUp(self):
         self.g1 = DAG([("X", "A"), ("A", "Y"), ("A", "B")])
@@ -947,17 +1021,17 @@ class TestPDAG(unittest.TestCase):
         self.pdag_role = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
-            roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
+            roles={"exposures": "A", "adjustment": "D", "outcomes": "C"},
         )
         self.pdag_role_set = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
-            roles={"exposure": ("A", "D"), "outcome": ("C")},
+            roles={"exposures": ("A", "D"), "outcomes": ("C")},
         )
         self.pdag_role_list = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
-            roles={"exposure": ["A", "D"], "outcome": ["C"]},
+            roles={"exposures": ["A", "D"], "outcomes": ["C"]},
         )
 
     def test_init_normal(self):
@@ -1179,11 +1253,12 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
         self.assertEqual(pdag_copy.undirected_edges, set([("B", "A"), ("B", "D")]))
         self.assertEqual(pdag_copy.latents, set())
-        self.assertEqual(pdag_copy.get_role("exposure"), ["A"])
+        self.assertEqual(pdag_copy.get_role("exposures"), ["A"])
         self.assertEqual(pdag_copy.get_role("adjustment"), ["D"])
-        self.assertEqual(pdag_copy.get_role("outcome"), ["C"])
+        self.assertEqual(pdag_copy.get_role("outcomes"), ["C"])
         self.assertEqual(
-            sorted(pdag_copy.get_roles()), sorted(["adjustment", "exposure", "outcome"])
+            sorted(pdag_copy.get_roles()),
+            sorted(["adjustment", "exposures", "outcomes"]),
         )
 
         pdag_copy = self.pdag_role_set.copy()
@@ -1200,9 +1275,11 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
         self.assertEqual(pdag_copy.undirected_edges, set([("B", "A"), ("B", "D")]))
         self.assertEqual(pdag_copy.latents, set())
-        self.assertEqual(sorted(pdag_copy.get_role("exposure")), sorted(["A", "D"]))
-        self.assertEqual(pdag_copy.get_role("outcome"), ["C"])
-        self.assertEqual(sorted(pdag_copy.get_roles()), sorted(["exposure", "outcome"]))
+        self.assertEqual(sorted(pdag_copy.get_role("exposures")), sorted(["A", "D"]))
+        self.assertEqual(pdag_copy.get_role("outcomes"), ["C"])
+        self.assertEqual(
+            sorted(pdag_copy.get_roles()), sorted(["exposures", "outcomes"])
+        )
 
         pdag_copy = self.pdag_role_list.copy()
         expected_edges = {
@@ -1218,9 +1295,11 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
         self.assertEqual(pdag_copy.undirected_edges, set([("B", "A"), ("B", "D")]))
         self.assertEqual(pdag_copy.latents, set())
-        self.assertEqual(sorted(pdag_copy.get_role("exposure")), sorted(["A", "D"]))
-        self.assertEqual(pdag_copy.get_role("outcome"), ["C"])
-        self.assertEqual(sorted(pdag_copy.get_roles()), sorted(["exposure", "outcome"]))
+        self.assertEqual(sorted(pdag_copy.get_role("exposures")), sorted(["A", "D"]))
+        self.assertEqual(pdag_copy.get_role("outcomes"), ["C"])
+        self.assertEqual(
+            sorted(pdag_copy.get_roles()), sorted(["exposures", "outcomes"])
+        )
 
     def test_pdag_to_dag(self):
         # PDAG no: 1  Possibility of creating a v-structure
@@ -1484,7 +1563,7 @@ class TestPDAG(unittest.TestCase):
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["B"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
 
         # Case1: When the models are the same
@@ -1492,48 +1571,48 @@ class TestPDAG(unittest.TestCase):
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["B"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
         # Case2: When the models differ
         other2 = DAG(
-            ebunch=[("A", "C"), ("D", "C")],
+            ebunch=[("A", "C"), ("D", "C"), ("B", "C")],
             latents=["B"],
-            roles={"exposure": "A", "adjustment": "D", "outcome": "C"},
+            roles={"exposures": "A", "adjustment": "D", "outcomes": "C"},
         )
         # Case3: When the directed_ebunch variables differ between models
         other3 = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C"), ("E", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["B"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
         # Case4: When the directed_ebunch variables differ between models
         other4 = PDAG(
             directed_ebunch=[("A", "E"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["B"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
         # Case5: When the undirected_ebunch variables differ between models
         other5 = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "E")],
             latents=["B"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
         # Case6: When the latents variables differ between models
         other6 = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["D"],
-            roles={"exposure": ("A", "D"), "outcome": ["C"]},
+            roles={"exposures": ("A", "D"), "outcomes": ["C"]},
         )
         # Case7: When the roles variables differ between models
         other7 = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
             latents=["B"],
-            roles={"exposure": ("A"), "adjustment": "D", "outcome": ["C"]},
+            roles={"exposures": ("A"), "adjustment": "D", "outcomes": ["C"]},
         )
 
         self.assertEqual(pdag.__eq__(other1), True)
@@ -1543,6 +1622,57 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.__eq__(other5), False)
         self.assertEqual(pdag.__eq__(other6), False)
         self.assertEqual(pdag.__eq__(other7), False)
+
+    def test_latents_with_role(self):
+        self.pdag1 = PDAG(
+            directed_ebunch=[("X", "Y")],
+            undirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A"],
+            roles={"exposures": "X", "outcomes": "Y", "latents": "B"},
+        )
+        self.pdag1.with_role(role="latents", variables="C", inplace=True)
+        self.pdag1.with_role(role="latents", variables=["D", "E"], inplace=True)
+        self.pdag1 = self.pdag1.with_role(role="latents", variables="F", inplace=False)
+
+        self.assertEqual(self.pdag1.latents, {"A", "B", "C", "D", "E", "F"})
+        self.assertEqual(
+            set(self.pdag1.get_role("latents")), {"A", "B", "C", "D", "E", "F"}
+        )
+
+        with self.assertRaisesRegex(ValueError, "Variable 'G' not found in the graph."):
+            self.pdag1.with_role(role="latents", variables="G", inplace=True)
+
+    def test_latnets_without_role(self):
+        self.pdag1 = PDAG(
+            directed_ebunch=[("X", "Y")],
+            undirected_ebunch=[
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+            ],
+            latents=["A", "B", "C"],
+            roles={"exposures": "X", "outcomes": "Y", "latents": ("D", "E", "F")},
+        )
+
+        self.pdag1.without_role(role="latents", variables="A", inplace=True)
+        self.pdag1.without_role(role="latents", variables=["B", "C"], inplace=True)
+        self.pdag1 = self.pdag1.without_role(
+            role="latents", variables="D", inplace=False
+        )
+        self.pdag1 = self.pdag1.without_role(
+            role="latents", variables=["E", "F"], inplace=False
+        )
+
+        self.assertEqual(self.pdag1.latents, set())
+        self.assertEqual(set(self.pdag1.get_role("latents")), set())
 
 
 class TestDAGConversion(unittest.TestCase):

@@ -1,8 +1,8 @@
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
@@ -35,7 +35,7 @@ class Config:
         Default configuration initilization.
         """
         self.BACKEND = "numpy"
-        self.DTYPE: str | np.dtype | torch.dtype = "float64"
+        self.DTYPE = "float64"
         self.DEVICE = None
         self.SHOW_PROGRESS = True
 
@@ -54,7 +54,10 @@ class Config:
                 f"Current backend is numpy. Device can only be set for torch backend"
             )
 
+        import torch
+
         if device is None:
+
             if torch.cuda.is_available():
                 self.DEVICE = torch.device("cuda:0")
             else:
@@ -80,7 +83,7 @@ class Config:
         self,
         backend: str,
         device: Optional[str] = None,
-        dtype: Optional[np.dtype[Any] | torch._C.dtype] = None,
+        dtype=None,
     ):
         """
         Setup the compute backend.
@@ -107,6 +110,13 @@ class Config:
             self.BACKEND = "numpy"
             self.DEVICE = None
         else:
+            msg = (
+                "Error in pgmpy Config.set_backend: setting the pgmpy backend to torch "
+                "requires torch to be installed in the python environment, but "
+                "torch was not found. Ensure to install torch using "
+                "`pip install pgmpy[torch]`, or `pip install pgmpy[optional]`"
+            )
+            _check_soft_dependencies("torch", msg=msg)
             self.BACKEND = "torch"
             self.set_device(device)
         self.set_dtype(dtype=dtype)
@@ -137,7 +147,7 @@ class Config:
         """
         return self.SHOW_PROGRESS
 
-    def set_dtype(self, dtype: Optional[np.dtype[Any] | torch.dtype] = None):
+    def set_dtype(self, dtype=None):
         """
         Sets the dtype for value matrices.
 
@@ -154,6 +164,8 @@ class Config:
 
         elif self.BACKEND == "torch":
             if dtype is None:
+                import torch
+
                 self.DTYPE = torch.float64
             else:
                 self.DTYPE = dtype
@@ -169,6 +181,8 @@ class Config:
             return np
 
         else:
+            import torch
+
             return torch
 
 
