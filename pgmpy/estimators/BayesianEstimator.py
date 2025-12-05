@@ -174,6 +174,8 @@ class BayesianEstimator(ParameterEstimator):
                  must be specified instead of 'pseudo_counts'. This is equivalent to
                  'prior_type=dirichlet' and using uniform 'pseudo_counts' of
                  `equivalent_sample_size/(node_cardinality*np.prod(parents_cardinalities))`.
+                 'equivalent_sample_size' can either be a numerical value or a dict that specifies
+                 the size for each variable separately.
             - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every
               pseudo_count to 1, regardless of the cardinality of the variable.
 
