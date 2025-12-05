@@ -156,9 +156,13 @@ class SimpleCausalModel(DAG):
             "mediators": set(mediators),
             "instruments": set(instruments),
         }
-        latents_set = set(latents) if latents else set()
-        super().__init__(edges, latents=set(), roles=roles)
 
-        if latents_set:
-            self.add_nodes_from(latents_set)
-            self.latents = latents_set
+        super().__init__(edges, roles=roles)
+
+        latents_set = set(latents) if latents else set()
+        for latent in latents_set:
+            if latent not in self.nodes():
+                raise ValueError(
+                    f"Latent variable '{latent}' is not in the graph nodes."
+                )
+        self.latents = latents_set
