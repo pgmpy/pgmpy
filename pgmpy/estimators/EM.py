@@ -79,9 +79,15 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Drop fully missing columns and treat them as latent if not already
         original_cols = set(data.columns)
-        data = data.dropna(axis=1, how="any")
+        data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
+
+        partially_missing = [col for col in data.columns if data[col].isnull().any()]
+        new_latents = [
+            col
+            for col in (dropped_cols | set(partially_missing))
+            if col not in model.latents
+        ]
 
         if new_latents:
             logger.warning(
@@ -106,7 +112,7 @@ class ExpectationMaximization(ParameterEstimator):
                 max(
                     cpd.get_value(
                         **{
-                            key: value
+                            key: int(value) if not pd.isna(value) else value
                             for key, value in datapoint.items()
                             if key in scope
                         }
@@ -127,7 +133,9 @@ class ExpectationMaximization(ParameterEstimator):
         cache: List[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             missing_vars = [
-                var for var in latent_card.keys() if pd.isna(data_unique.iloc[i][var])
+                var
+                for var in latent_card.keys()
+                if var not in data_unique.columns or pd.isna(data_unique.iloc[i][var])
             ]
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
@@ -278,12 +286,15 @@ class ExpectationMaximization(ParameterEstimator):
         # Step 1: Parameter checks
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
+        else:
+            latent_card = latent_card.copy()
+            for var in self.model_copy.latents:
+                if var not in latent_card:
+                    default_states = self.state_names.get(var, [0, 1])
+                    latent_card[var] = len(default_states)
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
-        n_states_dict.update(latent_card)
-        for var in self.model_copy.latents:
-            self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize CPDs.
         # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.

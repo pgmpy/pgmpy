@@ -7,6 +7,7 @@ from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.estimators import ExpectationMaximization
 from pgmpy.estimators import ExpectationMaximization as EM
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -347,3 +348,22 @@ class TestEMTorch(TestEM):
         get_reusable_executor().shutdown(wait=True)
 
         config.set_backend("numpy")
+
+
+class TestExpectationMaximization(unittest.TestCase):
+    def test_em_with_missing_values(self):
+        # GH#2386
+        np.random.seed(42)
+        data = pd.DataFrame(
+            np.random.randint(low=0, high=2, size=(100, 3)),
+            columns=["A", "C", "D"],
+        )
+        mask = np.random.random(data.shape) < 0.1
+        data = data.mask(mask)
+
+        model = DiscreteBayesianNetwork(
+            [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
+        )
+        estimator = ExpectationMaximization(model, data)
+        params = estimator.get_parameters(latent_card={"B": 3}, max_iter=1)
+        self.assertTrue(len(params) > 0)
