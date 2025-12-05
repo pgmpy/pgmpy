@@ -16,7 +16,7 @@ def test_get_scaling_indicators():
         roles={
             "exposures": "x1",
             "outcomes": "y1",
-            # "observed": ("x1", "y1", "x2", "y2"),
+            "observed": ("x1", "y1", "x2", "y2"),
             "latents": ("xi1", "eta1"),
         },
     )
@@ -42,7 +42,7 @@ def test_iv_transformations():
         roles={
             "exposures": "x1",
             "outcomes": "y1",
-            # "observed": ("x1", "y1", "x2", "y2"),
+            "observed": ("x1", "y1", "x2", "y2"),
             "latents": ("xi1", "eta1"),
         },
     )
@@ -73,6 +73,7 @@ def test_get_ivs_without_scaling_indicators():
             "exposures": "X",
             "outcomes": "Y",
             "latents": "U",
+            "observed": ("X", "Y", "I"),
         },
     )
     iv = InstrumentalVariables(
@@ -107,6 +108,7 @@ def test_no_ivs_found():
             "exposures": "X",
             "outcomes": "Y",
             "latents": "U",
+            "observed": ("X", "Y"),
         },
     )
     iv = InstrumentalVariables(variant=None)
@@ -123,6 +125,7 @@ def test_conditional_ivs():
         roles={
             "exposures": "X",
             "outcomes": "Y",
+            "observed": ("X", "Y", "I", "W"),
         },
     )
     iv = iv = InstrumentalVariables(variant="conditional")
@@ -135,7 +138,12 @@ def test_conditional_ivs():
 def test_conditional_ivs_with_latents():
     conditional_iv_model = DAG(
         [("U", "X"), ("U", "Y"), ("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
-        roles={"exposures": "X", "outcomes": "Y", "latents": "U"},
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+            "latents": "U",
+            "observed": ("X", "Y", "I", "W"),
+        },
     )
     iv = iv = InstrumentalVariables(variant="conditional")
     retruned_graph, ok = iv._identify(conditional_iv_model)

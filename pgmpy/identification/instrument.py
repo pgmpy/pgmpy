@@ -15,7 +15,7 @@ class InstrumentalVariables(BaseIdentification):
 
     def _get_scaling_indicators(self, causal_graph):
         latent_variables = causal_graph.get_role("latents")
-        observed_nodes = list(set(causal_graph.nodes) - set(latent_variables))
+        observed_nodes = causal_graph.get_role("observed")
         scaling_indicators = {}
 
         if self.scaling_indicators is not None:
@@ -34,8 +34,7 @@ class InstrumentalVariables(BaseIdentification):
 
         exposures = full_graph_.get_role("exposures")
         latent_variables = full_graph_.get_role("latents")
-        all_nodes = set(causal_graph.nodes)
-        observed = list(all_nodes - set(latent_variables))
+        observed = full_graph_.get_role("observed")
         scaling_indicators = self._get_scaling_indicators(causal_graph)
 
         if not full_graph_.has_edge(X, Y):
@@ -68,7 +67,7 @@ class InstrumentalVariables(BaseIdentification):
     def _identify(self, causal_graph):
         exposure = causal_graph.get_role("exposures")[0]
         outcome = causal_graph.get_role("outcomes")[0]
-        observed = set(causal_graph.nodes) - set(causal_graph.get_role("latents"))
+        observed = causal_graph.get_role("observed")
 
         latent_variables = causal_graph.get_role("latents")
         scaling_indicators = self._get_scaling_indicators(causal_graph)
@@ -91,7 +90,7 @@ class InstrumentalVariables(BaseIdentification):
                 G_c = transformed_graph
 
             instruments = []
-            for Z in observed - {exposure, outcome}:
+            for Z in set(observed) - {exposure, outcome}:
                 W = CausalInference(G_c)._nearest_separator(G_c, outcome, Z)
 
                 if (
