@@ -55,16 +55,12 @@ def test_iv_transformations():
     )
 
     assert set(transformed_graph.edges()) == {
-        #     (".eta1", "y1"),
-        #     (".xi1", "x1"),
-        #     (".xi1", "x2"),
-        # }
         ("xi1", "x1"),
-        (".eta1", "y1"),
+        ("eta1", "y1"),
         ("xi1", "x2"),
         ("eta1", "y2"),
         ("eta1", "y1"),
-        (".x1", "y1"),
+        ("x1", "y1"),
     }
 
     assert dependent_var == "y1"

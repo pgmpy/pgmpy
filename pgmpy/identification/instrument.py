@@ -47,7 +47,7 @@ class InstrumentalVariables(BaseIdentification):
             dependent_var = Y
 
         elif Y in latent_variables:
-            full_graph_.add_edge("." + Y, scaling_indicators[Y])
+            full_graph_.add_edge(Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
 
         else:
@@ -61,7 +61,7 @@ class InstrumentalVariables(BaseIdentification):
             if full_graph_.has_edge(X, Y):
                 full_graph_.remove_edge(X, Y)
             if parent_y in latent_variables:
-                full_graph_.add_edge("." + scaling_indicators[parent_y], dependent_var)
+                full_graph_.add_edge(scaling_indicators[parent_y], dependent_var)
 
         return full_graph_, dependent_var
 
@@ -93,13 +93,12 @@ class InstrumentalVariables(BaseIdentification):
             instruments = []
             for Z in observed - {exposure, outcome}:
                 W = CausalInference(G_c)._nearest_separator(G_c, outcome, Z)
-                if not W:
-                    continue
-                W = {
-                    v for v in W if not str(v).startswith(".")
-                }  # There seems to be a spurious node .X getting added from _nearest_separator
-                # Condition to check if W d-separates Y from Z
-                if (W.intersection(descendants(G_c, outcome))) or (exposure in W):
+
+                if (
+                    not W
+                    or (W.intersection(descendants(G_c, outcome)))
+                    or (exposure in W)
+                ):
                     continue
 
                 # Condition to check if X d-connected to I after conditioning on W.
