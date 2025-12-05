@@ -112,7 +112,14 @@ class ExpectationMaximization(ParameterEstimator):
                 max(
                     cpd.get_value(
                         **{
-                            key: int(value) if not pd.isna(value) else value
+                            key: (
+                                int(value)
+                                if not pd.isna(value)
+                                and isinstance(
+                                    value, (int, float, np.integer, np.floating)
+                                )
+                                else value
+                            )
                             for key, value in datapoint.items()
                             if key in scope
                         }
@@ -135,7 +142,8 @@ class ExpectationMaximization(ParameterEstimator):
             missing_vars = [
                 var
                 for var in latent_card.keys()
-                if var not in data_unique.columns or pd.isna(data_unique.iloc[i][var])
+                if var not in data_unique.columns
+                or pd.isna(data_unique.iloc[i][var].get(var))
             ]
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))

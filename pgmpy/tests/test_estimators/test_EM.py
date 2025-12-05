@@ -358,12 +358,19 @@ class TestExpectationMaximization(unittest.TestCase):
             np.random.randint(low=0, high=2, size=(100, 3)),
             columns=["A", "C", "D"],
         )
-        mask = np.random.random(data.shape) < 0.1
+        mask = np.random.random(data.shape) < 0.2
         data = data.mask(mask)
+
+        self.assertTrue(all(dtype == np.float64 for dtype in data.dtypes))
 
         model = DiscreteBayesianNetwork(
             [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
         )
-        estimator = ExpectationMaximization(model, data)
-        params = estimator.get_parameters(latent_card={"B": 3}, max_iter=1)
+        est = ExpectationMaximization(model, data)
+        params = est.get_parameters(
+            latent_card={"B": 3}, max_iter=2, show_progress=False
+        )
         self.assertTrue(len(params) > 0)
+        self.assertIn("A", est.model.latents)
+        self.assertIn("C", est.model.latents)
+        self.assertIn("D", est.model.latents)
