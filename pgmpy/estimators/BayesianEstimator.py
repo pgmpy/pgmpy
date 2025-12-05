@@ -149,7 +149,9 @@ class BayesianEstimator(ParameterEstimator):
         node: Hashable,
         prior_type: str = "BDeu",
         pseudo_counts: Union[List[List[float]], np.ndarray, float, int] = [],
-        equivalent_sample_size: Union[int, float] = 5,
+        equivalent_sample_size: Union[
+            int, float, Dict[Hashable, Union[int, float]]
+        ] = 5,
         weighted: bool = False,
     ) -> TabularCPD:
         """
@@ -232,7 +234,12 @@ class BayesianEstimator(ParameterEstimator):
         if prior_type == "k2":
             pseudo_counts = np.ones(cpd_shape, dtype=int)
         elif prior_type == "bdeu":
-            alpha = float(equivalent_sample_size) / (
+            equivalent_sample_size_val = (
+                equivalent_sample_size.get(node, 0)
+                if isinstance(equivalent_sample_size, dict)
+                else equivalent_sample_size
+            )
+            alpha = float(equivalent_sample_size_val) / (
                 node_cardinality * np.prod(parents_cardinalities)
             )
             pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
