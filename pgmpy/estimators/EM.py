@@ -82,16 +82,11 @@ class ExpectationMaximization(ParameterEstimator):
         data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
 
-        partially_missing = [col for col in data.columns if data[col].isnull().any()]
-        new_latents = [
-            col
-            for col in (dropped_cols | set(partially_missing))
-            if col not in model.latents
-        ]
+        new_latents = [col for col in dropped_cols if col not in model.latents]
 
         if new_latents:
             logger.warning(
-                f"Columns {new_latents} have all or partial missing values and are not marked as latent. "
+                f"Columns {new_latents} have all missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
             model.latents.update(new_latents)
@@ -143,7 +138,7 @@ class ExpectationMaximization(ParameterEstimator):
                 var
                 for var in latent_card.keys()
                 if var not in data_unique.columns
-                or pd.isna(data_unique.iloc[i][var].get(var))
+                or pd.isna(data_unique.iloc[i].get(var))
             ]
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
@@ -158,9 +153,8 @@ class ExpectationMaximization(ParameterEstimator):
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
-            df["_weight"] = (weights / weights.sum()) * n_counts[
-                tuple(data_unique.iloc[i])
-            ]
+            row_tuple = tuple(data_unique.iloc[i].values)
+            df["_weight"] = (weights / weights.sum()) * n_counts[row_tuple]
             cache.append(df)
 
         return pd.concat(cache, copy=False)
