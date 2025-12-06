@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Run doctests on specified files for pre-commit hook."""
+"""Run doctests on specified files for pre-commit hook.
+
+This script is used by the pre-commit framework to validate doctests in Python files
+before they are committed to the repository. It is configured in .pre-commit-config.yaml
+as a local hook that runs automatically on staged Python files.
+
+Usage:
+    # Automatically run by pre-commit on commit
+    git commit
+
+    # Manually test all files
+    pre-commit run doctest --all-files
+
+    # Manually test staged files
+    pre-commit run doctest
+
+The script:
+- Accepts file paths as command-line arguments
+- Runs doctests on each Python file using the doctest module
+- Uses ELLIPSIS and NORMALIZE_WHITESPACE options for more flexible matching
+- Reports failures with file names and failure counts
+- Returns exit code 1 if any tests fail (blocking the commit)
+- Returns exit code 0 if all tests pass (allowing the commit)
+"""
 import doctest
 import os
 import sys

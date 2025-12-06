@@ -27,8 +27,8 @@ repos:
     hooks:
       - id: doctest
         name: Run doctests
-        entry: python run_doctests.py
+        entry: python _doctests_precommit.py
         language: system
         files: \.py$
         pass_filenames: true
-        stages: [commit]
+        stages: [pre-commit]
