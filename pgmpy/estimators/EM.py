@@ -103,6 +103,8 @@ class ExpectationMaximization(ParameterEstimator):
         likelihood = 0
         for cpd in self.model_copy.cpds:
             scope = set(cpd.scope())
+            if any(pd.isna(datapoint.get(var)) for var in scope):
+                continue
             likelihood += log(
                 max(
                     cpd.get_value(
@@ -116,7 +118,7 @@ class ExpectationMaximization(ParameterEstimator):
                                 else value
                             )
                             for key, value in datapoint.items()
-                            if key in scope
+                            if key in scope and not pd.isna(value)
                         }
                     ),
                     1e-10,
@@ -153,8 +155,8 @@ class ExpectationMaximization(ParameterEstimator):
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
-            row_tuple = tuple(data_unique.iloc[i].values)
-            df["_weight"] = (weights / weights.sum()) * n_counts[row_tuple]
+            row_key = tuple("NaN" if pd.isna(v) else v for v in data_unique.iloc[i])
+            df["_weight"] = (weights / weights.sum()) * n_counts[row_key]
             cache.append(df)
 
         return pd.concat(cache, copy=False)
@@ -171,9 +173,10 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
-        n_counts = (
-            self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
-        )
+        n_counts = {}
+        for _, row in self.data.iterrows():
+            key = tuple("NaN" if pd.isna(v) else v for v in row)
+            n_counts[key] = n_counts.get(key, 0) + 1
 
         cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
@@ -292,11 +295,16 @@ class ExpectationMaximization(ParameterEstimator):
             latent_card = latent_card.copy()
             for var in self.model_copy.latents:
                 if var not in latent_card:
-                    default_states = self.state_names.get(var, [0, 1])
-                    latent_card[var] = len(default_states)
+                    latent_card[var] = len(self.state_names.get(var, [0, 1]))
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
+        n_states_dict.update(latent_card)
+
+        combined_state_names = self.state_names.copy()
+        for var, card in latent_card.items():
+            if var not in combined_state_names:
+                combined_state_names[var] = list(range(card))
 
         # Step 3: Initialize CPDs.
         # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
@@ -313,7 +321,8 @@ class ExpectationMaximization(ParameterEstimator):
                             v: n_states_dict[v] for v in ([var] + parents_dict[var])
                         },
                         state_names={
-                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                            v: combined_state_names[v]
+                            for v in ([var] + parents_dict[var])
                         },
                         seed=seed,
                     )
@@ -328,7 +337,8 @@ class ExpectationMaximization(ParameterEstimator):
                             v: n_states_dict[v] for v in ([var] + parents_dict[var])
                         },
                         state_names={
-                            v: self.state_names[v] for v in ([var] + parents_dict[var])
+                            v: combined_state_names[v]
+                            for v in ([var] + parents_dict[var])
                         },
                         seed=seed,
                     )
@@ -354,12 +364,12 @@ class ExpectationMaximization(ParameterEstimator):
             estimator = BayesianEstimator.__new__(BayesianEstimator)
             estimator.model = self.model
             estimator.data = self.data
-            estimator.state_names = self.state_names
+            estimator.state_names = combined_state_names
         else:
             estimator = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
             estimator.model = self.model
             estimator.data = self.data
-            estimator.state_names = self.state_names
+            estimator.state_names = combined_state_names
 
         for var in fixed_cpd_vars:
             fixed_cpds.append(estimator.estimate_cpd(var))
@@ -379,7 +389,7 @@ class ExpectationMaximization(ParameterEstimator):
                         var: n_states_dict[var] for var in chain([node], parents)
                     },
                     state_names={
-                        var: self.state_names[var] for var in chain([node], parents)
+                        var: combined_state_names[var] for var in chain([node], parents)
                     },
                     seed=seed,
                 )
