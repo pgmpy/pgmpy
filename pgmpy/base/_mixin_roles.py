@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from pgmpy.global_vars import logger
-
 __all__ = ["_GraphRolesMixin"]
 
 
@@ -20,7 +18,7 @@ class _GraphRolesMixin:
         List of nodes with the specified role.
         """
         G = self
-        n_w_role = [n for n, d in G.nodes(data=True) if d.get("role", None) == role]
+        n_w_role = [n for n, d in G.nodes(data=True) if role in d.get("roles", set())]
         return n_w_role
 
     def get_roles(self):
@@ -31,8 +29,9 @@ class _GraphRolesMixin:
         List of str
             list of all roles defined in the graph.
         """
-        roles = {d.get("role", None) for _, d in self.nodes(data=True)}
-        roles.discard(None)  # remove "None"
+        roles = set()
+        for _, d in self.nodes(data=True):
+            roles.update(d.get("roles", set()))
         return list(roles)
 
     def get_role_dict(self):
@@ -43,12 +42,12 @@ class _GraphRolesMixin:
         Dict with str keys and values being list of nodes
             keys are roles present in the graph, and lists are nodes with that role
         """
-        tpls = [(n, d.get("role", None)) for n, d in self.nodes(data=True)]
+        tpls = [(n, d.get("roles", set())) for n, d in self.nodes(data=True)]
         r_dict = {r: [] for r in self.get_roles()}
 
-        for n, r in tpls:
-            if r is not None:
-                r_dict[r].append(n)
+        for n, roles in tpls:
+            for role in roles:
+                r_dict[role].append(n)
         return r_dict
 
     def has_role(self, role: str) -> bool:
@@ -97,23 +96,19 @@ class _GraphRolesMixin:
                 if var not in new_graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = new_graph.nodes(data=True)[var].get("role", None)
-                    if existing_role is not None:
-                        logger.warning(
-                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
-                        )
-                    new_graph.add_node(var, role=role)
+                    existing_role = new_graph.nodes[var].get("roles", set())
+
+                    existing_role.add(role)
+                    new_graph.add_node(var, roles=existing_role)
         else:
             for var in variables:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = new_graph.nodes(data=True)[var].get("role", None)
-                    if existing_role is not None:
-                        logger.warning(
-                            f"Overwriting existing role for '{var}'. Replacing '{existing_role}' with '{role}'."
-                        )
-                    new_graph.add_node(var, role=role)
+                    existing_role = new_graph.nodes[var].get("roles", set())
+
+                    existing_role.add(role)
+                    new_graph.add_node(var, roles=existing_role)
         return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
@@ -144,8 +139,13 @@ class _GraphRolesMixin:
 
         for v, attr in new_graph.nodes(data=True):
             if variables is None or v in variables:
-                if attr.get("role", None) == role:
-                    attr.pop("role")
+                roles = attr.get("roles", set())
+                if isinstance(roles, set) and role in roles:
+                    roles.discard(role)
+                    if len(roles) == 0:
+                        attr.pop("roles")
+                    else:
+                        attr["roles"] = roles
         return new_graph
 
     def is_valid_causal_structure(self) -> bool:

@@ -23,3 +23,12 @@ repos:
     hooks:
     - id: blackdoc
       additional_dependencies: ["black==24.8.0"]
+  - repo: local
+    hooks:
+      - id: doctest
+        name: Run doctests
+        entry: python _doctests_precommit.py
+        language: system
+        files: \.py$
+        pass_filenames: true
+        stages: [pre-commit]
