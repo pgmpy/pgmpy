@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: install dependencies
+        run: pip install .[tests] --no-cache-dir
+
       - name: Get changed files
         id: changed-files
         run: |
