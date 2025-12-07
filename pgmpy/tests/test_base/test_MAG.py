@@ -172,20 +172,12 @@ class TestMAG:
         model_from_file = MAG.from_dagitty(filename="test_model.dagitty")
         os.remove("test_model.dagitty")
 
-        expected_edges = {("A", "B,"), ("A", "E"), ("A", "J"), ("A", "M")}
+        expected_edges = {("B", "A"), ("A", "E"), ("A", "J"), ("A", "M")}
         expected_roles = {"outcome": ["J"], "latents": ["E"], "exposure": ["A"]}
 
-        # Handles order of nodes
-        def normalize_edge(edge):
-            return tuple(sorted(edge))
-
-        assert {
-            normalize_edge(edge) for edge in model_from_str.edges()
-        } == expected_edges
+        assert model_from_str.edges() == expected_edges
         assert model_from_str.get_role_dict() == expected_roles
-        assert {
-            normalize_edge(edge) for edge in model_from_file.edges()
-        } == expected_edges
+        assert model_from_file.edges() == expected_edges
         assert model_from_file.get_role_dict() == expected_roles
 
     def test_from_dagitty_disconnected_graphs(self):

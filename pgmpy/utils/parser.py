@@ -72,7 +72,7 @@ def parse_dagitty(lines):
         all_vars = set()
         # ParseResults type is resolved at call time (ParseResults imported later)
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
-            return set([edge_stat.strip('"')])
+            return {edge_stat.strip('"').strip("'").rstrip(",")}
 
         length = len(edge_stat)
 
@@ -162,8 +162,8 @@ def parse_dagitty(lines):
 
         # For MAG/PAG we want to create 4-tuple edges (u, v, tail_mark_on_u, head_mark_on_v)
         # For DAG we keep the old behavior (u, v) and create artificial latent for <->.
-        for left_var in list(left_vars):
-            for right_var in list(right_vars):
+        for left_var in sorted(left_vars):
+            for right_var in sorted(right_vars):
                 if target_type.upper() in ("MAG", "PAG", "PDAG"):
                     t = str(token)
                     left_mark = char_to_mark(t[0])
