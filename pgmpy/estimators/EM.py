@@ -91,6 +91,9 @@ class ExpectationMaximization(ParameterEstimator):
             )
             model.latents.update(new_latents)
 
+        self.variables_with_missing = {
+            col for col in data.columns if data[col].isnull().any()
+        }
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
@@ -111,14 +114,13 @@ class ExpectationMaximization(ParameterEstimator):
                         **{
                             key: (
                                 int(value)
-                                if not pd.isna(value)
-                                and isinstance(
+                                if isinstance(
                                     value, (int, float, np.integer, np.floating)
                                 )
                                 else value
                             )
                             for key, value in datapoint.items()
-                            if key in scope and not pd.isna(value)
+                            if key in scope
                         }
                     ),
                     1e-10,
@@ -139,12 +141,11 @@ class ExpectationMaximization(ParameterEstimator):
             missing_vars = [
                 var
                 for var in latent_card.keys()
-                if var not in data_unique.columns
-                or pd.isna(data_unique.iloc[i].get(var))
+                if pd.isna(data_unique.iloc[i].get(var))
             ]
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
-                latent_combinations = np.array(v, dtype=int)
+                latent_combinations = np.array(v, dtype=float)
                 df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
                     drop=True
                 )
@@ -210,7 +211,7 @@ class ExpectationMaximization(ParameterEstimator):
         n_jobs: int = 1,
         batch_size: int = 1000,
         seed: Optional[int] = None,
-        init_cpds: Union[Dict[str, TabularCPD], str] = {},
+        init_cpds: Union[Dict[str, TabularCPD], str, None] = None,
         show_progress: bool = True,
         **kwargs,
     ) -> List[TabularCPD]:
@@ -288,6 +289,8 @@ class ExpectationMaximization(ParameterEstimator):
          <TabularCPD representing P(C:2) at 0x...>,
          <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
+        if init_cpds is None:
+            init_cpds = {}
         # Step 1: Parameter checks
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
@@ -358,6 +361,7 @@ class ExpectationMaximization(ParameterEstimator):
             - self.model.latents
             - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
             - set(init_cpds.keys())
+            - self.variables_with_missing
         )
 
         if apply_smoothing:

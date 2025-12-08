@@ -351,22 +351,40 @@ class TestEMTorch(TestEM):
 
 
 class TestExpectationMaximization(unittest.TestCase):
-    def test_em_with_missing_values(self):
-        np.random.seed(42)
-        data = pd.DataFrame(
-            np.random.randint(low=0, high=2, size=(100, 3)),
-            columns=["A", "C", "D"],
+    def test_em_recovers_cpds_with_missing_values_edge_cases(self):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[0.7], [0.3]])
+        cpd_b = TabularCPD(
+            "B", 2, [[0.9, 0.2], [0.1, 0.8]], evidence=["A"], evidence_card=[2]
         )
-        mask = np.random.random(data.shape) < 0.2
-        data = data.mask(mask)
+        model.add_cpds(cpd_a, cpd_b)
 
-        self.assertTrue(all(dtype == np.float64 for dtype in data.dtypes))
+        for missing_rate in [0.0, 0.1, 0.5]:
+            for seed in [42, 123]:
+                data = model.simulate(n_samples=1000, seed=seed)
+                mask = np.random.rand(*data.shape) < missing_rate
+                data_missing = data.mask(mask)
 
-        model = DiscreteBayesianNetwork(
-            [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
-        )
+                est = ExpectationMaximization(model, data_missing)
+                learned_cpds = est.get_parameters(
+                    max_iter=100, atol=1e-2, show_progress=False
+                )
+
+                for orig_cpd in [cpd_a, cpd_b]:
+                    learned_cpd = next(
+                        cpd for cpd in learned_cpds if cpd.variable == orig_cpd.variable
+                    )
+                    self.assertTrue(orig_cpd.__eq__(learned_cpd, atol=0.15))
+                    self.assertTrue(
+                        np.allclose(np.sum(learned_cpd.values, axis=0), 1, atol=1e-6)
+                    )
+
+        data = model.simulate(n_samples=100, seed=0)
+        data["B"] = np.nan
         est = ExpectationMaximization(model, data)
-        params = est.get_parameters(
-            latent_card={"B": 3}, max_iter=2, show_progress=False
-        )
-        self.assertTrue(len(params) >= 3)
+        self.assertNotIn("B", est.data.columns)
+
+        data = model.simulate(n_samples=10, seed=0)
+        data.iloc[5] = np.nan
+        est = ExpectationMaximization(model, data)
+        self.assertEqual(est.data.shape[0], 10)
