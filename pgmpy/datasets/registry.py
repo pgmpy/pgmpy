@@ -1,4 +1,4 @@
-class Registry:
+class DatasetRegistry:
     def __init__(self) -> None:
         self._by_name = {}
         self._by_tag = {}
@@ -20,9 +20,9 @@ class Registry:
         return self._by_name.get(name, None)
 
 
+DATASETS = DatasetRegistry()
+
+
 def dataset_class(cls):
     DATASETS.register(cls)
     return cls
-
-
-DATASETS = Registry()

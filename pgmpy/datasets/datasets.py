@@ -5,7 +5,7 @@ import io
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import networkx as nx
 import pandas as pd
@@ -21,13 +21,6 @@ PGMPY_DATA_HOME = os.environ.get(
 
 
 class BaseDataset:
-    name: str = ""
-    description: str = ""
-    tags: Dict[str, Any] = {}
-
-    VARIANT_URLS: Dict[str, str] = {}
-    GROUND_TRUTH_URL: str = ""
-    DEFAULT_VARIANT: str = ""
 
     @staticmethod
     def _ensure_dir(path: str) -> None:
@@ -41,20 +34,18 @@ class BaseDataset:
     def cache_path(cls, key: str) -> str:
         cls._ensure_dir(PGMPY_DATA_HOME)
         safe = hashlib.sha256(f"{cls.name}:{key}".encode()).hexdigest()[:16]
-        ext = ".bin"
+
         if key.startswith("data"):
             ext = ".csv"
         elif key.startswith("ground_truth"):
             ext = ".txt"
+        else:
+            raise ValueError(
+                f"Unknown key type: {key}. Must start with 'data' or 'ground_truth'."
+            )
         return os.path.join(
             PGMPY_DATA_HOME, f"{cls.name}_{key.replace(':','-')}_{safe}{ext}"
         )
-
-    @classmethod
-    def _fetch(cls, url: str) -> bytes:
-        resp = requests.get(url, timeout=60)
-        resp.raise_for_status()
-        return resp.content
 
     @classmethod
     def load_or_fetch(cls, key: str, url: str) -> bytes:
@@ -63,7 +54,9 @@ class BaseDataset:
             with open(cache_path, "rb") as f:
                 raw = f.read()
         else:
-            raw = cls._fetch(url)
+            resp = requests.get(url, timeout=60)
+            resp.raise_for_status()
+            raw = resp.content
             with open(cache_path, "wb") as f:
                 f.write(raw)
         return raw
@@ -82,72 +75,11 @@ class BaseDataset:
 
     @classmethod
     def load_ground_truth(cls) -> Optional[DAG]:
-        if not cls.GROUND_TRUTH_URL:
+        if not getattr(cls, "GROUND_TRUTH_URL", None):
             return None
 
         raw = cls.load_or_fetch("ground_truth", cls.GROUND_TRUTH_URL)
         return cls._parse_ground_truth(raw)
-
-    @classmethod
-    def _parse_ground_truth(cls, raw: bytes) -> Optional[DAG]:
-        raise NotImplementedError
-
-
-def load_dataset(
-    name: str, variant: Optional[str] = None, load_ground_truth: bool = True
-) -> Tuple[pd.DataFrame, Optional[DAG]]:
-    ds = DATASETS.get(name)
-    if ds is None:
-        raise ValueError(
-            f"Dataset '{name}' not found. Available datasets: {DATASETS.list_all()}"
-        )
-
-    X = ds.load(variant=variant)
-
-    gt = ds.load_ground_truth() if load_ground_truth else None
-
-    if gt is None:
-        gt = DAG()
-
-    data_cols = set(X.columns)
-    gt_nodes = set(gt.nodes())
-
-    if data_cols != gt_nodes:
-        missing_in_gt = data_cols - gt_nodes
-        gt.add_nodes_from(missing_in_gt)
-
-        missing_in_data = gt_nodes - data_cols
-        if missing_in_data:
-            logger.warning(
-                f"Ground truth for '{name}' has nodes not in data: {missing_in_data}"
-            )
-
-    return X, gt
-
-
-@dataset_class
-class Abalone(BaseDataset):
-    name = "abalone"
-    tags = {
-        "has_ground_truth": True,
-        "is_simulated": False,
-        "n_variables": 9,
-        "n_samples": 4177,
-        "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
-        "is_ordinal": False,
-    }
-
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/abalone/"
-
-    VARIANT_URLS = {
-        "continuous": base_url + "data/abalone.continuous.txt",
-        "mixed_numeric": base_url + "data/abalone.mixed.numeric.txt",
-        "mixed_max3": base_url + "data/abalone.mixed.maximum.3.txt",
-    }
-    GROUND_TRUTH_URL = base_url + "ground.truth/abalone.knowledge.txt"
-    DEFAULT_VARIANT = "mixed_numeric"
 
     @staticmethod
     def _parse_tier_graph(text_content: str) -> Optional[DAG]:
@@ -189,6 +121,66 @@ class Abalone(BaseDataset):
     def _parse_ground_truth(cls, raw: bytes) -> Optional[DAG]:
         text = raw.decode("utf-8-sig", errors="ignore")
         return cls._parse_tier_graph(text)
+
+
+def load_dataset(
+    name: str, variant: Optional[str] = None, load_ground_truth: bool = True
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
+
+    dataset = DATASETS.get(name)
+    if dataset is None:
+        raise ValueError(
+            f"Dataset '{name}' not found. Available datasets: {DATASETS.list_all()}"
+        )
+    X = dataset.load(variant=variant)
+
+    if not load_ground_truth:
+        return X
+
+    ground_truth = dataset.load_ground_truth()
+
+    if ground_truth is None:
+        ground_truth = DAG()
+
+    data_cols = set(X.columns)
+    gt_nodes = set(ground_truth.nodes())
+
+    if data_cols != gt_nodes:
+        missing_in_gt = data_cols - gt_nodes
+        ground_truth.add_nodes_from(missing_in_gt)
+
+        missing_in_data = gt_nodes - data_cols
+        if missing_in_data:
+            logger.warning(
+                f"Ground truth for '{name}' has nodes not in data: {missing_in_data}"
+            )
+
+    return X, ground_truth
+
+
+@dataset_class
+class Abalone(BaseDataset):
+    name = "abalone"
+    tags = {
+        "has_ground_truth": True,
+        "is_simulated": False,
+        "n_variables": 9,
+        "n_samples": 4177,
+        "is_discrete": False,
+        "is_continuous": False,
+        "is_mixed": True,
+        "is_ordinal": False,
+    }
+
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/abalone/"
+
+    VARIANT_URLS = {
+        "continuous": base_url + "data/abalone.continuous.txt",
+        "mixed_numeric": base_url + "data/abalone.mixed.numeric.txt",
+        "mixed_max3": base_url + "data/abalone.mixed.maximum.3.txt",
+    }
+    GROUND_TRUTH_URL = base_url + "ground.truth/abalone.knowledge.txt"
+    DEFAULT_VARIANT = "mixed_numeric"
 
 
 @dataset_class
