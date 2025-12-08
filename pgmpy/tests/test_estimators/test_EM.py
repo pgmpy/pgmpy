@@ -213,6 +213,74 @@ class TestEM(unittest.TestCase):
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
+    def test_get_parameters_node_specific_ess_bdeu(self):
+        """Test EM with node-specific equivalent_sample_size dict for BDeu."""
+        # All observed
+        est = EM(self.model1, self.data1)
+        ess_dict = {"Smoker": 10, "Cancer": 5, "Xray": 8}
+        cpds = est.get_parameters(
+            seed=42,
+            n_jobs=1,
+            apply_smoothing=True,
+            prior_type="bdeu",
+            equivalent_sample_size=ess_dict,
+            show_progress=False,
+        )
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model1.get_cpds(var)
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
+        # With latent variables
+        est = EM(self.model2, self.data2)
+        cpds = est.get_parameters(
+            seed=42,
+            n_jobs=1,
+            apply_smoothing=True,
+            prior_type="bdeu",
+            equivalent_sample_size=ess_dict,
+            show_progress=False,
+        )
+        for est_cpd in cpds:
+            var = est_cpd.variables[0]
+            orig_cpd = self.model2.get_cpds(var)
+
+            if "Smoker" in orig_cpd.variables:
+                orig_cpd.state_names["Smoker"] = [1, 0]
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+
+    def test_get_parameters_ess_dict_vs_scalar(self):
+        """Test that uniform ESS dict matches scalar ESS."""
+        ess_value = 7
+        ess_dict = {"Smoker": ess_value, "Cancer": ess_value, "Xray": ess_value}
+
+        est_scalar = EM(self.model1, self.data1)
+        cpds_scalar = est_scalar.get_parameters(
+            seed=42,
+            n_jobs=1,
+            apply_smoothing=True,
+            prior_type="bdeu",
+            equivalent_sample_size=ess_value,
+            show_progress=False,
+        )
+
+        est_dict = EM(self.model1, self.data1)
+        cpds_dict = est_dict.get_parameters(
+            seed=42,
+            n_jobs=1,
+            apply_smoothing=True,
+            prior_type="bdeu",
+            equivalent_sample_size=ess_dict,
+            show_progress=False,
+        )
+
+        # Results should be identical
+        for cpd_scalar, cpd_dict in zip(
+            sorted(cpds_scalar, key=lambda x: x.variables[0]),
+            sorted(cpds_dict, key=lambda x: x.variables[0]),
+        ):
+            self.assertTrue(cpd_scalar.__eq__(cpd_dict, atol=1e-6))
+
     def tearDown(self):
         del self.model1
         del self.model2

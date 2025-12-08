@@ -15,13 +15,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: install pre-commit
-        run: python3 -m pip install pre-commit
-
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .[tests] --no-cache-dir
 
       - name: Get changed files
         id: changed-files
