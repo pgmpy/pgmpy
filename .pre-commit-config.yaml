@@ -28,7 +28,7 @@ repos:
       - id: doctest
         name: Run doctests
         entry: python _doctests_precommit.py
-        language: system
+        language: python
         files: \.py$
         pass_filenames: true
         stages: [pre-commit]

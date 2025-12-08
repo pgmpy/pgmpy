@@ -7,7 +7,9 @@ from pgmpy.inference.CausalInference import CausalInference
 
 class InstrumentalVariables(BaseIdentification):
 
-    def __init__(self, variant=None, scaling_indicators=None) -> None:
+    def __init__(
+        self, variant: str = "non-conditional", scaling_indicators=None
+    ) -> None:
         self.supported_graph_types = DAG
         self.variant = variant
         self.scaling_indicators = scaling_indicators
