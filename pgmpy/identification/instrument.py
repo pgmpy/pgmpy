@@ -1,21 +1,23 @@
 from networkx.algorithms.dag import descendants
 
 from pgmpy.base import DAG
-from pgmpy.global_vars import logger
 from pgmpy.identification import BaseIdentification
 from pgmpy.inference.CausalInference import CausalInference
 
 
 class InstrumentalVariables(BaseIdentification):
 
-    def __init__(self, variant=None, scaling_indicators=None):
+    def __init__(self, variant=None, scaling_indicators=None) -> None:
         self.supported_graph_types = DAG
         self.variant = variant
         self.scaling_indicators = scaling_indicators
 
     def _get_scaling_indicators(self, causal_graph):
+        exposure = causal_graph.get_role("exposures")
+        outcome = causal_graph.get_role("outcomes")
         latent_variables = causal_graph.get_role("latents")
-        observed_nodes = causal_graph.get_role("observed")
+        all_nodes = causal_graph.nodes()
+        observed_nodes = all_nodes - latent_variables
         scaling_indicators = {}
 
         if self.scaling_indicators is not None:
@@ -24,9 +26,9 @@ class InstrumentalVariables(BaseIdentification):
         for node in latent_variables:
             for neighbour in causal_graph.neighbors(node):
                 if neighbour in observed_nodes:
-                    scaling_indicators[node] = neighbour
-                    break
-
+                    if not (node in exposure and neighbour != outcome):
+                        scaling_indicators[node] = neighbour
+                        break
         return scaling_indicators
 
     def _iv_transformations(self, X, Y, causal_graph, scaling_indicators=None):
@@ -67,7 +69,16 @@ class InstrumentalVariables(BaseIdentification):
     def _identify(self, causal_graph):
         exposure = causal_graph.get_role("exposures")[0]
         outcome = causal_graph.get_role("outcomes")[0]
-        observed = causal_graph.get_role("observed")
+        if len(exposure) != 1:
+            raise ValueError(
+                f"The current implementation suppports only one exposure. Got: {len(exposure)}"
+            )
+        if len(outcome) != 1:
+            raise ValueError(
+                f"The current implementation suppports only one outcome. Got: {len(outcome)}"
+            )
+        all_nodes = causal_graph.nodes()
+        observed = all_nodes - causal_graph.get_role("latents")
 
         latent_variables = causal_graph.get_role("latents")
         scaling_indicators = self._get_scaling_indicators(causal_graph)
@@ -75,8 +86,8 @@ class InstrumentalVariables(BaseIdentification):
         if (exposure in scaling_indicators.keys()) and (
             scaling_indicators[exposure] == outcome
         ):
-            logger.warning(
-                f"{outcome} is the scaling indicator of {exposure}. Please specify `scaling_indicators`"
+            raise ValueError(
+                f"{outcome} is the scaling indicator of {exposure}. Please specify the correct `scaling_indicators`"
             )
 
         transformed_graph, dependent_var = self._iv_transformations(
