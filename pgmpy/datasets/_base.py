@@ -18,63 +18,58 @@ requests = _safe_import("requests")
 
 
 class _BaseDataset:
-    @staticmethod
-    def _load_df_from_txt(raw: bytes) -> pd.DataFrame:
-        return pd.read_csv(io.BytesIO(raw), sep="\t")
-
-    @classmethod
-    def cache_path(cls, key: str) -> str:
-        Path(path).mkdir(parents=True, exist_ok=True)
-        return os.path.join(
-            PGMPY_DATA_HOME, f"{cls.name}_{key.replace(':','-')}_{safe}{ext}"
-        )
-
-        # safe = hashlib.sha256(f"{cls.name}:{key}".encode()).hexdigest()[:16]
-
-        # if key.startswith("data"):
-        #     ext = ".csv"
-        # elif key.startswith("ground_truth"):
-        #     ext = ".txt"
-        # else:
-        #     raise ValueError(
-        #         f"Unknown key type: {key}. Must start with 'data' or 'ground_truth'."
-        #     )
-
-    @classmethod
-    def load_or_fetch(cls, key: str, url: str) -> bytes:
-        cache_path = cls.cache_path(key)
-        if os.path.exists(cache_path):
-            with open(cache_path, "rb") as f:
-                raw = f.read()
-        else:
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            raw = resp.content
-            with open(cache_path, "wb") as f:
-                f.write(raw)
-        return raw
-
     @classmethod
     def load(cls, variant: Optional[str] = None) -> pd.DataFrame:
+        # Step 0: Determine variant to load and get the URL.
         if variant is None:
-            variant = cls.DEFAULT_VARIANT
+            variant = cls.default_variant
 
-        if variant not in cls.VARIANT_URLS:
+        if variant not in cls.variant_urls:
             raise ValueError(
-                f"Unknown variant '{variant}'. Available options are: {list(cls.VARIANT_URLS.keys())}"
+                f"Unknown variant '{variant}'. Available options are: {list(cls.variant_urls.keys())}"
             )
 
-        url = cls.VARIANT_URLS[v]
-        raw = cls.load_or_fetch(f"data:{v}", url)
-        return cls._load_df_from_txt(raw)
+        data_url = cls.variant_urls[variant]
+        has_ground_truth = cls.tags.get("has_ground_truth")
 
-    @classmethod
-    def load_ground_truth(cls) -> Optional[DAG]:
-        if not getattr(cls, "GROUND_TRUTH_URL", None):
-            return None
+        # Step 1: Create cache path and load or fetch the data.
+        cache_dir_path = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{cls.name}_{variant}_url".encode()).hexdigest(),
+        )
+        cache_data_path = os.path.join(cache_dir_path, "data")
+        cache_ground_truth_path = os.path.join(cache_dir_path, "ground_truth")
 
-        raw = cls.load_or_fetch("ground_truth", cls.GROUND_TRUTH_URL)
-        return cls._parse_ground_truth(raw)
+        if os.path.exists(cache_dir_path):
+            with open(cache_data_path, "rb") as f:
+                raw_data = f.read()
+            if has_ground_truth:
+                with open(cache_ground_truth_path, "rb") as f:
+                    raw_ground_truth = f.read()
+
+        else:
+            os.makedirs(cache_dir_path, exist_ok=True)
+
+            resp = requests.get(data_url, timeout=60)
+            resp.raise_for_status()
+            raw_data = resp.content
+            with open(cache_data_path, "wb") as f:
+                f.write(raw_data)
+
+            if has_ground_truth:
+                resp_gt = requests.get(cls.ground_truth_url, timeout=60)
+                resp_gt.raise_for_status()
+                raw_ground_truth = resp_gt.content
+                with open(cache_ground_truth_path, "wb") as f:
+                    f.write(raw_ground_truth)
+
+        # Step 2: Parse and return the data.
+        df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
+        if has_ground_truth:
+            ground_truth = cls._parse_ground_truth(raw_ground_truth)
+            return df, ground_truth
+        else:
+            return df, None
 
     @staticmethod
     def _parse_tier_graph(text_content: str) -> Optional[DAG]:
@@ -271,6 +266,6 @@ def load_dataset(
         if not dataset.tags.get("has_ground_truth"):
             raise ValueError(f"Dataset '{name}' does not have ground truth available.")
         else:
-            return (dataset.load(variant), dataset.load_ground_truth())
+            return dataset.load(variant)
     else:
-        return dataset.load(variant)
+        return dataset.load(variant)[0]

@@ -24,7 +24,8 @@ class Sachs(_BaseDataset):
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
 
-    VARIANT_URLS = {
+    default_variant = "continuous"
+    variant_urls = {
         "continuous": base_url + "data/sachs.2005.continuous.txt",
         "discrete": base_url + "data/sachs.2005.discrete.txt",
         "logxplus10_continuous": base_url + "data/sachs.2005.logxplus10.continuous.txt",
@@ -36,8 +37,7 @@ class Sachs(_BaseDataset):
         + "data/sachs.2005.continuous.discrete.experimental.mixed.maximum.2.txt",
     }
 
-    GROUND_TRUTH_URL = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
-    DEFAULT_VARIANT = "continuous"
+    ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
 
     @staticmethod
     def _parse_sachs_graph(text_content: str) -> Optional[DAG]:

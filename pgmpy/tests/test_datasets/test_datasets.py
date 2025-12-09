@@ -58,5 +58,5 @@ def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         load_dataset("sachs", variant="bad_variant")

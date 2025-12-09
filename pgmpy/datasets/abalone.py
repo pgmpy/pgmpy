@@ -18,10 +18,10 @@ class Abalone(_BaseDataset):
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/abalone/"
 
-    VARIANT_URLS = {
+    default_variant = "mixed_numeric"
+    variant_urls = {
         "continuous": base_url + "data/abalone.continuous.txt",
         "mixed_numeric": base_url + "data/abalone.mixed.numeric.txt",
         "mixed_max3": base_url + "data/abalone.mixed.maximum.3.txt",
     }
-    GROUND_TRUTH_URL = base_url + "ground.truth/abalone.knowledge.txt"
-    DEFAULT_VARIANT = "mixed_numeric"
+    ground_truth_url = base_url + "ground.truth/abalone.knowledge.txt"
