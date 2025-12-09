@@ -11,15 +11,13 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG
-from pgmpy.datasets import DATASETS, dataset_class
 from pgmpy.global_vars import PGMPY_DATA_HOME, logger
 from pgmpy.utils._safe_import import _safe_import
 
 requests = _safe_import("requests")
 
 
-class BaseDataset:
-
+class _BaseDataset:
     @staticmethod
     def _ensure_dir(path: str) -> None:
         Path(path).mkdir(parents=True, exist_ok=True)
@@ -121,6 +119,36 @@ class BaseDataset:
         return cls._parse_tier_graph(text)
 
 
+class DatasetRegistry:
+    def __init__(self) -> None:
+        self._by_name = {}
+        self._by_tag = {}
+
+    def register(self, cls):
+        self._by_name[cls.name] = cls
+        for tag in cls.tags:
+            if tag not in self._by_tag:
+                self._by_tag[tag] = set()
+            self._by_tag[tag].add(cls.name)
+
+    def list_all(self, tag=None):
+        if tag is None:
+            return list(self._by_name.keys())
+        else:
+            return list(self._by_tag.get(tag, []))
+
+    def get(self, name):
+        return self._by_name.get(name, None)
+
+
+DATASETS = DatasetRegistry()
+
+
+def dataset_class(cls):
+    DATASETS.register(cls)
+    return cls
+
+
 def load_dataset(
     name: str, variant: Optional[str] = None, load_ground_truth: bool = True
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
@@ -154,102 +182,3 @@ def load_dataset(
             )
 
     return X, ground_truth
-
-
-@dataset_class
-class Abalone(BaseDataset):
-    name = "abalone"
-    tags = {
-        "has_ground_truth": True,
-        "is_simulated": False,
-        "n_variables": 9,
-        "n_samples": 4177,
-        "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
-        "is_ordinal": False,
-    }
-
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/abalone/"
-
-    VARIANT_URLS = {
-        "continuous": base_url + "data/abalone.continuous.txt",
-        "mixed_numeric": base_url + "data/abalone.mixed.numeric.txt",
-        "mixed_max3": base_url + "data/abalone.mixed.maximum.3.txt",
-    }
-    GROUND_TRUTH_URL = base_url + "ground.truth/abalone.knowledge.txt"
-    DEFAULT_VARIANT = "mixed_numeric"
-
-
-@dataset_class
-class Sachs(BaseDataset):
-    name = "sachs"
-    tags = {
-        "has_ground_truth": True,
-        "is_simulated": False,
-        "n_variables": 11,
-        "n_samples": 7466,
-        "is_discrete": True,
-        "is_continuous": True,
-        "is_mixed": True,
-        "is_ordinal": False,
-    }
-
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
-
-    VARIANT_URLS = {
-        "continuous": base_url + "data/sachs.2005.continuous.txt",
-        "discrete": base_url + "data/sachs.2005.discrete.txt",
-        "logxplus10_continuous": base_url + "data/sachs.2005.logxplus10.continuous.txt",
-        "jittered_experimental": base_url
-        + "data/sachs.2005.with.jittered.experimental.continuous.txt",
-        "logxplus10_jittered_experimental": base_url
-        + "data/sachs.2005.logxplus10.jittered.eperimental.continuous.txt",
-        "mixed_maximum_2": base_url
-        + "data/sachs.2005.continuous.discrete.experimental.mixed.maximum.2.txt",
-    }
-
-    GROUND_TRUTH_URL = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
-    DEFAULT_VARIANT = "continuous"
-
-    @staticmethod
-    def _parse_sachs_graph(text_content: str) -> Optional[DAG]:
-        try:
-            lines = [line.strip() for line in text_content.splitlines() if line.strip()]
-            nodes_start = -1
-            edges_start = -1
-
-            for i, line in enumerate(lines):
-                if line.lower().startswith("graph nodes:"):
-                    nodes_start = i
-                elif line.lower().startswith("graph edges:"):
-                    edges_start = i
-
-            if nodes_start == -1 or edges_start == -1:
-                return None
-
-            G = nx.DiGraph()
-            node_str = " ".join(lines[nodes_start + 1 : edges_start])
-            nodes_list = re.split(r"[;\s]+", node_str)
-            for node in nodes_list:
-                if node:
-                    G.add_node(node.strip())
-
-            for line in lines[edges_start + 1 :]:
-                match = re.search(r"(\w+)\s*-->\s*(\w+)", line)
-                if match:
-                    try:
-                        u = match.group(1).strip()
-                        v = match.group(2).strip()
-                        if u in G and v in G:
-                            G.add_edge(u, v)
-                    except Exception:
-                        continue
-            return DAG(G)
-        except Exception:
-            return None
-
-    @classmethod
-    def _parse_ground_truth(cls, raw: bytes) -> Optional[DAG]:
-        text = raw.decode("utf-8-sig", errors="ignore")
-        return cls._parse_sachs_graph(text)

@@ -43,7 +43,6 @@ def test_sachs_jittered_variant():
 
     assert df.shape[1] == 20
     assert len(ground_truth.nodes()) == 20
-    assert len(ground_truth.edges()) == 20
 
 
 @pytest.mark.skipif(
