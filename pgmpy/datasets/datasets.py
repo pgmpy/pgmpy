@@ -9,11 +9,13 @@ from typing import Optional, Tuple, Union
 
 import networkx as nx
 import pandas as pd
-import requests
 
 from pgmpy.base import DAG
 from pgmpy.datasets import DATASETS, dataset_class
 from pgmpy.global_vars import PGMPY_DATA_HOME, logger
+from pgmpy.utils._safe_import import _safe_import
+
+requests = _safe_import("requests")
 
 
 class BaseDataset:

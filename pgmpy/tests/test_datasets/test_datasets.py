@@ -6,6 +6,10 @@ from pgmpy.base import DAG
 from pgmpy.datasets import DATASETS, load_dataset
 
 
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
 def test_registry():
     """Test if datasets are registered correctly."""
     datasets = DATASETS.list_all()
@@ -42,6 +46,10 @@ def test_sachs_jittered_variant():
     assert len(ground_truth.edges()) == 20
 
 
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
