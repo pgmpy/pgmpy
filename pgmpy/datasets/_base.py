@@ -18,6 +18,44 @@ requests = _safe_import("requests")
 
 
 class _BaseDataset:
+    @staticmethod
+    def _parse_tier_graph(raw_ground_truth: str) -> Optional[DAG]:
+        text_content = raw_ground_truth.decode("utf-8-sig", errors="ignore")
+
+        try:
+            lines = [line.strip() for line in text_content.splitlines() if line.strip()]
+            start_index = -1
+            for i, line in enumerate(lines):
+                if line.lower() == "addtemporal":
+                    start_index = i
+                    break
+
+            if start_index == -1:
+                return None
+
+            G = nx.DiGraph()
+            tiers = []
+
+            for line in lines[start_index + 1 :]:
+                match = re.match(r"^\d+\s+(.*)", line)
+                if match:
+                    vars_list = match.group(1).split()
+                    if vars_list:
+                        tiers.append(vars_list)
+                        G.add_nodes_from(vars_list)
+                elif line.startswith("/") or "direct" in line.lower():
+                    break
+
+            for i in range(len(tiers)):
+                for j in range(i + 1, len(tiers)):
+                    for u in tiers[i]:
+                        for v in tiers[j]:
+                            if u in G and v in G and u != v:
+                                G.add_edge(u, v)
+            return DAG(G)
+        except Exception:
+            return None
+
     @classmethod
     def load(cls, variant: Optional[str] = None) -> pd.DataFrame:
         # Step 0: Determine variant to load and get the URL.
@@ -72,45 +110,12 @@ class _BaseDataset:
             return df, None
 
     @staticmethod
-    def _parse_tier_graph(text_content: str) -> Optional[DAG]:
-        try:
-            lines = [line.strip() for line in text_content.splitlines() if line.strip()]
-            start_index = -1
-            for i, line in enumerate(lines):
-                if line.lower() == "addtemporal":
-                    start_index = i
-                    break
-
-            if start_index == -1:
-                return None
-
-            G = nx.DiGraph()
-            tiers = []
-
-            for line in lines[start_index + 1 :]:
-                match = re.match(r"^\d+\s+(.*)", line)
-                if match:
-                    vars_list = match.group(1).split()
-                    if vars_list:
-                        tiers.append(vars_list)
-                        G.add_nodes_from(vars_list)
-                elif line.startswith("/") or "direct" in line.lower():
-                    break
-
-            for i in range(len(tiers)):
-                for j in range(i + 1, len(tiers)):
-                    for u in tiers[i]:
-                        for v in tiers[j]:
-                            if u in G and v in G and u != v:
-                                G.add_edge(u, v)
-            return DAG(G)
-        except Exception:
-            return None
-
-    @classmethod
-    def _parse_ground_truth(cls, raw: bytes) -> Optional[DAG]:
-        text = raw.decode("utf-8-sig", errors="ignore")
-        return cls._parse_tier_graph(text)
+    def clear_cache() -> None:
+        """
+        Clears the cached data for all datasets.
+        """
+        if os.path.exists(PGMPY_DATA_HOME):
+            Path.rmdir(PGMPY_DATA_HOME)
 
 
 class _DatasetRegistry:
