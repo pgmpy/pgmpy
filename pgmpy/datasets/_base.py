@@ -19,29 +19,26 @@ requests = _safe_import("requests")
 
 class _BaseDataset:
     @staticmethod
-    def _ensure_dir(path: str) -> None:
-        Path(path).mkdir(parents=True, exist_ok=True)
-
-    @staticmethod
     def _load_df_from_txt(raw: bytes) -> pd.DataFrame:
         return pd.read_csv(io.BytesIO(raw), sep="\t")
 
     @classmethod
     def cache_path(cls, key: str) -> str:
-        cls._ensure_dir(PGMPY_DATA_HOME)
-        safe = hashlib.sha256(f"{cls.name}:{key}".encode()).hexdigest()[:16]
-
-        if key.startswith("data"):
-            ext = ".csv"
-        elif key.startswith("ground_truth"):
-            ext = ".txt"
-        else:
-            raise ValueError(
-                f"Unknown key type: {key}. Must start with 'data' or 'ground_truth'."
-            )
+        Path(path).mkdir(parents=True, exist_ok=True)
         return os.path.join(
             PGMPY_DATA_HOME, f"{cls.name}_{key.replace(':','-')}_{safe}{ext}"
         )
+
+        # safe = hashlib.sha256(f"{cls.name}:{key}".encode()).hexdigest()[:16]
+
+        # if key.startswith("data"):
+        #     ext = ".csv"
+        # elif key.startswith("ground_truth"):
+        #     ext = ".txt"
+        # else:
+        #     raise ValueError(
+        #         f"Unknown key type: {key}. Must start with 'data' or 'ground_truth'."
+        #     )
 
     @classmethod
     def load_or_fetch(cls, key: str, url: str) -> bytes:
@@ -59,10 +56,12 @@ class _BaseDataset:
 
     @classmethod
     def load(cls, variant: Optional[str] = None) -> pd.DataFrame:
-        v = variant or cls.DEFAULT_VARIANT
-        if v not in cls.VARIANT_URLS:
-            raise KeyError(
-                f"Unknown variant '{v}'. Available: {list(cls.VARIANT_URLS.keys())}"
+        if variant is None:
+            variant = cls.DEFAULT_VARIANT
+
+        if variant not in cls.VARIANT_URLS:
+            raise ValueError(
+                f"Unknown variant '{variant}'. Available options are: {list(cls.VARIANT_URLS.keys())}"
             )
 
         url = cls.VARIANT_URLS[v]
