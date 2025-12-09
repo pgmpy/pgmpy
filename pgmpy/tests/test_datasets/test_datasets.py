@@ -3,8 +3,7 @@ import unittest
 import pandas as pd
 
 from pgmpy.base import DAG
-from pgmpy.datasets import load_dataset
-from pgmpy.datasets.registry import DATASETS
+from pgmpy.datasets import DATASETS, load_dataset
 
 
 class TestDatasets(unittest.TestCase):

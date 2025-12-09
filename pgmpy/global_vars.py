@@ -9,6 +9,8 @@ from skbase.utils.dependencies import _check_soft_dependencies
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
 
+PGMPY_DATA_HOME = os.path.join(Path.home(), ".pgmpy")
+
 
 class DuplicateFilter(logging.Filter):
     """
@@ -186,10 +188,6 @@ class Config:
             import torch
 
             return torch
-
-    PGMPY_DATA_HOME = os.environ.get(
-        "PGMPY_DATA_HOME", os.path.join(Path.home(), ".pgmpy", "data")
-    )
 
 
 config = Config()

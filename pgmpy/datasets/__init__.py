@@ -1,5 +1,5 @@
+from ._registry import DATASETS, dataset_class
 from .datasets import BaseDataset, load_dataset
-from .registry import DATASETS, dataset_class
 
 __all__ = [
     "DATASETS",

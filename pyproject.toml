@@ -50,6 +50,7 @@ optional = [
   "pygraphviz",
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
+  "requests>2.35",
 ]
 tests = [
   "xdoctest>=0.11.0",

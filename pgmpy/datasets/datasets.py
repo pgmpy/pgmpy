@@ -12,12 +12,8 @@ import pandas as pd
 import requests
 
 from pgmpy.base import DAG
-from pgmpy.datasets.registry import DATASETS, dataset_class
-from pgmpy.global_vars import logger
-
-PGMPY_DATA_HOME = os.environ.get(
-    "PGMPY_DATA_HOME", os.path.join(Path.home(), ".pgmpy", "data")
-)
+from pgmpy.datasets import DATASETS, dataset_class
+from pgmpy.global_vars import PGMPY_DATA_HOME, logger
 
 
 class BaseDataset:
