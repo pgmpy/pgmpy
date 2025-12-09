@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -51,7 +53,7 @@ class Config:
         """
         if self.BACKEND == "numpy":
             raise ValueError(
-                f"Current backend is numpy. Device can only be set for torch backend"
+                "Current backend is numpy. Device can only be set for torch backend"
             )
 
         import torch
@@ -184,6 +186,10 @@ class Config:
             import torch
 
             return torch
+
+    PGMPY_DATA_HOME = os.environ.get(
+        "PGMPY_DATA_HOME", os.path.join(Path.home(), ".pgmpy", "data")
+    )
 
 
 config = Config()
