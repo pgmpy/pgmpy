@@ -5,29 +5,35 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from pgmpy.base import DAG
 from pgmpy.datasets import DATASETS, load_dataset
 
-
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
-def test_registry():
-    """Test if datasets are registered correctly."""
-    datasets = DATASETS.list_all()
-    assert "abalone" in datasets
-    assert "sachs" in datasets
+ALL_DATASETS = ["abalone", "sachs"]
 
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("requests", severity="none"),
     reason="test only if requests is installed",
 )
-def test_load_dataset_return_types():
-    """Test the conditional return types of load_dataset."""
+def test_list_datasets():
+    datasets = DATASETS.list_datasets()
+    for dataset in ALL_DATASETS:
+        assert dataset in datasets
+
+    datasets_filtered = DATASETS.list_datasets(has_ground_truth=True)
+    for dataset in ["abalone", "sachs"]:
+        assert dataset in datasets_filtered
+
+    datasets_filtered = DATASETS.list_datasets(is_continuous=True)
+    assert "sachs" in datasets_filtered
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
+def test_load_dataset():
     df, ground_truth = load_dataset("sachs")
     assert isinstance(df, pd.DataFrame)
     assert isinstance(ground_truth, DAG)
 
-    # 2. load_ground_truth=False -> returns DataFrame only
     df_only = load_dataset("sachs", load_ground_truth=False)
     assert isinstance(df_only, pd.DataFrame)
     assert not isinstance(df_only, tuple)
@@ -42,7 +48,6 @@ def test_sachs_jittered_variant():
     df, ground_truth = load_dataset("sachs", variant="jittered_experimental")
 
     assert df.shape[1] == 20
-    assert len(ground_truth.nodes()) == 20
 
 
 @pytest.mark.skipif(

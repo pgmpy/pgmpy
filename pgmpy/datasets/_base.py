@@ -5,13 +5,13 @@ import io
 import os
 import re
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG
-from pgmpy.global_vars import PGMPY_DATA_HOME, logger
+from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.utils._safe_import import _safe_import
 
 requests = _safe_import("requests")
@@ -119,32 +119,117 @@ class _BaseDataset:
         return cls._parse_tier_graph(text)
 
 
-class DatasetRegistry:
+class _DatasetRegistry:
+    """
+    Registry for dataset classes.
+
+    Example
+    -------
+    >>> from pgmpy.datasets import DATASETS
+    >>> all_datasets = DATASETS.list_datasets()
+    >>> filtered_datasets = DATASETS.list_datasets(has_ground_truth=True, is_mixed=True)
+
+    """
+
+    _REQUIRED_TAGS = {
+        "has_ground_truth",
+        "is_simulated",
+        "n_variables",
+        "n_samples",
+        "is_discrete",
+        "is_continuous",
+        "is_mixed",
+        "is_ordinal",
+    }
+
     def __init__(self) -> None:
-        self._by_name = {}
-        self._by_tag = {}
+        self._by_name: Dict[str, Type["_BaseDataset"]] = {}
+        self._by_tag: Dict[Tuple[str, Any], Set[str]] = {}
 
-    def register(self, cls):
-        self._by_name[cls.name] = cls
-        for tag in cls.tags:
-            if tag not in self._by_tag:
-                self._by_tag[tag] = set()
-            self._by_tag[tag].add(cls.name)
+    def register(self, cls: Type["_BaseDataset"]) -> None:
+        # Step 1: Check if the name is defined.
+        if not hasattr(cls, "name"):
+            raise TypeError("Dataset classes must define a string 'name' attribute.")
 
-    def list_all(self, tag=None):
-        if tag is None:
-            return list(self._by_name.keys())
+        # Step 2: Check if all required tags are defined.
+        if not hasattr(cls, "tags"):
+            raise TypeError("Dataset classes must define a 'tags' attribute as a dict.")
         else:
-            return list(self._by_tag.get(tag, []))
+            missing_tags = self._REQUIRED_TAGS - cls.tags.keys()
+            if missing_tags:
+                raise ValueError(
+                    f"Dataset '{cls.__name__}' is missing required tags: {missing_tags}"
+                )
 
-    def get(self, name):
-        return self._by_name.get(name, None)
+        # Step 3: Register the dataset by name and tags.
+        name = getattr(cls, "name")
+        self._by_name[name] = cls
+
+        raw_tags = getattr(cls, "tags")
+        for key, value in raw_tags.items():
+            self._by_tag.setdefault((key, value), set()).add(name)
+
+    def list_datasets(self, **tag_filters: Any) -> List[str]:
+        """
+        List dataset names, optionally filtered by tag key-value pairs.
+
+        Parameters
+        ----------
+        **tag_filters :
+            Tag constraints as keyword arguments. A dataset is included if
+            for every (key, value) in tag_filters, its tags dict satisfies
+            tags[key] == value.
+
+        Returns
+        -------
+        List[str]
+            Sorted list of dataset names that satisfy the filters.
+        """
+        # Step 1: If no filters return all.
+        if not tag_filters:
+            return sorted(self._by_name.keys())
+
+        # Step 2: Gather candidate sets for each tag filter.
+        candidate_sets = []
+
+        for key, value in tag_filters.items():
+            names_for_tag = self._by_tag.get((key, value), set())
+            candidate_sets.append(names_for_tag)
+
+        # Step 3: Intersect candidate sets and return.
+        names = candidate_sets[0].copy()
+        for s in candidate_sets[1:]:
+            names.intersection_update(s)
+
+        return sorted(names)
+
+    def get_dataset(self, name: str) -> Optional[Type["_BaseDataset"]]:
+        """
+        Get the dataset class by name.
+
+        Parameters
+        ----------
+        name : str
+            Name of the dataset.
+
+        Returns
+        -------
+        Instance of the Dataset class.
+        """
+        if name not in self._by_name:
+            raise ValueError(f"Dataset '{name}' not found in registry.")
+        return self._by_name[name]
 
 
-DATASETS = DatasetRegistry()
+DATASETS = _DatasetRegistry()
 
 
 def dataset_class(cls):
+    """
+    Class decorator to register a dataset class in the DATASETS registry.
+
+    For example usage see one of the dataset files such as `abalone.py`.
+    """
     DATASETS.register(cls)
     return cls
 
@@ -152,33 +237,41 @@ def dataset_class(cls):
 def load_dataset(
     name: str, variant: Optional[str] = None, load_ground_truth: bool = True
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
+    """
+    Load a dataset by name.
 
-    dataset = DATASETS.get(name)
-    if dataset is None:
-        raise ValueError(
-            f"Dataset '{name}' not found. Available datasets: {DATASETS.list_all()}"
-        )
-    X = dataset.load(variant=variant)
+    Parameters
+    ----------
+    name : str
+        Name of the dataset to load.
 
-    if not load_ground_truth:
-        return X
+    variant : str, default=None
+        Variant of the dataset to load. If None, the dataset's default variant
+        is loaded.
 
-    ground_truth = dataset.load_ground_truth()
+    load_ground_truth : bool, default=True
+        Whether to load the ground truth DAG along with the data.
 
-    if ground_truth is None:
-        ground_truth = DAG()
+    Returns
+    -------
+    Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]
+        If `load_ground_truth` is False, returns only the data as a DataFrame.
+        If True, returns a tuple of (data, ground_truth), where ground_truth
+        is a DAG or None if not available.
 
-    data_cols = set(X.columns)
-    gt_nodes = set(ground_truth.nodes())
+    Examples
+    --------
+    >>> from pgmpy.datasets import load_dataset
+    >>> data, ground_truth = load_dataset("sachs", load_ground_truth=True)
 
-    if data_cols != gt_nodes:
-        missing_in_gt = data_cols - gt_nodes
-        ground_truth.add_nodes_from(missing_in_gt)
+    """
 
-        missing_in_data = gt_nodes - data_cols
-        if missing_in_data:
-            logger.warning(
-                f"Ground truth for '{name}' has nodes not in data: {missing_in_data}"
-            )
+    dataset = DATASETS.get_dataset(name)
 
-    return X, ground_truth
+    if load_ground_truth:
+        if not dataset.tags.get("has_ground_truth"):
+            raise ValueError(f"Dataset '{name}' does not have ground truth available.")
+        else:
+            return (dataset.load(variant), dataset.load_ground_truth())
+    else:
+        return dataset.load(variant)
