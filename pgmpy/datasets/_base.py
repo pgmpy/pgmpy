@@ -27,6 +27,12 @@ class Dataset:
     ground_truth: Optional[DAG] = None
     tags: Dict[str, Any] = None
 
+    def __str__(self) -> str:
+        return f"Dataset(name={self.name}, \n data=DataFrame({list(self.data.columns)}), \n expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 
 class _BaseDataset:
     @staticmethod

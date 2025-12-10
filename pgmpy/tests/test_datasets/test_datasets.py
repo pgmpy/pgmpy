@@ -39,6 +39,7 @@ def test_list_datasets():
 )
 def test_load_dataset():
     dataset = load_dataset("sachs_continuous")
+    assert dataset.name == "sachs_continuous"
     assert isinstance(dataset.data, pd.DataFrame)
     assert isinstance(dataset.ground_truth, DAG)
 
