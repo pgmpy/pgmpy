@@ -3,7 +3,7 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
-from pgmpy.datasets import DATASET_REGISTRY, load_dataset
+from pgmpy.datasets import DATASET_REGISTRY, SachsContinuous, load_dataset
 
 ALL_DATASETS = [
     "abalone_continuous",
@@ -42,6 +42,7 @@ def test_load_dataset():
     assert dataset.name == "sachs_continuous"
     assert isinstance(dataset.data, pd.DataFrame)
     assert isinstance(dataset.ground_truth, DAG)
+    assert dataset.tags == SachsContinuous.tags
 
 
 @pytest.mark.skipif(
