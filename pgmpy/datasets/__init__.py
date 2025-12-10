@@ -1,6 +1,7 @@
 from ._base import DATASET_REGISTRY, _BaseDataset, load_dataset, register_dataset_class
 from ._abalone import AbaloneContinuous, AbaloneMixed  # noqa: F401
 from ._adult import Adult  # noqa: F401
+from ._airfoil import Airfoil  # noqa: F401
 from ._sachs import (  # noqa: F401
     SachsContinuous,
     SachsContinuousJittered,
