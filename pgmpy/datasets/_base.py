@@ -132,9 +132,10 @@ class _BaseDataset:
         if not cls.tags.get("has_ground_truth"):
             return None
 
-        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url)
-
-        return cls._parse_ground_truth(raw_data)
+        gt_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
+            "utf-8-sig", errors="ignore"
+        )
+        return DAG.from_dagitty(gt_data)
 
     @staticmethod
     def clear_cache() -> None:
