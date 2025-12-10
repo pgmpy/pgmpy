@@ -1,10 +1,17 @@
-from ._base import DATASETS, _BaseDataset, dataset_class, load_dataset
-from .abalone import Abalone  # noqa: F401
-from .sachs import Sachs  # noqa: F401
+from ._base import DATASET_REGISTRY, _BaseDataset, load_dataset, register_dataset_class
+from .abalone import AbaloneContinuous, AbaloneMixed  # noqa: F401
+from .sachs import (  # noqa: F401
+    SachsContinuous,
+    SachsContinuousJittered,
+    SachsContinuousJitteredLogScale,
+    SachsContinuousLogScale,
+    SachsDiscrete,
+    SachsMixed,
+)
 
 __all__ = [
     "_BaseDataset",
-    "DATASETS",
-    "dataset_class",
+    "DATASET_REGISTRY",
+    "register_dataset_class",
     "load_dataset",
 ]

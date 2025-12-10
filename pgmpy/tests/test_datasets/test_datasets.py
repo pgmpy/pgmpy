@@ -3,9 +3,14 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
-from pgmpy.datasets import DATASETS, load_dataset
+from pgmpy.datasets import DATASET_REGISTRY, load_dataset
 
-ALL_DATASETS = ["abalone", "sachs"]
+ALL_DATASETS = [
+    "abalone_continuous",
+    "sachs_continuous",
+    "sachs_discrete",
+    "sachs_continuous_logscale",
+]
 
 
 @pytest.mark.skipif(
@@ -13,16 +18,19 @@ ALL_DATASETS = ["abalone", "sachs"]
     reason="test only if requests is installed",
 )
 def test_list_datasets():
-    datasets = DATASETS.list_datasets()
+    datasets = DATASET_REGISTRY.list_datasets()
     for dataset in ALL_DATASETS:
         assert dataset in datasets
 
-    datasets_filtered = DATASETS.list_datasets(has_ground_truth=True)
-    for dataset in ["abalone", "sachs"]:
+    datasets_filtered = DATASET_REGISTRY.list_datasets(has_ground_truth=True)
+    for dataset in ["sachs_continuous", "sachs_discrete"]:
         assert dataset in datasets_filtered
+    for dataset in ["abalone_continuous", "abalone_mixed"]:
+        assert dataset not in datasets_filtered
 
-    datasets_filtered = DATASETS.list_datasets(is_continuous=True)
-    assert "sachs" in datasets_filtered
+    datasets_filtered = DATASET_REGISTRY.list_datasets(is_continuous=True)
+    assert "sachs_continuous" in datasets_filtered
+    assert "sachs_discrete" not in datasets_filtered
 
 
 @pytest.mark.skipif(
@@ -30,24 +38,9 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    df, ground_truth = load_dataset("sachs")
+    df, ground_truth = load_dataset("sachs_continuous")
     assert isinstance(df, pd.DataFrame)
     assert isinstance(ground_truth, DAG)
-
-    df_only = load_dataset("sachs", load_ground_truth=False)
-    assert isinstance(df_only, pd.DataFrame)
-    assert not isinstance(df_only, tuple)
-
-
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
-def test_sachs_jittered_variant():
-    """Test specific variant logic where nodes mismatch."""
-    df, ground_truth = load_dataset("sachs", variant="jittered_experimental")
-
-    assert df.shape[1] == 20
 
 
 @pytest.mark.skipif(
@@ -57,6 +50,3 @@ def test_sachs_jittered_variant():
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
-
-    with pytest.raises(ValueError):
-        load_dataset("sachs", variant="bad_variant")

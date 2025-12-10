@@ -57,23 +57,14 @@ class _BaseDataset:
             return None
 
     @classmethod
-    def load(cls, variant: Optional[str] = None) -> pd.DataFrame:
-        # Step 0: Determine variant to load and get the URL.
-        if variant is None:
-            variant = cls.default_variant
+    def load(cls) -> pd.DataFrame:
 
-        if variant not in cls.variant_urls:
-            raise ValueError(
-                f"Unknown variant '{variant}'. Available options are: {list(cls.variant_urls.keys())}"
-            )
-
-        data_url = cls.variant_urls[variant]
         has_ground_truth = cls.tags.get("has_ground_truth")
 
         # Step 1: Create cache path and load or fetch the data.
         cache_dir_path = os.path.join(
             PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_{variant}_url".encode()).hexdigest(),
+            hashlib.sha256(f"{cls.name}_url".encode()).hexdigest(),
         )
         cache_data_path = os.path.join(cache_dir_path, "data")
         cache_ground_truth_path = os.path.join(cache_dir_path, "ground_truth")
@@ -88,7 +79,7 @@ class _BaseDataset:
         else:
             os.makedirs(cache_dir_path, exist_ok=True)
 
-            resp = requests.get(data_url, timeout=60)
+            resp = requests.get(cls.data_url, timeout=60)
             resp.raise_for_status()
             raw_data = resp.content
             with open(cache_data_path, "wb") as f:
@@ -124,17 +115,21 @@ class _DatasetRegistry:
 
     Example
     -------
-    >>> from pgmpy.datasets import DATASETS
-    >>> all_datasets = DATASETS.list_datasets()
-    >>> filtered_datasets = DATASETS.list_datasets(has_ground_truth=True, is_mixed=True)
+    >>> from pgmpy.datasets import DATASET_REGISTRY
+    >>> all_datasets = DATASET_REGISTRY.list_datasets()
+    >>> filtered_datasets = DATASET_REGISTRY.list_datasets(
+    ...     has_ground_truth=True, is_mixed=True
+    ... )
 
     """
 
     _REQUIRED_TAGS = {
-        "has_ground_truth",
-        "is_simulated",
         "n_variables",
         "n_samples",
+        "has_ground_truth",
+        "has_expert_knowledge",
+        "is_simulated",
+        "is_interventional",
         "is_discrete",
         "is_continuous",
         "is_mixed",
@@ -159,8 +154,21 @@ class _DatasetRegistry:
                 raise ValueError(
                     f"Dataset '{cls.__name__}' is missing required tags: {missing_tags}"
                 )
+        # Step 3: Check if all required attributes/URLs are defined.
+        if not hasattr(cls, "data_url"):
+            raise TypeError("Dataset classes must define a 'data_url' attribute.")
+        if cls.tags.get("has_ground_truth") and not hasattr(cls, "ground_truth_url"):
+            raise TypeError(
+                "Dataset classes with 'has_ground_truth' tag True must define a 'ground_truth_url' attribute."
+            )
+        if cls.tags.get("has_expert_knowledge") and not hasattr(
+            cls, "expert_knowledge_url"
+        ):
+            raise TypeError(
+                "Dataset classes with 'has_expert_knowledge' tag True must define an 'expert_knowledge_url' attribute."
+            )
 
-        # Step 3: Register the dataset by name and tags.
+        # Step 4: Register the dataset by name and tags.
         name = getattr(cls, "name")
         self._by_name[name] = cls
 
@@ -220,22 +228,20 @@ class _DatasetRegistry:
         return self._by_name[name]
 
 
-DATASETS = _DatasetRegistry()
+DATASET_REGISTRY = _DatasetRegistry()
 
 
-def dataset_class(cls):
+def register_dataset_class(cls):
     """
-    Class decorator to register a dataset class in the DATASETS registry.
+    Class decorator to register a dataset class in the DATASET_REGISTRY.
 
     For example usage see one of the dataset files such as `abalone.py`.
     """
-    DATASETS.register(cls)
+    DATASET_REGISTRY.register(cls)
     return cls
 
 
-def load_dataset(
-    name: str, variant: Optional[str] = None, load_ground_truth: bool = True
-) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
+def load_dataset(name: str) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
     """
     Load a dataset by name.
 
@@ -244,33 +250,10 @@ def load_dataset(
     name : str
         Name of the dataset to load.
 
-    variant : str, default=None
-        Variant of the dataset to load. If None, the dataset's default variant
-        is loaded.
-
-    load_ground_truth : bool, default=True
-        Whether to load the ground truth DAG along with the data.
-
-    Returns
-    -------
-    Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]
-        If `load_ground_truth` is False, returns only the data as a DataFrame.
-        If True, returns a tuple of (data, ground_truth), where ground_truth
-        is a DAG or None if not available.
-
     Examples
     --------
     >>> from pgmpy.datasets import load_dataset
     >>> data, ground_truth = load_dataset("sachs", load_ground_truth=True)
 
     """
-
-    dataset = DATASETS.get_dataset(name)
-
-    if load_ground_truth:
-        if not dataset.tags.get("has_ground_truth"):
-            raise ValueError(f"Dataset '{name}' does not have ground truth available.")
-        else:
-            return dataset.load(variant)
-    else:
-        return dataset.load(variant)[0]
+    return DATASET_REGISTRY.get_dataset(name).load()
