@@ -277,7 +277,7 @@ def register_dataset_class(cls):
     return cls
 
 
-def load_dataset(name: str, n_samples: Optional[int] = None) -> Dataset:
+def load_dataset(name: str) -> Dataset:
     """
     Load a dataset by name.
 
@@ -293,13 +293,9 @@ def load_dataset(name: str, n_samples: Optional[int] = None) -> Dataset:
 
     """
     dataset_cls = DATASET_REGISTRY.get_dataset(name)
-    data = dataset_cls.load_data()
-    if n_samples is not None:
-        data = data.sample(n=n_samples).reset_index(drop=True)
-
     return Dataset(
         name=name,
-        data=data,
+        data=dataset_cls.load_data(),
         expert_knowledge=dataset_cls.load_expert_knowledge(),
         ground_truth=dataset_cls.load_ground_truth(),
         tags=dataset_cls.tags,
