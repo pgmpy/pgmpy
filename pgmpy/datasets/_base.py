@@ -28,7 +28,10 @@ class Dataset:
     tags: Dict[str, Any] = None
 
     def __str__(self) -> str:
-        return f"Dataset(name={self.name}, \n data=DataFrame({list(self.data.columns)}), \n expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+        return (
+            f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+        )
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -118,50 +121,6 @@ class _BaseDataset:
         raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url)
 
         return cls._parse_ground_truth(raw_data)
-
-    @classmethod
-    def load(cls) -> pd.DataFrame:
-
-        has_ground_truth = cls.tags.get("has_ground_truth")
-
-        # Step 1: Create cache path and load or fetch the data.
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_url".encode()).hexdigest(),
-        )
-        cache_data_path = os.path.join(cache_dir_path, "data")
-        cache_ground_truth_path = os.path.join(cache_dir_path, "ground_truth")
-
-        if os.path.exists(cache_dir_path):
-            with open(cache_data_path, "rb") as f:
-                raw_data = f.read()
-            if has_ground_truth:
-                with open(cache_ground_truth_path, "rb") as f:
-                    raw_ground_truth = f.read()
-
-        else:
-            os.makedirs(cache_dir_path, exist_ok=True)
-
-            resp = requests.get(cls.data_url, timeout=60)
-            resp.raise_for_status()
-            raw_data = resp.content
-            with open(cache_data_path, "wb") as f:
-                f.write(raw_data)
-
-            if has_ground_truth:
-                resp_gt = requests.get(cls.ground_truth_url, timeout=60)
-                resp_gt.raise_for_status()
-                raw_ground_truth = resp_gt.content
-                with open(cache_ground_truth_path, "wb") as f:
-                    f.write(raw_ground_truth)
-
-        # Step 2: Parse and return the data.
-        df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
-        if has_ground_truth:
-            ground_truth = cls._parse_ground_truth(raw_ground_truth)
-            return df, ground_truth
-        else:
-            return df, None
 
     @staticmethod
     def clear_cache() -> None:
