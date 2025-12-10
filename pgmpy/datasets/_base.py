@@ -113,7 +113,7 @@ class _BaseDataset:
         return raw_data
 
     @classmethod
-    def load_data(cls) -> pd.DataFrame:
+    def load_dataframe(cls) -> pd.DataFrame:
         raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         return df
@@ -296,7 +296,7 @@ def load_dataset(name: str) -> Dataset:
     dataset_cls = DATASET_REGISTRY.get_dataset(name)
     return Dataset(
         name=name,
-        data=dataset_cls.load_data(),
+        data=dataset_cls.load_dataframe(),
         expert_knowledge=dataset_cls.load_expert_knowledge(),
         ground_truth=dataset_cls.load_ground_truth(),
         tags=dataset_cls.tags,
