@@ -38,6 +38,9 @@ class Dataset:
 class _BaseDataset:
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
+        """
+        Helper method to parse expert knowledge from raw bytes.
+        """
         text = raw_expert_knowledge.decode("utf-8-sig", errors="ignore")
 
         temporal: List[List[str]] = []
@@ -93,6 +96,9 @@ class _BaseDataset:
 
     @classmethod
     def _get_raw_data(cls, data_type, url) -> bytes:
+        """
+        Checks if the data is cached locally; if not, fetches it from the URL and caches it.
+        """
         cache_dir_path = os.path.join(
             PGMPY_DATA_HOME,
             hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
@@ -114,12 +120,14 @@ class _BaseDataset:
 
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
+        """Fetches/reads from cache the data associated with the dataset."""
         raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         return df
 
     @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
+        """Fetches/reads from cache the expert knowledge associated with the dataset."""
         if not cls.tags.get("has_expert_knowledge"):
             return None
 
@@ -129,6 +137,7 @@ class _BaseDataset:
 
     @classmethod
     def load_ground_truth(cls) -> DAG:
+        """Fetches/reads from cache the ground truth DAG associated with the dataset."""
         if not cls.tags.get("has_ground_truth"):
             return None
 
@@ -220,14 +229,31 @@ class _DatasetRegistry:
         Parameters
         ----------
         **tag_filters :
-            Tag constraints as keyword arguments. A dataset is included if
-            for every (key, value) in tag_filters, its tags dict satisfies
-            tags[key] == value.
+            Tag constraints as keyword arguments. The following tags are supported:
+            - has_ground_truth
+            - has_expert_knowledge
+            - is_simulated
+            - is_interventional
+            - is_discrete
+            - is_continuous
+            - is_mixed
+            - is_ordinal
 
         Returns
         -------
         List[str]
             Sorted list of dataset names that satisfy the filters.
+
+        Examples
+        --------
+        >>> from pgmpy.datasets import DATASET_REGISTRY
+        >>> all_datasets = DATASET_REGISTRY.list_datasets()
+        >>> discrete_datasets = DATASET_REGISTRY.list_datasets(is_discrete=True)
+        ['sachs_discrete']
+        >>> mixed_datasets_with_gt = DATASET_REGISTRY.list_datasets(
+        ...     is_mixed=True, has_ground_truth=True
+        ... )
+        ['sachs_mixed']
         """
         # Step 1: If no filters return all.
         if not tag_filters:
