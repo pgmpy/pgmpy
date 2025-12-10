@@ -4,6 +4,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.datasets import DATASET_REGISTRY, SachsContinuous, load_dataset
+from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
     "abalone_continuous",
@@ -43,6 +44,7 @@ def test_load_dataset():
     assert isinstance(dataset.data, pd.DataFrame)
     assert isinstance(dataset.ground_truth, DAG)
     assert dataset.tags == SachsContinuous.tags
+    assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
 
 
 @pytest.mark.skipif(

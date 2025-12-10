@@ -3,12 +3,10 @@ from __future__ import annotations
 import hashlib
 import io
 import os
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
-import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG
@@ -39,42 +37,59 @@ class Dataset:
 
 class _BaseDataset:
     @staticmethod
-    def _parse_tier_graph(raw_ground_truth: str) -> Optional[DAG]:
-        text_content = raw_ground_truth.decode("utf-8-sig", errors="ignore")
+    def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
+        text = raw_expert_knowledge.decode("utf-8-sig", errors="ignore")
 
-        try:
-            lines = [line.strip() for line in text_content.splitlines() if line.strip()]
-            start_index = -1
-            for i, line in enumerate(lines):
-                if line.lower() == "addtemporal":
-                    start_index = i
-                    break
+        temporal: List[List[str]] = []
+        forbids: List[Tuple[str, str]] = []
+        requires: List[Tuple[str, str]] = []
 
-            if start_index == -1:
-                return None
+        section = None
 
-            G = nx.DiGraph()
-            tiers = []
+        for raw_line in text.splitlines():
+            stripped = raw_line.strip()
 
-            for line in lines[start_index + 1 :]:
-                match = re.match(r"^\d+\s+(.*)", line)
-                if match:
-                    vars_list = match.group(1).split()
-                    if vars_list:
-                        tiers.append(vars_list)
-                        G.add_nodes_from(vars_list)
-                elif line.startswith("/") or "direct" in line.lower():
-                    break
+            if not stripped:
+                if section == "addtemporal":
+                    temporal.append([])
+                continue
 
-            for i in range(len(tiers)):
-                for j in range(i + 1, len(tiers)):
-                    for u in tiers[i]:
-                        for v in tiers[j]:
-                            if u in G and v in G and u != v:
-                                G.add_edge(u, v)
-            return DAG(G)
-        except Exception:
-            return None
+            lower = stripped.lower()
+
+            # Section headers
+            if lower == "/knowledge":
+                section = None
+                continue
+            if lower == "addtemporal":
+                section = "addtemporal"
+                continue
+            if lower == "forbiddirect":
+                section = "forbiddirect"
+                continue
+            if lower in ("requiredirect", "requireddirect"):
+                section = "requiredirect"
+                continue
+
+            # Content, depending on current section
+            if section == "addtemporal":
+                # Treat lines that are just an integer as placeholders for empty lines
+                if stripped.isdigit():
+                    temporal.append([])
+                else:
+                    tokens = stripped.split()
+                    temporal.append(tokens)
+
+            elif section == "forbiddirect":
+                tokens = stripped.split()
+                forbids.append((tokens[0], tokens[1]))
+
+            elif section == "requiredirect":
+                tokens = stripped.split()
+                requires.append((tokens[0], tokens[1]))
+
+        return ExpertKnowledge(
+            forbidden_edges=forbids, required_edges=requires, temporal_order=temporal
+        )
 
     @classmethod
     def _get_raw_data(cls, data_type, url) -> bytes:
@@ -109,9 +124,8 @@ class _BaseDataset:
             return None
 
         raw_data = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
-        return raw_data
-
-        # TODO: Construct an ExpertKnowledge object from raw_data
+        expert_knowledge = cls._parse_expert_knowledge(raw_data)
+        return expert_knowledge
 
     @classmethod
     def load_ground_truth(cls) -> DAG:
@@ -263,7 +277,7 @@ def register_dataset_class(cls):
     return cls
 
 
-def load_dataset(name: str) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[DAG]]]:
+def load_dataset(name: str, n_samples: Optional[int] = None) -> Dataset:
     """
     Load a dataset by name.
 
@@ -279,9 +293,13 @@ def load_dataset(name: str) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[
 
     """
     dataset_cls = DATASET_REGISTRY.get_dataset(name)
+    data = dataset_cls.load_data()
+    if n_samples is not None:
+        data = data.sample(n=n_samples).reset_index(drop=True)
+
     return Dataset(
         name=name,
-        data=dataset_cls.load_data(),
+        data=data,
         expert_knowledge=dataset_cls.load_expert_knowledge(),
         ground_truth=dataset_cls.load_ground_truth(),
         tags=dataset_cls.tags,
