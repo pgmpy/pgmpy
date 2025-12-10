@@ -53,8 +53,6 @@ class _BaseDataset:
             stripped = raw_line.strip()
 
             if not stripped:
-                if section == "addtemporal":
-                    temporal.append([])
                 continue
 
             lower = stripped.lower()
@@ -80,7 +78,8 @@ class _BaseDataset:
                     temporal.append([])
                 else:
                     tokens = stripped.split()
-                    temporal.append(tokens)
+                    # Skip the first token; its the line number
+                    temporal.append(tokens[1:])
 
             elif section == "forbiddirect":
                 tokens = stripped.split()
