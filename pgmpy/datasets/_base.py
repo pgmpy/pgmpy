@@ -11,6 +11,7 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG
+from pgmpy.estimators import ExpertKnowledge
 from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.utils._safe_import import _safe_import
 
@@ -55,6 +56,62 @@ class _BaseDataset:
             return DAG(G)
         except Exception:
             return None
+
+    @staticmethod
+    def _get_raw_data(path, url) -> bytes:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                raw_data = f.read()
+        else:
+            os.makedirs(path, exist_ok=True)
+            resp = requests.get(url, timeout=60)
+            resp.raise_for_status()
+            raw_data = resp.content
+            with open(path, "wb") as f:
+                f.write(raw_data)
+        return raw_data
+
+    @classmethod
+    def load_data(cls) -> pd.DataFrame:
+        cache_dir_path = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
+        )
+        cache_data_path = os.path.join(cache_dir_path, "data")
+        raw_data = cls._get_raw_data(cache_data_path, cls.data_url)
+        df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
+        return df
+
+    @classmethod
+    def load_expert_knowledge(cls) -> ExpertKnowledge:
+        if not cls.tags.get("has_expert_knowledge"):
+            return None
+
+        cache_dir_path = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
+        )
+        cache_expert_knowledge_path = os.path.join(cache_dir_path, "expert_knowledge")
+        raw_data = cls._get_raw_data(
+            cache_expert_knowledge_path, cls.expert_knowledge_url
+        )
+        return raw_data
+
+        # TODO: Construct an ExpertKnowledge object from raw_data
+
+    @classmethod
+    def load_ground_truth(cls) -> DAG:
+        if not cls.tags.get("has_ground_truth"):
+            return None
+
+        cache_dir_path = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
+        )
+        cache_ground_truth_path = os.path.join(cache_dir_path, "ground_truth")
+        raw_data = cls._get_raw_data(cache_ground_truth_path, cls.ground_truth_url)
+
+        return cls._parse_ground_truth(raw_data)
 
     @classmethod
     def load(cls) -> pd.DataFrame:
