@@ -116,7 +116,7 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
     base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
 
     data_url = (
-        base_url + "data/sachs.2005.logxplus10.jittered.experimental.continuous.txt"
+        base_url + "data/sachs.2005.logxplus10.jittered.eperimental.continuous.txt"
     )
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"

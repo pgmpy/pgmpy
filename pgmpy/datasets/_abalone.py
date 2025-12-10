@@ -36,8 +36,8 @@ class AbaloneMixed(_BaseDataset):
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
-        "is_continuous": True,
-        "is_mixed": False,
+        "is_continuous": False,
+        "is_mixed": True,
         "is_ordinal": False,
     }
 
