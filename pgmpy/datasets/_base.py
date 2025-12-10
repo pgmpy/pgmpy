@@ -4,6 +4,7 @@ import hashlib
 import io
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
@@ -16,6 +17,15 @@ from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.utils._safe_import import _safe_import
 
 requests = _safe_import("requests")
+
+
+@dataclass
+class Dataset:
+    name: str
+    data: pd.DataFrame
+    expert_knowledge: Optional[ExpertKnowledge] = None
+    ground_truth: Optional[DAG] = None
+    tags: Dict[str, Any] = None
 
 
 class _BaseDataset:
@@ -57,13 +67,20 @@ class _BaseDataset:
         except Exception:
             return None
 
-    @staticmethod
-    def _get_raw_data(path, url) -> bytes:
+    @classmethod
+    def _get_raw_data(cls, data_type, url) -> bytes:
+        cache_dir_path = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
+        )
+
+        path = os.path.join(cache_dir_path, data_type)
+
         if os.path.exists(path):
             with open(path, "rb") as f:
                 raw_data = f.read()
         else:
-            os.makedirs(path, exist_ok=True)
+            os.makedirs(cache_dir_path, exist_ok=True)
             resp = requests.get(url, timeout=60)
             resp.raise_for_status()
             raw_data = resp.content
@@ -73,12 +90,7 @@ class _BaseDataset:
 
     @classmethod
     def load_data(cls) -> pd.DataFrame:
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
-        )
-        cache_data_path = os.path.join(cache_dir_path, "data")
-        raw_data = cls._get_raw_data(cache_data_path, cls.data_url)
+        raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         return df
 
@@ -87,14 +99,7 @@ class _BaseDataset:
         if not cls.tags.get("has_expert_knowledge"):
             return None
 
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
-        )
-        cache_expert_knowledge_path = os.path.join(cache_dir_path, "expert_knowledge")
-        raw_data = cls._get_raw_data(
-            cache_expert_knowledge_path, cls.expert_knowledge_url
-        )
+        raw_data = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
         return raw_data
 
         # TODO: Construct an ExpertKnowledge object from raw_data
@@ -104,12 +109,7 @@ class _BaseDataset:
         if not cls.tags.get("has_ground_truth"):
             return None
 
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
-        )
-        cache_ground_truth_path = os.path.join(cache_dir_path, "ground_truth")
-        raw_data = cls._get_raw_data(cache_ground_truth_path, cls.ground_truth_url)
+        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url)
 
         return cls._parse_ground_truth(raw_data)
 
@@ -313,4 +313,11 @@ def load_dataset(name: str) -> Union[pd.DataFrame, Tuple[pd.DataFrame, Optional[
     >>> data, ground_truth = load_dataset("sachs", load_ground_truth=True)
 
     """
-    return DATASET_REGISTRY.get_dataset(name).load()
+    dataset_cls = DATASET_REGISTRY.get_dataset(name)
+    return Dataset(
+        name=name,
+        data=dataset_cls.load_data(),
+        expert_knowledge=dataset_cls.load_expert_knowledge(),
+        ground_truth=dataset_cls.load_ground_truth(),
+        tags=dataset_cls.tags,
+    )

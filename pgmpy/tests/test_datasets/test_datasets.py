@@ -38,9 +38,9 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    df, ground_truth = load_dataset("sachs_continuous")
-    assert isinstance(df, pd.DataFrame)
-    assert isinstance(ground_truth, DAG)
+    dataset = load_dataset("sachs_continuous")
+    assert isinstance(dataset.data, pd.DataFrame)
+    assert isinstance(dataset.ground_truth, DAG)
 
 
 @pytest.mark.skipif(
