@@ -12,6 +12,7 @@ ALL_DATASETS = [
     "abalone_mixed",
     "adult",
     "airfoil",
+    "algeria_forest",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",

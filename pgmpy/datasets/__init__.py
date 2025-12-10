@@ -2,6 +2,7 @@ from ._base import DATASET_REGISTRY, _BaseDataset, load_dataset, register_datase
 from ._abalone import AbaloneContinuous, AbaloneMixed  # noqa: F401
 from ._adult import Adult  # noqa: F401
 from ._airfoil import Airfoil  # noqa: F401
+from ._algeria import Algeria  # noqa: F401
 from ._sachs import (  # noqa: F401
     SachsContinuous,
     SachsContinuousJittered,
