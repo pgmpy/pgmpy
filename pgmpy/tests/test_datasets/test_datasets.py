@@ -8,6 +8,7 @@ from pgmpy.datasets import DATASET_REGISTRY, load_dataset
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
+    "adult",
     "abalone_continuous",
     "abalone_mixed",
     "sachs_mixed",
