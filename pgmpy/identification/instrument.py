@@ -7,9 +7,7 @@ from pgmpy.inference.CausalInference import CausalInference
 
 class InstrumentalVariables(BaseIdentification):
 
-    def __init__(
-        self, variant: str = "non-conditional", scaling_indicators=None
-    ) -> None:
+    def __init__(self, variant=None, scaling_indicators=None) -> None:
         self.supported_graph_types = DAG
         self.variant = variant
         self.scaling_indicators = scaling_indicators
@@ -22,7 +20,24 @@ class InstrumentalVariables(BaseIdentification):
         observed_nodes = all_nodes - latent_variables
         scaling_indicators = {}
 
-        if self.scaling_indicators is not None:
+        if self.scaling_indicators is not None and len(self.scaling_indicators) == len(
+            latent_variables
+        ):
+            return self.scaling_indicators
+
+        # checks for missing scaling indicators and assigns for the missing nodes (if any)
+        if self.scaling_indicators is not None and len(self.scaling_indicators) < len(
+            latent_variables
+        ):
+            missing_scaling_indicators = set(latent_variables) - set(
+                self.scaling_indicators.keys()
+            )
+            for node in missing_scaling_indicators:
+                for neighbour in causal_graph.neighbors(node):
+                    if neighbour in observed_nodes:
+                        if not (node in exposure and neighbour != outcome):
+                            self.scaling_indicators[node] = neighbour
+                            break
             return self.scaling_indicators
 
         for node in latent_variables:
@@ -30,6 +45,7 @@ class InstrumentalVariables(BaseIdentification):
                 if neighbour in observed_nodes:
                     if not (node in exposure and neighbour != outcome):
                         scaling_indicators[node] = neighbour
+                        scaling_indicators
                         break
         return scaling_indicators
 

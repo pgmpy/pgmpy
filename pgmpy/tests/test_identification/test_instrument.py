@@ -1,4 +1,4 @@
-from pgmpy.base import DAG
+from pgmpy.base import DAG, SimpleCausalModel
 from pgmpy.identification import InstrumentalVariables
 
 
@@ -101,6 +101,38 @@ def test_get_ivs_with_scaling_indicators():
     assert set(graph_with_iv.get_role("instrument")) == expected_iv
 
 
+def test_get_ivs_with_multiple_latents():
+    iv_model = DAG(
+        [("X", "Y"), ("I", "X"), ("U", "X"), ("U", "Y"), ("U2", "X"), ("U2", "Y")],
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+            "latents": ("U", "U2"),
+        },
+    )
+    iv = InstrumentalVariables(variant=None, scaling_indicators={"U": "X", "U2": "X"})
+    graph_with_iv, ok = iv._identify(iv_model)
+    assert ok is True
+    expected_iv = {"I"}
+    assert set(graph_with_iv.get_role("instrument")) == expected_iv
+
+
+def test_get_ivs_when_scaling_indicator_incomplete():
+    iv_model = DAG(
+        [("X", "Y"), ("I", "X"), ("U", "X"), ("U", "Y"), ("U2", "X"), ("U2", "Y")],
+        roles={
+            "exposures": "X",
+            "outcomes": "Y",
+            "latents": ("U", "U2"),
+        },
+    )
+    iv = InstrumentalVariables(variant=None, scaling_indicators={"U": "X"})
+    graph_with_iv, ok = iv._identify(iv_model)
+    assert ok is True
+    expected_iv = {"I"}
+    assert set(graph_with_iv.get_role("instrument")) == expected_iv
+
+
 def test_no_ivs_found():
     iv_model = DAG(
         [("X", "Y"), ("U", "X"), ("U", "Y")],
@@ -150,3 +182,24 @@ def test_conditional_ivs_with_latents():
     assert ok is True
     expected_iv = ("I", "W")
     assert (retruned_graph.get_role("instrument")) == list(expected_iv)
+
+
+def test_no_ivs_with_SCM():
+    model = SimpleCausalModel(exposures="X", covariates="U", outcomes="Y", latents="U")
+    iv = InstrumentalVariables(variant=None)
+    retruned_graph, ok = iv._identify(model)
+    assert ok is False
+    expected_iv = set()
+    assert set(retruned_graph.get_role("instrument")) == expected_iv
+    assert not retruned_graph.has_role("instrument")
+
+
+def test_usage_with_SCM():
+    model = SimpleCausalModel(exposures="X", covariates="U", outcomes="Y", latents="U")
+    model.add_edge("I", "X")
+    iv = InstrumentalVariables(variant=None)
+    retruned_graph, ok = iv._identify(model)
+    assert ok is True
+    expected_iv = {"I"}
+    assert set(retruned_graph.get_role("instrument")) == expected_iv
+    assert retruned_graph.has_role("instrument")
