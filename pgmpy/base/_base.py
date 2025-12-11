@@ -206,20 +206,48 @@ class _CoreGraph(nx.MultiDiGraph, _GraphRolesMixin):
         if edge_type in ["<-", "<o"]:
             u, v = v, u
             edge_type = f"{edge_type[1]}>"
-        super().add_edge(u, v, key=edge_type, **kwargs)
 
-        # Further adding edge based on the edge's edge_type.
-        if edge_type in ["--", "-o", "o-"]:
-            reverse_edge_type = f"{edge_type[1]}{edge_type[0]}"
-            super().add_edge(v, u, key=reverse_edge_type, **kwargs)
-        elif edge_type in ["<>", "oo"]:
-            super().add_edge(v, u, key=edge_type, **kwargs)
-        elif edge_type in ["->", "<-", "o>", "<o"]:
-            pass
+        # add nodes
+        if u not in self._succ:
+            if u is None:
+                raise ValueError("None cannot be a node")
+            self._succ[u] = self.adjlist_inner_dict_factory()
+            self._pred[u] = self.adjlist_inner_dict_factory()
+            self._adj[u] = self.adjlist_inner_dict_factory()
+            self._node[u] = self.node_attr_dict_factory()
+        if v not in self._succ:
+            if v is None:
+                raise ValueError("None cannot be a node")
+            self._succ[v] = self.adjlist_inner_dict_factory()
+            self._pred[v] = self.adjlist_inner_dict_factory()
+            self._adj[v] = self.adjlist_inner_dict_factory()
+            self._node[v] = self.node_attr_dict_factory()
+        if v in self._succ[u]:
+            keydict = self._adj[u][v]
+            datadict = keydict.get(edge_type, self.edge_attr_dict_factory())
+            datadict.update(kwargs)
+            keydict[edge_type] = datadict
         else:
-            raise AssertionError(
-                "This is an unexpected error in pgmpy. If you see this error, please file an issue on the pgmpy GitHub."
-            )
+            # selfloops work this way without special treatment
+            datadict = self.edge_attr_dict_factory()
+            datadict.update(kwargs)
+            keydict = self.edge_key_dict_factory()
+            keydict[edge_type] = datadict
+            if edge_type in ["->", "o>"]:
+                self._succ[u][v] = keydict
+                self._pred[v][u] = keydict
+            elif edge_type in ["-o", "o-"]:
+                self._succ[u][v] = keydict
+                self._pred[v][u] = keydict
+                reverse_edge_type = f"{edge_type[1]}{edge_type[0]}"
+                keydict[reverse_edge_type] = datadict
+                self._succ[v][u] = keydict
+                self._pred[u][v] = keydict
+            elif edge_type in ["--", "<>", "oo"]:
+                self._adj[u][v] = keydict
+                self._adj[v][u] = keydict
+        nx._clear_cache(self)
+        return edge_type
 
     def add_edges_from(
         self,
@@ -312,24 +340,37 @@ class _CoreGraph(nx.MultiDiGraph, _GraphRolesMixin):
         """
         self._validate_edges(ebunch=[(u, v, edge_type)])
 
-        # Removing edge base on `edge_type` value.
         if edge_type in ["<-", "<o"]:
             u, v = v, u
             edge_type = f"{edge_type[1]}>"
-        super().remove_edge(u, v, key=edge_type)
 
-        # Further removing edge based on the edge's edge_type.
-        if edge_type in ["--", "-o", "o-"]:
-            reverse_edge_type = f"{edge_type[1]}{edge_type[0]}"
-            super().remove_edge(v, u, key=reverse_edge_type)
-        elif edge_type in ["<>", "oo"]:
-            super().remove_edge(v, u, key=edge_type)
-        elif edge_type in ["->", "<-", "o>", "<o"]:
-            pass
-        else:
-            raise AssertionError(
-                "This is an unexpected error in pgmpy. If you see this error, please file an issue on the pgmpy GitHub."
-            )
+        try:
+            d = self._adj[u][v]
+        except KeyError as err:
+            raise err
+        # remove the edge with specified data
+        try:
+            del d[edge_type]
+            if edge_type in ["-o", "o-"]:
+                reverse_edge_type = f"{edge_type[1]}{edge_type[0]}"
+                del d[reverse_edge_type]
+        except KeyError as err:
+            # msg = f"The edge {u}-{v} with key {key} is not in the graph."
+            raise err
+        if len(d) == 0:
+            # remove the key entries if last edge
+            if edge_type in ["->", "o>"]:
+                del self._succ[u][v]
+                del self._pred[v][u]
+            elif edge_type in ["-o", "o-"]:
+                del self._succ[u][v]
+                del self._pred[v][u]
+                del self._succ[v][u]
+                del self._pred[u][v]
+            elif edge_type in ["--", "<>", "oo"]:
+                del self._adj[u][v]
+                del self._adj[v][u]
+        nx._clear_cache(self)
 
     def remove_edges_from(
         self,
