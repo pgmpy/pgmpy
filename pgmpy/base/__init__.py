@@ -6,7 +6,6 @@ from .PDAG import PDAG
 from .SimpleCausalModel import SimpleCausalModel
 from .UndirectedGraph import UndirectedGraph
 
-
 __all__ = [
     "UndirectedGraph",
     "DAG",
@@ -16,4 +15,3 @@ __all__ = [
     "PAG",
     "SimpleCausalModel",
 ]
-
