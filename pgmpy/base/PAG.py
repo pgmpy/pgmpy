@@ -98,7 +98,7 @@ class PAG(AncestralBase):
             The vertex to check on the path.
 
         adj_u : Hashable
-            The node preceding `vertex` on the path.
+            The node preceding `vertex` on the path.Other smaller issues I noticed (optional fixes)
 
         adj_v : Hashable
             The node following `vertex` on the path.
@@ -158,7 +158,7 @@ class PAG(AncestralBase):
 
         Returns
         -------
-        bool
+        boolOther smaller issues I noticed (optional fixes)
             True if the edge is definitely visible, False otherwise.
         """
         if not self.has_edge(u, v):
@@ -390,12 +390,22 @@ class PAG(AncestralBase):
         ValueError
             If no edge exists between `u` and `v`.
         """
-        if not self.has_edge(u, v):
+
+        if self.has_edge(u, v):
+            edge_u = u
+            edge_v = v
+        elif self.has_edge(v, u):
+            edge_u = v
+            edge_v = u
+        else:
             raise ValueError(f"No edge between {u} and {v}")
+
+        # Now apply marks to the correct stored orientation
         if mark_u is not None:
-            self.edges[u, v]["marks"][u] = mark_u
+            self.edges[edge_u, edge_v]["marks"][u] = mark_u
+
         if mark_v is not None:
-            self.edges[u, v]["marks"][v] = mark_v
+            self.edges[edge_u, edge_v]["marks"][v] = mark_v
 
     def get_discriminating_path(self, x, y, v):
         r"""
@@ -613,25 +623,54 @@ class PAG(AncestralBase):
 
         """
         pag = self if inplace else self.copy()
+
         if "separating_sets" not in kwargs:
-            raise ValueError("Separating Sets is not passed")
+            raise ValueError("Separating Sets not provided")
 
-        for v in list(pag.nodes):
-            potential_y = pag.get_neighbors(v, u_type="o", v_type=None)
-            for y in potential_y:
-                for x in pag.nodes:
+        separating_sets = kwargs["separating_sets"]
 
-                    if x == v or x == y:
+        for c in pag.nodes:
+
+            # Find all d such that edge (c, d) has a circle on c's side
+            neighbors = pag.get_neighbors(c, u_type="o", v_type=None)
+
+            for d in neighbors:
+
+                # Try each possible a (start node)
+                for a in pag.nodes:
+                    if a == c or a == d:
                         continue
-                    discriminating_paths = pag.get_discriminating_path(x, y, v)
-                    for path in discriminating_paths:
+
+                    # Find paths that end ... b, c, d
+                    paths = pag.get_discriminating_path(a, d, c)
+
+                    for path in paths:
+                        # Need at least [a, ..., b, c, d]
                         if len(path) < 3:
                             continue
-                        if v in kwargs["separating_sets"].get((x, y), set()):
-                            pag.modify_edge(v, y, mark_u="-", mark_v=">")
+
+                        # b is predecessor of c on the path
+                        b = path[-3]
+
+                        # ---------- CASE 1 ----------
+                        # c is in Sepset(a, d) → orient: c → d
+                        in_sepset = False
+                        if (a, d) in separating_sets and c in separating_sets[(a, d)]:
+                            in_sepset = True
+                        if (d, a) in separating_sets and c in separating_sets[(d, a)]:
+                            in_sepset = True
+
+                        if in_sepset:
+                            # make c → d
+                            pag.modify_edge(c, d, mark_u="-", mark_v=">")
+
+                        # ---------- CASE 2 ----------
+                        # otherwise orient: b ↔ c ↔ d
                         else:
-                            pag.modify_edge(path[-3], v, mark_u=">", mark_v=">")
-                            pag.modify_edge(v, y, mark_u=">", mark_v=">")
+                            # b ↔ c  (arrowheads on both sides)
+                            pag.modify_edge(b, c, mark_u=">", mark_v=">")
+                            # c ↔ d
+                            pag.modify_edge(c, d, mark_u=">", mark_v=">")
 
         if not inplace:
             return pag
@@ -739,11 +778,15 @@ class PAG(AncestralBase):
         for v in list(pag.nodes):
             u_candidates = pag.get_neighbors(v, u_type="o", v_type="-")
             w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
-            for u, w in product(u_candidates, w_candidates):
-                if u == w or pag.has_edge(u, w):
-                    continue
+            for u in u_candidates:
+                for w in w_candidates:
+                    if u == w or pag.has_edge(u, w):
+                        continue
 
-                self.modify_edge(v, w, mark_u="-", mark_v=None)
+                    if pag.get_edge_marks(v, w).get(v) != "o":
+                        continue
+
+                    pag.modify_edge(v, w, mark_u="-", mark_v=None)
 
         if not inplace:
             return pag
@@ -765,16 +808,32 @@ class PAG(AncestralBase):
             otherwise None.
         """
         pag = self if inplace else self.copy()
-        for v in list(pag.nodes):
-            u_candidates = pag.get_neighbors(
-                v, u_type=">", v_type="-"
-            ) or pag.get_neighbors(v, u_type="o", v_type="-")
-            w_candidates = pag.get_neighbors(v, u_type="-", v_type=">")
 
-            for u, w in product(u_candidates, w_candidates):
-                if pag.has_edge(u, w):
+        for u in pag.nodes:
+            for v in pag.neighbors(u):
+
+                marks_uv = pag.get_edge_marks(u, v)
+
+                # Check u -> v   OR   u --o v
+                cond_uv_arrow = marks_uv.get(u) == "-" and marks_uv.get(v) == ">"
+                cond_uv_circle = marks_uv.get(u) == "-" and marks_uv.get(v) == "o"
+
+                if not (cond_uv_arrow or cond_uv_circle):
+                    continue
+
+                # Now check v -> w
+                for w in pag.neighbors(v):
+                    if w == u:
+                        continue
+
+                    marks_vw = pag.get_edge_marks(v, w)
+                    if not (marks_vw.get(v) == "-" and marks_vw.get(w) == ">"):
+                        continue
+
+                    # Finally check u o-> w
                     marks_uw = pag.get_edge_marks(u, w)
-                    if marks_uw[u] == "o" and marks_uw[w] == ">":
+                    if marks_uw.get(u) == "o" and marks_uw.get(w) == ">":
+                        # Orient u -> w
                         pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         if not inplace:
