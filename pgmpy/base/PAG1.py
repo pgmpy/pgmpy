@@ -166,8 +166,8 @@ class PAG(AncestralBase):
         if self.edges[u, v]["marks"][u] != "-" or self.edges[u, v]["marks"][v] != ">":
             return False
 
-        for neighbor in self.get_neighbors(u, v_type=">"):
-            if neighbor not in self.get_neighbors(v):
+        for neighbor in self.get_neighbors(u, u_type=">", v_type=None):
+            if neighbor not in self.get_neighbors(v, u_type=None, v_type=None):
                 return True
 
         stack = [u]
@@ -176,7 +176,7 @@ class PAG(AncestralBase):
         while stack:
             current = stack.pop()
 
-            for pred in self.get_neighbors(current, u_type=None, v_type=">"):
+            for pred in self.get_neighbors(current, u_type=">", v_type=None):
                 if pred in visited or pred == u:
                     continue
                 visited.add(pred)
@@ -248,7 +248,6 @@ class PAG(AncestralBase):
                 x = path[i]
                 y = path[i + 1]
                 edge_marks = self.get_edge_marks(x, y)
-                # Do not allow an arrowhead into x, nor a tail at y
                 if edge_marks.get(x) == ">" or edge_marks.get(y) == "-":
                     is_pd = False
                     break
@@ -427,21 +426,25 @@ class PAG(AncestralBase):
 
         discriminating_paths = []
 
-        for path in nx.all_simple_edge_paths(self, x, v):
+        for path in nx.all_simple_paths(self, source=x, target=v):
             if self.has_edge(x, y):
                 continue
 
-            for x1, x2 in path[1:]:
-
-                # should be a collider
-                if self.get_edge_marks(x1, x2) != {x1: ">", x2: ">"}:
+            for path in nx.all_simple_edge_paths(self, x, v):
+                if self.has_edge(x, y):
                     continue
 
-                # must be parent of y
-                if self.get_edge_marks(x1, y) != {x1: "-", y: ">"}:
-                    continue
+                for x1, x2 in path[1:]:
 
-            discriminating_paths.append(path)
+                    # should be a collider
+                    if self.get_edge_marks(x1, x2) != {x1: ">", x2: ">"}:
+                        continue
+
+                    # must be parent of y
+                    if self.get_edge_marks(x1, y) != {x1: "-", y: ">"}:
+                        continue
+
+                discriminating_paths.append(path)
 
         return discriminating_paths
 
@@ -474,8 +477,6 @@ class PAG(AncestralBase):
             w_candidates = pag.get_neighbors(node, u_type="o", v_type=None)
 
             for u, w in product(u_candidates, w_candidates):
-                if pag.get_edge_marks(node, w)[node] != "o":
-                    continue
                 if not pag.has_edge(u, w):
                     pag.modify_edge(node, w, mark_u="-", mark_v=">")
 
@@ -505,17 +506,17 @@ class PAG(AncestralBase):
             w_candidates = pag.get_neighbors(node, u_type=None, v_type=">")
 
             for u, w in product(u_candidates, w_candidates):
-                if self.has_edge(u, w):
-                    if self.get_edge_marks(u, w)[w] == "o":
+                if pag.has_edge(u, w):
+                    if pag.get_edge_marks(u, w).get(w) == "o":
                         pag.modify_edge(u, w, mark_u=None, mark_v=">")
 
-        for node in pag.nodes:
+        for node in list(pag.nodes):
             u_candidates = pag.get_neighbors(node, u_type=">", v_type=None)
             w_candidates = pag.get_neighbors(node, u_type="-", v_type=">")
 
             for u, w in product(u_candidates, w_candidates):
-                if self.has_edge(u, w):
-                    if self.get_edge_marks(u, w)[w] == "o":
+                if pag.has_edge(u, w):
+                    if pag.get_edge_marks(u, w).get(w) == "o":
                         pag.modify_edge(u, w, mark_u=None, mark_v=">")
 
         if not inplace:
@@ -616,6 +617,8 @@ class PAG(AncestralBase):
         if "separating_sets" not in kwargs:
             raise ValueError("Separating Sets is not passed")
 
+        separating_sets = kwargs["separating_sets"]
+
         for v in list(pag.nodes):
             potential_y = pag.get_neighbors(v, u_type="o", v_type=None)
             for y in potential_y:
@@ -625,13 +628,12 @@ class PAG(AncestralBase):
                         continue
                     discriminating_paths = pag.get_discriminating_path(x, y, v)
                     for path in discriminating_paths:
-                        if len(path) < 3:
-                            continue
-                        if v in kwargs["separating_sets"].get((x, y), set()):
+                        if v in separating_sets.get((x, y), set()):
                             pag.modify_edge(v, y, mark_u="-", mark_v=">")
                         else:
-                            pag.modify_edge(path[-3], v, mark_u=">", mark_v=">")
-                            pag.modify_edge(v, y, mark_u=">", mark_v=">")
+                            if len(path) >= 3:
+                                pag.modify_edge(path[-3], v, mark_u=">", mark_v=">")
+                                pag.modify_edge(v, y, mark_u=">", mark_v=">")
 
         if not inplace:
             return pag
@@ -669,7 +671,7 @@ class PAG(AncestralBase):
 
         for u, v in list(pag.edges):
             edge_marks = pag.get_edge_marks(u, v)
-            if edge_marks[u] == "o" and edge_marks[v] == "o":
+            if edge_marks.get(u) == "o" and edge_marks.get(v) == "o":
                 paths = pag.get_paths(u, v, {("o", "o")})
                 for path in paths:
                     if len(path) >= 4 and pag.is_uncovered(path):
@@ -711,8 +713,6 @@ class PAG(AncestralBase):
 
             if len(u_candidates) > 0:
                 for w in w_candidates:
-                    if pag.get_edge_marks(v, w).get(v) != "o":
-                        continue
                     pag.modify_edge(v, w, mark_u="-", mark_v=None)
 
         if not inplace:
@@ -743,7 +743,7 @@ class PAG(AncestralBase):
                 if u == w or pag.has_edge(u, w):
                     continue
 
-                self.modify_edge(v, w, mark_u="-", mark_v=None)
+                pag.modify_edge(v, w, mark_u="-", mark_v=None)
 
         if not inplace:
             return pag
@@ -761,8 +761,7 @@ class PAG(AncestralBase):
         Returns
         -------
         PAG or None
-            A new graph with orientations applied if inplace=False,
-            otherwise None.
+            A new graph with orientations applied if inplace=False, otherwise None.
         """
         pag = self if inplace else self.copy()
         for v in list(pag.nodes):
@@ -774,7 +773,7 @@ class PAG(AncestralBase):
             for u, w in product(u_candidates, w_candidates):
                 if pag.has_edge(u, w):
                     marks_uw = pag.get_edge_marks(u, w)
-                    if marks_uw[u] == "o" and marks_uw[w] == ">":
+                    if marks_uw.get(u) == "o" and marks_uw.get(w) == ">":
                         pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         if not inplace:
@@ -782,7 +781,7 @@ class PAG(AncestralBase):
 
     def rule_9(self, inplace=False, **kwargs):
         r"""
-        Orient the edge `u --> w` when an uncovered, potentially directed path supports it.
+        Orient the edge `u → w` when an uncovered, potentially directed path supports it.
 
         This rule applies when:
 
@@ -853,8 +852,8 @@ class PAG(AncestralBase):
         for u, w in list(pag.edges):
             if not (
                 pag.has_edge(u, w)
-                and self.get_edge_marks(u, w)[u] == "o"
-                and self.get_edge_marks(u, w)[w] == ">"
+                and pag.get_edge_marks(u, w).get(u) == "o"
+                and pag.get_edge_marks(u, w).get(w) == ">"
             ):
                 continue
 
@@ -904,15 +903,15 @@ class PAG(AncestralBase):
 
         rules_to_apply = rules or list(rules_map.keys())
 
-        missing = set(rules_to_apply) - set(rules)
-        if missing:
-            raise ValueError(f"Unknown Rule(s) Requested:  {missing}")
+        invalid = set(rules_to_apply) - set(rules_map.keys())
+        if invalid:
+            raise ValueError(f"Unknown Rule(s) Requested:  {invalid}")
 
         for r in rules_to_apply:
             func = rules_map[r]
             if inplace:
-                func(pag, separating_sets=separating_sets, inplace=inplace)
+                func(inplace=True, separating_sets=separating_sets)
             else:
-                pag = func(pag, separating_sets=separating_sets, inplace=inplace)
+                pag = func(inplace=False, separating_sets=separating_sets)
 
         return pag
