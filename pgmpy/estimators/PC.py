@@ -14,7 +14,6 @@ from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
 
