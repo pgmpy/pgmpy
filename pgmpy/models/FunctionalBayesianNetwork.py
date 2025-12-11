@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -18,18 +18,76 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     """
     Class for representing Functional Bayesian Network.
 
-    Functional Bayesian Networks allow for representation of any probability
-    distribution using CPDs in functional form (Functional CPD). Functional
-    CPDs return a pyro.distribution object allowing for flexible representation
-    of any distribution.
+    Functional Bayesian Networks allow for flexible representation of probability distribution using CPDs in functional
+    form (FunctionalCPD). As these CPDs are defined using functions that return pyro distributions, they can represent
+    any distribution supported by Pyro.
+
+    Parameters
+    ----------
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes, default=set()
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    # Defining a Functional Bayesian Network
+
+    >>> from pgmpy.models import FunctionalBayesianNetwork
+    >>> from pgmpy.factors.hybrid import FunctionalCPD
+    >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+    >>> model.add_cpds(
+    ...     FunctionalCPD("x1", lambda _: dist.Normal(0, 1)),
+    ...     FunctionalCPD(
+    ...         "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+    ...     ),
+    ...     FunctionalCPD(
+    ...         "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+
+    # Simulating data from the Functional Bayesian Network
+
+    >>> samples = model.simulate(n_samples=1000)
+
+    # Fitting the Functional Bayesian Network to the simulated data
+
+    >>> fitted_params = model.fit(samples, estimator="SVI", num_steps=1000)
     """
 
     def __init__(
         self,
         ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
-        latents: Set[Hashable] = set(),
-        lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,
+        latents: set[Hashable] = None,
+        exposures: set[Hashable] = None,
+        outcomes: set[Hashable] = None,
+        roles: Dict[str, Iterable] = None,
     ):
         """
         Initializes a FunctionalBayesianNetwork.
@@ -59,6 +117,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
 
     def add_cpds(self, *cpds: FunctionalCPD) -> None:

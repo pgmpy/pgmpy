@@ -1,7 +1,7 @@
 import inspect
 import itertools
 from os import PathLike
-from typing import Callable, Hashable, Iterable, Optional, Sequence
+from typing import Callable, Dict, Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
@@ -165,18 +165,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     def __init__(
         self,
         ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
-        latents: set[Hashable] = set(),
-        exposures: set[Hashable] = set(),
-        outcomes: set[Hashable] = set(),
-        roles=None,
+        latents: set[Hashable] = None,
+        exposures: set[Hashable] = None,
+        outcomes: set[Hashable] = None,
+        roles: Dict[str, Iterable] = None,
     ):
         super().__init__(ebunch)
 
         self._check_cycles()
 
-        self.latents = set(latents)
-        self.exposures = set(exposures)
-        self.outcomes = set(outcomes)
+        self.latents = set(latents) if latents is not None else set()
+        self.exposures = set(exposures) if exposures is not None else set()
+        self.outcomes = set(outcomes) if outcomes is not None else set()
 
         if roles is None:
             roles = {}
