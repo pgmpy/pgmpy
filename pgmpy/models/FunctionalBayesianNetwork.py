@@ -83,26 +83,12 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
+        ebunch: Optional[Union[nx.Graph, Iterable[Tuple[Any, Any]]]] = None,
         latents: set[Hashable] = None,
         exposures: set[Hashable] = None,
         outcomes: set[Hashable] = None,
         roles: Dict[str, Iterable] = None,
-    ):
-        """
-        Initializes a FunctionalBayesianNetwork.
-
-        Parameters
-        ----------
-        ebunch: list
-            List of edges to build the Bayesian Network. Each edge should be a tuple (u, v)
-            where u, v are nodes representing the edge u -> v.
-
-        Examples
-        --------
-        >>> from pgmpy.models import FunctionalBayesianNetwork
-        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        """
+    ) -> None:
         if config.get_backend() == "numpy":
             msg = (
                 f"{type(self)} requires pytorch backend, currently it is "

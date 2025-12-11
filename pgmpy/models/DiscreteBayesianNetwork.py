@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Set,
     Tuple,
     Type,
     Union,
@@ -111,11 +112,11 @@ class DiscreteBayesianNetwork(DAG):
 
     def __init__(
         self,
-        ebunch: Optional[Union[nx.Graph, Iterable[Tuple[Any, Any]]]] = None,
-        latents: set[Hashable] = None,
-        exposures: set[Hashable] = None,
-        outcomes: set[Hashable] = None,
-        roles: Dict[str, Iterable] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,

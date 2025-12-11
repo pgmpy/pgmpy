@@ -101,11 +101,11 @@ class LinearGaussianBayesianNetwork(DAG):
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
-        latents: Set[Hashable] = None,
-        exposures: set[Hashable] = None,
-        outcomes: set[Hashable] = None,
-        roles: Dict[str, Iterable] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
