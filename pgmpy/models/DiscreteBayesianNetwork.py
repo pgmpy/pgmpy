@@ -57,7 +57,7 @@ class DiscreteBayesianNetwork(DAG):
         variables but are used to represent unobserved confounding or
         other latent structures.
 
-    exposures : set, default=set()
+    exposures : set, default=None
         Set of exposure variables in the graph. These are the variables
         that represent the treatment or intervention being studied in a
         causal analysis. Default is an empty set.
