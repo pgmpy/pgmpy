@@ -150,8 +150,9 @@ class ExpectationMaximization(ParameterEstimator):
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
-            row_tuple = tuple(data_unique.iloc[i].values)
-            df["_weight"] = (weights / weights.sum()) * n_counts[row_tuple]
+            df["_weight"] = (weights / weights.sum()) * n_counts[
+                tuple(data_unique.iloc[i])
+            ]
             cache.append(df)
 
         return pd.concat(cache, copy=False)
