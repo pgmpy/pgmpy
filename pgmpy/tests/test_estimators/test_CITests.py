@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -270,9 +269,6 @@ class TestDiscreteTests(unittest.TestCase):
             np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
 class TestResidualMethods(unittest.TestCase):
     def setUp(self):
         # Create a combination of mixed data types
