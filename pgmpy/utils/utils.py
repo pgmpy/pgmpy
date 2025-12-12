@@ -494,3 +494,132 @@ def get_dataset_type(data: pd.DataFrame) -> str:
         elif "C" in dtypes_set:
             return "discrete"
     return "mixed"
+
+
+def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):
+    """
+    Converts given wide format dataframe to different time series formats.
+
+    Takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
+    traces ( "wide" format) and converts it to different format as specified in `return_format` argument.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe represented in the wide format (on rows we have samples, on columns, unsorted pairs of
+        ("Variable", "timestep")
+
+    return_format : {'pd-multiindex', 'numpy3d', 'pd-list', 'sorted'}
+        Controls the return representation. The options are:
+
+        "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
+                    represents variable, third dimension represent timestep
+
+        "pd-multiindex" : returns the pandas multiindex DataFrame, with indexes of ("Variable name", "timestep")
+
+        "pd-list" : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
+                    contain timestep and columns represent variables
+
+        "sorted" : makes sure that the representation of [sample, ("variable", "timestep")] is sorted, which
+                   makes further processing easier
+
+    Returns
+    -------
+    np.ndarray or pd.DataFrame or list of pd.DataFrame:
+        Depends on `return_format` variable. `numpy3d` returns a numpy array (`np.ndarray`), while rest of the
+        representations return a pandas DataFrame.
+
+    Examples
+    --------
+
+    For input dataframe `df`, represented in the wide format
+
+      (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (D, 2) (G, 2) (I, 1) (I, 2)
+    0      1      1      0      0      0      0      0      1      0
+    1      0      2      0      1      1      1      1      1      1
+
+    >>> to_timeseries_format(df, return_format="numpy3d")
+    [[[1 0 0]
+      [1 0 0]
+      [0 1 0]]
+     [[0 1 1]
+      [2 1 1]
+      [0 1 1]]]
+
+    >>> to_timeseries_format(df, return_format="pd-multiindex")
+    variable       D  G  I
+    instance time
+    0        0     1  1  0
+             1     0  0  1
+             2     0  0  0
+    1        0     0  2  0
+             1     1  1  1
+             2     1  1  1
+
+    >>> to_timeseries_format(df, return_format="pd-list")
+    [variable  D  G  I
+     time
+     0         1  1  0
+     1         0  0  1
+     2         0  0  0,
+     variable  D  G  I
+     time
+     0         0  2  0
+     1         1  1  1
+     2         1  1  1]
+
+    >>> to_timeseries_format(df, return_format="sorted")
+            (D,0), (D,1), (D,2), (G,0), (G,1), (G,2), (I,0), (I,1), (I,2)
+    0         1      0      0      1      0      0      0      1      0
+    1         0      1      1      2      1      1      0      1      1
+
+    """
+    x = df.copy()
+
+    # normalize the columns to multiindex
+    if not isinstance(x.columns, pd.MultiIndex):
+        x.columns = pd.MultiIndex.from_tuples(x.columns, names=["variable", "time"])
+    else:
+        x.columns = x.columns.set_names(["variable", "time"])
+
+    unique_variables = x.columns.get_level_values("variable").unique().tolist()
+    timesteps = sorted(x.columns.get_level_values("time").unique().tolist())
+    N, D, T = len(x), len(unique_variables), len(timesteps)
+
+    # sort the columns, to make the ordering easier
+    x = x.sort_index(axis=1)
+
+    # cast to different representation
+    panel = x
+    return_format = return_format.lower()
+
+    if return_format == "numpy3d":
+        # no guarantee that there will be order, which complicates the 3D tensor creation
+        panel = panel.to_numpy()
+        panel = panel.reshape(N, D, T)
+
+    elif return_format == "pd-multiindex":
+        panel = x.stack("time")
+        panel.index.set_names(["instance", "time"], inplace=True)
+        panel = panel.sort_index()
+        panel.columns = panel.columns.get_level_values("variable")
+
+    elif return_format == "pd-list":
+        # return the list of dataframes, one per time series
+        panel = x.stack("time")
+        panel.index.set_names(["instance", "time"], inplace=True)
+        panel = panel.sort_index()
+        panel.columns = panel.columns.get_level_values("variable")
+
+        panel = [pd.DataFrame(panel.loc[i]) for i in range(df.shape[0])]
+
+    elif return_format == "sorted":
+        panel.sort_index(inplace=True, axis=1)
+
+    else:
+        raise ValueError(
+            f"Unknown representation: {return_format}. Supported `return_types`"
+            "are: numpy3d, pd-multiindex, pd-list, sorted"
+        )
+
+    return panel
