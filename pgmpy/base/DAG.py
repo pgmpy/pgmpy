@@ -296,9 +296,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(
-                ebunch=ebunch, latents=roles["latents"]
-            )
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
             lgbn.add_nodes_from(nodes)
 
             std = 1

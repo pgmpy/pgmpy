@@ -595,28 +595,35 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
         """
         target_type = self.__class__.__name__
-        dagitty_str = f"{target_type.lower()} {{\n"
+        lines = [f"{target_type.lower()} {{"]
+
+        edge_map = {
+            ("-", ">"): "->",
+            (">", "-"): "<-",
+            (">", ">"): "<->",
+            ("o", ">"): "@->",
+            (">", "o"): "<-@",
+            ("o", "o"): "@-@",
+            ("o", "-"): "@--",
+            ("-", "o"): "--@",
+            ("-", "-"): "--",
+        }
         for u, v in self.edges:
             marks = self.edges[u, v]["marks"]
-            if marks[u] == "-" and marks[v] == ">":
-                dagitty_str += f"{u} -> {v}\n"
-            elif marks[u] == ">" and marks[v] == "-":
-                dagitty_str += f"{v} -> {u}\n"
-            elif marks[u] == ">" and marks[v] == ">":
-                dagitty_str += f"{u} <-> {v}\n"
-            elif marks[u] == "-" and marks[v] == "-":
-                dagitty_str += f"{u} -- {v}\n"
+            u_mark, v_mark = marks[u], marks[v]
+            if (u_mark, v_mark) in edge_map:
+                symbol = edge_map[(u_mark, v_mark)]
+                if symbol in ["<-", "<-@", "--@"]:
+                    lines.append(f"{v} {symbol[::-1]} {u}")
+                else:
+                    lines.append(f"{u} {symbol} {v}")
 
         for role in self.get_roles():
-            variables = self.get_role(role)
-            if len(variables) == 1:
-                dagitty_str += f"{variables[0]} [{role}]\n"
-            else:
-                for var in variables:
-                    dagitty_str += f"{var} [{role}]\n"
+            for var in self.get_role(role):
+                lines.append(f"{var} [{role}]")
 
-        dagitty_str += "}"
-        return dagitty_str
+        lines.append("}")
+        return "\n".join(lines)
 
     @classmethod
     def from_dagitty(cls, string: str = None, filename: str = None):
