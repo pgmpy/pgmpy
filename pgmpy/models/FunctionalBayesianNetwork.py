@@ -41,10 +41,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         that represent the treatment or intervention being studied in a
         causal analysis. If None, exposures will be treated as an empty set.
 
-    outcomes : set, default=set()
+    outcomes : set, optional (default: None)
         Set of outcome variables in the graph. These are the variables
         that represent the response or dependent variables being studied
-        in a causal analysis. Default is an empty set.
+        in a causal analysis. If None, defaults to an empty set.
 
     roles : dict, optional (default: None)
         A dictionary mapping roles to node names.
