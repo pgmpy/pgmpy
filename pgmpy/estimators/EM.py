@@ -86,14 +86,11 @@ class ExpectationMaximization(ParameterEstimator):
 
         if new_latents:
             logger.warning(
-                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                f"Columns {new_latents} have all or partial missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
             model.latents.update(new_latents)
 
-        self.variables_with_missing = {
-            col for col in data.columns if data[col].isnull().any()
-        }
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
@@ -106,19 +103,11 @@ class ExpectationMaximization(ParameterEstimator):
         likelihood = 0
         for cpd in self.model_copy.cpds:
             scope = set(cpd.scope())
-            if any(pd.isna(datapoint.get(var)) for var in scope):
-                continue
             likelihood += log(
                 max(
                     cpd.get_value(
                         **{
-                            key: (
-                                int(value)
-                                if isinstance(
-                                    value, (int, float, np.integer, np.floating)
-                                )
-                                else value
-                            )
+                            key: value
                             for key, value in datapoint.items()
                             if key in scope
                         }
@@ -138,17 +127,22 @@ class ExpectationMaximization(ParameterEstimator):
     ) -> pd.DataFrame:
         cache: List[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
-            missing_vars = [
-                var
-                for var in latent_card.keys()
-                if pd.isna(data_unique.iloc[i].get(var))
-            ]
+            row = data_unique.iloc[i]
+            missing_vars = []
+
+            for var in latent_card.keys():
+                if var not in data_unique.columns:
+                    missing_vars.append(var)
+                elif pd.isna(row[var]):
+                    missing_vars.append(var)
+
             if missing_vars:
                 v = list(product(*[range(latent_card[var]) for var in missing_vars]))
-                latent_combinations = np.array(v, dtype=float)
+                latent_combinations = np.array(v, dtype=int)
                 df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
                     drop=True
                 )
+
                 for index, latent_var in enumerate(missing_vars):
                     df[latent_var] = latent_combinations[:, index]
             else:
@@ -156,8 +150,8 @@ class ExpectationMaximization(ParameterEstimator):
             weights = np.e ** (
                 df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             )
-            row_key = tuple("NaN" if pd.isna(v) else v for v in data_unique.iloc[i])
-            df["_weight"] = (weights / weights.sum()) * n_counts[row_key]
+            row_tuple = tuple(data_unique.iloc[i].values)
+            df["_weight"] = (weights / weights.sum()) * n_counts[row_tuple]
             cache.append(df)
 
         return pd.concat(cache, copy=False)
@@ -174,11 +168,11 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
-        n_counts = {}
-        for _, row in self.data.iterrows():
-            key = tuple("NaN" if pd.isna(v) else v for v in row)
-            n_counts[key] = n_counts.get(key, 0) + 1
-
+        n_counts = (
+            self.data.groupby(list(self.data.columns), observed=True, dropna=False)
+            .size()
+            .to_dict()
+        )
         cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
                 data_unique, latent_card, n_counts, i, batch_size
@@ -211,7 +205,7 @@ class ExpectationMaximization(ParameterEstimator):
         n_jobs: int = 1,
         batch_size: int = 1000,
         seed: Optional[int] = None,
-        init_cpds: Union[Dict[str, TabularCPD], str, None] = None,
+        init_cpds: Union[Dict[str, TabularCPD], str] = {},
         show_progress: bool = True,
         **kwargs,
     ) -> List[TabularCPD]:
@@ -289,25 +283,22 @@ class ExpectationMaximization(ParameterEstimator):
          <TabularCPD representing P(C:2) at 0x...>,
          <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
-        if init_cpds is None:
-            init_cpds = {}
         # Step 1: Parameter checks
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
-        else:
-            latent_card = latent_card.copy()
-            for var in self.model_copy.latents:
-                if var not in latent_card:
-                    latent_card[var] = len(self.state_names.get(var, [0, 1]))
+
+        for col in self.data.columns:
+            if self.data[col].isna().any() and col not in latent_card:
+                if col in self.state_names:
+                    latent_card[col] = len(self.state_names[col])
+                else:
+                    latent_card[col] = int(self.data[col].nunique(dropna=True))
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
         n_states_dict.update(latent_card)
-
-        combined_state_names = self.state_names.copy()
-        for var, card in latent_card.items():
-            if var not in combined_state_names:
-                combined_state_names[var] = list(range(card))
+        for var in self.model_copy.latents:
+            self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize CPDs.
         # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
@@ -324,8 +315,7 @@ class ExpectationMaximization(ParameterEstimator):
                             v: n_states_dict[v] for v in ([var] + parents_dict[var])
                         },
                         state_names={
-                            v: combined_state_names[v]
-                            for v in ([var] + parents_dict[var])
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
                         },
                         seed=seed,
                     )
@@ -340,8 +330,7 @@ class ExpectationMaximization(ParameterEstimator):
                             v: n_states_dict[v] for v in ([var] + parents_dict[var])
                         },
                         state_names={
-                            v: combined_state_names[v]
-                            for v in ([var] + parents_dict[var])
+                            v: self.state_names[v] for v in ([var] + parents_dict[var])
                         },
                         seed=seed,
                     )
@@ -355,25 +344,25 @@ class ExpectationMaximization(ParameterEstimator):
         # Step 3.1: Learn the CPDs of variables which don't involve
         #           latent variables using MLE if their init_cpd is
         #           not specified.
+
         fixed_cpds = []
         fixed_cpd_vars = (
             set(self.model.nodes())
             - self.model.latents
             - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
             - set(init_cpds.keys())
-            - self.variables_with_missing
         )
 
         if apply_smoothing:
             estimator = BayesianEstimator.__new__(BayesianEstimator)
             estimator.model = self.model
             estimator.data = self.data
-            estimator.state_names = combined_state_names
+            estimator.state_names = self.state_names
         else:
             estimator = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
             estimator.model = self.model
             estimator.data = self.data
-            estimator.state_names = combined_state_names
+            estimator.state_names = self.state_names
 
         for var in fixed_cpd_vars:
             fixed_cpds.append(estimator.estimate_cpd(var))
@@ -393,7 +382,7 @@ class ExpectationMaximization(ParameterEstimator):
                         var: n_states_dict[var] for var in chain([node], parents)
                     },
                     state_names={
-                        var: combined_state_names[var] for var in chain([node], parents)
+                        var: self.state_names[var] for var in chain([node], parents)
                     },
                     seed=seed,
                 )
