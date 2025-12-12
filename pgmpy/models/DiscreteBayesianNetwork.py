@@ -52,7 +52,7 @@ class DiscreteBayesianNetwork(DAG):
         dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
         sparse matrix, or PyGraphviz graph.
 
-    latents : set of nodes, default=set()
+    latents : set of nodes, default=None
         A set of latent variables in the graph. These are not observed
         variables but are used to represent unobserved confounding or
         other latent structures.
