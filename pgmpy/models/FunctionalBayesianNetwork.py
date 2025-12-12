@@ -83,7 +83,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def __init__(
         self,
-        ebunch: Optional[Union[nx.Graph, Iterable[Tuple[Any, Any]]]] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
         latents: Optional[Set[Hashable]] = None,
         exposures: Optional[Set[Hashable]] = None,
         outcomes: Optional[Set[Hashable]] = None,
