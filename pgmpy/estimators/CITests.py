@@ -51,6 +51,25 @@ class CITestRegistry:
 
         return decorator
 
+    def list_all(self, data_type=None) -> List[str]:
+        """
+        Lists all registered CI test strategies.
+
+        Parameters
+        ----------
+        data_type : str, optional
+            If provided, filters tests that support the given data type.
+
+        Returns
+        -------
+        list of str
+            Names of all registered CI tests.
+        """
+        if data_type:
+            return [name for name, types in self._tags.items() if data_type in types]
+
+        return list(self._registry.keys())
+
     def get_test(
         self, test: Union[str, None, Callable], data: Optional[pd.DataFrame] = None
     ) -> Callable:
@@ -105,7 +124,11 @@ class CITestRegistry:
 ci_registry = CITestRegistry()
 
 
-@ci_registry.register(name="independence_match", data_types=["mixed"], is_default=False)
+@ci_registry.register(
+    name="independence_match",
+    data_types=["discrete", "continuous", "mixed"],
+    is_default=False,
+)
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
     Check if `X \u27c2 Y | Z` is in `independences`.
@@ -653,7 +676,9 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     return pred_x, pred_y, x_cat_index, y_cat_index
 
 
-@ci_registry.register(name="pillai", data_types=["mixed"], is_default=True)
+@ci_registry.register(
+    name="pillai", data_types=["discrete", "continuous", "mixed"], is_default=True
+)
 def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     """
     A mixed-data residualization based conditional independence test[1].
