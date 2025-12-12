@@ -84,10 +84,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     def __init__(
         self,
         ebunch: Optional[Union[nx.Graph, Iterable[Tuple[Any, Any]]]] = None,
-        latents: set[Hashable] = None,
-        exposures: set[Hashable] = None,
-        outcomes: set[Hashable] = None,
-        roles: Dict[str, Iterable] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         if config.get_backend() == "numpy":
             msg = (
