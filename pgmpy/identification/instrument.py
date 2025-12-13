@@ -119,6 +119,7 @@ class InstrumentalVariables(BaseIdentification):
                 G_c = transformed_graph
 
             instruments = []
+            conditionals = []
             for Z in set(observed) - {exposure, outcome}:
                 W = CausalInference(G_c)._nearest_separator(G_c, outcome, Z)
 
@@ -132,12 +133,14 @@ class InstrumentalVariables(BaseIdentification):
                 # Condition to check if X d-connected to I after conditioning on W.
                 elif exposure in (causal_graph.active_trail_nodes([Z], observed=W))[Z]:
                     instruments.append(Z)
-                    instruments.extend(list(W))
+                    conditionals.append(W)
+                    # instruments.extend(list(W))
                 else:
                     continue
             if bool(instruments):
-                for i in instruments:
-                    causal_graph.with_role("instrument", i, inplace=True)
+                for i, j in enumerate(instruments):
+                    causal_graph.with_role("instrument", j, inplace=True)
+                    causal_graph.with_role("conditional", conditionals[i], inplace=True)
                 return causal_graph, True
             else:
                 return causal_graph, False
@@ -175,3 +178,70 @@ class InstrumentalVariables(BaseIdentification):
                     ),
                     True,
                 )
+
+    def _validate(self, causal_graph):
+        """
+        Validate the causal graph for instrumental variable identification.
+
+        Given a causal graph with variable roles 'exposure, 'outcome', 'instruments' defined,
+        this method checks whether the given instrument set is valid.
+
+        Parameters
+        ----------
+        causal_graph: DAG
+            The causal graph to validate.
+
+        Returns
+        -------
+        bool: True if the 'instrument' set is valid, False otherwise.
+        """
+        if not causal_graph.has_role("instrument"):
+            raise ValueError(
+                "The causal graph has no variable assigned with the role 'instrument'"
+            )
+
+        copy = causal_graph.copy()
+
+        given_instruments = copy.get_role("instrument")
+
+        usable_graph = copy.without_role("instrument")
+
+        if self.variant == ("conditional") and copy.has_role("conditional"):
+            given_conditionals = copy.get_role("conditional")
+            usable_graph = copy.without_role("conditional")
+
+        if self.variant == ("conditional"):
+            if not copy.has_role("conditional"):
+                raise ValueError(
+                    "The causal graph has no variable assigned with the role 'conditional'"
+                )
+            given_conditionals = copy.get_role("conditional")
+            usable_graph = copy.without_role("conditional")
+            returned_graph, ok = self._identify(usable_graph)
+
+            if not ok:
+                raise ValueError(
+                    "The given causal graph has no identifiable conditional instrumental variables"
+                )
+            identified_instruments = returned_graph.get_role("instrument")
+            identified_conditionals = returned_graph.get_role("conditional")
+
+            if (set(identified_instruments) == set(given_instruments)) and (
+                set(identified_conditionals) == set(given_conditionals)
+            ):
+                return True
+            else:
+                return False
+
+        returned_graph, ok = self._identify(usable_graph)
+        if not ok:
+            raise ValueError(
+                "The given causal graph has no identifiable instrumental variables"
+            )
+
+        identified_instruments = returned_graph.get_role("instrument")
+        given_instruments = causal_graph.get_role("instrument")
+        if set(identified_instruments) == set(given_instruments):
+            return True
+        else:
+            return False
