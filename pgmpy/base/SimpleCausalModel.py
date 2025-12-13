@@ -8,11 +8,11 @@ class SimpleCausalModel(DAG):
     A specialized DAG class for simple causal models.
 
     This class simplifies the creation of causal graphs commonly used in causal inference,
-    where the structure consists of exposures, outcomes, covariates (confounders), mediators, and instruments.
+    where the structure consists of exposures, outcomes, confounders (confounders), mediators, and instruments.
     It automatically adds the standard edges:
         - Exposures -> Outcomes (only if there are no mediators)
-        - Covariates -> Exposures
-        - Covariates -> Outcomes
+        - confounders -> Exposures
+        - confounders -> Outcomes
         - Instruments -> Exposures
         - Exposures -> Mediators
         - Mediators -> Outcomes
@@ -33,7 +33,7 @@ class SimpleCausalModel(DAG):
         E: Exposure
         M: Mediator
         O: Outcome
-        X: Covariate (affects both E and O)
+        X: Confounder (affects both E and O)
 
 
     If no mediators:
@@ -52,8 +52,8 @@ class SimpleCausalModel(DAG):
         The outcome variable(s). If an int 'n' is provided, 'n' variables
         will be generated with role-based prefixes: ``O_0, O_1, ..., O_{n-1}``.
 
-    covariates: str, int, iterable, or None (default: None)
-        The covariate (confounder) variable(s). If an int 'n' is provided,
+    confounders: str, int, iterable, or None (default: None)
+        The confounding variable(s). If an int 'n' is provided,
         'n' variables will be generated with role-based prefixes:
         ``X_0, X_1, ..., X_{n-1}``.
 
@@ -73,13 +73,13 @@ class SimpleCausalModel(DAG):
 
     >>> from pgmpy.base import SimpleCausalModel
     >>> model = SimpleCausalModel(
-    ...     exposures="X", outcomes="Y", covariates="Z", mediators="M", instruments="I"
+    ...     exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
     ... )
     >>> model.edges()
     OutEdgeView([('Z', 'X'), ('Z', 'Y'), ('I', 'X'), ('X', 'M'), ('M', 'Y')])
 
     >>> model2 = SimpleCausalModel(
-    ...     exposures=1, outcomes=2, covariates=2, mediators=None, instruments=1
+    ...     exposures=1, outcomes=2, confounders=2, mediators=None, instruments=1
     ... )
     >>> sorted(model2.nodes())
     ['E_0', 'I_0', 'O_0', 'O_1', 'X_0', 'X_1']
@@ -107,7 +107,7 @@ class SimpleCausalModel(DAG):
             prefix = {
                 "exposures": "E_",
                 "outcomes": "O_",
-                "covariates": "X_",
+                "confounders": "X_",
                 "mediators": "M_",
                 "instruments": "I_",
             }.get(role, "Var_")
@@ -120,14 +120,14 @@ class SimpleCausalModel(DAG):
         self,
         exposures: Union[str, int, Iterable[Union[str, int]]],
         outcomes: Union[str, int, Iterable[Union[str, int]]],
-        covariates: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
+        confounders: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
         mediators: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
         instruments: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
         latents: Optional[Iterable[str]] = None,
     ):
         exposures = self._to_list(exposures, "exposures")
         outcomes = self._to_list(outcomes, "outcomes")
-        covariates = self._to_list(covariates, "covariates")
+        confounders = self._to_list(confounders, "confounders")
         mediators = self._to_list(mediators, "mediators")
         instruments = self._to_list(instruments, "instruments")
         latents = list(latents) if latents is not None else []
@@ -138,9 +138,9 @@ class SimpleCausalModel(DAG):
         if not mediators:
             edges += [(exp, out) for exp in exposures for out in outcomes]
 
-        # Add edges from covariates to exposures and outcomes
-        edges += [(cov, exp) for cov in covariates for exp in exposures]
-        edges += [(cov, out) for cov in covariates for out in outcomes]
+        # Add edges from confounders to exposures and outcomes
+        edges += [(conf, exp) for conf in confounders for exp in exposures]
+        edges += [(conf, out) for conf in confounders for out in outcomes]
 
         # Add edges from instruments to exposures
         edges += [(inst, exp) for inst in instruments for exp in exposures]
@@ -152,7 +152,7 @@ class SimpleCausalModel(DAG):
         roles = {
             "exposures": set(exposures),
             "outcomes": set(outcomes),
-            "covariates": set(covariates),
+            "confounders": set(confounders),
             "mediators": set(mediators),
             "instruments": set(instruments),
         }
