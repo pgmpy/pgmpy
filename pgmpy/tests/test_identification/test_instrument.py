@@ -294,3 +294,46 @@ def test_validate_when_no_conditionals():
     )
     iv = InstrumentalVariables(variant=None)
     assert pytest.raises(ValueError, iv._validate, no_conditional_model)
+
+
+def test_multiple_exposures_not_supported():
+    iv_model = DAG(
+        [
+            ("X1", "Y"),
+            ("X2", "Y"),
+            ("I", "X1"),
+            ("I", "X2"),
+            ("U1", "X1"),
+            ("U1", "Y"),
+            ("U2", "X2"),
+            ("U2", "Y"),
+        ],
+        roles={
+            "exposures": ("X1", "X2"),
+            "outcomes": "Y",
+            "latents": ("U1", "U2"),
+        },
+    )
+    iv = InstrumentalVariables(variant=None)
+    assert pytest.raises(
+        ValueError,
+        iv._identify,
+        iv_model,
+    )
+
+
+def test_multiple_outcomes_not_supported():
+    iv_model = DAG(
+        [("X", "Y1"), ("X", "Y2"), ("I", "X"), ("U", "X"), ("U", "Y1"), ("U", "Y2")],
+        roles={
+            "exposures": "X",
+            "outcomes": ("Y1", "Y2"),
+            "latents": "U",
+        },
+    )
+    iv = InstrumentalVariables(variant=None)
+    assert pytest.raises(
+        ValueError,
+        iv._identify,
+        iv_model,
+    )
