@@ -8,7 +8,7 @@ class SimpleCausalModel(DAG):
     A specialized DAG class for simple causal models.
 
     This class simplifies the creation of causal graphs commonly used in causal inference,
-    where the structure consists of exposures, outcomes, confounders (confounders), mediators, and instruments.
+    where the structure consists of exposures, outcomes, confounders, mediators, and instruments.
     It automatically adds the standard edges:
         - Exposures -> Outcomes (only if there are no mediators)
         - confounders -> Exposures
@@ -45,26 +45,25 @@ class SimpleCausalModel(DAG):
     Parameters
     ----------
     exposures: str, int, or iterable
-        The exposure variable(s). If an int 'n' is provided, 'n' variables
-        will be generated with role-based prefixes: ``E_0, E_1, ..., E_{n-1}``.
+        If str or iterable, those would be used as the names of the exposure variables,
+        If an int, `exposures` number of variables will be generated with role-based prefixes: `E_0, E_1, ..., E_n`.
 
     outcomes: str, int, or iterable
-        The outcome variable(s). If an int 'n' is provided, 'n' variables
-        will be generated with role-based prefixes: ``O_0, O_1, ..., O_{n-1}``.
+        If str or iterable, those would be used as the names of the outcome variables,
+        If an int, `outcomes` number of variables will be generated with role-based prefixes: `O_0, O_1, ..., O_n`.
 
     confounders: str, int, iterable, or None (default: None)
-        The confounding variable(s). If an int 'n' is provided,
-        'n' variables will be generated with role-based prefixes:
-        ``X_0, X_1, ..., X_{n-1}``.
+        If str or iterable, those would be used as the names of the confounder variables,
+        If an int, `confounders` number of variables will be generated with role-based prefixes: `X_0, X_1, ..., X_n`.
 
     mediators: str, int, iterable, or None (default: None)
-        The mediator variable(s). If an int 'n' is provided, 'n' variables
-        will be generated with role-based prefixes: ``M_0, M_1, ..., M_{n-1}``.
+        If str or iterable, those would be used as the names of the mediator variables,
+        If an int, `mediators` number of variables will be generated with role-based prefixes: `M_0, M_1, ..., M_n`.
 
     instruments: str, int, iterable, or None (default: None)
-        The instrumental variable(s). If an int 'n' is provided, 'n' variables
-        will be generated with role-based prefixes: ``I_0, I_1, ..., I_{n-1}``.
-
+        If str or iterable, those would be used as the names of the instrumental variables,
+        If an int, `instruments` number of variables will be generated with role-based prefixes: `I_0, I_1, ..., I_n`.
+        
     latents: iterable or None (default: None)
         List of latent variables.
 
