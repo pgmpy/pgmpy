@@ -6,14 +6,14 @@ from pgmpy.base import SimpleCausalModel
 
 def test_simple_string_variables():
     model = SimpleCausalModel(
-        exposures="X", outcomes="Y", covariates="Z", mediators="M", instruments="I"
+        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
     )
     assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
     expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
     assert set(model.edges()) == expected_edges
     assert set(model.get_role("exposures")) == {"X"}
     assert set(model.get_role("outcomes")) == {"Y"}
-    assert set(model.get_role("covariates")) == {"Z"}
+    assert set(model.get_role("confounders")) == {"Z"}
     assert set(model.get_role("mediators")) == {"M"}
     assert set(model.get_role("instruments")) == {"I"}
 
@@ -22,7 +22,7 @@ def test_list_variables():
     model = SimpleCausalModel(
         exposures=["X1", "X2"],
         outcomes=["Y1", "Y2"],
-        covariates=["Z"],
+        confounders=["Z"],
         mediators=["M"],
         instruments=["I"],
     )
@@ -41,7 +41,7 @@ def test_list_variables():
     assert set(model.edges()) == expected_edges
     assert set(model.get_role("exposures")) == {"X1", "X2"}
     assert set(model.get_role("outcomes")) == {"Y1", "Y2"}
-    assert set(model.get_role("covariates")) == {"Z"}
+    assert set(model.get_role("confounders")) == {"Z"}
     assert set(model.get_role("mediators")) == {"M"}
     assert set(model.get_role("instruments")) == {"I"}
 
@@ -50,7 +50,7 @@ def test_integer_variables():
     model = SimpleCausalModel(
         exposures=1,
         outcomes=2,
-        covariates=3,
+        confounders=3,
         mediators=4,
         instruments=5,
         latents=["X_0", "X_1"],
@@ -83,7 +83,7 @@ def test_integer_variables():
     assert ("M_0", "O_0") in set(model.edges())
     assert set(model.get_role("exposures")) == {"E_0"}
     assert set(model.get_role("outcomes")) == {"O_0", "O_1"}
-    assert set(model.get_role("covariates")) == {"X_0", "X_1", "X_2"}
+    assert set(model.get_role("confounders")) == {"X_0", "X_1", "X_2"}
     assert set(model.get_role("mediators")) == {"M_0", "M_1", "M_2", "M_3"}
     assert set(model.get_role("instruments")) == {"I_0", "I_1", "I_2", "I_3", "I_4"}
     assert set(model.latents) == {"X_0", "X_1"}
@@ -94,19 +94,19 @@ def test_missing_optional_args():
     assert set(model.edges()) == {("X", "Y")}
     assert set(model.get_role("exposures")) == {"X"}
     assert set(model.get_role("outcomes")) == {"Y"}
-    assert set(model.get_role("covariates")) == set()
+    assert set(model.get_role("confounders")) == set()
     assert set(model.get_role("mediators")) == set()
     assert set(model.get_role("instruments")) == set()
 
 
-def test_empty_covariates_mediators_instruments():
+def test_empty_confounders_mediators_instruments():
     model = SimpleCausalModel(
-        exposures="X", outcomes="Y", covariates=None, mediators=None, instruments=[]
+        exposures="X", outcomes="Y", confounders=None, mediators=None, instruments=[]
     )
     assert set(model.edges()) == {("X", "Y")}
     assert set(model.get_role("exposures")) == {"X"}
     assert set(model.get_role("outcomes")) == {"Y"}
-    assert set(model.get_role("covariates")) == set()
+    assert set(model.get_role("confounders")) == set()
     assert set(model.get_role("mediators")) == set()
     assert set(model.get_role("instruments")) == set()
 
@@ -124,7 +124,7 @@ def test_latents():
         SimpleCausalModel(exposures="X", outcomes="Y", latents=["L"])
 
     model = SimpleCausalModel(
-        exposures="X", outcomes="Y", covariates="Z", latents=["Z"]
+        exposures="X", outcomes="Y", confounders="Z", latents=["Z"]
     )
     assert set(model.nodes()) == {"X", "Y", "Z"}
     assert set(model.latents) == {"Z"}
@@ -132,6 +132,6 @@ def test_latents():
 
 def test_is_dag():
     model = SimpleCausalModel(
-        exposures="X", outcomes="Y", covariates="Z", mediators="M", instruments="I"
+        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
     )
     assert nx.is_directed_acyclic_graph(model)

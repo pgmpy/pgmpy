@@ -21,9 +21,13 @@ class CITestRegistry:
     def __init__(self):
         self._registry: Dict[str, Callable] = {}
         self._tags: Dict[str, List[str]] = {}
-        self._defaults: Dict[str, str] = {}
+        self._defaults: Dict[str, str] = {
+            "continuous": "pearsonr",
+            "discrete": "chi_square",
+            "mixed": "pillai",
+        }
 
-    def register(self, name: str, data_types: List[str], is_default: bool = False):
+    def register(self, name: str, data_types: List[str]):
         """
         Decorator to register a CI test strategy.
 
@@ -34,9 +38,6 @@ class CITestRegistry:
 
         data_types : list of str
             List of data types this test supports (e.g., ['continuous', 'discrete']).
-
-        is_default : bool, default=False
-            If True, sets this test as the default for the provided data types.
         """
 
         def decorator(func: Callable):
@@ -44,12 +45,28 @@ class CITestRegistry:
             self._registry[clean_name] = func
             self._tags[clean_name] = data_types
 
-            if is_default:
-                for dtype in data_types:
-                    self._defaults[dtype] = clean_name
             return func
 
         return decorator
+
+    def list_all(self, data_type=None) -> List[str]:
+        """
+        Lists all registered CI test strategies.
+
+        Parameters
+        ----------
+        data_type : str, optional
+            If provided, filters tests that support the given data type.
+
+        Returns
+        -------
+        list of str
+            Names of all registered CI tests.
+        """
+        if data_type:
+            return [name for name, types in self._tags.items() if data_type in types]
+
+        return list(self._registry.keys())
 
     def get_test(
         self, test: Union[str, None, Callable], data: Optional[pd.DataFrame] = None
@@ -105,7 +122,10 @@ class CITestRegistry:
 ci_registry = CITestRegistry()
 
 
-@ci_registry.register(name="independence_match", data_types=["mixed"], is_default=False)
+@ci_registry.register(
+    name="independence_match",
+    data_types=["discrete", "continuous", "mixed"],
+)
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
     Check if `X \u27c2 Y | Z` is in `independences`.
@@ -133,7 +153,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     return IndependenceAssertion(X, Y, Z) in independencies
 
 
-@ci_registry.register(name="pearsonr", data_types=["continuous"], is_default=False)
+@ci_registry.register(name="pearsonr", data_types=["continuous"])
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     """
     Compute Pearson correlation coefficient and p-value for testing non-correlation.
@@ -203,9 +223,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         return coef, p_value
 
 
-@ci_registry.register(
-    name="power_divergence", data_types=["discrete"], is_default=False
-)
+@ci_registry.register(name="power_divergence", data_types=["discrete"])
 def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwargs):
     """
     Computes the Cressie-Read power divergence statistic [1]. The null hypothesis
@@ -338,7 +356,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         return chi, p_value, dof
 
 
-@ci_registry.register(name="chi_square", data_types=["discrete"], is_default=True)
+@ci_registry.register(name="chi_square", data_types=["discrete"])
 def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     """
     Perform Chi-square conditional independence test.
@@ -402,7 +420,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     )
 
 
-@ci_registry.register(name="g_sq", data_types=["discrete"], is_default=False)
+@ci_registry.register(name="g_sq", data_types=["discrete"])
 def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     """
     G squared test for conditional independence. Also commonly known as G-test,
@@ -464,7 +482,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     )
 
 
-@ci_registry.register(name="log_likelihood", data_types=["discrete"], is_default=False)
+@ci_registry.register(name="log_likelihood", data_types=["discrete"])
 def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     """
     Log likelihood ratio test for conditional independence. Also commonly known
@@ -534,9 +552,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     )
 
 
-@ci_registry.register(
-    name="modified_log_likelihood", data_types=["discrete"], is_default=False
-)
+@ci_registry.register(name="modified_log_likelihood", data_types=["discrete"])
 def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     """
     Modified log likelihood ratio test for conditional independence.
@@ -653,7 +669,7 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     return pred_x, pred_y, x_cat_index, y_cat_index
 
 
-@ci_registry.register(name="pillai", data_types=["mixed"], is_default=True)
+@ci_registry.register(name="pillai", data_types=["discrete", "continuous", "mixed"])
 def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     """
     A mixed-data residualization based conditional independence test[1].
@@ -761,7 +777,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         return coef, p_value
 
 
-@ci_registry.register(name="gcm", data_types=["continuous"], is_default=True)
+@ci_registry.register(name="gcm", data_types=["continuous"])
 def gcm(X, Y, Z, data, boolean=True, **kwargs):
     """
     The Generalized Covariance Measure(GCM) test for CI.
@@ -836,3 +852,86 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         return p_value >= kwargs["significance_level"]
     else:
         return t_stat, p_value
+
+
+@ci_registry.register(name="pearsonr_equivalence", data_types=["continuous"])
+def pearsonr_equivalence(
+    X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwargs
+) -> tuple | bool:
+    """
+    Computes a two-sided level-alpha equivalent test using partial correlations.
+
+    Tests the Null Hypothesis that the partial correlation is greater than or
+    equal to `delta_threshold` (Dependence). Rejection implies Practical Independence.
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X _|_ Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X _|_ Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X _|_ Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the independence condition.
+
+    boolean: bool
+        If True, returns True (Independent) if p_value < significance_level.
+
+    delta_threshold: float
+        The equivalence bound (threshold for practical independence).
+
+    Returns
+    -------
+    CI Test results: tuple or bool
+        If boolean=True, returns True (Independent) if p-value < significance_level.
+        If boolean=False, returns (Partial Correlation, p-value).
+
+    References
+    ----------
+    .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
+            arXiv:2404.18232 (2024).
+    """
+    # Step 1: Input validation
+    if not hasattr(Z, "__iter__"):
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
+    else:
+        Z = list(Z)
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
+        )
+
+    # Step 2: Compute Partial Pearson Correlation and clip values to avoid infinities
+    rho, _ = pearsonr(X, Y, Z, data, boolean=False)
+    rho = np.clip(rho, -0.999999, 0.999999)
+
+    # Step 3: Fisher Z-Transformation
+    coeff = np.arctanh(rho)
+    z_delta = np.arctanh(delta_threshold)
+
+    n = data.shape[0]
+    s = len(Z)  # Number of conditioning variables
+
+    std_error_factor = np.sqrt(n - s - 3)
+
+    # Step 4: TOST (Two One-Sided Tests)
+    # Step 4.1: H0: rho <= -delta  vs  H1: rho > -delta
+    z_score_lower = std_error_factor * (coeff + z_delta)
+    p_value_lower = 1 - stats.norm.cdf(z_score_lower)
+
+    # Step 4.2: H0: rho >= delta   vs  H1: rho < delta
+    z_score_upper = std_error_factor * (coeff - z_delta)
+    p_value_upper = stats.norm.cdf(z_score_upper)
+
+    p_value = max(p_value_lower, p_value_upper)
+
+    # Step 5: Return
+    if boolean:
+        return p_value < kwargs.get("significance_level", 0.05)
+    else:
+        return coeff, p_value

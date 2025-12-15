@@ -8,15 +8,30 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators.CITests import (
     chi_square,
+    ci_registry,
     g_sq,
     gcm,
     log_likelihood,
     modified_log_likelihood,
     pearsonr,
+    pearsonr_equivalence,
     pillai_trace,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
+
+
+class TestCIRegistry(unittest.TestCase):
+    def test_ci_registry(self):
+        all_tests = ci_registry.list_all()
+
+        self.assertIn("chi_square", all_tests)
+        self.assertIn("g_sq", all_tests)
+        self.assertIn("log_likelihood", all_tests)
+        self.assertIn("modified_log_likelihood", all_tests)
+        self.assertIn("pearsonr", all_tests)
+        self.assertIn("pillai", all_tests)
+        self.assertIn("gcm", all_tests)
 
 
 class TestPearsonr(unittest.TestCase):
@@ -393,7 +408,7 @@ class TestResidualMethods(unittest.TestCase):
         reason="execute only if required dependency present",
     )
     def test_pillai_no_cond(self):
-        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
+        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
         dep_pvalues = [0, 0, 0, 0, 0]
 
         computed_coefs = []
@@ -433,7 +448,7 @@ class TestResidualMethods(unittest.TestCase):
     )
     def test_pillai_indep(self):
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.3086, 0.1277, 0.1224, 0.009, 0.1224]
+        indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
 
         computed_coefs = []
         computed_pvalues = []
@@ -515,7 +530,7 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 11.934)
+        self.assertAlmostEqual(round(coef, 3), 13.693)
         self.assertAlmostEqual(p_value, 0.0)
 
         # Conditional tests
@@ -528,8 +543,8 @@ class TestResidualMethods(unittest.TestCase):
             seed=42,
         )
 
-        self.assertAlmostEqual(round(coef, 3), -1.908)
-        self.assertEqual(round(p_value, 4), 0.0564)
+        self.assertAlmostEqual(round(coef, 3), 0.097)
+        self.assertEqual(round(p_value, 4), 0.9228)
 
         # Conditional tests
         coef, p_value = gcm(
@@ -538,3 +553,26 @@ class TestResidualMethods(unittest.TestCase):
 
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
+
+    def test_pearsonr_equivalence(self):
+        is_independent = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_dep,
+            boolean=True,
+            significance_level=0.05,
+            delta_th=0.3,
+        )
+        self.assertFalse(is_independent)
+
+        is_independent = pearsonr_equivalence(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_dep,
+            boolean=False,
+            significance_level=0.05,
+            delta_th=0.5,
+        )
+        self.assertTrue(is_independent)
