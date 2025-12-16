@@ -22,6 +22,7 @@ ALL_DATASETS = [
     "sachs_continuous_jittered",
 ]
 
+
 @pytest.mark.skipif(
     not _check_soft_dependencies("requests", severity="none"),
     reason="test only if requests is installed",

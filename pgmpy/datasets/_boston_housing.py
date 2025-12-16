@@ -1,10 +1,11 @@
 from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
+
 @register_dataset_class
 class BostonHousing(_BaseDataset):
     name = "boston_housing"
-    
+
     tags = {
         "n_variables": 14,
         "n_samples": 506,
@@ -19,11 +20,7 @@ class BostonHousing(_BaseDataset):
     }
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/boston-housing/"
-    
+
     data_url = base_url + "data/boston-housing.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
-
-    # load_dataframe, load_ground_truth, load_expert_knowledge 
-    # automatically inherit from _BaseDataset
-    # Only override if you need custom parsing
