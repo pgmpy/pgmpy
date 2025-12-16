@@ -11,7 +11,7 @@ from ._sachs import (  # noqa: F401
     SachsDiscrete,
     SachsMixed,
 )
-
+from ._boston_housing import BostonHousing  # noqa: F401
 __all__ = [
     "_BaseDataset",
     "DATASET_REGISTRY",

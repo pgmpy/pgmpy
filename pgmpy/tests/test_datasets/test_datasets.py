@@ -13,6 +13,7 @@ ALL_DATASETS = [
     "adult",
     "airfoil",
     "algeria_forest",
+    "boston_housing",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
@@ -20,7 +21,6 @@ ALL_DATASETS = [
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
 ]
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("requests", severity="none"),
