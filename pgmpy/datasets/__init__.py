@@ -12,7 +12,6 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._boston_housing import BostonHousing  # noqa: F401
-from ._dropouts import Dropouts  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401
 
 __all__ = [
