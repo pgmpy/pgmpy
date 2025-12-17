@@ -15,7 +15,6 @@ ALL_DATASETS = [
     "algeria_forest",
     "apple_watch_fitbit",
     "auto_mpg",
-    "blue_driver",
     "boston_housing",
     "south_german_credit",
     "pima_diabetes",
