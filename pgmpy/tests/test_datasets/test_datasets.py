@@ -14,6 +14,7 @@ ALL_DATASETS = [
     "airfoil",
     "algeria_forest",
     "boston_housing",
+    "residential_building",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
