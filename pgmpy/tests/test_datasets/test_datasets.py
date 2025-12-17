@@ -13,6 +13,7 @@ ALL_DATASETS = [
     "adult",
     "airfoil",
     "algeria_forest",
+    "auto_mpg",
     "boston_housing",
     "sachs_mixed",
     "sachs_continuous",
