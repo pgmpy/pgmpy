@@ -1,9 +1,9 @@
 import unittest
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from pgmpy.estimators import PC, HillClimbSearch, GES, ExpertKnowledge, MmhcEstimator
+from pgmpy.estimators import GES, PC, ExpertKnowledge, HillClimbSearch, MmhcEstimator
 
 
 class TestRootNodeAlgorithms(unittest.TestCase):
