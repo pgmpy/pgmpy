@@ -15,12 +15,16 @@ ALL_DATASETS = [
     "algeria_forest",
     "boston_housing",
     "residential_building",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
