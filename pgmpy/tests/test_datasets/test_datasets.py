@@ -17,12 +17,20 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "south_german_credit",
+    "pima_diabetes",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "student_performance",
+    "seoul_bike",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
