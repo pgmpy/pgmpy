@@ -14,13 +14,17 @@ ALL_DATASETS = [
     "airfoil",
     "algeria_forest",
     "boston_housing",
-    "seoul_bike",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "seoul_bike",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
