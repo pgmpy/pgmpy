@@ -12,9 +12,6 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._boston_housing import BostonHousing  # noqa: F401
-from ._apple_watch_fitbit import AppleWatchFitbit  # noqa: F401
-from ._auto_mpg import AutoMpg  # noqa: F401
-from ._blue_driver import BlueDriver  # noqa: F401
 from ._dropouts import Dropouts  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401
 
