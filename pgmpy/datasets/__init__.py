@@ -16,6 +16,7 @@ from ._sachs import (  # noqa: F401
 from ._boston_housing import BostonHousing  # noqa: F401
 from ._residential_building import ResidentialBuilding  # noqa: F401
 from ._galton_stature import GaltonStature  # noqa: F401
+from ._south_german_credit import SouthGermanCredit  # noqa: F401
 from ._student_performance import StudentPerformance  # noqa: F401
 from ._pima_diabetes import PimaDiabetes  # noqa: F401
 from ._seoul_bike import SeoulBike  # noqa: F401

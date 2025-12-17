@@ -15,6 +15,7 @@ ALL_DATASETS = [
     "algeria_forest",
     "boston_housing",
     "residential_building",
+    "south_german_credit",
     "pima_diabetes",
     "galton_stature",
     "sachs_mixed",
