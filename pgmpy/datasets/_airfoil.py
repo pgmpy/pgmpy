@@ -1,0 +1,28 @@
+from pgmpy.datasets import register_dataset_class
+from pgmpy.datasets._base import _BaseDataset
+
+
+@register_dataset_class
+class Airfoil(_BaseDataset):
+    name = "airfoil"
+    tags = {
+        "n_variables": 6,
+        "n_samples": 1503,
+        "has_ground_truth": False,
+        "has_expert_knowledge": True,
+        "is_simulated": False,
+        "is_interventional": False,
+        "is_discrete": False,
+        "is_continuous": True,
+        "is_mixed": False,
+        "is_ordinal": False,
+    }
+
+    base_url = (
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/"
+        "heads/main/real/airfoil-self-noise/"
+    )
+
+    data_url = base_url + "data/airfoil-self-noise.continuous.txt"
+    ground_truth_url = None
+    expert_knowledge_url = base_url + "ground.truth/airfoil-self-noise.knowledge.txt"

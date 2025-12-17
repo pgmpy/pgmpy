@@ -45,70 +45,85 @@ class DiscreteBayesianNetwork(DAG):
 
     Parameters
     ----------
-    ebunch: input graph
-        Data to initialize graph.  If ebunch=None (default) an empty
-        graph is created.  The ebunch can be an edge list, or any
-        NetworkX graph object.
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
 
-    latents: list, array-like
-        List of variables which are latent (i.e. unobserved) in the model.
+    latents : set of nodes, default=None
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=None
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, optional (default: None)
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. If None, an empty set is used.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
     Examples
     --------
-    Create an empty Bayesian Network with no nodes and no edges.
+    # Defining a Discrete Bayesian Network and adding CPDs to it.
 
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> G = DiscreteBayesianNetwork()
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+    >>> model.add_nodes_from(["A", "B", "C"])
+    >>> cpd_a = TabularCPD("A", 2, [[0.6], [0.4]])
+    >>> cpd_b = TabularCPD("B", 2, [[0.7], [0.3]])
+    >>> cpd_c = TabularCPD(
+    ...     variable="C",
+    ...     variable_card=2,
+    ...     values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
+    ...     evidence=["A", "B"],
+    ...     evidence_card=[2, 2],
+    ... )
+    >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+    >>> model.get_cpds("C")
+    <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>
 
-    G can be grown in several ways.
+    # Simulating data from the defined Discrete Bayesian Network.
 
-    **Nodes:**
+    >>> df = model.simulate(n_samples=1000)
 
-    Add one node at a time:
+    # Fitting simulated data to the model.
 
-    >>> G.add_node("a")
+    >>> fitted_model = model.fit(df)
 
-    Add the nodes from any container (a list, set or tuple or the nodes
-    from another graph).
+    # Predicting missing values in the data.
 
-    >>> G.add_nodes_from(["a", "b"])
-
-    **Edges:**
-
-    G can also be grown by adding edges.
-
-    Add one edge,
-
-    >>> G.add_edge("a", "b")
-
-    a list of edges,
-
-    >>> G.add_edges_from([("a", "b"), ("b", "c")])
-
-    If some edges connect nodes not yet in the model, the nodes
-    are added automatically.  There are no errors when adding
-    nodes or edges that already exist.
-
-    **Shortcuts:**
-
-    Many common graph features allow python syntax for speed reporting.
-
-    >>> "a" in G  # check if node in graph
-    True
-    >>> len(G)  # number of nodes in graph
-    3
+    >>> test_data = df.copy()
+    >>> test_data.loc[0:10, "C"] = np.nan
+    >>> predicted_data = fitted_model.predict(test_data)
     """
 
     def __init__(
         self,
-        ebunch: Optional[Union[nx.Graph, Iterable[Tuple[Any, Any]]]] = None,
-        latents: Union[Set[Any], List[Any]] = set(),
-        lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         super(DiscreteBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
         self.cpds = []
         self.cardinalities = defaultdict(int)
