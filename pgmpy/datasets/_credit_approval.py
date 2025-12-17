@@ -1,34 +1,26 @@
-from pgmpy.datasets._base import _BaseDataset, register_dataset_class
+from pgmpy.datasets import register_dataset_class
+from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
 class CreditApproval(_BaseDataset):
-    """
-    Credit Approval dataset.
-
-    This dataset contains credit approval decisions with various anonymized attributes.
-    The original variable names and meanings have been deliberately obscured.
-
-    Variables: 16 attributes (15 features + 1 target)
-    Samples: 690
-    """
-
     name = "credit_approval"
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
-        "refs/heads/main/real/credit-approval/"
-    )
-    data_url = base_url + "data/crx.data.mixed.maximum.14.txt"
 
     tags = {
+        "n_variables": 16,
+        "n_samples": 690,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
-        "is_continuous": False,
-        "is_discrete": False,
-        "is_mixed": True,
-        "is_interventional": False,
-        "n_samples": 690,
-        "is_ordinal": False,
         "is_simulated": False,
-        "n_variables": 16,
+        "is_interventional": False,
+        "is_discrete": False,
+        "is_continuous": False,
+        "is_mixed": True,
+        "is_ordinal": False,
     }
+
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/credit-approval/"
+
+    data_url = base_url + "data/crx.data.mixed.maximum.14.txt"
+    ground_truth_url = None
+    expert_knowledge_url = None
