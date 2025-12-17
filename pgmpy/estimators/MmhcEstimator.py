@@ -35,7 +35,13 @@ class MmhcEstimator(StructureEstimator):
     def __init__(self, data, **kwargs):
         super(MmhcEstimator, self).__init__(data, **kwargs)
 
-    def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
+    def estimate(
+        self,
+        scoring_method=None,
+        tabu_length=10,
+        significance_level=0.01,
+        expert_knowledge=None,
+    ):
         """
         Estimates a DiscreteBayesianNetwork for the data set, using MMHC. First estimates a
         graph skeleton using MMPC and then orients the edges using score-based local
@@ -90,9 +96,13 @@ class MmhcEstimator(StructureEstimator):
             n=self.state_names.keys(), create_using=nx.Graph
         ).edges()
 
-        expert_knowledge = ExpertKnowledge(
-            forbidden_edges=possible_edges - skel.to_directed().edges()
+        if expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+
+        expert_knowledge.forbidden_edges.update(
+            possible_edges - skel.to_directed().edges()
         )
+        expert_knowledge.set_variables(self.variables)
 
         model = hc.estimate(
             scoring_method=scoring_method,
