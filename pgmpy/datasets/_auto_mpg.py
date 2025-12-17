@@ -8,7 +8,7 @@ class AutoMPG(_BaseDataset):
 
     tags = {
         "n_variables": 8,
-        "n_samples": 392, 
+        "n_samples": 392,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "is_simulated": False,
@@ -20,8 +20,8 @@ class AutoMPG(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-        "real/auto-mpg/"
+    "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
+    "refs/heads/main/real/auto-mpg/"
     )
 
     data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
