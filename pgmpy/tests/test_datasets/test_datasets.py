@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "apple_watch_fitbit",
     "auto_mpg",
     "boston_housing",
+    "dry_bean",
     "cystic_fibrosis",
     "south_german_credit",
     "pima_diabetes",
