@@ -12,9 +12,9 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._boston_housing import BostonHousing  # noqa: F401
-from ._myocardial_infarction_complications import (
+from ._myocardial_infarction_complications import (  # noqa: F401
     MyocardialInfarctionComplications,
-)  # noqa: F401
+)
 
 __all__ = [
     "_BaseDataset",
