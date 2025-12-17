@@ -20,6 +20,6 @@ class DryBean(_BaseDataset):
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/dry-bean/"
 
-    data_url = base_url + "data/drybean.data.mixed.numeric.txt"
+    data_url = base_url + "data/drybean.data.mixed.maximum.7.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/dry-bean.knowledge.txt"
