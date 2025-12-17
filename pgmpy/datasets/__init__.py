@@ -12,7 +12,10 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._boston_housing import BostonHousing  # noqa: F401
-from ._wine_quality import WineQualityRed, WineQualityWhite, WineQualityRedWhiteMixed  # noqa: F401
+from ._wine_quality import (  # noqa: F401
+    WineQualityWhite,
+    WineQualityRedWhiteMixed,
+)
 
 __all__ = [
     "_BaseDataset",

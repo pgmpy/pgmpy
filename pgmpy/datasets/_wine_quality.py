@@ -1,7 +1,6 @@
 from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
-
 BASE_URL = (
     "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
     "real/wine-quality/"
