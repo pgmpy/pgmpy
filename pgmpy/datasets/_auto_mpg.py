@@ -20,8 +20,8 @@ class AutoMPG(_BaseDataset):
     }
 
     base_url = (
-    "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
-    "refs/heads/main/real/auto-mpg/"
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
+        "refs/heads/main/real/auto-mpg/"
     )
 
     data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
