@@ -12,6 +12,7 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._boston_housing import BostonHousing  # noqa: F401
+from ._student_performance import StudentPerformance  # noqa: F401
 
 __all__ = [
     "_BaseDataset",
