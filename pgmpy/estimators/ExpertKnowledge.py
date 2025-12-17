@@ -342,6 +342,3 @@ class ExpertKnowledge:
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges_additive)
-
-        # Also add forbidden edges for root nodes
-        self._add_root_nodes_forbidden_edges(data_coulumn_labels)
