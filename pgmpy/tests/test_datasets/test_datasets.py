@@ -17,8 +17,6 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
-    "dropouts",
-    "dry_bean",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
