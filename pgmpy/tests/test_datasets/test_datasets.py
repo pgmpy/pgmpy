@@ -17,6 +17,7 @@ ALL_DATASETS = [
     "auto_mpg",
     "boston_housing",
     "fmri_9var",
+    "htru2",
     "dry_bean",
     "cystic_fibrosis",
     "south_german_credit",
