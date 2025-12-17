@@ -14,6 +14,8 @@ ALL_DATASETS = [
     "airfoil",
     "algeria_forest",
     "boston_housing",
+    "pima_diabetes",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
@@ -21,6 +23,11 @@ ALL_DATASETS = [
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
     "yacht_hydrodynamics",
+    "student_performance",
+    "seoul_bike",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
