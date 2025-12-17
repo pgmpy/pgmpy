@@ -20,6 +20,7 @@ ALL_DATASETS = [
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "yacht_hydrodynamics",
 ]
 
 
