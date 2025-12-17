@@ -23,6 +23,6 @@ class AppleWatchFitbit(_BaseDataset):
         "refs/heads/main/real/apple-watch-fitbit/"
     )
 
-    data_url = base_url + "data/aw-fb-pruned18.data.mixed.numeric.txt"
+    data_url = base_url + "data/aw-fb-pruned18.data.mixed.maximum.6.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/aw-fb-pruned18.knowledge.txt"
