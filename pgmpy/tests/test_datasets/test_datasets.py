@@ -15,12 +15,19 @@ ALL_DATASETS = [
     "algeria_forest",
     "boston_housing",
     "hungary_chickenpox",
+    "pima_diabetes",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "student_performance",
+    "seoul_bike",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
