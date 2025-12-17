@@ -31,20 +31,20 @@ class Dropouts(_BaseDataset):
         """Custom parser for dropouts covariance matrix format."""
         raw_data = cls._get_raw_data("data", cls.data_url)
         text = raw_data.decode("utf-8-sig", errors="ignore")
-        lines = text.strip().split('\n')
+        lines = text.strip().split("\n")
 
         # Parse the covariance matrix format
         n_samples = int(lines[0])  # First line is sample size
-        variable_names = lines[1].split('\t')  # Second line is variable names
+        variable_names = lines[1].split("\t")  # Second line is variable names
         n_vars = len(variable_names)
 
         # Parse correlation/covariance matrix (lower triangular)
         corr_matrix = []
         for i in range(2, 2 + n_vars):
             if i < len(lines):
-                row_values = lines[i].split('\t')
+                row_values = lines[i].split("\t")
                 # Pad with zeros to make full row
-                full_row = ['0.0'] * n_vars
+                full_row = ["0.0"] * n_vars
                 for j, val in enumerate(row_values):
                     if j < len(full_row):
                         full_row[j] = val
@@ -52,11 +52,12 @@ class Dropouts(_BaseDataset):
 
         # Convert to symmetric matrix
         import numpy as np
+
         matrix = np.array(corr_matrix)
 
         # Make symmetric (copy lower triangle to upper)
         for i in range(n_vars):
-            for j in range(i+1, n_vars):
+            for j in range(i + 1, n_vars):
                 matrix[i, j] = matrix[j, i]
 
         # Generate synthetic data from correlation matrix
