@@ -245,6 +245,8 @@ class PC(BaseConstraintEstimator):
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
+        expert_knowledge.set_variables(self.variables)
+
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
 

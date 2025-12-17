@@ -125,6 +125,12 @@ class ExpertKnowledge:
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
         self.root_nodes = set(root_nodes) if root_nodes is not None else set()
+        self._processed_root_nodes = False
+
+    def set_variables(self, variables):
+        if self.root_nodes and not self._processed_root_nodes:
+            self._add_root_nodes_forbidden_edges(variables)
+            self._processed_root_nodes = True
 
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
@@ -287,7 +293,6 @@ class ExpertKnowledge:
         [1] https://doi.org/10.48550/arXiv.2306.01638
         """
         self._validate_temporal_order(pdag.nodes())
-        self._add_root_nodes_forbidden_edges(pdag.nodes())
         self._orient_temporal_forbidden_edges(pdag)
 
         for edge in self.forbidden_edges:

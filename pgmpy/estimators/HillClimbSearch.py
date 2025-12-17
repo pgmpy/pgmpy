@@ -230,6 +230,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 1.3: Check if expert knowledge was specified
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+        expert_knowledge.set_variables(self.variables)
 
         # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
         if expert_knowledge.search_space:

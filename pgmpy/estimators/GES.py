@@ -162,6 +162,7 @@ class GES(StructureEstimator):
         current_model.add_nodes_from(list(self.data.columns))
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
+        expert_knowledge.set_variables(self.variables)
 
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
