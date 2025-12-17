@@ -78,7 +78,7 @@ class Lead(_BaseDataset):
                 raise ValueError("Not enough covariance rows in lead.cov.txt.")
             if len(values[i]) != i + 1:
                 raise ValueError(
-                    f"Row {i} in covariance data should have {i+1} values, got {len(values[i])}."
+                    f"Row {i} in covariance data should have {i + 1} values, got {len(values[i])}."
                 )
             for j in range(i + 1):
                 cov[i][j] = values[i][j]
