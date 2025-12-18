@@ -101,6 +101,21 @@ def test_load_dataset():
     not _check_soft_dependencies("requests", severity="none"),
     reason="test only if requests is installed",
 )
+def test_load_covariance_dataset():
+    dataset = load_dataset("goldberg")
+    assert dataset.name == "goldberg"
+    assert dataset.data.shape == (
+        dataset.tags["n_samples"],
+        dataset.tags["n_variables"],
+    )
+    assert isinstance(dataset.data, pd.DataFrame)
+    assert isinstance(dataset.tags, dict)
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
