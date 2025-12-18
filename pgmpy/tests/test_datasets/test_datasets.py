@@ -17,6 +17,12 @@ ALL_DATASETS = [
     "auto_mpg",
     "boston_housing",
     "credit_approval",
+    "iq_brain_size",
+    "contraceptive_method",
+    "myocardial_infarction_complications",
+    "htru2",
+    "dry_bean",
+    "cystic_fibrosis",
     "south_german_credit",
     "pima_diabetes",
     "galton_stature",
@@ -26,6 +32,7 @@ ALL_DATASETS = [
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "yacht_hydrodynamics",
     "student_performance",
     "seoul_bike",
     "wine_quality_red",
@@ -61,9 +68,13 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
+        assert dataset.data.shape == (
+            dataset.tags["n_samples"],
+            dataset.tags["n_variables"],
+        )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
