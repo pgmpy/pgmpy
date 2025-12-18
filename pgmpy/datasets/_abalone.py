@@ -6,7 +6,7 @@ from pgmpy.datasets._base import _BaseDataset
 class AbaloneContinuous(_BaseDataset):
     name = "abalone_continuous"
     tags = {
-        "n_variables": 9,
+        "n_variables": 8,
         "n_samples": 4177,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
