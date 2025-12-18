@@ -123,6 +123,7 @@ class MockPolicy(CausalBanditPolicy):
         self.selected_actions = []
 
     def select_action(self, context=None):
+        self.t += 1
         action = np.random.randint(0, self.n_actions)
         self.selected_actions.append(action)
         return action

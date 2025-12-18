@@ -134,6 +134,8 @@ class TestUCBCausalBandit:
         for _ in range(3):
             action = policy.select_action()
             selected.add(action)
+            # Simulate update to mark action as explored
+            policy.update(action, 1.0)
 
         assert len(selected) == 3  # All actions selected
 

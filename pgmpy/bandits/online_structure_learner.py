@@ -65,6 +65,10 @@ class OnlineCausalStructureLearner(BaseEstimator):
         # Initialize graph
         if initial_graph is not None:
             self.current_graph = initial_graph.copy()
+            # Ensure all variables are in the graph
+            for var in variables:
+                if var not in self.current_graph.nodes():
+                    self.current_graph.add_node(var)
         else:
             self.current_graph = DAG()
             self.current_graph.add_nodes_from(variables)

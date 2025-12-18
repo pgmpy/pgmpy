@@ -114,7 +114,8 @@ class UCBCausalBandit(CausalBanditPolicy):
 
         # If any action hasn't been tried, select it
         if np.any(self.action_counts == 0):
-            return np.argmin(self.action_counts)
+            unexplored = np.where(self.action_counts == 0)[0]
+            return unexplored[0]
 
         # Calculate UCB values
         ucb_values = np.zeros(self.n_actions)
