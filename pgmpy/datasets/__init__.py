@@ -14,6 +14,14 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._hitters import Hitters  # noqa: F401
+from ._residential_building import ResidentialBuilding  # noqa: F401
+from ._galton_stature import GaltonStature  # noqa: F401
+from ._iq_brain import IQBrainSize  # noqa: F401
+from ._contraceptive_method import ContraceptiveMethod  # noqa: F401
+from ._boston_housing import BostonHousing  # noqa: F401
+from ._pittsburgh_bridges import PittsburghBridges  # noqa: F401
+from ._credit_approval import CreditApproval  # noqa: F401
+from ._myocardial_infarction_complications import MyocardialInfarctionComplications  # noqa: F401
 from ._htru2 import HTRU2  # noqa: F401
 from ._yacht_hydrodynamics import YachtHydrodynamics  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401

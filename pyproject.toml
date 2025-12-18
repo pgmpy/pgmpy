@@ -70,6 +70,7 @@ docs =[
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
+  "sphinx_sitemap",
 ]
 all = [
   "networkx>=3.0",
