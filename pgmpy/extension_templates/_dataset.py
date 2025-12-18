@@ -15,7 +15,9 @@ from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 
-@register_dataset_class  # TODO: Rename the class for your dataset.
+@register_dataset_class
+# TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
+# class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
 class YourDatasetClass(_BaseDataset):
 
     # TODO: Rename the name; this is the name that `load_dataset` method uses.
