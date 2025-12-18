@@ -22,7 +22,7 @@ ALL_DATASETS = [
     "credit_approval",
     "iq_brain_size",
     "contraceptive_method",
-    "myocardial_infarction_complications",
+    "myocardial_infarction",
     "htru2",
     "dry_bean",
     "cystic_fibrosis",
@@ -99,6 +99,7 @@ def test_load_dataset():
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
+
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("requests", severity="none"),

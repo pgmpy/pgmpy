@@ -22,12 +22,12 @@ class MyocardialInfarctionComplications(_BaseDataset):
 
     base_url = (
         "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-        "real/myocarcial-infarction-complications/"
+        "real/myocardial-infarction-complications/"
     )
 
-    data_url = base_url + "data/myocardial-infarction-complications.continuous.txt"
+    data_url = base_url + "data/myocarcial-infarction-complications.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = (
-        base_url + "ground.truth/myocardial-infarction-complications.knowledge.txt"
+        base_url + "ground.truth/myocarcial-infarction-complications.knowledge.txt"
     )
     missing_values_marker = "*"
