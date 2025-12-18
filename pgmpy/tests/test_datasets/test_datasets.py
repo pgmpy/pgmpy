@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "apple_watch_fitbit",
     "auto_mpg",
     "boston_housing",
+    "fmri_9var",
     "pittsburgh_bridges",
     "residential_building",
     "credit_approval",
