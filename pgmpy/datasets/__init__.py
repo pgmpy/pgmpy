@@ -1,4 +1,4 @@
-from ._base import DATASET_REGISTRY, _BaseDataset, load_dataset, register_dataset_class
+from ._base import DATASET_REGISTRY, load_dataset, register_dataset_class
 from ._abalone import AbaloneContinuous, AbaloneMixed  # noqa: F401
 from ._adult import Adult  # noqa: F401
 from ._airfoil import Airfoil  # noqa: F401
@@ -13,6 +13,7 @@ from ._sachs import (  # noqa: F401
     SachsDiscrete,
     SachsMixed,
 )
+from ._goldberg import Goldberg  # noqa: F401
 from ._hitters import Hitters  # noqa: F401
 from ._residential_building import ResidentialBuilding  # noqa: F401
 from ._iq_brain import IQBrainSize  # noqa: F401
@@ -20,7 +21,7 @@ from ._contraceptive_method import ContraceptiveMethod  # noqa: F401
 from ._spartina import Spartina  # noqa: F401
 from ._pittsburgh_bridges import PittsburghBridges  # noqa: F401
 from ._credit_approval import CreditApproval  # noqa: F401
-from ._myocardial_infarction_complications import MyocardialInfarctionComplications  # noqa: F401
+from ._myocardial_infarction import MyocardialInfarction  # noqa: F401
 from ._htru2 import HTRU2  # noqa: F401
 from ._yacht_hydrodynamics import YachtHydrodynamics  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401

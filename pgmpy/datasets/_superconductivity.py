@@ -4,9 +4,9 @@ from pgmpy.datasets._base import _BaseDataset
 
 @register_dataset_class
 class Superconductivity(_BaseDataset):
-    name = "superconductivity_continuous"
+    name = "superconductivity"
     tags = {
-        "n_variables": 81,
+        "n_variables": 82,
         "n_samples": 22163,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
