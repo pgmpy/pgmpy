@@ -8,9 +8,10 @@ class IQBrainSize(_BaseDataset):
 
     tags = {
         "n_variables": 9,
-        "n_samples": 0,
+        "n_samples": 20,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
+        "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
