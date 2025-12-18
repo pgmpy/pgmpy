@@ -3,6 +3,7 @@ from .causal_bandits import (
     EpsilonGreedyCausalBandit,
     UCBCausalBandit,
     ThompsonSamplingCausalBandit,
+    ContextualCausalBandit,
 )
 from .online_structure_learner import OnlineCausalStructureLearner
 from .utils import CausalBanditMetrics
@@ -14,6 +15,7 @@ __all__ = [
     "EpsilonGreedyCausalBandit",
     "UCBCausalBandit",
     "ThompsonSamplingCausalBandit",
+    "ContextualCausalBandit",
     "OnlineCausalStructureLearner",
     "CausalBanditMetrics",
 ]
