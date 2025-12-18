@@ -109,6 +109,9 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           files: test-results.xml
+          report_type: test_results
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
