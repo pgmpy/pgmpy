@@ -224,10 +224,6 @@ class TOPIC(_BaseConstraintCausalDiscovery):
 
         return self
 
-    def _score_edge(
-        self,
-    ):
-        raise NotImplementedError
 
     def _next_node_in_topological_order(
         self,

@@ -42,7 +42,7 @@ def test_topic_compatibility(estimator, check):
 """ 2. Unit Tests (fake score function) """
 def test_unit_improvement_matrix():
     topic = TOPIC()
-    candidates = ["A", "B", "C"]
+    candidates = list(["A", "B", "C"])
     dag = DAG()
     dag.add_nodes_from(candidates)
     dag.add_edge("A", "C")
