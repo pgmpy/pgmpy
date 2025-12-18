@@ -122,6 +122,8 @@ class _BaseDataset:
         """Fetches/reads from cache the data associated with the dataset."""
         raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
+        if cls.tags.get("has_missing_data"):
+            df.replace(cls.missing_marker, pd.NA, inplace=True)
         return df
 
     @classmethod
@@ -173,6 +175,7 @@ class _DatasetRegistry:
         "n_samples",
         "has_ground_truth",
         "has_expert_knowledge",
+        "has_missing_data",
         "is_simulated",
         "is_interventional",
         "is_discrete",
@@ -231,6 +234,7 @@ class _DatasetRegistry:
             Tag constraints as keyword arguments. The following tags are supported:
             - has_ground_truth
             - has_expert_knowledge
+            - has_missing_data
             - is_simulated
             - is_interventional
             - is_discrete

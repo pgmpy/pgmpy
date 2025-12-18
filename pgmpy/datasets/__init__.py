@@ -14,6 +14,10 @@ from ._sachs import (  # noqa: F401
     SachsMixed,
 )
 from ._hungary_chickenpox import HungaryChickenpox  # noqa: F401
+from ._contraceptive_method import ContraceptiveMethod  # noqa: F401
+from ._boston_housing import BostonHousing  # noqa: F401
+from ._myocardial_infarction_complications import (  # noqa: F401
+    MyocardialInfarctionComplications,
 from ._htru2 import HTRU2  # noqa: F401
 from ._yacht_hydrodynamics import YachtHydrodynamics  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401
