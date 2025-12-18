@@ -64,9 +64,13 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
+        assert dataset.data.shape == (
+            dataset.tags["n_samples"],
+            dataset.tags["n_variables"],
+        )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
