@@ -7,7 +7,7 @@ class Superconductivity(_BaseDataset):
     name = "superconductivity"
     tags = {
         "n_variables": 82,
-        "n_samples": 22163,
+        "n_samples": 21263,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,

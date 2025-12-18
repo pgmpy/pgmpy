@@ -19,6 +19,7 @@ from ._hitters import Hitters  # noqa: F401
 from ._residential_building import ResidentialBuilding  # noqa: F401
 from ._iq_brain import IQBrainSize  # noqa: F401
 from ._contraceptive_method import ContraceptiveMethod  # noqa: F401
+from ._spartina import Spartina  # noqa: F401
 from ._pittsburgh_bridges import PittsburghBridges  # noqa: F401
 from ._credit_approval import CreditApproval  # noqa: F401
 from ._myocardial_infarction import MyocardialInfarction  # noqa: F401
