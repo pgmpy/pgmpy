@@ -11,6 +11,7 @@ class MyocardialInfarctionComplications(_BaseDataset):
         "n_samples": 1700,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
+        "has_missing_data": True,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -29,3 +30,4 @@ class MyocardialInfarctionComplications(_BaseDataset):
     expert_knowledge_url = (
         base_url + "ground.truth/myocardial-infarction-complications.knowledge.txt"
     )
+    missing_values_marker = "*"
