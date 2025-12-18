@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type
@@ -174,7 +175,8 @@ class _CovarianceMixin:
         )
 
         lines = raw_data.strip().splitlines()
-        names = lines[1].strip().split("\t")
+        # Split the line on either \t or space. Datasets are not uniform.
+        names = re.split(r"\t|\ ", lines[1].strip())
 
         mat = np.zeros((len(names), len(names)), dtype=float)
 
