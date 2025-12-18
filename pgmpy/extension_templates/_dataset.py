@@ -27,6 +27,7 @@ class YourDatasetClass(_BaseDataset):
         "n_samples": int,
         "has_ground_truth": bool,
         "has_expert_knowledge": bool,
+        "has_missing_data": bool,
         "is_simulated": bool,
         "is_interventional": bool,
         "is_discrete": bool,
@@ -44,8 +45,10 @@ class YourDatasetClass(_BaseDataset):
 
     # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
     # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
-
     expert_knowledge_url = None
+
+    # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
+    missing_values_marker = None
 
     # TODO: If the ground truth file is in dagitty format, remove the following `load_ground_truth` method.
     @classmethod
