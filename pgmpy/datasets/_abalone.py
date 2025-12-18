@@ -6,10 +6,11 @@ from pgmpy.datasets._base import _BaseDataset
 class AbaloneContinuous(_BaseDataset):
     name = "abalone_continuous"
     tags = {
-        "n_variables": 9,
+        "n_variables": 8,
         "n_samples": 4177,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
+        "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -33,6 +34,7 @@ class AbaloneMixed(_BaseDataset):
         "n_samples": 4177,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
+        "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,

@@ -3,11 +3,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class Adult(_BaseDataset):
-    name = "adult"
+class StudentPerformance(_BaseDataset):
+    name = "student_performance"
+
     tags = {
-        "n_variables": 15,
-        "n_samples": 32561,
+        "n_variables": 33,
+        "n_samples": 395,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
@@ -19,8 +20,11 @@ class Adult(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/adult/"
+    base_url = (
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
+        "refs/heads/main/real/student-performance/"
+    )
 
-    data_url = base_url + "data/adult.data.mixed.maximum.50.json.txt"
+    data_url = base_url + "data/student-performance.data.mixed.maximum.3.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/adult.knowledge.txt"
+    expert_knowledge_url = base_url + "ground.truth/student-performance.knowledge.txt"
