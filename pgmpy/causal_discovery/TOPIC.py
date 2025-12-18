@@ -1,10 +1,11 @@
 from typing import (
     List,
     Optional,
-    Union,
+    Union, Callable,
 )
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG
@@ -164,7 +165,7 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         # Step 0: Initial checks and setup for arguments
         score_c: ScoreCache
         _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        # score_fn = score_c.local_score
+        score_fn = score_c.local_score
 
         # Step 1: Initialize an empty model.
         dag_current = DAG()
@@ -185,12 +186,12 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         n_nodes = len(dag_current.nodes)
         it = 0
         while it < n_nodes:
-            source, source_meta = self._next_node_in_topological_order(X, candidates_)
+            source, source_meta = self._next_node_in_topological_order(candidates_, dag_current, score_fn)
             candidates_.remove(source)
             topological_order_.append(source)
 
-            added_edges, outgoing_scores = self._add_outgoing_edges(X, source)
-            pruned_edges, incoming_scores = self._remove_ingoing_edges(X, source)
+            added_edges, outgoing_scores = self._add_outgoing_edges(source, dag_current, score_fn)
+            pruned_edges, incoming_scores = self._remove_ingoing_edges(source, dag_current, score_fn)
 
             # History
             topic_history_.append(
@@ -230,10 +231,11 @@ class TOPIC(_BaseConstraintCausalDiscovery):
 
     def _next_node_in_topological_order(
         self,
-        X: pd.DataFrame,
         candidates: List,
+        dag_current: DAG,
+        score_fn: Callable,
         **kwargs,
-    ) -> int:
+    ) -> [int, List]:
         """
         Returns the next node in topological order.
 
@@ -256,19 +258,67 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         ... )
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
-        >>> c = TOPIC()
-        >>> next = c._next_node_in_topological_order(list(range(data.columns)))
+        >>> model = TOPIC()
+        >>> score_c: ScoreCache
+        >>> _, score_c = get_scoring_method("bic-g", data, True)
+        >>> score_fn = score_c.local_score
+
+        >>> next = model._next_node_in_topological_order(list(range(data.columns)), DAG(), score_fn)
         >>> print(next)
         """
+        improvement = self._improvement_matrix(candidates, dag_current, score_fn, **kwargs)
+        delta = improvement - improvement.T
+        np.fill_diagonal(delta, -np.inf)
 
-        source = candidates[0]
-        meta_source = []
-        return source, meta_source
+        incoming_pressure = np.max(delta, axis=0)
+        source_idx = int(np.argmin(incoming_pressure))
+        source = candidates[source_idx]
+        best_delta_per_node = np.max(delta, axis=1)
+
+        order_idx = np.argsort(incoming_pressure)
+        ranking = [
+            { "node":  candidates[i],
+                "incoming_pressure": float(incoming_pressure[i]),
+                "best_delta": float(best_delta_per_node[i]),
+            }
+            for i in order_idx
+        ]
+
+        meta = {
+            "candidates": [c for c in candidates],
+            "improvement_matrix": improvement.tolist(),
+            "delta_matrix": delta.tolist(),
+            "best_delta": [float(x) for x in best_delta_per_node],
+            "ranking": ranking,
+            "source_idx": int(source_idx),
+        }
+        return source, meta
+
+
+    def _improvement_matrix(
+        self,
+        candidates: List,
+        dag_current: DAG,
+        score_fn: Callable,
+        **kwargs,
+    ) -> np.ndarray:
+        improvement_matrix = np.zeros((len(candidates), len(candidates)))
+        for cause in candidates:
+            for effect in candidates:
+                if cause == effect: continue
+                current_parents = list(dag_current.get_parents(effect)).copy()
+                old_score = score_fn(effect, current_parents)
+                current_parents.append(cause)
+                new_score = score_fn(effect, current_parents)
+                improvement_matrix[candidates.index(cause), candidates.index(effect)] = \
+                    old_score - new_score #self._gain(new_score, old_score)
+        return improvement_matrix
 
     def _add_outgoing_edges(
         self,
-        X: pd.DataFrame,
         source: int,
+        dag_current: DAG,
+        score_fn: Callable,
         **kwargs,
     ) -> [List, List]:
         added_edges = []
@@ -277,8 +327,9 @@ class TOPIC(_BaseConstraintCausalDiscovery):
 
     def _remove_ingoing_edges(
         self,
-        X: pd.DataFrame,
         source: int,
+        dag_current: DAG,
+        score_fn: Callable,
         **kwargs,
     ) -> [List, List]:
 
