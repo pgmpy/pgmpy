@@ -3,8 +3,8 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class MyocardialInfarctionComplications(_BaseDataset):
-    name = "myocardial_infarction_complications"
+class MyocardialInfarction(_BaseDataset):
+    name = "myocardial_infarction"
 
     tags = {
         "n_variables": 124,
@@ -21,13 +21,14 @@ class MyocardialInfarctionComplications(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-        "real/myocardial-infarction-complications/"
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/"
+        "heads/main/real/myocardial-infarction-complications/"
     )
 
-    data_url = base_url + "data/myocardial-infarction-complications.continuous.txt"
+    data_url = base_url + "data/myocarcial-infaraction-complications.continuous.txt"
+
     ground_truth_url = None
     expert_knowledge_url = (
-        base_url + "ground.truth/myocardial-infarction-complications.knowledge.txt"
+        base_url + "ground.truth/myocarcial-infaraction-complications.knowledge.txt"
     )
     missing_values_marker = "*"

@@ -16,12 +16,16 @@ ALL_DATASETS = [
     "apple_watch_fitbit",
     "auto_mpg",
     "boston_housing",
+    "lead",
+    "spartina",
+    "goldberg",
+    "hitters",
     "pittsburgh_bridges",
     "residential_building",
     "credit_approval",
     "iq_brain_size",
     "contraceptive_method",
-    "myocardial_infarction_complications",
+    "myocardial_infarction",
     "htru2",
     "dry_bean",
     "cystic_fibrosis",
@@ -34,6 +38,7 @@ ALL_DATASETS = [
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "superconductivity",
     "yacht_hydrodynamics",
     "student_performance",
     "seoul_bike",
@@ -89,6 +94,25 @@ def test_load_dataset():
             assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
         else:
             assert dataset.expert_knowledge is None
+
+        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_missing_data"]:
+            assert dataset.data.isna().any().any()
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
+def test_load_covariance_dataset():
+    for name in ["goldberg", "spartina", "lead"]:
+        dataset = load_dataset(name)
+        assert dataset.name == name
+        assert dataset.data.shape == (
+            dataset.tags["n_samples"],
+            dataset.tags["n_variables"],
+        )
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert isinstance(dataset.tags, dict)
 
 
 @pytest.mark.skipif(
