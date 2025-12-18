@@ -50,6 +50,7 @@ optional = [
   "pygraphviz",
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
+  "requests>=2.0",
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -69,6 +70,7 @@ docs =[
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
+  "sphinx_sitemap",
 ]
 all = [
   "networkx>=3.0",
@@ -86,6 +88,7 @@ all = [
   "xgboost>=2.0.3",
   "litellm==1.61.15",
   "pyparsing>=3.0",
+  "requests>=2.0",
 ]
 
 [project.urls]
@@ -116,7 +119,10 @@ norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
 [tool.isort]
-skip = ["pgmpy/identification/__init__.py"]
+skip = [
+  "pgmpy/identification/__init__.py",
+  "pgmpy/datasets/__init__.py",
+]
 
 [tool.ruff]
 line-length = 120
