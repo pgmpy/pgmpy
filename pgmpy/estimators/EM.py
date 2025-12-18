@@ -94,6 +94,9 @@ class ExpectationMaximization(ParameterEstimator):
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
+        # Precompute boolean mask for missing values
+        self.missing_mask = self.data.isna()
+
     def _get_log_likelihood(self, datapoint: Dict[str, Any]) -> float:
         """
         Computes the likelihood of a given datapoint. Goes through each
@@ -124,16 +127,16 @@ class ExpectationMaximization(ParameterEstimator):
         n_counts: Dict[Tuple, int],
         offset: int,
         batch_size: int,
+        missing_mask_unique: pd.DataFrame,
     ) -> pd.DataFrame:
         cache: List[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
-            row = data_unique.iloc[i]
             missing_vars = []
 
             for var in latent_card.keys():
                 if var not in data_unique.columns:
                     missing_vars.append(var)
-                elif pd.isna(row[var]):
+                elif missing_mask_unique.iloc[i][var]:
                     missing_vars.append(var)
 
             if missing_vars:
@@ -169,6 +172,10 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
+        missing_mask_unique = self.missing_mask.loc[data_unique.index].reset_index(
+            drop=True
+        )
+        data_unique = data_unique.reset_index(drop=True)
         n_counts = (
             self.data.groupby(list(self.data.columns), observed=True, dropna=False)
             .size()
@@ -176,7 +183,7 @@ class ExpectationMaximization(ParameterEstimator):
         )
         cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
-                data_unique, latent_card, n_counts, i, batch_size
+                data_unique, latent_card, n_counts, i, batch_size, missing_mask_unique
             )
             for i in range(0, data_unique.shape[0], batch_size)
         )
@@ -288,12 +295,16 @@ class ExpectationMaximization(ParameterEstimator):
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
 
+        # Identify all variables with missing values
+        vars_with_missing = set()
         for col in self.data.columns:
-            if self.data[col].isna().any() and col not in latent_card:
-                if col in self.state_names:
-                    latent_card[col] = len(self.state_names[col])
-                else:
-                    latent_card[col] = int(self.data[col].nunique(dropna=True))
+            if self.data[col].isna().any():
+                vars_with_missing.add(col)
+                if col not in latent_card and col not in self.model_copy.latents:
+                    if col in self.state_names:
+                        latent_card[col] = len(self.state_names[col])
+                    else:
+                        latent_card[col] = int(self.data[col].nunique(dropna=True))
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
@@ -343,14 +354,16 @@ class ExpectationMaximization(ParameterEstimator):
                 )
 
         # Step 3.1: Learn the CPDs of variables which don't involve
-        #           latent variables using MLE if their init_cpd is
+        #           latent variables or missing values using MLE if their init_cpd is
         #           not specified.
 
         fixed_cpds = []
         fixed_cpd_vars = (
             set(self.model.nodes())
             - self.model.latents
+            - vars_with_missing
             - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+            - set(chain(*[self.model.get_children(var) for var in vars_with_missing]))
             - set(init_cpds.keys())
         )
 
