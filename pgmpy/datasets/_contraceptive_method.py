@@ -11,11 +11,12 @@ class ContraceptiveMethod(_BaseDataset):
         "n_samples": 1473,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
+        "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
-        "is_continuous": True,
-        "is_mixed": False,
+        "is_continuous": False,
+        "is_mixed": True,
         "is_ordinal": False,
     }
 
