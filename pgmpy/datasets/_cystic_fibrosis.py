@@ -11,6 +11,7 @@ class CysticFibrosis(_BaseDataset):
         "n_samples": 41,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
+        "has_missing_data": True,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -24,3 +25,4 @@ class CysticFibrosis(_BaseDataset):
     data_url = base_url + "data/cystic-fibrosis-20180726-simplified.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+    missing_marker = "*"

@@ -3,13 +3,14 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class AutoMpg(_BaseDataset):
-    name = "auto_mpg"
+class ContraceptiveMethod(_BaseDataset):
+    name = "contraceptive_method"
+
     tags = {
-        "n_variables": 8,
-        "n_samples": 392,
+        "n_variables": 9,
+        "n_samples": 1473,
         "has_ground_truth": False,
-        "has_expert_knowledge": True,
+        "has_expert_knowledge": False,
         "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
@@ -19,8 +20,11 @@ class AutoMpg(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/auto-mpg/"
+    base_url = (
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "real/contraceptive-method/"
+    )
 
-    data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
+    data_url = base_url + "data/contraceptive-method.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/auto-mpg.knowledge.txt"
+    expert_knowledge_url = None
