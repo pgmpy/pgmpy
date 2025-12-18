@@ -11,6 +11,7 @@ class PittsburghBridges(_BaseDataset):
         "n_samples": 108,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
+        "has_missing_data": True,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": True,
@@ -27,3 +28,4 @@ class PittsburghBridges(_BaseDataset):
     data_url = base_url + "data/bridges.data.version21.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+    missing_values_marker = "?"
