@@ -25,4 +25,4 @@ class CysticFibrosis(_BaseDataset):
     data_url = base_url + "data/cystic-fibrosis-20180726-simplified.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
-    missing_marker = "*"
+    missing_values_marker = "*"

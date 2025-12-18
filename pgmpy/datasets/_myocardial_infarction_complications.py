@@ -4,7 +4,7 @@ from pgmpy.datasets._base import _BaseDataset
 
 @register_dataset_class
 class MyocardialInfarctionComplications(_BaseDataset):
-    name = "myocardial_infarction_complications"
+    name = "myocardial_infarction"
 
     tags = {
         "n_variables": 124,
@@ -22,7 +22,7 @@ class MyocardialInfarctionComplications(_BaseDataset):
 
     base_url = (
         "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-        "real/myocardial-infarction-complications/"
+        "real/myocarcial-infarction-complications/"
     )
 
     data_url = base_url + "data/myocardial-infarction-complications.continuous.txt"

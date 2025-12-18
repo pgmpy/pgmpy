@@ -123,7 +123,7 @@ class _BaseDataset:
         raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         if cls.tags.get("has_missing_data"):
-            df.replace(cls.missing_marker, pd.NA, inplace=True)
+            df.replace(cls.missing_values_marker, pd.NA, inplace=True)
         return df
 
     @classmethod
