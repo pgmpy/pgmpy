@@ -3,11 +3,11 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class Airfoil(_BaseDataset):
-    name = "airfoil"
+class Superconductivity(_BaseDataset):
+    name = "superconductivity"
     tags = {
-        "n_variables": 6,
-        "n_samples": 1503,
+        "n_variables": 82,
+        "n_samples": 22163,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
@@ -19,11 +19,8 @@ class Airfoil(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/"
-        "heads/main/real/airfoil-self-noise/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/superconductivity/"
+    data_url = base_url + "data/superconductivity.continuous.txt"
 
-    data_url = base_url + "data/airfoil-self-noise.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/airfoil-self-noise.knowledge.txt"
+    expert_knowledge_url = base_url + "ground.truth/superconductivity.knowledge.txt"

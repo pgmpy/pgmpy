@@ -6,10 +6,11 @@ from pgmpy.datasets._base import _BaseDataset
 class AppleWatchFitbit(_BaseDataset):
     name = "apple_watch_fitbit"
     tags = {
-        "n_variables": 17,
+        "n_variables": 18,
         "n_samples": 6264,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
+        "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
