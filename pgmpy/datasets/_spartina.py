@@ -10,6 +10,7 @@ class Spartina(_CovarianceMixin, _BaseDataset):
         "n_samples": 45,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
+        "has_missing_data": False,
         "is_simulated": True,
         "is_interventional": False,
         "is_discrete": False,
