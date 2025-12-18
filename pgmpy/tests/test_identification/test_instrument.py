@@ -193,7 +193,7 @@ def test_conditional_ivs_with_latents():
 
 
 def test_no_ivs_with_SCM():
-    model = SimpleCausalModel(exposures="X", covariates="U", outcomes="Y", latents="U")
+    model = SimpleCausalModel(exposures="X", confounders="U", outcomes="Y", latents="U")
     iv = InstrumentalVariables(variant=None)
     retruned_graph, ok = iv._identify(model)
     assert ok is False
@@ -203,7 +203,7 @@ def test_no_ivs_with_SCM():
 
 
 def test_usage_with_SCM():
-    model = SimpleCausalModel(exposures="X", covariates="U", outcomes="Y", latents="U")
+    model = SimpleCausalModel(exposures="X", confounders="U", outcomes="Y", latents="U")
     model.add_edge("I", "X")
     iv = InstrumentalVariables(variant=None)
     retruned_graph, ok = iv._identify(model)
@@ -215,7 +215,7 @@ def test_usage_with_SCM():
 
 def test_usage_with_SCM_with_mediator():
     model = SimpleCausalModel(
-        exposures="X", covariates="U", outcomes="Y", mediators="M", latents="U"
+        exposures="X", confounders="U", outcomes="Y", mediators="M", latents="U"
     )
     model.add_edge("I", "X")
     iv = InstrumentalVariables(variant=None)
