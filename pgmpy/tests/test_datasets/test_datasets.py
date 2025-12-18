@@ -104,7 +104,7 @@ def test_load_dataset():
     reason="test only if requests is installed",
 )
 def test_load_covariance_dataset():
-    for name in ["goldberg", "spartina"]:
+    for name in ["goldberg", "spartina", "lead"]:
         dataset = load_dataset(name)
         assert dataset.name == name
         assert dataset.data.shape == (

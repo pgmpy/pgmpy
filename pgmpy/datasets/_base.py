@@ -175,8 +175,9 @@ class _CovarianceMixin:
         )
 
         lines = raw_data.strip().splitlines()
-        # Split the line on either \t or space. Datasets are not uniform.
-        names = re.split(r"\t|\ ", lines[1].strip())
+        # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
+        # not uniform.
+        names = re.split(r"\t|\ ", re.sub(r"\s+", " ", lines[1].strip()))
 
         mat = np.zeros((len(names), len(names)), dtype=float)
 
