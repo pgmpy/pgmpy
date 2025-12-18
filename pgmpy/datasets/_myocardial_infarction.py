@@ -3,7 +3,7 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class MyocardialInfarctionComplications(_BaseDataset):
+class MyocardialInfarction(_BaseDataset):
     name = "myocardial_infarction"
 
     tags = {
