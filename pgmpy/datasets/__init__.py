@@ -13,7 +13,7 @@ from ._sachs import (  # noqa: F401
     SachsDiscrete,
     SachsMixed,
 )
-from ._boston_housing import BostonHousing  # noqa: F401
+
 from ._htru2 import HTRU2  # noqa: F401
 from ._yacht_hydrodynamics import YachtHydrodynamics  # noqa: F401
 from ._dry_bean import DryBean  # noqa: F401
@@ -23,6 +23,7 @@ from ._auto_mpg import AutoMpg  # noqa: F401
 from ._south_german_credit import SouthGermanCredit  # noqa: F401
 from ._student_performance import StudentPerformance  # noqa: F401
 from ._pima_diabetes import PimaDiabetes  # noqa: F401
+from ._superconductivity import Superconductivity  # noqa: F401
 from ._seoul_bike import SeoulBike  # noqa: F401
 from ._wine_quality import (  # noqa: F401
     WineQualityWhite,

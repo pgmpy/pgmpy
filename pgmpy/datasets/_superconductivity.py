@@ -3,7 +3,7 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class superconductivity(_BaseDataset):
+class Superconductivity(_BaseDataset):
     name = "superconductivity_continuous"
     tags = {
         "n_variables": 81,
