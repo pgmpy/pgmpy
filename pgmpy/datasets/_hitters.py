@@ -1,6 +1,3 @@
-import io
-import pandas as pd
-
 from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
@@ -32,19 +29,3 @@ class Hitters(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"
-
-    @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        raw = cls._get_raw_data("data", cls.data_url).decode("utf-8-sig", errors="ignore")
-
-        df = pd.read_csv(
-            io.StringIO(raw),
-            sep=r"\s+",
-            engine="python",
-            na_values=["*"],
-        )
-
-        if "Salary" in df.columns:
-            df["Salary"] = pd.to_numeric(df["Salary"], errors="coerce")
-
-        return df

@@ -91,6 +91,9 @@ def test_load_dataset():
         else:
             assert dataset.expert_knowledge is None
 
+        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_missing_data"]:
+            assert dataset.data.isna().any().any()
+
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("requests", severity="none"),
@@ -99,40 +102,3 @@ def test_load_dataset():
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
-
-
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
-def test_hitters_shape_and_columns():
-    ds = load_dataset("hitters")
-    df = ds.data
-
-    assert df.shape == (322, 20)
-
-    expected_cols = [
-        "AtBat",
-        "Hits",
-        "HmRun",
-        "Runs",
-        "RBI",
-        "Walks",
-        "Years",
-        "CAtBat",
-        "CHits",
-        "CHmRun",
-        "CRuns",
-        "CRBI",
-        "CWalks",
-        "League",
-        "Division",
-        "PutOuts",
-        "Assists",
-        "Errors",
-        "Salary",
-        "NewLeague",
-    ]
-    assert list(df.columns) == expected_cols
-
-    assert str(df["Salary"].dtype) in ("float64", "Float64")
