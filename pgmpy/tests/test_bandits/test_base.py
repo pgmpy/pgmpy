@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
-import pytest
-import numpy as np
 from unittest.mock import Mock
 
+import numpy as np
+import pytest
+
+from pgmpy.bandits.base import (
+    CausalBanditLearner,
+    CausalBanditModel,
+    CausalBanditPolicy,
+)
 from pgmpy.base import DAG
-from pgmpy.bandits.base import CausalBanditModel, CausalBanditPolicy, CausalBanditLearner
 
 
 class TestCausalBanditModel:
@@ -24,7 +29,7 @@ class TestCausalBanditModel:
             causal_graph=self.graph,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            seed=42
+            seed=42,
         )
 
         assert model.graph == self.graph
@@ -37,7 +42,7 @@ class TestCausalBanditModel:
             CausalBanditModel(
                 causal_graph=self.graph,
                 action_variables=self.action_variables,
-                outcome_variable="Invalid"
+                outcome_variable="Invalid",
             )
 
     def test_init_invalid_action_variable(self):
@@ -46,7 +51,7 @@ class TestCausalBanditModel:
             CausalBanditModel(
                 causal_graph=self.graph,
                 action_variables=["Invalid"],
-                outcome_variable=self.outcome_variable
+                outcome_variable=self.outcome_variable,
             )
 
     def test_get_action_space(self):
@@ -54,7 +59,7 @@ class TestCausalBanditModel:
         model = CausalBanditModel(
             causal_graph=self.graph,
             action_variables=self.action_variables,
-            outcome_variable=self.outcome_variable
+            outcome_variable=self.outcome_variable,
         )
 
         action_space = model.get_action_space()
@@ -66,7 +71,7 @@ class TestCausalBanditModel:
         model = CausalBanditModel(
             causal_graph=self.graph,
             action_variables=self.action_variables,
-            outcome_variable=self.outcome_variable
+            outcome_variable=self.outcome_variable,
         )
 
         interventions = model.get_valid_interventions()
@@ -83,7 +88,7 @@ class TestCausalBanditModel:
             causal_graph=self.graph,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            seed=42
+            seed=42,
         )
 
         # Test with intervention
@@ -103,7 +108,7 @@ class TestCausalBanditModel:
         model = CausalBanditModel(
             causal_graph=self.graph,
             action_variables=self.action_variables,
-            outcome_variable=self.outcome_variable
+            outcome_variable=self.outcome_variable,
         )
 
         # Test with intervention
@@ -140,10 +145,7 @@ class TestCausalBanditLearner:
         # Create simple environment
         graph = DAG([("X", "Y")])
         self.environment = CausalBanditModel(
-            causal_graph=graph,
-            action_variables=["X"],
-            outcome_variable="Y",
-            seed=42
+            causal_graph=graph, action_variables=["X"], outcome_variable="Y", seed=42
         )
 
         # Create mock policy
@@ -153,72 +155,64 @@ class TestCausalBanditLearner:
     def test_init(self):
         """Test learner initialization."""
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=100
+            environment=self.environment, policy=self.policy, horizon=100
         )
 
         assert learner.environment == self.environment
         assert learner.policy == self.policy
         assert learner.horizon == 100
-        assert len(learner.history['actions']) == 0
+        assert len(learner.history["actions"]) == 0
 
     def test_run_basic(self):
         """Test basic learning run."""
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=10
+            environment=self.environment, policy=self.policy, horizon=10
         )
 
         history = learner.run()
 
-        assert len(history['actions']) == 10
-        assert len(history['rewards']) == 10
-        assert len(history['contexts']) == 10
-        assert len(history['regrets']) == 10
-        assert len(history['cumulative_regret']) == 10
+        assert len(history["actions"]) == 10
+        assert len(history["rewards"]) == 10
+        assert len(history["contexts"]) == 10
+        assert len(history["regrets"]) == 10
+        assert len(history["cumulative_regret"]) == 10
 
     def test_run_with_context_generator(self):
         """Test learning run with context generator."""
+
         def context_gen(t):
             return {"context_var": t * 0.1}
 
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=5
+            environment=self.environment, policy=self.policy, horizon=5
         )
 
         history = learner.run(context_generator=context_gen)
 
-        assert len(history['actions']) == 5
-        for i, context in enumerate(history['contexts']):
+        assert len(history["actions"]) == 5
+        for i, context in enumerate(history["contexts"]):
             assert context["context_var"] == i * 0.1
 
     def test_run_with_oracle_policy(self):
         """Test learning run with oracle policy for regret calculation."""
+
         def oracle_policy(context):
             return 1  # Always select action 1
 
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=5
+            environment=self.environment, policy=self.policy, horizon=5
         )
 
         history = learner.run(oracle_policy=oracle_policy)
 
-        assert len(history['regrets']) == 5
-        for regret in history['regrets']:
+        assert len(history["regrets"]) == 5
+        for regret in history["regrets"]:
             assert isinstance(regret, float)
 
     def test_get_performance_metrics(self):
         """Test performance metrics calculation."""
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=10
+            environment=self.environment, policy=self.policy, horizon=10
         )
 
         # Run to generate history
@@ -226,20 +220,18 @@ class TestCausalBanditLearner:
 
         metrics = learner.get_performance_metrics()
 
-        assert 'cumulative_regret' in metrics
-        assert 'average_reward' in metrics
-        assert 'total_reward' in metrics
-        assert 'regret_per_round' in metrics
+        assert "cumulative_regret" in metrics
+        assert "average_reward" in metrics
+        assert "total_reward" in metrics
+        assert "regret_per_round" in metrics
 
-        assert isinstance(metrics['average_reward'], float)
-        assert isinstance(metrics['total_reward'], (int, float))
+        assert isinstance(metrics["average_reward"], float)
+        assert isinstance(metrics["total_reward"], (int, float))
 
     def test_get_performance_metrics_empty_history(self):
         """Test performance metrics with empty history."""
         learner = CausalBanditLearner(
-            environment=self.environment,
-            policy=self.policy,
-            horizon=10
+            environment=self.environment, policy=self.policy, horizon=10
         )
 
         metrics = learner.get_performance_metrics()

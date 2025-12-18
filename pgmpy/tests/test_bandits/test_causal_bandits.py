@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-import pytest
 import numpy as np
+import pytest
 
 from pgmpy.bandits.causal_bandits import (
+    ContextualCausalBandit,
     EpsilonGreedyCausalBandit,
-    UCBCausalBandit,
     ThompsonSamplingCausalBandit,
-    ContextualCausalBandit
+    UCBCausalBandit,
 )
 
 
@@ -21,9 +21,7 @@ class TestEpsilonGreedyCausalBandit:
     def test_init(self):
         """Test initialization."""
         policy = EpsilonGreedyCausalBandit(
-            action_space=self.action_space,
-            epsilon=0.2,
-            decay_rate=0.01
+            action_space=self.action_space, epsilon=0.2, decay_rate=0.01
         )
 
         assert policy.epsilon == 0.2
@@ -36,8 +34,7 @@ class TestEpsilonGreedyCausalBandit:
     def test_select_action_pure_exploration(self):
         """Test action selection with epsilon=1 (pure exploration)."""
         policy = EpsilonGreedyCausalBandit(
-            action_space=self.action_space,
-            epsilon=1.0  # Always explore
+            action_space=self.action_space, epsilon=1.0  # Always explore
         )
 
         # Should select random actions
@@ -48,8 +45,7 @@ class TestEpsilonGreedyCausalBandit:
     def test_select_action_pure_exploitation(self):
         """Test action selection with epsilon=0 (pure exploitation)."""
         policy = EpsilonGreedyCausalBandit(
-            action_space=self.action_space,
-            epsilon=0.0  # Never explore
+            action_space=self.action_space, epsilon=0.0  # Never explore
         )
 
         # Update to create a clear best action
@@ -74,9 +70,7 @@ class TestEpsilonGreedyCausalBandit:
     def test_epsilon_decay(self):
         """Test epsilon decay over time."""
         policy = EpsilonGreedyCausalBandit(
-            action_space=self.action_space,
-            epsilon=1.0,
-            decay_rate=0.1
+            action_space=self.action_space, epsilon=1.0, decay_rate=0.1
         )
 
         initial_epsilon = policy.epsilon
@@ -88,9 +82,7 @@ class TestEpsilonGreedyCausalBandit:
     def test_reset(self):
         """Test policy reset."""
         policy = EpsilonGreedyCausalBandit(
-            action_space=self.action_space,
-            epsilon=0.1,
-            decay_rate=0.01
+            action_space=self.action_space, epsilon=0.1, decay_rate=0.01
         )
 
         # Make some updates
@@ -115,10 +107,7 @@ class TestUCBCausalBandit:
 
     def test_init(self):
         """Test initialization."""
-        policy = UCBCausalBandit(
-            action_space=self.action_space,
-            c=2.0
-        )
+        policy = UCBCausalBandit(action_space=self.action_space, c=2.0)
 
         assert policy.c == 2.0
         assert policy.n_actions == 3
@@ -192,7 +181,7 @@ class TestThompsonSamplingCausalBandit:
         policy = ThompsonSamplingCausalBandit(
             action_space=self.action_space,
             prior_type="beta",
-            prior_params={"alpha": 2.0, "beta": 3.0}
+            prior_params={"alpha": 2.0, "beta": 3.0},
         )
 
         assert policy.prior_type == "beta"
@@ -204,7 +193,7 @@ class TestThompsonSamplingCausalBandit:
         policy = ThompsonSamplingCausalBandit(
             action_space=self.action_space,
             prior_type="normal",
-            prior_params={"mu": 1.0, "sigma": 0.5, "nu": 2.0}
+            prior_params={"mu": 1.0, "sigma": 0.5, "nu": 2.0},
         )
 
         assert policy.prior_type == "normal"
@@ -216,15 +205,13 @@ class TestThompsonSamplingCausalBandit:
         """Test initialization with invalid prior type."""
         with pytest.raises(ValueError, match="Unsupported prior type"):
             ThompsonSamplingCausalBandit(
-                action_space=self.action_space,
-                prior_type="invalid"
+                action_space=self.action_space, prior_type="invalid"
             )
 
     def test_select_action_beta(self):
         """Test action selection with Beta prior."""
         policy = ThompsonSamplingCausalBandit(
-            action_space=self.action_space,
-            prior_type="beta"
+            action_space=self.action_space, prior_type="beta"
         )
 
         actions = [policy.select_action() for _ in range(10)]
@@ -233,8 +220,7 @@ class TestThompsonSamplingCausalBandit:
     def test_select_action_normal(self):
         """Test action selection with Normal prior."""
         policy = ThompsonSamplingCausalBandit(
-            action_space=self.action_space,
-            prior_type="normal"
+            action_space=self.action_space, prior_type="normal"
         )
 
         actions = [policy.select_action() for _ in range(10)]
@@ -245,7 +231,7 @@ class TestThompsonSamplingCausalBandit:
         policy = ThompsonSamplingCausalBandit(
             action_space=self.action_space,
             prior_type="beta",
-            prior_params={"alpha": 1.0, "beta": 1.0}
+            prior_params={"alpha": 1.0, "beta": 1.0},
         )
 
         # Simulate positive reward (should increase alpha)
@@ -263,7 +249,7 @@ class TestThompsonSamplingCausalBandit:
         policy = ThompsonSamplingCausalBandit(
             action_space=self.action_space,
             prior_type="normal",
-            prior_params={"mu": 0.0, "sigma": 1.0, "nu": 1.0}
+            prior_params={"mu": 0.0, "sigma": 1.0, "nu": 1.0},
         )
 
         # Update with reward
@@ -278,7 +264,7 @@ class TestThompsonSamplingCausalBandit:
         policy = ThompsonSamplingCausalBandit(
             action_space=self.action_space,
             prior_type="beta",
-            prior_params={"alpha": 2.0, "beta": 3.0}
+            prior_params={"alpha": 2.0, "beta": 3.0},
         )
 
         # Make updates
@@ -304,9 +290,7 @@ class TestContextualCausalBandit:
     def test_init(self):
         """Test initialization."""
         policy = ContextualCausalBandit(
-            action_space=self.action_space,
-            context_dim=self.context_dim,
-            alpha=2.0
+            action_space=self.action_space, context_dim=self.context_dim, alpha=2.0
         )
 
         assert policy.context_dim == self.context_dim
@@ -317,8 +301,7 @@ class TestContextualCausalBandit:
     def test_context_to_vector(self):
         """Test context conversion to vector."""
         policy = ContextualCausalBandit(
-            action_space=self.action_space,
-            context_dim=self.context_dim
+            action_space=self.action_space, context_dim=self.context_dim
         )
 
         # Test with None context
@@ -334,8 +317,7 @@ class TestContextualCausalBandit:
     def test_select_action(self):
         """Test contextual action selection."""
         policy = ContextualCausalBandit(
-            action_space=self.action_space,
-            context_dim=self.context_dim
+            action_space=self.action_space, context_dim=self.context_dim
         )
 
         context = {"feature1": 1.0, "feature2": 0.5}
@@ -345,8 +327,7 @@ class TestContextualCausalBandit:
     def test_update(self):
         """Test parameter updates."""
         policy = ContextualCausalBandit(
-            action_space=self.action_space,
-            context_dim=self.context_dim
+            action_space=self.action_space, context_dim=self.context_dim
         )
 
         context = {"feature1": 1.0, "feature2": -0.5}
@@ -365,9 +346,7 @@ class TestContextualCausalBandit:
     def test_reset(self):
         """Test policy reset."""
         policy = ContextualCausalBandit(
-            action_space=self.action_space,
-            context_dim=self.context_dim,
-            alpha=1.5
+            action_space=self.action_space, context_dim=self.context_dim, alpha=1.5
         )
 
         # Make updates

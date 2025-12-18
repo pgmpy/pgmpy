@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 
 from pgmpy.base import DAG
 from pgmpy.estimators import BaseEstimator
-from pgmpy.estimators.StructureScore import BDeu, BIC
+from pgmpy.estimators.StructureScore import BIC, BDeu
 
 
 class OnlineCausalStructureLearner(BaseEstimator):
@@ -108,7 +108,9 @@ class OnlineCausalStructureLearner(BaseEstimator):
 
         # Add intervention variables
         for var in self.action_variables:
-            observation[var] = intervention.get(var, 0)  # Default to 0 if not intervened
+            observation[var] = intervention.get(
+                var, 0
+            )  # Default to 0 if not intervened
 
         # Add context variables
         if context:
@@ -186,14 +188,19 @@ class OnlineCausalStructureLearner(BaseEstimator):
                 # Try adding edges
                 for parent in self.variables:
                     for child in self.variables:
-                        if parent != child and not current_graph.has_edge(parent, child):
+                        if parent != child and not current_graph.has_edge(
+                            parent, child
+                        ):
                             # Check if adding edge would create cycle
                             test_graph = current_graph.copy()
                             test_graph.add_edge(parent, child)
 
                             if nx.is_directed_acyclic_graph(test_graph):
                                 # Check parent limit
-                                if len(list(test_graph.predecessors(child))) <= self.max_parents:
+                                if (
+                                    len(list(test_graph.predecessors(child)))
+                                    <= self.max_parents
+                                ):
                                     score = self._calculate_score(data, test_graph)
                                     if score > best_score:
                                         best_score = score
@@ -221,7 +228,7 @@ class OnlineCausalStructureLearner(BaseEstimator):
 
             return current_graph
 
-        except Exception as e:
+        except Exception:
             # Return None if structure search fails
             return None
 

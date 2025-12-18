@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-import pandas as pd
 
 from pgmpy.base import DAG
 from pgmpy.inference.CausalInference import CausalInference
-from pgmpy.estimators import BaseEstimator
 
 
 class CausalBanditModel:
@@ -80,7 +78,9 @@ class CausalBanditModel:
         """Return the available action variables."""
         return self.action_variables.copy()
 
-    def get_valid_interventions(self, context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def get_valid_interventions(
+        self, context: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get valid intervention sets given current context.
 
@@ -108,7 +108,9 @@ class CausalBanditModel:
 
         return interventions
 
-    def simulate_intervention(self, intervention: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> float:
+    def simulate_intervention(
+        self, intervention: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+    ) -> float:
         """
         Simulate the effect of an intervention and return reward.
 
@@ -146,12 +148,10 @@ class CausalBanditModel:
         return reward
 
     def get_causal_effect(
-        self,
-        intervention: Dict[str, Any],
-        estimand: Optional[str] = None
+        self, intervention: Dict[str, Any], estimand: Optional[str] = None
     ) -> float:
         """
-        Estimate causal effect of intervention on outcome using pgmpy's causal inference.
+        Estimate causal effect of intervention on outcome using pgmpy's inference.
 
         Parameters
         ----------
@@ -181,10 +181,13 @@ class CausalBanditModel:
                     # Check if there's a causal path from var to outcome
                     try:
                         import networkx as nx
+
                         if nx.has_path(self.graph, var, self.outcome_variable):
                             # Simple linear effect - in practice this would be estimated
                             # from the structural causal model or data
-                            path_length = nx.shortest_path_length(self.graph, var, self.outcome_variable)
+                            path_length = nx.shortest_path_length(
+                                self.graph, var, self.outcome_variable
+                            )
                             # Effect diminishes with path length
                             path_effect = value * (0.5 ** (path_length - 1))
                             effect += path_effect
@@ -244,7 +247,9 @@ class CausalBanditPolicy(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update(self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """
         Update policy based on observed reward.
 
@@ -294,17 +299,17 @@ class CausalBanditLearner:
 
         # Learning history
         self.history = {
-            'actions': [],
-            'rewards': [],
-            'contexts': [],
-            'regrets': [],
-            'cumulative_regret': []
+            "actions": [],
+            "rewards": [],
+            "contexts": [],
+            "regrets": [],
+            "cumulative_regret": [],
         }
 
     def run(
         self,
         context_generator: Optional[callable] = None,
-        oracle_policy: Optional[callable] = None
+        oracle_policy: Optional[callable] = None,
     ) -> Dict[str, List]:
         """
         Run the bandit learning algorithm.
@@ -342,7 +347,7 @@ class CausalBanditLearner:
                 optimal_action = oracle_policy(context)
                 optimal_reward = self.environment.simulate_intervention(
                     self.environment.get_valid_interventions(context)[optimal_action],
-                    context
+                    context,
                 )
                 regret = optimal_reward - reward
             else:
@@ -354,11 +359,11 @@ class CausalBanditLearner:
             self.policy.update(action_idx, reward, context)
 
             # Record history
-            self.history['actions'].append(action_idx)
-            self.history['rewards'].append(reward)
-            self.history['contexts'].append(context)
-            self.history['regrets'].append(regret)
-            self.history['cumulative_regret'].append(cumulative_regret)
+            self.history["actions"].append(action_idx)
+            self.history["rewards"].append(reward)
+            self.history["contexts"].append(context)
+            self.history["regrets"].append(regret)
+            self.history["cumulative_regret"].append(cumulative_regret)
 
         return self.history
 
@@ -371,12 +376,20 @@ class CausalBanditLearner:
         dict
             Performance metrics including cumulative regret, avg reward, etc.
         """
-        if not self.history['rewards']:
+        if not self.history["rewards"]:
             return {}
 
         return {
-            'cumulative_regret': self.history['cumulative_regret'][-1] if self.history['cumulative_regret'] else 0.0,
-            'average_reward': np.mean(self.history['rewards']),
-            'total_reward': sum(self.history['rewards']),
-            'regret_per_round': self.history['cumulative_regret'][-1] / len(self.history['rewards']) if self.history['cumulative_regret'] else 0.0,
+            "cumulative_regret": (
+                self.history["cumulative_regret"][-1]
+                if self.history["cumulative_regret"]
+                else 0.0
+            ),
+            "average_reward": np.mean(self.history["rewards"]),
+            "total_reward": sum(self.history["rewards"]),
+            "regret_per_round": (
+                self.history["cumulative_regret"][-1] / len(self.history["rewards"])
+                if self.history["cumulative_regret"]
+                else 0.0
+            ),
         }

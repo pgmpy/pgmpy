@@ -4,7 +4,6 @@ import math
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-from scipy import stats
 
 from .base import CausalBanditPolicy
 
@@ -22,7 +21,7 @@ class EpsilonGreedyCausalBandit(CausalBanditPolicy):
         action_space: List[Dict[str, Any]],
         epsilon: float = 0.1,
         decay_rate: float = 0.0,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize epsilon-greedy policy.
@@ -61,7 +60,9 @@ class EpsilonGreedyCausalBandit(CausalBanditPolicy):
             # Exploit: best action so far
             return np.argmax(self.action_values)
 
-    def update(self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Update action value estimates."""
         self.action_counts[action_idx] += 1
 
@@ -85,12 +86,7 @@ class UCBCausalBandit(CausalBanditPolicy):
     with highest upper confidence bound.
     """
 
-    def __init__(
-        self,
-        action_space: List[Dict[str, Any]],
-        c: float = 1.0,
-        **kwargs
-    ):
+    def __init__(self, action_space: List[Dict[str, Any]], c: float = 1.0, **kwargs):
         """
         Initialize UCB policy.
 
@@ -127,7 +123,9 @@ class UCBCausalBandit(CausalBanditPolicy):
 
         return np.argmax(ucb_values)
 
-    def update(self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Update action value estimates."""
         self.action_counts[action_idx] += 1
 
@@ -155,7 +153,7 @@ class ThompsonSamplingCausalBandit(CausalBanditPolicy):
         action_space: List[Dict[str, Any]],
         prior_type: str = "normal",
         prior_params: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize Thompson Sampling policy.
@@ -201,19 +199,27 @@ class ThompsonSamplingCausalBandit(CausalBanditPolicy):
 
         # Sample from posterior distributions
         if self.prior_type == "beta":
-            samples = np.array([
-                np.random.beta(self.alpha[i], self.beta[i])
-                for i in range(self.n_actions)
-            ])
+            samples = np.array(
+                [
+                    np.random.beta(self.alpha[i], self.beta[i])
+                    for i in range(self.n_actions)
+                ]
+            )
         elif self.prior_type == "normal":
-            samples = np.array([
-                np.random.normal(self.mu[i], math.sqrt(self.sigma_squared[i] / self.nu[i]))
-                for i in range(self.n_actions)
-            ])
+            samples = np.array(
+                [
+                    np.random.normal(
+                        self.mu[i], math.sqrt(self.sigma_squared[i] / self.nu[i])
+                    )
+                    for i in range(self.n_actions)
+                ]
+            )
 
         return np.argmax(samples)
 
-    def update(self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Update posterior distributions."""
         if self.prior_type == "beta":
             # Assume reward is binary (0 or 1)
@@ -239,7 +245,9 @@ class ThompsonSamplingCausalBandit(CausalBanditPolicy):
             self.beta = np.full(self.n_actions, self.prior_params["beta"])
         elif self.prior_type == "normal":
             self.mu = np.full(self.n_actions, self.prior_params["mu"])
-            self.sigma_squared = np.full(self.n_actions, self.prior_params["sigma"] ** 2)
+            self.sigma_squared = np.full(
+                self.n_actions, self.prior_params["sigma"] ** 2
+            )
             self.nu = np.full(self.n_actions, self.prior_params["nu"])
 
 
@@ -255,7 +263,7 @@ class ContextualCausalBandit(CausalBanditPolicy):
         action_space: List[Dict[str, Any]],
         context_dim: int,
         alpha: float = 1.0,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize contextual policy.
@@ -291,7 +299,7 @@ class ContextualCausalBandit(CausalBanditPolicy):
                 features.append(1.0 if context[key] else 0.0)
 
         # Pad or truncate to context_dim
-        features = features[:self.context_dim]
+        features = features[: self.context_dim]
         while len(features) < self.context_dim:
             features.append(0.0)
 
@@ -315,7 +323,9 @@ class ContextualCausalBandit(CausalBanditPolicy):
 
         return np.argmax(ucb_values)
 
-    def update(self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None) -> None:
+    def update(
+        self, action_idx: int, reward: float, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Update linear model parameters."""
         x = self._context_to_vector(context)
 

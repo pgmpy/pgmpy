@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
-from pgmpy.base import DAG
 from pgmpy.bandits.online_structure_learner import OnlineCausalStructureLearner
+from pgmpy.base import DAG
 
 
 class TestOnlineCausalStructureLearner:
@@ -22,7 +22,7 @@ class TestOnlineCausalStructureLearner:
         learner = OnlineCausalStructureLearner(
             variables=self.variables,
             action_variables=self.action_variables,
-            outcome_variable=self.outcome_variable
+            outcome_variable=self.outcome_variable,
         )
 
         assert learner.variables == self.variables
@@ -39,7 +39,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         assert learner.current_graph.number_of_edges() == 2
@@ -52,7 +52,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            update_frequency=10  # Don't update during test
+            update_frequency=10,  # Don't update during test
         )
 
         # Add observation
@@ -76,7 +76,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables + ["W"],  # Extra variable
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            update_frequency=10
+            update_frequency=10,
         )
 
         intervention = {"X": 1}
@@ -95,7 +95,7 @@ class TestOnlineCausalStructureLearner:
         learner = OnlineCausalStructureLearner(
             variables=self.variables,
             action_variables=self.action_variables,
-            outcome_variable=self.outcome_variable
+            outcome_variable=self.outcome_variable,
         )
 
         graph = learner.get_current_graph()
@@ -110,7 +110,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         # Test parents of Z
@@ -133,7 +133,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         # Test children of X
@@ -156,7 +156,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         # Test direct path
@@ -178,7 +178,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         # Test targets for Z (should include X since X->Y->Z)
@@ -197,7 +197,7 @@ class TestOnlineCausalStructureLearner:
             variables=self.variables,
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
-            initial_graph=initial_graph
+            initial_graph=initial_graph,
         )
 
         # Add some observations
@@ -219,7 +219,7 @@ class TestOnlineCausalStructureLearner:
             action_variables=self.action_variables,
             outcome_variable=self.outcome_variable,
             update_frequency=5,  # Update every 5 observations
-            score_type="bic"
+            score_type="bic",
         )
 
         # Generate synthetic data with clear structure

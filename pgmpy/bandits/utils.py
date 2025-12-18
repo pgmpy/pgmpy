@@ -21,8 +21,7 @@ class CausalBanditMetrics:
 
     @staticmethod
     def compute_regret(
-        rewards: List[float],
-        optimal_rewards: List[float]
+        rewards: List[float], optimal_rewards: List[float]
     ) -> Tuple[List[float], List[float]]:
         """
         Compute instantaneous and cumulative regret.
@@ -46,9 +45,7 @@ class CausalBanditMetrics:
 
     @staticmethod
     def compute_simple_regret(
-        action_values: np.ndarray,
-        optimal_action: int,
-        selected_actions: List[int]
+        action_values: np.ndarray, optimal_action: int, selected_actions: List[int]
     ) -> List[float]:
         """
         Compute simple regret (regret of best action so far).
@@ -83,7 +80,7 @@ class CausalBanditMetrics:
     def plot_regret(
         regret_curves: Dict[str, List[float]],
         title: str = "Cumulative Regret",
-        save_path: Optional[str] = None
+        save_path: Optional[str] = None,
     ) -> None:
         """
         Plot regret curves for multiple algorithms.
@@ -109,7 +106,7 @@ class CausalBanditMetrics:
         plt.grid(True, alpha=0.3)
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
         plt.show()
 
     @staticmethod
@@ -117,7 +114,7 @@ class CausalBanditMetrics:
         reward_curves: Dict[str, List[float]],
         window_size: int = 100,
         title: str = "Average Reward",
-        save_path: Optional[str] = None
+        save_path: Optional[str] = None,
     ) -> None:
         """
         Plot smoothed reward curves.
@@ -147,13 +144,12 @@ class CausalBanditMetrics:
         plt.grid(True, alpha=0.3)
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
         plt.show()
 
     @staticmethod
     def analyze_action_distribution(
-        actions: List[int],
-        action_names: Optional[List[str]] = None
+        actions: List[int], action_names: Optional[List[str]] = None
     ) -> Dict[int, float]:
         """
         Analyze distribution of selected actions.
@@ -185,8 +181,7 @@ class CausalBanditMetrics:
 
     @staticmethod
     def compute_confidence_intervals(
-        data: List[List[float]],
-        confidence_level: float = 0.95
+        data: List[List[float]], confidence_level: float = 0.95
     ) -> Tuple[List[float], List[float], List[float]]:
         """
         Compute confidence intervals across multiple runs.
@@ -218,8 +213,7 @@ class CausalBanditMetrics:
 
     @staticmethod
     def causal_effect_mse(
-        estimated_effects: List[float],
-        true_effects: List[float]
+        estimated_effects: List[float], true_effects: List[float]
     ) -> float:
         """
         Compute MSE for causal effect estimation.
@@ -239,13 +233,14 @@ class CausalBanditMetrics:
         if len(estimated_effects) != len(true_effects):
             raise ValueError("Effect lists must have same length")
 
-        mse = np.mean([(est - true) ** 2 for est, true in zip(estimated_effects, true_effects)])
+        mse = np.mean(
+            [(est - true) ** 2 for est, true in zip(estimated_effects, true_effects)]
+        )
         return float(mse)
 
     @staticmethod
     def intervention_efficiency(
-        actions: List[int],
-        outcome_variable_actions: List[int]
+        actions: List[int], outcome_variable_actions: List[int]
     ) -> float:
         """
         Compute efficiency of intervention selection.
@@ -265,14 +260,14 @@ class CausalBanditMetrics:
         if not actions:
             return 0.0
 
-        efficient_actions = sum(1 for action in actions if action in outcome_variable_actions)
+        efficient_actions = sum(
+            1 for action in actions if action in outcome_variable_actions
+        )
         return efficient_actions / len(actions)
 
 
 def create_synthetic_environment(
-    n_variables: int = 5,
-    n_actions: int = 3,
-    seed: Optional[int] = None
+    n_variables: int = 5, n_actions: int = 3, seed: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Create a synthetic causal bandit environment for testing.
@@ -300,6 +295,7 @@ def create_synthetic_environment(
 
     # Generate random DAG
     from pgmpy.base import DAG
+
     graph = DAG()
     graph.add_nodes_from(variables)
 
@@ -328,7 +324,7 @@ def run_bandit_comparison(
     policies: Dict[str, Any],
     n_rounds: int = 1000,
     n_runs: int = 10,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
 ) -> Dict[str, Dict[str, List]]:
     """
     Run comparison of multiple bandit policies.
@@ -357,11 +353,7 @@ def run_bandit_comparison(
     results = {}
 
     for policy_name, policy_config in policies.items():
-        policy_results = {
-            "rewards": [],
-            "regrets": [],
-            "actions": []
-        }
+        policy_results = {"rewards": [], "regrets": [], "actions": []}
 
         for run in range(n_runs):
             # Initialize policy and run

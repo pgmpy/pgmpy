@@ -1,9 +1,9 @@
-from .base import CausalBanditModel, CausalBanditPolicy, CausalBanditLearner
+from .base import CausalBanditLearner, CausalBanditModel, CausalBanditPolicy
 from .causal_bandits import (
-    EpsilonGreedyCausalBandit,
-    UCBCausalBandit,
-    ThompsonSamplingCausalBandit,
     ContextualCausalBandit,
+    EpsilonGreedyCausalBandit,
+    ThompsonSamplingCausalBandit,
+    UCBCausalBandit,
 )
 from .online_structure_learner import OnlineCausalStructureLearner
 from .utils import CausalBanditMetrics
