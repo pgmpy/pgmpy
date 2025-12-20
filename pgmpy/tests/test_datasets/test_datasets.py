@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "apple_watch_fitbit",
     "auto_mpg",
     "boston_housing",
+    "cities",
     "lead",
     "spartina",
     "goldberg",
@@ -104,7 +105,7 @@ def test_load_dataset():
     reason="test only if requests is installed",
 )
 def test_load_covariance_dataset():
-    for name in ["goldberg", "spartina", "lead"]:
+    for name in ["goldberg", "spartina", "lead", "cities"]:
         dataset = load_dataset(name)
         assert dataset.name == name
         assert dataset.data.shape == (
