@@ -8,7 +8,7 @@ class Cities(_CovarianceMixin, _BaseDataset):
 
     tags = {
         "n_variables": 7,
-        "n_samples": 100,  # Typical sample size for covariance matrix datasets
+        "n_samples": 164,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
