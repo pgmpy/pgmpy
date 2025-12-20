@@ -34,6 +34,7 @@ from ._student_performance import StudentPerformance  # noqa: F401
 from ._pima_diabetes import PimaDiabetes  # noqa: F401
 from ._superconductivity import Superconductivity  # noqa: F401
 from ._seoul_bike import SeoulBike  # noqa: F401
+from ._cities import Cities  # noqa: F401
 from ._wine_quality import (  # noqa: F401
     WineQualityWhite,
     WineQualityRed,
