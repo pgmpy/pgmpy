@@ -13,7 +13,7 @@ jobs:
       - name: python environment step
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Checkout code
         uses: actions/checkout@v5
@@ -23,7 +23,7 @@ jobs:
       - name: install dependencies
         run: |
           pip install --upgrade pip
-          pip install .[tests] --no-cache-dir
+          pip install .[all,tests] --no-cache-dir
 
       - name: Get changed files
         id: changed-files
