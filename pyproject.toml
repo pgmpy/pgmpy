@@ -50,7 +50,7 @@ optional = [
   "pygraphviz",
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
-  "requests>2.35",
+  "requests>=2.0",
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -88,6 +88,7 @@ all = [
   "xgboost>=2.0.3",
   "litellm==1.61.15",
   "pyparsing>=3.0",
+  "requests>=2.0",
 ]
 
 [project.urls]
