@@ -3,13 +3,14 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class Adult(_BaseDataset):
-    name = "adult"
+class CreditApproval(_BaseDataset):
+    name = "credit_approval"
+
     tags = {
-        "n_variables": 15,
-        "n_samples": 32561,
+        "n_variables": 16,
+        "n_samples": 690,
         "has_ground_truth": False,
-        "has_expert_knowledge": True,
+        "has_expert_knowledge": False,
         "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
@@ -19,8 +20,8 @@ class Adult(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/adult/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/credit-approval/"
 
-    data_url = base_url + "data/adult.data.mixed.maximum.50.json.txt"
+    data_url = base_url + "data/crx.data.mixed.maximum.14.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/adult.knowledge.txt"
+    expert_knowledge_url = None

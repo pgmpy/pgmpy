@@ -13,12 +13,39 @@ ALL_DATASETS = [
     "adult",
     "airfoil",
     "algeria_forest",
+    "apple_watch_fitbit",
+    "auto_mpg",
+    "boston_housing",
+    "cities",
+    "lead",
+    "spartina",
+    "goldberg",
+    "hitters",
+    "pittsburgh_bridges",
+    "residential_building",
+    "credit_approval",
+    "iq_brain_size",
+    "contraceptive_method",
+    "myocardial_infarction",
+    "htru2",
+    "dry_bean",
+    "cystic_fibrosis",
+    "south_german_credit",
+    "pima_diabetes",
+    "galton_stature",
     "sachs_mixed",
     "sachs_continuous",
     "sachs_discrete",
     "sachs_continuous_logscale",
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
+    "superconductivity",
+    "yacht_hydrodynamics",
+    "student_performance",
+    "seoul_bike",
+    "wine_quality_red",
+    "wine_quality_white",
+    "wine_quality_red_white_mixed",
 ]
 
 
@@ -49,9 +76,13 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
+        assert dataset.data.shape == (
+            dataset.tags["n_samples"],
+            dataset.tags["n_variables"],
+        )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
@@ -64,6 +95,25 @@ def test_load_dataset():
             assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
         else:
             assert dataset.expert_knowledge is None
+
+        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_missing_data"]:
+            assert dataset.data.isna().any().any()
+
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("requests", severity="none"),
+    reason="test only if requests is installed",
+)
+def test_load_covariance_dataset():
+    for name in ["goldberg", "spartina", "lead", "cities"]:
+        dataset = load_dataset(name)
+        assert dataset.name == name
+        assert dataset.data.shape == (
+            dataset.tags["n_samples"],
+            dataset.tags["n_variables"],
+        )
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert isinstance(dataset.tags, dict)
 
 
 @pytest.mark.skipif(
