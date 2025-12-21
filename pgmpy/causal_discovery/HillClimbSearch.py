@@ -182,7 +182,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         self : HillClimbSearch
             Returns the instance with the learned causal graph.
         """
-        variables = list(X.columns)
+        self.variables_ = list(X.columns)
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
@@ -192,10 +192,10 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
             start_dag = DAG()
-            start_dag.add_nodes_from(variables)
+            start_dag.add_nodes_from(self.variables_)
         elif not isinstance(self.start_dag, DAG) or not set(
             self.start_dag.nodes()
-        ) == set(variables):
+        ) == set(self.variables_):
             raise ValueError(
                 "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
             )
@@ -243,7 +243,6 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations(
                     model=current_model,
-                    variables=variables,
                     score=score_fn,
                     structure_score=score.structure_prior_ratio,
                     tabu_list=tabu_list,
@@ -277,10 +276,9 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
 
         return self
 
-    @staticmethod
     def _legal_operations(
+        self,
         model: DAG,
-        variables: List[Hashable],
         score: Callable[[Any, List[Any]], float],
         structure_score: Callable[[str], float],
         tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]],
@@ -288,61 +286,21 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         forbidden_edges: List[Tuple[Hashable, Hashable]],
         required_edges: List[Tuple[Hashable, Hashable]],
     ) -> Generator[Tuple[Tuple[str, Tuple[Hashable, Hashable]], float], None, None]:
+        """Generates a list of legal (= not in tabu_list) graph modifications
+        for a given model, together with their score changes. Possible graph modifications:
+        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
+        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
+        If a number `max_indegree` is provided, only modifications that keep the number
+        of parents for each node below `max_indegree` are considered. A list of
+        edges can optionally be passed as `forbidden_edges` or `required_edges` to exclude those
+        edges or to force them to be present in the model, respectively.
         """
-        Generates a list of legal (= not in tabu_list) graph modifications
-        for a given model, together with their score changes.
 
-        Possible graph modifications:
-        (1) add, (2) remove, or (3) flip a single edge.
-
-        For details on scoring see Koller & Friedman, Probabilistic Graphical
-        Models, Section 18.4.3.3 (page 818).
-
-        If a number `max_indegree` is provided, only modifications that keep
-        the number of parents for each node below `max_indegree` are considered.
-
-        A list of edges can optionally be passed as `forbidden_edges` or
-        `required_edges` to exclude those edges or to force them to be present
-        in the model, respectively.
-
-        Parameters
-        ----------
-        model : DAG
-            The current graph model.
-
-        variables : list
-            List of all variable names in the dataset.
-
-        score : callable
-            The local scoring function.
-
-        structure_score : callable
-            The structure prior ratio function.
-
-        tabu_list : deque
-            List of recently performed operations that cannot be reversed.
-
-        max_indegree : int
-            Maximum number of parents allowed for any node.
-
-        forbidden_edges : list
-            Edges that are not allowed in the model.
-
-        required_edges : list
-            Edges that must be present in the model.
-
-        Yields
-        ------
-        tuple
-            A tuple of (operation, score_delta) where operation is a tuple of
-            (operation_type, (source, target)) and score_delta is the change
-            in score if this operation is applied.
-        """
-        tabu_set = set(tabu_list)
+        tabu_list = set(tabu_list)
 
         # Step 1: Get all legal operations for adding edges.
         potential_new_edges = (
-            set(permutations(variables, 2))
+            set(permutations(self.variables_, 2))
             - set(model.edges())
             - set([(Y, X) for (X, Y) in model.edges()])
         )
@@ -351,7 +309,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
             # Check if adding (X, Y) will create a cycle.
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
-                if (operation not in tabu_set) and ((X, Y) not in forbidden_edges):
+                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if len(new_parents) <= max_indegree:
@@ -362,7 +320,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
-            if (operation not in tabu_set) and ((X, Y) not in required_edges):
+            if (operation not in tabu_list) and ((X, Y) not in required_edges):
                 old_parents = model.get_parents(Y)
                 new_parents = [var for var in old_parents if var != X]
                 score_delta = score(Y, new_parents) - score(Y, old_parents)
@@ -377,7 +335,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
             ):
                 operation = ("flip", (X, Y))
                 if (
-                    ((operation not in tabu_set) and ("flip", (Y, X)) not in tabu_set)
+                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
                     and ((X, Y) not in required_edges)
                     and ((Y, X) not in forbidden_edges)
                 ):
