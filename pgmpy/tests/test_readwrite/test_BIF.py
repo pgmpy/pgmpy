@@ -12,6 +12,10 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import BIFReader, BIFWriter
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFReader(unittest.TestCase):
     def setUp(self):
         self.reader = BIFReader(
@@ -332,6 +336,10 @@ class TestBIFReader(unittest.TestCase):
             self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBIFWriter(unittest.TestCase):
     def setUp(self):
         variables = [
@@ -523,7 +531,7 @@ probability ( light-on | family-out ) {
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestBIFReaderTorch(unittest.TestCase):
@@ -850,7 +858,7 @@ class TestBIFReaderTorch(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestBIFWriterTorch(unittest.TestCase):

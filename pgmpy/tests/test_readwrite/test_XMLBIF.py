@@ -130,6 +130,10 @@ TEST_FILE = """<?xml version="1.0"?>
 </BIF>"""
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethods(unittest.TestCase):
     def setUp(self):
         self.reader = XMLBIFReader(string=TEST_FILE)
@@ -233,6 +237,10 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     def setUp(self):
         with open("dog_problem.xml", "w") as fout:
@@ -319,6 +327,10 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         os.remove("dog_problem.xml")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
         reader = XMLBIFReader(string=TEST_FILE)
@@ -394,7 +406,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
@@ -484,7 +496,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
@@ -577,7 +589,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXMLBIFWriterMethodsString(unittest.TestCase):

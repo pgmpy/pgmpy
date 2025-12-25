@@ -10,6 +10,10 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestUAIReader(unittest.TestCase):
     def setUp(self):
         string = """MARKOV
@@ -132,6 +136,10 @@ class TestUAIReader(unittest.TestCase):
         self.assertDictEqual(dict(model.nodes), node_expected)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestUAIWriter(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
@@ -270,7 +278,7 @@ class TestUAIWriter(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestUAIReaderTorch(unittest.TestCase):
@@ -401,7 +409,7 @@ class TestUAIReaderTorch(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+    _check_soft_dependencies(["pyro-ppl", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestUAIWriterTorch(unittest.TestCase):

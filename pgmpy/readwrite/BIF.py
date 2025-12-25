@@ -4,26 +4,8 @@ from itertools import product
 from string import Template
 
 import numpy as np
-import pyparsing as pp
 from joblib import Parallel, delayed
-
-try:
-    from pyparsing import (
-        CharsNotIn,
-        Group,
-        OneOrMore,
-        Optional,
-        Suppress,
-        Word,
-        ZeroOrMore,
-        cppStyleComment,
-        nums,
-        printables,
-    )
-except ImportError as e:
-    raise ImportError(
-        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    ) from None
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
@@ -65,6 +47,14 @@ class BIFReader(object):
     """
 
     def __init__(self, path=None, string=None, include_properties=False, n_jobs=1):
+        msg = (
+            "Error in UAIReader: 'pyparsing' is required to use UAIReader. "
+            "Please install pyparsing using 'pip install pyparsing', "
+            "or the full set of pgmpy soft dependencies using "
+            "'pip install pgmpy[optional]'"
+        )
+        _check_soft_dependencies("pyparsing", msg=msg)
+
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
@@ -85,6 +75,8 @@ class BIFReader(object):
             self.network = self.network.replace('"', " ")
 
         if "/*" in self.network or "//" in self.network:
+            from pyparsing import cppStyleComment
+
             self.network = cppStyleComment.suppress().transformString(
                 self.network
             )  # removing comments from the file
@@ -108,6 +100,18 @@ class BIFReader(object):
         """
         A method that returns variable grammar
         """
+        import pyparsing as pp
+        from pyparsing import (
+            CharsNotIn,
+            Group,
+            Optional,
+            Suppress,
+            Word,
+            ZeroOrMore,
+            nums,
+            printables,
+        )
+
         # Defining an expression for valid word
         word_expr = Word(pp.unicode.alphanums + "_" + "-" + ".")
         word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
@@ -137,6 +141,15 @@ class BIFReader(object):
         """
         A method that returns probability grammar
         """
+        import pyparsing as pp
+        from pyparsing import (
+            OneOrMore,
+            Optional,
+            Suppress,
+            Word,
+            nums,
+            printables,
+        )
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
         word_expr = (
@@ -185,6 +198,9 @@ class BIFReader(object):
         >>> reader.network_name()
         'Dog-Problem'
         """
+        import pyparsing as pp
+        from pyparsing import Suppress, Word
+
         start = self.network.find("network")
         end = self.network.find("}\n", start)
         # Creating a network attribute

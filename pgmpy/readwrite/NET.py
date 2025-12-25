@@ -3,28 +3,9 @@ from math import prod
 from string import Template
 
 import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.global_vars import logger
-
-try:
-    from pyparsing import (
-        CharsNotIn,
-        Group,
-        OneOrMore,
-        Optional,
-        Suppress,
-        Word,
-        ZeroOrMore,
-        alphanums,
-        alphas,
-        cppStyleComment,
-        nums,
-        printables,
-    )
-except ImportError as e:
-    raise ImportError(
-        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    ) from None
 
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -55,6 +36,14 @@ class NETWriter(object):
     """
 
     def __init__(self, model):
+        msg = (
+            "Error in UAIReader: 'pyparsing' is required to use UAIReader. "
+            "Please install pyparsing using 'pip install pyparsing', "
+            "or the full set of pgmpy soft dependencies using "
+            "'pip install pgmpy[optional]'"
+        )
+        _check_soft_dependencies("pyparsing", msg=msg)
+
         if not isinstance(model, DiscreteBayesianNetwork):
             raise TypeError("model must be an instance of DiscreteBayesianNetwork")
 
@@ -385,6 +374,8 @@ class NETReader:
         self.include_properties = include_properties
 
         if "/*" in self.network or "//" in self.network:
+            from pyparsing import cppStyleComment
+
             self.network = cppStyleComment.suppress().transformString(
                 self.network
             )  # removing comments from the file
@@ -414,6 +405,18 @@ class NETReader:
         """
         A method that returns variable grammar
         """
+        from pyparsing import (
+            CharsNotIn,
+            Group,
+            Optional,
+            Suppress,
+            Word,
+            ZeroOrMore,
+            alphanums,
+            alphas,
+            printables,
+        )
+
         # Defining an expression for valid word
         word_expr = Word(alphanums + "_" + "-")("nodename")
         name_expr = Suppress("node ") + word_expr + Optional(Suppress("{"))
@@ -447,6 +450,15 @@ class NETReader:
         """
         A method that returns probability grammar
         """
+        from pyparsing import (
+            OneOrMore,
+            Optional,
+            Suppress,
+            Word,
+            ZeroOrMore,
+            alphanums,
+            nums,
+        )
 
         word_expr = Word(alphanums + "-" + "_") + Suppress(Optional("|"))
 
@@ -477,6 +489,7 @@ class NETReader:
         >>> reader.get_network_name()
         False
         """
+        from pyparsing import Suppress, Word, alphanums
 
         start = self.network.find("net")
         end = self.network.find("}\n", start)
