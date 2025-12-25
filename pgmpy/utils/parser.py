@@ -291,7 +291,7 @@ def parse_dagitty(lines):
     lines = split_at_betas(lines)
     cleaned_dag = False
     while True:
-        if not lines:  # === MODIFICATION ===: Handle empty input
+        if not lines:
             break
         first_line = lines.pop(0).strip()
         if first_line:
@@ -310,7 +310,7 @@ def parse_dagitty(lines):
                 break
 
     while True:
-        if not lines:  # === MODIFICATION ===: Handle empty input
+        if not lines:
             break
         last_line = lines.pop().strip()
         if last_line:
