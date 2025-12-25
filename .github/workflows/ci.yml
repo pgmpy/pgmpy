@@ -1,4 +1,4 @@
-name: Build and Run Test Suite
+name: Test
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -8,7 +8,7 @@ on: [push, pull_request]
 
 jobs:
   test-nosoftdeps:
-    name: Tests with soft dependencies - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
+    name: only core deps - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -56,7 +56,7 @@ jobs:
         run: pytest --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: Test with full dependencies - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    name: with optional deps - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
