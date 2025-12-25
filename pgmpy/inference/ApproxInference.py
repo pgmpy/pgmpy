@@ -74,16 +74,6 @@ class ApproxInference(object):
                 warn(msg, FutureWarning)
                 self._model = model
 
-        # handle defaults
-        if evidence is None:
-            self._evidence = dict()
-        else:
-            self._evidence = evidence
-        if virtual_evidence is None:
-            self._virtual_evidence = dict()
-        else:
-            self._virtual_evidence = virtual_evidence
-
     @staticmethod
     def _get_factor_from_df(df, state_names):
         """
@@ -240,8 +230,14 @@ class ApproxInference(object):
             )
         model.check_model()
 
+        # handle defaults
         if variables is None:
             variables = list(model.nodes)
+
+        if evidence is None:
+            evidence = dict()
+        if virtual_evidence is None:
+            virtual_evidence = dict()
 
         final_args = self._handle_deprec_args(args, kwargs)
 
