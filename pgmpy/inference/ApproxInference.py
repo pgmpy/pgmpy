@@ -258,7 +258,7 @@ class ApproxInference(object):
             }
 
             # default for time_slices in DBN
-            if isinstance(self.model, DynamicBayesianNetwork):
+            if isinstance(model, DynamicBayesianNetwork):
                 max_time_slices = 0
                 for var in variables:
                     if var[1] > max_time_slices:
