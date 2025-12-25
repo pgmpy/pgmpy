@@ -221,12 +221,12 @@ class ApproxInference(object):
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.inference import ApproxInference
         >>> model = get_example_model("alarm")
-        >>> infer = ApproxInference(model)
-        >>> infer.query(variables=["HISTORY"])
+        >>> infer = ApproxInference()
+        >>> infer.query(model, variables=["HISTORY"])
         <DiscreteFactor representing phi(HISTORY:2) at 0x7f92d9f5b910>
-        >>> infer.query(variables=["HISTORY", "CVP"], joint=True)
+        >>> infer.query(model, variables=["HISTORY", "CVP"], joint=True)
         <DiscreteFactor representing phi(HISTORY:2, CVP:3) at 0x7f92d9f77610>
-        >>> infer.query(variables=["HISTORY", "CVP"], joint=False)
+        >>> infer.query(model, variables=["HISTORY", "CVP"], joint=False)
         {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x7f92dc61eb50>,
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
