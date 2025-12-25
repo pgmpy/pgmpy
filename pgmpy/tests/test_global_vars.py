@@ -4,10 +4,10 @@ import unittest
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-torch = _safe_import("torch")
-
 from pgmpy import config
 from pgmpy.global_vars import DuplicateFilter
+
+torch = _safe_import("torch")
 
 
 class TestConfig:

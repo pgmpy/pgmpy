@@ -4,10 +4,10 @@ import numpy as np
 import numpy.testing as npt
 from skbase.utils.dependencies import _safe_import
 
-torch = _safe_import("torch")
-
 from pgmpy import config
 from pgmpy.utils import optimize, pinverse
+
+torch = _safe_import("torch")
 
 
 class TestOptimize(unittest.TestCase):

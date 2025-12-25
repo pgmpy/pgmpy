@@ -1,12 +1,12 @@
-## Redefines function for pytorch and numpy backends, so that they have same behavior
+"""Common API for torch and numpy backends."""
 from copy import deepcopy
 
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-torch = _safe_import("torch")
-
 from pgmpy import config
+
+torch = _safe_import("torch")
 
 
 def _is_torch_tensor(obj):
