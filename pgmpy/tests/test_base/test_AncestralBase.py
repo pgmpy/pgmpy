@@ -264,17 +264,27 @@ class TestAncestralBase:
         graph.outcomes = {"B", "C"}
         dag_str = graph.to_dagitty()
 
-        assert dag_str == "ancestralbase {\nA -> B\nB -> C\nB [outcomes]\nC [outcomes]\n}"
+        assert (
+            dag_str == "ancestralbase {\nA -> B\nB -> C\nB [outcomes]\nC [outcomes]\n}"
+        )
 
     def test_to_dagitty_complex(self):
-        graph = AncestralBase([
-            ("A", "B", "o", ">"), ("B", "C", "-", ">"),
-            ("C", "D", ">", ">"), ("C", "E", "o", "o")])
+        graph = AncestralBase(
+            [
+                ("A", "B", "o", ">"),
+                ("B", "C", "-", ">"),
+                ("C", "D", ">", ">"),
+                ("C", "E", "o", "o"),
+            ]
+        )
         graph.outcomes = {"D", "E"}
         graph.latents = {"A"}
         dag_str = graph.to_dagitty()
 
-        assert dag_str == "ancestralbase {\nA @-> B\nB -> C\nC <-> D\nC @-@ E\nD [outcomes]\nE [outcomes]\nA [latents]\n}"
+        assert (
+            dag_str
+            == "ancestralbase {\nA @-> B\nB -> C\nC <-> D\nC @-@ E\nD [outcomes]\nE [outcomes]\nA [latents]\n}"
+        )
 
     def test_to_dagitty_empty(self):
         graph = AncestralBase()
