@@ -80,7 +80,10 @@ def _all_objects_cached(module_name, obj_type="all"):
         elif obj_type == "classes":
             get_members_fn = inspect.isclass
         elif obj_type == "all":
-            get_members_fn = lambda x: inspect.isfunction(x) or inspect.isclass(x)
+
+            def get_members_fn(x):
+                return inspect.isfunction(x) or inspect.isclass(x)
+
         else:
             raise ValueError(f"Unknown obj_type: {obj_type}")
 
