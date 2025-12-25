@@ -2,8 +2,7 @@ import logging
 import unittest
 
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
-from pgmpy.utils._safe_import import _safe_import
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 torch = _safe_import("torch")
 
