@@ -1,4 +1,5 @@
 import itertools
+from warnings import warn
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
@@ -11,7 +12,24 @@ class ApproxInference(object):
 
     Parameters
     ----------
-    model: Instance of pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DynamicBayesianNetwork
+    n_samples: int
+        The number of samples to generate for computing the distributions. Higher `n_samples`
+        results in more accurate results at the cost of more computation time.
+
+    samples: pd.DataFrame (default: None)
+        If provided, uses these samples to compute the distribution instead
+        of generating samples. `samples` **must** conform with the provided
+        `evidence` and `virtual_evidence`.
+
+    state_names: dict (default: None)
+        A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+        If None, inferred from the data but is possible that the final distribution misses some states.
+
+    show_progress: boolean (default: True)
+        If True, shows a progress bar when generating samples.
+
+    seed: int (default: None)
+        Sets the seed for the random generators.
 
     Examples
     --------
@@ -20,13 +38,51 @@ class ApproxInference(object):
     >>> infer = ApproxInference(model)
     """
 
-    def __init__(self, model):
-        if not isinstance(model, (DiscreteBayesianNetwork, DynamicBayesianNetwork)):
-            raise ValueError(
-                f"model should either be a Bayesian Network or Dynamic Bayesian Network. Got {type(model)}."
-            )
-        model.check_model()
-        self.model = model
+    def __init__(
+        self,
+        *args,
+        n_samples=int(1e4),
+        samples=None,
+        joint=True,
+        state_names=None,
+        show_progress=True,
+        seed=None,
+        **kwargs,
+    ):
+        self.n_samples = n_samples
+        self.samples = samples
+        self.joint = joint
+        self.state_names = state_names
+        self.show_progress = show_progress
+        self.seed = seed
+
+        msg = (
+            "Passing model to __init__ of inference classes is deprecated, "
+            "and will raise an exception in pgmpy 2.0. "
+            "Please pass model an argument to query."
+        )
+
+        if len(args) > 0:
+            self._model = args[0]
+            warn(msg, FutureWarning)
+        else:
+            self._model = None
+
+        if kwargs is not None:
+            model = kwargs.get("model", None)
+            if model is not None:
+                warn(msg, FutureWarning)
+                self._model = model
+
+        # handle defaults
+        if evidence is None:
+            self._evidence = dict()
+        else:
+            self._evidence = evidence
+        if virtual_evidence is None:
+            self._virtual_evidence = dict()
+        else:
+            self._virtual_evidence = virtual_evidence
 
     @staticmethod
     def _get_factor_from_df(df, state_names):
@@ -85,35 +141,57 @@ class ApproxInference(object):
                 for var in variables
             }
 
+    def _handle_deprec_args(self, args, kwargs):
+        """Utility to handle deprecated args for query methods."""
+
+        msg = (
+            "Passing parameters to query method of inference algorithms"
+            " is deprecated, and will raise an exception in pgmpy 2.0. "
+            "Please pass parameters to __init__ of inference class.",
+            FutureWarning,
+        )
+        defaults = {
+            "n_samples": self.n_samples,
+            "samples": self.samples,
+            "state_names": self.state_names,
+            "show_progress": self.show_progress,
+            "seed": self.seed,
+        }
+        var_names = [
+            "n_samples",
+            "samples",
+            "state_names",
+            "show_progress",
+            "seed",
+        ]
+        # handle deprecated args
+        from pgmpy.utils._deprecation import _handle_deprec_args
+
+        final_args = _handle_deprec_args(args, kwargs, var_names, defaults, msg)
+        return final_args
+
     def query(
         self,
-        variables,
-        n_samples=int(1e4),
-        samples=None,
+        *args,
+        model=None,
+        variables=None,
         evidence=None,
         virtual_evidence=None,
         joint=True,
-        state_names=None,
-        show_progress=True,
-        seed=None,
+        **kwargs,
     ):
-        """
+        """Query the probability distribution from model, for variables.
+
         Method for doing approximate inference based on sampling in Bayesian
         Networks and Dynamic Bayesian Networks.
 
         Parameters
         ----------
-        variables: list
-            List of variables for which the probability distribution needs to be calculated.
+        model: Instance of models.DiscreteBayesianNetwork or DynamicBayesianNetwork
+            The probabilistic graphical model to do inference on.
 
-        n_samples: int
-            The number of samples to generate for computing the distributions. Higher `n_samples`
-            results in more accurate results at the cost of more computation time.
-
-        samples: pd.DataFrame (default: None)
-            If provided, uses these samples to compute the distribution instead
-            of generating samples. `samples` **must** conform with the provided
-            `evidence` and `virtual_evidence`.
+        variables: list, optional, default=all variables in the model
+            List of variables to calculate the probability distribution for.
 
         evidence: dict (default: None)
             The observed values. A dict key, value pair of the form {var: state_name}.
@@ -122,20 +200,21 @@ class ApproxInference(object):
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
 
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
-        show_progress: boolean (default: True)
-            If True, shows a progress bar when generating samples.
-
-        seed: int (default: None)
-            Sets the seed for the random generators.
+        joint: boolean, optional, default=True
+            If joint=True, computes the joint distribution over `variables`.
+            Else, returns a dict with marginal distribution of each variable in
+            `variables`.
 
         Returns
         -------
-        Probability distribution: pgmpy.factors.discrete.TabularCPD
+        Probability distribution or list thereof, of type factors.discrete.TabularCPD
             The queried probability distribution.
+
+            * if `joint=True`, returns a single TabularCPD representing
+              the joint distribution
+            * if `joint=False`, returns a dict of TabularCPDs, these represent
+              marginal distributions of each variable in `variables`,
+              in the same order.
 
         Examples
         --------
@@ -151,48 +230,60 @@ class ApproxInference(object):
         {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x7f92dc61eb50>,
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
+        if model is None and self._model is not None:
+            model = self._model
+
+        if not isinstance(model, (DiscreteBayesianNetwork, DynamicBayesianNetwork)):
+            raise ValueError(
+                f"model should either be a DiscreteBayesianNetwork "
+                f"or a DynamicBayesianNetwork. Got {type(model)}."
+            )
+        model.check_model()
+
+        if variables is None:
+            variables = list(model.nodes)
+
+        final_args = self._handle_deprec_args(args, kwargs)
+
+        n_samples = final_args["n_samples"]
+        samples = final_args["samples"]
+        state_names = final_args["state_names"]
+        show_progress = final_args["show_progress"]
+        seed = final_args["seed"]
+
         # Step 1: If samples are not provided, generate samples for the query
         if samples is None:
-            if isinstance(self.model, DiscreteBayesianNetwork):
-                samples = self.model.simulate(
-                    n_samples=n_samples,
-                    evidence=evidence,
-                    virtual_evidence=virtual_evidence,
-                    seed=seed,
-                    show_progress=show_progress,
-                )
-            elif isinstance(self.model, DynamicBayesianNetwork):
-                if evidence is None:
-                    evidence = dict()
-                if virtual_evidence is None:
-                    virtual_evidence = dict()
+            simulate_kwargs = {
+                "n_samples": n_samples,
+                "evidence": evidence,
+                "virtual_evidence": virtual_evidence,
+                "show_progress": show_progress,
+                "seed": seed,
+            }
 
+            # default for time_slices in DBN
+            if isinstance(self.model, DynamicBayesianNetwork):
                 max_time_slices = 0
                 for var in variables:
                     if var[1] > max_time_slices:
                         max_time_slices = var[1]
-                for var, state in evidence.items():
+                for var, _ in evidence.items():
                     if var[1] > max_time_slices:
                         max_time_slices = var[1]
                 for cpd in virtual_evidence:
                     if cpd.variable[1] > max_time_slices:
                         max_time_slices = cpd.variable[2]
-                samples = self.model.simulate(
-                    n_samples=n_samples,
-                    n_time_slices=max_time_slices + 1,
-                    evidence=evidence,
-                    virtual_evidence=virtual_evidence,
-                    show_progress=show_progress,
-                    seed=seed,
-                )
+                simulate_kwargs["time_slices"] = max_time_slices + 1
+
+            samples = model.simulate(**simulate_kwargs)
 
         # Step 2: If state_names is None, infer it from samples.
         if state_names is None:
-            if isinstance(self.model, DiscreteBayesianNetwork):
+            if isinstance(model, DiscreteBayesianNetwork):
                 state_names = {
                     var: list(samples.loc[:, var].unique()) for var in variables
                 }
-            elif isinstance(self.model, DynamicBayesianNetwork):
+            elif isinstance(model, DynamicBayesianNetwork):
                 state_names = {
                     var: list(samples.loc[:, [var]].iloc[:, 0].unique())
                     for var in variables
@@ -203,34 +294,28 @@ class ApproxInference(object):
             samples, variables=variables, state_names=state_names, joint=joint
         )
 
-    def map_query(
+    def query(
         self,
-        variables,
-        n_samples=int(1e4),
-        samples=None,
+        *args,
+        model=None,
+        variables=None,
         evidence=None,
         virtual_evidence=None,
-        state_names=None,
-        show_progress=True,
-        seed=None,
+        joint=True,
+        **kwargs,
     ):
-        """
+        """Query most probable states from model, for variables.
+
         Finds the most probable state in the joint distribution of variables. Calculates the
         result by generating samples and calculating most probable states based on the probabilities.
 
         Parameters
         ----------
-        variables: list
-            List of variables for which the probability distribution needs to be calculated.
+        model: Instance of models.DiscreteBayesianNetwork or DynamicBayesianNetwork
+            The probabilistic graphical model to do inference on.
 
-        n_samples: int
-            The number of samples to generate for computing the distributions. Higher `n_samples`
-            results in more accurate results at the cost of more computation time.
-
-        samples: pd.DataFrame (default: None)
-            If provided, uses these samples to compute the distribution instead
-            of generating samples. `samples` **must** conform with the provided
-            `evidence` and `virtual_evidence`.
+        variables: list, optional, default=all variables in the model
+            List of variables to calculate the probability distribution for.
 
         evidence: dict (default: None)
             The observed values. A dict key, value pair of the form {var: state_name}.
@@ -239,15 +324,10 @@ class ApproxInference(object):
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
             evidence.
 
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
-        show_progress: boolean (default: True)
-            If True, shows a progress bar when generating samples.
-
-        seed: int (default: None)
-            Sets the seed for the random generators.
+        joint: boolean, optional, default=True
+            If joint=True, computes the joint distribution over `variables`.
+            Else, returns a dict with marginal distribution of each variable in
+            `variables`.
 
         Returns
         -------
@@ -280,15 +360,13 @@ class ApproxInference(object):
         {'HISTORY': 'TRUE'}
         """
         final_distribution = self.query(
-            variables,
-            n_samples=n_samples,
-            samples=samples,
+            *args,
+            model=model,
+            joint=joint,
+            variables=variables,
             evidence=evidence,
             virtual_evidence=virtual_evidence,
-            joint=True,
-            state_names=state_names,
-            show_progress=show_progress,
-            seed=seed,
+            **kwargs,
         )
 
         argmax = compat_fns.argmax(final_distribution.values)
