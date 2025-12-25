@@ -290,7 +290,7 @@ class ApproxInference(object):
             samples, variables=variables, state_names=state_names, joint=joint
         )
 
-    def query(
+    def map_query(
         self,
         *args,
         model=None,
