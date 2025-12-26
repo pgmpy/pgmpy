@@ -30,6 +30,7 @@ def _handle_deprec_args(args, kwargs, var_names, defaults, msg=None):
             f"Expected at most {len(var_names)} arguments, got {len(args)}."
         )
     kw_from_args = {var_names[i]: args[i] for i in range(len(args))}
+    kwfa_subset = {k: kw_from_args[k] for k in defaults if k in kw_from_args}
     kwargs_subset = {k: kwargs[k] for k in defaults if k in kwargs}
 
     if msg is not None and (len(kw_from_args) > 0 or len(kwargs_subset) > 0):
@@ -39,5 +40,5 @@ def _handle_deprec_args(args, kwargs, var_names, defaults, msg=None):
 
     var_final = defaults.copy()
     var_final.update(kwargs_subset)
-    var_final.update(kw_from_args)
+    var_final.update(kwfa_subset)
     return var_final

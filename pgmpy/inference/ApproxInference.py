@@ -2,13 +2,13 @@ import itertools
 from warnings import warn
 
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.inference.base import BaseInference
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
-class ApproxInference(object):
-    """
-    Initializes the Approximate Inference class.
+class ApproxInference(BaseInference):
+    """Approximate Inference via Sampling.
 
     Parameters
     ----------
@@ -148,8 +148,12 @@ class ApproxInference(object):
             "seed": self.seed,
         }
         var_names = [
+            "variables",
             "n_samples",
             "samples",
+            "evidence",
+            "virtual_evidence",
+            "joint",
             "state_names",
             "show_progress",
             "seed",

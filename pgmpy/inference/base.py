@@ -15,8 +15,17 @@ from pgmpy.models import (
 )
 from pgmpy.utils import compat_fns
 
+from skbase.base import BaseObject
 
-class Inference(object):
+
+class BaseInference(BaseObject):
+    """
+    Base class for all inference algorithms in pgmpy.
+    """
+    pass
+
+
+class Inference(BaseInference):
     """
     Base class for all inference algorithms.
 
