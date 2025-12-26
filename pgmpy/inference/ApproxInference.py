@@ -237,8 +237,8 @@ class ApproxInference(BaseInference):
         model.check_model()
 
         # handle defaults
-        if variables is None:
-            variables = list(model.nodes)
+        # if variables is None:
+        #     variables = list(model.nodes)
 
         if evidence is None:
             evidence = dict()
