@@ -3,7 +3,7 @@
 from collections import defaultdict
 from itertools import chain
 
-import numpy as np
+from skbase.base import BaseObject
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
@@ -14,8 +14,6 @@ from pgmpy.models import (
     JunctionTree,
 )
 from pgmpy.utils import compat_fns
-
-from skbase.base import BaseObject
 
 
 class BaseInference(BaseObject):
