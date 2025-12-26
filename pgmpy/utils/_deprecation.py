@@ -17,6 +17,8 @@ def _handle_deprec_args(args, kwargs, var_names, defaults, msg=None):
         Names of the method parameters in order.
     defaults : dict
         Default values for method parameters. Keys are parameter names.
+    msg : str, optional
+        Deprecation warning message to be shown if deprecated args are used.
 
     Returns
     -------
