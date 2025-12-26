@@ -131,7 +131,7 @@ class ApproxInference(BaseInference):
                 for var in variables
             }
 
-    def _handle_deprec_args(self, args, kwargs):
+    def _handle_deprec_args(self, args, kwargs, defaults):
         """Utility to handle deprecated args for query methods."""
 
         msg = (
@@ -140,13 +140,15 @@ class ApproxInference(BaseInference):
             "Please pass parameters to __init__ of inference class.",
             FutureWarning,
         )
-        defaults = {
+        defaults_add = {
             "n_samples": self.n_samples,
             "samples": self.samples,
             "state_names": self.state_names,
             "show_progress": self.show_progress,
             "seed": self.seed,
         }
+        defaults = defaults.copy()
+        defaults.update(defaults_add)
         var_names = [
             "variables",
             "n_samples",
@@ -235,16 +237,22 @@ class ApproxInference(BaseInference):
         model.check_model()
 
         # handle defaults
-        # this seems to fail. todo: investigate
-        # if variables is None:
-        #     variables = list(model.nodes)
+        if variables is None:
+            variables = list(model.nodes)
 
         if evidence is None:
             evidence = dict()
         if virtual_evidence is None:
             virtual_evidence = dict()
 
-        final_args = self._handle_deprec_args(args, kwargs)
+        defaults = {
+            "variables": variables,
+            "evidence": evidence,
+            "virtual_evidence": virtual_evidence,
+            "joint": joint,
+        }
+
+        final_args = self._handle_deprec_args(args, kwargs, defaults)
 
         n_samples = final_args["n_samples"]
         samples = final_args["samples"]
