@@ -137,8 +137,7 @@ class ApproxInference(BaseInference):
         msg = (
             "Passing parameters to query method of inference algorithms"
             " is deprecated, and will raise an exception in pgmpy 2.0. "
-            "Please pass parameters to __init__ of inference class.",
-            FutureWarning,
+            "Please pass parameters to __init__ of inference class."
         )
         defaults_add = {
             "n_samples": self.n_samples,
@@ -238,7 +237,7 @@ class ApproxInference(BaseInference):
 
         # handle defaults
         # if variables is None:
-        #     variables = list(model.nodes)
+        #     variables = list(model.nodes))
 
         if evidence is None:
             evidence = dict()
@@ -254,6 +253,10 @@ class ApproxInference(BaseInference):
 
         final_args = self._handle_deprec_args(args, kwargs, defaults)
 
+        variables = final_args["variables"]
+        evidence = final_args["evidence"]
+        virtual_evidence = final_args["virtual_evidence"]
+        joint = final_args["joint"]
         n_samples = final_args["n_samples"]
         samples = final_args["samples"]
         state_names = final_args["state_names"]
