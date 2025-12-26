@@ -17,9 +17,8 @@ from pgmpy.utils import compat_fns
 
 
 class BaseInference(BaseObject):
-    """
-    Base class for all inference algorithms in pgmpy.
-    """
+    """Base class for all inference algorithms in pgmpy."""
+
     pass
 
 
