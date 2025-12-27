@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 import numpy as np
 import pandas as pd
+from skbase.base import BaseObject
 
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge
@@ -19,25 +20,26 @@ from pgmpy.utils._safe_import import _safe_import
 requests = _safe_import("requests")
 
 
-@dataclass
-class Dataset:
-    name: str
-    data: pd.DataFrame
-    expert_knowledge: Optional[ExpertKnowledge] = None
-    ground_truth: Optional[DAG] = None
-    tags: Dict[str, Any] = None
+class BaseDataset(BaseObject):
 
-    def __str__(self) -> str:
-        return (
-            f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
-        )
+    _tags = {
+        "name": "",
+        "n_variables": None,
+        "n_samples": False,
+        "has_ground_truth": False,
+        "has_expert_knowledge": False,
+        "has_missing_data": False,
+        "is_simulated": False,
+        "is_interventional": False,
+        "is_discrete": False,
+        "is_continuous": True,
+        "is_mixed": False,
+        "is_ordinal": False,
+    }
 
-    def __repr__(self) -> str:
-        return self.__str__()
+    def __init__(self):
+        pass
 
-
-class _BaseDataset:
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
         """
@@ -235,23 +237,21 @@ class _DatasetRegistry:
     }
 
     def __init__(self) -> None:
-        self._by_name: Dict[str, Type["_BaseDataset"]] = {}
+        self._by_name: Dict[str, Type["BaseDataset"]] = {}
         self._by_tag: Dict[Tuple[str, Any], Set[str]] = {}
 
-    def register(self, cls: Type["_BaseDataset"]) -> None:
+    def register(self, cls: Type["BaseDataset"]) -> None:
         # Step 1: Check if the name is defined.
-        if not hasattr(cls, "name"):
+        if cls.get_class_tag("name") in (None, ""):
             raise TypeError("Dataset classes must define a string 'name' attribute.")
 
         # Step 2: Check if all required tags are defined.
-        if not hasattr(cls, "tags"):
-            raise TypeError("Dataset classes must define a 'tags' attribute as a dict.")
-        else:
-            missing_tags = self._REQUIRED_TAGS - cls.tags.keys()
-            if missing_tags:
-                raise ValueError(
-                    f"Dataset '{cls.__name__}' is missing required tags: {missing_tags}"
-                )
+        all_tags = cls.get_class_tags()
+        missing_tags = self._REQUIRED_TAGS - all_tags
+        if missing_tags:
+            raise ValueError(
+                f"Dataset '{cls.__name__}' is missing required tags: {missing_tags}"
+            )
         # Step 3: Check if all required attributes/URLs are defined.
         if not hasattr(cls, "data_url"):
             raise TypeError("Dataset classes must define a 'data_url' attribute.")
@@ -267,10 +267,10 @@ class _DatasetRegistry:
             )
 
         # Step 4: Register the dataset by name and tags.
-        name = getattr(cls, "name")
+        name = cls.get_class_tag("name")
         self._by_name[name] = cls
 
-        raw_tags = getattr(cls, "tags")
+        raw_tags = cls.get_class_tags()
         for key, value in raw_tags.items():
             self._by_tag.setdefault((key, value), set()).add(name)
 
@@ -326,7 +326,7 @@ class _DatasetRegistry:
 
         return sorted(names)
 
-    def get_dataset(self, name: str) -> Optional[Type["_BaseDataset"]]:
+    def get_dataset(self, name: str) -> Optional[Type["BaseDataset"]]:
         """
         Get the dataset class by name.
 

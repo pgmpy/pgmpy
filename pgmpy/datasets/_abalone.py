@@ -2,10 +2,11 @@ from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
+
 class AbaloneContinuous(_BaseDataset):
-    name = "abalone_continuous"
-    tags = {
+
+    _tags = {
+        "name": "abalone_continuous",
         "n_variables": 8,
         "n_samples": 4177,
         "has_ground_truth": False,
