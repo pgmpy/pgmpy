@@ -56,6 +56,8 @@ class ApproxInference(BaseInference):
         self.show_progress = show_progress
         self.seed = seed
 
+        # handle parameter change with warning for downwards compatibility
+        # todo: remove this in pgmpy 2.0
         msg = (
             "Passing model to __init__ of inference classes is deprecated, "
             "and will raise an exception in pgmpy 2.0. "
@@ -73,6 +75,7 @@ class ApproxInference(BaseInference):
             if model is not None:
                 warn(msg, FutureWarning)
                 self._model = model
+        # end remove
 
     @staticmethod
     def _get_factor_from_df(df, state_names):
@@ -131,6 +134,8 @@ class ApproxInference(BaseInference):
                 for var in variables
             }
 
+    # function to handle deprecated args
+    # todo: remove this in pgmpy 2.0
     def _handle_deprec_args(self, args, kwargs, defaults):
         """Utility to handle deprecated args for query methods."""
 
@@ -165,6 +170,8 @@ class ApproxInference(BaseInference):
         final_args = _handle_deprec_args(args, kwargs, var_names, defaults, msg)
         return final_args
 
+    # args and kwargs handle deprecated parameters
+    # todo: remove args and kwargs in pgmpy 2.0
     def query(
         self,
         *args,
@@ -225,8 +232,11 @@ class ApproxInference(BaseInference):
         {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x7f92dc61eb50>,
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
+        # handling of deprecated passing of model in __init__
+        # todo: remove this in pgmpy 2.0
         if model is None and self._model is not None:
             model = self._model
+        # end remove
 
         if not isinstance(model, (DiscreteBayesianNetwork, DynamicBayesianNetwork)):
             raise ValueError(
@@ -244,6 +254,8 @@ class ApproxInference(BaseInference):
         if virtual_evidence is None:
             virtual_evidence = dict()
 
+        # handling deprecated args
+        # todo: remove this in pgmpy 2.0
         defaults = {
             "variables": variables,
             "evidence": evidence,
@@ -262,6 +274,7 @@ class ApproxInference(BaseInference):
         state_names = final_args["state_names"]
         show_progress = final_args["show_progress"]
         seed = final_args["seed"]
+        # end remove
 
         # Step 1: If samples are not provided, generate samples for the query
         if samples is None:
@@ -306,6 +319,8 @@ class ApproxInference(BaseInference):
             samples, variables=variables, state_names=state_names, joint=joint
         )
 
+    # args and kwargs handle deprecated parameters
+    # todo: remove args and kwargs in pgmpy 2.0
     def map_query(
         self,
         *args,
