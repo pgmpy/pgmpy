@@ -40,6 +40,7 @@ ALL_DATASETS = [
     "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
     "superconductivity",
+    "uscrime",
     "yacht_hydrodynamics",
     "student_performance",
     "seoul_bike",
