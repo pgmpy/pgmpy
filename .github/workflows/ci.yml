@@ -103,12 +103,7 @@ jobs:
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose --junitxml=test-results.xml
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload test results
+      - name: Upload coverage and test results to Codecov
         uses: codecov/codecov-action@v5
         with:
           files: test-results.xml
