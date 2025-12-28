@@ -7,7 +7,7 @@ class DepressionCoping(_BaseDataset):
     name = "depression_coping"
 
     tags = {
-        "n_variables": 70,  # Based on observation of many columns including STR1-21, DEP1-20, COP1-20, etc.
+        "n_variables": 79,
         "n_samples": 127,
         "has_ground_truth": False,
         "has_expert_knowledge": False,

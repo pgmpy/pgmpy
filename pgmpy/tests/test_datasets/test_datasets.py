@@ -23,6 +23,7 @@ ALL_DATASETS = [
     "pittsburgh_bridges",
     "residential_building",
     "credit_approval",
+    "depression_coping",
     "iq_brain_size",
     "contraceptive_method",
     "myocardial_infarction",
