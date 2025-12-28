@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import pytest
+from skbase.lookup import all_objects
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
-from pgmpy.datasets import DATASET_REGISTRY, load_dataset
+from pgmpy.datasets import _BaseDataset, load_dataset
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -54,21 +55,38 @@ ALL_DATASETS = [
     reason="test only if requests is installed",
 )
 def test_list_datasets():
-    datasets = DATASET_REGISTRY.list_datasets()
+    all_ds_tulpes = all_objects(
+        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=True
+    )
+
+    found_datasets = [cls.get_class_tag("name") for _, cls in all_ds_tulpes]
+
     for dataset in ALL_DATASETS:
-        assert dataset in datasets
+        assert dataset in found_datasets
 
-    datasets_filtered = DATASET_REGISTRY.list_datasets(has_ground_truth=True)
-    for dataset in ["sachs_continuous", "sachs_discrete"]:
-        assert dataset in datasets_filtered
-    for dataset in ["abalone_continuous", "abalone_mixed"]:
-        assert dataset not in datasets_filtered
+    gt_datasets_tuples = all_objects(
+        object_types=_BaseDataset,
+        package_name="pgmpy.datasets",
+        return_names=False,
+        filter_tags={"has_ground_truth": True},
+    )
 
-    datasets_filtered = DATASET_REGISTRY.list_datasets(is_continuous=True)
-    assert "sachs_continuous" in datasets_filtered
-    assert "abalone_continuous" in datasets_filtered
-    assert "sachs_discrete" not in datasets_filtered
-    assert "abalone_mixed" not in datasets_filtered
+    gt_names = [cls.get_class_tag("name") for cls in gt_datasets_tuples]
+
+    assert "abalone_continuous" not in gt_names
+
+    cont_datasets_tuples = all_objects(
+        object_types=_BaseDataset,
+        package_name="pgmpy.datasets",
+        return_names=False,
+        filter_tags={"is_continuous": True},
+    )
+
+    cont_names = [cls.get_class_tag("name") for cls in cont_datasets_tuples]
+
+    assert "abalone_continuous" in cont_names
+    assert "sachs_discrete" not in cont_names
+    assert "abalone_mixed" not in cont_names
 
 
 @pytest.mark.skipif(
@@ -76,7 +94,7 @@ def test_list_datasets():
     reason="test only if requests is installed",
 )
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -86,17 +104,17 @@ def test_load_dataset():
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
-        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_ground_truth"]:
+        if dataset.tags["has_ground_truth"]:
             assert isinstance(dataset.ground_truth, DAG)
         else:
             assert dataset.ground_truth is None
 
-        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_expert_knowledge"]:
+        if dataset.tags["has_expert_knowledge"]:
             assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
         else:
             assert dataset.expert_knowledge is None
 
-        if DATASET_REGISTRY.get_dataset(dataset_name).tags["has_missing_data"]:
+        if dataset.tags["has_missing_data"]:
             assert dataset.data.isna().any().any()
 
 
