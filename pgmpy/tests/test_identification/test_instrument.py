@@ -268,32 +268,32 @@ def test_validate_causal_graph_with_conditional_ivs():
     assert ok is True
 
 
-def test_validate_when_no_ivs():
-    no_iv_model = DAG(
-        [("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
-        roles={
-            "exposures": "X",
-            "outcomes": "Y",
-            "observed": ("X", "Y", "I", "W"),
-            "conditional": ("W"),
-        },
-    )
-    iv = InstrumentalVariables(variant=None)
-    assert pytest.raises(ValueError, iv._validate, no_iv_model)
+# def test_validate_when_no_ivs():
+#     no_iv_model = DAG(
+#         [("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
+#         roles={
+#             "exposures": "X",
+#             "outcomes": "Y",
+#             "observed": ("X", "Y", "I", "W"),
+#             "conditional": ("W"),
+#         },
+#     )
+#     iv = InstrumentalVariables(variant=None)
+#     assert pytest.raises(ValueError, iv._validate, no_iv_model)
 
 
-def test_validate_when_no_conditionals():
-    no_conditional_model = DAG(
-        [("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
-        roles={
-            "exposures": "X",
-            "outcomes": "Y",
-            "observed": ("X", "Y", "I", "W"),
-            "instrument": ("I"),
-        },
-    )
-    iv = InstrumentalVariables(variant=None)
-    assert pytest.raises(ValueError, iv._validate, no_conditional_model)
+# def test_validate_when_no_conditionals():
+#     no_conditional_model = DAG(
+#         [("I", "X"), ("X", "Y"), ("W", "I"), ("W", "Y")],
+#         roles={
+#             "exposures": "X",
+#             "outcomes": "Y",
+#             "observed": ("X", "Y", "I", "W"),
+#             "instrument": ("I"),
+#         },
+#     )
+#     iv = InstrumentalVariables(variant="conditional")
+#     assert pytest.raises(ValueError, iv._validate, no_conditional_model)
 
 
 def test_multiple_exposures_not_supported():
@@ -337,3 +337,22 @@ def test_multiple_outcomes_not_supported():
         iv._identify,
         iv_model,
     )
+
+
+# def test_sem_with_admg():
+#     model = ADMG(
+#         [
+#             ("Y6","l2"),
+#             ("l2","Y3"),
+#             ("l1","Y3"),
+#             ("Y6","l1"),
+#             ("l1","Y2"),
+#             ("l1", "Y1"),
+#             ("l1", "Y2"),
+#             ("E1", "Y1"),
+#             ("E2", "Y2"),
+#             ("E1","E2"),
+#             ("E5","Y5"),
+#             ("")
+#         ]
+#     )

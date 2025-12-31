@@ -7,10 +7,13 @@ from pgmpy.inference.CausalInference import CausalInference
 
 class InstrumentalVariables(BaseIdentification):
 
-    def __init__(self, variant=None, scaling_indicators=None) -> None:
-        self.supported_graph_types = DAG
+    def __init__(
+        self, variant=None, scaling_indicators=None, observed_variables=None
+    ) -> None:
+        self.supported_graph_types = (DAG,)
         self.variant = variant
         self.scaling_indicators = scaling_indicators
+        self.observed_variables = observed_variables
 
     def _get_scaling_indicators(self, causal_graph):
         exposure = causal_graph.get_role("exposures")
@@ -18,36 +21,33 @@ class InstrumentalVariables(BaseIdentification):
         latent_variables = causal_graph.get_role("latents")
         all_nodes = causal_graph.nodes()
         observed_nodes = all_nodes - latent_variables
-        scaling_indicators = {}
+        # scaling_indicators = {}
 
-        if self.scaling_indicators is not None and len(self.scaling_indicators) == len(
-            latent_variables
+        if (
+            self.scaling_indicators is not None
+            and set(latent_variables) == set(self.scaling_indicators.keys())
+            and all(v is not None for v in self.scaling_indicators.values())
         ):
             return self.scaling_indicators
 
-        # checks for missing scaling indicators and assigns for the missing nodes (if any)
-        if self.scaling_indicators is not None and len(self.scaling_indicators) < len(
-            latent_variables
-        ):
-            missing_scaling_indicators = set(latent_variables) - set(
-                self.scaling_indicators.keys()
-            )
-            for node in missing_scaling_indicators:
-                for neighbour in causal_graph.neighbors(node):
-                    if neighbour in observed_nodes:
-                        if not (node in exposure and neighbour != outcome):
-                            self.scaling_indicators[node] = neighbour
-                            break
-            return self.scaling_indicators
+        existing_keys = (
+            set(self.scaling_indicators.keys())
+            if self.scaling_indicators is not None
+            else set()
+        )
 
-        for node in latent_variables:
+        if self.scaling_indicators is None:
+            self.scaling_indicators = {}
+
+        missing_scaling_indicators = set(latent_variables) - existing_keys
+
+        for node in missing_scaling_indicators:
             for neighbour in causal_graph.neighbors(node):
                 if neighbour in observed_nodes:
                     if not (node in exposure and neighbour != outcome):
-                        scaling_indicators[node] = neighbour
-                        scaling_indicators
+                        self.scaling_indicators[node] = neighbour
                         break
-        return scaling_indicators
+        return self.scaling_indicators
 
     def _iv_transformations(self, X, Y, causal_graph, scaling_indicators=None):
         full_graph_ = causal_graph.copy()
@@ -95,6 +95,7 @@ class InstrumentalVariables(BaseIdentification):
             raise ValueError(
                 f"The current implementation suppports only one outcome. Got: {len(outcome)}"
             )
+
         all_nodes = causal_graph.nodes()
         observed = all_nodes - causal_graph.get_role("latents")
 
@@ -137,7 +138,7 @@ class InstrumentalVariables(BaseIdentification):
                     # instruments.extend(list(W))
                 else:
                     continue
-            if bool(instruments):
+            if len(instruments):
                 for i, j in enumerate(instruments):
                     causal_graph.with_role("instrument", j, inplace=True)
                     causal_graph.with_role("conditional", conditionals[i], inplace=True)
@@ -195,53 +196,39 @@ class InstrumentalVariables(BaseIdentification):
         -------
         bool: True if the 'instrument' set is valid, False otherwise.
         """
-        if not causal_graph.has_role("instrument"):
+
+        exposure = causal_graph.get_role("exposures")[0]
+        outcome = causal_graph.get_role("outcomes")[0]
+        instruments = causal_graph.get_role("instrument")[0]
+
+        if len(exposure) != 1:
             raise ValueError(
-                "The causal graph has no variable assigned with the role 'instrument'"
+                f"The current implementation suppports only one exposure. Got: {len(exposure)}"
+            )
+        if len(outcome) != 1:
+            raise ValueError(
+                f"The current implementation suppports only one outcome. Got: {len(outcome)}"
+            )
+        if len(instruments) != 1:
+            raise ValueError(
+                f"The current implementation suppports only one instrument. Got: {len(instruments)}"
             )
 
-        copy = causal_graph.copy()
-
-        given_instruments = copy.get_role("instrument")
-
-        usable_graph = copy.without_role("instrument")
-
-        if self.variant == ("conditional") and copy.has_role("conditional"):
-            given_conditionals = copy.get_role("conditional")
-            usable_graph = copy.without_role("conditional")
-
-        if self.variant == ("conditional"):
-            if not copy.has_role("conditional"):
+        if self.variant == "conditional":
+            conditional_vars = causal_graph.get_role("conditional")[0]
+            if len(conditional_vars) != 1:
                 raise ValueError(
-                    "The causal graph has no variable assigned with the role 'conditional'"
+                    f"The current implementation suppports only one outcome. Got: {len(outcome)}"
                 )
-            given_conditionals = copy.get_role("conditional")
-            usable_graph = copy.without_role("conditional")
-            returned_graph, ok = self._identify(usable_graph)
-
-            if not ok:
-                raise ValueError(
-                    "The given causal graph has no identifiable conditional instrumental variables"
-                )
-            identified_instruments = returned_graph.get_role("instrument")
-            identified_conditionals = returned_graph.get_role("conditional")
-
-            if (set(identified_instruments) == set(given_instruments)) and (
-                set(identified_conditionals) == set(given_conditionals)
-            ):
-                return True
-            else:
-                return False
-
-        returned_graph, ok = self._identify(usable_graph)
-        if not ok:
-            raise ValueError(
-                "The given causal graph has no identifiable instrumental variables"
+            return causal_graph.is_dconnected(
+                instruments, exposure, observed=(conditional_vars)
+            ) and not causal_graph.is_dconnected(
+                (instruments),
+                (outcome),
+                observed=tuple((conditional_vars)) + tuple((exposure)),
             )
 
-        identified_instruments = returned_graph.get_role("instrument")
-        given_instruments = causal_graph.get_role("instrument")
-        if set(identified_instruments) == set(given_instruments):
-            return True
         else:
-            return False
+            return causal_graph.is_dconnected(
+                instruments, exposure
+            ) and not causal_graph.has_edge(instruments, outcome)
