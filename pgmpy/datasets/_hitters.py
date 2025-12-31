@@ -3,12 +3,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class CysticFibrosis(_BaseDataset):
-    name = "cystic_fibrosis"
+class Hitters(_BaseDataset):
+    name = "hitters"
 
     tags = {
-        "n_variables": 44,
-        "n_samples": 41,
+        "n_variables": 20,
+        "n_samples": 322,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": True,
@@ -20,9 +20,12 @@ class CysticFibrosis(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/cystic-fibrosis/"
+    base_url = (
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "real/hitters/"
+    )
 
-    data_url = base_url + "data/cystic-fibrosis-20180726-simplified.continuous.txt"
+    data_url = base_url + "data/hitters.txt"
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"

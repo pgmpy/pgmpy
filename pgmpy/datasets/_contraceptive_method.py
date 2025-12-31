@@ -3,13 +3,14 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 @register_dataset_class
-class AppleWatchFitbit(_BaseDataset):
-    name = "apple_watch_fitbit"
+class ContraceptiveMethod(_BaseDataset):
+    name = "contraceptive_method"
+
     tags = {
-        "n_variables": 18,
-        "n_samples": 6264,
+        "n_variables": 9,
+        "n_samples": 1473,
         "has_ground_truth": False,
-        "has_expert_knowledge": True,
+        "has_expert_knowledge": False,
         "has_missing_data": False,
         "is_simulated": False,
         "is_interventional": False,
@@ -20,10 +21,10 @@ class AppleWatchFitbit(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
-        "refs/heads/main/real/apple-watch-fitbit/"
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "real/contraceptive-method/"
     )
 
-    data_url = base_url + "data/aw-fb-pruned18.data.mixed.maximum.6.txt"
+    data_url = base_url + "data/contraceptive-method.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/aw-fb-pruned18.knowledge.txt"
+    expert_knowledge_url = None

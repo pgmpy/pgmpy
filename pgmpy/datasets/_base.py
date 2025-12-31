@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import io
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
+import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG
@@ -123,7 +125,7 @@ class _BaseDataset:
         raw_data = cls._get_raw_data("data", cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         if cls.tags.get("has_missing_data"):
-            df.replace(cls.missing_marker, pd.NA, inplace=True)
+            df.replace(cls.missing_values_marker, pd.NA, inplace=True)
         return df
 
     @classmethod
@@ -154,6 +156,54 @@ class _BaseDataset:
         """
         if os.path.exists(PGMPY_DATA_HOME):
             Path.rmdir(PGMPY_DATA_HOME)
+
+
+class _CovarianceMixin:
+    """
+    This mixin class provides functionality to load datasets defined by a covariance matrix. Mainly the `load_dataframe`
+    method is overridden to generate data from the covariance matrix instead of loading a static data file as is the
+    case with `_BaseDataset`.
+    """
+
+    @classmethod
+    def _load_covariance_matrix(cls) -> pd.DataFrame:
+        """
+        Fetches the data and creates a covariance matrix DataFrame.
+        """
+        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode(
+            "utf-8-sig", errors="ignore"
+        )
+
+        lines = raw_data.strip().splitlines()
+        # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
+        # not uniform.
+        names = re.split(r"\t|\ ", re.sub(r"\s+", " ", lines[1].strip()))
+
+        mat = np.zeros((len(names), len(names)), dtype=float)
+
+        for i, line in enumerate(lines[2 : 2 + len(names)]):
+            vals = np.fromstring(line, sep="\t", dtype=float)
+            mat[i, : i + 1] = vals
+            mat[: i + 1, i] = vals
+
+        return pd.DataFrame(mat, columns=names, index=names)
+
+    @classmethod
+    def load_dataframe(cls) -> pd.DataFrame:
+        """Method to create data from covariance matrix. When the `_CovarDatasetMixin is
+        used this method is supposed to override the _BaseDataset.load_dataframe method.
+
+        ** Hence, when using this mixin, _CovarDatasetMixin should be the first parent class. **
+        """
+        cov_matrix = cls._load_covariance_matrix()
+        mean = [0] * cls.tags["n_variables"]
+        data = pd.DataFrame(
+            np.random.multivariate_normal(
+                mean, cov_matrix.values, size=cls.tags["n_samples"]
+            ),
+            columns=cov_matrix.columns,
+        )
+        return data
 
 
 class _DatasetRegistry:

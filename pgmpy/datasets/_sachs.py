@@ -58,7 +58,7 @@ class SachsDiscrete(_BaseDataset):
     name = "sachs_discrete"
     tags = {
         "n_variables": 11,
-        "n_samples": 7466,
+        "n_samples": 5400,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
