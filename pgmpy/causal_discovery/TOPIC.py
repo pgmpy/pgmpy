@@ -118,7 +118,7 @@ class TOPIC(_BaseConstraintCausalDiscovery):
 
     Use the TOPIC algorithm to learn the causal structure from data:
 
-    >>> from pgmpy.causal_discovery import TOPIC
+    >>> from pgmpy.causal_discovery.TOPIC import TOPIC
     >>> topic = TOPIC()
     >>> topic.fit(df)
     >>> topic.causal_graph_.edges()
@@ -129,6 +129,9 @@ class TOPIC(_BaseConstraintCausalDiscovery):
     .. [1] Xu, S., Mameche, S. and Vreeken, J. Information-Theoretic Causal Discovery in Topological Order.
            International Conference on Artificial Intelligence and Statistics (AISTATS), 2025.
     """
+
+    score_ = BICGauss
+    score_fn_ = None
 
     def __init__(
         self,
@@ -151,8 +154,6 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         self.n_jobs = n_jobs
         self.show_progress = show_progress
         self.use_cache = use_cache
-        self.score = None
-        self.score_fn = None
 
     def _fit(self, X: pd.DataFrame, independencies=None):
         """
@@ -234,14 +235,14 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         self.topological_order_ = topological_order_
         self.history_ = topic_history_
 
-        return self.causal_graph_
+        return self
 
     def _init_score(self, X: pd.DataFrame):
         score_c: ScoreCache
         score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
         score_fn = score_c.local_score
-        self.score = score
-        self.score_fn = score_fn
+        self.score_ = score
+        self.score_fn_ = score_fn
 
     def _next_node_in_topological_order(
         self,
@@ -311,17 +312,17 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         return source, meta
 
     def _score(self, effect, parents) -> float:
-        return self.score_fn(effect, parents)
+        return self.score_fn_(effect, parents)
 
     def _score_significant(self, score):
         alpha = self.significance_level
         if score <= 0:
             return False
-        if isinstance(self.score, BICGauss):
+        if isinstance(self.score_, BICGauss):
             return score > 0
-        elif isinstance(self.score, LogLikelihoodGauss):
+        elif isinstance(self.score_, LogLikelihoodGauss):
             return score > 0
-        elif isinstance(self.score, AICGauss):
+        elif isinstance(self.score_, AICGauss):
             return score > 0
         else:
             return 2 ** (-score) < alpha
@@ -427,21 +428,30 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         self,
         parents: List[int | str],
         child: int | str,
-    ) -> [bool, int | str, float, List]:
+    ) -> tuple[bool, int | str | None, float, List[tuple[int | str, float]]]:
+
         old_score = self._score(child, parents)
+
         best_parent = None
-        best_harm = 0
-        candidate_stats = []
+        best_harm = float("-inf")
+        candidate_stats: List[tuple[int | str, float]] = []
 
         for parent in parents:
             new_parents = [p for p in parents if p != parent]
+            if not new_parents:
+                continue
+
             new_score = self._score(child, new_parents)
             harm = new_score - old_score
             candidate_stats.append((parent, harm))
 
-            if harm > best_harm:
+            if harm >= 0 and harm > best_harm:
                 best_harm = harm
                 best_parent = parent
 
         removed_found = best_parent is not None
-        return removed_found, best_parent, best_harm, candidate_stats
+
+        if not removed_found:
+            return False, None, float("inf"), candidate_stats
+
+        return True, best_parent, float(best_harm), candidate_stats
