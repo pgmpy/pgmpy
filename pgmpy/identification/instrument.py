@@ -8,12 +8,13 @@ from pgmpy.inference.CausalInference import CausalInference
 class InstrumentalVariables(BaseIdentification):
 
     def __init__(
-        self, variant=None, scaling_indicators=None, observed_variables=None
+        self,
+        variant=None,
+        scaling_indicators=None,
     ) -> None:
         self.supported_graph_types = (DAG,)
         self.variant = variant
         self.scaling_indicators = scaling_indicators
-        self.observed_variables = observed_variables
 
     def _get_scaling_indicators(self, causal_graph):
         exposure = causal_graph.get_role("exposures")
@@ -21,7 +22,6 @@ class InstrumentalVariables(BaseIdentification):
         latent_variables = causal_graph.get_role("latents")
         all_nodes = causal_graph.nodes()
         observed_nodes = all_nodes - latent_variables
-        # scaling_indicators = {}
 
         if (
             self.scaling_indicators is not None
@@ -51,26 +51,20 @@ class InstrumentalVariables(BaseIdentification):
 
     def _iv_transformations(self, X, Y, causal_graph, scaling_indicators=None):
         full_graph_ = causal_graph.copy()
-
-        exposures = full_graph_.get_role("exposures")
         latent_variables = full_graph_.get_role("latents")
-        observed = full_graph_.get_role("observed")
+
         scaling_indicators = self._get_scaling_indicators(causal_graph)
 
         if not full_graph_.has_edge(X, Y):
             raise ValueError(f"The edge from {X} -> {Y} does not exist in the graph")
 
-        if (X in exposures) and (Y in observed):
-            if full_graph_.has_edge(X, Y):
-                full_graph_.remove_edge(X, Y)
+        if full_graph_.has_edge(X, Y):
+            full_graph_.remove_edge(X, Y)
             dependent_var = Y
 
-        elif Y in latent_variables:
+        if Y in latent_variables:
             full_graph_.add_edge(Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
-
-        else:
-            dependent_var = Y
 
         variable_parents = [
             var for var in causal_graph.predecessors(Y) if not var.startswith(".")
@@ -134,14 +128,14 @@ class InstrumentalVariables(BaseIdentification):
                 # Condition to check if X d-connected to I after conditioning on W.
                 elif exposure in (causal_graph.active_trail_nodes([Z], observed=W))[Z]:
                     instruments.append(Z)
-                    conditionals.append(W)
-                    # instruments.extend(list(W))
+                    conditionals.extend(W)
+
                 else:
                     continue
+
             if len(instruments):
-                for i, j in enumerate(instruments):
-                    causal_graph.with_role("instrument", j, inplace=True)
-                    causal_graph.with_role("conditional", conditionals[i], inplace=True)
+                causal_graph.with_role("instrument", instruments, inplace=True)
+                causal_graph.with_role("conditional", conditionals, inplace=True)
                 return causal_graph, True
             else:
                 return causal_graph, False
@@ -214,21 +208,14 @@ class InstrumentalVariables(BaseIdentification):
                 f"The current implementation suppports only one instrument. Got: {len(instruments)}"
             )
 
-        if self.variant == "conditional":
-            conditional_vars = causal_graph.get_role("conditional")[0]
-            if len(conditional_vars) != 1:
-                raise ValueError(
-                    f"The current implementation suppports only one outcome. Got: {len(outcome)}"
-                )
-            return causal_graph.is_dconnected(
-                instruments, exposure, observed=(conditional_vars)
-            ) and not causal_graph.is_dconnected(
-                (instruments),
-                (outcome),
-                observed=tuple((conditional_vars)) + tuple((exposure)),
-            )
+        conditional_vars = causal_graph.get_role("conditional")
 
-        else:
-            return causal_graph.is_dconnected(
-                instruments, exposure
-            ) and not causal_graph.has_edge(instruments, outcome)
+        # Remove all outgoing edges from X.
+        # Check I is d-separated from Y conditioned on Z
+
+        copy = causal_graph.copy()
+
+        copy.remove_edge(exposure, outcome)
+        return copy.is_dconnected(
+            instruments, exposure, observed=conditional_vars
+        ) and not copy.is_dconnected(instruments, outcome, observed=conditional_vars)
