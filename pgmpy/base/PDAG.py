@@ -1,5 +1,5 @@
 import itertools
-from typing import Hashable, Iterable, Iterator, Optional, Union
+from typing import Hashable, Iterable, Iterator, Union
 
 import networkx as nx
 
