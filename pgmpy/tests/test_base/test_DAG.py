@@ -1674,6 +1674,118 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
 
+    def test_enumerate_dags_only_directed(self):
+        """Test enumeration when PDAG has only directed edges."""
+        pdag_only_directed = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C")],
+            undirected_ebunch=[]
+        )
+        dags = list(pdag_only_directed.enumerate_dags())
+
+        self.assertEqual(len(dags), 1)
+        dag = dags[0]
+        self.assertIsInstance(dag, DAG)
+        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+        self.assertEqual(set(dag.edges()), {("A", "B"), ("B", "C")})
+
+    def test_enumerate_dags_simple(self):
+        """Test enumeration with one undirected edge."""
+        pdag_simple = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C")]
+        )
+        dags = list(pdag_simple.enumerate_dags())
+
+        self.assertGreaterEqual(len(dags), 1)
+
+        for dag in dags:
+            self.assertIsInstance(dag, DAG)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            self.assertIn(("A", "B"), dag.edges())
+
+    def test_enumerate_dags_complex(self):
+        """Test enumeration with multiple undirected edges."""
+        pdag_complex = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        dags = list(pdag_complex.enumerate_dags())
+
+        self.assertGreaterEqual(len(dags), 1)
+
+        for dag in dags:
+            self.assertIsInstance(dag, DAG)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            self.assertIn(("A", "B"), dag.edges())
+
+    def test_enumerate_dags_max_dags_limit(self):
+        """Test max_dags parameter."""
+        pdag_complex = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        all_dags = list(pdag_complex.enumerate_dags())
+        limited_dags = list(pdag_complex.enumerate_dags(max_dags=2))
+
+        if len(all_dags) > 2:
+            self.assertEqual(len(limited_dags), 2)
+        else:
+            self.assertEqual(len(limited_dags), len(all_dags))
+
+    def test_enumerate_dags_no_duplicates(self):
+        """Test that no duplicate DAGs are returned."""
+        pdag_complex = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C"), ("C", "D")]
+        )
+        dags = list(pdag_complex.enumerate_dags())
+
+        # Convert to edge sets for comparison
+        dag_edge_sets = [frozenset(dag.edges()) for dag in dags]
+
+        # Check for uniqueness
+        self.assertEqual(len(dag_edge_sets), len(set(dag_edge_sets)))
+
+    def test_enumerate_dags_preserve_roles(self):
+        """Test that roles are preserved in enumerated DAGs."""
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C")],
+            exposures={"A"},
+            outcomes={"C"}
+        )
+
+        dags = list(pdag.enumerate_dags())
+
+        for dag in dags:
+            self.assertEqual(dag.exposures, {"A"})
+            self.assertEqual(dag.outcomes, {"C"})
+
+    def test_enumerate_dags_empty_pdag(self):
+        """Test enumeration of empty PDAG."""
+        empty_pdag = PDAG()
+        dags = list(empty_pdag.enumerate_dags())
+
+        self.assertEqual(len(dags), 1)
+        self.assertEqual(len(dags[0].nodes()), 0)
+        self.assertEqual(len(dags[0].edges()), 0)
+
+    def test_enumerate_dags_generator_behavior(self):
+        """Test that enumerate_dags returns a generator."""
+        pdag_simple = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C")]
+        )
+        gen = pdag_simple.enumerate_dags()
+
+        # Should be a generator
+        self.assertTrue(hasattr(gen, '__iter__'))
+        self.assertTrue(hasattr(gen, '__next__'))
+
+        # Should be able to get first item
+        first_dag = next(gen)
+        self.assertIsInstance(first_dag, DAG)
+
 
 class TestDAGConversion(unittest.TestCase):
     """Test for DAG to_lavaan and to_dagitty conversion methods"""
