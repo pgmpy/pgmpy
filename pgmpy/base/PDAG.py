@@ -481,8 +481,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import PDAG
         >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "B")],
-        ...     undirected_ebunch=[("B", "C"), ("C", "D")]
+        ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
         ... )
         >>> dags = list(pdag.enumerate_dags(max_dags=5))
         >>> len(dags)

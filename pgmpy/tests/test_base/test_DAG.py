@@ -1677,8 +1677,7 @@ class TestPDAG(unittest.TestCase):
     def test_enumerate_dags_only_directed(self):
         """Test enumeration when PDAG has only directed edges."""
         pdag_only_directed = PDAG(
-            directed_ebunch=[("A", "B"), ("B", "C")],
-            undirected_ebunch=[]
+            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[]
         )
         dags = list(pdag_only_directed.enumerate_dags())
 
@@ -1690,10 +1689,7 @@ class TestPDAG(unittest.TestCase):
 
     def test_enumerate_dags_simple(self):
         """Test enumeration with one undirected edge."""
-        pdag_simple = PDAG(
-            directed_ebunch=[("A", "B")],
-            undirected_ebunch=[("B", "C")]
-        )
+        pdag_simple = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
         dags = list(pdag_simple.enumerate_dags())
 
         self.assertGreaterEqual(len(dags), 1)
@@ -1706,8 +1702,7 @@ class TestPDAG(unittest.TestCase):
     def test_enumerate_dags_complex(self):
         """Test enumeration with multiple undirected edges."""
         pdag_complex = PDAG(
-            directed_ebunch=[("A", "B")],
-            undirected_ebunch=[("B", "C"), ("C", "D")]
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
         )
         dags = list(pdag_complex.enumerate_dags())
 
@@ -1721,8 +1716,7 @@ class TestPDAG(unittest.TestCase):
     def test_enumerate_dags_max_dags_limit(self):
         """Test max_dags parameter."""
         pdag_complex = PDAG(
-            directed_ebunch=[("A", "B")],
-            undirected_ebunch=[("B", "C"), ("C", "D")]
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
         )
         all_dags = list(pdag_complex.enumerate_dags())
         limited_dags = list(pdag_complex.enumerate_dags(max_dags=2))
@@ -1735,8 +1729,7 @@ class TestPDAG(unittest.TestCase):
     def test_enumerate_dags_no_duplicates(self):
         """Test that no duplicate DAGs are returned."""
         pdag_complex = PDAG(
-            directed_ebunch=[("A", "B")],
-            undirected_ebunch=[("B", "C"), ("C", "D")]
+            directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "D")]
         )
         dags = list(pdag_complex.enumerate_dags())
 
@@ -1752,7 +1745,7 @@ class TestPDAG(unittest.TestCase):
             directed_ebunch=[("A", "B")],
             undirected_ebunch=[("B", "C")],
             exposures={"A"},
-            outcomes={"C"}
+            outcomes={"C"},
         )
 
         dags = list(pdag.enumerate_dags())
@@ -1772,15 +1765,12 @@ class TestPDAG(unittest.TestCase):
 
     def test_enumerate_dags_generator_behavior(self):
         """Test that enumerate_dags returns a generator."""
-        pdag_simple = PDAG(
-            directed_ebunch=[("A", "B")],
-            undirected_ebunch=[("B", "C")]
-        )
+        pdag_simple = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
         gen = pdag_simple.enumerate_dags()
 
         # Should be a generator
-        self.assertTrue(hasattr(gen, '__iter__'))
-        self.assertTrue(hasattr(gen, '__next__'))
+        self.assertTrue(hasattr(gen, "__iter__"))
+        self.assertTrue(hasattr(gen, "__next__"))
 
         # Should be able to get first item
         first_dag = next(gen)
