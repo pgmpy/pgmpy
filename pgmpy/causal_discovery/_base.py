@@ -23,6 +23,8 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
+from pgmpy.metrics import SHD
+from pgmpy.metrics.metrics import get_metrics
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -75,6 +77,36 @@ class _BaseCausalDiscovery(BaseEstimator):
             raise TypeError("argument must be a string, number, or hashable object.")
 
         return X
+
+    def score(self, X_test=None, ground_truth=None, method=SHD, **kwargs):
+        """Method to calculate the score of the fitted causal graph.
+
+        Parameters
+        ----------
+        X_test: pd.DataFrame
+            The data to calculate the model score on.
+
+        ground_truth: pgmpy.base.DAG
+            The true model to calulate the model score against.
+
+        method: function
+            The scoring method to be used (from pgmpy.metrics or custom function).
+
+        kwargs:
+            Additional arguments that are required for the scoring method chosen.
+        """
+        if isinstance(method, str):
+            method = get_metrics(method)
+
+        # Metrics that test the model against data
+        if not ground_truth:
+            graph_score = method(self.causal_graph_, X_test, **kwargs)
+
+        # Metrics that test the model against the true model (SHD, SID etc.)
+        else:
+            graph_score = method(self.causal_graph_, ground_truth, **kwargs)
+
+        return graph_score
 
 
 class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
