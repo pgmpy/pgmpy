@@ -6,6 +6,39 @@ from pgmpy.inference.CausalInference import CausalInference
 
 
 class InstrumentalVariables(BaseIdentification):
+    """
+    Given a causal graph, finds the variable satisfying instrumental variable criteria.
+
+    Given a causal graph with roles 'exposure', 'outcome' and 'latents' specified,
+    this class provides methods to find the variable satisfying the instrumental variable criteria.
+    It also provides a method to validate whether a given instrumental variable is valid.
+
+    Parammeters
+    ----------
+    variant: str
+        The variant of instrumental variable identification to use. Default is None (non-conditional).
+
+        - 'conditional': Returns a causal graph with identified conditional instrument variable and its
+                         coresponding conditional variables.
+
+    scaling_indicators: dict, optional
+        A dictionary specifying the scaling indicators for latent variables in the causal graph.
+        The keys of the dictionary should be the latent variable names, and the values should be their
+        corresponding scaling indicators.
+        If scaling indicators are not provided, the method will find scaling indicators automatically.
+        If all scaling indicators are not provided, the method will automatically find the missing ones.
+
+    Examples
+    --------
+    TO : DO
+
+    References
+    ----------
+    .. [1] Ankan, A., Wortel, I., Bollen, K. A., & Textor, J. (2023).
+           Combining Graphical and Algebraic Approaches for Parameter
+           Identification in Latent Variable Structural Equation Models.
+           arXiv:2302.13220 [stat.ME]. https://arxiv.org/abs/2302.13220 :contentReference[oaicite:0]{index=0}
+    """
 
     def __init__(
         self,
