@@ -48,7 +48,9 @@ class YourIdentificationMethod(BaseIdentification):
     >>> identified_graph, success = method.identify(dag)
     >>> print(success)
     True
-    >>> print(identified_graph.get_role("adjustment"))  # or whatever role your method assigns
+    >>> print(
+    ...     identified_graph.get_role("adjustment")
+    ... )  # or whatever role your method assigns
     ['Z']
 
     References
@@ -131,7 +133,9 @@ class YourIdentificationMethod(BaseIdentification):
         if success:
             # TODO: Replace "your_role_name" with the appropriate role name for your method
             # Common role names: "adjustment", "instrumental", "frontdoor", "mediator", etc.
-            identified_graph = causal_graph.with_role("your_role_name", identifying_set, inplace=False)
+            identified_graph = causal_graph.with_role(
+                "your_role_name", identifying_set, inplace=False
+            )
             return identified_graph, True
         else:
             return causal_graph, False
