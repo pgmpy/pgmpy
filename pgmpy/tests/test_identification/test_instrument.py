@@ -19,7 +19,7 @@ def test_get_scaling_indicators():
             "latents": ("xi1", "eta1"),
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
 
     scaling_indicators = iv._get_scaling_indicators(model)
 
@@ -44,7 +44,7 @@ def test_iv_transformations():
             "latents": ("xi1", "eta1"),
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
 
     scaling_indicators = iv._get_scaling_indicators(model)
 
@@ -74,7 +74,7 @@ def test_get_ivs_without_scaling_indicators():
         },
     )
     iv = InstrumentalVariables(
-        variant=None,
+        variant="non-conditional",
     )
     graph_with_iv, ok = iv._identify(iv_model)
     assert ok is True
@@ -91,7 +91,7 @@ def test_get_ivs_with_scaling_indicators():
             "latents": "U",
         },
     )
-    iv = InstrumentalVariables(variant=None, scaling_indicators={"U": "X"})
+    iv = InstrumentalVariables(variant="non-conditional", scaling_indicators={"U": "X"})
     graph_with_iv, ok = iv._identify(iv_model)
     assert ok is True
     expected_iv = {"I"}
@@ -107,7 +107,9 @@ def test_get_ivs_with_multiple_latents():
             "latents": ("U", "U2"),
         },
     )
-    iv = InstrumentalVariables(variant=None, scaling_indicators={"U": "X", "U2": "X"})
+    iv = InstrumentalVariables(
+        variant="non-conditional", scaling_indicators={"U": "X", "U2": "X"}
+    )
     graph_with_iv, ok = iv._identify(iv_model)
     assert ok is True
     expected_iv = {"I"}
@@ -131,7 +133,9 @@ def test_get_ivs_when_scaling_indicator_incomplete():
             "latents": ("xi1", "eta1", "eta2"),
         },
     )
-    iv = InstrumentalVariables(variant=None, scaling_indicators={"xi1": "x1"})
+    iv = InstrumentalVariables(
+        variant="non-conditional", scaling_indicators={"xi1": "x1"}
+    )
     _ = iv._get_scaling_indicators(model)
     # assert the returned scaling indicators are correct
     assert iv.scaling_indicators == {"xi1": "x1", "eta1": "y1", "eta2": "x3"}
@@ -147,7 +151,7 @@ def test_no_ivs_found():
             "observed": ("X", "Y"),
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     retruned_graph, ok = iv._identify(iv_model)
     assert ok is False
     expected_iv = set()
@@ -194,7 +198,7 @@ def test_conditional_ivs_with_latents():
 
 def test_no_ivs_with_SCM():
     model = SimpleCausalModel(exposures="X", confounders="U", outcomes="Y", latents="U")
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     retruned_graph, ok = iv._identify(model)
     assert ok is False
     expected_iv = set()
@@ -205,7 +209,7 @@ def test_no_ivs_with_SCM():
 def test_usage_with_SCM():
     model = SimpleCausalModel(exposures="X", confounders="U", outcomes="Y", latents="U")
     model.add_edge("I", "X")
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     retruned_graph, ok = iv._identify(model)
     assert ok is True
     expected_iv = {"I"}
@@ -218,7 +222,7 @@ def test_usage_with_SCM_with_mediator():
         exposures="X", confounders="U", outcomes="Y", mediators="M", latents="U"
     )
     model.add_edge("I", "X")
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     assert pytest.raises(ValueError, iv._identify, model)
 
 
@@ -232,7 +236,7 @@ def test_validate_causal_graph():
             "instrument": "I",
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     ok = iv._validate(iv_model)
     assert ok is True
 
@@ -247,7 +251,7 @@ def test_validate_causal_graph_returns_false():
             "instrument": "X",
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     ok = iv._validate(incorrect_iv_model)
     assert ok is False
 
@@ -301,7 +305,7 @@ def test_multiple_exposures_not_supported():
             "latents": ("U1", "U2"),
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     assert pytest.raises(
         ValueError,
         iv._identify,
@@ -318,7 +322,7 @@ def test_multiple_outcomes_not_supported():
             "latents": "U",
         },
     )
-    iv = InstrumentalVariables(variant=None)
+    iv = InstrumentalVariables(variant="non-conditional")
     assert pytest.raises(
         ValueError,
         iv._identify,

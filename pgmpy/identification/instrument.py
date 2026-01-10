@@ -7,19 +7,19 @@ from pgmpy.inference.CausalInference import CausalInference
 
 class InstrumentalVariables(BaseIdentification):
     """
-    Given a causal graph, finds the variable satisfying instrumental variable criteria.
+    Given a causal graph, finds the (conditional) instrumental variable(s) as described in [1]_.
 
-    Given a causal graph with roles 'exposure', 'outcome' and 'latents' specified,
-    this class provides methods to find the variable satisfying the instrumental variable criteria.
-    It also provides a method to validate whether a given instrumental variable is valid.
+    Given a causal graph with roles 'exposure', 'outcome' and 'latents' specified, this class provides methods to find
+    conditional or non-conditional instrumental variables that can be used to identify the causal effect of the exposure
+    on the outcome. It also provides a method to validate whether a given instrumental variable is valid.
 
     Parammeters
     ----------
-    variant: str
-        The variant of instrumental variable identification to use. Default is None (non-conditional).
-
+    variant: str (default: None)
+        The variant of instrumental variable identification to use. Supported variants are:
+        - 'non-conditional': Returns a causal graph with identified non-conditional instrument variable(s).
         - 'conditional': Returns a causal graph with identified conditional instrument variable and its
-                         coresponding conditional variables.
+                         corresponding conditional variables.
 
     scaling_indicators: dict, optional
         A dictionary specifying the scaling indicators for latent variables in the causal graph.
@@ -42,7 +42,7 @@ class InstrumentalVariables(BaseIdentification):
 
     def __init__(
         self,
-        variant=None,
+        variant="non-conditional",
         scaling_indicators=None,
     ) -> None:
         self.supported_graph_types = (DAG,)
@@ -173,7 +173,7 @@ class InstrumentalVariables(BaseIdentification):
             else:
                 return causal_graph, False
 
-        else:
+        elif self.variant == "non-conditional":
             if exposure in latent_variables:
                 explanatory_var = scaling_indicators[exposure]
             else:
@@ -209,19 +209,20 @@ class InstrumentalVariables(BaseIdentification):
 
     def _validate(self, causal_graph):
         """
-        Validate the causal graph for instrumental variable identification.
+        Validates the causal graph whether the specified (conditional) instrumental variable(s) is/are valid.
 
-        Given a causal graph with variable roles 'exposure, 'outcome', 'instruments' defined,
-        this method checks whether the given instrument set is valid.
+        Given a causal graph with variable roles 'exposure, 'outcome', 'instruments', and optionally 'conditional'
+        defined, this method checks whether the given instrument set is valid.
 
         Parameters
         ----------
         causal_graph: DAG
-            The causal graph to validate.
+            The causal graph to validate. This graph must have roles 'exposure', 'outcome', 'instrument', and optionally
+            'conditional' defined.
 
         Returns
         -------
-        bool: True if the 'instrument' set is valid, False otherwise.
+        bool: True if the specified instrumental set is valid, False otherwise.
         """
 
         exposure = causal_graph.get_role("exposures")[0]
