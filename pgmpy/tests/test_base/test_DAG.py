@@ -1674,7 +1674,6 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
 
-
     def test_enumerate_dags_basic_functionality(self):
         """Comprehensive test covering basic enumeration scenarios."""
 

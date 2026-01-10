@@ -530,7 +530,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         def _mcs_enum(pdag, depth=0):
             """MCS-ENUM algorithm implementation."""
-            nonlocal enumerated_count, seen_dags
+            nonlocal enumerated_count
 
             if max_dags is not None and enumerated_count >= max_dags:
                 return
