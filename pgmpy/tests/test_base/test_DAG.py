@@ -1687,157 +1687,119 @@ class TestPDAG(unittest.TestCase):
         self.assertTrue(nx.is_directed_acyclic_graph(dag))
         self.assertEqual(set(dag.edges()), {("A", "B"), ("B", "C")})
 
-    def test_enumerate_dags_simple(self):
-        """Test enumeration with one undirected edge that is forced by Meek's rules."""
-        pdag_simple = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
-        dags = list(pdag_simple.enumerate_dags())
+    def test_enumerate_dags_basic_functionality(self):
+        """Comprehensive test covering basic enumeration scenarios."""
 
-        # Meek's Rule 1 forces B -> C orientation (A -> B - C => A -> B -> C)
-        # since A is not adjacent to C, so only 1 DAG is possible
-        self.assertEqual(len(dags), 1)
+        # Test 1: Meek's rule forcing orientation
+        pdag_meek = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")])
+        dags_meek = list(pdag_meek.enumerate_dags())
 
-        expected_edges = {("A", "B"), ("B", "C")}  # A -> B -> C
-        actual_edges = set(dags[0].edges())
-        self.assertEqual(actual_edges, expected_edges)
+        self.assertEqual(len(dags_meek), 1)
+        expected_dag = DAG()
+        expected_dag.add_edges_from([("A", "B"), ("B", "C")])
 
-        dag = dags[0]
-        self.assertIsInstance(dag, DAG)
-        self.assertTrue(nx.is_directed_acyclic_graph(dag))
-        self.assertIn(("A", "B"), dag.edges())
+        # Direct DAG comparison
+        actual_dag = dags_meek[0]
+        self.assertEqual(set(actual_dag.edges()), set(expected_dag.edges()))
+        self.assertTrue(nx.is_directed_acyclic_graph(actual_dag))
 
-    def test_enumerate_dags_complex(self):
-        """Test enumeration with independent undirected edges."""
-        # Use independent edges to avoid Meek's rules forcing orientations
-        pdag_complex = PDAG(
-            directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")]
-        )
-        dags = list(pdag_complex.enumerate_dags())
+        # Test 2: Independent edges with exact enumeration
+        pdag_independent = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")])
+        dags_independent = list(pdag_independent.enumerate_dags())
 
-        # Should have exactly 4 DAGs: 2^2 = 4 possible orientations
-        self.assertEqual(len(dags), 4)
+        self.assertEqual(len(dags_independent), 4)
 
-        expected_edge_sets = [
-            {("A", "B"), ("C", "D")},  # A -> B, C -> D
-            {("A", "B"), ("D", "C")},  # A -> B, D -> C
-            {("B", "A"), ("C", "D")},  # B -> A, C -> D
-            {("B", "A"), ("D", "C")},  # B -> A, D -> C
+        # Create expected DAGs for exact comparison
+        expected_dags = [
+            DAG([("A", "B"), ("C", "D")]),  # A -> B, C -> D
+            DAG([("A", "B"), ("D", "C")]),  # A -> B, D -> C
+            DAG([("B", "A"), ("C", "D")]),  # B -> A, C -> D
+            DAG([("B", "A"), ("D", "C")])   # B -> A, D -> C
         ]
 
-        actual_edge_sets = [set(dag.edges()) for dag in dags]
+        actual_edge_sets = [set(dag.edges()) for dag in dags_independent]
+        expected_edge_sets = [set(dag.edges()) for dag in expected_dags]
 
-        for expected in expected_edge_sets:
-            self.assertIn(expected, actual_edge_sets)
+        # Verify each expected DAG is present
+        for expected_edges in expected_edge_sets:
+            self.assertIn(expected_edges, actual_edge_sets)
 
-        for dag in dags:
-            self.assertIsInstance(dag, DAG)
+        # Verify all DAGs are valid and distinct
+        for i, dag in enumerate(dags_independent):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
-
-    def test_enumerate_dags_max_dags_limit(self):
-        """Test max_dags parameter."""
-        # Use independent edges to get multiple DAGs
-        pdag_complex = PDAG(
-            directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")]
-        )
-        all_dags = list(pdag_complex.enumerate_dags())
-        limited_dags = list(pdag_complex.enumerate_dags(max_dags=2))
-
-        # Should have exactly 4 DAGs without limit
-        self.assertEqual(len(all_dags), 4)
-        # Should have exactly 2 DAGs with limit
-        self.assertEqual(len(limited_dags), 2)
-
-        # All limited DAGs should be in the full set
-        all_edge_sets = [set(dag.edges()) for dag in all_dags]
-        for limited_dag in limited_dags:
-            self.assertIn(set(limited_dag.edges()), all_edge_sets)
-
-    def test_enumerate_dags_no_duplicates(self):
-        """Test that no duplicate DAGs are returned."""
-        # Use independent edges to get multiple DAGs
-        pdag_complex = PDAG(
-            directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")]
-        )
-        dags = list(pdag_complex.enumerate_dags())
-
-        # Convert to edge sets for comparison
-        dag_edge_sets = [frozenset(dag.edges()) for dag in dags]
-
-        # Check for uniqueness
-        self.assertEqual(len(dag_edge_sets), len(set(dag_edge_sets)))
-
-        # Verify each DAG is distinct
-        for i, dag1 in enumerate(dags):
-            for j, dag2 in enumerate(dags):
+            for j, other_dag in enumerate(dags_independent):
                 if i != j:
-                    self.assertNotEqual(set(dag1.edges()), set(dag2.edges()))
+                    self.assertNotEqual(dag, other_dag)
 
-    def test_enumerate_dags_preserve_roles(self):
-        """Test that roles are preserved in enumerated DAGs."""
-        pdag = PDAG(
+    def test_enumerate_dags_advanced_features(self):
+        """Test advanced features: constraints, roles, limits."""
+
+        # Test 1: V-structure constraints
+        pdag_constraint = PDAG(directed_ebunch=[("A", "C")], undirected_ebunch=[("B", "C")])
+        dags_constraint = list(pdag_constraint.enumerate_dags())
+
+        self.assertEqual(len(dags_constraint), 1)
+        expected_constraint_dag = DAG([("A", "C"), ("C", "B")])
+        self.assertEqual(set(dags_constraint[0].edges()), set(expected_constraint_dag.edges()))
+
+        # Test 2: Role preservation
+        pdag_roles = PDAG(
             directed_ebunch=[],
             undirected_ebunch=[("A", "B")],
             exposures={"A"},
-            outcomes={"B"},
+            outcomes={"B"}
         )
+        dags_roles = list(pdag_roles.enumerate_dags())
 
-        dags = list(pdag.enumerate_dags())
-
-        # Should have exactly 2 DAGs (A -> B and B -> A)
-        self.assertEqual(len(dags), 2)
-
-        for dag in dags:
+        self.assertEqual(len(dags_roles), 2)
+        for dag in dags_roles:
             self.assertEqual(dag.exposures, {"A"})
             self.assertEqual(dag.outcomes, {"B"})
-            self.assertIsInstance(dag, DAG)
-            self.assertTrue(nx.is_directed_acyclic_graph(dag))
 
-    def test_enumerate_dags_with_v_structure_constraint(self):
-        """Test enumeration when v-structure constraints limit orientations."""
-        # Create a PDAG where orienting B -> C would create an unshielded collider
-        # A -> C <- B (where A and B are not adjacent)
-        pdag = PDAG(directed_ebunch=[("A", "C")], undirected_ebunch=[("B", "C")])
+        # Test 3: Max DAGs limit
+        pdag_limit = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")])
+        all_dags = list(pdag_limit.enumerate_dags())
+        limited_dags = list(pdag_limit.enumerate_dags(max_dags=2))
 
-        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(all_dags), 4)
+        self.assertEqual(len(limited_dags), 2)
 
-        # Only one valid orientation: A -> C <- B is forbidden (creates unshielded collider)
-        # So only C -> B is valid (making the direction A -> C, C -> B)
-        self.assertEqual(len(dags), 1)
+        # Verify limited DAGs are subset of all DAGs by direct comparison
+        all_dags_set = {frozenset(dag.edges()) for dag in all_dags}
+        for limited_dag in limited_dags:
+            self.assertIn(frozenset(limited_dag.edges()), all_dags_set)
 
-        dag = dags[0]
-        expected_edges = {
-            ("A", "C"),
-            ("C", "B"),
-        }  # C -> B is the only valid orientation
-        self.assertEqual(set(dag.edges()), expected_edges)
+    def test_enumerate_dags_edge_cases(self):
+        """Test edge cases and generator behavior."""
 
-    def test_enumerate_dags_empty_pdag(self):
-        """Test enumeration of empty PDAG."""
+        # Test 1: Empty PDAG
         empty_pdag = PDAG()
-        dags = list(empty_pdag.enumerate_dags())
+        empty_dags = list(empty_pdag.enumerate_dags())
 
-        self.assertEqual(len(dags), 1)
-        self.assertEqual(len(dags[0].nodes()), 0)
-        self.assertEqual(len(dags[0].edges()), 0)
+        self.assertEqual(len(empty_dags), 1)
+        self.assertEqual(len(empty_dags[0].nodes()), 0)
+        self.assertEqual(len(empty_dags[0].edges()), 0)
 
-    def test_enumerate_dags_generator_behavior(self):
-        """Test that enumerate_dags returns a generator."""
-        pdag_simple = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B")])
-        gen = pdag_simple.enumerate_dags()
+        # Test 2: Only directed edges
+        directed_only = PDAG(directed_ebunch=[("A", "B"), ("B", "C")])
+        directed_dags = list(directed_only.enumerate_dags())
 
-        # Should be a generator
+        self.assertEqual(len(directed_dags), 1)
+        expected_directed = DAG([("A", "B"), ("B", "C")])
+        self.assertEqual(set(directed_dags[0].edges()), set(expected_directed.edges()))
+
+        # Test 3: Generator behavior
+        pdag_gen = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B")])
+        gen = pdag_gen.enumerate_dags()
+
         self.assertTrue(hasattr(gen, "__iter__"))
         self.assertTrue(hasattr(gen, "__next__"))
 
-        # Should be able to get first item
         first_dag = next(gen)
-        self.assertIsInstance(first_dag, DAG)
-
-        # Should be able to get second item
         second_dag = next(gen)
+        self.assertIsInstance(first_dag, DAG)
         self.assertIsInstance(second_dag, DAG)
-
-        # Should not be the same DAG
-        self.assertNotEqual(set(first_dag.edges()), set(second_dag.edges()))
+        self.assertNotEqual(first_dag, second_dag)
 
 
 class TestDAGConversion(unittest.TestCase):
