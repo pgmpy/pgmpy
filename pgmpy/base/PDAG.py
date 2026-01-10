@@ -608,7 +608,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         while queue:
             current = queue.pop(0)
             for neighbor in undirected_nodes:
-                if neighbor not in visited and pdag.has_undirected_edge(current, neighbor):
+                if neighbor not in visited and pdag.has_undirected_edge(
+                    current, neighbor
+                ):
                     visited.add(neighbor)
                     queue.append(neighbor)
 

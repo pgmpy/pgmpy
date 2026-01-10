@@ -1704,7 +1704,9 @@ class TestPDAG(unittest.TestCase):
         self.assertTrue(nx.is_directed_acyclic_graph(actual_dag))
 
         # Test 2: Independent edges with exact enumeration
-        pdag_independent = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")])
+        pdag_independent = PDAG(
+            directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")]
+        )
         dags_independent = list(pdag_independent.enumerate_dags())
 
         self.assertEqual(len(dags_independent), 4)
@@ -1714,7 +1716,7 @@ class TestPDAG(unittest.TestCase):
             DAG([("A", "B"), ("C", "D")]),  # A -> B, C -> D
             DAG([("A", "B"), ("D", "C")]),  # A -> B, D -> C
             DAG([("B", "A"), ("C", "D")]),  # B -> A, C -> D
-            DAG([("B", "A"), ("D", "C")])   # B -> A, D -> C
+            DAG([("B", "A"), ("D", "C")]),  # B -> A, D -> C
         ]
 
         actual_edge_sets = [set(dag.edges()) for dag in dags_independent]
@@ -1735,19 +1737,23 @@ class TestPDAG(unittest.TestCase):
         """Test advanced features: constraints, roles, limits."""
 
         # Test 1: V-structure constraints
-        pdag_constraint = PDAG(directed_ebunch=[("A", "C")], undirected_ebunch=[("B", "C")])
+        pdag_constraint = PDAG(
+            directed_ebunch=[("A", "C")], undirected_ebunch=[("B", "C")]
+        )
         dags_constraint = list(pdag_constraint.enumerate_dags())
 
         self.assertEqual(len(dags_constraint), 1)
         expected_constraint_dag = DAG([("A", "C"), ("C", "B")])
-        self.assertEqual(set(dags_constraint[0].edges()), set(expected_constraint_dag.edges()))
+        self.assertEqual(
+            set(dags_constraint[0].edges()), set(expected_constraint_dag.edges())
+        )
 
         # Test 2: Role preservation
         pdag_roles = PDAG(
             directed_ebunch=[],
             undirected_ebunch=[("A", "B")],
             exposures={"A"},
-            outcomes={"B"}
+            outcomes={"B"},
         )
         dags_roles = list(pdag_roles.enumerate_dags())
 
@@ -1757,7 +1763,9 @@ class TestPDAG(unittest.TestCase):
             self.assertEqual(dag.outcomes, {"B"})
 
         # Test 3: Max DAGs limit
-        pdag_limit = PDAG(directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")])
+        pdag_limit = PDAG(
+            directed_ebunch=[], undirected_ebunch=[("A", "B"), ("C", "D")]
+        )
         all_dags = list(pdag_limit.enumerate_dags())
         limited_dags = list(pdag_limit.enumerate_dags(max_dags=2))
 
