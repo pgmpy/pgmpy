@@ -15,29 +15,46 @@ class InstrumentalVariables(BaseIdentification):
 
     Parammeters
     ----------
-    variant: str (default: None)
+    variant: str, optional
         The variant of instrumental variable identification to use. Supported variants are:
         - 'non-conditional': Returns a causal graph with identified non-conditional instrument variable(s).
         - 'conditional': Returns a causal graph with identified conditional instrument variable and its
                          corresponding conditional variables.
 
     scaling_indicators: dict, optional
-        A dictionary specifying the scaling indicators for latent variables in the causal graph.
-        The keys of the dictionary should be the latent variable names, and the values should be their
-        corresponding scaling indicators.
-        If scaling indicators are not provided, the method will find scaling indicators automatically.
-        If all scaling indicators are not provided, the method will automatically find the missing ones.
+        A dictionary specifying the scaling indicators for the latent variables in the causal graph. The causal effect
+        between the latent variable and its scaling indicator is set to a fixed value. This uses the observed variable
+        as a proxy measurement for the latent variable allowing identification of certain causal effects that would
+        otherwise be unidentifiable.
+
+        If scaling indicators are not provided, if required, the method will find scaling indicators automatically.
 
     Examples
     --------
-    TO : DO
+    >>> from pgmpy.base import DAG
+    >>> from pgmpy.identification import InstrumentalVariables
+    >>> edges = [
+    ...     ("Z", "X"),
+    ...     ("X", "Y"),
+    ...     ("L1", "X"),
+    ...     ("L1", "Y"),
+    ...     ("L1", "W1"),
+    ...     ("W1", "Y"),
+    ... ]
+    >>> causal_graph = DAG(edges, exposures="X", outcomes="Y", latents=["L1"])
+    >>> iv_identifier = InstrumentalVariables(variant="non-conditional")
+    >>> identified_graph, is_identified = iv_identifier.identify(causal_graph)
+    >>> is_identified
+    True
+    >>> identified_graph.get_role("instrument")
+    {'Z'}
+    >>> iv_identifier.validate(identified_graph)
+    True
 
     References
     ----------
-    .. [1] Ankan, A., Wortel, I., Bollen, K. A., & Textor, J. (2023).
-           Combining Graphical and Algebraic Approaches for Parameter
-           Identification in Latent Variable Structural Equation Models.
-           arXiv:2302.13220 [stat.ME]. https://arxiv.org/abs/2302.13220 :contentReference[oaicite:0]{index=0}
+    .. [1] Ankan, A., Wortel, I., Bollen, K. A., & Textor, J. (2023). Combining Graphical and Algebraic Approaches for
+           Parameter Identification in Latent Variable Structural Equation Models. arXiv:2302.13220 [stat.ME].
     """
 
     def __init__(
@@ -46,7 +63,7 @@ class InstrumentalVariables(BaseIdentification):
         scaling_indicators=None,
     ) -> None:
         self.supported_graph_types = (DAG,)
-        self.variant = variant
+        self.variant = variant.lower()
         self.scaling_indicators = scaling_indicators
 
     def _get_scaling_indicators(self, causal_graph):
