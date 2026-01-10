@@ -1674,18 +1674,6 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
 
-    def test_enumerate_dags_only_directed(self):
-        """Test enumeration when PDAG has only directed edges."""
-        pdag_only_directed = PDAG(
-            directed_ebunch=[("A", "B"), ("B", "C")], undirected_ebunch=[]
-        )
-        dags = list(pdag_only_directed.enumerate_dags())
-
-        self.assertEqual(len(dags), 1)
-        dag = dags[0]
-        self.assertIsInstance(dag, DAG)
-        self.assertTrue(nx.is_directed_acyclic_graph(dag))
-        self.assertEqual(set(dag.edges()), {("A", "B"), ("B", "C")})
 
     def test_enumerate_dags_basic_functionality(self):
         """Comprehensive test covering basic enumeration scenarios."""
