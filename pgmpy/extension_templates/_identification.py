@@ -7,7 +7,7 @@
 # 4. If you would like to contribute the identification method to pgmpy, please add tests in
 #   `pgmpy/tests/test_identification/` directory following the naming convention `test_your_method.py`.
 
-from pgmpy.base import DAG, PDAG, ADMG, MAG
+from pgmpy.base import ADMG, DAG, MAG, PDAG  # noqa: F401
 from pgmpy.identification import BaseIdentification
 
 
@@ -111,8 +111,8 @@ class YourIdentificationMethod(BaseIdentification):
         # This is where the main logic of your method goes
 
         # Example structure (replace with your actual algorithm):
-        exposure = exposures[0]
-        outcome = outcomes[0]
+        exposure = exposures[0]  # noqa: F841
+        outcome = outcomes[0]  # noqa: F841
 
         # Step 1: [Describe what this step does]
         # your_algorithm_step_1()
@@ -154,8 +154,8 @@ class YourIdentificationMethod(BaseIdentification):
             True if the assigned roles are valid for identification, False otherwise.
         """
         # TODO: Extract the relevant variables
-        exposures = causal_graph.get_role("exposures")
-        outcomes = causal_graph.get_role("outcomes")
+        exposures = causal_graph.get_role("exposures")  # noqa: F841
+        outcomes = causal_graph.get_role("outcomes")  # noqa: F841
 
         # TODO: Replace "your_role_name" with the role name your method uses
         identifying_vars = causal_graph.get_role("your_role_name")
