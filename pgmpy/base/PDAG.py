@@ -255,10 +255,16 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         Checks whether v has any directed parents other than u that are not adjacent to u.
 
+        Parameters
+        ----------
+        u, v : Hashable
+            The nodes representing the edge u -> v to be oriented.
+
         Returns
         -------
-        True, if the orientation u -> v would lead to creation of a new V-structure.
-        False, if no new V-structures are formed.
+        bool
+            True if the orientation u -> v would lead to creation of a new V-structure.
+            False if no new V-structures are formed.
         """
         for node in self.directed_parents(v):
             if (node != u) and (not self.is_adjacent(u, node)):
@@ -461,9 +467,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         Enumerate all DAGs consistent with the PDAG/CPDAG.
 
         This method implements an efficient algorithm for enumerating all directed acyclic graphs (DAGs)
-        that belong to the Markov equivalence class represented by this PDAG/CPDAG. The algorithm is
-        based on systematic orientation of undirected edges while maintaining DAG constraints and
-        avoiding creation of new v-structures.
+        that belong to the Markov equivalence class represented by this PDAG/CPDAG. The algorithm
+        uses a recursive approach based on consistent extension principles to avoid brute force
+        enumeration of all possible orientations.
 
         Parameters
         ----------
@@ -492,124 +498,86 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         [1] Wienöbst, M., Bannach, M., & Liśkiewicz, M. (2023).
             Efficient Enumeration of Markov Equivalent DAGs.
             In Proceedings of the AAAI Conference on Artificial Intelligence.
+        [2] Dor, Dorit, and Michael Tarsi.
+            "A simple algorithm to construct a consistent extension of a partially oriented graph."
+            Technical Report R-185, Cognitive Systems Laboratory, UCLA (1992).
         """
         from pgmpy.base import DAG
 
-        # If there are no undirected edges, return the single DAG
+        enumerated_count = 0
+        seen_dags = set()
+
+        def _enumerate_recursive(pdag_copy):
+            nonlocal enumerated_count
+
+            if max_dags is not None and enumerated_count >= max_dags:
+                return
+
+            # Apply Meek's rules to orient as many edges as possible
+            pdag_copy.apply_meeks_rules(apply_r4=True, inplace=True)
+
+            # If no undirected edges remain, we have a complete DAG
+            if not pdag_copy.undirected_edges:
+                dag = DAG()
+                dag.add_nodes_from(pdag_copy.nodes())
+                dag.add_edges_from(pdag_copy.directed_edges)
+                dag.latents = self.latents.copy()
+
+                for role, vars in self.get_role_dict().items():
+                    dag.with_role(role=role, variables=vars, inplace=True)
+
+                # Use frozenset of edges as unique identifier
+                dag_signature = frozenset(dag.edges())
+                if dag_signature not in seen_dags and nx.is_directed_acyclic_graph(dag):
+                    seen_dags.add(dag_signature)
+                    yield dag
+                    enumerated_count += 1
+                return
+
+            # Find an undirected edge to orient
+            u, v = next(iter(pdag_copy.undirected_edges))
+
+            # Try both orientations
+            for orientation in [(u, v), (v, u)]:
+                x, y = orientation
+
+                # Check if orientation is valid
+                if _is_valid_orientation(pdag_copy, x, y):
+                    # Create a copy and orient the edge
+                    new_pdag = pdag_copy.copy()
+                    new_pdag.orient_undirected_edge(x, y, inplace=True)
+
+                    # Recursively enumerate from this orientation
+                    yield from _enumerate_recursive(new_pdag)
+
+        def _is_valid_orientation(pdag, x, y):
+            # Check if orienting x -> y would create a cycle
+            temp_dag = pdag._directed_graph()
+            temp_dag.add_edge(x, y)
+            if not nx.is_directed_acyclic_graph(temp_dag):
+                return False
+
+            # Check if orienting x -> y would create a new unshielded collider
+            if pdag._check_new_unshielded_collider(x, y):
+                return False
+
+            return True
+
+        # Handle the base case where there are no undirected edges
         if not self.undirected_edges:
             dag = DAG()
             dag.add_nodes_from(self.nodes())
             dag.add_edges_from(self.directed_edges)
             dag.latents = self.latents.copy()
 
-            # Copy roles
             for role, vars in self.get_role_dict().items():
                 dag.with_role(role=role, variables=vars, inplace=True)
 
             yield dag
             return
 
-        # Track enumerated DAGs to avoid duplicates
-        enumerated_count = 0
-
-        # Use systematic enumeration based on undirected edge orientations
-        undirected_edge_list = list(self.undirected_edges)
-
-        # Generate all possible orientations of undirected edges
-        for orientation_bits in range(2 ** len(undirected_edge_list)):
-            if max_dags is not None and enumerated_count >= max_dags:
-                break
-
-            # Create a copy of the PDAG for this orientation
-            candidate_pdag = self.copy()
-
-            # Try to orient edges according to the current bit pattern
-            valid_orientation = True
-
-            for i, (u, v) in enumerate(undirected_edge_list):
-                if not valid_orientation:
-                    break
-
-                # Determine orientation based on bit pattern
-                if (orientation_bits >> i) & 1:
-                    # Orient as u -> v
-                    try:
-                        # Check if this orientation would create a cycle
-                        temp_dag = candidate_pdag._directed_graph()
-                        temp_dag.add_edge(u, v)
-                        if not nx.is_directed_acyclic_graph(temp_dag):
-                            valid_orientation = False
-                            continue
-
-                        # Check if this orientation would create a new unshielded collider
-                        if candidate_pdag._check_new_unshielded_collider(u, v):
-                            valid_orientation = False
-                            continue
-
-                        # Orient the edge
-                        candidate_pdag.orient_undirected_edge(u, v, inplace=True)
-
-                    except ValueError:
-                        # Edge might have already been oriented by previous operations
-                        valid_orientation = False
-                        continue
-                else:
-                    # Orient as v -> u
-                    try:
-                        # Check if this orientation would create a cycle
-                        temp_dag = candidate_pdag._directed_graph()
-                        temp_dag.add_edge(v, u)
-                        if not nx.is_directed_acyclic_graph(temp_dag):
-                            valid_orientation = False
-                            continue
-
-                        # Check if this orientation would create a new unshielded collider
-                        if candidate_pdag._check_new_unshielded_collider(v, u):
-                            valid_orientation = False
-                            continue
-
-                        # Orient the edge
-                        candidate_pdag.orient_undirected_edge(v, u, inplace=True)
-
-                    except ValueError:
-                        # Edge might have already been oriented by previous operations
-                        valid_orientation = False
-                        continue
-
-            if valid_orientation:
-                # Apply Meek's rules to complete the orientation
-                try:
-                    candidate_pdag.apply_meeks_rules(apply_r4=True, inplace=True)
-
-                    # Convert to DAG if all edges are oriented
-                    if not candidate_pdag.undirected_edges:
-                        dag = DAG()
-                        dag.add_nodes_from(candidate_pdag.nodes())
-                        dag.add_edges_from(candidate_pdag.directed_edges)
-                        dag.latents = self.latents.copy()
-
-                        # Copy roles
-                        for role, vars in self.get_role_dict().items():
-                            dag.with_role(role=role, variables=vars, inplace=True)
-
-                        # Verify the DAG is valid and acyclic
-                        if nx.is_directed_acyclic_graph(dag):
-                            yield dag
-                            enumerated_count += 1
-                    else:
-                        # If there are still undirected edges, convert using existing to_dag method
-                        try:
-                            dag = candidate_pdag.to_dag()
-                            if nx.is_directed_acyclic_graph(dag):
-                                yield dag
-                                enumerated_count += 1
-                        except Exception:
-                            # Skip invalid orientations
-                            continue
-
-                except Exception:
-                    # Skip invalid orientations that cause errors in Meek's rules
-                    continue
+        # Start the recursive enumeration
+        yield from _enumerate_recursive(self.copy())
 
     def to_graphviz(self) -> object:
         """
