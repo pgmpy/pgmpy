@@ -22,12 +22,13 @@ class InstrumentalVariables(BaseIdentification):
                          corresponding conditional variables.
 
     scaling_indicators: dict, optional
-        A dictionary specifying the scaling indicators for the latent variables in the causal graph. The causal effect
-        between the latent variable and its scaling indicator is set to a fixed value. This uses the observed variable
-        as a proxy measurement for the latent variable allowing identification of certain causal effects that would
-        otherwise be unidentifiable.
+        A dictionary specifying the scaling indicators for exposure and/or outcome variables if they are latent of the
+        form {latent_variable: scaling_indicator}. Scaling indicators are observed variables that have an incoming edge
+        from the corresponding latent variable. This uses the observed variable as a proxy measurement for the latent
+        exposure/outcome and allows identification of certain causal effects that would otherwise be unidentifiable.
 
-        If scaling indicators are not provided, if required, the method will find scaling indicators automatically.
+        If scaling indicators are not provided, if required, the method will automatically assign scaling indicators by
+        selecting an child observed node of the latent variable that is not the outcome (for latent exposures).
 
     Examples
     --------
@@ -64,39 +65,39 @@ class InstrumentalVariables(BaseIdentification):
     ) -> None:
         self.supported_graph_types = (DAG,)
         self.variant = variant.lower()
-        self.scaling_indicators = scaling_indicators
+        self.scaling_indicators = (
+            dict() if scaling_indicators is None else scaling_indicators
+        )
 
     def _get_scaling_indicators(self, causal_graph):
-        exposure = causal_graph.get_role("exposures")
-        outcome = causal_graph.get_role("outcomes")
+        exposure = causal_graph.get_role("exposures")[0]
+        outcome = causal_graph.get_role("outcomes")[0]
         latent_variables = causal_graph.get_role("latents")
         all_nodes = causal_graph.nodes()
         observed_nodes = all_nodes - latent_variables
 
-        if (
-            self.scaling_indicators is not None
-            and set(latent_variables) == set(self.scaling_indicators.keys())
-            and all(v is not None for v in self.scaling_indicators.values())
-        ):
-            return self.scaling_indicators
+        if exposure in latent_variables:
+            if exposure in self.scaling_indicators.keys():
+                if self.scaling_indicators[exposure] == outcome:
+                    raise ValueError(
+                        f"{outcome} is the outcome variable and cannot be the scaling indicator for the latent exposure"
+                        f"{exposure}."
+                    )
+            else:
+                self.scaling_indicators[exposure] = [
+                    neighbour
+                    for neighbour in causal_graph.neighbors(exposure)
+                    if neighbour != outcome and neighbour in observed_nodes
+                ][0]
 
-        existing_keys = (
-            set(self.scaling_indicators.keys())
-            if self.scaling_indicators is not None
-            else set()
-        )
+        if outcome in latent_variables:
+            if outcome not in self.scaling_indicators.keys():
+                self.scaling_indicators[outcome] = [
+                    neighbour
+                    for neighbour in causal_graph.neighbors(outcome)
+                    if neighbour in observed_nodes
+                ][0]
 
-        if self.scaling_indicators is None:
-            self.scaling_indicators = {}
-
-        missing_scaling_indicators = set(latent_variables) - existing_keys
-
-        for node in missing_scaling_indicators:
-            for neighbour in causal_graph.neighbors(node):
-                if neighbour in observed_nodes:
-                    if not (node in exposure and neighbour != outcome):
-                        self.scaling_indicators[node] = neighbour
-                        break
         return self.scaling_indicators
 
     def _iv_transformations(self, X, Y, causal_graph, scaling_indicators=None):

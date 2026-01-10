@@ -14,8 +14,8 @@ def test_get_scaling_indicators():
             ("eta1", "y2"),
         ],
         roles={
-            "exposures": "x1",
-            "outcomes": "y1",
+            "exposures": "xi1",
+            "outcomes": "eta1",
             "latents": ("xi1", "eta1"),
         },
     )
@@ -23,14 +23,12 @@ def test_get_scaling_indicators():
 
     scaling_indicators = iv._get_scaling_indicators(model)
 
-    assert scaling_indicators == {
-        "eta1": "y1",
-        "xi1": "x1",
-    }
+    assert scaling_indicators["eta1"] in ["y1", "y2"]
+    assert scaling_indicators["xi1"] in ["x1", "x2"]
 
 
 def test_iv_transformations():
-    model = DAG(
+    causal_model = DAG(
         [
             ("xi1", "eta1"),
             ("xi1", "x1"),
@@ -38,18 +36,13 @@ def test_iv_transformations():
             ("eta1", "y1"),
             ("eta1", "y2"),
         ],
-        roles={
-            "exposures": "x1",
-            "outcomes": "y1",
-            "latents": ("xi1", "eta1"),
-        },
+        exposures=["xi1"],
+        outcomes=["eta1"],
+        latents=["xi1", "eta1"],
     )
     iv = InstrumentalVariables(variant="non-conditional")
-
-    scaling_indicators = iv._get_scaling_indicators(model)
-
     transformed_graph, dependent_var = iv._iv_transformations(
-        "xi1", "eta1", model, scaling_indicators=scaling_indicators
+        "xi1", "eta1", causal_model, scaling_indicators={"xi1": "x1", "eta1": "y1"}
     )
 
     assert set(transformed_graph.edges()) == {
