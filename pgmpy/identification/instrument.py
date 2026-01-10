@@ -130,29 +130,27 @@ class InstrumentalVariables(BaseIdentification):
         return full_graph_, dependent_var
 
     def _identify(self, causal_graph):
-        exposure = causal_graph.get_role("exposures")[0]
-        outcome = causal_graph.get_role("outcomes")[0]
-        if len(exposure) != 1:
+        exposures = causal_graph.get_role("exposures")
+        outcomes = causal_graph.get_role("outcomes")
+
+        if len(exposures) != 1:
             raise ValueError(
-                f"The current implementation suppports only one exposure. Got: {len(exposure)}"
+                f"The current implementation supports only one exposure. Got: {len(exposures)}"
             )
-        if len(outcome) != 1:
+        else:
+            exposure = exposures[0]
+
+        if len(outcomes) != 1:
             raise ValueError(
-                f"The current implementation suppports only one outcome. Got: {len(outcome)}"
+                f"The current implementation supports only one outcome. Got: {len(outcomes)}"
             )
+        else:
+            outcome = outcomes[0]
 
         all_nodes = causal_graph.nodes()
-        observed = all_nodes - causal_graph.get_role("latents")
-
         latent_variables = causal_graph.get_role("latents")
+        observed = all_nodes - latent_variables
         scaling_indicators = self._get_scaling_indicators(causal_graph)
-
-        if (exposure in scaling_indicators.keys()) and (
-            scaling_indicators[exposure] == outcome
-        ):
-            raise ValueError(
-                f"{outcome} is the scaling indicator of {exposure}. Please specify the correct `scaling_indicators`"
-            )
 
         transformed_graph, dependent_var = self._iv_transformations(
             exposure, outcome, causal_graph, scaling_indicators
