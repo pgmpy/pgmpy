@@ -1,11 +1,11 @@
+import pgmpy.estimators.CITests as citests
 from pgmpy.base import PAG
-from pgmpy.estimators import BaseConstraintEstimator
-from pgmpy.estimators.CITests import get_callable_ci_test
+from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 
 
 class FCI(BaseConstraintEstimator):
     def __init__(self, data=None, independencies=None, **kwargs):
-        super().__init__(self, data=data, independencies=independencies, **kwargs)
+        super().__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
@@ -16,9 +16,7 @@ class FCI(BaseConstraintEstimator):
         **kwargs,
     ):
 
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=self.data, independencies=self.independencies
-        )
+        ci_test = citests.ci_registry.get_test(ci_test, data=self.data)
 
         # 1. Skeleton discovery
         skeleton, separating_sets = self.build_skeleton(
@@ -35,14 +33,27 @@ class FCI(BaseConstraintEstimator):
             pag.add_edge(u, v, "o", "o")
 
         # 2. Orient colliders
-        pag_new = self.orient_colliders(skeleton, separating_sets, graph_cls=PAG)
+        directed_edges, _ = self.orient_colliders(
+            skeleton, separating_sets, temporal_ordering={}
+        )
+        directed_edges = set(directed_edges)
 
+        for u, v in skeleton.edges():
+            uv = (u, v) in directed_edges
+            vu = (v, u) in directed_edges
+
+            if uv and not vu:
+                pag.modify_edge(u, v, "-", ">")
+            elif vu and not uv:
+                pag.modify_edge(u, v, ">", "-")
+            elif uv and vu:
+                pag.modify_edge(u, v, "o", "o")
         # 3. Apply orientation rules iteratively
-        changed = True
-        while changed:
-            changed = False
-            pag_new = pag.apply_orientation_rules(pag, inplace=False, sepsets=None)
+        while True:
+            pag_new = pag.apply_orientation_rules(pag, False, separating_sets)
+
             if pag_new == pag:
                 break
+            pag = pag_new
 
         return pag_new
