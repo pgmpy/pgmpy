@@ -10,7 +10,6 @@ from typing import (
     Optional,
     Set,
     Tuple,
-    Type,
     Union,
 )
 
@@ -22,6 +21,9 @@ from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
+from pgmpy import config
+from pgmpy.base import UndirectedGraph
+from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
 
 
@@ -347,9 +349,7 @@ class BaseConstraintEstimator(StructureEstimator):
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
         temporal_ordering: Dict[Hashable, int] = dict(),
-        graph_cls: Type = PDAG,  # By default
-        # here this will return the list of tuples
-    ) -> PDAG:
+    ):
         """
         Orient v-structures (colliders) in the given skeleton based on separating sets.
 
@@ -365,16 +365,13 @@ class BaseConstraintEstimator(StructureEstimator):
             A dict mapping node -> time index. If given, orientations that
             violate temporal order are blocked.
 
-        graph_cls : class, optional
-            Graph class to use for the result (e.g., PDAG for PC, PAG for FCI).
-            Must support the same constructor interface:
-            `graph_cls(directed_ebunch=..., undirected_ebunch=...)`.
-
         Returns
         -------
-        graph_cls instance
-            A partially oriented graph (PDAG for PC, PAG for FCI).
+        set
+            A set of oriented edges as tuples (u, v)
         """
+        if temporal_ordering is None:
+            temporal_ordering = {}
 
         # Work on a directed copy to check orientations
         candidate = skeleton.to_directed()
@@ -390,20 +387,4 @@ class BaseConstraintEstimator(StructureEstimator):
                         ):
                             candidate.remove_edges_from([(Z, X), (Z, Y)])
 
-        # Collect oriented edges
-        edges = set(candidate.edges())
-        undirected_edges = set()
-        directed_edges = set()
-        for u, v in edges:
-            if (v, u) in edges:
-                undirected_edges.add(tuple(sorted((u, v))))
-            else:
-                directed_edges.add((u, v))
-
-        # Construct result graph
-        oriented_graph = graph_cls(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
-        oriented_graph.add_nodes_from(candidate.nodes())
-
-        return oriented_graph
+        return candidate.edges(), candidate.nodes()

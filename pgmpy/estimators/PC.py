@@ -252,6 +252,12 @@ class PC(BaseConstraintEstimator):
 
         # Step 2: Orient the edges based on collider structures.
         pdag = self.orient_colliders(skel, separating_sets, expert_knowledge.temporal_ordering)
+        edges, nodes = self.orient_colliders(
+            skel, separating_sets, expert_knowledge.temporal_ordering
+        )
+        pdag = PDAG()
+        pdag.add_edges_from(edges)
+        pdag.add_nodes_from(nodes)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
