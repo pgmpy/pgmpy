@@ -11,6 +11,7 @@ from typing import (
 )
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
@@ -18,13 +19,12 @@ from sklearn.utils.validation import validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import UndirectedGraph
+from pgmpy.base import DAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import SHD
-from pgmpy.metrics.metrics import get_metrics
+from pgmpy.metrics import SHD, correlation_score
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -78,33 +78,54 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         return X
 
-    def score(self, X_test=None, ground_truth=None, method=SHD, **kwargs):
+    def score(
+        self,
+        X,
+        y=None,
+        method_true_model=SHD,
+        method_test_data=correlation_score,
+        **kwargs,
+    ):
         """Method to calculate the score of the fitted causal graph.
 
         Parameters
         ----------
-        X_test: pd.DataFrame
-            The data to calculate the model score on.
+        X: pgmpy.base.DAG or pd.DataFrame
+            The true model to calulate the model score against, or the test data for the same .
 
-        ground_truth: pgmpy.base.DAG
-            The true model to calulate the model score against.
-
-        method: function
+        y: function
             The scoring method to be used (from pgmpy.metrics or custom function).
 
         kwargs:
             Additional arguments that are required for the scoring method chosen.
         """
-        if isinstance(method, str):
-            method = get_metrics(method)
+        validate_data(
+            self,
+            X=X,
+            dtype=None,
+            accept_sparse=False,
+            ensure_all_finite=True,
+            reset=False,
+        )
 
         # Metrics that test the model against data
-        if not ground_truth:
-            graph_score = method(self.causal_graph_, X_test, **kwargs)
+        if isinstance(X, pd.DataFrame):
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = method_test_data(causal_dag_, X, **kwargs)
 
         # Metrics that test the model against the true model (SHD, SID etc.)
+        elif isinstance(X, (DAG)):
+            graph_score = method_true_model(self.causal_graph_, X, **kwargs)
+
+        elif isinstance(X, (np.ndarray)):
+            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = method_test_data(causal_dag_, X, **kwargs)
+
         else:
-            graph_score = method(self.causal_graph_, ground_truth, **kwargs)
+            raise TypeError(
+                f"Expected pd.DataFrame or DAG or numpy ndarray: got unsupported type {type(X)}"
+            )
 
         return graph_score
 
