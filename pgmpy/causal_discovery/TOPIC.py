@@ -11,12 +11,12 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.causal_discovery._base import _BaseConstraintCausalDiscovery
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import BICGauss, StructureScore, get_scoring_method
 
 
-class TOPIC(_BaseConstraintCausalDiscovery):
+class TOPIC(_BaseCausalDiscovery):
     """
     The TOPIC algorithm for causal discovery / structure learning.
 
@@ -24,10 +24,8 @@ class TOPIC(_BaseConstraintCausalDiscovery):
     tabular dataset, TOPIC estimates the causal structure among the
     variables in the data in a Directed Acyclic Graph (DAG). The algorithm works by
     establishing a topological ordering among the variables using a local scoring
-    criterion, and in the process adds respectively prunes directed edges among the variables
-    that are consistent with the topological ordering.
-
-    *Note: will inherit from _BaseCausalDiscovery or _BaseScoreCausalDiscovery once those are sklearn-compatible.*
+    criterion, and in the process adds respectively prunes directed edges among the
+    variables that are consistent with the topological ordering.
 
     Parameters
     ----------
@@ -133,7 +131,7 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         self.show_progress = show_progress
         self.use_cache = use_cache
 
-    def _fit(self, X: pd.DataFrame, independencies=None):
+    def _fit(self, X: pd.DataFrame):
         """
         The fitting procedure for the TOPIC algorithm.
 
@@ -141,10 +139,6 @@ class TOPIC(_BaseConstraintCausalDiscovery):
         ----------
         X: pd.DataFrame
             The input dataset
-
-        independencies: Independencies
-            Not used *(Note: will inherit from _BaseCausalDiscovery or _BaseScoreCausalDiscovery once
-            sklearn-compatible and then this argument can be removed)*
         """
 
         # 0. Initialization (Data, DAG)
@@ -185,7 +179,6 @@ class TOPIC(_BaseConstraintCausalDiscovery):
                 source, dag_current
             )
 
-            # History
             topic_history_.append(
                 {
                     "iteration": it,
