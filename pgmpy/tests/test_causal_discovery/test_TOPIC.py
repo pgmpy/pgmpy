@@ -166,7 +166,6 @@ def test_next_node_in_topological_order_tie(monkeypatch):
     source, meta = topic._next_node_in_topological_order(
         candidates=candidates,
         dag_current=dag,
-        score_fn=_score_fn,
     )
     assert source == "A"
     assert meta["source_idx"] == 0
@@ -224,8 +223,7 @@ def test_find_removable_edge_no_removable_candidate():
     topic = TOPIC()
 
     def score_fn(child, parents):
-        # higher is better; fewer parents => worse score
-        return 100.0 - (3 - len(parents)) * 10.0  # 3 parents:100, 2 parents:90
+        return 100.0 - (3 - len(parents)) * 10.0
 
     topic.score_fn_ = score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
@@ -253,7 +251,6 @@ def test_find_removable_edge_allows_small_negative_harm_due_to_float_noise():
             return 1.0
         if set(parents) == {"B"}:
             return 1.0 - 1e-12
-        raise AssertionError
 
     topic.score_fn_ = score_fn2
     removed_found, best_parent, best_harm, _ = topic._find_removable_edge(
@@ -375,12 +372,14 @@ def test_remove_ingoing_edges_calls_find_until_none(monkeypatch):
     assert ("C", "X") in dag.edges()
 
 
-def test_score_significant_mdl_monotonicity():
+def test_score_significant():
     topic = TOPIC()
     topic._init_score(pd.DataFrame())
-    assert topic._score_significant(0.1) is False
-    assert topic._score_significant(-1.0) is False
-    assert topic._score_significant(10.0) is True
+
+    assert not topic._score_significant(-1.0)
+    assert not topic._score_significant(0.0)
+    assert topic._score_significant(0.01)
+    assert topic._score_significant(10.0)
 
 
 def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
@@ -399,8 +398,8 @@ def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
     def score_fn(child, parents):
         return 0.0
 
-    added, meta = topic._add_outgoing_edges(
-        source="A", candidates=["A", "B", "C"], dag_current=dag, score_fn=score_fn
+    added, all = topic._add_outgoing_edges(
+        source="A", candidates=["A", "B", "C"], dag_current=dag
     )
 
     assert ("A", "A") not in dag.edges()
@@ -408,7 +407,7 @@ def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
     assert ("A", "C") not in dag.edges()
 
     assert added == [{"from": "A", "to": "B", "gain": pytest.approx(2.0)}]
-    assert meta == [
+    assert all == [
         {"from": "A", "to": "B", "gain": pytest.approx(2.0), "significant": True},
         {"from": "A", "to": "C", "gain": pytest.approx(-1.0), "significant": False},
     ]
@@ -422,3 +421,7 @@ def test_fit_scoring_methods(fake_data, scoring_method):
     est = TOPIC(scoring_method=scoring_method)
     dag = est.fit(fake_data)
     assert dag is not None
+    assert est.n_features_in_ == fake_data.shape[1]
+    assert len(est.feature_names_in_) == len(
+        np.asarray(fake_data.columns, dtype=object)
+    )
