@@ -283,7 +283,7 @@ class K2(StructureScore):
     >>> data = pd.DataFrame({"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]})
     >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
     >>> k2_score = K2(data)
-    >>> print(k2_score.score_(model))
+    >>> print(k2_score.score(model))
     -356.1785
 
     Raises
@@ -413,7 +413,7 @@ class BDeu(StructureScore):
     >>> data = pd.DataFrame({"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]})
     >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
     >>> bdeu_score = BDeu(data, equivalent_sample_size=5)
-    >>> print(bdeu_score.score_(model))
+    >>> print(bdeu_score.score(model))
     -241.872
 
     Raises
@@ -527,7 +527,7 @@ class BDs(BDeu):
     >>> data = pd.DataFrame({"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]})
     >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
     >>> bds_score = BDs(data, equivalent_sample_size=5)
-    >>> print(bds_score.score_(model))
+    >>> print(bds_score.score(model))
     -210.314
 
     Raises
@@ -762,7 +762,7 @@ class BIC(LogLikeliHood):
     >>> data = pd.DataFrame({"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]})
     >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
     >>> bic_score = BIC(data)
-    >>> print(bic_score.score_(model))
+    >>> print(bic_score.score(model))
     -151.47
 
     Raises
@@ -855,7 +855,7 @@ class AIC(LogLikeliHood):
     >>> data = pd.DataFrame({"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]})
     >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
     >>> aic_score = AIC(data)
-    >>> print(aic_score.score_(model))
+    >>> print(aic_score.score(model))
     -140.12
 
     Raises
