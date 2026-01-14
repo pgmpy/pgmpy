@@ -204,12 +204,13 @@ class TOPIC(_BaseCausalDiscovery):
 
         if self.return_type == "dag":
             self.causal_graph_ = dag_current
-        elif self.return_type in ("pdag", "cpdag"):
+        elif self.return_type == "pdag":
             self.causal_graph_ = dag_current.to_pdag()
         else:
             raise ValueError(
-                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
+                f"return_type must be one of: dag, pdag, got {self.return_type}"
             )
+
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
         self.topological_order_ = topological_order_
         self.history_ = topic_history_
@@ -268,11 +269,6 @@ class TOPIC(_BaseCausalDiscovery):
         >>> next_node[0] in list(data.columns)
         True
         """
-
-        if self.score_fn_ is None:
-            raise ValueError(
-                "Score function not initialized. Call _init_score(data) or fit(data) first."
-            )
 
         improvement = self._improvement_matrix(candidates, dag_current)
         delta = improvement - improvement.T
@@ -492,7 +488,9 @@ class TOPIC(_BaseCausalDiscovery):
             local score of ``parents`` -> ``effect``
         """
         if self.score_fn_ is None:
-            raise ValueError("Score function not initialized")
+            raise ValueError(
+                "Score function not initialized. Call _init_score(data) or fit(data) first."
+            )
 
         score = self.score_fn_(effect, parents)
         return score

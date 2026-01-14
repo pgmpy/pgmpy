@@ -113,10 +113,10 @@ def test_unit_next_node_in_topological_order(monkeypatch):
 
     monkeypatch.setattr(topic, "_improvement_matrix", fake_improvement_matrix)
 
-    def _score_fn(node, parents):
-        return 0.0
+    # def _score_fn(node, parents):
+    #    return 0.0
 
-    topic.score_fn_ = _score_fn
+    topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     source, meta = topic._next_node_in_topological_order(
         candidates=candidates, dag_current=dag
     )
@@ -159,10 +159,11 @@ def test_next_node_in_topological_order_tie(monkeypatch):
     improv = np.array([[0.0, 1.0], [1.0, 0.0]])
     monkeypatch.setattr(topic, "_improvement_matrix", lambda *args, **kwargs: improv)
 
-    def _score_fn(node, parents):
-        return 0.0
+    # def _score_fn(node, parents):
+    #    return 0.0
 
-    topic.score_fn_ = _score_fn
+    # topic.score_fn_ = _score_fn
+    topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     source, meta = topic._next_node_in_topological_order(
         candidates=candidates,
         dag_current=dag,
@@ -174,10 +175,11 @@ def test_next_node_in_topological_order_tie(monkeypatch):
 def test_find_removable_edge_single_parent():
     topic = TOPIC()
 
-    def score_fn(child, parents):
-        return 0.0
+    # def score_fn(child, parents):
+    #    return 0.0
 
-    topic.score_fn_ = score_fn
+    # topic.score_fn_ = score_fn
+    topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
         parents=["A"], child="X"
     )
@@ -201,7 +203,6 @@ def test_find_removable_edge_best_parent():
             return 25.0
         if s == {"A", "B"}:
             return 50.0
-        raise AssertionError
 
     topic.score_fn_ = score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
@@ -243,9 +244,6 @@ def test_find_removable_edge_no_removable_candidate():
 def test_find_removable_edge_allows_small_negative_harm_due_to_float_noise():
     topic = TOPIC()
 
-    def score_fn(child, parents):
-        return 1.0
-
     def score_fn2(child, parents):
         if set(parents) == {"A", "B"}:
             return 1.0
@@ -281,10 +279,6 @@ def test_remove_ingoing_edges_iterative_removal(monkeypatch):
 
     monkeypatch.setattr(topic, "_find_removable_edge", fake_find)
 
-    def score_fn(child, parents):
-        return 0.0
-
-    topic.score_fn_ = score_fn
     pruned_edges, meta = topic._remove_ingoing_edges("X", dag)
 
     assert pruned_edges == [
@@ -310,9 +304,6 @@ def test_remove_ingoing_edges_no_parents():
     dag = DAG()
     dag.add_nodes_from(["X", "A"])
 
-    def score_fn(child, parents):
-        return 0.0
-
     pruned_edges, meta = model._remove_ingoing_edges("X", dag)
 
     assert pruned_edges == []
@@ -330,9 +321,6 @@ def test_remove_ingoing_edges_breaks_immediately(monkeypatch):
         return False, None, float("inf"), [("A", 0.2), ("B", 0.1)]
 
     monkeypatch.setattr(topic, "_find_removable_edge", fake_find)
-
-    def score_fn(child, parents):
-        return 0.0
 
     pruned_edges, meta = topic._remove_ingoing_edges("X", dag)
 
@@ -361,9 +349,6 @@ def test_remove_ingoing_edges_calls_find_until_none(monkeypatch):
         return False, None, float("inf"), []
 
     monkeypatch.setattr(topic, "_find_removable_edge", fake_find)
-
-    def score_fn(child, parents):
-        return 0.0
 
     pruned_edges, meta = topic._remove_ingoing_edges("X", dag)
 
@@ -395,9 +380,6 @@ def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
     )
     monkeypatch.setattr(topic, "_score_significant", lambda gain: gain > 0)
 
-    def score_fn(child, parents):
-        return 0.0
-
     added, all = topic._add_outgoing_edges(
         source="A", candidates=["A", "B", "C"], dag_current=dag
     )
@@ -413,15 +395,87 @@ def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
     ]
 
 
+_ERR = (
+    r"Score function not initialized\. Call _init_score\(data\) or fit\(data\) first\."
+)
+
+
+def test_score_checks_init_score():
+    topic = TOPIC()
+    with pytest.raises(ValueError, match=_ERR):
+        topic._score("X", ["A", "B"])
+
+
+def test_addition_gain_checks_init_score():
+    topic = TOPIC()
+    dag = DAG()
+    dag.add_nodes_from(["A", "B"])
+
+    with pytest.raises(ValueError, match=_ERR):
+        topic._addition_gain(cause="A", effect="B", dag_current=dag)
+
+
+def test_improvement_matrix_checks_init_score():
+    topic = TOPIC()
+    dag = DAG()
+    dag.add_nodes_from(["A", "B"])
+
+    with pytest.raises(ValueError, match=_ERR):
+        topic._improvement_matrix(candidates=["A", "B"], dag_current=dag)
+
+
+def test_add_outgoing_edges_checks_init_score():
+    topic = TOPIC()
+    dag = DAG()
+    dag.add_nodes_from(["A", "B", "C"])
+
+    with pytest.raises(ValueError, match=_ERR):
+        topic._add_outgoing_edges(source="A", candidates=["B", "C"], dag_current=dag)
+
+
+def test_find_removable_edge_checks_init_score():
+    topic = TOPIC()
+    with pytest.raises(ValueError, match=_ERR):
+        topic._find_removable_edge(parents=["A", "B"], child="X")
+
+
+def test_remove_ingoing_edges_checks_init_score(fake_data):
+    with pytest.raises(ValueError):
+        est = TOPIC(return_type="")
+        _ = est.fit(fake_data)
+
+
+def test_TOPIC_checks_return_type():
+    topic = TOPIC()
+    dag = DAG()
+    dag.add_nodes_from(["A", "B", "X"])
+    dag.add_edge("A", "X")
+    dag.add_edge("B", "X")
+
+    with pytest.raises(ValueError, match=_ERR):
+        topic._remove_ingoing_edges(source="X", dag_current=dag)
+
+
 """ 3. Smoke Test (fake data) """
 
 
-@pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
-def test_fit_scoring_methods(fake_data, scoring_method):
-    est = TOPIC(scoring_method=scoring_method)
+def test_fit_scoring_methods(fake_data):
+    est = TOPIC()
     dag = est.fit(fake_data)
     assert dag is not None
     assert est.n_features_in_ == fake_data.shape[1]
     assert len(est.feature_names_in_) == len(
         np.asarray(fake_data.columns, dtype=object)
     )
+
+
+@pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
+@pytest.mark.parametrize("show_progress", [True, False])
+@pytest.mark.parametrize("return_type", ["dag", "pdag"])
+def test_arguments(fake_data, scoring_method, show_progress, return_type):
+    est = TOPIC(
+        scoring_method=scoring_method,
+        show_progress=show_progress,
+        return_type=return_type,
+    )
+    _ = est.fit(fake_data)
