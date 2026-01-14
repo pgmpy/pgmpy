@@ -3,7 +3,7 @@ from typing import Hashable, Iterable, Optional
 
 import networkx as nx
 
-from pgmpy.base import AncestralBase
+from pgmpy.base.AncestralBase import AncestralBase
 
 
 class PAG(AncestralBase):

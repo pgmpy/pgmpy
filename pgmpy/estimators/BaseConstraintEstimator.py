@@ -18,10 +18,12 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import ci_registry
+
+# from pgmpy.estimators.CITests import CITestRegistry
 from pgmpy.global_vars import logger
 
 
+# ci_registry = CITestRegistry()
 class BaseConstraintEstimator(StructureEstimator):
     """
     Base class for all constraint-based structure learning algorithms.
@@ -173,7 +175,7 @@ class BaseConstraintEstimator(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = ci_registry.get_test(ci_test, data=self.data)
+        # ci_test = ci_registry.get_test(ci_test, data=self.data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -356,47 +358,192 @@ class BaseConstraintEstimator(StructureEstimator):
             combinations(separating_set_v, lim_neighbors),
         )
 
+    # @staticmethod
+    # def orient_colliders(
+    #     skeleton: UndirectedGraph,
+    #     separating_sets: Dict[FrozenSet, Set],
+    #     temporal_ordering: Dict[Hashable, int] = dict(),
+    # ):
+    #     """
+    #     Orient v-structures (colliders) in the given skeleton based on separating sets.
+
+    #     Parameters
+    #     ----------
+    #     skeleton : nx.Graph
+    #         Undirected skeleton of the graph.
+
+    #     separating_sets : dict
+    #         For each pair of non-adjacent nodes, a separating set of variables.
+
+    #     temporal_ordering : dict, optional
+    #         A dict mapping node -> time index. If given, orientations that
+    #         violate temporal order are blocked.@staticmethod
+    # def orient_colliders(
+    #     skeleton: UndirectedGraph,@staticmethod
+    # def orient_colliders(
+    #     skeleton: UndirectedGraph,
+    #     separating_sets: Dict[FrozenSet, Set],
+    #     temporal_ordering: Dict[Hashable, int] = dict(),
+    # ):
+    #     """
+    #     Orient v-structures (colliders) in the given skeleton based on separating sets.
+
+    #     Parameters
+    #     ----------
+    #     skeleton : nx.Graph
+    #         Undirected skeleton of the graph.
+
+    #     separating_sets : dict
+    #         For each pair of non-adjacent nodes, a separating set of variables.
+
+    #     temporal_ordering : dict, optional
+    #         A dict mapping node -> time index. If given, orientations that
+    #         violate temporal order are blocked.
+
+    #     Returns
+    #     -------
+    #     set
+    #         A set of oriented edges as tuples (u, v)
+    #     """
+    #     if temporal_ordering is None:
+    #         temporal_ordering = {}
+
+    #     # Returns the deep copy of the skeleton as a directed graph
+    #     candidate = skeleton.to_directed()
+    #     # mention a debugger here
+    #     undirected_edges = list(skeleton.edges())
+    #     directed_edges = []
+
+    #     # Collider orientation: For each X-Z-Y with X ⟂̸ Y | S, orient X→Z←Y
+    #     for X, Y in permutations(sorted(candidate.nodes()), 2):
+    #         if not skeleton.has_edge(X, Y):  # X and Y not adjacent
+    #             for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+    #                 if Z not in separating_sets[frozenset((X, Y))]:
+    #                     if (not temporal_ordering) or (
+    #                         temporal_ordering[Z] >= temporal_ordering[X]
+    #                         and temporal_ordering[Z] >= temporal_ordering[Y]
+    #                     ):
+    #                         candidate.remove_edges_from([(Z, X), (Z, Y)])
+    #                         import pdb; pdb.set_trace()
+    #                         skeleton.remove_edges_from([(Z, X), (Z, Y)])
+    #                         directed_edges.extend([(X, Z), (Y, Z)])
+
+    #     return candidate.edges(), candidate.nodes()
+    #     separating_sets: Dict[FrozenSet, Set],
+    #     temporal_ordering: Dict[Hashable, int] = dict(),
+    # ):
+    #     """
+    #     Orient v-structures (colliders) in the given skeleton based on separating sets.
+
+    #     Parameters
+    #     ----------
+    #     skeleton : nx.Graph
+    #         Undirected skeleton of the graph.
+
+    #     separating_sets : dict
+    #         For each pair of non-adjacent nodes, a separating set of variables.
+
+    #     temporal_ordering : dict, optional
+    #         A dict mapping node -> time index. If given, orientations that
+    #         violate temporal order are blocked.
+
+    #     Returns
+    #     -------
+    #     set
+    #         A set of oriented edges as tuples (u, v)
+    #     """
+    #     if temporal_ordering is None:
+    #         temporal_ordering = {}
+
+    #     # Returns the deep copy of the skeleton as a directed graph
+    #     candidate = skeleton.to_directed()
+    #     # mention a debugger here
+    #     undirected_edges = list(skeleton.edges())
+    #     directed_edges = []
+
+    #     # Collider orientation: For each X-Z-Y with X ⟂̸ Y | S, orient X→Z←Y
+    #     for X, Y in permutations(sorted(candidate.nodes()), 2):
+    #         if not skeleton.has_edge(X, Y):  # X and Y not adjacent
+    #             for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+    #                 if Z not in separating_sets[frozenset((X, Y))]:
+    #                     if (not temporal_ordering) or (
+    #                         temporal_ordering[Z] >= temporal_ordering[X]
+    #                         and temporal_ordering[Z] >= temporal_ordering[Y]
+    #                     ):
+    #                         candidate.remove_edges_from([(Z, X), (Z, Y)])
+    #                         import pdb; pdb.set_trace()
+    #                         skeleton.remove_edges_from([(Z, X), (Z, Y)])
+    #                         directed_edges.extend([(X, Z), (Y, Z)])
+
+    #     return candidate.edges(), candidate.nodes()
+
+    #     Returns
+    #     -------
+    #     set
+    #         A set of oriented edges as tuples (u, v)
+    #     """
+    #     if temporal_ordering is None:
+    #         temporal_ordering = {}
+
+    #     # Returns the deep copy of the skeleton as a directed graph
+    #     candidate = skeleton.to_directed()
+    #     # mention a debugger here
+    #     undirected_edges = list(skeleton.edges())
+    #     directed_edges = []
+
+    #     # Collider orientation: For each X-Z-Y with X ⟂̸ Y | S, orient X→Z←Y
+    #     for X, Y in permutations(sorted(candidate.nodes()), 2):
+    #         if not skeleton.has_edge(X, Y):  # X and Y not adjacent
+    #             for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+    #                 if Z not in separating_sets[frozenset((X, Y))]:
+    #                     if (not temporal_ordering) or (
+    #                         temporal_ordering[Z] >= temporal_ordering[X]
+    #                         and temporal_ordering[Z] >= temporal_ordering[Y]
+    #                     ):
+    #                         candidate.remove_edges_from([(Z, X), (Z, Y)])
+    #                         import pdb; pdb.set_trace()
+    #                         skeleton.remove_edges_from([(Z, X), (Z, Y)])
+    #                         directed_edges.extend([(X, Z), (Y, Z)])
+
+    #     return candidate.edges(), candidate.nodes()
+
     @staticmethod
     def orient_colliders(
         skeleton: UndirectedGraph,
         separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
+        temporal_ordering: Dict[Hashable, int] = None,
     ):
-        """
-        Orient v-structures (colliders) in the given skeleton based on separating sets.
-
-        Parameters
-        ----------
-        skeleton : nx.Graph
-            Undirected skeleton of the graph.
-
-        separating_sets : dict
-            For each pair of non-adjacent nodes, a separating set of variables.
-
-        temporal_ordering : dict, optional
-            A dict mapping node -> time index. If given, orientations that
-            violate temporal order are blocked.
-
-        Returns
-        -------
-        set
-            A set of oriented edges as tuples (u, v)
-        """
         if temporal_ordering is None:
             temporal_ordering = {}
 
-        # Work on a directed copy to check orientations
-        candidate = skeleton.to_directed()
+        # Explicit edge sets
+        undirected_edges = {frozenset(e) for e in skeleton.edges()}
+        directed_edges = set()
 
-        # Collider orientation: For each X-Z-Y with X ⟂̸ Y | S, orient X→Z←Y
-        for X, Y in permutations(sorted(candidate.nodes()), 2):
-            if not skeleton.has_edge(X, Y):  # X and Y not adjacent
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        if (not temporal_ordering) or (
-                            temporal_ordering[Z] >= temporal_ordering[X]
-                            and temporal_ordering[Z] >= temporal_ordering[Y]
-                        ):
-                            candidate.remove_edges_from([(Z, X), (Z, Y)])
+        nodes = sorted(skeleton.nodes())
 
-        return candidate.edges(), candidate.nodes()
+        for X, Y in permutations(nodes, 2):
+            if skeleton.has_edge(X, Y):
+                continue
+
+            sepset = separating_sets.get(frozenset((X, Y)), set())
+
+            for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+                if Z in sepset:
+                    continue
+
+                if temporal_ordering:
+                    if not (
+                        temporal_ordering[Z] >= temporal_ordering[X]
+                        and temporal_ordering[Z] >= temporal_ordering[Y]
+                    ):
+                        continue
+
+                # Orient X → Z ← Y
+                undirected_edges.discard(frozenset((X, Z)))
+                undirected_edges.discard(frozenset((Y, Z)))
+
+                directed_edges.add((X, Z))
+                directed_edges.add((Y, Z))
+        # import pdb; pdb.set_trace()
+        return directed_edges, undirected_edges
