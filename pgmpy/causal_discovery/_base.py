@@ -76,8 +76,16 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         return X
 
+    def fit(self, X: pd.DataFrame, y=None):
+        """Fit data (`X`) to a causal graph. The method
+        calls the `_fit` method, which must be implemented separately in any causal
+        discovery algorithm inheriting from `BaseCausalDiscovery`.
+        """
+        X = self._check_fit_data(X)
+        return self._fit(X)
 
-class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
+
+class _ConstraintMixin:
     """
     Base class for all constraint-based causal discovery estimators.
     """
