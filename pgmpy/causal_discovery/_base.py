@@ -24,7 +24,7 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import SHD, correlation_score
+from pgmpy.metrics import correlation_score
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -80,10 +80,10 @@ class _BaseCausalDiscovery(BaseEstimator):
 
     def score(
         self,
-        X,
+        X=None,
         y=None,
-        method_true_model=SHD,
-        method_test_data=correlation_score,
+        ground_truth=None,
+        scoring_method=correlation_score,
         **kwargs,
     ):
         """Method to calculate the score of the fitted causal graph.
@@ -91,10 +91,15 @@ class _BaseCausalDiscovery(BaseEstimator):
         Parameters
         ----------
         X: pgmpy.base.DAG or pd.DataFrame
-            The true model to calulate the model score against, or the test data for the same .
+            Test data used for calulating score for the fitted model.
 
-        y: function
-            The scoring method to be used (from pgmpy.metrics or custom function).
+        y: None
+
+        ground_truth: DAG
+            The true model to calulate the fitted model score against.
+
+        scoring_method: callable
+            Method to be used for calculating score of the fitted model.
 
         kwargs:
             Additional arguments that are required for the scoring method chosen.
@@ -111,16 +116,17 @@ class _BaseCausalDiscovery(BaseEstimator):
         # Metrics that test the model against data
         if isinstance(X, pd.DataFrame):
             causal_dag_ = self.causal_graph_.to_dag()
-            graph_score = method_test_data(causal_dag_, X, **kwargs)
-
-        # Metrics that test the model against the true model (SHD, SID etc.)
-        elif isinstance(X, (DAG)):
-            graph_score = method_true_model(self.causal_graph_, X, **kwargs)
+            graph_score = scoring_method(causal_dag_, X, **kwargs)
 
         elif isinstance(X, (np.ndarray)):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
             causal_dag_ = self.causal_graph_.to_dag()
-            graph_score = method_test_data(causal_dag_, X, **kwargs)
+            graph_score = scoring_method(causal_dag_, X, **kwargs)
+
+        # Metrics that test the model against the true model (SHD, SID etc.)
+        elif isinstance(ground_truth, DAG):
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = scoring_method(causal_dag_, ground_truth, **kwargs)
 
         else:
             raise TypeError(
