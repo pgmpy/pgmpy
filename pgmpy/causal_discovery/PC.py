@@ -13,12 +13,13 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery import _BaseConstraintCausalDiscovery
+from pgmpy.causal_discovery import _ConstraintMixin
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 
 
-class PC(_BaseConstraintCausalDiscovery):
+class PC(_ConstraintMixin, _BaseCausalDiscovery):
     """
     The PC algorithm for causal discovery / structure learning.
 
