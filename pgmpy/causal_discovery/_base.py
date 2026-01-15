@@ -410,3 +410,40 @@ class _ConstraintMixin:
             combinations(separating_set_u, lim_neighbors),
             combinations(separating_set_v, lim_neighbors),
         )
+
+
+class _BaseScoreCausalDiscovery(_BaseCausalDiscovery):
+    """
+    Base class for all score-based causal discovery estimators.
+
+    Score-based causal discovery algorithms (e.g., HillClimbSearch, GES) work by
+    searching through the space of possible DAGs and scoring each candidate structure
+    using a scoring function (e.g., BIC, K2, BDeu).
+    """
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y=None,
+    ):
+        """Fit data (`X`) to learn a causal graph using score-based methods.
+
+        The method calls the `_fit` method, which must be implemented separately
+        in any causal discovery algorithm inheriting from `_BaseScoreCausalDiscovery`.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The data to fit the causal discovery algorithm on. Each column represents
+            a variable and each row represents an observation.
+
+        y : None
+            Ignored. Present for sklearn API compatibility.
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+        X = self._check_fit_data(X)
+        return self._fit(X)
