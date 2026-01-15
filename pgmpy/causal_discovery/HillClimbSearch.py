@@ -1,19 +1,7 @@
-#!/usr/bin/env python
-"""
-HillClimbSearch - Score-based causal discovery using hill climbing optimization.
-
-This module implements an sklearn-compatible version of the HillClimbSearch algorithm
-for learning DAG structure from data.
-"""
 from collections import deque
-from itertools import permutations
 from typing import (
-    Any,
-    Callable,
     Deque,
-    Generator,
     Hashable,
-    List,
     Optional,
     Tuple,
     Union,
@@ -25,16 +13,16 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.causal_discovery._base import _BaseScoreCausalDiscovery
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
 
 
-class HillClimbSearch(_BaseScoreCausalDiscovery):
+class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 
-    This class implements the HillClimbSearch algorithm [1] for causal discovery.
+    This class implements the HillClimbSearch algorithm [1]_ for causal discovery.
     Given a tabular dataset, the algorithm estimates the causal structure among
     the variables in the data as a Directed Acyclic Graph (DAG). The algorithm
     works by iteratively making local modifications to the graph structure
@@ -42,10 +30,10 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
     the score until a local maximum is reached.
 
     The algorithm is a greedy local search method that:
-    1. Starts from an initial graph (empty by default)
-    2. Evaluates all possible single-edge modifications (add, delete, reverse)
-    3. Applies the modification with the highest score improvement
-    4. Repeats until no improvement can be made
+    1. Starts from an initial graph (empty by default or based on provided expert knowledge).
+    2. Evaluates all possible single-edge modifications (add, delete, reverse).
+    3. Applies the modification with the highest score improvement.
+    4. Repeats until no improvement can be made.
 
     A tabu list is used to prevent the algorithm from immediately undoing recent
     changes, which helps avoid getting stuck in local optima.
@@ -86,6 +74,11 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         - Required edges that must be present in the final graph
         - Forbidden edges that cannot be present in the final graph
         - Temporal ordering of nodes
+
+    return_type : str, default='pdag'
+        The type of graph to return. Options are:
+        - 'dag': Returns a directed acyclic graph (DAG).
+        - 'pdag': Returns a partially directed acyclic graph (PDAG) where
 
     epsilon : float, default=1e-4
         Defines the exit condition. If the improvement in score is less
@@ -136,7 +129,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.estimators import ExpertKnowledge
-    >>> expert = ExpertKnowledge(forbidden_edges=[("A", "B")])
+    >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)
 
@@ -153,6 +146,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         tabu_length: int = 100,
         max_indegree: Optional[int] = None,
         expert_knowledge: Optional[ExpertKnowledge] = None,
+        return_type: str = "pdag",
         epsilon: float = 1e-4,
         max_iter: int = int(1e6),
         use_cache: bool = True,
@@ -163,24 +157,26 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         self.tabu_length = tabu_length
         self.max_indegree = max_indegree
         self.expert_knowledge = expert_knowledge
+        self.return_type = return_type
         self.epsilon = epsilon
         self.max_iter = max_iter
         self.use_cache = use_cache
         self.show_progress = show_progress
 
-    def _fit(self, X: pd.DataFrame) -> "HillClimbSearch":
+    def _fit(self, X: pd.DataFrame):
         """
         The fitting procedure for the HillClimbSearch algorithm.
 
         Parameters
         ----------
-        X : pd.DataFrame
-            The data to learn the causal structure from.
+        X : pd.DataFrame or np.ndarray
+            The data to learn the causal structure from. If a numpy array is
+            passed, then the column names would be integers from 0 to n_features-1.
 
         Returns
         -------
-        self : HillClimbSearch
-            Returns the instance with the learned causal graph.
+        self : pgmpy.causal_discovery.HillClimbSearch
+            Returns the instance with the fitted attributes.
         """
         self.variables_ = list(X.columns)
 
@@ -241,7 +237,7 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
         #         possible, sets best_operation=None.
         for _ in iteration:
             best_operation, best_score_delta = max(
-                self._legal_operations(
+                self._legal_operations_dag(
                     model=current_model,
                     score=score_fn,
                     structure_score=score.structure_prior_ratio,
@@ -269,86 +265,17 @@ class HillClimbSearch(_BaseScoreCausalDiscovery):
                 tabu_list.append(best_operation)
 
         # Step 3: Store results
-        self.causal_graph_ = current_model
+        if self.return_type.lower() == "dag":
+            self.causal_graph_ = current_model
+        elif self.return_type.lower() == "pdag":
+            self.causal_graph_ = current_model.to_pdag()
+        else:
+            raise ValueError(
+                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
+            )
+
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
             self.causal_graph_, weight=1, dtype="int"
         )
 
         return self
-
-    def _legal_operations(
-        self,
-        model: DAG,
-        score: Callable[[Any, List[Any]], float],
-        structure_score: Callable[[str], float],
-        tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]],
-        max_indegree: int,
-        forbidden_edges: List[Tuple[Hashable, Hashable]],
-        required_edges: List[Tuple[Hashable, Hashable]],
-    ) -> Generator[Tuple[Tuple[str, Tuple[Hashable, Hashable]], float], None, None]:
-        """Generates a list of legal (= not in tabu_list) graph modifications
-        for a given model, together with their score changes. Possible graph modifications:
-        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
-        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
-        If a number `max_indegree` is provided, only modifications that keep the number
-        of parents for each node below `max_indegree` are considered. A list of
-        edges can optionally be passed as `forbidden_edges` or `required_edges` to exclude those
-        edges or to force them to be present in the model, respectively.
-        """
-
-        tabu_list = set(tabu_list)
-
-        # Step 1: Get all legal operations for adding edges.
-        potential_new_edges = (
-            set(permutations(self.variables_, 2))
-            - set(model.edges())
-            - set([(Y, X) for (X, Y) in model.edges()])
-        )
-
-        for X, Y in potential_new_edges:
-            # Check if adding (X, Y) will create a cycle.
-            if not nx.has_path(model, Y, X):
-                operation = ("+", (X, Y))
-                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
-                    if len(new_parents) <= max_indegree:
-                        score_delta = score(Y, new_parents) - score(Y, old_parents)
-                        score_delta += structure_score("+")
-                        yield (operation, score_delta)
-
-        # Step 2: Get all legal operations for removing edges
-        for X, Y in model.edges():
-            operation = ("-", (X, Y))
-            if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
-                score_delta = score(Y, new_parents) - score(Y, old_parents)
-                score_delta += structure_score("-")
-                yield (operation, score_delta)
-
-        # Step 3: Get all legal operations for flipping edges
-        for X, Y in model.edges():
-            # Check if flipping creates any cycles
-            if not any(
-                map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))
-            ):
-                operation = ("flip", (X, Y))
-                if (
-                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                    and ((X, Y) not in required_edges)
-                    and ((Y, X) not in forbidden_edges)
-                ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
-                    if len(new_X_parents) <= max_indegree:
-                        score_delta = (
-                            score(X, new_X_parents)
-                            + score(Y, new_Y_parents)
-                            - score(X, old_X_parents)
-                            - score(Y, old_Y_parents)
-                        )
-                        score_delta += structure_score("flip")
-                        yield (operation, score_delta)

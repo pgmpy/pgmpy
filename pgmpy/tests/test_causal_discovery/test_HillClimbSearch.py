@@ -94,7 +94,7 @@ def model2(model1):
 
 def test_legal_operations(est_rand, model2, score_rand, score_structure_prior):
     model2_legal_ops = list(
-        est_rand._legal_operations(
+        est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
             structure_score=score_structure_prior,
@@ -121,7 +121,7 @@ def test_legal_operations_forbidden_required(
     est_rand, model2, score_rand, score_structure_prior
 ):
     model2_legal_ops_bl = list(
-        est_rand._legal_operations(
+        est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
             structure_score=score_structure_prior,
@@ -141,7 +141,7 @@ def test_legal_operations_forbidden_required(
     )
 
     model2_legal_ops_wl = list(
-        est_rand._legal_operations(
+        est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
             structure_score=score_structure_prior,
@@ -166,7 +166,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
         [("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")]
     )
 
-    legal_ops = est_titanic1._legal_operations(
+    legal_ops = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
         structure_score=score_structure_prior,
@@ -182,7 +182,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
         ("-", ("Survived", "Pclass")),
         ("flip", ("Age", "Pclass")),
     ]
-    legal_ops_tabu = est_titanic1._legal_operations(
+    legal_ops_tabu = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
         structure_score=score_structure_prior,
@@ -193,7 +193,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
     )
     assert len(list(legal_ops_tabu)) == 18
 
-    legal_ops_indegree = est_titanic1._legal_operations(
+    legal_ops_indegree = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
         structure_score=score_structure_prior,
@@ -204,7 +204,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
     )
     assert len(list(legal_ops_indegree)) == 11
 
-    legal_ops_both = est_titanic1._legal_operations(
+    legal_ops_both = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
         structure_score=score_structure_prior,
@@ -231,7 +231,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
 
 
 def test_estimate_rand(rand_data):
-    est1 = HillClimbSearch(scoring_method="k2", show_progress=False)
+    est1 = HillClimbSearch(scoring_method="k2", return_type="dag", show_progress=False)
     est1.fit(rand_data)
     assert set(est1.causal_graph_.nodes()) == set(["A", "B", "C"])
     assert list(est1.causal_graph_.edges()) == [("B", "C")] or list(
@@ -241,6 +241,7 @@ def test_estimate_rand(rand_data):
     est2 = HillClimbSearch(
         scoring_method="k2",
         start_dag=DiscreteBayesianNetwork([("A", "B"), ("A", "C")]),
+        return_type="dag",
         show_progress=False,
     )
     est2.fit(rand_data)
@@ -250,14 +251,17 @@ def test_estimate_rand(rand_data):
 
     expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
     est3 = HillClimbSearch(
-        scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
+        scoring_method="k2",
+        expert_knowledge=expert_knowledge,
+        return_type="dag",
+        show_progress=False,
     )
     est3.fit(rand_data)
     assert [("B", "C")] == list(est3.causal_graph_.edges())
 
 
 def test_estimate_titanic(titanic_data2):
-    est = HillClimbSearch(scoring_method="k2", show_progress=False)
+    est = HillClimbSearch(scoring_method="k2", return_type="dag", show_progress=False)
     est.fit(titanic_data2)
     assert set(est.causal_graph_.edges()) == set(
         [("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]
@@ -265,7 +269,10 @@ def test_estimate_titanic(titanic_data2):
 
     expert_knowledge = ExpertKnowledge(required_edges=[("Pclass", "Survived")])
     est2 = HillClimbSearch(
-        scoring_method="k2", expert_knowledge=expert_knowledge, show_progress=False
+        scoring_method="k2",
+        expert_knowledge=expert_knowledge,
+        return_type="dag",
+        show_progress=False,
     )
     est2.fit(titanic_data2)
     assert ("Pclass", "Survived") in est2.causal_graph_.edges()
@@ -273,7 +280,9 @@ def test_estimate_titanic(titanic_data2):
     temporal_knowledge = ExpertKnowledge(
         temporal_order=[["Pclass", "Sex"], ["Survived"]]
     )
-    est3 = HillClimbSearch(expert_knowledge=temporal_knowledge, show_progress=False)
+    est3 = HillClimbSearch(
+        expert_knowledge=temporal_knowledge, return_type="dag", show_progress=False
+    )
     est3.fit(titanic_data2)
     assert est3.causal_graph_.edges() <= set(
         [
@@ -301,19 +310,28 @@ def test_no_legal_operation():
         required_edges=[("A", "B"), ("B", "C")],
         forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
     )
-    est = HillClimbSearch(scoring_method="k2", expert_knowledge=expert_knowledge)
+    est = HillClimbSearch(
+        scoring_method="k2",
+        expert_knowledge=expert_knowledge,
+        return_type="dag",
+        show_progress=False,
+    )
     est.fit(data)
 
 
 @pytest.mark.parametrize("scoring_method", ["k2", "bdeu", "bds", "bic-d", "aic-d"])
 def test_estimate_discrete(rand_data, scoring_method):
-    est = HillClimbSearch(scoring_method=scoring_method, show_progress=False)
+    est = HillClimbSearch(
+        scoring_method=scoring_method, return_type="dag", show_progress=False
+    )
     est.fit(rand_data)
 
 
 @pytest.mark.parametrize("scoring_method", ["ll-cg", "aic-cg", "bic-cg"])
 def test_estimate_mixed(titanic_data1, scoring_method):
-    est = HillClimbSearch(scoring_method=scoring_method, show_progress=False)
+    est = HillClimbSearch(
+        scoring_method=scoring_method, return_type="dag", show_progress=False
+    )
     est.fit(titanic_data1)
 
 
@@ -333,6 +351,7 @@ def test_search_space():
     est = HillClimbSearch(
         scoring_method="k2",
         expert_knowledge=expert_knowledge,
+        return_type="dag",
         show_progress=False,
     )
     est.fit(adult_data)
@@ -346,7 +365,9 @@ def test_estimate_gaussian(scoring_method):
     data = pd.read_csv(
         "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0
     )
-    est = HillClimbSearch(scoring_method=scoring_method, show_progress=False)
+    est = HillClimbSearch(
+        scoring_method=scoring_method, return_type="dag", show_progress=False
+    )
     est.fit(data)
 
 
@@ -359,5 +380,7 @@ def test_estimate_mixed_data():
     data["C_cat"] = data.C_cat.astype("category")
     data["B_int"] = data.B_int.astype("category")
 
-    est = HillClimbSearch(scoring_method="ll-cg")
+    est = HillClimbSearch(
+        scoring_method="ll-cg", return_type="dag", show_progress=False
+    )
     est.fit(data)
