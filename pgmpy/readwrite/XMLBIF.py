@@ -5,18 +5,12 @@ from io import BytesIO
 from itertools import chain
 
 import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
-
-try:
-    import pyparsing as pp
-except ImportError as e:
-    raise ImportError(
-        f"{e} . pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    ) from None
 
 
 class XMLBIFReader(object):
@@ -46,6 +40,14 @@ class XMLBIFReader(object):
     """
 
     def __init__(self, path=None, string=None):
+        msg = (
+            "Error in UAIReader: 'pyparsing' is required to use UAIReader. "
+            "Please install pyparsing using 'pip install pyparsing', "
+            "or the full set of pgmpy soft dependencies using "
+            "'pip install pgmpy[optional]'"
+        )
+        _check_soft_dependencies("pyparsing", msg=msg)
+
         if path:
             self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
         elif string:
@@ -397,6 +399,8 @@ class XMLBIFWriter(object):
         XMLBIF states must start with a letter and only contain letters,
         numbers and underscores.
         """
+        import pyparsing as pp
+
         s = str(state_name)
 
         # Warn about commas in state names as they can cause issues when loading

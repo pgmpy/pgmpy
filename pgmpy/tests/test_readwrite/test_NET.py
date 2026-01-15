@@ -12,6 +12,10 @@ from pgmpy.readwrite import NETReader, NETWriter
 from pgmpy.utils import compat_fns, get_example_model
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETWriter(unittest.TestCase):
     def setUp(self):
         asia = get_example_model("asia")
@@ -219,6 +223,10 @@ potential (xray | either){
                     os.unlink(tmp_path)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyparsing", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestNETReader(unittest.TestCase):
     def setUp(self):
         net = """
@@ -423,7 +431,7 @@ class TestNETReader(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+    _check_soft_dependencies(["torch", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestNETWriterTorch(unittest.TestCase):
@@ -589,7 +597,7 @@ potential (xray | either){
 
 
 @unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+    _check_soft_dependencies(["pyro-ppl", "pyparsing"], severity="none"),
     reason="execute only if required dependency present",
 )
 class TestNETReaderTorch(unittest.TestCase):

@@ -3,7 +3,6 @@ import sys
 import unittest
 import xml.etree.ElementTree as etree
 
-import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 

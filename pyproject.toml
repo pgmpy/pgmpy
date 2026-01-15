@@ -32,7 +32,6 @@ dependencies = [
   "pandas>=1.5",
   "statsmodels>=0.14.5",
   "tqdm>=4.64",
-  "pyparsing>=3.0",
   "joblib>=1.2",
   "opt_einsum>=3.3",
   "scikit-base>=0.12.4",

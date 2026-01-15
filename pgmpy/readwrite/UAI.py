@@ -1,13 +1,7 @@
 from itertools import combinations
 
 import numpy as np
-
-try:
-    from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
-except ImportError as e:
-    raise ImportError(
-        f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
-    ) from None
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.global_vars import logger
@@ -40,6 +34,14 @@ class UAIReader(object):
     """
 
     def __init__(self, path=None, string=None):
+        msg = (
+            "Error in UAIReader: 'pyparsing' is required to use UAIReader. "
+            "Please install pyparsing using 'pip install pyparsing', "
+            "or the full set of pgmpy soft dependencies using "
+            "'pip install pgmpy[optional]'"
+        )
+        _check_soft_dependencies("pyparsing", msg=msg)
+
         if path:
             with open(path, "r") as f:
                 self.network = f.read()
@@ -49,6 +51,8 @@ class UAIReader(object):
             raise ValueError("Must specify either path or string.")
 
         if "#" in self.network:
+            from pyparsing import Regex
+
             self.network = (
                 Regex("#.*").suppress().transformString(self.network)
             )  # removing comments from the file
@@ -64,6 +68,8 @@ class UAIReader(object):
         """
         Returns the grammar of the UAI file.
         """
+        from pyparsing import Combine, Literal, Optional, Word, alphas, nums
+
         network_name = Word(alphas).setResultsName("network_name")
         no_variables = Word(nums).setResultsName("no_variables")
         grammar = network_name + no_variables

@@ -1,11 +1,17 @@
+"""Utility functions for parsing different file formats."""
+from skbase.utils.dependencies import _check_soft_dependencies
+
 def parse_lavaan(lines):
-    # Step 0: Check if pyparsing is installed
-    try:
-        from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums
-    except ImportError as e:
-        raise ImportError(
-            f"{e}. pyparsing is required for using lavaan syntax. Please install using: pip install pyparsing"
-        ) from None
+    msg = (
+        "Error in parse_lavaan: "
+        "'pyparsing' is required to use lavaan syntax via parse_lavaan. "
+        "Please install pyparsing using 'pip install pyparsing', "
+        "or the full set of pgmpy soft dependencies using "
+        "'pip install pgmpy[optional]'"
+    )
+    _check_soft_dependencies("pyparsing", msg=msg)
+
+    from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums
 
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)
@@ -68,6 +74,33 @@ def parse_lavaan(lines):
 
 
 def parse_dagitty(lines):
+    """Parse a list of strings in dagitty syntax.
+
+    Parameters
+    ----------
+    lines : list of str
+        List of strings in dagitty syntax.
+
+    Returns
+    -------
+    ebunch : list of tuples
+        List of edges in the DAG.
+    latents : list of str
+        List of latent variables in the DAG.
+    betas : dict
+        Dictionary of beta parameters for edges in the DAG.
+    nodes : set
+        Set of all nodes in the DAG.
+    """
+    msg = (
+        "Error in parse_dagitty: "
+        "'pyparsing' is required to use dagitty syntax via parse_lavaan. "
+        "Please install pyparsing using 'pip install pyparsing', "
+        "or the full set of pgmpy soft dependencies using "
+        "'pip install pgmpy[optional]'"
+    )
+    _check_soft_dependencies("pyparsing", msg=msg)
+
     def handle_edge_stat(edge_stat, latents, ebunch, betas):
         all_vars = set()
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
@@ -158,26 +191,21 @@ def parse_dagitty(lines):
             new_dag_lines.extend(split_lines)
         return new_dag_lines
 
-    # Step 0: Check if pyparsing is installed
-    try:
-        from pyparsing import (
-            Combine,
-            Group,
-            OneOrMore,
-            Optional,
-            ParseResults,
-            QuotedString,
-            Suppress,
-            Word,
-            ZeroOrMore,
-            alphanums,
-            nestedExpr,
-            pyparsing_common,
-        )
-    except ImportError as e:
-        raise ImportError(
-            f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
-        ) from None
+    # Imports
+    from pyparsing import (
+        Combine,
+        Group,
+        OneOrMore,
+        Optional,
+        ParseResults,
+        QuotedString,
+        Suppress,
+        Word,
+        ZeroOrMore,
+        alphanums,
+        nestedExpr,
+        pyparsing_common,
+    )
 
     # Step 1: DAGitty Grammar in pyparsing
     # Reference: https://www.dagitty.net/manual-3.x.pdf#page=3.58
