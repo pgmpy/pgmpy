@@ -50,8 +50,9 @@ class YourIdentificationMethod(BaseIdentification):
     References
     ----------
     TODO: Add references to papers or books that describe your method
-    .. [1] Author, A. (Year). Title of paper. Journal Name, Volume(Issue), pages.
-    .. [2] Author, B. et al. (Year). Another reference. Conference Name, pages.
+    .. [1] Author, A., "Title of Paper," Journal Name, vol. X, pp. XX-XX, Year.
+    .. [2] Author, B. et al., "Another Reference Title," Conference Name,
+       pp. XX-XX, Year.
     """
 
     def __init__(self):
