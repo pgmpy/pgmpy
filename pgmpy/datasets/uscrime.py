@@ -28,3 +28,6 @@ class USCrime(_BaseDataset):
     data_url = base_url + "data/uscrime.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = []
+    ordinal_variables = dict()
