@@ -1,11 +1,15 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class AppleWatchFitbit(_BaseDataset):
-    name = "apple_watch_fitbit"
-    tags = {
+    """
+    References
+    ----------
+    .. [1] https://www.kaggle.com/aleespinosa/apple-watch-and-fitbit-data
+    """
+
+    _tags = {
+        "name": "apple_watch_fitbit",
         "n_variables": 18,
         "n_samples": 6264,
         "has_ground_truth": False,
@@ -27,3 +31,10 @@ class AppleWatchFitbit(_BaseDataset):
     data_url = base_url + "data/aw-fb-pruned18.data.mixed.maximum.6.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/aw-fb-pruned18.knowledge.txt"
+
+    categorical_variables = [
+        "gender",
+        "device",
+        "activity",
+    ]
+    ordinal_variables = dict()

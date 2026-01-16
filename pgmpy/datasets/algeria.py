@@ -1,11 +1,16 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class Algeria(_BaseDataset):
-    name = "algeria_forest"
-    tags = {
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Algerian+Forest+Fires+Dataset++
+    .. [2] https://www.nwcg.gov/publications/pms437/cffdrs/fire-weather-index-system
+    """
+
+    _tags = {
+        "name": "algerian_forest",
         "n_variables": 15,
         "n_samples": 244,
         "has_ground_truth": False,
@@ -27,3 +32,12 @@ class Algeria(_BaseDataset):
     data_url = base_url + "data/algerian-forest-fires.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/algerian-forest-fires.knowledge.txt"
+
+    categorical_variables = [
+        "Region",
+        "day",
+        "month",
+        "year",
+        "Fire",
+    ]
+    ordinal_variables = dict()

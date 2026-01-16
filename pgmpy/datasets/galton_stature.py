@@ -1,13 +1,17 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
-class SouthGermanCredit(_BaseDataset):
-    name = "south_german_credit"
-    tags = {
-        "n_variables": 21,
-        "n_samples": 1000,
+class GaltonStature(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] http://www.medicine.mcgill.ca/epidemiology/hanley/galton/
+    """
+
+    _tags = {
+        "name": "galton_stature",
+        "n_variables": 5,
+        "n_samples": 898,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
@@ -21,9 +25,12 @@ class SouthGermanCredit(_BaseDataset):
 
     base_url = (
         "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
-        "refs/heads/main/real/south-german-credit/"
+        "refs/heads/main/real/galton-stature/"
     )
 
-    data_url = base_url + "data/south-german-credit.data.mixed.txt"
+    data_url = base_url + "data/galton-stature.mixed.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = ["family", "Gender"]
+    ordinal_variables = dict()

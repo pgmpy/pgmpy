@@ -1,12 +1,15 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class YachtHydrodynamics(_BaseDataset):
-    name = "yacht_hydrodynamics"
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/yacht+hydrodynamics
+    """
 
-    tags = {
+    _tags = {
+        "name": "yacht_hydrodynamics",
         "n_variables": 7,
         "n_samples": 308,
         "has_ground_truth": False,
@@ -28,3 +31,6 @@ class YachtHydrodynamics(_BaseDataset):
     data_url = base_url + "data/yacht.hydrodynamics.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/yacht-hydrodynamics.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

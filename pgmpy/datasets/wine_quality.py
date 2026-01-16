@@ -1,4 +1,3 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 BASE_URL = (
@@ -9,11 +8,15 @@ BASE_URL = (
 EXPERT_URL = BASE_URL + "ground.truth/wine.quality.knowledge.txt"
 
 
-@register_dataset_class
 class WineQualityRed(_BaseDataset):
-    name = "wine_quality_red"
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    """
 
-    tags = {
+    _tags = {
+        "name": "wine_quality_red",
         "n_variables": 12,
         "n_samples": 1599,
         "has_ground_truth": False,
@@ -32,12 +35,19 @@ class WineQualityRed(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
+    categorical_variables = []
+    ordinal_variables = dict()
 
-@register_dataset_class
+
 class WineQualityWhite(_BaseDataset):
-    name = "wine_quality_white"
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    """
 
-    tags = {
+    _tags = {
+        "name": "wine_quality_white",
         "n_variables": 12,
         "n_samples": 4898,
         "has_ground_truth": False,
@@ -56,12 +66,19 @@ class WineQualityWhite(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
+    categorical_variables = []
+    ordinal_variables = dict()
 
-@register_dataset_class
+
 class WineQualityRedWhiteMixed(_BaseDataset):
-    name = "wine_quality_red_white_mixed"
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    """
 
-    tags = {
+    _tags = {
+        "name": "wine_quality_red_white_mixed",
         "n_variables": 13,
         "n_samples": 6497,
         "has_ground_truth": False,
@@ -79,3 +96,6 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     data_url = BASE_URL + "data/winequality-red-white.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
+
+    categorical_variables = ["type"]
+    ordinal_variables = dict()

@@ -1,11 +1,15 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class DryBean(_BaseDataset):
-    name = "dry_bean"
-    tags = {
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Dry+Bean+Dataset
+    """
+
+    _tags = {
+        "name": "dry_bean",
         "n_variables": 17,
         "n_samples": 13611,
         "has_ground_truth": False,
@@ -24,3 +28,6 @@ class DryBean(_BaseDataset):
     data_url = base_url + "data/drybean.data.mixed.maximum.7.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/dry-bean.knowledge.txt"
+
+    categorical_variables = ["Class"]
+    ordinal_variables = dict()

@@ -1,11 +1,10 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class Airfoil(_BaseDataset):
-    name = "airfoil"
-    tags = {
+
+    _tags = {
+        "name": "airfoil",
         "n_variables": 6,
         "n_samples": 1503,
         "has_ground_truth": False,
@@ -27,3 +26,6 @@ class Airfoil(_BaseDataset):
     data_url = base_url + "data/airfoil-self-noise.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/airfoil-self-noise.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

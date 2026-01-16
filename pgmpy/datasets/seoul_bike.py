@@ -1,11 +1,9 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class SeoulBike(_BaseDataset):
-    name = "seoul_bike"
-    tags = {
+    _tags = {
+        "name": "seoul_bike",
         "n_variables": 13,
         "n_samples": 8760,
         "has_ground_truth": False,
@@ -27,3 +25,6 @@ class SeoulBike(_BaseDataset):
     data_url = base_url + "data/seoul-bike.mixed.maximum.4.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = ["Season", "Holiday", "FunctioningDay"]
+    ordinal_variables = dict()
