@@ -1,12 +1,10 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class CollegePlans(_BaseDataset):
-    name = "college_plans"
 
-    tags = {
+    _tags = {
+        "name": "college_plans",
         "n_variables": 5,
         "n_samples": 10318,
         "has_ground_truth": False,
@@ -28,3 +26,6 @@ class CollegePlans(_BaseDataset):
     data_url = base_url + "data/college-plans.discrete.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = ["sex", "iq", "cp", "pe", "ses"]
+    ordinal_variables = dict()
