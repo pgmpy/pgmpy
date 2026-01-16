@@ -4,8 +4,8 @@ import hashlib
 import io
 import os
 import re
+import shutil
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -48,6 +48,7 @@ class _BaseDataset(BaseObject):
 
     # define tags
     _tags = {
+        "name": None,
         "n_variables": None,
         "n_samples": None,
         "has_ground_truth": False,
@@ -59,11 +60,7 @@ class _BaseDataset(BaseObject):
         "is_continuous": False,
         "is_mixed": False,
         "is_ordinal": False,
-        "name": None,
     }
-
-    def __init__(self):
-        super().__init__()
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -183,7 +180,7 @@ class _BaseDataset(BaseObject):
         Clears the cached data for all datasets.
         """
         if os.path.exists(PGMPY_DATA_HOME):
-            Path.rmdir(PGMPY_DATA_HOME)
+            shutil.rmtree(PGMPY_DATA_HOME)
 
 
 class _CovarianceMixin:
@@ -246,10 +243,9 @@ def load_dataset(name: str) -> Dataset:
     Examples
     --------
     >>> from pgmpy.datasets import load_dataset
-    >>> dataset = load_dataset("sachs")
+    >>> dataset = load_dataset("sachs_mixed")
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
-
     """
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
@@ -261,7 +257,9 @@ def load_dataset(name: str) -> Dataset:
             target_cls = cls
             break
     if target_cls is None:
-        raise ValueError(f"Dataset with name '{name}' not found.")
+        raise ValueError(
+            f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
+        )
 
     return Dataset(
         name=name,
@@ -272,7 +270,7 @@ def load_dataset(name: str) -> Dataset:
     )
 
 
-def list_datasets(variant: str = None) -> list[str]:
+def list_datasets() -> list[str]:
     """
     Returns a list of all available datasets, optionally filtered by a query string.
 
@@ -292,25 +290,15 @@ def list_datasets(variant: str = None) -> list[str]:
     >>> from pgmpy.datasets import list_datasets
     >>> list_datasets()
     ['abalone_continuous', 'abalone_mixed', ..., 'sachs_continuous', ...]
-
-    >>> list_datasets(variant="sachs")
-    ['sachs_continuous', 'sachs_continuous_jittered', 'sachs_discrete', 'sachs_mixed']
     """
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
     )
 
-    # Extract names
     dataset_names = [
         cls.get_class_tag("name")
         for cls in all_datasets
         if cls.get_class_tag("name") is not None
     ]
-
-    # Filter if a query is provided
-    if variant:
-        dataset_names = [
-            name for name in dataset_names if variant.lower() in name.lower()
-        ]
 
     return sorted(dataset_names)
