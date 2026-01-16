@@ -1,8 +1,6 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class USCrime(_BaseDataset):
     """
     References
