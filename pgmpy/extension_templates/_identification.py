@@ -22,15 +22,11 @@ class YourIdentificationMethod(BaseIdentification):
 
     Parameters
     ----------
-    variant : str, optional
-        TODO: If your method has variants, describe them here. Example:
-        The variant of identification to use. Default is 'standard'.
+    TODO: Add parameters your method needs (method-dependent hyperparameters)
 
-        - 'standard': Standard implementation of the method
-        - 'minimal': Returns minimal identifying sets
-        - 'all': Returns all possible identifying sets
-
-    TODO: Add other parameters your method might need
+    For example:
+    parameter_name : type
+        Description of what this parameter controls in your identification method.
 
     Examples
     --------
@@ -48,29 +44,26 @@ class YourIdentificationMethod(BaseIdentification):
     >>> identified_graph, success = method.identify(dag)
     >>> print(success)
     True
-    >>> print(
-    ...     identified_graph.get_role("adjustment")
-    ... )  # or whatever role your method assigns
-    ['Z']
+    >>> print(identified_graph.get_role_dict())
+    {'exposures': ['X'], 'outcomes': ['Y'], 'your_role_name': ['Z']}
 
     References
     ----------
     TODO: Add references to papers or books that describe your method
-    [1] Author, Title, Journal/Conference, Year
-    [2] Another reference if applicable
+    .. [1] Author, A. (Year). Title of paper. Journal Name, Volume(Issue), pages.
+    .. [2] Author, B. et al. (Year). Another reference. Conference Name, pages.
     """
 
-    def __init__(self, variant="standard"):
+    def __init__(self):
         # TODO: Set the supported graph types for your method
-        # Common options are: DAG, PDAG, ADMG, MAG
+        # pgmpy supports DAG, PDAG, ADMG, MAG, PAG. Specify the subset of
+        # causal graph classes that your identification method supports.
         self.supported_graph_types = (DAG, PDAG)
 
         # TODO: Store any parameters your method needs
-        self.variant = variant
-
-        # TODO: Add validation for parameters if needed
-        if variant not in ["standard", "minimal", "all"]:
-            raise ValueError("Variant must be one of: 'standard', 'minimal', 'all'")
+        # Add method-specific hyperparameters here
+        # Example:
+        # self.parameter_name = parameter_value
 
     def _identify(self, causal_graph):
         """
@@ -112,18 +105,18 @@ class YourIdentificationMethod(BaseIdentification):
         # TODO: Implement your identification algorithm here
         # This is where the main logic of your method goes
 
-        # Example structure (replace with your actual algorithm):
+        # Example algorithm structure (replace with your actual algorithm):
         exposure = exposures[0]  # noqa: F841
         outcome = outcomes[0]  # noqa: F841
 
-        # Step 1: [Describe what this step does]
-        # your_algorithm_step_1()
+        #     Step 1: [Describe what this step does]
+        #     your_algorithm_step_1()
 
-        # Step 2: [Describe what this step does]
-        # your_algorithm_step_2()
+        #     Step 2: [Describe what this step does]
+        #     your_algorithm_step_2()
 
-        # Step 3: Determine the identifying set
-        # identifying_set = your_algorithm_logic(causal_graph, exposure, outcome)
+        #     Step 3: Determine the identifying set
+        #     identifying_set = your_algorithm_logic(causal_graph, exposure, outcome)
 
         # TODO: Replace this placeholder logic with your actual algorithm
         # This is just an example - remove and implement your method
