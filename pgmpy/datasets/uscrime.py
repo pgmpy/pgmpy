@@ -4,6 +4,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 @register_dataset_class
 class USCrime(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] Der, G., and Everitt, B.S. (2002). A Handbook of Statistical Analysis using SAS, 2e. CRC.
+    .. [2] https://www.imsbio.co.jp/RGM/R_rdfile?f=ACSWR/man/usc.Rd&d=R_CC
+    """
     name = "uscrime"
 
     tags = {
@@ -15,8 +21,8 @@ class USCrime(_BaseDataset):
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
-        "is_continuous": True,
-        "is_mixed": False,
+        "is_continuous": False,
+        "is_mixed": True,
         "is_ordinal": False,
     }
 
@@ -29,5 +35,5 @@ class USCrime(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
 
-    categorical_variables = []
+    categorical_variables = ["S",]
     ordinal_variables = dict()
