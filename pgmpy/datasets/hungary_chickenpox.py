@@ -1,12 +1,16 @@
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 
 
-@register_dataset_class
 class HungaryChickenpox(_BaseDataset):
-    name = "hungary_chickenpox"
-
-    tags = {
+    """
+    References
+    ----------
+    .. [1] Rozemberczki, B., Scherer, P., Kiss, O., Sarkar, R., & Ferenci, T. (2021). Chickenpox cases in hungary: a benchmark
+           dataset for spatiotemporal signal processing with graph neural networks. arXiv preprint arXiv:2102.08100.
+    .. [2] https://archive.ics.uci.edu/ml/datasets/Hungarian+Chickenpox+Cases
+    """
+    _tags = {
+        "name": "hungary_chickenpox",
         "n_variables": 20,
         "n_samples": 522,
         "has_ground_truth": False,
@@ -28,3 +32,6 @@ class HungaryChickenpox(_BaseDataset):
 
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = []
+    ordinal_variables = dict()
