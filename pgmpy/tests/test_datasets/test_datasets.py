@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.lookup import all_objects
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
-from pgmpy.datasets import _BaseDataset, load_dataset
+from pgmpy.datasets import list_datasets, load_dataset
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -55,34 +54,13 @@ ALL_DATASETS = [
     reason="test only if requests is installed",
 )
 def test_list_datasets():
-    all_ds = all_objects(
-        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=True
-    )
-
-    found_datasets = set([cls.get_class_tag("name") for _, cls in all_ds])
-
+    found_datasets = list_datasets()
     for dataset in ALL_DATASETS:
         assert dataset in found_datasets
 
-    gt_datasets_tuples = all_objects(
-        object_types=_BaseDataset,
-        package_name="pgmpy.datasets",
-        return_names=False,
-        filter_tags={"has_ground_truth": True},
-    )
+    assert "abalone_continuous" not in list_datasets(has_ground_truth=True)
 
-    gt_names = [cls.get_class_tag("name") for cls in gt_datasets_tuples]
-
-    assert "abalone_continuous" not in gt_names
-
-    cont_datasets_tuples = all_objects(
-        object_types=_BaseDataset,
-        package_name="pgmpy.datasets",
-        return_names=False,
-        filter_tags={"is_continuous": True},
-    )
-
-    cont_names = [cls.get_class_tag("name") for cls in cont_datasets_tuples]
+    cont_names = list_datasets(is_continuous=True)
 
     assert "abalone_continuous" in cont_names
     assert "sachs_discrete" not in cont_names

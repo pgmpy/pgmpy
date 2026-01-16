@@ -277,15 +277,26 @@ def load_dataset(name: str) -> Dataset:
     )
 
 
-def list_datasets() -> list[str]:
+def list_datasets(**filter_tags) -> list[str]:
     """
     Returns a list of all available datasets, optionally filtered by a query string.
 
     Parameters
     ----------
-    query : str, optional
-        If specified, only returns datasets whose names contain this string.
-        Useful for finding variants of a specific dataset (e.g., 'sachs').
+    **filter_tags : optional arguments
+        If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
+        Available tags:
+            - n_variables
+            - n_samples
+            - has_ground_truth
+            - has_expert_knowledge
+            - has_missing_data
+            - is_simulated
+            - is_interventional
+            - is_discrete
+            - is_continuous
+            - is_mixed
+            - is_ordinal
 
     Returns
     -------
@@ -297,9 +308,15 @@ def list_datasets() -> list[str]:
     >>> from pgmpy.datasets import list_datasets
     >>> list_datasets()
     ['abalone_continuous', 'abalone_mixed', ..., 'sachs_continuous', ...]
+
+    >>> list_datasets(is_discrete=True, has_ground_truth=True)
+    ['sachs_discrete']
     """
     all_datasets = all_objects(
-        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
+        object_types=_BaseDataset,
+        package_name="pgmpy.datasets",
+        return_names=False,
+        filter_tags=filter_tags,
     )
 
     dataset_names = [
