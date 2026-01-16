@@ -2,9 +2,7 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class DepressionCoping(_BaseDataset):
-    name = "depression_coping"
-
-    tags = {
+    _tags = {
         "name": "depression_coping",
         "n_variables": 79,
         "n_samples": 127,
@@ -28,6 +26,6 @@ class DepressionCoping(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"
-    
+
     categorical_variables = []
     ordinal_variables = dict()
