@@ -13,7 +13,6 @@ from .sachs import (  # noqa: F401
     SachsDiscrete,
     SachsMixed,
 )
-from .uscrime import USCrime  # noqa: F401
 from .lead import Lead  # noqa: F401
 from .goldberg import Goldberg  # noqa: F401
 from .hitters import Hitters  # noqa: F401
@@ -36,6 +35,7 @@ from .pima_diabetes import PimaDiabetes  # noqa: F401
 from .superconductivity import Superconductivity  # noqa: F401
 from .seoul_bike import SeoulBike  # noqa: F401
 from .cities import Cities  # noqa: F401
+from .uscrime import USCrime  # noqa: F401
 from .wine_quality import (  # noqa: F401
     WineQualityWhite,
     WineQualityRed,

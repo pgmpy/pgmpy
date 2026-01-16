@@ -8,8 +8,9 @@ class USCrime(_BaseDataset):
     .. [1] Der, G., and Everitt, B.S. (2002). A Handbook of Statistical Analysis using SAS, 2e. CRC.
     .. [2] https://www.imsbio.co.jp/RGM/R_rdfile?f=ACSWR/man/usc.Rd&d=R_CC
     """
-    tags = {
-        "name": "uscrime"
+
+    _tags = {
+        "name": "uscrime",
         "n_variables": 14,
         "n_samples": 47,
         "has_ground_truth": False,
@@ -32,5 +33,7 @@ class USCrime(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
 
-    categorical_variables = ["S",]
+    categorical_variables = [
+        "S",
+    ]
     ordinal_variables = dict()
