@@ -14,6 +14,7 @@ from .sachs import (  # noqa: F401
     SachsMixed,
 )
 from .depression_coping import DepressionCoping  # noqa: F401
+from .college_plans import CollegePlans  # noqa: F401
 from .lead import Lead  # noqa: F401
 from .goldberg import Goldberg  # noqa: F401
 from .hitters import Hitters  # noqa: F401

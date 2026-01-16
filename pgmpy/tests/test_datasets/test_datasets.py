@@ -17,6 +17,7 @@ ALL_DATASETS = [
     "auto_mpg",
     "boston_housing",
     "cities",
+    "college_plans",
     "lead",
     "spartina",
     "goldberg",
