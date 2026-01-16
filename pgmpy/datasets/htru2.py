@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class HTRU2(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/HTRU2
+    """
+
     _tags = {
         "name": "htru2",
         "n_variables": 9,
@@ -25,3 +31,6 @@ class HTRU2(_BaseDataset):
     data_url = base_url + "data/pulsar.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/htr2.knowledge.txt"
+
+    categorical_variables = ["pulsar"]
+    ordinal_variables = dict()

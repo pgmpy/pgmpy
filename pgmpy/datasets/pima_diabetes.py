@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class PimaDiabetes(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://www.kaggle.com/uciml/pima-indians-diabetes-database
+    """
+
     _tags = {
         "name": "pima_diabetes",
         "n_variables": 9,
@@ -25,3 +31,6 @@ class PimaDiabetes(_BaseDataset):
     data_url = base_url + "data/pima-diabetes.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/pima-diabetes.knowledge.txt"
+
+    categorical_variables = ["Outcome"]
+    ordinal_variables = dict()

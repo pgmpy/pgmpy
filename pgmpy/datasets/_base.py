@@ -151,6 +151,13 @@ class _BaseDataset(BaseObject):
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+        if len(cls.categorical_variables) > 0:
+            for col in cls.categorical_variables:
+                df[col] = df[col].astype("category")
+        if len(cls.ordinal_variables) > 0:
+            for col, order in cls.ordinal_variables.items():
+                cat_type = pd.CategoricalDtype(categories=order, ordered=True)
+                df[col] = df[col].astype(cat_type)
         return df
 
     @classmethod

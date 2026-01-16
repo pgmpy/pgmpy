@@ -2,6 +2,13 @@ from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
 
 
 class Cities(_CovarianceMixin, _BaseDataset):
+    """
+    References
+    ----------
+    .. [1] Spirtes, P., Glymour, C. N., Scheines, R., & Heckerman, D. (2000). Causation, prediction, and search. MIT
+            press, p. 13.
+    """
+
     _tags = {
         "name": "cities",
         "n_variables": 7,
@@ -25,3 +32,6 @@ class Cities(_CovarianceMixin, _BaseDataset):
     data_url = base_url + "data/cites.cov.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/cites.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

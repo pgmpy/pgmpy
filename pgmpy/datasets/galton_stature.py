@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class GaltonStature(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] http://www.medicine.mcgill.ca/epidemiology/hanley/galton/
+    """
+
     _tags = {
         "name": "galton_stature",
         "n_variables": 5,
@@ -25,3 +31,6 @@ class GaltonStature(_BaseDataset):
     data_url = base_url + "data/galton-stature.mixed.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = ["family", "Gender"]
+    ordinal_variables = dict()

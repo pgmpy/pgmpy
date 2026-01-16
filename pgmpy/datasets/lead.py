@@ -26,3 +26,6 @@ class Lead(_CovarianceMixin, _BaseDataset):
 
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = []
+    ordinal_variables = dict()

@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class Superconductivity(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/superconductivty+data
+    """
+
     _tags = {
         "name": "superconductivity",
         "n_variables": 82,
@@ -22,3 +28,6 @@ class Superconductivity(_BaseDataset):
 
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/superconductivity.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

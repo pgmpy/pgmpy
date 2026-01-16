@@ -2,6 +2,14 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class AbaloneContinuous(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
+           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
+    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    """
+
     _tags = {
         "name": "abalone_continuous",
         "n_variables": 8,
@@ -23,8 +31,18 @@ class AbaloneContinuous(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/abalone.knowledge.txt"
 
+    categorical_variables = []
+    ordinal_variables = dict()
+
 
 class AbaloneMixed(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
+           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
+    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    """
 
     _tags = {
         "name": "abalone_mixed",
@@ -46,3 +64,8 @@ class AbaloneMixed(_BaseDataset):
     data_url = base_url + "data/abalone.mixed.maximum.3.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/abalone.knowledge.txt"
+
+    categorical_variables = [
+        "Sex",
+    ]
+    ordinal_variables = dict()

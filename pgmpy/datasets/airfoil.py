@@ -26,3 +26,6 @@ class Airfoil(_BaseDataset):
     data_url = base_url + "data/airfoil-self-noise.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/airfoil-self-noise.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class MyocardialInfarction(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Myocardial+infarction+complications
+    """
+
     _tags = {
         "name": "myocardial_infarction",
         "n_variables": 124,
@@ -29,3 +35,6 @@ class MyocardialInfarction(_BaseDataset):
         base_url + "ground.truth/myocarcial-infaraction-complications.knowledge.txt"
     )
     missing_values_marker = "*"
+
+    categorical_variables = []
+    ordinal_variables = dict()

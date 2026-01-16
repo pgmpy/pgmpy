@@ -2,6 +2,13 @@ from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
 
 
 class Spartina(_CovarianceMixin, _BaseDataset):
+    """
+        References
+        ----------
+        .. [1] Spirtes, P., Glymour, C. N., Scheines, R., & Heckerman, D. (2000). Causation,
+    prediction, and search. MIT press, p. 18.
+    """
+
     _tags = {
         "name": "spartina",
         "n_variables": 15,
@@ -25,3 +32,6 @@ class Spartina(_CovarianceMixin, _BaseDataset):
     data_url = base_url + "data/spartina.cov.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = []
+    ordinal_variables = dict()

@@ -23,3 +23,43 @@ class CysticFibrosis(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"
+
+    categorical_variables = [
+        "crs_number",
+        "sex",
+        "cfrd",
+        "mutation_508",
+        "allergic_rhinitis",
+        "ever_on_nasal_steroid",
+        "virus",
+        "rhinovirus",
+        "sinus_exacerbation",
+        "pulmonary_exacerbation",
+        "on_nasal_cannula_oxygen",
+        "hospital_days",
+        "sputum_pa",
+        "sputum_staph",
+        "sinus_pa",
+        "current_topabx",
+        "current_top_vanco",
+        "current_top_gent",
+        "current_top_mupirocin",
+        "current_top_ciprodex",
+        "is_subject_on_systemic_abx",
+        "Shannon",
+        "Simpson",
+        "Evenness",
+        "Sheen_LB",
+        "Mucoid_LB",
+        "Rhamnolipid",
+        "Hyper_pigment_binding_VBMM",
+        "Twitching",
+        "Swimming ",
+        "Secreted_Protease_Milk",
+        "Pa_Kill_Staph",
+        "Pa_kill_Serratia",
+        "Pa_Sheen_Serratia",
+        "COG_P",
+        "COG_V",
+    ]
+    ordinal_variables = dict()

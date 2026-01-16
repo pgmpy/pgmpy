@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class IQBrainSize(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] http://lib.stat.cmu.edu/datasets/IQ_Brain_Size
+    """
+
     _tags = {
         "name": "iq_brain_size",
         "n_variables": 9,
@@ -25,3 +31,6 @@ class IQBrainSize(_BaseDataset):
     data_url = base_url + "data/iq_brain_size.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = []
+    ordinal_variables = dict()

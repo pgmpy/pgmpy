@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class ContraceptiveMethod(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Contraceptive+Method+Choice
+    """
+
     _tags = {
         "name": "contraceptive_method",
         "n_variables": 9,
@@ -25,3 +31,10 @@ class ContraceptiveMethod(_BaseDataset):
     data_url = base_url + "data/contraceptive-method.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = ["wife-relig", "husb-occ", "media-exp", "contrac-method"]
+    ordinal_variables = {
+        "wife-educ": [1, 2, 3, 4],
+        "husb-educ": [1, 2, 3, 4],
+        "sol-index": [1, 2, 3, 4],
+    }

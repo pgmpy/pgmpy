@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class ResidentialBuilding(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
+    """
+
     _tags = {
         "name": "residential_building",
         "n_variables": 109,
@@ -25,3 +31,11 @@ class ResidentialBuilding(_BaseDataset):
     data_url = base_url + "data/residential-building.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
+
+    categorical_variables = [
+        "START YEAR",
+        "START QUARTER",
+        "COMPLETION YEAR",
+        "COMPLETION QUARTER",
+    ]
+    ordinal_variables = dict()

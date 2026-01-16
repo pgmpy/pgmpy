@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class Adult(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/adult
+    """
+
     _tags = {
         "name": "adult",
         "n_variables": 15,
@@ -22,3 +28,34 @@ class Adult(_BaseDataset):
     data_url = base_url + "data/adult.data.mixed.maximum.50.json.txt"
     ground_truth_url = None
     expert_knowledge_url = base_url + "ground.truth/adult.knowledge.txt"
+
+    categorical_variables = [
+        "workclass",
+        "mar-stat",
+        "occup",
+        "relat",
+        "race",
+        "sex",
+        "nat-count",
+    ]
+    ordinal_variables = {
+        "educ": [
+            "Preschool",
+            "1st-4th",
+            "5th-6th",
+            "7th-8th",
+            "9th",
+            "10th",
+            "11th",
+            "12th",
+            "HS-grad",
+            "Some-college",
+            "Assoc-voc",
+            "Assoc-acdm",
+            "Bachelors",
+            "Masters",
+            "Doctorate",
+            "Prof-school",
+        ],
+        "Income": ["<=50K", ">50K"],
+    }

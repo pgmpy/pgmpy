@@ -13,7 +13,7 @@ ALL_DATASETS = [
     "abalone_mixed",
     "adult",
     "airfoil",
-    "algeria_forest",
+    "algerian_forest",
     "apple_watch_fitbit",
     "auto_mpg",
     "boston_housing",
@@ -55,11 +55,11 @@ ALL_DATASETS = [
     reason="test only if requests is installed",
 )
 def test_list_datasets():
-    all_ds_tulpes = all_objects(
+    all_ds = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=True
     )
 
-    found_datasets = [cls.get_class_tag("name") for _, cls in all_ds_tulpes]
+    found_datasets = set([cls.get_class_tag("name") for _, cls in all_ds])
 
     for dataset in ALL_DATASETS:
         assert dataset in found_datasets

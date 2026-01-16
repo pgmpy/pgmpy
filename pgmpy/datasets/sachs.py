@@ -26,6 +26,19 @@ class SachsMixed(_BaseDataset):
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
 
+    categorical_variables = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
+    ordinal_variables = dict()
+
 
 class SachsContinuous(_BaseDataset):
     _tags = {
@@ -48,6 +61,9 @@ class SachsContinuous(_BaseDataset):
     data_url = base_url + "data/sachs.2005.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()
 
 
 class SachsDiscrete(_BaseDataset):
@@ -72,6 +88,21 @@ class SachsDiscrete(_BaseDataset):
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
 
+    categorical_variables = [
+        "raf",
+        "mek",
+        "plc",
+        "pip2",
+        "pip3",
+        "erk",
+        "akt",
+        "pka",
+        "pkc",
+        "p38",
+        "jnk",
+    ]
+    ordinal_variables = dict()
+
 
 class SachsContinuousLogScale(_BaseDataset):
     _tags = {
@@ -94,6 +125,9 @@ class SachsContinuousLogScale(_BaseDataset):
     data_url = base_url + "data/sachs.2005.logxplus10.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()
 
 
 class SachsContinuousJitteredLogScale(_BaseDataset):
@@ -120,6 +154,9 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
 
+    categorical_variables = []
+    ordinal_variables = dict()
+
 
 class SachsContinuousJittered(_BaseDataset):
     _tags = {
@@ -142,3 +179,6 @@ class SachsContinuousJittered(_BaseDataset):
     data_url = base_url + "data/sachs.2005.with.jittered.experimental.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
+
+    categorical_variables = []
+    ordinal_variables = dict()

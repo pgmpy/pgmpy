@@ -50,6 +50,12 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
 
+    # TODO: If the dataset has categorical variables, list them here.
+    categorical_variables = []
+
+    # TODO: If the dataset has ordinal variables, define the category orderings (lower to higher) for each of them here.
+    ordinal_variables = dict()
+
     # TODO: If the ground truth file is in dagitty format, remove the following `load_ground_truth` method.
     @classmethod
     def load_ground_truth(cls) -> DAG:

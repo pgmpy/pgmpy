@@ -2,6 +2,12 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class PittsburghBridges(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] https://archive.ics.uci.edu/ml/datasets/Pittsburgh+Bridges
+    """
+
     _tags = {
         "name": "pittsburgh_bridges",
         "n_variables": 12,
@@ -26,3 +32,19 @@ class PittsburghBridges(_BaseDataset):
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "?"
+
+    categorical_variables = [
+        "RIVER",
+        "LOCATION",
+        "ERECTED",
+        "PURPOSE",
+        "LENGTH",
+        "LANES",
+        "CLEAR-G",
+        "T-OR-D",
+        "MATERIAL",
+        "SPAN",
+        "REL-L",
+        "TYPE",
+    ]
+    ordinal_variables = dict()
