@@ -65,7 +65,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     """
 
     _tags = {
-        "name": "SHD",
+        "name": "correlation_score",
         "requires_true_graph": False,
         "requires_data": True,
         "lower_is_better": False,
