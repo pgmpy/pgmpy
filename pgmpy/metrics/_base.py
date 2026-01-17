@@ -1,6 +1,5 @@
 import pandas as pd
 from skbase.base import BaseObject
-from skbase.lookup import all_objects
 
 
 class _BaseSupervisedMetric(BaseObject):
@@ -73,7 +72,7 @@ class _BaseUnsupervisedMetric(BaseObject):
                 f"The data must be a pandas.DataFrame instance, "
                 f"but got {type(X)} instead."
             )
-        elif len(set(X.columns) - set(causal_graph.nodes())) > 0:
+        elif len(set(causal_graph.nodes()) - set(X.columns)) > 0:
             raise ValueError(
                 "Missing columns in data. Can't find values for the following variables: "
                 f" {set(causal_graph.nodes()) - set(X.columns)}"
