@@ -205,14 +205,8 @@ def test_estimate_with_orientations(adult_data_small, orientations_small):
 )
 def test_estimate_with_cache(adult_data_small, orientations_small):
     """Test estimation with cached orientations."""
-
-    def fallback_orient(var1, var2, **kwargs):
-        # Fallback: orient alphabetically
-        return (var1, var2) if var1 < var2 else (var2, var1)
-
     # Create estimator and set the orientation cache
     estimator = ExpertInLoop(
-        orientation_fn=fallback_orient,
         use_cache=True,
         pval_threshold=0.1,
         effect_size_threshold=0.1,
