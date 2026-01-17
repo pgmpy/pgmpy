@@ -1,0 +1,57 @@
+import pytest
+
+from sklearn.metrics import f1_score, accuracy_score
+import pandas as pd
+
+from pgmpy.utils import get_example_model
+from pgmpy.metrics import CorrelationScore
+
+
+@pytest.fixture
+def model_and_data():
+    alarm_model = get_example_model("alarm")
+    alarm_data = alarm_model.simulate(int(1e4), show_progress=False)
+
+    return alarm_model, alarm_data
+
+
+def test_discrete_network(model_and_data):
+    alarm_model, alarm_data = model_and_data
+
+    for test in {
+        "chi_square",
+        "g_sq",
+        "log_likelihood",
+        "modified_log_likelihood",
+    }:
+        for score in {f1_score, accuracy_score}:
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=False)
+
+            metric = corr_scorer(X=alarm_data, causal_graph=alarm_model)
+            assert isinstance(metric, float)
+
+
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=True)
+            metric_summary = corr_scorer(X=alarm_data, causal_graph=alarm_model)
+            assert isinstance(metric_summary, pd.DataFrame)
+
+
+def test_input(model_and_data):
+    alarm_model, alarm_data = model_and_data
+
+    with pytest.raises(ValueError):
+        corr_scorer = CorrelationScore(ci_test="some_random_test", score=f1_score)
+        corr_scorer(X=alarm_data, causal_graph=alarm_model)
+
+    with pytest.raises(ValueError):
+        corr_scorer = CorrelationScore(ci_test="chi_square", score="not_a_score")
+        corr_scorer(X=alarm_data, causal_graph=alarm_model)
+
+    with pytest.raises(ValueError):
+        corr_scorer = CorrelationScore()
+        corr_scorer(X=alarm_data, causal_graph="not_a_model")
+
+    with pytest.raises(ValueError):
+        alarm_data.columns = range(len(alarm_data.columns))
+        corr_scorer = CorrelationScore(ci_test="chi_square", score=f1_score)
+        corr_scorer(X=alarm_data, causal_graph=alarm_model)

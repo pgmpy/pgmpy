@@ -21,47 +21,6 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
 
 
-class TestCorrelationScore(unittest.TestCase):
-    def setUp(self):
-        self.alarm = get_example_model("alarm")
-        self.data = self.alarm.simulate(int(1e4), show_progress=False)
-
-    def test_discrete_network(self):
-        for test in {
-            "chi_square",
-            "g_sq",
-            "log_likelihood",
-            "modified_log_likelihood",
-        }:
-            for score in {f1_score, accuracy_score}:
-                metric = correlation_score(
-                    self.alarm, self.data, test=test, score=score
-                )
-                self.assertTrue(isinstance(metric, float))
-
-                metric_summary = correlation_score(
-                    self.alarm, self.data, test=test, score=score, return_summary=True
-                )
-                self.assertTrue(isinstance(metric_summary, pd.DataFrame))
-
-    def test_input(self):
-        self.assertRaises(
-            ValueError, correlation_score, self.alarm, self.data, "some_random_test"
-        )
-        self.assertRaises(
-            ValueError, correlation_score, "I am wrong model type", self.data
-        )
-        self.assertRaises(ValueError, correlation_score, self.alarm, self.data.values)
-
-        df_wrong_columns = self.data.copy()
-        df_wrong_columns.columns = range(len(self.data.columns))
-        self.assertRaises(ValueError, correlation_score, self.alarm, df_wrong_columns)
-
-        self.assertRaises(
-            ValueError, correlation_score, self.alarm, self.data, score="Wrong type"
-        )
-
-
 class TestStructureScore(unittest.TestCase):
     def setUp(self):
         self.alarm = get_example_model("alarm")
@@ -224,44 +183,3 @@ class TestImpliedCI(unittest.TestCase):
         self.assertEqual(round(rmsea, 4), 0.0476)
 
 
-class TestStructuralHammingDistance(unittest.TestCase):
-    def test_shd1(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2)])
-        dag2 = DiscreteBayesianNetwork([(2, 1)])
-        self.assertEqual(SHD(dag1, dag2), 1)
-
-    def test_shd2(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2), (2, 4), (1, 3), (3, 4)])
-        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
-        self.assertEqual(SHD(dag1, dag2), 2)
-
-    def test_shd3(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2), (1, 3), (2, 4), (3, 5), (4, 5), (5, 6)])
-        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (4, 2), (3, 5), (4, 6), (5, 6)])
-        self.assertEqual(SHD(dag1, dag2), 3)
-
-    def test_shd_isolated_nodes(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2)])
-        dag1.add_nodes_from([3])
-        dag2 = DiscreteBayesianNetwork([(1, 2), (2, 3)])
-
-        self.assertEqual(SHD(dag1, dag2), 1)
-        self.assertEqual(SHD(dag2, dag1), 1)
-
-    def test_shd_mixed_differences(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2), (2, 3), (2, 4), (4, 5), (6, 5), (7, 8)])
-        dag1.add_nodes_from([9, 10])
-        dag2 = DiscreteBayesianNetwork(
-            [(1, 2), (2, 4), (5, 4), (6, 5), (8, 7), (9, 10)]
-        )
-        dag2.add_nodes_from([3, 7])
-
-        self.assertEqual(SHD(dag1, dag2), 4)
-        self.assertEqual(SHD(dag2, dag1), 4)
-
-    def test_shd_unequal_graphs(self):
-        dag1 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 4)])
-        dag2 = DiscreteBayesianNetwork([(1, 2), (1, 3), (3, 2), (3, 5)])
-
-        with self.assertRaises(ValueError, msg="The graphs must have the same nodes."):
-            SHD(dag1, dag2)
