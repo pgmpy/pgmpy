@@ -1,7 +1,17 @@
-from pgmpy.metrics import _BaseMetric
+import math
+from itertools import combinations
+
+import numpy as np
+import pandas as pd
+from scipy import stats
+from tqdm import tqdm
+
+from pgmpy.base import DAG
+from pgmpy.global_vars import config
+from pgmpy.metrics import _BaseUnsupervisedMetric
 
 
-class FisherC(_BaseMetric):
+class FisherC(_BaseUnsupervisedMetric):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.
@@ -37,26 +47,29 @@ class FisherC(_BaseMetric):
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
-    >>> from pgmpy.metrics import implied_cis
     >>> from pgmpy.estimators.CITests import chi_square
     >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
-    >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
+    >>> fisher_c = FisherC(ci_test=chi_square, compute_rmsea=False)
+    >>> fisher_c(X=df, causal_graph=model)
     0.7504
     """
+
+    _tags = {
+        "name": "fisher_c",
+        "requires_true_graph": False,
+        "requires_data": True,
+        "lower_is_better": False,
+        "supported_graph_types": (DAG,),
+    }
 
     def __init__(self, ci_test=None, compute_rmsea=False, show_progress=True):
         self.ci_test = ci_test
         self.compute_rmsea = compute_rmsea
         self.show_progress = show_progress
 
-    def evaluate(self, X, estimated_causal_model):
-        if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
-            raise ValueError(
-                f"model must be an instance of DAG or DiscreteBayesianNetwork. Got {type(model)}"
-            )
-
-        if len(model.latents) > 0:
+    def _evaluate(self, X, causal_graph):
+        if len(causal_graph.latents) > 0:
             raise ValueError(
                 "This test can not be performed on models with latent variables."
             )
@@ -65,15 +78,18 @@ class FisherC(_BaseMetric):
 
         if self.show_progress and config.SHOW_PROGRESS:
             comb_iter = tqdm(
-                combinations(model.nodes(), 2), total=math.comb(len(model.nodes()), 2)
+                combinations(causal_graph.nodes(), 2),
+                total=math.comb(len(causal_graph.nodes()), 2),
             )
         else:
-            comb_iter = combinations(model.nodes(), 2)
+            comb_iter = combinations(causal_graph.nodes(), 2)
 
         for u, v in comb_iter:
-            if not ((u in model[v]) or (v in model[u])):
-                Z = set(model.predecessors(u)).union(model.predecessors(v))
-                test_results = self.ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
+            if not ((u in causal_graph[v]) or (v in causal_graph[u])):
+                Z = set(causal_graph.predecessors(u)).union(
+                    causal_graph.predecessors(v)
+                )
+                test_results = self.ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
                 cis.append([u, v, Z, test_results[1]])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
         cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
@@ -83,10 +99,11 @@ class FisherC(_BaseMetric):
         rmsea = np.nan
 
         if self.compute_rmsea:
-            if len(data) != 1 and len(cis) != 0:
+            if len(X) != 1 and len(cis) != 0:
                 rmsea = np.sqrt(
-                    max((C - 2 * len(cis)) / (2 * len(cis) * (len(data) - 1)), 0)
+                    max((C - 2 * len(cis)) / (2 * len(cis) * (len(X) - 1)), 0)
                 )
             return (p_value, rmsea)
 
-        return p_value
+        else:
+            return p_value
