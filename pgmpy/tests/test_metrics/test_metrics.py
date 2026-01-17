@@ -181,5 +181,3 @@ class TestImpliedCI(unittest.TestCase):
         )
         self.assertEqual(round(p_value, 4), 0)
         self.assertEqual(round(rmsea, 4), 0.0476)
-
-

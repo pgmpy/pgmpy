@@ -1,6 +1,6 @@
-from ._base import _BaseUnsupervisedMetric, _BaseSupervisedMetric
-from .shd import SHD
+from ._base import _BaseSupervisedMetric, _BaseUnsupervisedMetric
 from .correlation_score import CorrelationScore
+from .shd import SHD
 
 # from .bn_inference import BayesianModelProbability
 # from .metrics import (

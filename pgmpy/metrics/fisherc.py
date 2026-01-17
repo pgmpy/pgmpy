@@ -44,6 +44,7 @@ class FisherC(_BaseMetric):
     >>> fisher_c(model=model, data=df, ci_test=chi_square, show_progress=False)
     0.7504
     """
+
     def __init__(self, ci_test=None, compute_rmsea=False, show_progress=True):
         self.ci_test = ci_test
         self.compute_rmsea = compute_rmsea

@@ -1,11 +1,11 @@
 from itertools import combinations
 
-from sklearn.metrics import f1_score
 import pandas as pd
+from sklearn.metrics import f1_score
 
-from pgmpy.metrics import _BaseUnsupervisedMetric
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.metrics import _BaseUnsupervisedMetric
 
 
 class CorrelationScore(_BaseUnsupervisedMetric):
@@ -63,15 +63,18 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     >>> correlation_score(X=data, estimated_model=alarm)
     0.911957950065703
     """
+
     _tags = {
         "name": "SHD",
         "requires_true_graph": False,
         "requires_data": True,
         "lower_is_better": False,
-        "supported_graph_types": (DAG, ),
+        "supported_graph_types": (DAG,),
     }
 
-    def __init__(self, ci_test=None, score=f1_score, significance_level=0.05, return_summary=True):
+    def __init__(
+        self, ci_test=None, score=f1_score, significance_level=0.05, return_summary=True
+    ):
         self.ci_test = ci_test
         self.score = score
         self.significance_level = significance_level
@@ -82,7 +85,6 @@ class CorrelationScore(_BaseUnsupervisedMetric):
             raise ValueError(
                 f"score should be scikit-learn classification metric. Got {self.score}"
             )
-
 
         ci_test = ci_registry.get_test(test=self.ci_test, data=X)
 
@@ -100,7 +102,12 @@ class CorrelationScore(_BaseUnsupervisedMetric):
             d_connected = not causal_graph.is_dconnected(start=i, end=j)
 
             results.append(
-                {"var1": i, "var2": j, "stat_test": test_result, "d_connected": d_connected}
+                {
+                    "var1": i,
+                    "var2": j,
+                    "stat_test": test_result,
+                    "d_connected": d_connected,
+                }
             )
 
         results = pd.DataFrame(results)

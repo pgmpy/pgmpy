@@ -32,6 +32,7 @@ class StructureScore(_BaseMetric):
     >>> structure_score(model, data, scoring_method="bic-g")
     -106665.9383064447
     """
+
     def __init__(self, scoring_method=None, **kwargs):
         self.scoring_method = scoring_methods
 
@@ -70,7 +71,9 @@ class StructureScore(_BaseMetric):
                 f"model must be an instance of pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork. Got {type(model)}"
             )
         elif not isinstance(data, pd.DataFrame):
-            raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+            raise ValueError(
+                f"data must be a pandas.DataFrame instance. Got {type(data)}"
+            )
         elif set(model.nodes()) != set(data.columns):
             raise ValueError(
                 f"Missing columns in data. Can't find values for the following variables: "

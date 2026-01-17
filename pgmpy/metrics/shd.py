@@ -1,8 +1,8 @@
 import networkx as nx
 import numpy as np
 
-from pgmpy.metrics import _BaseSupervisedMetric
 from pgmpy.base import DAG
+from pgmpy.metrics import _BaseSupervisedMetric
 
 
 class SHD(_BaseSupervisedMetric):
@@ -24,13 +24,14 @@ class SHD(_BaseSupervisedMetric):
     >>> SHD(dag1, dag2)
     1
     """
+
     _tags = {
         "name": "SHD",
         "requires_true_graph": True,
         "requires_data": False,
         "lower_is_better": True,
         "is_symmetric": True,
-        "supported_graph_types": (DAG, ),
+        "supported_graph_types": (DAG,),
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):

@@ -47,6 +47,7 @@ class ImpliedCIs(_BaseMetric):
     4     Smoker  Dyspnoea  [Cancer]  1.000000
     5       Xray  Dyspnoea  [Cancer]  0.888619
     """
+
     def __init__(self, ci_test, show_progress=True):
         self.ci_test = ci_test
 
