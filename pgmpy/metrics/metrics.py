@@ -185,7 +185,7 @@ def log_likelihood_score(model, data):
 
     Parameters
     ----------
-    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork instance
+    model: pgmpy.models.DiscreteBayesianNetwork instance
         The model whose score needs to be computed.
 
     data: pd.DataFrame instance
@@ -201,7 +201,7 @@ def log_likelihood_score(model, data):
     -103818.57516969478
     """
     # Step 1: Check the inputs
-    if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
+    if not isinstance(model, (DiscreteBayesianNetwork)):
         raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
     elif not isinstance(data, pd.DataFrame):
         raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
