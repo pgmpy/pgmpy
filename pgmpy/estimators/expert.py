@@ -1,5 +1,6 @@
 from itertools import combinations
 from typing import Callable, Hashable, Optional, Set, Tuple
+from warnings import warn
 
 import networkx as nx
 import pandas as pd
@@ -14,6 +15,12 @@ from pgmpy.utils import llm_pairwise_orient
 
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data: Optional[pd.DataFrame] = None, **kwargs):
+        warn(
+            "ExpertInLoop in pgmpy.estimators is deprecated. "
+            "Use pgmpy.causal_discovery.ExpertInLoop instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super(ExpertInLoop, self).__init__(data=data, **kwargs)
         self.orientation_cache = set([])
 
