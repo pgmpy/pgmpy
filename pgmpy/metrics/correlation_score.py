@@ -59,7 +59,9 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     >>> from pgmpy.metrics import CorrelationScore
     >>> alarm = get_example_model("alarm")
     >>> data = alarm.simulate(int(1e4))
-    >>> scorer = CorrelationScore(ci_test="chi_square", significance_level=0.05, return_summary=False)
+    >>> scorer = CorrelationScore(
+    ...     ci_test="chi_square", significance_level=0.05, return_summary=False
+    ... )
     >>> scorer.evaluate(X=data, causal_graph=alarm)
     0.911957950065703
     """
@@ -73,7 +75,11 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     }
 
     def __init__(
-        self, ci_test=None, score=f1_score, significance_level=0.05, return_summary=False
+        self,
+        ci_test=None,
+        score=f1_score,
+        significance_level=0.05,
+        return_summary=False,
     ):
         self.ci_test = ci_test
         self.score = score
