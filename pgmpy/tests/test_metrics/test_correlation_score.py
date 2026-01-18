@@ -18,6 +18,7 @@ def test_discrete_network(model_and_data):
     alarm_model, alarm_data = model_and_data
 
     for test in {
+        None,
         "chi_square",
         "g_sq",
         "log_likelihood",
