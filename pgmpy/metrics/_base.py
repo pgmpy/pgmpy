@@ -7,7 +7,7 @@ class _BaseSupervisedMetric(BaseObject):
     Base class for all metric classes in pgmpy that require ground truth causal graph.
     """
 
-    def evaluate(self, true_causal_graph, est_causal_graph):
+    def evaluate(self, true_causal_graph, est_causal_graph, **kwargs):
         """
         Evaluate the metric by comparing the true causal graph with the estimated causal graph.
 
@@ -34,12 +34,16 @@ class _BaseSupervisedMetric(BaseObject):
             )
 
         return self._evaluate(
-            true_causal_graph=true_causal_graph, est_causal_graph=est_causal_graph
+            true_causal_graph=true_causal_graph,
+            est_causal_graph=est_causal_graph,
+            **kwargs,
         )
 
-    def __call__(self, true_causal_graph, est_causal_graph):
+    def __call__(self, true_causal_graph, est_causal_graph, **kwargs):
         return self.evaluate(
-            true_causal_graph=true_causal_graph, est_causal_graph=est_causal_graph
+            true_causal_graph=true_causal_graph,
+            est_causal_graph=est_causal_graph,
+            **kwargs,
         )
 
 
@@ -48,7 +52,7 @@ class _BaseUnsupervisedMetric(BaseObject):
     Base class for all metric classes in pgmpy that do not require ground truth causal graph.
     """
 
-    def evaluate(self, X, causal_graph):
+    def evaluate(self, X, causal_graph, **kwargs):
         """
         Evaluate the metric by comparing the causal graph with the data.
 
@@ -78,7 +82,7 @@ class _BaseUnsupervisedMetric(BaseObject):
                 f" {set(causal_graph.nodes()) - set(X.columns)}"
             )
 
-        return self._evaluate(X=X, causal_graph=causal_graph)
+        return self._evaluate(X=X, causal_graph=causal_graph, **kwargs)
 
-    def __call__(self, X, causal_graph):
-        return self.evaluate(X=X, causal_graph=causal_graph)
+    def __call__(self, X, causal_graph, **kwargs):
+        return self.evaluate(X=X, causal_graph=causal_graph, **kwargs)

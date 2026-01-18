@@ -16,6 +16,7 @@ def get_scoring_method(
     scoring_method: Optional[Union[str, "StructureScore"]],
     data: pd.DataFrame,
     use_cache: bool,
+    **kwargs,
 ) -> Tuple["StructureScore", "StructureScore"]:
     available_methods = {
         "continuous": {
@@ -75,7 +76,7 @@ def get_scoring_method(
 
     score: StructureScore
     if isinstance(scoring_method, str):
-        score = supported_methods[scoring_method.lower()](data=data)
+        score = supported_methods[scoring_method.lower()](data=data, **kwargs)
     else:
         score = scoring_method
 

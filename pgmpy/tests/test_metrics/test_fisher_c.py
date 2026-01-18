@@ -57,3 +57,23 @@ def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
         X=bundle["data"], causal_graph=bundle[graph_key]
     )
     assert round(p_value, ndigits) == expected
+
+
+@pytest.mark.parametrize(
+    "model_name, graph_key, ndigits, expected_pval, expected_rmsea",
+    [
+        ("cancer", "true", 4, 0.9967, 0),
+        ("cancer", "random", 4, 0.0001, 0.0602),
+        ("alarm", "true", 4, 0.0005, 0.0117),
+        ("alarm", "random", 4, 0.0, 0.0476),
+    ],
+)
+def test_rmsea(
+    models_and_data, model_name, graph_key, ndigits, expected_pval, expected_rmsea
+):
+    bundle = models_and_data[model_name]
+    p_value, rmsea = FisherC(ci_test=chi_square, compute_rmsea=True).evaluate(
+        X=bundle["data"], causal_graph=bundle[graph_key]
+    )
+    assert round(p_value, ndigits) == expected_pval
+    assert round(rmsea, ndigits) == expected_rmsea

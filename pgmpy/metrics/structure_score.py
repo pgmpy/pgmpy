@@ -1,7 +1,9 @@
-from pgmpy.metrics import _BaseMetric
+from pgmpy.base import DAG
+from pgmpy.estimators.StructureScore import get_scoring_method
+from pgmpy.metrics import _BaseUnsupervisedMetric
 
 
-class StructureScore(_BaseMetric):
+class StructureScore(_BaseUnsupervisedMetric):
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretebility but can be
@@ -33,61 +35,19 @@ class StructureScore(_BaseMetric):
     -106665.9383064447
     """
 
-    def __init__(self, scoring_method=None, **kwargs):
-        self.scoring_method = scoring_methods
+    _tags = {
+        "name": "structure_score",
+        "requires_true_graph": False,
+        "requires_data": True,
+        "lower_is_better": False,
+        "supported_graph_types": (DAG,),
+    }
 
-    def evaluate(X, estimated_causal_graph):
-        from pgmpy.estimators import (
-            AIC,
-            BIC,
-            K2,
-            AICCondGauss,
-            AICGauss,
-            BDeu,
-            BDs,
-            BICCondGauss,
-            BICGauss,
-            LogLikelihoodCondGauss,
-            LogLikelihoodGauss,
-        )
+    def __init__(self, scoring_method=None):
+        self.scoring_method = scoring_method
 
-        supported_methods = {
-            "k2": K2,
-            "bdeu": BDeu,
-            "bds": BDs,
-            "bic-d": BIC,
-            "aic-d": AIC,
-            "ll-g": LogLikelihoodGauss,
-            "aic-g": AICGauss,
-            "bic-g": BICGauss,
-            "ll-cg": LogLikelihoodCondGauss,
-            "aic-cg": AICCondGauss,
-            "bic-cg": BICCondGauss,
-        }
-
-        # Step 1: Test the inputs
-        if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
-            raise ValueError(
-                f"model must be an instance of pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork. Got {type(model)}"
-            )
-        elif not isinstance(data, pd.DataFrame):
-            raise ValueError(
-                f"data must be a pandas.DataFrame instance. Got {type(data)}"
-            )
-        elif set(model.nodes()) != set(data.columns):
-            raise ValueError(
-                f"Missing columns in data. Can't find values for the following variables: "
-                f" {set(model.nodes()) - set(data.columns)}"
-            )
-        elif (scoring_method not in supported_methods.keys()) and (
-            not callable(scoring_method)
-        ):
-            raise ValueError(
-                f"scoring method not supported and not a callable. Got {scoring_method}"
-            )
-
-        # Step 2: Compute the score and return
-        return supported_methods[scoring_method](data, **kwargs).score(model)
-
-    def __call__(self, X, estimated_causal_graph):
-        return self.evaluate(X, estimated_causal_graph)
+    def _evaluate(self, X, causal_graph, **kwargs):
+        scoring_method = get_scoring_method(
+            self.scoring_method, data=X, use_cache=False, **kwargs
+        )[0]
+        return scoring_method.score(causal_graph)

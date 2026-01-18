@@ -54,7 +54,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
         "name": "implied_cis",
         "requires_true_graph": False,
         "requires_data": True,
-        "lower_is_better": True,
+        "lower_is_better": None,
         "supported_graph_types": (DAG,),
     }
 
