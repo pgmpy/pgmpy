@@ -1,5 +1,6 @@
 import pandas as pd
 from skbase.base import BaseObject
+from skbase.lookup import all_objects
 
 
 class _BaseSupervisedMetric(BaseObject):
@@ -86,3 +87,30 @@ class _BaseUnsupervisedMetric(BaseObject):
 
     def __call__(self, X, causal_graph, **kwargs):
         return self.evaluate(X=X, causal_graph=causal_graph, **kwargs)
+
+
+def get_metrics(**kwargs):
+    """
+    Get the metric class by name.
+
+    Parameters
+    ----------
+    metric_name: str
+        The name of the metric class to retrieve.
+
+    Returns
+    -------
+    Type[BaseObject]
+        The metric class corresponding to the given name.
+
+    Raises
+    ------
+    ValueError
+        If the metric class with the given name is not found.
+    """
+    return all_objects(
+        object_types=[_BaseSupervisedMetric, _BaseUnsupervisedMetric],
+        package_name="pgmpy.metrics",
+        return_names=False,
+        filter_tags=kwargs,
+    )
