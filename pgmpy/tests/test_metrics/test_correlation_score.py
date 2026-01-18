@@ -54,6 +54,7 @@ def test_input(model_and_data):
         corr_scorer(X=alarm_data, causal_graph="not_a_model")
 
     with pytest.raises(ValueError):
-        alarm_data.columns = range(len(alarm_data.columns))
+        alarm_data_copy = alarm_data.copy()
+        alarm_data_copy.columns = range(len(alarm_data_copy.columns))
         corr_scorer = CorrelationScore(ci_test="chi_square", score=f1_score)
-        corr_scorer(X=alarm_data, causal_graph=alarm_model)
+        corr_scorer(X=alarm_data_copy, causal_graph=alarm_model)

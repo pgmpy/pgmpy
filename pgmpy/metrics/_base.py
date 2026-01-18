@@ -91,22 +91,23 @@ class _BaseUnsupervisedMetric(BaseObject):
 
 def get_metrics(**kwargs):
     """
-    Get the metric class by name.
+    Get metric classes matching the given tag filters.
 
     Parameters
     ----------
-    metric_name: str
-        The name of the metric class to retrieve.
+    **kwargs
+        Keyword arguments specifying tag filters to be passed to
+        :func:`skbase.lookup.all_objects` via its ``filter_tags`` parameter.
 
     Returns
     -------
-    Type[BaseObject]
-        The metric class corresponding to the given name.
+    Type[BaseObject] or list[Type[BaseObject]]
+        Metric class(es) corresponding to the given tag filters.
 
     Raises
     ------
     ValueError
-        If the metric class with the given name is not found.
+        If no metric class matching the given tag filters is found.
     """
     return all_objects(
         object_types=[_BaseSupervisedMetric, _BaseUnsupervisedMetric],

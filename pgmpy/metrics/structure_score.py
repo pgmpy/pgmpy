@@ -6,7 +6,7 @@ from pgmpy.metrics import _BaseUnsupervisedMetric
 class StructureScore(_BaseUnsupervisedMetric):
     """
     Uses the standard model scoring methods to give a score for each structure.
-    The score doesn't have very straight forward interpretebility but can be
+    The score doesn't have very straight forward interpretability but can be
     used to compare different models. A higher score represents a better fit.
     This method only needs the model structure to compute the score and parameters
     aren't required.
@@ -28,10 +28,11 @@ class StructureScore(_BaseUnsupervisedMetric):
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
-    >>> from pgmpy.metrics import structure_score
+    >>> from pgmpy.metrics import StructureScore
     >>> model = get_example_model("alarm")
     >>> data = model.simulate(int(1e4))
-    >>> structure_score(model, data, scoring_method="bic-g")
+    >>> scorer = StructureScore(scoring_method="bic-g")
+    >>> scorer(X=data, causal_graph=model)
     -106665.9383064447
     """
 

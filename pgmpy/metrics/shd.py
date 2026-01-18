@@ -21,7 +21,8 @@ class SHD(_BaseSupervisedMetric):
     >>> from pgmpy.base import DAG
     >>> dag1 = DAG([(1, 2), (2, 3)])
     >>> dag2 = DAG([(2, 1), (2, 3)])
-    >>> SHD(dag1, dag2)
+    >>> shd = SHD()
+    >>> shd.evaluate(true_causal_graph=dag1, est_causal_graph=dag2)
     1
     """
 

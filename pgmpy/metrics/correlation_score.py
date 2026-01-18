@@ -10,7 +10,7 @@ from pgmpy.metrics import _BaseUnsupervisedMetric
 
 class CorrelationScore(_BaseUnsupervisedMetric):
     """
-    Score to compute the model structure represents the correlations
+    Score to compute how well the model structure represents the correlations
     in the data. The model doesn't need to be parameterized for this score.
 
     A Bayesian Network or DAG has d-connection property which can be used to
@@ -24,7 +24,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     by `score` is computed by using the correlation test as the true value and
     d-connections as predicted values.
 
-    Absense of correlation/d-separation is considered as the positive class for
+    Absence of correlation/d-separation is considered as the positive class for
     computing the metrics.
 
     Parameters
@@ -51,16 +51,16 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     Returns
     -------
     The specified metric: float
-        The metric specified by the `score` argument. By defults returns the f1-score.
+        The metric specified by the `score` argument. By defaults returns the f1-score.
 
     Examples
     --------
-    >>> from pgmpy.utils import get_examples_model
-    >>> from pgmpy.metrics import correlation_score
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import CorrelationScore
     >>> alarm = get_example_model("alarm")
     >>> data = alarm.simulate(int(1e4))
-    >>> scorer = CorrelationScore(test="chi_square", significance_level=0.05)
-    >>> correlation_score(X=data, estimated_model=alarm)
+    >>> scorer = CorrelationScore(ci_test="chi_square", significance_level=0.05, return_summary=False)
+    >>> scorer.evaluate(X=data, causal_graph=alarm)
     0.911957950065703
     """
 
@@ -73,7 +73,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     }
 
     def __init__(
-        self, ci_test=None, score=f1_score, significance_level=0.05, return_summary=True
+        self, ci_test=None, score=f1_score, significance_level=0.05, return_summary=False
     ):
         self.ci_test = ci_test
         self.score = score
