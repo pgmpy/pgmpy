@@ -69,7 +69,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         ...     ci_test="chi_square", significance_level=0.05, return_summary=True
         ... )
         >>> scorer(X=data, causal_graph=alarm).head()
-           var1         var2  stat_test  d_connected
+        var1            var2  stat_test  d_connected
     0   HISTORY          CVP      False        False
     1   HISTORY         PCWP      False        False
     2   HISTORY  HYPOVOLEMIA       True         True
