@@ -7,6 +7,7 @@ from scipy import stats
 from tqdm import tqdm
 
 from pgmpy.base import DAG
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import config
 from pgmpy.metrics import _BaseUnsupervisedMetric
 
@@ -75,6 +76,7 @@ class FisherC(_BaseUnsupervisedMetric):
             )
 
         cis = []
+        ci_test = ci_registry.get_test(test=self.ci_test, data=X)
 
         if self.show_progress and config.SHOW_PROGRESS:
             comb_iter = tqdm(
@@ -89,7 +91,7 @@ class FisherC(_BaseUnsupervisedMetric):
                 Z = set(causal_graph.predecessors(u)).union(
                     causal_graph.predecessors(v)
                 )
-                test_results = self.ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
+                test_results = ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
                 cis.append([u, v, Z, test_results[1]])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
         cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
