@@ -20,7 +20,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
 
     Parameters
     ----------
-    ci_test: function
+    ci_test: fun or str
         The function for statistical test. Can be either any of the tests in
         pgmpy.estimators.CITests or any custom function of the same form.
 
@@ -40,7 +40,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
     >>> from pgmpy.estimators.CITests import chi_square
     >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
-    >>> implied_cis = ImpliedCIs(ci_test=chi_square, show_progress=False)
+    >>> implied_cis = ImpliedCIs(ci_test="chi_square", show_progress=False)
     >>> implied_cis.evaluate(X=df, causal_graph=model)
            u         v cond_vars   p-value
     0  Pollution    Smoker        []  0.189851
