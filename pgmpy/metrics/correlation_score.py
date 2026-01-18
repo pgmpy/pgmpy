@@ -98,6 +98,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         self.return_summary = return_summary
 
     def _evaluate(self, X, causal_graph):
+        # Step 1: Validate inputs
         if not callable(self.score):
             raise ValueError(
                 f"score should be scikit-learn classification metric. Got {self.score}"
@@ -128,11 +129,11 @@ class CorrelationScore(_BaseUnsupervisedMetric):
             )
 
         results = pd.DataFrame(results)
-        metric = self.score(
-            y_true=results["stat_test"].values, y_pred=results["d_connected"].values
-        )
 
+        # Step 3: Return summary or metric
         if self.return_summary:
             return results
         else:
-            return metric
+            return self.score(
+                y_true=results["stat_test"].values, y_pred=results["d_connected"].values
+            )
