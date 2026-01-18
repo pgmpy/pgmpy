@@ -20,7 +20,7 @@ class TestStructureScore:
         alarm, data, alarm_no_cpd = alarm_and_data
 
         for model in (alarm, alarm_no_cpd):
-            for scoring_method in ("k2", "bdeu", "bds", "bic-d", "ll-d"):
+            for scoring_method in (None, "k2", "bdeu", "bds", "bic-d", "ll-d"):
                 scorer = StructureScore(scoring_method=scoring_method)
                 metric = scorer(X=data, causal_graph=model)
                 assert isinstance(metric, float)
