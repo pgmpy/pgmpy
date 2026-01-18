@@ -10,65 +10,65 @@ from pgmpy.metrics import _BaseUnsupervisedMetric
 
 class CorrelationScore(_BaseUnsupervisedMetric):
     """
-        Score to compute how well the model structure represents the correlations
-        in the data. The model doesn't need to be parameterized for this score.
+    Score to compute how well the model structure represents the correlations
+    in the data. The model doesn't need to be parameterized for this score.
 
-        A Bayesian Network or DAG has d-connection property which can be used to
-        determine which variables are correlated according to the model. This
-        function uses this d-connection/d-separation property to compare the model
-        with variable correlations in a given dataset. For every pair of variables
-        in the dataset, a correlation test (specified by `test` argument) is done.
-        We say that any two variables are correlated if the test's p-value <
-        significance_level. The same pair of variables are then tested whether they
-        are d-connected in the network structure or not. Finally, a metric specified
-        by `score` is computed by using the correlation test as the true value and
-        d-connections as predicted values.
+    A Bayesian Network or DAG has d-connection property which can be used to
+    determine which variables are correlated according to the model. This
+    function uses this d-connection/d-separation property to compare the model
+    with variable correlations in a given dataset. For every pair of variables
+    in the dataset, a correlation test (specified by `test` argument) is done.
+    We say that any two variables are correlated if the test's p-value <
+    significance_level. The same pair of variables are then tested whether they
+    are d-connected in the network structure or not. Finally, a metric specified
+    by `score` is computed by using the correlation test as the true value and
+    d-connections as predicted values.
 
-        Absence of correlation/d-separation is considered as the positive class for
-        computing the metrics.
+    Absence of correlation/d-separation is considered as the positive class for
+    computing the metrics.
 
-        Parameters
-        ----------
-        ci_test: str or function
-            The statistical tests to use for determining whether the variables in data
-            are correlated or not. For discrete variables, the options are: 1) chi_square
-            2) g_sq 3) log_likelihood 4) freeman_tuckey 5) modified_log_likelihood 6) neyman
-            7) cressie_read. For continuous variables only one test is available: 1) pearsonr.
-            A function with the signature fun(X, Y, Z, data) can also be passed which
-            returns True for uncorrelated and False otherwise.
+    Parameters
+    ----------
+    ci_test: str or function
+        The statistical tests to use for determining whether the variables in data
+        are correlated or not. For discrete variables, the options are: 1) chi_square
+        2) g_sq 3) log_likelihood 4) freeman_tuckey 5) modified_log_likelihood 6) neyman
+        7) cressie_read. For continuous variables only one test is available: 1) pearsonr.
+        A function with the signature fun(X, Y, Z, data) can also be passed which
+        returns True for uncorrelated and False otherwise.
 
-        significance_level: float
-            A value between 0 and 1. If p_value < significance_level, the variables are
-            considered uncorrelated.
+    significance_level: float
+        A value between 0 and 1. If p_value < significance_level, the variables are
+        considered uncorrelated.
 
-        score: fun (default: f1-score)
-            Any classification scoring metric from scikit-learn.
-            https://scikit-learn.org/stable/modules/classes.html#classification-metrics
+    score: fun (default: f1-score)
+        Any classification scoring metric from scikit-learn.
+        https://scikit-learn.org/stable/modules/classes.html#classification-metrics
 
-        return_summary: boolean (default: False)
-            If True, returns a dataframe with details for each of the conditions checked.
+    return_summary: boolean (default: False)
+        If True, returns a dataframe with details for each of the conditions checked.
 
-        Returns
-        -------
-        The specified metric: float
-            The metric specified by the `score` argument. By defaults returns the f1-score.
+    Returns
+    -------
+    The specified metric: float
+        The metric specified by the `score` argument. By defaults returns the f1-score.
 
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> from pgmpy.metrics import CorrelationScore
-        >>> alarm = get_example_model("alarm")
-        >>> data = alarm.simulate(int(1e4))
-        >>> scorer = CorrelationScore(
-        ...     ci_test="chi_square", significance_level=0.05, return_summary=False
-        ... )
-        >>> scorer(X=data, causal_graph=alarm)
-        0.911957950065703
+    Examples
+    --------
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import CorrelationScore
+    >>> alarm = get_example_model("alarm")
+    >>> data = alarm.simulate(int(1e4))
+    >>> scorer = CorrelationScore(
+    ...     ci_test="chi_square", significance_level=0.05, return_summary=False
+    ... )
+    >>> scorer(X=data, causal_graph=alarm)
+    0.911957950065703
 
-        >>> scorer = CorrelationScore(
-        ...     ci_test="chi_square", significance_level=0.05, return_summary=True
-        ... )
-        >>> scorer(X=data, causal_graph=alarm).head()
+    >>> scorer = CorrelationScore(
+    ...     ci_test="chi_square", significance_level=0.05, return_summary=True
+    ... )
+    >>> scorer(X=data, causal_graph=alarm).head()
         var1            var2  stat_test  d_connected
     0   HISTORY          CVP      False        False
     1   HISTORY         PCWP      False        False
