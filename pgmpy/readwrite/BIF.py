@@ -1,11 +1,10 @@
-import collections
 import re
 from itertools import product
 from string import Template
 
 import numpy as np
+import pandas as pd
 import pyparsing as pp
-from joblib import Parallel, delayed
 
 try:
     from pyparsing import (
@@ -16,7 +15,6 @@ try:
         Suppress,
         Word,
         ZeroOrMore,
-        cppStyleComment,
         nums,
         printables,
     )
@@ -46,9 +44,6 @@ class BIFReader(object):
     include_properties: boolean
         If True, gets the properties tag from the file and stores in graph properties.
 
-    n_jobs: int (default: 1)
-        Number of jobs to run in parallel. `-1` means use all processors.
-
     Examples
     --------
     >>> # dog-problem.bif file is present at
@@ -64,7 +59,7 @@ class BIFReader(object):
         http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
     """
 
-    def __init__(self, path=None, string=None, include_properties=False, n_jobs=1):
+    def __init__(self, path=None, string=None, include_properties=False):
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
@@ -75,8 +70,15 @@ class BIFReader(object):
         else:
             raise ValueError("Must specify either path or string")
 
-        self.n_jobs = n_jobs
         self.include_properties = include_properties
+
+        if "/*" in self.network or "//" in self.network:
+            # removing comments from the file
+            pattern = r'("[^"\\]*(?:\\.[^"\\]*)*")|(/\*.*?\*/|//[^\n]*)'
+            regex = re.compile(pattern, re.DOTALL)
+            self.network = regex.sub(
+                lambda m: m.group(1) if m.group(1) else "", self.network
+            )
 
         if '"' in self.network:
             # Replacing quotes by spaces to remove case sensitivity like:
@@ -84,25 +86,91 @@ class BIFReader(object):
             # or "true""false" and "true" "false" and true false
             self.network = self.network.replace('"', " ")
 
-        if "/*" in self.network or "//" in self.network:
-            self.network = cppStyleComment.suppress().transformString(
-                self.network
-            )  # removing comments from the file
-
         (
-            self.name_expr,
-            self.state_expr,
-            self.property_expr,
+            name_expr,
+            state_expr,
+            property_expr,
         ) = self.get_variable_grammar()
-        self.probability_expr, self.cpd_expr = self.get_probability_grammar()
-        self.network_name = self.get_network_name()
-        self.variable_names = self.get_variables()
-        self.variable_states = self.get_states()
+        probability_expr, cpd_expr = self.get_probability_grammar()
+
+        # self.get_network_name()
+        match = re.search(r"network\s+([\w-]+)\s*\{", self.network)
+        self.network_name = match.group(1) if match else None
+
+        block_pattern = re.compile(r"(variable|probability).*?\}\n", re.DOTALL)
+
+        self.variable_states = {}
+        self.variable_names = []
         if self.include_properties:
-            self.variable_properties = self.get_property()
-        self.variable_parents = self.get_parents()
-        self.variable_cpds = self.get_values()
-        self.variable_edges = self.get_edges()
+            self.variable_properties = {}
+        self.variable_parents = {}
+        self.variable_edges = []
+        probability_blocks = []
+
+        for match in block_pattern.finditer(self.network):
+            block_content = match.group(0)
+
+            # self.get_variables(), self.get_states(), self.get_property()
+            if block_content.startswith("variable"):
+                name = name_expr.searchString(block_content)[0][0]
+                self.variable_names.append(name)
+                self.variable_states[name] = list(
+                    state_expr.searchString(block_content)[0][0]
+                )
+                if self.include_properties:
+                    properties = property_expr.searchString(block_content)
+                    self.variable_properties[name] = [
+                        y.strip() for x in properties for y in x
+                    ]
+
+            # self.get_parents(), self.get_edges()
+            elif block_content.startswith("probability"):
+                header_line = block_content.split("\n")[0]
+                names = probability_expr.searchString(header_line)[0]
+                var_name, parents = names[0], names[1:]
+
+                self.variable_parents[var_name] = parents
+                self.variable_edges.extend([[p, var_name] for p in parents])
+                probability_blocks.append((block_content, var_name, parents))
+
+        # self.get_values()
+        self.variable_cpds = {}
+
+        state_maps = {
+            var: {state: i for i, state in enumerate(states)}
+            for var, states in self.variable_states.items()
+        }
+
+        for block_content, var_name, parents in probability_blocks:
+            cpds_list = cpd_expr.searchString(block_content)
+            n_rows = len(self.variable_states[var_name])
+
+            if ("table " in block_content) or ("default " in block_content):
+                arr = [float(j) for i in cpds_list for j in i]
+                arr = np.array(arr).reshape(n_rows, -1)
+                self.variable_cpds[var_name] = arr
+            else:
+                parent_cards = [len(self.variable_states[p]) for p in parents]
+                arr_length = int(np.prod(parent_cards))
+                arr = np.zeros((n_rows, arr_length))
+
+                len_parents = len(parents)
+
+                if len(cpds_list) > 0:
+                    df = pd.DataFrame(cpds_list)
+
+                    state_df = df.iloc[:, :len_parents].copy()
+                    values_df = df.iloc[:, len_parents:]
+
+                    for idx, parent in enumerate(parents):
+                        state_df.iloc[:, idx] = state_df.iloc[:, idx].map(
+                            state_maps[parent]
+                        )
+
+                    strides = np.cumprod([1] + parent_cards[::-1])[:-1][::-1]
+                    col_indices = state_df.dot(strides).astype(int)
+                    arr[:, col_indices] = values_df.astype(float).T
+                self.variable_cpds[var_name] = arr
 
     def get_variable_grammar(self):
         """
@@ -162,202 +230,6 @@ class BIFReader(object):
 
         return probability_expr, cpd_expr
 
-    def variable_block(self):
-        start = re.finditer("variable", self.network)
-        for index in start:
-            end = self.network.find("}\n", index.start())
-            yield self.network[index.start() : end]
-
-    def probability_block(self):
-        start = re.finditer("probability", self.network)
-        for index in start:
-            end = self.network.find("}\n", index.start())
-            yield self.network[index.start() : end]
-
-    def get_network_name(self):
-        """
-        Returns the name of the network
-
-        Example
-        ---------------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIF.BifReader("bif_test.bif")
-        >>> reader.network_name()
-        'Dog-Problem'
-        """
-        start = self.network.find("network")
-        end = self.network.find("}\n", start)
-        # Creating a network attribute
-        network_attribute = (
-            Suppress("network") + Word(pp.unicode.alphanums + "_" + "-") + "{"
-        )
-        network_name = network_attribute.searchString(self.network[start:end])[0][0]
-
-        return network_name
-
-    def get_variables(self):
-        """
-        Returns list of variables of the network
-
-        Example
-        -------------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_variables()
-        ['light-on','bowel_problem','dog-out','hear-bark','family-out']
-        """
-        variable_names = []
-        for block in self.variable_block():
-            name = self.name_expr.searchString(block)[0][0]
-            variable_names.append(name)
-
-        return variable_names
-
-    def get_states(self):
-        """
-        Returns the states of variables present in the network
-
-        Example
-        -----------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_states()
-        {'bowel-problem': ['true','false'],
-        'dog-out': ['true','false'],
-        'family-out': ['true','false'],
-        'hear-bark': ['true','false'],
-        'light-on': ['true','false']}
-        """
-        variable_states = {}
-        for block in self.variable_block():
-            name = self.name_expr.searchString(block)[0][0]
-            variable_states[name] = list(self.state_expr.searchString(block)[0][0])
-
-        return variable_states
-
-    def get_property(self):
-        """
-        Returns the property of the variable
-
-        Example
-        -------------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_property()
-        {'bowel-problem': ['position = (335, 99)'],
-        'dog-out': ['position = (300, 195)'],
-        'family-out': ['position = (257, 99)'],
-        'hear-bark': ['position = (296, 268)'],
-        'light-on': ['position = (218, 195)']}
-        """
-        variable_properties = {}
-        for block in self.variable_block():
-            name = self.name_expr.searchString(block)[0][0]
-            properties = self.property_expr.searchString(block)
-            variable_properties[name] = [y.strip() for x in properties for y in x]
-        return variable_properties
-
-    def get_parents(self):
-        """
-        Returns the parents of the variables present in the network
-
-        Example
-        --------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_parents()
-        {'bowel-problem': [],
-        'dog-out': ['family-out', 'bowel-problem'],
-        'family-out': [],
-        'hear-bark': ['dog-out'],
-        'light-on': ['family-out']}
-        """
-        variable_parents = {}
-        for block in self.probability_block():
-            names = self.probability_expr.searchString(block.split("\n")[0])[0]
-            variable_parents[names[0]] = names[1:]
-        return variable_parents
-
-    def _get_values_from_block(self, block):
-        names = self.probability_expr.searchString(block)
-        var_name, parents = names[0][0], names[0][1:]
-        cpds = self.cpd_expr.searchString(block)
-
-        # Check if the block is a table.
-        if bool(re.search(".*\n[ ]*(table|default) .*\n.*", block)):
-            arr = np.array([float(j) for i in cpds for j in i])
-            arr = arr.reshape(
-                (
-                    len(self.variable_states[var_name]),
-                    arr.size // len(self.variable_states[var_name]),
-                )
-            )
-        else:
-            arr_length = np.prod([len(self.variable_states[var]) for var in parents])
-            arr = np.zeros((len(self.variable_states[var_name]), arr_length))
-            values_dict = {}
-            for prob_line in cpds:
-                states = prob_line[: len(parents)]
-                vals = [float(i) for i in prob_line[len(parents) :]]
-                values_dict[tuple(states)] = vals
-            for index, combination in enumerate(
-                product(*[self.variable_states[var] for var in parents])
-            ):
-                arr[:, index] = values_dict[combination]
-        return var_name, arr
-
-    def get_values(self):
-        """
-        Returns the CPD of the variables present in the network
-
-        Example
-        --------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_values()
-        {'bowel-problem': np.array([[0.01],
-                                    [0.99]]),
-        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
-                            [0.01, 0.03, 0.1, 0.7]]),
-        'family-out': np.array([[0.15],
-                                [0.85]]),
-        'hear-bark': np.array([[0.7, 0.01],
-                                [0.3, 0.99]]),
-        'light-on': np.array([[0.6, 0.05],
-                            [0.4, 0.95]])}
-        """
-        cpd_values = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._get_values_from_block)(block)
-            for block in self.probability_block()
-        )
-
-        variable_cpds = {}
-        for var_name, arr in cpd_values:
-            variable_cpds[var_name] = arr
-
-        return variable_cpds
-
-    def get_edges(self):
-        """
-        Returns the edges of the network
-
-        Example
-        --------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_edges()
-        [['family-out', 'light-on'],
-         ['family-out', 'dog-out'],
-         ['bowel-problem', 'dog-out'],
-         ['dog-out', 'hear-bark']]
-        """
-        edges = [
-            [value, key]
-            for key in self.variable_parents.keys()
-            for value in self.variable_parents[key]
-        ]
-        return edges
-
     def get_model(self, state_name_type=str):
         """
         Returns the Bayesian Model read from the file/str.
@@ -374,49 +246,41 @@ class BIFReader(object):
         >>> reader.get_model()
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x7f20af154320>
         """
-        try:
-            model = DiscreteBayesianNetwork()
-            model.add_nodes_from(self.variable_names)
-            model.add_edges_from(self.variable_edges)
-            model.name = self.network_name
+        model = DiscreteBayesianNetwork()
+        model.add_nodes_from(self.variable_names)
+        model.add_edges_from(self.variable_edges)
+        model.name = self.network_name
 
-            tabular_cpds = []
-            for var in sorted(self.variable_cpds.keys()):
-                values = self.variable_cpds[var]
-                sn = {
-                    p_var: list(map(state_name_type, self.variable_states[p_var]))
-                    for p_var in self.variable_parents[var]
-                }
-                sn[var] = list(map(state_name_type, self.variable_states[var]))
-                cpd = TabularCPD(
-                    var,
-                    len(self.variable_states[var]),
-                    values,
-                    evidence=self.variable_parents[var],
-                    evidence_card=[
-                        len(self.variable_states[evidence_var])
-                        for evidence_var in self.variable_parents[var]
-                    ],
-                    state_names=sn,
-                )
-                tabular_cpds.append(cpd)
-
-            model.add_cpds(*tabular_cpds)
-
-            if self.include_properties:
-                for node, properties in self.variable_properties.items():
-                    for prop in properties:
-                        prop_name, prop_value = map(
-                            lambda t: t.strip(), prop.split("=")
-                        )
-                        model.nodes[node][prop_name] = prop_value
-
-            return model
-
-        except AttributeError:
-            raise AttributeError(
-                "First get states of variables, edges, parents and network name"
+        tabular_cpds = []
+        for var in sorted(self.variable_cpds.keys()):
+            values = self.variable_cpds[var]
+            sn = {
+                p_var: list(map(state_name_type, self.variable_states[p_var]))
+                for p_var in self.variable_parents[var]
+            }
+            sn[var] = list(map(state_name_type, self.variable_states[var]))
+            cpd = TabularCPD(
+                var,
+                len(self.variable_states[var]),
+                values,
+                evidence=self.variable_parents[var],
+                evidence_card=[
+                    len(self.variable_states[evidence_var])
+                    for evidence_var in self.variable_parents[var]
+                ],
+                state_names=sn,
             )
+            tabular_cpds.append(cpd)
+
+        model.add_cpds(*tabular_cpds)
+
+        if self.include_properties:
+            for node, properties in self.variable_properties.items():
+                for prop in properties:
+                    prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
+                    model.nodes[node][prop_name] = prop_value
+
+        return model
 
 
 class BIFWriter(object):
@@ -508,7 +372,9 @@ $values
         network += network_template.substitute(name=self.network_name)
         variables = self.model.nodes()
 
-        for var in sorted(variables):
+        sorted_variables = sorted(variables)
+
+        for var in sorted_variables:
             no_of_states = str(len(self.variable_states[var]))
             states = ", ".join(self.variable_states[var])
             if not self.property_tag[var]:
@@ -524,7 +390,7 @@ $values
                 properties=properties,
             )
 
-        for var in sorted(variables):
+        for var in sorted_variables:
             if not self.variable_parents[var]:
                 parents = ""
                 separator = ""
@@ -644,10 +510,9 @@ $values
         property_tag = {}
         for variable in sorted(variables):
             properties = self.model.nodes[variable]
-            properties = collections.OrderedDict(sorted(properties.items()))
-            property_tag[variable] = []
-            for prop, val in properties.items():
-                property_tag[variable].append(str(prop) + " = " + str(val))
+            property_tag[variable] = [
+                f"{prop} = {val}" for prop, val in sorted(properties.items())
+            ]
         return property_tag
 
     def get_parents(self):
