@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import validate_data
+from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -115,15 +115,16 @@ class _BaseCausalDiscovery(BaseEstimator):
         scoring_method: pgmpy.metrics._BaseSupervisedMetric or pgmpy.metrics._BaseUnsupervisedMetric
             Method to be used for calculating the score.
         """
-        validate_data(
-            self,
-            X=X,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=False,
-        )
+        check_is_fitted(self, "causal_graph_")
 
         if X is not None:
+            validate_data(
+                self,
+                X=X,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=False,
+            )
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
