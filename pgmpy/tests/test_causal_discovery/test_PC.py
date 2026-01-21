@@ -13,11 +13,16 @@ from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
 
-def make_estimator():
-    return PC()
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method."
+    }
 
 
-@parametrize_with_checks([make_estimator()])
+@parametrize_with_checks(
+    [PC(return_type="dag", show_progress=False)],
+    expected_failed_checks=expected_failed_checks,
+)
 def test_pc_compatibility(estimator, check):
     check(estimator)
 

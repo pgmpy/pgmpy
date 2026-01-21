@@ -12,11 +12,11 @@ import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.utils._safe_import import _safe_import
 
 requests = _safe_import("requests")
 
