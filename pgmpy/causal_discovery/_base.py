@@ -15,6 +15,7 @@ from typing import (
 )
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
@@ -27,6 +28,7 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
+from pgmpy.metrics import correlation_score
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -87,6 +89,63 @@ class _BaseCausalDiscovery(BaseEstimator):
         """
         X = self._check_fit_data(X)
         return self._fit(X)
+      
+    def score(
+        self,
+        X=None,
+        y=None,
+        ground_truth=None,
+        scoring_method=correlation_score,
+        **kwargs,
+    ):
+        """Method to calculate the score of the fitted causal graph.
+
+        Parameters
+        ----------
+        X: pgmpy.base.DAG or pd.DataFrame
+            Test data used for calulating score for the fitted model.
+
+        y: None
+
+        ground_truth: DAG
+            The true model to calulate the fitted model score against.
+
+        scoring_method: callable
+            Method to be used for calculating score of the fitted model.
+
+        kwargs:
+            Additional arguments that are required for the scoring method chosen.
+        """
+        validate_data(
+            self,
+            X=X,
+            dtype=None,
+            accept_sparse=False,
+            ensure_all_finite=True,
+            reset=False,
+        )
+
+        # Metrics that test the model against data
+        if isinstance(X, pd.DataFrame):
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = scoring_method(causal_dag_, X, **kwargs)
+
+        elif isinstance(X, (np.ndarray)):
+            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = scoring_method(causal_dag_, X, **kwargs)
+
+        # Metrics that test the model against the true model (SHD, SID etc.)
+        elif isinstance(ground_truth, DAG):
+            causal_dag_ = self.causal_graph_.to_dag()
+            graph_score = scoring_method(causal_dag_, ground_truth, **kwargs)
+
+        else:
+            raise TypeError(
+                f"Expected pd.DataFrame or DAG or numpy ndarray: got unsupported type {type(X)}"
+            )
+
+        return graph_score
 
 
 class _ConstraintMixin:
