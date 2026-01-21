@@ -89,7 +89,7 @@ class _BaseCausalDiscovery(BaseEstimator):
         """
         X = self._check_fit_data(X)
         return self._fit(X)
-      
+
     def score(
         self,
         X=None,
