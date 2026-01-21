@@ -106,14 +106,38 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         Parameters
         ----------
-        X: pd.DataFrame (optional)
-            Test data used for scoring the learned causal model.
+        X : pandas.DataFrame, optional
+            Test data used for scoring the learned causal model. If provided, `scoring_method` should be a metric that
+            can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
 
-        true_graph: DAG (optional)
-            The true model graph for scoring the learned causal model.
+        true_graph : pgmpy.base.DAG, optional
+            The true model graph for scoring the learned causal model. If provided, `scoring_method` should be a metric
+            that compares graphs. You can find all such metrics using:
+            `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
-        scoring_method: pgmpy.metrics._BaseSupervisedMetric or pgmpy.metrics._BaseUnsupervisedMetric
-            Method to be used for calculating the score.
+        scoring_method : pgmpy.metrics._BaseSupervisedMetric or pgmpy.metrics._BaseUnsupervisedMetric, optional
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
+            argument (`X` or `true_graph`) will be selected internally.
+
+        **kwargs
+            Additional keyword arguments passed directly to the scoring method initialization. The accepted arguments
+            depend on the specific scoring method class used. Refer to the chosen metric's documentation in
+            :mod:`pgmpy.metrics` for the list of supported keyword arguments (for example, to configure which metrics
+            are computed or how they are aggregated).
+
+        Returns
+        -------
+        score : float
+            The calculated score of the learned causal graph according to the specified scoring method.
+
+        Examples
+        --------
+        >>> from pgmpy.estimators import PC
+        >>> from pgmpy.metrics import get_metrics
+        >>> from pgmpy.datasets import load_dataset
+        >>> data = load_dataset("lead")
+        >>> dag = PC(return_type="dag").fit(data)
+        >>> score = dag.score(X=data, scoring_method="correlation_score")
         """
         check_is_fitted(self, "causal_graph_")
 
