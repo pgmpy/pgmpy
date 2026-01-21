@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _safe_import
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge
