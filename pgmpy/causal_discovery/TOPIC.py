@@ -1,3 +1,7 @@
+__authors__ = ["srhmm", "ankurankan"]  # Implementation  # Minor refactoring
+
+
+import itertools
 from typing import (
     List,
     Optional,
@@ -12,7 +16,6 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import BICGauss, StructureScore, get_scoring_method
 
 
@@ -29,11 +32,6 @@ class TOPIC(_BaseCausalDiscovery):
 
     Parameters
     ----------
-    variant: str, default="orig"
-        The variant of TOPIC to run.
-
-        - "orig": The original TOPIC algorithm. Might not give the same results in different runs.
-
     scoring_method: str or StructureScore instance
         The score to be optimized during structure estimation.  Supported
         structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
@@ -59,7 +57,7 @@ class TOPIC(_BaseCausalDiscovery):
         this  `min_improvement` will be used to check whether score differences are large enough
         to be considered sufficient for edge  addition and  removal.
 
-    show_progress : bool, default=False
+    show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
 
     use_cache : bool, default=True
@@ -86,22 +84,18 @@ class TOPIC(_BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> import logging
-    >>> logging.getLogger("pgmpy").setLevel(logging.ERROR)
-
     >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model("ecoli70")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the TOPIC algorithm to learn the causal structure from data:
 
-    >>> from pgmpy.causal_discovery.TOPIC import TOPIC
+    >>> from pgmpy.causal_discovery import TOPIC
     >>> topic = TOPIC()
-    >>> _ = topic.fit(df)
+    >>> topic.fit(df)
     >>> edges = sorted(topic.causal_graph_.edges())
     >>> len(edges) > 0
     True
-
 
     References
     ----------
@@ -115,15 +109,13 @@ class TOPIC(_BaseCausalDiscovery):
 
     def __init__(
         self,
-        variant: str = "orig",
         scoring_method: Optional[Union[str, StructureScore]] = None,
         return_type: str = "dag",
         significance_level: float = 0.05,
         min_improvement: float = 1e-6,
-        show_progress: bool = False,
+        show_progress: bool = True,
         use_cache: bool = True,
     ):
-        self.variant = variant
         self.return_type = return_type
         self.scoring_method = scoring_method
         self.significance_level = significance_level
@@ -140,20 +132,26 @@ class TOPIC(_BaseCausalDiscovery):
         X: pd.DataFrame
             The input dataset
         """
+        # Step 0. Initialize scoring and data structures.
+        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
+        score_fn = score_c.local_score
 
-        # 0. Initialization (Data, DAG)
-        self._init_score(X)
+        # TODO: Remove this
+        self.score_fn_ = score_fn
+
+        # self._init_score(X)
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = np.asarray(X.columns, dtype=object)
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))
+
         candidates_ = list(dag_current.nodes)
         topological_order_ = []
         topic_history_ = []
 
-        # 1. Discover a topological order, prune and add edges
-        n_nodes = len(dag_current.nodes)
+        # Step 1. Discover a topological order, prune and add edges
+        n_nodes = dag_current.number_of_nodes()
         pbar = (
             tqdm(total=n_nodes, desc="Topological order", unit="node")
             if self.show_progress and config.SHOW_PROGRESS
@@ -217,20 +215,20 @@ class TOPIC(_BaseCausalDiscovery):
 
         return self
 
-    def _init_score(self, X: pd.DataFrame):
-        """
-        Initializes the local scoring function and score cache for the given dataset.
+    # def _init_score(self, X: pd.DataFrame):
+    #     """
+    #     Initializes the local scoring function and score cache for the given dataset.
 
-        Parameters
-        ----------
-        X: pd.DataFrame
-            The input dataset
-        """
-        score_c: ScoreCache
-        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score_c.local_score
-        self.score_ = score
-        self.score_fn_ = score_fn
+    #     Parameters
+    #     ----------
+    #     X: pd.DataFrame
+    #         The input dataset
+    #     """
+    #     score_c: ScoreCache
+    #     score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
+    #     score_fn = score_c.local_score
+    #     self.score_ = score
+    #     self.score_fn_ = score_fn
 
     def _next_node_in_topological_order(
         self, candidates: List[int | str], dag_current: DAG
@@ -321,12 +319,17 @@ class TOPIC(_BaseCausalDiscovery):
         """
         improvement_matrix = np.zeros((len(candidates), len(candidates)))
         idx = {node: i for i, node in enumerate(candidates)}
-        for cause in candidates:
-            for effect in candidates:
-                if cause == effect:
-                    continue
-                score_improv = self._addition_gain(cause, effect, dag_current)
-                improvement_matrix[idx[cause], idx[effect]] = score_improv
+
+        # TODO: Parallelize this.
+        for cause, effect in itertools.product(candidates, candidates):
+            # score_improv = self._addition_gain(cause, effect, dag_current)
+            if cause == effect:
+                continue
+            pa_effect = dag_current.get_parents(effect)
+            score_improv = self.score_fn_(effect, pa_effect + [cause]) - self.score_fn_(
+                effect, pa_effect
+            )
+            improvement_matrix[idx[cause], idx[effect]] = score_improv
         return improvement_matrix
 
     def _add_outgoing_edges(
@@ -355,19 +358,25 @@ class TOPIC(_BaseCausalDiscovery):
             if node == source:
                 continue
 
-            gain = self._addition_gain(source, node, dag_current)
-            significant = self._score_significant(gain)
+            # gain = self._addition_gain(source, node, dag_current)
+
+            pa_source = dag_current.get_parents(node)
+            gain = self.score_fn_(node, pa_source + [source]) - self.score_fn_(
+                node, pa_source
+            )
+
+            is_significant = gain > self.min_improvement
 
             considered_edges.append(
                 {
                     "from": str(source),
                     "to": str(node),
                     "gain": gain,
-                    "significant": significant,
+                    "significant": is_significant,
                 }
             )
 
-            if significant:
+            if is_significant:
                 dag_current.add_edge(source, node)
                 added_edges.append({"from": str(source), "to": str(node), "gain": gain})
 
@@ -439,7 +448,7 @@ class TOPIC(_BaseCausalDiscovery):
         noise_epsilon:
             noise threshold
         """
-        old_score = self._score(child, parents)
+        old_score = self.score_fn_(child, parents)
 
         best_parent = None
         best_harm = float("-inf")
@@ -450,7 +459,7 @@ class TOPIC(_BaseCausalDiscovery):
             if len(new_parents) == 0:
                 continue
 
-            new_score = self._score(child, new_parents)
+            new_score = self.score_fn_(child, new_parents)
             if new_score is None:
                 continue
 
@@ -473,65 +482,66 @@ class TOPIC(_BaseCausalDiscovery):
         return True, best_parent, best_harm, candidate_stats
 
     # %% Helpers for scoring
-    def _score(self, effect, parents) -> float:
-        """Wrapper for local scoring
 
-        Parameters
-        ----------
-        effect:
-            A node in the DAG
-        parents:
-            A set of parent nodes in the DAG
-        Returns
-        -------
-        score: int
-            local score of ``parents`` -> ``effect``
-        """
-        if self.score_fn_ is None:
-            raise ValueError(
-                "Score function not initialized. Call _init_score(data) or fit(data) first."
-            )
 
-        score = self.score_fn_(effect, parents)
-        return score
+#     def _score(self, effect, parents) -> float:
+#         """Wrapper for local scoring
+#
+#         Parameters
+#         ----------
+#         effect:
+#             A node in the DAG
+#         parents:
+#             A set of parent nodes in the DAG
+#         Returns
+#         -------
+#         score: int
+#             local score of ``parents`` -> ``effect``
+#         """
+#         if self.score_fn_ is None:
+#             raise ValueError(
+#                 "Score function not initialized. Call _init_score(data) or fit(data) first."
+#             )
+#
+#         score = self.score_fn_(effect, parents)
+#         return score
 
-    def _score_significant(self, score_improvement):
-        """Checks whether a score difference is large enough to be considered an improvement
+#     def _score_significant(self, score_improvement):
+#         """Checks whether a score difference is large enough to be considered an improvement
+#
+#         *Note:  once MDL scores MDLScoreXY are implemented, check and use 2 ^(-score) < self.significance_level.*
+#
+#         Parameters
+#         ----------
+#         score_improvement:
+#             updated_score - previous_score, for two models (updated_DAG, previous_DAG)
+#         Returns
+#         -------
+#         significant: bool
+#              whether score difference is large enough to prefer updated_DAG over previous_DAG
+#         """
+#         return significant
 
-        *Note:  once MDL scores MDLScoreXY are implemented, check and use 2 ^(-score) < self.significance_level.*
-
-        Parameters
-        ----------
-        score_improvement:
-            updated_score - previous_score, for two models (updated_DAG, previous_DAG)
-        Returns
-        -------
-        significant: bool
-             whether score difference is large enough to prefer updated_DAG over previous_DAG
-        """
-        significant = score_improvement > self.min_improvement
-        return significant
-
-    def _addition_gain(self, cause, effect, dag_current):
-        """Score gain of including an additional edge in the current model
-
-        Parameters
-        ----------
-        cause:
-            cause of edge
-        effect:
-            effect of edge
-        dag_current:
-            current DAG
-
-        Returns
-        -------
-        score_improv: float
-             score improvement
-        """
-        current_parents = list(dag_current.get_parents(effect)).copy()
-        old_score = self._score(effect, current_parents)
-        current_parents.append(cause)
-        new_score = self._score(effect, current_parents)
-        score_improv = new_score - old_score
-        return score_improv
+#     def _addition_gain(self, cause, effect, dag_current):
+#         """Score gain of including an additional edge in the current model
+#
+#         Parameters
+#         ----------
+#         cause:
+#             cause of edge
+#         effect:
+#             effect of edge
+#         dag_current:
+#             current DAG
+#
+#         Returns
+#         -------
+#         score_improv: float
+#              score improvement
+#         """
+#         current_parents = list(dag_current.get_parents(effect)).copy()
+#         old_score = self._score(effect, current_parents)
+#         current_parents.append(cause)
+#         new_score = self._score(effect, current_parents)
+#         score_improv = new_score - old_score
+#         return score_improv
