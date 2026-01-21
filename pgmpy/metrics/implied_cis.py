@@ -57,6 +57,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
         "requires_data": True,
         "lower_is_better": None,
         "supported_graph_types": (DAG,),
+        "is_default": False,
     }
 
     def __init__(self, ci_test=None, show_progress=True):

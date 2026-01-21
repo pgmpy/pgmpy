@@ -62,6 +62,7 @@ class FisherC(_BaseUnsupervisedMetric):
         "requires_data": True,
         "lower_is_better": False,
         "supported_graph_types": (DAG,),
+        "is_default": False,
     }
 
     def __init__(self, ci_test=None, compute_rmsea=False, show_progress=True):

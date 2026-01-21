@@ -12,11 +12,16 @@ from pgmpy.estimators import K2, ExpertKnowledge
 from pgmpy.models import DiscreteBayesianNetwork
 
 
-def make_estimator():
-    return HillClimbSearch()
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method."
+    }
 
 
-@parametrize_with_checks([make_estimator()])
+@parametrize_with_checks(
+    [HillClimbSearch(return_type="dag", show_progress=False)],
+    expected_failed_checks=expected_failed_checks,
+)
 def test_hillclimb_compatibility(estimator, check):
     check(estimator)
 

@@ -28,7 +28,7 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import correlation_score
+from pgmpy.metrics import get_metrics
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -89,63 +89,69 @@ class _BaseCausalDiscovery(BaseEstimator):
         """
         X = self._check_fit_data(X)
         return self._fit(X)
-      
+
     def score(
         self,
         X=None,
-        y=None,
-        ground_truth=None,
-        scoring_method=correlation_score,
+        true_graph=None,
+        scoring_method=None,
         **kwargs,
     ):
-        """Method to calculate the score of the fitted causal graph.
+        """
+        Method to calculate the score of the fitted causal graph.
+
+        The score can be calculated either against a dataset (`X`) or against a ground truth model (`true_graph`).
+        Hence, only one of the two parameters should be provided. Depending on whether `X` is provided or
+        `true_graph`, the `scoring_method` should be chosen accordingly.
 
         Parameters
         ----------
-        X: pgmpy.base.DAG or pd.DataFrame
-            Test data used for calulating score for the fitted model.
+        X: pd.DataFrame (optional)
+            Test data used for scoring the learned causal model.
 
-        y: None
+        true_graph: DAG (optional)
+            The true model graph for scoring the learned causal model.
 
-        ground_truth: DAG
-            The true model to calulate the fitted model score against.
-
-        scoring_method: callable
-            Method to be used for calculating score of the fitted model.
-
-        kwargs:
-            Additional arguments that are required for the scoring method chosen.
+        scoring_method: pgmpy.metrics._BaseSupervisedMetric or pgmpy.metrics._BaseUnsupervisedMetric
+            Method to be used for calculating the score.
         """
         validate_data(
             self,
             X=X,
-            dtype=None,
             accept_sparse=False,
             ensure_all_finite=True,
             reset=False,
         )
 
-        # Metrics that test the model against data
-        if isinstance(X, pd.DataFrame):
-            causal_dag_ = self.causal_graph_.to_dag()
-            graph_score = scoring_method(causal_dag_, X, **kwargs)
+        if X is not None:
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
-        elif isinstance(X, (np.ndarray)):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            causal_dag_ = self.causal_graph_.to_dag()
-            graph_score = scoring_method(causal_dag_, X, **kwargs)
+            if scoring_method is None:
+                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
+                scoring_method = scoring_class(**kwargs)
 
-        # Metrics that test the model against the true model (SHD, SID etc.)
-        elif isinstance(ground_truth, DAG):
-            causal_dag_ = self.causal_graph_.to_dag()
-            graph_score = scoring_method(causal_dag_, ground_truth, **kwargs)
+            elif isinstance(scoring_method, str):
+                scoring_class = get_metrics(name=scoring_method)[0]
+                scoring_method = scoring_class(**kwargs)
 
-        else:
-            raise TypeError(
-                f"Expected pd.DataFrame or DAG or numpy ndarray: got unsupported type {type(X)}"
+            return scoring_method.evaluate(X, self.causal_graph_)
+
+        elif true_graph is not None:
+            if scoring_method is None:
+                scoring_class = get_metrics(requires_true_graph=True, is_default=True)[
+                    0
+                ]
+                scoring_method = scoring_class(**kwargs)
+            elif isinstance(scoring_method, str):
+                scoring_class = get_metrics(name=scoring_method)[0]
+                scoring_method = scoring_class(**kwargs)
+
+            return scoring_method.evaluate(
+                true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
             )
-
-        return graph_score
+        else:
+            raise ValueError("Either `X` or `true_graph` needs to be specified")
 
 
 class _ConstraintMixin:
