@@ -13,16 +13,17 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery import _BaseConstraintCausalDiscovery
+from pgmpy.causal_discovery import _ConstraintMixin
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 
 
-class PC(_BaseConstraintCausalDiscovery):
+class PC(_ConstraintMixin, _BaseCausalDiscovery):
     """
     The PC algorithm for causal discovery / structure learning.
 
-    This class implements the PC algorithm [1] for causal discovery. Given a
+    This class implements the PC algorithm [1]_ for causal discovery. Given a
     tabular dataset, the PC algorithm estimates the causal structure among the
     variables in the data in a Directed Acyclic Graph (DAG) or Partially
     Directed Acyclic Graph (PDAG). The algorithm works by identifying
@@ -210,6 +211,17 @@ class PC(_BaseConstraintCausalDiscovery):
     def _fit(self, X: pd.DataFrame, independencies=None):
         """
         The fitting procedure for the PC algorithm.
+
+        Parameters
+        ----------
+        X : pd.DataFrame or np.ndarray
+            The data to learn the causal structure from. If a numpy array is
+            passed, then the column names would be integers from 0 to n_features-1.
+
+        Returns
+        -------
+        self : pgmpy.causal_discovery.PC
+            Returns the instance with the fitted attributes.
         """
 
         # CI test

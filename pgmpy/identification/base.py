@@ -1,4 +1,4 @@
-class BaseIdentification:
+class _BaseIdentification:
     """Base class for all identification methods.
 
     All identification methods in pgmpy must inherit `BaseIdentification`.
