@@ -15,6 +15,7 @@
 # import numpy as np
 
 from pgmpy.base import DAG  # noqa: F401
+
 # TODO: Choose the appropriate base class based on whether your metric requires ground truth:
 # For metrics that compare against a ground truth graph, import _BaseSupervisedMetric
 # For metrics that evaluate a graph against data without ground truth, import _BaseUnsupervisedMetric
@@ -55,8 +56,8 @@ class MyMetric(_BaseSupervisedMetric):
     >>> from pgmpy.metrics import MyMetric
     >>> from pgmpy.base import DAG
     >>> # TODO: Provide a complete working example
-    >>> true_graph = DAG([('A', 'B'), ('B', 'C')])
-    >>> est_graph = DAG([('A', 'B'), ('A', 'C')])
+    >>> true_graph = DAG([("A", "B"), ("B", "C")])
+    >>> est_graph = DAG([("A", "B"), ("A", "C")])
     >>> metric = MyMetric()
     >>> metric(true_causal_graph=true_graph, est_causal_graph=est_graph)
     # Expected output value
@@ -74,7 +75,9 @@ class MyMetric(_BaseSupervisedMetric):
         "requires_data": False,  # TODO: Set to True if metric needs data in addition to graphs
         "lower_is_better": True,  # TODO: Set to False if higher values are better
         "is_symmetric": False,  # TODO: Set to True if metric(A, B) == metric(B, A)
-        "supported_graph_types": (DAG,),  # TODO: Add supported graph types (DAG, PDAG, etc.)
+        "supported_graph_types": (
+            DAG,
+        ),  # TODO: Add supported graph types (DAG, PDAG, etc.)
     }
 
     # TODO: Add all parameters required for the metric in the init method.
