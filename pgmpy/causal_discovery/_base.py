@@ -127,8 +127,10 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         Returns
         -------
-        score : float
-            The calculated score of the learned causal graph according to the specified scoring method.
+        score : float or other type
+            The calculated score of the learned causal graph according to the specified scoring method. The exact
+            return type depends on the chosen metric and may be a float, pandas.DataFrame, tuple, or another
+            metric-specific type.
 
         Examples
         --------
