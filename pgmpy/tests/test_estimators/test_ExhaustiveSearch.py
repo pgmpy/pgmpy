@@ -2,8 +2,9 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import networkx as nx
 
-from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch
+from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch, K2
 
 
 class TestBaseEstimator(unittest.TestCase):
@@ -71,7 +72,8 @@ class TestBaseEstimator(unittest.TestCase):
         self.assertSetEqual(abc_dags, abc_dags_ref)
 
     def test_estimate_rand(self):
-        est = self.est_rand.estimate()
+        est_k2 = ExhaustiveSearch(self.rand_data, scoring_method=K2(self.rand_data))
+        est = est_k2.estimate()
         self.assertSetEqual(set(est.nodes()), set(["A", "B", "C"]))
         self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
@@ -79,17 +81,23 @@ class TestBaseEstimator(unittest.TestCase):
         self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
         est_bic = self.est_rand.estimate()
-        self.assertEqual(set(est_bic.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
+        self.assertEqual(set(est_bic.edges()), {("B", "C")})
 
     def test_estimate_titanic(self):
-        e1 = self.est_titanic.estimate()
+        est_k2 = ExhaustiveSearch(
+            self.titanic_data2, scoring_method=K2(self.titanic_data2)
+        )
+        e1 = est_k2.estimate()
         self.assertSetEqual(
             set(e1.edges()),
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
     def test_all_scores(self):
-        scores = self.est_titanic.all_scores()
+        est_k2 = ExhaustiveSearch(
+            self.titanic_data2, scoring_method=K2(self.titanic_data2)
+        )
+        scores = est_k2.all_scores()
         scores_ref = [
             (-2072.9132364404695, []),
             (-2069.071694164769, [("Pclass", "Sex")]),
@@ -146,6 +154,26 @@ class TestBaseEstimator(unittest.TestCase):
             [score for score, model in scores],
             [score for score, edges in scores_ref],
         )
+
+    def test_estimate_rand_bic_default(self):
+        """
+        Tests the new default BIC scoring method.
+        """
+        est_bic = self.est_rand.estimate()
+        self.assertSetEqual(set(est_bic.nodes()), set(["A", "B", "C"]))
+        self.assertEqual(set(est_bic.edges()), {("B", "C")})
+        self.assertTrue(nx.is_directed_acyclic_graph(est_bic))
+
+    def test_estimate_titanic_bic_default(self):
+        """
+        Tests the new default BIC scoring method on the titanic dataset.
+        """
+        e1_bic = self.est_titanic.estimate()
+        self.assertSetEqual(
+            set(e1_bic.edges()),
+            set([("Sex", "Survived"), ("Pclass", "Survived"), ("Pclass", "Sex")]),
+        )
+        self.assertTrue(nx.is_directed_acyclic_graph(e1_bic))
 
     def tearDown(self):
         del self.rand_data

@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from joblib.externals.loky import get_reusable_executor
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.base import DAG
@@ -17,7 +18,7 @@ class TestBayesianEstimator(unittest.TestCase):
         self.model_latent = DiscreteBayesianNetwork(
             [("A", "C"), ("B", "C")], latents=["C"]
         )
-        self.dag_with_latents = DAG([("A", "B")], latents=["C"])
+        self.dag_with_latents = DAG([("A", "B"), ("B", "C")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
@@ -192,6 +193,67 @@ class TestBayesianEstimator(unittest.TestCase):
             cpds,
         )
 
+    def test_node_specific_equivalent_sample_size(self):
+        """Test BDeu with node-specific equivalent_sample_size dict."""
+        ess_dict = {"A": 10, "B": 20, "C": 15}
+        cpds_dict = self.est3.get_parameters(
+            prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
+        )
+
+        cpds_manual = set(
+            [
+                self.est3.estimate_cpd(
+                    "A", prior_type="bdeu", equivalent_sample_size=10
+                ),
+                self.est3.estimate_cpd(
+                    "B", prior_type="bdeu", equivalent_sample_size=20
+                ),
+                self.est3.estimate_cpd(
+                    "C", prior_type="bdeu", equivalent_sample_size=15
+                ),
+            ]
+        )
+        self.assertSetEqual(set(cpds_dict), cpds_manual)
+
+    def test_node_specific_ess_partial_dict(self):
+        """Test that unspecified nodes default to 0 (or equivalent behavior) when dict is partial."""
+        ess_dict = {"A": 10, "C": 15}
+        cpd_A_dict = self.est3.estimate_cpd(
+            "A", prior_type="bdeu", equivalent_sample_size=ess_dict
+        )
+        cpd_B_dict = self.est3.estimate_cpd(
+            "B", prior_type="bdeu", equivalent_sample_size=ess_dict
+        )
+        cpd_C_dict = self.est3.estimate_cpd(
+            "C", prior_type="bdeu", equivalent_sample_size=ess_dict
+        )
+
+        cpd_A_manual = self.est3.estimate_cpd(
+            "A", prior_type="bdeu", equivalent_sample_size=10
+        )
+        cpd_C_manual = self.est3.estimate_cpd(
+            "C", prior_type="bdeu", equivalent_sample_size=15
+        )
+        cpd_B_manual = self.est3.estimate_cpd(
+            "B", prior_type="bdeu", equivalent_sample_size=0
+        )
+
+        self.assertEqual(cpd_A_dict, cpd_A_manual)
+        self.assertEqual(cpd_B_dict, cpd_B_manual)
+        self.assertEqual(cpd_C_dict, cpd_C_manual)
+
+    def test_node_specific_ess_matches_uniform_ess(self):
+        """Test that uniform ESS dict matches scalar ESS."""
+        ess_value = 12
+        ess_dict = {"A": ess_value, "B": ess_value, "C": ess_value}
+        cpds_scalar = self.est3.get_parameters(
+            prior_type="bdeu", equivalent_sample_size=ess_value, n_jobs=1
+        )
+        cpds_dict = self.est3.get_parameters(
+            prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
+        )
+        self.assertSetEqual(set(cpds_scalar), set(cpds_dict))
+
     def tearDown(self):
         del self.m1
         del self.d1
@@ -201,6 +263,10 @@ class TestBayesianEstimator(unittest.TestCase):
         get_reusable_executor().shutdown(wait=True)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("daft-pgm", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestBayesianEstimatorTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")

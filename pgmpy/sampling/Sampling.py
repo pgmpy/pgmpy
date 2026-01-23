@@ -1,11 +1,8 @@
 import itertools
 from collections import namedtuple
 
-import networkx as nx
 import numpy as np
 import pandas as pd
-import torch
-from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -123,6 +120,8 @@ class BayesianModelSampling(BayesianModelInference):
                             inverse
                         ]
                     else:
+                        import torch
+
                         weight_index = torch.Tensor(
                             [state_to_index[u] for u in unique]
                         )[inverse]

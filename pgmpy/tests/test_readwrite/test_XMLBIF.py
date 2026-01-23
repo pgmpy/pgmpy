@@ -1,9 +1,11 @@
 import os
+import tempfile
 import unittest
 import xml.etree.ElementTree as etree
 
 import numpy as np
 import numpy.testing as np_test
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
@@ -391,6 +393,10 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             self.assertEqual(cpds_expected, cpds_got)
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -477,6 +483,10 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -566,6 +576,10 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -640,6 +654,60 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
             self.assertEqual(cpds_expected, cpds_got)
+
+    def test_comma_state_name_warning(self):
+        # Create a simple model with state names containing commas
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": ["state,1", "state,2"]},
+        )
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+            state_names={"B": ["yes", "no"], "A": ["state,1", "state,2"]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
+        # Test that warning is raised when writing
+        with tempfile.NamedTemporaryFile(suffix=".xmlbif", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            with self.assertLogs("pgmpy", level="WARNING") as cm:
+                writer = XMLBIFWriter(model)
+                writer.write_xmlbif(tmp_path)
+
+                # Verify the warning was logged with the correct variable name
+                self.assertTrue(
+                    any(
+                        "State name 'state,1' for variable 'A' contains commas" in msg
+                        for msg in cm.output
+                    ),
+                    f"Expected warning about commas in state names, got: {cm.output}",
+                )
+
+            # The file should still be loadable but with modified state names
+            reader = XMLBIFReader(tmp_path)
+            loaded_model = reader.get_model()
+
+            # Check that the state names were modified to be valid XMLBIF identifiers
+            # Commas should be replaced with underscores, but no leading underscore needed
+            self.assertEqual(
+                loaded_model.get_cpds("A").state_names["A"], ["state_1", "state_2"]
+            )
+            self.assertEqual(
+                loaded_model.get_cpds("B").state_names["A"], ["state_1", "state_2"]
+            )
+            self.assertEqual(loaded_model.get_cpds("B").state_names["B"], ["yes", "no"])
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     def tearDown(self):
         config.set_backend("numpy")

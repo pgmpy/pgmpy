@@ -1,11 +1,22 @@
-## Redefines function for pytorch and numpy backends, so that they have same behavior
+"""Common API for torch and numpy backends."""
+
 from copy import deepcopy
 
 import numpy as np
 import torch
 from scipy.linalg import expm
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
+
+torch = _safe_import("torch")
+
+
+def _is_torch_tensor(obj):
+    if not _check_soft_dependencies("torch", severity="none"):
+        return False
+
+    return isinstance(obj, torch.Tensor)
 
 
 def size(arr):
@@ -72,7 +83,7 @@ def stack(arr_iter):
 
 
 def to_numpy(arr, decimals=None):
-    if isinstance(arr, torch.Tensor):
+    if _is_torch_tensor(arr):
         if arr.device.type.startswith("cuda"):
             arr = arr.cpu().detach().numpy()
         else:
@@ -103,6 +114,8 @@ def get_compute_backend():
     if config.get_backend() == "numpy":
         return np
     else:
+        import torch
+
         return torch
 
 

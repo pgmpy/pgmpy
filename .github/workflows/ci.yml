@@ -1,4 +1,4 @@
-name: Build and Run Test Suite
+name: Test
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -7,14 +7,61 @@ concurrency:
 on: [push, pull_request]
 
 jobs:
-  build:
-    name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+  test-nosoftdeps:
+    name: only core deps - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.10", "3.14"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        group: [1, 2, 3]
+      fail-fast: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Print Python info
+        run: |
+          which python
+          python --version
+
+      - name: Install graphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz -y
+
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz -y
+
+      - name: Install graphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: brew install graphviz
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest-split
+          pip install .[tests] --no-cache-dir
+
+      - name: Print installed packages
+        run: pip freeze
+
+      - name: Run tests
+        run: pytest --verbose --junitxml=test-results.xml
+
+  test-fulldep:
+    name: with optional deps - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: true
 
     steps:
@@ -54,7 +101,7 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 3 --group ${{ matrix.group }} --verbose --junitxml=test-results.xml
+        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose --junitxml=test-results.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

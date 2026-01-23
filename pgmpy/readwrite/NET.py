@@ -4,6 +4,8 @@ from string import Template
 
 import numpy as np
 
+from pgmpy.global_vars import logger
+
 try:
     from pyparsing import (
         CharsNotIn,
@@ -45,7 +47,7 @@ class NETWriter(object):
     >>> writer = NETWriter(asia)
     >>> writer
     <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
-    >>> writer.write_net("asia.net")
+    >>> writer.write("asia.net")
 
     Reference
     ---------
@@ -140,8 +142,9 @@ class NETWriter(object):
         string: CPT format of .net files
         """
         cpt = self.tables[var_name]
-        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=4), 0, -1)
-        cpt_string = str(cpt_array)
+        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=8), 0, -1)
+        # avoid truncated output when serializing to str
+        cpt_string = np.array2string(cpt_array, threshold=np.inf, max_line_width=np.inf)
         net_cpt_string = (
             cpt_string.replace("[", "(")
             .replace("]", ")")
@@ -271,7 +274,13 @@ class NETWriter(object):
             variable = cpd.variable
             variable_states[variable] = []
             for state in cpd.state_names[variable]:
-                variable_states[variable].append(str(state))
+                state_str = str(state)
+                if "," in state_str:
+                    logger.warning(
+                        f"State name '{state_str}' for variable '{variable}' contains commas. "
+                        "This may cause issues when loading the file. Consider removing any special characters."
+                    )
+                variable_states[variable].append(state_str)
         return variable_states
 
     def get_parents(self):
@@ -304,7 +313,7 @@ class NETWriter(object):
             variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
-    def write_net(self, filename):
+    def write(self, filename):
         """
         Writes the NET data into a file
 
@@ -318,11 +327,17 @@ class NETWriter(object):
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = get_example_model("asia")
         >>> writer = NETWriter(asia)
-        >>> writer.write_net(filename="asia.net")
+        >>> writer.write(filename="asia.net")
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
             fout.write(writer)
+
+    def write_net(self, filename):
+        logger.warning(
+            "The `NETWriter.write_net` has been deprecated. Please use `NETWriter.write` instead."
+        )
+        self.write(filename)
 
 
 class NETReader:
