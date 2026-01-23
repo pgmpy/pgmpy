@@ -132,7 +132,7 @@ class _BaseCausalDiscovery(BaseEstimator):
 
         Examples
         --------
-        >>> from pgmpy.estimators import PC
+        >>> from pgmpy.causal_discovery import PC
         >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
         >>> data = load_dataset("lead")
