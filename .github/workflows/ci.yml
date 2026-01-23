@@ -1,4 +1,4 @@
-name: Build and Run Test Suite
+name: Test
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -8,11 +8,11 @@ on: [push, pull_request]
 
 jobs:
   test-nosoftdeps:
-    name: Tests with soft dependencies - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
+    name: only core deps - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.14"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: true
 
@@ -20,10 +20,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Print Python info
@@ -56,11 +56,11 @@ jobs:
         run: pytest --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: Test with full dependencies - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    name: with optional deps - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.14"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: true
 
@@ -68,10 +68,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ (matrix.os == 'windows-latest' && matrix.python-version == '3.13') && '3.13.6' || matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Print Python info
