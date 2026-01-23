@@ -1,9 +1,14 @@
 ### Your checklist for this pull request
 Please review the [guidelines for contributing](CONTRIBUTING.md) to this repository.
 
-- [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side). Don't request your master!
-- [ ] Make sure you are making a pull request against the **dev branch** (left side). Also you should start *your branch* off *our dev*.
-- [ ] Check the commit's or even all commits' message styles matches our requested structure.
+- [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side) against our **dev branch** (left side).
+- [ ] Are all the GitHub Actions checks passing? If not, you will need to make changes to fix them. You can reference actions logs for the failing check to identify the issue.
+
+Did you use a Large language model (LLM) to generate the PR (or parts of it)? If yes, please go through this checklist as well: 
+- [ ] Please include a short description of the algorithm / changes. This doesn't need to be a polished description, but it needs to be written manually by you.
+- [ ] Have you verified that the algorithm matches exactly with the reference paper?
+- [ ] Has the LLM added a bunch of try-except blocks? They will need to be removed; any error handling should be explicit.
+- [ ] If you used LLM for generating tests, they usually need to be compressed into a smaller set of tests.
 
 ### Issue number(s) that this pull request fixes
 - Fixes #

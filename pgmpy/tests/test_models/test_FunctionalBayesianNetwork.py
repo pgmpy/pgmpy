@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -10,7 +10,6 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
 from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.utils import get_example_model
-from pgmpy.utils._safe_import import _safe_import
 
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
