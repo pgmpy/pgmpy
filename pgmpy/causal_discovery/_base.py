@@ -141,6 +141,7 @@ class _BaseCausalDiscovery(BaseEstimator):
         """
         check_is_fitted(self, "causal_graph_")
 
+        # Case 1: When data is provided.
         if X is not None:
             validate_data(
                 self,
@@ -157,20 +158,29 @@ class _BaseCausalDiscovery(BaseEstimator):
                 scoring_method = scoring_class(**kwargs)
 
             elif isinstance(scoring_method, str):
-                scoring_class = get_metrics(name=scoring_method)[0]
-                scoring_method = scoring_class(**kwargs)
+                scoring_class = get_metrics(name=scoring_method)
+                if len(scoring_class) == 0:
+                    raise ValueError(
+                        f"No scoring method found with name: {scoring_method}"
+                    )
+
+                scoring_method = scoring_class[0](**kwargs)
 
             return scoring_method.evaluate(X, self.causal_graph_)
 
+        # Case 2: When true graph is provided.
         elif true_graph is not None:
             if scoring_method is None:
-                scoring_class = get_metrics(requires_true_graph=True, is_default=True)[
-                    0
-                ]
-                scoring_method = scoring_class(**kwargs)
+                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
+                scoring_method = scoring_class[0](**kwargs)
             elif isinstance(scoring_method, str):
-                scoring_class = get_metrics(name=scoring_method)[0]
-                scoring_method = scoring_class(**kwargs)
+                scoring_class = get_metrics(name=scoring_method)
+                if len(scoring_class) == 0:
+                    raise ValueError(
+                        f"No scoring method found with name: {scoring_method}"
+                    )
+
+                scoring_method = scoring_class[0](**kwargs)
 
             return scoring_method.evaluate(
                 true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
