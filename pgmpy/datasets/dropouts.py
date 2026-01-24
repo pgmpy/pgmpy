@@ -19,11 +19,11 @@ class Dropouts(_CovarianceMixin, _BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/",
-        "real/dropouts",
+        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
+        "refs/heads/main/real/dropouts/"
     )
 
-    data_url = base_url + "/data/dropouts.cov.txt"
+    data_url = base_url + "data/dropouts.cov.txt"
 
     ground_truth_url = None
 
