@@ -10,7 +10,7 @@ class Dropouts(_CovarianceMixin, _BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
-        "is_simulated": False,
+        "is_simulated": True,
         "is_interventional": False,
         "is_discrete": False,
         "is_continuous": True,
