@@ -74,9 +74,7 @@ class MyMetric(_BaseSupervisedMetric):
         "requires_data": False,  # Set to True if metric needs data in addition to graphs
         "lower_is_better": True,  # Set to False if higher values are better
         "is_symmetric": False,  # Set to True if metric(A, B) == metric(B, A)
-        "supported_graph_types": (
-            DAG,
-        ),  # Add supported graph types (DAG, PDAG, etc.)
+        "supported_graph_types": (DAG,),  # Add supported graph types (DAG, PDAG, etc.)
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -213,5 +211,6 @@ class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
         return metric_value
 
 
-# TODO: After implementing your metric, remove the unused class definition above and update the class name in docstring examples.
+# TODO: After implementing your metric, remove the unused class definition above
+# and update the class name in docstring examples.
 # TODO: Test your implementation thoroughly with different graph types and edge cases.
