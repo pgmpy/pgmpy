@@ -65,19 +65,18 @@ class MyMetric(_BaseSupervisedMetric):
     References
     ----------
     .. [1] TODO: Add citation for the metric
-    .. [2] TODO: Add any additional relevant citations
     """
 
     # TODO: Fill in the tags for your metric. This is mandatory.
     _tags = {
-        "name": "my_metric",  # TODO: Change to your metric name (lowercase, underscores allowed)
-        "requires_true_graph": True,  # TODO: Set to True for supervised metrics
-        "requires_data": False,  # TODO: Set to True if metric needs data in addition to graphs
-        "lower_is_better": True,  # TODO: Set to False if higher values are better
-        "is_symmetric": False,  # TODO: Set to True if metric(A, B) == metric(B, A)
+        "name": "my_metric",  # Change to your metric name (lowercase, underscores allowed)
+        "requires_true_graph": True,  # Set to True for supervised metrics
+        "requires_data": False,  # Set to True if metric needs data in addition to graphs
+        "lower_is_better": True,  # Set to False if higher values are better
+        "is_symmetric": False,  # Set to True if metric(A, B) == metric(B, A)
         "supported_graph_types": (
             DAG,
-        ),  # TODO: Add supported graph types (DAG, PDAG, etc.)
+        ),  # Add supported graph types (DAG, PDAG, etc.)
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -161,16 +160,15 @@ class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
     References
     ----------
     .. [1] TODO: Add citation for the metric
-    .. [2] TODO: Add any additional relevant citations
     """
 
     # TODO: Fill in the tags for your metric. This is mandatory.
     _tags = {
-        "name": "my_unsupervised_metric",  # TODO: Change to your metric name
-        "requires_true_graph": False,  # TODO: Always False for unsupervised metrics
-        "requires_data": True,  # TODO: Always True for unsupervised metrics
-        "lower_is_better": False,  # TODO: Set based on your metric's interpretation
-        "supported_graph_types": (DAG,),  # TODO: Add supported graph types
+        "name": "my_unsupervised_metric",  # Change to your metric name
+        "requires_true_graph": False,  # Always False for unsupervised metrics
+        "requires_data": True,  # Always True for unsupervised metrics
+        "lower_is_better": False,  # Set based on your metric's interpretation
+        "supported_graph_types": (DAG,),  # Add supported graph types
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -215,6 +213,5 @@ class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
         return metric_value
 
 
-# TODO: After implementing your metric, remove the unused class definition above.
-# TODO: Update the class name in the docstring examples to match your actual class name.
+# TODO: After implementing your metric, remove the unused class definition above and update the class name in docstring examples.
 # TODO: Test your implementation thoroughly with different graph types and edge cases.
