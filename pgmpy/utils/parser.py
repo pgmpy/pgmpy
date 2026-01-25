@@ -70,20 +70,38 @@ def parse_lavaan(lines):
 def parse_dagitty(lines):
     def handle_edge_stat(edge_stat, latents, ebunch, betas):
         all_vars = set()
+        # ParseResults type is resolved at call time (ParseResults imported later)
         if not isinstance(edge_stat, ParseResults) and not isinstance(edge_stat, list):
-            return set([edge_stat.strip('"')])
-        # if edge_stat is longer than 3, then treat one edge symbol at once. Call multiple times
+            return {edge_stat.strip('"').strip("'").rstrip(",")}
+
+        length = len(edge_stat)
+
+        # Handle wrapper group { a } or { X -> Y }
+        # These parse as ['a'] or [['X', '->', 'Y']], both have length 1.
+        if length == 1:
+            # This is a group with one item; recurse on the item itself.
+            return handle_edge_stat(edge_stat[0], latents, ebunch, betas)
+
+        # If longer than 3, split into smaller edge/stat parts and handle recursively
         if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(
             edge_stat
         ) > 3:
             length = len(edge_stat)
             start_i = 0
             while start_i < length - 1:
-                # Parse {a -> b -> c}
-                if edge_stat[start_i + 1] in ["->", "<-", "<->"]:
+                # Parse {a -> b -> c} or {a <- b <- c} etc
+                if edge_stat[start_i + 1] in [
+                    "->",
+                    "<-",
+                    "<->",
+                    "o->",
+                    "<-o",
+                    "o-o",
+                    "--",
+                ]:
                     end_i = start_i + 2
-                # Parse {a b c d}
                 else:
+                    # subgraph/list of variables {a b c}
                     end_i = start_i + 1
 
                 all_vars.update(
@@ -91,6 +109,7 @@ def parse_dagitty(lines):
                         edge_stat[start_i : end_i + 1], latents, ebunch, betas
                     )
                 )
+
                 # Parse `edge` [beta=float]
                 if end_i + 1 < length and isinstance(
                     edge_stat[end_i + 1], ParseResults
@@ -111,9 +130,11 @@ def parse_dagitty(lines):
 
             return all_vars
 
+        # Now edge_stat length is 1 or 2 or 3
         length = len(edge_stat)
         right_i = 1 if length == 2 else 2
-        # length is three. Now check if any node is a subgraph
+
+        # resolve left and right vars (may be subgraphs)
         left_vars = handle_edge_stat(edge_stat[0], latents, ebunch, betas)
         right_vars = handle_edge_stat(edge_stat[right_i], latents, ebunch, betas)
         all_vars.update(left_vars)
@@ -123,35 +144,69 @@ def parse_dagitty(lines):
         if length == 2:
             return all_vars
 
-        # Now connect the every pair of left and right vars with the given edge for {X <- Y}
-        for left_var in list(left_vars):
-            for right_var in list(right_vars):
-                # connect with the given edge.
-                if edge_stat[1] == "->":
-                    ebunch.append((left_var, right_var))
-                elif edge_stat[1] == "<-":
-                    ebunch.append((right_var, left_var))
-                elif edge_stat[1] == "<->":
-                    # add to latent
-                    latent_var = (
-                        f"u_{left_var}_{right_var}"
-                        if left_var < right_var
-                        else f"u_{right_var}_{left_var}"
-                    )
-                    latents.append(latent_var)
-                    ebunch.append((latent_var, left_var))
-                    ebunch.append((latent_var, right_var))
-                    # latent variable from subgraph
-                    all_vars.add(latent_var)
+        # token representing the edge symbol, e.g., "->", "<-",
+        token = edge_stat[1]
+
+        # Helper to map visual characters to mark characters used by MAG/PAG
+        def char_to_mark(c):
+            # '<' means an arrowhead at that endpoint (visual '<' -> mark '>')
+            if c == "<":
+                return ">"
+            # Dagitty can use '@' to represent circle endpoints for PAG; map to 'o'
+            if c == "@":
+                return "o"
+            if c in (">", "o", "-"):
+                return c
+            # fallback (shouldn't happen)
+            return c
+
+        # For MAG/PAG we want to create 4-tuple edges (u, v, tail_mark_on_u, head_mark_on_v)
+        # For DAG we keep the old behavior (u, v) and create artificial latent for <->.
+        for left_var in sorted(left_vars):
+            for right_var in sorted(right_vars):
+                if target_type.upper() in ("MAG", "PAG", "PDAG"):
+                    t = str(token)
+                    left_mark = char_to_mark(t[0])
+                    right_mark = char_to_mark(t[-1])
+
+                    # Normalize directed edges so that directed edge is stored as (tail, head, "-", ">")
+                    # i.e., if visual marks indicate right-to-left arrow (left_mark==">" and right_mark=="-"),
+                    # we reverse the order to keep tail '-' first and head '>' second.
+                    if (left_mark, right_mark) == ("-", ">"):
+                        ebunch.append((left_var, right_var, "-", ">"))
+                    elif (left_mark, right_mark) == (">", "-"):
+                        ebunch.append((right_var, left_var, "-", ">"))
+                    else:
+                        # other cases: bidirected (">", ">"), circle marks ("o", ">"), ("o", "o"), ("-", "-"), etc.
+                        ebunch.append((left_var, right_var, left_mark, right_mark))
                 else:
-                    print("unknown edge type")
+                    # DAG behavior (backwards compatible)
+                    if token == "->":
+                        ebunch.append((left_var, right_var))
+                    elif token == "<-":
+                        ebunch.append((right_var, left_var))
+                    elif token == "<->":
+                        # represent bidirected in DAG-as-MAG form using an artificial latent confounder
+                        latent_var = (
+                            f"u_{left_var}_{right_var}"
+                            if left_var < right_var
+                            else f"u_{right_var}_{left_var}"
+                        )
+                        latents.append(latent_var)
+                        ebunch.append((latent_var, left_var))
+                        ebunch.append((latent_var, right_var))
+                        all_vars.add(latent_var)
+                    else:
+                        # unknown token for DAG; keep graceful fallback
+                        ebunch.append((left_var, right_var))
 
         return all_vars
 
     def split_at_betas(lines):
         import re
 
-        split_regex = r'(?<=\])\s+(?=[\w"]+\s*->)'
+        # allow single or double quoted names before arrow when splitting on beta annotations
+        split_regex = r'(?<=\])\s+(?=[\w"\'`]+\s*->)'
         new_dag_lines = []
         for line in lines:
             split_lines = re.split(split_regex, line)
@@ -179,83 +234,98 @@ def parse_dagitty(lines):
             f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
         ) from None
 
+    # Infer graph type from header (e.g. "dag {", "mag {", "pag {") if present.
+    # If header is present, override target_type to follow the file.
+    import re
+
+    first_nonempty = None
+    for ln in lines:
+        if isinstance(ln, str) and ln.strip():
+            first_nonempty = ln.strip()
+            break
+    if first_nonempty is not None:
+        m = re.match(r"^\s*(\w+)", first_nonempty, flags=re.IGNORECASE)
+        if m:
+            hdr = m.group(1).lower()
+            if hdr in ("dag", "mag", "pag"):
+                target_type = hdr.upper()
+
     # Step 1: DAGitty Grammar in pyparsing
-    # Reference: https://www.dagitty.net/manual-3.x.pdf#page=3.58
-    # Drawing and Analyzing Causal DAGs with DAGitty by Johannes Textor
-    # Variable name like X.1, a_b, 123. Double-quote if with special characters
+    # Variable name like X.1, a_b, 123. Support single or double quoted names with spaces
     var = Word(alphanums + "_" + ".") ^ QuotedString('"') ^ QuotedString("'")
-    # Exposure, outcome, latent, adjusted
     option = nestedExpr("[", "]")
-    # The variable statements: variable name + list of option(s)
     var_stat = var + Optional(option)
-    # { } open a new scope for a subgraph
     subgraph = nestedExpr("{", "}")
-    # arrow can point to a variable or subgraph.
     var_or_subgraph = subgraph ^ var
-    # edge type (which can be ->, <-, or <->)
-    edge = Word("><-")
-    # beta parameters [beta=float]
+
+    # include '@' (Dagitty's circle character) when parsing PAG; map later to 'o'
+    edge_chars = "><-@" if target_type.upper() == "PAG" else "><-"
+    edge = Word(edge_chars)
+
     beta = (
         Suppress("[")
         + Group(Word("beta") + Suppress("=") + pyparsing_common.number())
         + Suppress("]")
     )
-    # edge chaining
+
     edge_relation = (
         var_or_subgraph
         + OneOrMore(edge + var_or_subgraph)
         + Optional(beta.setResultsName("annotation"))
     )
 
-    # Display info bb="1,2,3,4", [pos="1,2"] will be parsed and discarded
     bb_re = Combine("bb=" + QuotedString('"'))
     pos_re = Combine("[pos=" + QuotedString('"') + "]")
 
-    # If possible, try to match with edge_relation with arrow, rather than only reading varnames as var_stat
     statement = (
         edge_relation.setResultsName("edge_stat*")
         ^ var_stat.setResultsName("var_stat*")
+        ^ subgraph.setResultsName("edge_stat*")  # <-- Add subgraph as a valid statement
         ^ bb_re
         ^ pos_re
     )
 
-    # different statements on the same line without semicolon
     dagitty_line = ZeroOrMore(statement + Optional(";"))
 
-    # Step 2:
-    # Split the lines where beta values are specified
-    # Clean the opening of the enclosing dag{ .. } or dag Smoking { .. }
+    # Step 2: Preprocess lines and strip outer dag { ... }
     lines = split_at_betas(lines)
     cleaned_dag = False
     while True:
+        if not lines:
+            break
         first_line = lines.pop(0).strip()
         if first_line:
-            # Try to find and remove "dag"
             if not cleaned_dag:
-                assert first_line[:3] == "dag"
-                cleaned_dag = True
-                first_line = first_line[3:]
-            # Try to find and remove {, either same line as 'dag' or next lines.
-            if (
-                cleaned_dag
-            ):  # Do not change this with else. cleaned_dag could have changed.
-                start_loc = first_line.find("{")
-                if start_loc >= 0:
-                    first_line = first_line[start_loc + 1 :].strip()
-                    lines.insert(0, first_line)
-                    break
+                # Accept headers "dag", "mag", or "pag" (case insensitive).
+                # Remove the header token (whatever it is) instead of assuming "dag".
+                m_hdr = re.match(r"^\s*(\w+)", first_line, flags=re.IGNORECASE)
+                if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag"):
+                    cleaned_dag = True
+                    # remove the header token from the start so the "{" is handled below
+                    first_line = first_line[m_hdr.end() :]
+            start_loc = first_line.find("{")
+            if start_loc >= 0:
+                first_line = first_line[start_loc + 1 :].strip()
+                lines.insert(0, first_line)
+                break
 
-    # Clean the tail of the enclosing dag{ .. } or dag Smoking { .. }
     while True:
-        # Search iteratively from the last line
+        if not lines:
+            break
         last_line = lines.pop().strip()
         if last_line:
-            assert last_line[-1] == "}", "dag { }"
-            lines.append(last_line[:-1])
+            end_loc = last_line.rfind("}")
+            if end_loc != -1:
+                last_line = last_line[:end_loc]
+                lines.append(last_line)
+            else:
+                lines.append(last_line)
             break
-    # Step 3: Initialize arguments and fill them by parsing each line.
+
+    # Step 3: Parse lines
     ebunch = []
-    latents = []
+    roles = {"outcome": [], "exposure": [], "latents": []}
+    latents = roles["latents"]
     betas = {}
     nodes = set()
     for line in lines:
@@ -264,20 +334,25 @@ def parse_dagitty(lines):
             results = dagitty_line.parseString(line, parseAll=True)
 
             for var_stat in results.get("var_stat", []):
-                nodes.add(var_stat[0])
+                name = var_stat[0]
+                if isinstance(name, str):
+                    name = name.strip("\"'")
+                nodes.add(name)
                 if len(var_stat) == 2:
-                    option = var_stat[1][0].lower()
-                    if (
-                        option[:6] == "latent"
-                        or option == "l"
-                        or option.startswith("l,")
-                    ):
-                        latents.append(var_stat[0].strip('"'))
+                    option = str(var_stat[1][0]).rstrip(",").lower()
+                    # latent markers: 'latent', 'latents', 'l'
+                    if option.startswith("latent") or option == "l":
+                        roles["latents"].append(name)
+                    elif option.startswith("outcome") or option.startswith("o"):
+                        roles["outcome"].append(name)
+                    elif option.startswith("exposure") or option.startswith("e"):
+                        roles["exposure"].append(name)
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch, betas)
 
     for e in ebunch:
+        # ebunch items can be 2-tuples or 4-tuples
         nodes.add(e[0])
         nodes.add(e[1])
 
-    return ebunch, latents, betas, nodes
+    return ebunch, roles, betas, nodes

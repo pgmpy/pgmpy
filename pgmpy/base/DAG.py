@@ -286,16 +286,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, latents=latents)
+            dag = cls(ebunch=ebunch, roles=roles)
             dag.add_nodes_from(nodes)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
             lgbn.add_nodes_from(nodes)
 
             std = 1

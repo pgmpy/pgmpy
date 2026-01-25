@@ -859,6 +859,19 @@ class TestDAGParser(unittest.TestCase):
         )
         self.assertEqual(set(dag.latents), set(["Z"]))
 
+    def test_from_dagitty_empty(self):
+        dag1 = DAG.from_dagitty(
+            """
+                dag {
+
+                }
+            """
+        )
+        dag2 = DAG.from_dagitty("""dag { }""")
+        dag = DAG()
+        self.assertEqual(dag1, dag)
+        self.assertEqual(dag2, dag)
+
 
 class TestDAGMoralization(unittest.TestCase):
     def setUp(self):
