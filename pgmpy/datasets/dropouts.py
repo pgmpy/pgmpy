@@ -28,8 +28,3 @@ class Dropouts(_CovarianceMixin, _BaseDataset):
     ground_truth_url = None
 
     expert_knowledge_url = None
-
-    missing_values_marker = None
-
-    categorical_variables = []
-    ordinal_variables = dict()
