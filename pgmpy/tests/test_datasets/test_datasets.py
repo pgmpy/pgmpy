@@ -26,6 +26,7 @@ ALL_DATASETS = [
     "residential_building",
     "credit_approval",
     "depression_coping",
+    "dropouts",
     "iq_brain_size",
     "contraceptive_method",
     "myocardial_infarction",
