@@ -1,4 +1,4 @@
-from typing import Any, Dict, Hashable, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -13,24 +13,106 @@ from pgmpy.global_vars import logger
 
 class LinearGaussianBayesianNetwork(DAG):
     """
-    A Linear Gaussian Bayesian Network is a Bayesian Network whose
-    variables are all continuous, and whose CPDs are linear Gaussians.
+    Class to represent Linear Gaussian Bayesian Networks (LGBN).
 
-    An important result is that Linear Gaussian Bayesian Networks
-    are an alternative representation for the class of multivariate
-    Gaussian distributions.
+    A LGBN is a graphical model that represents a set of continuous random variables and their conditional dependencies
+    via a directed acyclic graph (DAG). In a LGBN, each variable is assumed to be conditionally normally distributed,
+    and the conditional probability distribution (CPD) of each variable given its parents is modeled as a linear
+    function of the parents' values plus Gaussian noise. This is equivalent to assumptions of a Linear Structural
+    Equation Model (SEM) with Gaussian noise.
+
+    Parameters
+    ----------
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes, default=None
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, optional (default: None)
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. If None, an empty set is used.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    # Defining a Linear Gaussian Bayesian Network.
+
+    >>> from pgmpy.models import LinearGaussianBayesianNetwork
+    >>> from pgmpy.factors.continuous import LinearGaussianCPD
+    >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+    >>> cpd1 = LinearGaussianCPD("x1", [1], 4)
+    >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+    >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+    >>> model.add_cpds(cpd1, cpd2, cpd3)
+    >>> for cpd in model.cpds:
+    ...     print(cpd)
+    ...
+    P(x1) = N(1; 4)
+    P(x2 | x1) = N(-5 + 0.5*x1; 4)
+    P(x3 | x2) = N(4 + -1*x2; 3)
+
+    # Simulating data from the model.
+
+    >>> df = model.simulate(n_samples=100, seed=42)
+    >>> print(df.columns)
+    Index(['x1', 'x2', 'x3'], dtype='object')
+
+    # Fitting the model to the simulated data.
+
+    >>> model.fit(df)
+
+    # Predicting missing variables.
+
+    >>> df_missing = df.drop(columns=["x3"])
+    >>> missing_vars, mu_cond, cov_cond = model.predict(df_missing)
+    >>> print(missing_vars)
+    ['x3']
+    >>> print(mu_cond)
+    [[ 0.13440001]
+     [-0.39458728]
+     [ 0.60606023]
+     [ 0.0732233 ]
+     [-0.07241039]
+     [ 0.43420811]
+     [ 0.23197845]
+     [ 0.35382335]
+     [ 0.11859155]
+     [ 0.18397848]]
     """
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
-        latents: Set[Hashable] = set(),
-        lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
         self.cpds = []
 

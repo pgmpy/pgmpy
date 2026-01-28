@@ -9,6 +9,7 @@ from .utils import (
     llm_pairwise_orient,
     manual_pairwise_orient,
     preprocess_data,
+    to_timeseries_format,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "manual_pairwise_orient",
     "preprocess_data",
     "get_dataset_type",
+    "to_timeseries_format",
 ]

@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.utils.parser import parse_dagitty
 
 
 class AncestralBase(nx.Graph, _GraphRolesMixin):
@@ -542,6 +543,127 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
                 reachable.add(current)
                 queue.extend(self.get_neighbors(current, u_type=u_type, v_type=v_type))
         return reachable
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the MAG to a Dagitty string representation.
+
+        Returns
+        -------
+        str
+            A string in Dagitty format representing the MAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", "-", ">")
+        >>> mag.add_edge("Z", "Y", "-", ">")
+        >>> print(mag.to_dagitty())
+        mag {
+        X -> Y
+        Z -> Y
+        }
+
+        >>> mag2 = MAG()
+        >>> mag2.add_edge("A", "B", ">", ">")
+        >>> mag2.add_edge("C", "D", "-", "-")
+        >>> print(mag2.to_dagitty())
+        mag {
+        A <-> B
+        C -- D
+        }
+
+        >>> # MAG with latent variables and roles
+        >>> mag3 = MAG()
+        >>> mag3.add_edge("L", "X", "-", ">")
+        >>> mag3.add_edge("X", "Y", "-", ">")
+        >>> mag3.latents = {"L"}
+        >>> mag3 = mag3.with_role("exposure", "X")
+        >>> mag3 = mag3.with_role("outcome", "Y")
+        >>> print(mag3.to_dagitty())
+        mag {
+        L -> X
+        X -> Y
+        L [latents]
+        Y [outcome]
+        X [exposure]
+        }
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        target_type = self.__class__.__name__
+        lines = [f"{target_type.lower()} {{"]
+
+        edge_map = {
+            ("-", ">"): "->",
+            (">", "-"): "<-",
+            (">", ">"): "<->",
+            ("o", ">"): "@->",
+            (">", "o"): "<-@",
+            ("o", "o"): "@-@",
+            ("o", "-"): "@--",
+            ("-", "o"): "--@",
+            ("-", "-"): "--",
+        }
+        for u, v in self.edges:
+            marks = self.edges[u, v]["marks"]
+            u_mark, v_mark = marks[u], marks[v]
+            if (u_mark, v_mark) in edge_map:
+                symbol = edge_map[(u_mark, v_mark)]
+                if symbol in ["<-", "<-@", "--@"]:
+                    lines.append(f"{v} {symbol[::-1]} {u}")
+                else:
+                    lines.append(f"{u} {symbol} {v}")
+
+        for role in self.get_roles():
+            for var in self.get_role(role):
+                lines.append(f"{var} [{role}]")
+
+        lines.append("}")
+        return "\n".join(lines)
+
+    @classmethod
+    def from_dagitty(cls, string: str = None, filename: str = None):
+        """
+        Populate the MAG from a Dagitty string representation.
+
+        Parameters
+        ----------
+        string : str
+            A string in dagitty format representing the MAG.
+        filename : str, optional
+            Path to file containing Dagitty format string.
+
+        Returns
+        -------
+        MAG
+            A new MAG instance created from the Dagitty representation.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> dag_str = '''dag {
+        ... L -> A
+        ... B -> C
+        ... L [latents]
+        ... B [outcome]
+        ... A [exposure]
+        ... }'''
+        >>> mag = MAG.from_dagitty(dag_str)
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_lines = [line.strip() for line in f.readlines()]
+        elif string:
+            dagitty_lines = [line.strip() for line in string.split("\n")]
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_lines)
+        return cls(ebunch=ebunch, roles=roles)
 
     def __eq__(self, other):
         """

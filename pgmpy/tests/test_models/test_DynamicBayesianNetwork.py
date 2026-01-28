@@ -672,7 +672,8 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
     def setUp(self):
         self.cancer_model = DBN()
-        #########################    1    ######################
+
+        # Model 1
         self.cpd_poll = TabularCPD(
             variable=("Pollution", 0), variable_card=2, values=[[0.9], [0.1]]
         )
@@ -701,7 +702,7 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
             evidence_card=[2],
         )
 
-        #########################    2    ######################
+        # Model 2
         self.cpd_poll2 = TabularCPD(
             variable=("Pollution", 1),
             variable_card=2,
@@ -1088,10 +1089,10 @@ class TestDBNSampling(unittest.TestCase):
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             # DBN query only works for variables > evidence time
-            if node[1] > 0:
-                dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
-                    node
-                ]
+            # if node[1] > 0:
+            #     dbn_infer_cpd = self.dbn_infer.query([node], evidence={("D", 0): 1})[
+            #         node
+            #     ]
             # Query can't have same node in variables and evidence
             if node != ("D", 0):
                 bn_infer_cpd = self.bn_infer.query(
@@ -1404,10 +1405,6 @@ class TestDBNSampling(unittest.TestCase):
             TabularCPD(("D", 0), 2, [[0], [1]]),
             TabularCPD(("D", 2), 2, [[1], [0]]),
         ]
-        bn_virtual_intervention = [
-            TabularCPD("D0", 2, [[0], [1]]),
-            TabularCPD("D2", 2, [[1], [0]]),
-        ]
 
         samples = self.dbn.simulate(
             n_samples=int(1e5),
@@ -1462,6 +1459,656 @@ class TestDBNSampling(unittest.TestCase):
                             atol=0.08,
                         )
                     )
+
+    def test_simulate_3d_format_one_slice(self):
+        # firstly do a small test if the output is as expected
+        timeslices = 1
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        samples = self.dbn.simulate(
+            n_samples=10,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+            seed=None,
+        )
+
+        # check the shapes
+        # should return 3D numpy array, with shape of 10 x 3 x 1
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert samples.shape == (
+            10,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size (10, {n_vars}, {timeslices})"
+
+        # try now with more samples
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        samples = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+            seed=seed,
+        )
+
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (
+            n_samples,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+    def test_simulate_3d_format_two_slices(self):
+        # small, simple test
+        timeslices = 2
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        samples = self.dbn.simulate(
+            n_samples=10,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+        )
+
+        # should return 3D numpy array, with shape of 10 x 3 x 2
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3"
+        assert samples.shape == (
+            10,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size (10, {n_vars}, {timeslices})"
+
+        # try now with more samples
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        samples = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+            seed=seed,
+        )
+
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (
+            n_samples,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+    def test_simulate_3d_format_more_slices(self):
+        # small and simple test
+        timeslices = 10
+        samples = self.dbn.simulate(
+            n_samples=10,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+        )
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        # should return 3D numpy array, with shape of 10 x 3 x 10
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3"
+        assert samples.shape == (
+            10,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size (10, {n_vars}, {timeslices})"
+
+        # try now with more samples
+        # and also assert if the values are the same
+        seed = 42
+        n_samples = 100
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        samples = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="numpy3D",
+            seed=seed,
+        )
+
+        assert isinstance(
+            samples, np.ndarray
+        ), "return from numpy3D should be numpy array"
+        assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
+        assert samples.shape == (
+            n_samples,
+            n_vars,
+            timeslices,
+        ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
+
+        # check the values
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)  # must match converter ordering
+
+        vars = wide.columns.get_level_values("variable").unique().tolist()
+        for d, v in enumerate(vars):
+            for t in range(timeslices):
+                np.testing.assert_array_equal(samples[:, d, t], wide[(v, t)].to_numpy())
+
+    def test_simulate_pd_multiindex_format_one_slice(self):
+        # small and simple test
+        timeslices = 1
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=None,
+        )
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == [
+            "instance",
+            "time",
+        ], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (
+            samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert (
+            panel.index.is_monotonic_increasing
+        ), "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 20
+
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=seed,
+        )
+
+        # check the shape
+        assert panel.shape == (
+            n_samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({n_samples * timeslices}, {n_vars})"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_multiindex_format_two_slices(self):
+        # small and simple test
+        timeslices = 2
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=None,
+        )
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == [
+            "instance",
+            "time",
+        ], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (
+            samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert (
+            panel.index.is_monotonic_increasing
+        ), "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 20
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=seed,
+        )
+
+        # check the shape
+        assert panel.shape == (
+            n_samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({n_samples * timeslices}, {n_vars})"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_multiindex_format_more_slices(self):
+        # small and simple test
+        timeslices = 5
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=None,
+        )
+
+        # check the names of indexes ( should be (instance, timestep))
+        assert list(panel.index.names) == [
+            "instance",
+            "time",
+        ], "the names of the panels are not ('instance', 'timestep') "
+
+        # check the shape
+        assert panel.shape == (
+            samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
+
+        # it should be monotonically increasing ( instances and timewise)
+        assert (
+            panel.index.is_monotonic_increasing
+        ), "the indexes are not monotonic increasing"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 25
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-multiindex",
+            seed=seed,
+        )
+
+        # check the shape
+        assert panel.shape == (
+            n_samples * timeslices,
+            n_vars,
+        ), f"the shape of the panel should be ({n_samples * timeslices}, {n_vars})"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(n_samples):
+            for t in range(timeslices):
+                for v in vars:
+                    assert panel.loc[(i, t), v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_format_one_slice(self):
+        # small and simple test
+        timeslices = 1
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=None,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 20
+
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=seed,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == n_samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are OK
+        for i in range(n_samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_format_two_slices(self):
+        # small and simple test
+        timeslices = 2
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=None,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 20
+
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=seed,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == n_samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are the same
+        for i in range(n_samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_pd_list_format_more_slices(self):
+        # small and simple test
+        timeslices = 10
+        samples = 10
+        n_vars = len(np.unique([k for k, v in self.dbn.states]))
+
+        panel = self.dbn.simulate(
+            n_samples=samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=None,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # fix seed for comparison
+        seed = 42
+        n_samples = 20
+
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="pd-list",
+            seed=seed,
+        )
+
+        # panel here is in format of list of Dataframes
+        assert len(panel) == n_samples, "panel has to be list with size of samples"
+
+        for i, el in enumerate(panel):
+            assert el.shape == (
+                timeslices,
+                n_vars,
+            ), f"Dataframe should be of shape (timeslice, vars), failed for i={i}"
+
+        # compare with wide
+        wide = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="wide",
+            seed=seed,
+        )
+
+        wide.columns = pd.MultiIndex.from_tuples(
+            wide.columns, names=["variable", "time"]
+        )
+        wide = wide.sort_index(axis=1)
+
+        vars = list(wide.columns.get_level_values("variable").unique())
+
+        # check if the values are the same
+        for i in range(n_samples):
+            for t in range(timeslices):
+                for v_i, v in enumerate(vars):
+                    assert panel[i].loc[t, v] == wide.loc[i, (v, t)]
+
+    def test_simulate_sorted_format_two_slices(self):
+        # firstly try with single timeslice
+        timeslices = 2
+        n_samples = 25
+
+        # small and simple test
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="sorted",
+            seed=None,
+        )
+
+        # check the columns
+        assert sorted(panel.columns.copy()) == list(
+            panel.columns
+        ), "the columns has to be sorted !"
+
+        # test columns and content
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="sorted",
+            seed=None,
+        )
+
+        assert sorted(panel.columns.copy()) == list(
+            panel.columns
+        ), "the columns has to be sorted !"
+
+    def test_simulate_sorted_format_more_slices(self):
+        # firstly try with single timeslice
+        timeslices = 10
+        n_samples = 25
+
+        # simple test
+        panel = self.dbn.simulate(
+            n_samples=n_samples,
+            n_time_slices=timeslices,
+            show_progress=False,
+            return_format="sorted",
+            seed=None,
+        )
+
+        # check the columns
+        assert sorted(panel.columns.copy()) == list(
+            panel.columns
+        ), "the columns has to be sorted !"
 
 
 class TestDBNWithStateName(unittest.TestCase):
