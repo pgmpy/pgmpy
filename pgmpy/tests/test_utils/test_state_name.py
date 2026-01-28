@@ -1,15 +1,14 @@
-import unittest
-
 import numpy as np
 import numpy.testing as np_test
+import pytest
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import Inference, VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork
 
 
-class TestStateNameInit(unittest.TestCase):
-    def setUp(self):
+class TestStateNameInit:
+    def setup_method(self, method):
         self.sn2 = {
             "grade": ["A", "B", "F"],
             "diff": ["high", "low"],
@@ -68,16 +67,16 @@ class TestStateNameInit(unittest.TestCase):
         self.model2 = Inference(student)
 
     def test_factor_init_statename(self):
-        self.assertEqual(self.phi1.state_names, self.sn1_no_names)
-        self.assertEqual(self.phi2.state_names, self.sn1)
+        assert self.phi1.state_names == self.sn1_no_names
+        assert self.phi2.state_names == self.sn1
 
     def test_cpd_init_statename(self):
-        self.assertEqual(self.cpd1.state_names, self.sn2_no_names)
-        self.assertEqual(self.cpd2.state_names, self.sn2)
+        assert self.cpd1.state_names == self.sn2_no_names
+        assert self.cpd2.state_names == self.sn2
 
 
-class StateNameDecorator(unittest.TestCase):
-    def setUp(self):
+class StateNameDecorator:
+    def setup_method(self, method):
         self.sn2 = {
             "grade": ["A", "B", "F"],
             "diff": ["high", "low"],
@@ -171,37 +170,36 @@ class StateNameDecorator(unittest.TestCase):
             [("speed", 0), ("switch", 0), ("time", 1)],
             [("speed", 0), ("switch", 1), ("time", 0)],
         ]
-
-        self.assertEqual(self.phi1.assignment([1, 2]), req_op2)
-        self.assertEqual(self.phi2.assignment([1, 2]), req_op1)
+        assert self.phi1.assignment([1, 2]) == req_op2
+        assert self.phi2.assignment([1, 2]) == req_op1
 
     def test_factor_reduce_statename(self):
         phi = DiscreteFactor(
             ["speed", "switch", "time"], [3, 2, 2], np.ones(12), state_names=self.sn1
         )
         phi.reduce([("speed", "medium"), ("time", "day")])
-        self.assertEqual(phi.variables, ["switch"])
-        self.assertEqual(phi.cardinality, [2])
+        assert phi.variables == ["switch"]
+        assert phi.cardinality == [2]
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
         phi = DiscreteFactor(
             ["speed", "switch", "time"], [3, 2, 2], np.ones(12), state_names=self.sn1
         )
         phi = phi.reduce([("speed", "medium"), ("time", "day")], inplace=False)
-        self.assertEqual(phi.variables, ["switch"])
-        self.assertEqual(phi.cardinality, [2])
+        assert phi.variables == ["switch"]
+        assert phi.cardinality == [2]
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
         phi = DiscreteFactor(["speed", "switch", "time"], [3, 2, 2], np.ones(12))
         phi.reduce([("speed", 1), ("time", 0)])
-        self.assertEqual(phi.variables, ["switch"])
-        self.assertEqual(phi.cardinality, [2])
+        assert phi.variables == ["switch"]
+        assert phi.cardinality == [2]
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
         phi = DiscreteFactor(["speed", "switch", "time"], [3, 2, 2], np.ones(12))
         phi = phi.reduce([("speed", 1), ("time", 0)], inplace=False)
-        self.assertEqual(phi.variables, ["switch"])
-        self.assertEqual(phi.cardinality, [2])
+        assert phi.variables == ["switch"]
+        assert phi.cardinality == [2]
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
     def test_reduce_cpd_statename(self):
@@ -218,8 +216,8 @@ class StateNameDecorator(unittest.TestCase):
             state_names=self.sn2,
         )
         cpd.reduce([("diff", "high")])
-        self.assertEqual(cpd.variable, "grade")
-        self.assertEqual(cpd.variables, ["grade", "intel"])
+        assert cpd.variable == "grade"
+        assert cpd.variables == ["grade", "intel"]
         np_test.assert_array_equal(
             cpd.get_values(),
             np.array([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.8, 0.8, 0.8]]),
@@ -237,8 +235,8 @@ class StateNameDecorator(unittest.TestCase):
             evidence_card=[2, 3],
         )
         cpd.reduce([("diff", 0)])
-        self.assertEqual(cpd.variable, "grade")
-        self.assertEqual(cpd.variables, ["grade", "intel"])
+        assert cpd.variable == "grade"
+        assert cpd.variables == ["grade", "intel"]
         np_test.assert_array_equal(
             cpd.get_values(),
             np.array([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.8, 0.8, 0.8]]),
@@ -257,8 +255,8 @@ class StateNameDecorator(unittest.TestCase):
             state_names=self.sn2,
         )
         cpd = cpd.reduce([("diff", "high")], inplace=False)
-        self.assertEqual(cpd.variable, "grade")
-        self.assertEqual(cpd.variables, ["grade", "intel"])
+        assert cpd.variable == "grade"
+        assert cpd.variables == ["grade", "intel"]
         np_test.assert_array_equal(
             cpd.get_values(),
             np.array([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.8, 0.8, 0.8]]),
@@ -276,8 +274,8 @@ class StateNameDecorator(unittest.TestCase):
             evidence_card=[2, 3],
         )
         cpd = cpd.reduce([("diff", 0)], inplace=False)
-        self.assertEqual(cpd.variable, "grade")
-        self.assertEqual(cpd.variables, ["grade", "intel"])
+        assert cpd.variable == "grade"
+        assert cpd.variables == ["grade", "intel"]
         np_test.assert_array_equal(
             cpd.get_values(),
             np.array([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.8, 0.8, 0.8]]),
@@ -294,8 +292,8 @@ class StateNameDecorator(unittest.TestCase):
             np.array([0.1, 0.1, 0.8]),
             state_names={"grade": ["A", "B", "F"]},
         )
-        self.assertEqual(inf_op1, req_op)
-        self.assertEqual(inf_op1, req_op)
+        assert inf_op1 == req_op
+        assert inf_op2 == req_op
 
         inf_op1 = self.model_with_state_names.map_query(
             ["grade"], evidence={"intel": "poor"}
@@ -304,8 +302,8 @@ class StateNameDecorator(unittest.TestCase):
         req_op1 = {"grade": "F"}
         req_op2 = {"grade": 2}
 
-        self.assertEqual(inf_op1, req_op1)
-        self.assertEqual(inf_op2, req_op2)
+        assert inf_op1 == req_op1
+        assert inf_op2 == req_op2
 
     def test_add_state_names(self):
         # Test string state names taking precedence over numeric ones
@@ -323,11 +321,11 @@ class StateNameDecorator(unittest.TestCase):
 
         # String states should take precedence
         numeric_states.add_state_names(string_states)
-        self.assertEqual(numeric_states.state_names["speed"], ["low", "medium", "high"])
+        assert numeric_states.state_names["speed"] == ["low", "medium", "high"]
 
         # Test the opposite direction - string states should still take precedence
         string_states.add_state_names(numeric_states_copy)
-        self.assertEqual(string_states.state_names["speed"], ["low", "medium", "high"])
+        assert string_states.state_names["speed"] == ["low", "medium", "high"]
 
         # Test conflicting string state names
         states1 = DiscreteFactor(
@@ -338,7 +336,7 @@ class StateNameDecorator(unittest.TestCase):
         )
 
         # Should raise a ValueError due to conflict
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             states1.add_state_names(states2)
 
         # Test merging non-conflicting state names for different variables
@@ -351,5 +349,5 @@ class StateNameDecorator(unittest.TestCase):
 
         # Should merge without conflict
         factor1.add_state_names(factor2)
-        self.assertEqual(factor1.state_names["speed"], ["low", "medium", "high"])
-        self.assertEqual(factor1.state_names["switch"], ["on", "off"])
+        assert factor1.state_names["speed"] == ["low", "medium", "high"]
+        assert factor1.state_names["switch"] == ["on", "off"]

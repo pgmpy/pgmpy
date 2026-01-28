@@ -1,22 +1,21 @@
-import unittest
-
 import numpy as np
 import numpy.testing as npt
+import pytest
+
+from pgmpy import config
+from pgmpy.utils import optimize, pinverse
 from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
 
-from pgmpy import config
-from pgmpy.utils import optimize, pinverse
 
-
-class TestOptimize(unittest.TestCase):
+class TestOptimize:
     """
     self = TestOptimize()
     self.setUp()
     """
 
-    def setUp(self):
+    def setup_method(self, method):
         self.A = torch.randn(
             5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
         )
@@ -30,7 +29,7 @@ class TestOptimize(unittest.TestCase):
 
         return (A - B).pow(2).sum()
 
-    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
+    @pytest.mark.skipif(config.BACKEND == "numpy", reason="backend is numpy")
     def test_optimize(self):
         # TODO: Add tests for other optimizers
         for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
@@ -55,15 +54,15 @@ class TestOptimize(unittest.TestCase):
             )
 
 
-class Testpinverse(unittest.TestCase):
-    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
+class Testpinverse:
+    @pytest.mark.skipif(config.BACKEND == "numpy", reason="backend is numpy")
     def test_pinverse(self):
         mat = np.random.randn(5, 5)
         np_inv = np.linalg.pinv(mat)
         inv = pinverse(torch.tensor(mat))
         npt.assert_array_almost_equal(np_inv, inv.numpy())
 
-    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
+    @pytest.mark.skipif(config.BACKEND == "numpy", reason="backend is numpy")
     def test_pinverse_zeros(self):
         mat = np.zeros((5, 5))
         np_inv = np.linalg.pinv(mat)
