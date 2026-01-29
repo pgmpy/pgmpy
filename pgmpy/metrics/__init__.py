@@ -1,4 +1,5 @@
 from ._base import _BaseSupervisedMetric, _BaseUnsupervisedMetric, get_metrics
+from .confusion_matrix import ConfusionMatrix
 from .correlation_score import CorrelationScore
 from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
@@ -9,6 +10,7 @@ __all__ = [
     "_BaseSupervisedMetric",
     "_BaseUnsupervisedMetric",
     "get_metrics",
+    "ConfusionMatrix",
     "SHD",
     "CorrelationScore",
     "ImpliedCIs",
