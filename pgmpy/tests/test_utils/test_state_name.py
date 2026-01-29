@@ -75,7 +75,7 @@ class TestStateNameInit:
         assert self.cpd2.state_names == self.sn2
 
 
-class StateNameDecorator:
+class TestStateNameDecorator:
     def setup_method(self, method):
         self.sn2 = {
             "grade": ["A", "B", "F"],
