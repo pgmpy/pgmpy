@@ -5,9 +5,6 @@ from skbase.utils.dependencies import _safe_import
 
 from pgmpy import config
 from pgmpy.utils import optimize, pinverse
-from pgmpy.utils._safe_import import _safe_import
-
-torch = _safe_import("torch")
 
 torch = _safe_import("torch")
 
