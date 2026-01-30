@@ -428,7 +428,9 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(
+            df[col]
+        ):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
@@ -437,16 +439,10 @@ def preprocess_data(df):
             else:
                 dtypes[col] = "C"
         else:
-            try:
-                if isinstance(df[col].dtype, pd.StringDtype):
-                    dtypes[col] = "C"
-                else:
-                    raise ValueError(
-                        f"Couldn't infer datatype of column: {col} from data. "
-                        "Try specifying the appropriate datatype to the column."
-                    )
-            except AttributeError as e:
-                print(f"Cannot access StringDtype from pandas: {e}")
+            raise ValueError(
+                f"Couldn't infer datatype of column: {col} from data. "
+                "Try specifying the appropriate datatype to the column."
+            )
 
     logger.info(
         f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
