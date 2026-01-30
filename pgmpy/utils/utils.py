@@ -437,10 +437,16 @@ def preprocess_data(df):
             else:
                 dtypes[col] = "C"
         else:
-            raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. "
-                "Try specifying the appropriate datatype to the column."
-            )
+            try:
+                if isinstance(df[col].dtype, pd.StringDtype):
+                    dtypes[col] = "C"
+                else:
+                    raise ValueError(
+                        f"Couldn't infer datatype of column: {col} from data. "
+                        "Try specifying the appropriate datatype to the column."
+                    )
+            except AttributeError as e:
+                print(f"Cannot access StringDtype from pandas: {e}")
 
     logger.info(
         f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
