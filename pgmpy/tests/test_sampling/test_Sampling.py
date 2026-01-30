@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import pytest
 from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
@@ -10,8 +9,8 @@ from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 from pgmpy.sampling.base import BayesianModelInference
 
 
-class TestBayesianModelSampling(unittest.TestCase):
-    def setUp(self):
+class TestBayesianModelSampling:
+    def setup_method(self, method):
         # Bayesian Model without state names
         self.bayesian_model = DiscreteBayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
@@ -142,7 +141,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.markov_model = DiscreteMarkovNetwork()
 
     def test_init(self):
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             BayesianModelSampling(self.markov_model)
 
     def test_pre_compute_reduce_maps(self):
@@ -150,56 +149,56 @@ class TestBayesianModelSampling(unittest.TestCase):
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
             "J", ["A", "R"], [(1, 1), (1, 0)]
         )
-        self.assertEqual(state_to_index[(1, 1)], 0)
-        self.assertEqual(state_to_index[(1, 0)], 1)
-        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
-        self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
+        assert state_to_index[(1, 1)] == 0
+        assert state_to_index[(1, 0)] == 1
+        assert list(index_to_weight[0]) == [0.1, 0.9]
+        assert list(index_to_weight[1]) == [0.6, 0.4]
 
         # Make sure the order of the evidence variables doen't matter
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
             "J", ["R", "A"], [(1, 1), (1, 0)]
         )
-        self.assertEqual(state_to_index[(1, 1)], 0)
-        self.assertEqual(state_to_index[(1, 0)], 1)
-        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
-        self.assertEqual(list(index_to_weight[1]), [0.7, 0.3])
+        assert state_to_index[(1, 1)] == 0
+        assert state_to_index[(1, 0)] == 1
+        assert list(index_to_weight[0]) == [0.1, 0.9]
+        assert list(index_to_weight[1]) == [0.7, 0.3]
 
     def test_pred_compute_reduce_maps_partial_evidence(self):
         base_infer = BayesianModelInference(self.bayesian_model)
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
             "J", ["A"], [(1,), (0,)]
         )
-        self.assertEqual(state_to_index[(1,)], 0)
-        self.assertEqual(state_to_index[(0,)], 1)
-        self.assertEqual(list(index_to_weight[0].round(2)), [0.35, 0.65])
-        self.assertEqual(list(index_to_weight[1].round(2)), [0.8, 0.2])
+        assert state_to_index[(1,)] == 0
+        assert state_to_index[(0,)] == 1
+        assert list(index_to_weight[0].round(2)) == [0.35, 0.65]
+        assert list(index_to_weight[1].round(2)) == [0.8, 0.2]
 
         # Make sure the order of the evidence variables doen't matter
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
             "J", ["R"], [(1,), (0,)]
         )
-        self.assertEqual(state_to_index[(1,)], 0)
-        self.assertEqual(state_to_index[(0,)], 1)
-        self.assertEqual(list(index_to_weight[0].round(2)), [0.4, 0.6])
-        self.assertEqual(list(index_to_weight[1].round(2)), [0.75, 0.25])
+        assert state_to_index[(1,)] == 0
+        assert state_to_index[(0,)] == 1
+        assert list(index_to_weight[0].round(2)) == [0.4, 0.6]
+        assert list(index_to_weight[1].round(2)) == [0.75, 0.25]
 
     def test_forward_sample(self):
         # Test without state names
         sample = self.sampling_inference.forward_sample(int(1e5))
-        self.assertEqual(len(sample), int(1e5))
-        self.assertEqual(len(sample.columns), 6)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
-        self.assertTrue(set(sample.A).issubset({0, 1}))
-        self.assertTrue(set(sample.J).issubset({0, 1}))
-        self.assertTrue(set(sample.R).issubset({0, 1}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == int(1e5)
+        assert len(sample.columns) == 6
+        assert "A" in sample.columns
+        assert "J" in sample.columns
+        assert "R" in sample.columns
+        assert "Q" in sample.columns
+        assert "G" in sample.columns
+        assert "L" in sample.columns
+        assert set(sample.A).issubset({0, 1})
+        assert set(sample.J).issubset({0, 1})
+        assert set(sample.R).issubset({0, 1})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         # Test that the marginal distribution of samples is same as the model
         sample_marginals = {
@@ -209,67 +208,66 @@ class TestBayesianModelSampling(unittest.TestCase):
 
         for node in self.bayesian_model.nodes():
             for state in [0, 1]:
-                self.assertEqual(
-                    round(self.forward_marginals[node].get_value(**{node: state}), 1),
-                    round(sample_marginals[node].loc[state], 1),
-                )
+                assert round(
+                    self.forward_marginals[node].get_value(**{node: state}), 1
+                ) == round(sample_marginals[node].loc[state], 1)
 
         # Test without state names and with latents
         sample = self.sampling_inference_lat.forward_sample(25, include_latents=True)
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({0, 1}))
-        self.assertTrue(set(sample.J).issubset({0, 1}))
-        self.assertTrue(set(sample.R).issubset({0, 1}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
+        assert set(sample.A).issubset({0, 1})
+        assert set(sample.J).issubset({0, 1})
+        assert set(sample.R).issubset({0, 1})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         sample = self.sampling_inference_lat.forward_sample(25, include_latents=False)
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 4)
-        self.assertFalse("R" in sample.columns)
-        self.assertFalse("Q" in sample.columns)
+        assert len(sample) == 25
+        assert len(sample.columns) == 4
+        assert "R" not in sample.columns
+        assert "Q" not in sample.columns
 
         # Test with state names
         sample = self.sampling_inference_names.forward_sample(25)
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
-        self.assertTrue(set(sample.A).issubset({"a0", "a1"}))
-        self.assertTrue(set(sample.J).issubset({"j0", "j1"}))
-        self.assertTrue(set(sample.R).issubset({"r0", "r1"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert "A" in sample.columns
+        assert "J" in sample.columns
+        assert "R" in sample.columns
+        assert "Q" in sample.columns
+        assert "G" in sample.columns
+        assert "L" in sample.columns
+        assert set(sample.A).issubset({"a0", "a1"})
+        assert set(sample.J).issubset({"j0", "j1"})
+        assert set(sample.R).issubset({"r0", "r1"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         # Test with state names and with latents
         sample = self.sampling_inference_names_lat.forward_sample(
             25, include_latents=True
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({"a0", "a1"}))
-        self.assertTrue(set(sample.J).issubset({"j0", "j1"}))
-        self.assertTrue(set(sample.R).issubset({"r0", "r1"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
+        assert set(sample.A).issubset({"a0", "a1"})
+        assert set(sample.J).issubset({"j0", "j1"})
+        assert set(sample.R).issubset({"r0", "r1"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         sample = self.sampling_inference_names_lat.forward_sample(
             25, include_latents=False
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 4)
-        self.assertFalse("R" in sample.columns)
-        self.assertFalse("Q" in sample.columns)
+        assert len(sample) == 25
+        assert len(sample.columns) == 4
+        assert "R" not in sample.columns
+        assert "Q" not in sample.columns
 
     def test_rejection_sample_basic(self):
         # Test without state names
@@ -277,15 +275,15 @@ class TestBayesianModelSampling(unittest.TestCase):
         sample = self.sampling_inference.rejection_sample(
             [State("A", 1), State("J", 1), State("R", 1)], int(1e5)
         )
-        self.assertEqual(len(sample), int(1e5))
-        self.assertEqual(len(sample.columns), 6)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({1}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.R).issubset({1}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == int(1e5)
+        assert len(sample.columns) == 6
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
+        assert set(sample.A).issubset({1})
+        assert set(sample.J).issubset({1})
+        assert set(sample.R).issubset({1})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         # Test that the marginal distributions is the same in model and samples
         self.rejection_marginals = VariableElimination(self.bayesian_model).query(
@@ -302,48 +300,47 @@ class TestBayesianModelSampling(unittest.TestCase):
 
         for node in ["Q", "G", "L"]:
             for state in [0, 1]:
-                self.assertEqual(
-                    round(self.rejection_marginals[node].get_value(**{node: state}), 1),
-                    round(sample_marginals[node].loc[state], 1),
-                )
+                assert round(
+                    self.rejection_marginals[node].get_value(**{node: state}), 1
+                ) == round(sample_marginals[node].loc[state], 1)
 
         # Test without state names with latent variables
         sample = self.sampling_inference_lat.rejection_sample(
             [State("A", 1), State("J", 1), State("R", 1)], 25, include_latents=True
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertTrue(set(sample.A).issubset({1}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.R).issubset({1}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert set(sample.A).issubset({1})
+        assert set(sample.J).issubset({1})
+        assert set(sample.R).issubset({1})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         sample = self.sampling_inference_lat.rejection_sample(
             [State("A", 1), State("J", 1), State("R", 1)], 25, include_latents=False
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 4)
-        self.assertTrue(set(sample.A).issubset({1}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 4
+        assert set(sample.A).issubset({1})
+        assert set(sample.J).issubset({1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         # Test with state names
         sample = self.sampling_inference_names.rejection_sample()
         sample = self.sampling_inference_names.rejection_sample(
             [State("A", "a1"), State("J", "j1"), State("R", "r1")], 25
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({"a1"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.R).issubset({"r1"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
+        assert set(sample.A).issubset({"a1"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.R).issubset({"r1"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         # Test with state names and latent variables
         sample = self.sampling_inference_names_lat.rejection_sample(
@@ -351,28 +348,28 @@ class TestBayesianModelSampling(unittest.TestCase):
             25,
             include_latents=True,
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 6)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({"a1"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.R).issubset({"r1"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 6
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
+        assert set(sample.A).issubset({"a1"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.R).issubset({"r1"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         sample = self.sampling_inference_names_lat.rejection_sample(
             [State("A", "a1"), State("J", "j1"), State("R", "r1")],
             25,
             include_latents=False,
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 4)
-        self.assertEqual(set(sample.columns), {"A", "J", "G", "L"})
-        self.assertTrue(set(sample.A).issubset({"a1"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 4
+        assert set(sample.columns) == {"A", "J", "G", "L"}
+        assert set(sample.A).issubset({"a1"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
     def test_likelihood_weighted_sample(self):
         # Test without state names
@@ -380,55 +377,55 @@ class TestBayesianModelSampling(unittest.TestCase):
         sample = self.sampling_inference.likelihood_weighted_sample(
             [State("A", 0), State("J", 1), State("R", 0)], 25
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 7)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({0}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.R).issubset({0}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 7
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L", "_weight"}
+        assert set(sample.A).issubset({0})
+        assert set(sample.J).issubset({1})
+        assert set(sample.R).issubset({0})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         # Test without state names and with latent variables
         sample = self.sampling_inference_lat.likelihood_weighted_sample(
             [State("A", 0), State("J", 1), State("R", 0)], 25, include_latents=True
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 7)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({0}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.R).issubset({0}))
-        self.assertTrue(set(sample.Q).issubset({0, 1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 7
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L", "_weight"}
+        assert set(sample.A).issubset({0})
+        assert set(sample.J).issubset({1})
+        assert set(sample.R).issubset({0})
+        assert set(sample.Q).issubset({0, 1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         sample = self.sampling_inference_lat.likelihood_weighted_sample(
             [State("A", 0), State("J", 1), State("R", 0)], 25, include_latents=False
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 5)
-        self.assertEqual(set(sample.columns), {"A", "J", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({0}))
-        self.assertTrue(set(sample.J).issubset({1}))
-        self.assertTrue(set(sample.G).issubset({0, 1}))
-        self.assertTrue(set(sample.L).issubset({0, 1}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 5
+        assert set(sample.columns) == {"A", "J", "G", "L", "_weight"}
+        assert set(sample.A).issubset({0})
+        assert set(sample.J).issubset({1})
+        assert set(sample.G).issubset({0, 1})
+        assert set(sample.L).issubset({0, 1})
 
         # Test with state names
         sample = self.sampling_inference_names.likelihood_weighted_sample()
         sample = self.sampling_inference_names.likelihood_weighted_sample(
             [State("A", "a0"), State("J", "j1"), State("R", "r0")], 25
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 7)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({"a0"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.R).issubset({"r0"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 7
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L", "_weight"}
+        assert set(sample.A).issubset({"a0"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.R).issubset({"r0"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         # Test with state names and with latent variables
         sample = self.sampling_inference_names_lat.likelihood_weighted_sample(
@@ -436,37 +433,37 @@ class TestBayesianModelSampling(unittest.TestCase):
             25,
             include_latents=True,
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 7)
-        self.assertEqual(set(sample.columns), {"A", "J", "R", "Q", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({"a0"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.R).issubset({"r0"}))
-        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 7
+        assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L", "_weight"}
+        assert set(sample.A).issubset({"a0"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.R).issubset({"r0"})
+        assert set(sample.Q).issubset({"q0", "q1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
         sample = self.sampling_inference_names_lat.likelihood_weighted_sample(
             [State("A", "a0"), State("J", "j1"), State("R", "r0")],
             25,
             include_latents=False,
         )
-        self.assertEqual(len(sample), 25)
-        self.assertEqual(len(sample.columns), 5)
-        self.assertEqual(set(sample.columns), {"A", "J", "G", "L", "_weight"})
-        self.assertTrue(set(sample.A).issubset({"a0"}))
-        self.assertTrue(set(sample.J).issubset({"j1"}))
-        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
-        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+        assert len(sample) == 25
+        assert len(sample.columns) == 5
+        assert set(sample.columns) == {"A", "J", "G", "L", "_weight"}
+        assert set(sample.A).issubset({"a0"})
+        assert set(sample.J).issubset({"j1"})
+        assert set(sample.G).issubset({"g0", "g1"})
+        assert set(sample.L).issubset({"l0", "l1"})
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.sampling_inference
         del self.bayesian_model
         del self.markov_model
 
 
-class TestGibbsSampling(unittest.TestCase):
-    def setUp(self):
+class TestGibbsSampling:
+    def setup_method(self, method):
         # A test Bayesian model
         diff_cpd = TabularCPD("diff", 2, [[0.6], [0.4]])
         intel_cpd = TabularCPD("intel", 2, [[0.7], [0.3]])
@@ -526,7 +523,7 @@ class TestGibbsSampling(unittest.TestCase):
 
         self.gibbs = GibbsSampling(self.bayesian_model)
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.bayesian_model
         del self.bayesian_model_sprinkler
         del self.markov_model
@@ -540,47 +537,47 @@ class TestGibbsSampling(unittest.TestCase):
     def test_get_kernel_from_bayesian_model(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_bayesian_model(self.bayesian_model)
-        self.assertListEqual(list(gibbs.variables), list(self.bayesian_model.nodes()))
-        self.assertDictEqual(gibbs.cardinalities, {"diff": 2, "intel": 2, "grade": 3})
+        assert list(gibbs.variables) == list(self.bayesian_model.nodes())
+        assert gibbs.cardinalities == {"diff": 2, "intel": 2, "grade": 3}
 
     def test_get_kernel_from_bayesian_model_sprinkler(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_bayesian_model(self.bayesian_model_sprinkler)
-        self.assertListEqual(
-            list(gibbs.variables), list(self.bayesian_model_sprinkler.nodes())
-        )
-        self.assertDictEqual(
-            gibbs.cardinalities,
-            {"Cloudy": 2, "Rain": 2, "Sprinkler": 2, "Wet_Grass": 2},
-        )
+        assert list(gibbs.variables) == list(self.bayesian_model_sprinkler.nodes())
+        assert gibbs.cardinalities == {
+            "Cloudy": 2,
+            "Rain": 2,
+            "Sprinkler": 2,
+            "Wet_Grass": 2,
+        }
 
     def test_get_kernel_from_markov_model(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_markov_model(self.markov_model)
-        self.assertListEqual(list(gibbs.variables), list(self.markov_model.nodes()))
-        self.assertDictEqual(gibbs.cardinalities, {"A": 2, "B": 3, "C": 4, "D": 2})
+        assert list(gibbs.variables) == list(self.markov_model.nodes())
+        assert gibbs.cardinalities == {"A": 2, "B": 3, "C": 4, "D": 2}
 
     def test_sample(self):
         start_state = [State("diff", 0), State("intel", 0), State("grade", 0)]
         sample = self.gibbs.sample(start_state, 2)
-        self.assertEqual(len(sample), 2)
-        self.assertEqual(len(sample.columns), 3)
-        self.assertIn("diff", sample.columns)
-        self.assertIn("intel", sample.columns)
-        self.assertIn("grade", sample.columns)
-        self.assertTrue(set(sample["diff"]).issubset({0, 1}))
-        self.assertTrue(set(sample["intel"]).issubset({0, 1}))
-        self.assertTrue(set(sample["grade"]).issubset({0, 1, 2}))
+        assert len(sample) == 2
+        assert len(sample.columns) == 3
+        assert "diff" in sample.columns
+        assert "intel" in sample.columns
+        assert "grade" in sample.columns
+        assert set(sample["diff"]).issubset({0, 1})
+        assert set(sample["intel"]).issubset({0, 1})
+        assert set(sample["grade"]).issubset({0, 1, 2})
 
     def test_sample_sprinkler(self):
         gibbs = GibbsSampling(self.bayesian_model_sprinkler)
         nodes = set(self.bayesian_model_sprinkler.nodes)
         sample = gibbs.sample(size=2)
-        self.assertEqual(len(sample), 2)
-        self.assertEqual(len(sample.columns), 4)
-        self.assertEqual(nodes, set(sample.columns))
+        assert len(sample) == 2
+        assert len(sample.columns) == 4
+        assert nodes == set(sample.columns)
         for node in nodes:
-            self.assertTrue(set(sample[node]).issubset({0, 1}))
+            assert set(sample[node]).issubset({0, 1})
 
     def test_sample_limit(self):
         samples = self.gibbs.sample(size=int(1e4))
@@ -592,12 +589,10 @@ class TestGibbsSampling(unittest.TestCase):
             for node in self.bayesian_model.nodes()
         }
         for node in self.bayesian_model.nodes():
-            self.assertTrue(
-                np.allclose(
-                    sorted(marginal_prob[node].values),
-                    sorted(sample_prob[node].values),
-                    atol=0.05,
-                )
+            assert np.allclose(
+                sorted(marginal_prob[node].values),
+                sorted(sample_prob[node].values),
+                atol=0.05,
             )
 
     @patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
@@ -610,21 +605,23 @@ class TestGibbsSampling(unittest.TestCase):
         ]
         sample = self.gibbs.sample(size=2)
         random_state.assert_called_once_with(self.gibbs)
-        self.assertEqual(len(sample), 2)
+        assert len(sample) == 2
 
     def test_generate_sample(self):
         start_state = [State("diff", 0), State("intel", 0), State("grade", 0)]
         gen = self.gibbs.generate_sample(start_state, 2)
         samples = [sample for sample in gen]
-        self.assertEqual(len(samples), 2)
-        self.assertEqual(
-            {samples[0][0].var, samples[0][1].var, samples[0][2].var},
-            {"diff", "intel", "grade"},
-        )
-        self.assertEqual(
-            {samples[1][0].var, samples[1][1].var, samples[1][2].var},
-            {"diff", "intel", "grade"},
-        )
+        assert len(samples) == 2
+        assert {
+            samples[0][0].var,
+            samples[0][1].var,
+            samples[0][2].var,
+        } == {"diff", "intel", "grade"}
+        assert {
+            samples[1][0].var,
+            samples[1][1].var,
+            samples[1][2].var,
+        } == {"diff", "intel", "grade"}
 
     @patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state):
@@ -632,11 +629,11 @@ class TestGibbsSampling(unittest.TestCase):
         gen = self.gibbs.generate_sample(size=2)
         samples = [sample for sample in gen]
         random_state.assert_called_once_with(self.gibbs)
-        self.assertEqual(len(samples), 2)
+        assert len(samples) == 2
 
 
-class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
-    def setUp(self):
+class TestBayesianModelSamplingWithIntegerStateName:
+    def setup_method(self, method):
         # Bayesian Model with integer state names.
         self.bayesian_model_names = DiscreteBayesianNetwork([("X", "Y")])
         cpd_x_names = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": [1, 2]})
@@ -656,4 +653,4 @@ class TestBayesianModelSamplingWithIntegerStateName(unittest.TestCase):
         sampled_y = self.sampling_inference_names.rejection_sample(
             evidence=[State("X", 2)], size=1
         )["Y"][0]
-        self.assertEqual(sampled_y, 2)
+        assert sampled_y == 2
