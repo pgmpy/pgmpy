@@ -70,6 +70,12 @@ Use GitHub issues to report:
 
 Try to fill out the issue template as much as possible so maintainers have all the information they need.
 
+## Self-Assigning Beginner Issues
+
+For issues labeled `good first issue` or `help wanted`, you can claim the issue yourself.
+Just comment `.take` on the issue and the bot will assign it to you.
+If an issue is already assigned or doesn't have one of these labels, the bot will let you know.
+
 ## Proposing New Features
 
 If you plan to add a model, algorithm, or major feature:
