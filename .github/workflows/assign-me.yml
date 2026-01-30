@@ -1,0 +1,61 @@
+name: Assign issue on .take
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    if: ${{ github.event.issue.pull_request == null }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Handle .take comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentBody = (context.payload.comment.body || "").trim();
+            if (commentBody !== ".take") {
+              return;
+            }
+
+            const issue = context.payload.issue;
+            const labels = (issue.labels || [])
+              .map(label => (typeof label === "string" ? label : label.name || ""))
+              .map(label => label.toLowerCase());
+            const allowedLabels = ["good first issue", "help wanted"];
+
+            const hasAllowedLabel = labels.some(label => allowedLabels.includes(label));
+            const assignees = issue.assignees || [];
+
+            const comment = async (body) => {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body
+              });
+            };
+
+            if (!hasAllowedLabel) {
+              await comment(
+                "Thanks for the interest! `.take` is only available for issues labeled " +
+                "`good first issue` or `help wanted` to avoid claiming complex tasks."
+              );
+              return;
+            }
+
+            if (assignees.length > 0) {
+              await comment("This issue is already assigned.");
+              return;
+            }
+
+            const assignee = context.payload.comment.user.login;
+            await github.rest.issues.addAssignees({
+              ...context.repo,
+              issue_number: issue.number,
+              assignees: [assignee]
+            });
+
+            await comment("Thanks! You have been assigned.");
