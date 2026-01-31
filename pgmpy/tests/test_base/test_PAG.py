@@ -182,86 +182,86 @@ class TestPAGRules:
             else:
                 assert pag == pag
 
-    # def test_rule_4_case_1(self):
-    #     pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "-", ">"),   # a → b
-    #             ("b", "c", "-", ">"),   # b → c
-    #             ("c", "d", "o", "-"),   # c ◦— d   (circle at c)
-    #         ]
-    #     )
+    def test_rule_4_case_1(self):
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),  # a → b
+                ("b", "c", "-", ">"),  # b → c
+                ("c", "d", "o", "-"),  # c ◦— d   (circle at c)
+            ]
+        )
 
-    #     # c IS in Sepset(a, d)
-    #     separating_sets = {("a", "d"): {"c"}}
+        # c IS in Sepset(a, d)
+        separating_sets = {("a", "d"): {"c"}}
 
-    #     expected_pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "-", ">"),
-    #             ("b", "c", "-", ">"),
-    #             ("c", "d", "-", ">"),   # must become c → d
-    #         ]
-    #     )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),
+                ("b", "c", "-", ">"),
+                ("c", "d", "-", ">"),  # must become c → d
+            ]
+        )
 
-    #     for rule in self.all_rules:
-    #         if rule == "rule_4":
-    #             pag_new = pag.rule_4(separating_sets=separating_sets)
-    #             assert pag_new == expected_pag
-    #         else:
-    #             assert pag == pag
+        for rule in self.all_rules:
+            if rule == "rule_4":
+                pag_new = pag.rule_4(separating_sets=separating_sets)
+                assert pag_new == expected_pag
+            else:
+                assert pag == pag
 
-    # def test_rule_4_case_2(self):
-    #     pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "-", ">"),   # a → b
-    #             ("b", "c", "-", ">"),   # b → c
-    #             ("c", "d", "o", "-"),   # c ◦— d
-    #         ]
-    #     )
+    def test_rule_4_case_2(self):
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),  # a → b
+                ("b", "c", "-", ">"),  # b → c
+                ("c", "d", "o", "-"),  # c ◦— d
+            ]
+        )
 
-    #     # c NOT in Sepset(a, d)
-    #     separating_sets = {("a", "d"): set()}
+        # c NOT in Sepset(a, d)
+        separating_sets = {("a", "d"): set()}
 
-    #     expected_pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "-", ">"),     # unchanged
-    #             ("b", "c", ">", ">"),     # b ↔ c
-    #             ("c", "d", ">", ">"),     # c ↔ d
-    #         ]
-    #     )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "-", ">"),  # unchanged
+                ("b", "c", ">", ">"),  # b ↔ c
+                ("c", "d", ">", ">"),  # c ↔ d
+            ]
+        )
 
-    #     for rule in self.all_rules:
-    #         if rule == "rule_4":
-    #             pag_new = pag.rule_4(separating_sets=separating_sets)
-    #             assert pag_new == expected_pag
-    #         else:
-    #             assert pag == pag
+        for rule in self.all_rules:
+            if rule == "rule_4":
+                pag_new = pag.rule_4(separating_sets=separating_sets)
+                assert pag_new == expected_pag
+            else:
+                assert pag == pag
 
-    # def test_rule_5(self):
-    #     pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "o", "o"),
-    #             ("a", "c", "o", "o"),
-    #             ("c", "d", "o", "o"),
-    #             ("d", "e", "o", "o"),
-    #             ("e", "b", "o", "o"),
-    #         ]
-    #     )
-    #     expected_pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "-", "-"),
-    #             ("a", "c", "-", "-"),
-    #             ("c", "d", "-", "-"),
-    #             ("d", "e", "-", "-"),
-    #             ("e", "b", "-", "-"),
-    #         ]
-    #     )
+    def test_rule_5(self):
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "o", "o"),
+                ("a", "c", "o", "o"),
+                ("c", "d", "o", "o"),
+                ("d", "e", "o", "o"),
+                ("e", "b", "o", "o"),
+            ]
+        )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "-", "-"),
+                ("a", "c", "-", "-"),
+                ("c", "d", "-", "-"),
+                ("d", "e", "-", "-"),
+                ("e", "b", "-", "-"),
+            ]
+        )
 
-    #     for rule in self.all_rules:
-    #         if rule == "rule_5":
-    #             pag_new = pag.rule_5(separating_sets=None)
-    #             assert pag_new == expected_pag
-    #         else:
-    #             assert pag == pag
+        for rule in self.all_rules:
+            if rule == "rule_5":
+                pag_new = pag.rule_5(separating_sets=None)
+                assert pag_new == expected_pag
+            else:
+                assert pag == pag
 
     def test_rule_6(self):
         pag = PAG(
@@ -330,59 +330,59 @@ class TestPAGRules:
 
                 assert pag == pag
 
-    # def test_rule_9(self):
-    #     pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "o", "o"),
-    #             ("a", "c", "o", "o"),
-    #             ("b", "d", "o", "o"),
-    #             ("c", "d", "o", "o"),
-    #         ]
-    #     )
-    #     expected_pag = PAG(
-    #         ebunch=[
-    #             ("a", "b", "o", "o"),
-    #             ("a", "c", "o", "o"),
-    #             ("b", "d", "-", ">"),
-    #             ("c", "d", "-", ">"),
-    #         ]
-    #     )
+    def test_rule_9(self):
+        pag = PAG(
+            ebunch=[
+                ("a", "b", "o", "o"),
+                ("a", "c", "o", "o"),
+                ("b", "d", "o", "o"),
+                ("c", "d", "o", "o"),
+            ]
+        )
+        expected_pag = PAG(
+            ebunch=[
+                ("a", "b", "o", "o"),
+                ("a", "c", "o", "o"),
+                ("b", "d", "-", ">"),
+                ("c", "d", "-", ">"),
+            ]
+        )
 
-    #     for rule in self.all_rules:
-    #         if rule == "rule_9":
-    #             pag_new = pag.rule_9(separating_sets=None)
-    #             assert pag_new == expected_pag
-    #         else:
-    #             assert pag == pag
+        for rule in self.all_rules:
+            if rule == "rule_9":
+                pag_new = pag.rule_9(separating_sets=None)
+                assert pag_new == expected_pag
+            else:
+                assert pag == pag
 
-    # def test_rule_10(self):
-    #     pag = PAG(
-    #         ebunch=[
-    #             ("u", "w", "o", ">"),
-    #             ("v", "w", ">", "-"),
-    #             ("x", "w", ">", "-"),
-    #             ("u", "m", "-", "-"),
-    #             ("m", "v", "-", "-"),
-    #             ("u", "n", "-", "-"),
-    #             ("n", "x", "-", "-"),
-    #         ]
-    #     )
+    def test_rule_10(self):
+        pag = PAG(
+            ebunch=[
+                ("u", "w", "o", ">"),
+                ("v", "w", ">", "-"),
+                ("x", "w", ">", "-"),
+                ("u", "m", "-", "-"),
+                ("m", "v", "-", "-"),
+                ("u", "n", "-", "-"),
+                ("n", "x", "-", "-"),
+            ]
+        )
 
-    #     expected_pag = PAG(
-    #         ebunch=[
-    #             ("u", "w", "-", ">"),
-    #             ("v", "w", ">", "-"),
-    #             ("x", "w", ">", "-"),
-    #             ("u", "m", "-", "-"),
-    #             ("m", "v", "-", "-"),
-    #             ("u", "n", "-", "-"),
-    #             ("n", "x", "-", "-"),
-    #         ]
-    #     )
+        expected_pag = PAG(
+            ebunch=[
+                ("u", "w", "-", ">"),
+                ("v", "w", ">", "-"),
+                ("x", "w", ">", "-"),
+                ("u", "m", "-", "-"),
+                ("m", "v", "-", "-"),
+                ("u", "n", "-", "-"),
+                ("n", "x", "-", "-"),
+            ]
+        )
 
-    #     for rule in self.all_rules:
-    #         if rule == "rule_10":
-    #             pag_new = pag.rule_10(separating_sets=None)
-    #             assert pag_new == expected_pag
-    #         else:
-    #             assert pag == pag
+        for rule in self.all_rules:
+            if rule == "rule_10":
+                pag_new = pag.rule_10(separating_sets=None)
+                assert pag_new == expected_pag
+            else:
+                assert pag == pag
