@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.factors.base import BaseFactor
-from pgmpy.utils._safe_import import _safe_import
 
 torch = _safe_import("torch")
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")

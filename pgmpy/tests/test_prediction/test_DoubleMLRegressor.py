@@ -70,7 +70,7 @@ def test_dataframe_input_for_both_x_and_y(dag):
     assert model.exposure_var_ == "D"
     assert model.outcome_var_ == "Y"
     assert set(model.adjustment_vars_) == {"Z1", "Z2"}
-    assert set(model.feature_columns_) == {"D", "Z1", "Z2"}
+    assert set(model.feature_columns_fit_) == {"D", "Z1", "Z2"}
     assert model.n_samples_ == 1000
 
     assert len(model.treatment_est_) == 3
@@ -100,7 +100,7 @@ def test_numpy_array_input_with_integer_dag_variables():
     _ = model.fit(X_array, y_array)
     preds = model.predict(X_array)
     assert len(preds) == n_samples
-    assert model.feature_columns_ == [0, 1]
+    assert model.feature_columns_fit_ == [0, 1]
 
 
 def test_no_adjustment_variables():
@@ -125,7 +125,7 @@ def test_no_adjustment_variables():
     preds = model.predict(data[["D"]])
     assert len(preds) == len(data)
     assert model.adjustment_vars_ == []
-    assert list(model.feature_columns_) == ["D"]
+    assert list(model.feature_columns_fit_) == ["D"]
     assert hasattr(model, "effect_est_")
 
 
@@ -159,7 +159,7 @@ def test_multiple_adjustment_variables_and_noise_columns():
     assert model.exposure_var_ == "X"
     assert set(model.adjustment_vars_) == {"U1", "U2"}
     # feature_columns_ should include exposure + adjustments + pretreatment (if any)
-    assert model.feature_columns_[:3] == ["X", "U1", "U2"]
+    assert model.feature_columns_fit_[:3] == ["X", "U1", "U2"]
     # n_features_in_ counts total columns passed to fit
     assert model.n_features_in_ == X_with_noise.shape[1]
 
@@ -267,7 +267,7 @@ def test_dag_roles_validation_and_pretreatment_support():
     Y = 1.2 * D + 0.3 * Z + rng.normal(scale=0.2, size=50)
     df = pd.DataFrame({"D": D, "Z": Z, "P": P})
     _ = model.fit(df, pd.Series(Y, name="Y"))
-    assert set(model.feature_columns_) >= {"D", "Z", "P"}
+    assert set(model.feature_columns_fit_) == {"D", "Z", "P"}
 
 
 def test_doubleml_recovers_theta_with_RF():
