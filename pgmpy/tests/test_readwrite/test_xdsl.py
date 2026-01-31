@@ -1,10 +1,11 @@
+import logging
 import os
 import tempfile
-import unittest
 import warnings
 
 import numpy as np
 import numpy.testing as np_test
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -85,12 +86,12 @@ TEST_WHITESPACE_MODEL = """<?xml version="1.0" encoding="UTF-8"?>
 </smile>"""
 
 
-class TestXDSLReaderMethodsString(unittest.TestCase):
-    def setUp(self):
+class TestXDSLReaderMethodsString:
+    def setup_method(self, method):
         self.reader = XDSLReader(string=TEST_FILE)
 
     def test_whitespace_error(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.model_with_whitespace = XDSLReader(string=TEST_WHITESPACE_MODEL)
 
     def test_get_variables(self):
@@ -104,7 +105,7 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
             "bronc",
             "dysp",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_parents(self):
         parents_expected = {
@@ -119,7 +120,7 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_states(self):
         states_expected = {
@@ -134,7 +135,7 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -147,7 +148,7 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
             ["either", "dysp"],
             ["bronc", "dysp"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -201,8 +202,8 @@ DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 </smile>"""
 
 
-class TestXDSLWriterMethods(unittest.TestCase):
-    def setUp(self):
+class TestXDSLWriterMethods:
+    def setup_method(self, method):
         self.alarm_model_bn = get_example_model(model="alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
@@ -252,14 +253,12 @@ class TestXDSLWriterMethods(unittest.TestCase):
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
     def assert_models_equivalent(self, expected, got):
-        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        assert set(expected.nodes()) == set(got.nodes())
         for node in expected.nodes():
-            self.assertListEqual(
-                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
-            )
+            assert sorted(expected.get_parents(node)) == sorted(got.get_parents(node))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
-            self.assertEqual(cpds_expected, cpds_got)
+            assert cpds_expected == cpds_got
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
@@ -279,23 +278,23 @@ class TestXDSLWriterMethods(unittest.TestCase):
 
         os.remove("alarm_model.xdsl")
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.alarm_model_bn
         del self.dummy_model
         del self.writer_dummy
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
-    def setUp(self):
+class TestXDSLReaderMethodsStringTorch:
+    def setup_method(self, method):
         config.set_backend("torch")
         self.reader = XDSLReader(string=TEST_FILE)
 
     def test_whitespace_error(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.model_with_whitespace = XDSLReader(string=TEST_WHITESPACE_MODEL)
 
     def test_get_variables(self):
@@ -309,7 +308,7 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
             "bronc",
             "dysp",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_parents(self):
         parents_expected = {
@@ -324,7 +323,7 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_states(self):
         states_expected = {
@@ -339,7 +338,7 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -352,7 +351,7 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
             ["either", "dysp"],
             ["bronc", "dysp"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -372,17 +371,17 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.reader
         config.set_backend("numpy")
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXDSLWriterMethodsTorch(unittest.TestCase):
-    def setUp(self):
+class TestXDSLWriterMethodsTorch:
+    def setup_method(self, method):
         config.set_backend("torch")
 
         self.alarm_model_bn = get_example_model(model="alarm")
@@ -434,14 +433,12 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
             self.model_with_whitespaces_xdsl = XDSLWriter(self.model_with_whitespaces)
 
     def assert_models_equivalent(self, expected, got):
-        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        assert set(expected.nodes()) == set(got.nodes())
         for node in expected.nodes():
-            self.assertListEqual(
-                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
-            )
+            assert sorted(expected.get_parents(node)) == sorted(got.get_parents(node))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
-            self.assertEqual(cpds_expected, cpds_got)
+            assert cpds_expected == cpds_got
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
@@ -459,15 +456,15 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
         os.remove("alarm_model.xdsl")
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.alarm_model_bn
         del self.dummy_model
         del self.writer_dummy
         config.set_backend("numpy")
 
 
-class TestXDSLCommaWarning(unittest.TestCase):
-    def test_comma_state_name_warning(self):
+class TestXDSLCommaWarning:
+    def test_comma_state_name_warning(self, caplog):
         # Create a model with state names containing commas
         model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD(
@@ -491,29 +488,24 @@ class TestXDSLCommaWarning(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
+            with caplog.at_level(logging.WARNING):
                 writer = XDSLWriter(model)
                 writer.write_xdsl(tmp_path)
 
                 # Verify the warning was logged
-                self.assertIn(
+                assert (
                     "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
+                    "This may cause issues when loading the file. Consider removing any special characters."
+                ) in caplog.text
 
             # Verify that the file can be loaded back with the same state names
             reader = XDSLReader(tmp_path)
             loaded_model = reader.get_model()
 
             # Check that the state names were preserved
-            self.assertEqual(
-                loaded_model.get_cpds("A").state_names["A"], ["state,1", "state,2"]
-            )
-            self.assertEqual(
-                loaded_model.get_cpds("B").state_names["A"], ["state,1", "state,2"]
-            )
-            self.assertEqual(loaded_model.get_cpds("B").state_names["B"], ["yes", "no"])
+            assert loaded_model.get_cpds("A").state_names["A"] == ["state,1", "state,2"]
+            assert loaded_model.get_cpds("B").state_names["A"] == ["state,1", "state,2"]
+            assert loaded_model.get_cpds("B").state_names["B"] == ["yes", "no"]
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)

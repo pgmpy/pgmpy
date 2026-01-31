@@ -1,8 +1,9 @@
+import logging
 import os
 import tempfile
-import unittest
 
 import numpy as np
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -12,104 +13,86 @@ from pgmpy.readwrite import NETReader, NETWriter
 from pgmpy.utils import compat_fns, get_example_model
 
 
-class TestNETWriter(unittest.TestCase):
-    def setUp(self):
+class TestNETWriter:
+    def setup_method(self, method):
         asia = get_example_model("asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
-        self.assertListEqual(
-            self.writer.get_variables(),
-            ["asia", "tub", "smoke", "lung", "bronc", "either", "xray", "dysp"],
-        )
+        assert self.writer.get_variables() == [
+            "asia",
+            "tub",
+            "smoke",
+            "lung",
+            "bronc",
+            "either",
+            "xray",
+            "dysp",
+        ]
 
     def test_get_states(self):
-        self.assertDictEqual(
-            self.writer.get_states(),
-            {
-                "asia": ["yes", "no"],
-                "bronc": ["yes", "no"],
-                "dysp": ["yes", "no"],
-                "either": ["yes", "no"],
-                "lung": ["yes", "no"],
-                "smoke": ["yes", "no"],
-                "tub": ["yes", "no"],
-                "xray": ["yes", "no"],
-            },
-        )
+        assert self.writer.get_states() == {
+            "asia": ["yes", "no"],
+            "bronc": ["yes", "no"],
+            "dysp": ["yes", "no"],
+            "either": ["yes", "no"],
+            "lung": ["yes", "no"],
+            "smoke": ["yes", "no"],
+            "tub": ["yes", "no"],
+            "xray": ["yes", "no"],
+        }
 
     def test_get_parents(self):
-        self.assertDictEqual(
-            self.writer.get_parents(),
-            {
-                "asia": [],
-                "bronc": ["smoke"],
-                "dysp": ["bronc", "either"],
-                "either": ["lung", "tub"],
-                "lung": ["smoke"],
-                "smoke": [],
-                "tub": ["asia"],
-                "xray": ["either"],
-            },
-        )
+        assert self.writer.get_parents() == {
+            "asia": [],
+            "bronc": ["smoke"],
+            "dysp": ["bronc", "either"],
+            "either": ["lung", "tub"],
+            "lung": ["smoke"],
+            "smoke": [],
+            "tub": ["asia"],
+            "xray": ["either"],
+        }
 
     def test_get_cpds(self):
         cpds = self.writer.get_cpds()
         # np.testing.assert_array_equal returns None if equal
-        self.assertIsNone(
-            np.testing.assert_array_equal(cpds["asia"], np.array([0.01, 0.99]))
+        np.testing.assert_array_equal(cpds["asia"], np.array([0.01, 0.99]))
+        np.testing.assert_array_equal(cpds["bronc"], np.array([[0.6, 0.3], [0.4, 0.7]]))
+        np.testing.assert_array_equal(
+            cpds["dysp"],
+            np.array([[[0.9, 0.8], [0.7, 0.1]], [[0.1, 0.2], [0.3, 0.9]]]),
         )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["bronc"], np.array([[0.6, 0.3], [0.4, 0.7]])
-            )
+        np.testing.assert_array_equal(
+            cpds["either"],
+            np.array([[[1.0, 1.0], [1.0, 0.0]], [[0.0, 0.0], [0.0, 1.0]]]),
         )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["dysp"],
-                np.array([[[0.9, 0.8], [0.7, 0.1]], [[0.1, 0.2], [0.3, 0.9]]]),
-            )
+        np.testing.assert_array_equal(
+            cpds["lung"], np.array([[0.1, 0.01], [0.9, 0.99]])
         )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["either"],
-                np.array([[[1.0, 1.0], [1.0, 0.0]], [[0.0, 0.0], [0.0, 1.0]]]),
-            )
+        np.testing.assert_array_equal(cpds["smoke"], np.array([0.5, 0.5]))
+        np.testing.assert_array_equal(
+            cpds["tub"], np.array([[0.05, 0.01], [0.95, 0.99]])
         )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["lung"], np.array([[0.1, 0.01], [0.9, 0.99]])
-            )
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(cpds["smoke"], np.array([0.5, 0.5]))
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["tub"], np.array([[0.05, 0.01], [0.95, 0.99]])
-            )
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["xray"], np.array([[0.98, 0.05], [0.02, 0.95]])
-            )
+        np.testing.assert_array_equal(
+            cpds["xray"], np.array([[0.98, 0.05], [0.02, 0.95]])
         )
 
     def test_net_cpd(self):
-        self.assertEqual(self.writer.net_cpd("asia"), "(0.01 0.99)")
-        self.assertEqual(self.writer.net_cpd("bronc"), "((0.6 0.4)\n (0.3 0.7))")
-        self.assertEqual(
-            self.writer.net_cpd("dysp"),
-            "(((0.9 0.1)\n  (0.8 0.2))\n\n ((0.7 0.3)\n  (0.1 0.9)))",
+        assert self.writer.net_cpd("asia") == "(0.01 0.99)"
+        assert self.writer.net_cpd("bronc") == "((0.6 0.4)\n (0.3 0.7))"
+        assert (
+            self.writer.net_cpd("dysp")
+            == "(((0.9 0.1)\n  (0.8 0.2))\n\n ((0.7 0.3)\n  (0.1 0.9)))"
         )
-        self.assertEqual(
-            self.writer.net_cpd("either"),
-            "(((1.0 0.0)\n  (1.0 0.0))\n\n ((1.0 0.0)\n  (0.0 1.0)))",
+        assert (
+            self.writer.net_cpd("either")
+            == "(((1.0 0.0)\n  (1.0 0.0))\n\n ((1.0 0.0)\n  (0.0 1.0)))"
         )
-        self.assertEqual(self.writer.net_cpd("lung"), "((0.1  0.9 )\n (0.01 0.99))")
-        self.assertEqual(self.writer.net_cpd("smoke"), "(0.5 0.5)")
-        self.assertEqual(self.writer.net_cpd("tub"), "((0.05 0.95)\n (0.01 0.99))")
-        self.assertEqual(self.writer.net_cpd("xray"), "((0.98 0.02)\n (0.05 0.95))")
+        assert self.writer.net_cpd("lung") == "((0.1  0.9 )\n (0.01 0.99))"
+        assert self.writer.net_cpd("smoke") == "(0.5 0.5)"
+        assert self.writer.net_cpd("tub") == "((0.05 0.95)\n (0.01 0.99))"
+        assert self.writer.net_cpd("xray") == "((0.98 0.02)\n (0.05 0.95))"
 
     def test_str(self):
         net = """net {
@@ -175,9 +158,9 @@ potential (xray | either){
  (0.05 0.95));
 }
 """
-        self.assertEqual(str(self.writer), net)
+        assert str(self.writer) == net
 
-    def test_comma_state_name_warning(self):
+    def test_comma_state_name_warning(self, caplog):
         # Create a minimal model with state names containing commas
         model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD(
@@ -197,30 +180,29 @@ potential (xray | either){
         model.add_cpds(cpd_a, cpd_b)
 
         # Test that warning is raised when writing
-        with self.assertLogs("pgmpy", level="WARNING") as cm:
-            writer = NETWriter(model)
-            with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
-                tmp_path = tmp.name
-            try:
+        writer = NETWriter(model)
+        with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            with caplog.at_level(logging.WARNING):
                 writer.write_net(tmp_path)
 
-                # Verify the warning was logged
-                self.assertIn(
-                    "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
+            # Verify the warning was logged
+            assert (
+                "State name 'state,1' for variable 'A' contains commas. "
+                "This may cause issues when loading the file. Consider removing any special characters."
+            ) in caplog.text
 
-                # Verify that loading fails due to commas in state names
-                with self.assertRaises(ValueError):
-                    NETReader(tmp_path).get_model()
-            finally:
-                if os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
+            # Verify that loading fails due to commas in state names
+            with pytest.raises(ValueError):
+                NETReader(tmp_path).get_model()
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
 
-class TestNETReader(unittest.TestCase):
-    def setUp(self):
+class TestNETReader:
+    def setup_method(self, method):
         net = """
         /// Bayesian Network in the Hugin (.net) Format
         /// Produced by Genie Software
@@ -349,7 +331,7 @@ class TestNETReader(unittest.TestCase):
             "Bronchitis",
             "Dyspnea",
         ]
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        assert self.reader.get_variables() == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -364,7 +346,7 @@ class TestNETReader(unittest.TestCase):
         }
         states = self.reader.get_states()
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -379,7 +361,7 @@ class TestNETReader(unittest.TestCase):
         }
         parents = self.reader.get_parents()
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_values(self):
         values_expected = {
@@ -394,10 +376,8 @@ class TestNETReader(unittest.TestCase):
         }
         values = self.reader.get_values()
         for variable in values_expected:
-            self.assertIsNone(
-                np.testing.assert_array_almost_equal(
-                    values_expected[variable], values[variable]
-                )
+            np.testing.assert_array_almost_equal(
+                values_expected[variable], values[variable]
             )
 
     def test_get_edges(self):
@@ -413,7 +393,7 @@ class TestNETReader(unittest.TestCase):
         ]
         edges = self.reader.get_edges()
         for index, edge in enumerate(edges_expected):
-            self.assertListEqual(edge, edges[index])
+            assert edge == edges[index]
 
     def test_get_properties(self):
         pass
@@ -422,52 +402,52 @@ class TestNETReader(unittest.TestCase):
         pass
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestNETWriterTorch(unittest.TestCase):
-    def setUp(self):
+class TestNETWriterTorch:
+    def setup_method(self, method):
         config.set_backend("torch")
 
         asia = get_example_model("asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
-        self.assertListEqual(
-            self.writer.get_variables(),
-            ["asia", "tub", "smoke", "lung", "bronc", "either", "xray", "dysp"],
-        )
+        assert self.writer.get_variables() == [
+            "asia",
+            "tub",
+            "smoke",
+            "lung",
+            "bronc",
+            "either",
+            "xray",
+            "dysp",
+        ]
 
     def test_get_states(self):
-        self.assertDictEqual(
-            self.writer.get_states(),
-            {
-                "asia": ["yes", "no"],
-                "bronc": ["yes", "no"],
-                "dysp": ["yes", "no"],
-                "either": ["yes", "no"],
-                "lung": ["yes", "no"],
-                "smoke": ["yes", "no"],
-                "tub": ["yes", "no"],
-                "xray": ["yes", "no"],
-            },
-        )
+        assert self.writer.get_states() == {
+            "asia": ["yes", "no"],
+            "bronc": ["yes", "no"],
+            "dysp": ["yes", "no"],
+            "either": ["yes", "no"],
+            "lung": ["yes", "no"],
+            "smoke": ["yes", "no"],
+            "tub": ["yes", "no"],
+            "xray": ["yes", "no"],
+        }
 
     def test_get_parents(self):
-        self.assertDictEqual(
-            self.writer.get_parents(),
-            {
-                "asia": [],
-                "bronc": ["smoke"],
-                "dysp": ["bronc", "either"],
-                "either": ["lung", "tub"],
-                "lung": ["smoke"],
-                "smoke": [],
-                "tub": ["asia"],
-                "xray": ["either"],
-            },
-        )
+        assert self.writer.get_parents() == {
+            "asia": [],
+            "bronc": ["smoke"],
+            "dysp": ["bronc", "either"],
+            "either": ["lung", "tub"],
+            "lung": ["smoke"],
+            "smoke": [],
+            "tub": ["asia"],
+            "xray": ["either"],
+        }
 
     def test_get_cpds(self):
         cpds = self.writer.get_cpds()
@@ -503,20 +483,20 @@ class TestNETWriterTorch(unittest.TestCase):
         )
 
     def test_net_cpd(self):
-        self.assertEqual(self.writer.net_cpd("asia"), "(0.01 0.99)")
-        self.assertEqual(self.writer.net_cpd("bronc"), "((0.6 0.4)\n (0.3 0.7))")
-        self.assertEqual(
-            self.writer.net_cpd("dysp"),
-            "(((0.9 0.1)\n  (0.8 0.2))\n\n ((0.7 0.3)\n  (0.1 0.9)))",
+        assert self.writer.net_cpd("asia") == "(0.01 0.99)"
+        assert self.writer.net_cpd("bronc") == "((0.6 0.4)\n (0.3 0.7))"
+        assert (
+            self.writer.net_cpd("dysp")
+            == "(((0.9 0.1)\n  (0.8 0.2))\n\n ((0.7 0.3)\n  (0.1 0.9)))"
         )
-        self.assertEqual(
-            self.writer.net_cpd("either"),
-            "(((1.0 0.0)\n  (1.0 0.0))\n\n ((1.0 0.0)\n  (0.0 1.0)))",
+        assert (
+            self.writer.net_cpd("either")
+            == "(((1.0 0.0)\n  (1.0 0.0))\n\n ((1.0 0.0)\n  (0.0 1.0)))"
         )
-        self.assertEqual(self.writer.net_cpd("lung"), "((0.1  0.9 )\n (0.01 0.99))")
-        self.assertEqual(self.writer.net_cpd("smoke"), "(0.5 0.5)")
-        self.assertEqual(self.writer.net_cpd("tub"), "((0.05 0.95)\n (0.01 0.99))")
-        self.assertEqual(self.writer.net_cpd("xray"), "((0.98 0.02)\n (0.05 0.95))")
+        assert self.writer.net_cpd("lung") == "((0.1  0.9 )\n (0.01 0.99))"
+        assert self.writer.net_cpd("smoke") == "(0.5 0.5)"
+        assert self.writer.net_cpd("tub") == "((0.05 0.95)\n (0.01 0.99))"
+        assert self.writer.net_cpd("xray") == "((0.98 0.02)\n (0.05 0.95))"
 
     def test_str(self):
         net = """net {
@@ -582,18 +562,18 @@ potential (xray | either){
  (0.05 0.95));
 }
 """
-        self.assertEqual(str(self.writer), net)
+        assert str(self.writer) == net
 
-    def tearDown(self):
+    def teardown_method(self, method):
         config.set_backend("numpy")
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestNETReaderTorch(unittest.TestCase):
-    def setUp(self):
+class TestNETReaderTorch:
+    def setup_method(self, method):
         config.set_backend("torch")
 
         net = """
@@ -724,7 +704,7 @@ class TestNETReaderTorch(unittest.TestCase):
             "Bronchitis",
             "Dyspnea",
         ]
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        assert self.reader.get_variables() == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -739,7 +719,7 @@ class TestNETReaderTorch(unittest.TestCase):
         }
         states = self.reader.get_states()
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -754,7 +734,7 @@ class TestNETReaderTorch(unittest.TestCase):
         }
         parents = self.reader.get_parents()
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_values(self):
         values_expected = {
@@ -769,10 +749,8 @@ class TestNETReaderTorch(unittest.TestCase):
         }
         values = self.reader.get_values()
         for variable in values_expected:
-            self.assertIsNone(
-                np.testing.assert_array_almost_equal(
-                    values_expected[variable], values[variable]
-                )
+            np.testing.assert_array_almost_equal(
+                values_expected[variable], values[variable]
             )
 
     def test_get_edges(self):
@@ -788,7 +766,7 @@ class TestNETReaderTorch(unittest.TestCase):
         ]
         edges = self.reader.get_edges()
         for index, edge in enumerate(edges_expected):
-            self.assertListEqual(edge, edges[index])
+            assert edge == edges[index]
 
     def test_get_properties(self):
         pass
@@ -796,5 +774,5 @@ class TestNETReaderTorch(unittest.TestCase):
     def test_get_network_name(self):
         pass
 
-    def tearDown(self):
+    def teardown_method(self, method):
         config.set_backend("numpy")

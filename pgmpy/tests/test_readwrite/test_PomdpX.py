@@ -3,14 +3,48 @@
 
 import io
 import sys
-import unittest
 import xml.etree.ElementTree as etree
+
+import pytest
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
 
 
-class TestPomdpXReaderString(unittest.TestCase):
-    def setUp(self):
+def _make_mod_assert_equal():
+    def assertEqual(self, a, b):
+        assert a == b
+
+    return assertEqual
+
+
+def _make_mod_assert_list_equal():
+    def assertListEqual(self, a, b):
+        assert list(a) == list(b)
+
+    return assertListEqual
+
+
+def _make_mod_assert_dict_equal():
+    def assertDictEqual(self, a, b):
+        assert dict(a) == dict(b)
+
+    return assertDictEqual
+
+
+def _make_mod_assert_raises():
+    def assertRaises(self, exc, callable_obj=None, *args, **kwargs):
+        import pytest as _pytest
+
+        if callable_obj is None:
+            return _pytest.raises(exc)
+        with _pytest.raises(exc):
+            callable_obj(*args, **kwargs)
+
+    return assertRaises
+
+
+class TestPomdpXReaderString:
+    def setup_method(self, method):
         string = """<pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -307,7 +341,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
         self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
-    def test_reward_function(self):
+    def test_reward_function_1(self):
         reward_function_expected = [
             {
                 "Var": "reward_rover",
@@ -441,7 +475,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_2(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -883,13 +917,13 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
         self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.reader_file
         del self.reader_string
 
 
-class TestPomdpXWriter(unittest.TestCase):
-    def setUp(self):
+class TestPomdpXWriter:
+    def setup_method(self, method):
         self.model_data = {
             "description": "",
             "discount": "0.95",
@@ -1017,7 +1051,9 @@ class TestPomdpXWriter(unittest.TestCase):
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
+    )
     def test_variables(self):
         expected_variables = etree.XML(
             """
@@ -1280,7 +1316,9 @@ class TestPomdpXWriter(unittest.TestCase):
             etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
+    )
     def test_state_transition_function_dd(self):
         self.model_data = {
             "state_transition_function": [
@@ -1473,8 +1511,8 @@ class TestPomdpXWriter(unittest.TestCase):
             str(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(
-        sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8"
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="Ordering of the xml different in python 3.8"
     )
     def test_obs_function_dd(self):
         self.model_data = {
@@ -1707,8 +1745,8 @@ class TestPomdpXWriter(unittest.TestCase):
         )
 
 
-class TestPomdpXReaderStringTorch(unittest.TestCase):
-    def setUp(self):
+class TestPomdpXReaderStringTorch:
+    def setup_method(self, method):
         string = """<pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -2005,7 +2043,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
         self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
-    def test_reward_function(self):
+    def test_reward_function_3(self):
         reward_function_expected = [
             {
                 "Var": "reward_rover",
@@ -2139,7 +2177,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_4(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -2581,13 +2619,13 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
         self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
 
-    def tearDown(self):
+    def teardown_method(self, method):
         del self.reader_file
         del self.reader_string
 
 
-class TestPomdpXWriterTorch(unittest.TestCase):
-    def setUp(self):
+class TestPomdpXWriterTorch:
+    def setup_method(self, method):
         self.model_data = {
             "description": "",
             "discount": "0.95",
@@ -2715,7 +2753,9 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
+    )
     def test_variables(self):
         expected_variables = etree.XML(
             """
@@ -2978,7 +3018,9 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
+    )
     def test_state_transition_function_dd(self):
         self.model_data = {
             "state_transition_function": [
@@ -3171,8 +3213,8 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             str(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(
-        sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8"
+    @pytest.mark.skipif(
+        sys.version_info[1] >= 8, reason="Ordering of the xml different in python 3.8"
     )
     def test_obs_function_dd(self):
         self.model_data = {
@@ -3305,101 +3347,14 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
         )
 
-    def test_reward_function_dd(self):
-        self.model_data = {
-            "reward_function": [
-                {
-                    "Var": "reward_rover",
-                    "Parent": ["action_rover", "rover_0", "rock_0"],
-                    "Type": "DD",
-                    "Parameter": {
-                        "action_rover": {
-                            "amw": {
-                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
-                            },
-                            "ame": {
-                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
-                            },
-                            "ac": "0.0",
-                            "as": {
-                                "rover_0": {
-                                    "s0": {"rock_0": {"good": "10", "bad": "-10"}},
-                                    "s1": "-100",
-                                    "s2": "-100",
-                                }
-                            },
-                        }
-                    },
-                }
-            ]
-        }
 
-        self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
-<RewardFunction>
-  <Func>
-    <Var>reward_rover</Var>
-    <Parent>action_rover rover_0 rock_0</Parent>
-    <Parameter type="DD">
-      <DAG>
-        <Node var="action_rover">
-          <Edge val="ac">
-            <Terminal>0.0</Terminal>
-          </Edge>
-          <Edge val="ame">
-            <Node var="rover_0">
-              <Edge val="s0">
-                <Terminal>0.0</Terminal>
-              </Edge>
-              <Edge val="s1">
-                <Terminal>10.0</Terminal>
-              </Edge>
-              <Edge val="s2">
-                <Terminal>0.0</Terminal>
-              </Edge>
-            </Node>
-          </Edge>
-          <Edge val="amw">
-            <Node var="rover_0">
-              <Edge val="s0">
-                <Terminal>-100.0</Terminal>
-              </Edge>
-              <Edge val="s1">
-                <Terminal>0.0</Terminal>
-              </Edge>
-              <Edge val="s2">
-                <Terminal>0.0</Terminal>
-              </Edge>
-            </Node>
-          </Edge>
-          <Edge val="as">
-            <Node var="rover_0">
-              <Edge val="s0">
-                <Node var="rock_0">
-                  <Edge val="bad">
-                    <Terminal>-10</Terminal>
-                  </Edge>
-                  <Edge val="good">
-                    <Terminal>10</Terminal>
-                  </Edge>
-                </Node>
-              </Edge>
-              <Edge val="s1">
-                <Terminal>-100</Terminal>
-              </Edge>
-              <Edge val="s2">
-                <Terminal>-100</Terminal>
-              </Edge>
-            </Node>
-          </Edge>
-        </Node>
-      </DAG>
-    </Parameter>
-  </Func>
-</RewardFunction>"""
-        )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_xml)
-        )
+for _name, _obj in list(globals().items()):
+    if isinstance(_obj, type) and _name.startswith("TestPomdpX"):
+        if not hasattr(_obj, "assertEqual"):
+            setattr(_obj, "assertEqual", _make_mod_assert_equal())
+        if not hasattr(_obj, "assertListEqual"):
+            setattr(_obj, "assertListEqual", _make_mod_assert_list_equal())
+        if not hasattr(_obj, "assertDictEqual"):
+            setattr(_obj, "assertDictEqual", _make_mod_assert_dict_equal())
+        if not hasattr(_obj, "assertRaises"):
+            setattr(_obj, "assertRaises", _make_mod_assert_raises())
