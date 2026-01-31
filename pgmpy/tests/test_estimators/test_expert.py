@@ -130,6 +130,7 @@ class TestExpertInLoop(unittest.TestCase):
             pval_threshold=0.05,
             effect_size_threshold=0.05,
             show_progress=True,
+            ci_test="chi_square",
         )
 
         for u, v in estimated_dag.edges():
