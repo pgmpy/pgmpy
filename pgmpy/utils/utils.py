@@ -314,7 +314,7 @@ def llm_pairwise_orient(
     y: str
         The second variable's name
 
-    description: dict
+    descriptions: dict
         A dict of the form {variable: description}
           containing text description of the variables.
 

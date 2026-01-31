@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import networkx as nx
@@ -147,6 +146,7 @@ class TestExpertInLoop(unittest.TestCase):
             pval_threshold=0.1,
             effect_size_threshold=0.1,
             orientations=orientations,
+            descriptions=self.descriptions,
         )
         self.assertEqual(orientations, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
@@ -163,6 +163,7 @@ class TestExpertInLoop(unittest.TestCase):
             use_cache=True,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
+            descriptions=self.descriptions,
         )
         self.assertEqual(self.orientations_small, set(dag.edges()))
         orientations_cache = getattr(self.estimator_small, "orientation_cache", set([]))
