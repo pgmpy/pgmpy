@@ -14,13 +14,12 @@ from typing import (
 import networkx as nx
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.utils._safe_import import _safe_import
 
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 

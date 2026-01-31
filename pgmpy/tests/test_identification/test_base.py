@@ -1,7 +1,7 @@
 import pytest
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.identification import BaseIdentification
+from pgmpy.identification import _BaseIdentification
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def cg():
     return DAG(ebunch=edges, roles=roles)
 
 
-class DummyIdentification(BaseIdentification):
+class DummyIdentification(_BaseIdentification):
     """Sorts non-exposure and non-outcome nodes in the graph and assigns the
     first or the last one as adjustment node depending on the `variant`.
     """
