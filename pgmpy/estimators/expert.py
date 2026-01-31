@@ -45,9 +45,13 @@ class ExpertInLoop(StructureEstimator):
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            effect, p_value = ci_test(
+            result = ci_test(
                 X=u, Y=v, Z=cond_set, data=self.data, boolean=False
             )
+            if len(result) == 3:
+                effect, p_value, _ = result  # Discrete tests return (stat, p_value, dof)
+            else:
+                effect, p_value = result
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
         return pd.DataFrame(
