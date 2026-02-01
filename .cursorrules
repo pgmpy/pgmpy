@@ -1,0 +1,120 @@
+# pgmpy Cursor Rules
+
+You are an expert contributor to `pgmpy`, a Python library for Probabilistic Graphical Models and Causal Inference.
+
+## ⚡ Quick Start Checklist
+Before writing any code:
+- [ ] Read `ARCHITECTURE.md` for component locations
+- [ ] Check existing patterns in target module
+- [ ] Identify test file location in `pgmpy/tests/`
+- [ ] Run `ruff check .` before committing
+
+## 🎯 Decision Tree: Where Does My Code Go?
+
+```
+Is it a new graphical model?
+├── Yes → pgmpy/models/
+│   ├── Directed? → Inherit from DAG (pgmpy/base/DAG.py)
+│   └── Undirected? → Inherit from UndirectedGraph
+└── No
+    ├── Learning algorithm?
+    │   ├── Parameter learning → pgmpy/estimators/ (inherit BaseEstimator)
+    │   └── Structure learning → pgmpy/estimators/ (inherit StructureEstimator)
+    ├── Inference method? → pgmpy/inference/
+    ├── Probability distribution? → pgmpy/factors/
+    └── I/O format? → pgmpy/readwrite/
+```
+
+## 🔧 Tech Stack
+| Category | Tools |
+|----------|-------|
+| Core | Python >=3.10, NetworkX, NumPy, SciPy, Pandas |
+| ML | Scikit-learn, Statsmodels |
+| Optional | Torch, Pyro |
+| Testing | Pytest (NEVER unittest) |
+| Linting | Ruff |
+
+## 📐 Code Patterns to Follow
+
+### ✅ DO
+```python
+# Type hints on all public methods
+def fit(self, data: pd.DataFrame, **kwargs) -> "ModelName":
+    """Fit model to data.
+    
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Training data.
+    
+    Returns
+    -------
+    self : ModelName
+    """
+    # Vectorized operations
+    result = np.sum(data.values, axis=0)
+    return self
+```
+
+### ❌ DON'T
+```python
+# No type hints
+def fit(self, data):
+    # Explicit loops over data
+    for i in range(len(data)):
+        result += data.iloc[i]
+    return self
+```
+
+## 🚫 Common Pitfalls
+| Mistake | Solution |
+|---------|----------|
+| Using `unittest` | Always use `pytest` |
+| Loops over DataFrame rows | Use vectorized NumPy/Pandas ops |
+| Missing docstrings | Use numpydoc format |
+| String concatenation | Use f-strings |
+| `open()` without context | Always use `with open() as f:` |
+| Adding core dependencies | Use `optional` extras in pyproject.toml |
+
+## 📁 Project Structure Quick Reference
+```
+pgmpy/
+├── base/        → DAG, PDAG, MAG, ADMG, UndirectedGraph
+├── models/      → BN, DBN, MN, SEM, FactorGraph, etc.
+├── factors/     → TabularCPD, DiscreteFactor, LinearGaussianCPD
+├── estimators/  → MLE, EM, PC, HillClimb, GES
+├── inference/   → VariableElimination, BeliefPropagation, Causal
+├── readwrite/   → BIF, XMLBIF, UAI formats
+└── tests/       → Mirrors main structure
+```
+
+## 🧪 Testing Commands
+```bash
+# Run all tests
+pytest
+
+# Run specific module tests
+pytest pgmpy/tests/test_models/ -v
+
+# Run with coverage
+pytest --cov=pgmpy --cov-report=html
+
+# Quick lint check
+ruff check .
+
+# Auto-format
+ruff format .
+```
+
+## 🔄 Git Workflow
+1. Branch from `dev`: `git checkout -b feature/your-feature dev`
+2. Make changes with tests
+3. Run `ruff check . && pytest`
+4. Commit and push
+5. Open PR against `dev`
+
+## 📊 CI Matrix
+| Python | Ubuntu | Windows | macOS |
+|--------|--------|---------|-------|
+| 3.10   | ✓      | ✓       | ✓     |
+| 3.14   | ✓      | ✓       | ✓     |

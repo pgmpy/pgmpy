@@ -1,0 +1,87 @@
+# pgmpy Cline Rules
+
+Rules for AI agents using Cline/Windsurf/Antigravity interfaces.
+
+## ⚡ Pre-Flight Checklist
+Before any task:
+- [ ] Read `.cursorrules` for code patterns
+- [ ] Check `ARCHITECTURE.md` for project structure
+- [ ] Identify target files and test locations
+- [ ] Plan changes before editing
+
+## 🎯 Task Priority Matrix
+
+| Priority | Task Type | Action |
+|----------|-----------|--------|
+| 🔴 High | Bug fix | Reproduce → Fix → Test → PR |
+| 🟡 Medium | Feature | Plan → Implement → Test → PR |
+| 🟢 Low | Docs | Update → Verify links → PR |
+
+## ✅ Safe Commands (Auto-run OK)
+```bash
+pytest                    # Run tests
+pytest pgmpy/tests/ -v   # Verbose tests
+ruff check .             # Lint
+ruff format .            # Format
+git status               # Check status
+git diff                 # View changes
+pip list                 # Check packages
+```
+
+## ⚠️ Requires Approval
+```bash
+git push                 # Pushing changes
+pip install <pkg>        # New dependencies
+rm -rf <dir>             # Deletions
+```
+
+## 📁 Quick File Finder
+
+| Need to... | Go to... |
+|------------|----------|
+| Add model | `pgmpy/models/` |
+| Add factor/CPD | `pgmpy/factors/` |
+| Add estimator | `pgmpy/estimators/` |
+| Add inference | `pgmpy/inference/` |
+| Add I/O format | `pgmpy/readwrite/` |
+| Add tests | `pgmpy/tests/test_<module>/` |
+
+## 🔧 Component Quick Reference
+
+### Models
+`DiscreteBayesianNetwork` `LinearGaussianBayesianNetwork` `FunctionalBayesianNetwork` `NaiveBayes` `DynamicBayesianNetwork` `DiscreteMarkovNetwork` `FactorGraph` `ClusterGraph` `SEM` `MarkovChain` `JunctionTree`
+
+### Factors
+`TabularCPD` `DiscreteFactor` `JointProbabilityDistribution` `NoisyOR` `LinearGaussianCPD` `FunctionalCPD`
+
+### Estimators
+`MLE` `BayesianEstimator` `EM` `PC` `HillClimbSearch` `GES` `ExhaustiveSearch` `TreeSearch` `MmhcEstimator`
+
+### Inference
+`VariableElimination` `BeliefPropagation` `DBNInference` `ApproxInference` `CausalInference` `Mplp`
+
+## 🚫 Anti-Patterns
+
+| DON'T | DO |
+|-------|-----|
+| Use `unittest` | Use `pytest` |
+| Loop over rows | Vectorize with NumPy/Pandas |
+| Skip docstrings | Use numpydoc format |
+| Add core deps | Use optional extras |
+| Delete tests | Add more tests |
+| Modify public API | Discuss first |
+
+## 🔄 Standard Workflow
+```
+1. git checkout -b feature/name dev
+2. Write failing test
+3. Implement feature
+4. ruff check . && pytest
+5. git commit -m "feat: description"
+6. Create PR against dev
+```
+
+## 📊 CI/CD Info
+- **Tests**: Python 3.10-3.14 on Ubuntu/Windows/macOS
+- **Lint**: Ruff via `lint.yml`
+- **Security**: CodeQL via `codeql.yml`
