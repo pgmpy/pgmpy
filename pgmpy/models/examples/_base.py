@@ -76,22 +76,16 @@ class _BaseModel(BaseObject):
     def load_model_object(cls):
         """Fetches/reads from cache the data associated with the model."""
         name = cls.get_class_tag("name")
-        model_type = cls.get_class_tag("type")
         file_format = cls.get_class_tag("file_format")
-
+        data_url = cls.data_url
         local_file_name = f"{name}.{file_format}"
-        remote_file_name = local_file_name
-        if model_type == "discrete":
-            remote_file_name += ".gz"
-        url = f"{cls.base_url}/{model_type}/{remote_file_name}"
-
-        cls._get_raw_data(remote_file_name, url)
+        url = f"{cls.base_url}/{data_url}"
+        cls._get_raw_data(local_file_name, url)
 
         cache_dir = os.path.join(
             PGMPY_DATA_HOME,
             hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
         )
-
         full_path = os.path.join(cache_dir, local_file_name)
 
         if file_format == "bif":
