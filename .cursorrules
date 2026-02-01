@@ -41,12 +41,12 @@ Is it a new graphical model?
 # Type hints on all public methods
 def fit(self, data: pd.DataFrame, **kwargs) -> "ModelName":
     """Fit model to data.
-    
+
     Parameters
     ----------
     data : pd.DataFrame
         Training data.
-    
+
     Returns
     -------
     self : ModelName
