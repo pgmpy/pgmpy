@@ -79,17 +79,20 @@ class _BaseModel(BaseObject):
         model_type = cls.get_class_tag("type")
         file_format = cls.get_class_tag("file_format")
 
-        file_name = f"{name}.{file_format}"
-        url = f"{cls.base_url}/{model_type}/{file_name}"
+        local_file_name = f"{name}.{file_format}"
+        remote_file_name = local_file_name
+        if model_type == "discrete":
+            remote_file_name += ".gz"
+        url = f"{cls.base_url}/{model_type}/{remote_file_name}"
 
-        cls._get_raw_data(file_name, url)
+        cls._get_raw_data(remote_file_name, url)
 
         cache_dir = os.path.join(
             PGMPY_DATA_HOME,
             hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
         )
 
-        full_path = os.path.join(cache_dir, file_name)
+        full_path = os.path.join(cache_dir, local_file_name)
 
         if file_format == "bif":
             return BIFReader(full_path).get_model()
