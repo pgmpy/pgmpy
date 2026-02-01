@@ -77,9 +77,8 @@ class _BaseModel(BaseObject):
         """Fetches/reads from cache the data associated with the model."""
         name = cls.get_class_tag("name")
         file_format = cls.get_class_tag("file_format")
-        data_url = cls.data_url
+        url = f"{cls.base_url}/{cls.data_url}"
         local_file_name = f"{name}.{file_format}"
-        url = f"{cls.base_url}/{data_url}"
         cls._get_raw_data(local_file_name, url)
 
         cache_dir = os.path.join(
