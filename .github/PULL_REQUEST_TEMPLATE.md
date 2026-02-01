@@ -4,7 +4,7 @@ Please review the [guidelines for contributing](CONTRIBUTING.md) to this reposit
 - [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side) against our **dev branch** (left side).
 - [ ] Are all the GitHub Actions checks passing? If not, you will need to make changes to fix them. You can reference actions logs for the failing check to identify the issue.
 
-Did you use a Large language model (LLM) to generate the PR (or parts of it)? If yes, please go through this checklist as well: 
+Did you use a Large language model (LLM) to generate the PR (or parts of it)? If yes, please go through this checklist as well:
 - [ ] Please include a short description of the algorithm / changes. This doesn't need to be a polished description, but it needs to be written manually by you.
 - [ ] Have you verified that the algorithm matches exactly with the reference paper?
 - [ ] Has the LLM added a bunch of try-except blocks? They will need to be removed; any error handling should be explicit.
@@ -14,6 +14,6 @@ Did you use a Large language model (LLM) to generate the PR (or parts of it)? If
 - Fixes #
 
 ### List of changes to the codebase in this pull request
-- 
+-
 -
 -
