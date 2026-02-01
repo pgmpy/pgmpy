@@ -4,14 +4,16 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, Union
 
-import requests
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from skbase.utils.dependencies._import import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.models import BayesianNetwork
 from pgmpy.readwrite import BIFReader
+
+requests = _safe_import("requests")
 
 
 @dataclass
