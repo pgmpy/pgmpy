@@ -432,26 +432,47 @@ class PAG(AncestralBase):
 
         if x == y:
             raise ValueError("`x` and `y` cannot be the same nodes.")
-        if self.get_edge_marks(y, v) != {y: ">", v: ">"}:
+
+        # The edge (v, y) should exist
+        if not self.has_edge(v, y):
             return []
 
         discriminating_paths = []
 
-        for path in nx.all_simple_edge_paths(self, x, v):
-            if self.has_edge(x, y):
-                continue
+        # x and y cannot be adjacent
+        if self.has_edge(x, y):
+            return []
 
-            for x1, x2 in path[1:]:
+        for edge_path in nx.all_simple_edge_paths(self, x, v):
+            # Convert edge path to node path
+            node_path = [edge_path[0][0]]  # Start with first node of first edge
+            for u, node in edge_path:
+                node_path.append(node)
 
-                # should be a collider
-                if self.get_edge_marks(x1, x2) != {x1: ">", x2: ">"}:
-                    continue
+            valid = True
+            # All edges in the path should have arrowheads at their endpoints (colliders)
+            # except possibly the first edge from x
+            for i, (u, v_node) in enumerate(edge_path):
+                edge_marks = self.get_edge_marks(u, v_node)
+                # All edges should have arrowhead at the next node
+                if edge_marks.get(v_node) != ">":
+                    valid = False
+                    break
 
-                # must be parent of y
-                if self.get_edge_marks(x1, y) != {x1: "-", y: ">"}:
-                    continue
+            if valid:
+                # Also check: w (node before v on path) should be parent of y
+                # This is the second-to-last node in node_path
+                if len(node_path) >= 2:
+                    w = node_path[-2]
+                    # Check if w and y are connected
+                    if not self.has_edge(w, y):
+                        valid = False
+                    elif self.get_edge_marks(w, y) != {w: "-", y: ">"}:
+                        valid = False
 
-            discriminating_paths.append(path)
+            if valid:
+                # Append the full path including y at the end
+                discriminating_paths.append(node_path + [y])
 
         return discriminating_paths
 
@@ -917,7 +938,7 @@ class PAG(AncestralBase):
             ):
                 continue
 
-            forks = pag.get_neighbors(w, u_type=">", v_type="-")
+            forks = pag.get_neighbors(w, u_type="-", v_type=">")
 
             if len(forks) < 2:
                 continue
@@ -963,15 +984,15 @@ class PAG(AncestralBase):
 
         rules_to_apply = rules or list(rules_map.keys())
 
-        missing = set(rules_to_apply) - set(rules)
+        missing = set(rules_to_apply) - set(rules_map.keys())
         if missing:
             raise ValueError(f"Unknown Rule(s) Requested:  {missing}")
 
         for r in rules_to_apply:
             func = rules_map[r]
             if inplace:
-                func(pag, separating_sets=separating_sets, inplace=inplace)
+                func(separating_sets=separating_sets, inplace=inplace)
             else:
-                pag = func(pag, separating_sets=separating_sets, inplace=inplace)
+                pag = func(separating_sets=separating_sets, inplace=inplace)
 
         return pag

@@ -742,7 +742,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         """
         # import ipdb
         # ipdb.set_trace()
-        if not isinstance(other, __class__):
+        if not isinstance(other, type(self)):
             return False
 
         self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
