@@ -50,7 +50,9 @@ class FCI(BaseConstraintEstimator):
                 pag.modify_edge(u, v, "o", "o")
         # 3. Apply orientation rules iteratively
         while True:
-            pag_new = pag.apply_orientation_rules(pag, False, separating_sets)
+            pag_new = pag.apply_orientation_rules(
+                inplace=False, separating_sets=separating_sets
+            )
 
             if pag_new == pag:
                 break
