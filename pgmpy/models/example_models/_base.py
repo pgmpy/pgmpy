@@ -1,6 +1,8 @@
-import gzip
 import hashlib
+import json
+import math
 import os
+import shutil
 from dataclasses import dataclass
 from typing import Any, Dict, Union
 
@@ -9,8 +11,9 @@ from skbase.lookup import all_objects
 from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
+from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import BayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
 
 requests = _safe_import("requests")
@@ -33,7 +36,7 @@ class Model:
         return self.__str__()
 
 
-class _BaseModel(BaseObject):
+class _BaseExampleModel(BaseObject):
     """
     Base class for all models in pgmpy.
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
@@ -68,15 +71,23 @@ class _BaseModel(BaseObject):
             resp = requests.get(url, timeout=60)
             resp.raise_for_status()
             raw_data = resp.content
-            if raw_data.startswith(b"\x1f\x8b"):
-                raw_data = gzip.decompress(raw_data)
             with open(path, "wb") as f:
                 f.write(raw_data)
         return raw_data
 
+    @staticmethod
+    def clear_cache():
+        """
+        Clears the cached data for all models.
+        """
+        if os.path.exists(PGMPY_DATA_HOME):
+            shutil.rmtree(PGMPY_DATA_HOME)
+
+
+class DiscreteExampleMixin:
     @classmethod
     def load_model_object(cls):
-        """Fetches/reads from cache the data associated with the model."""
+        """Fetches/reads from cache the data associated with the discrete model."""
         name = cls.get_class_tag("name")
         file_format = cls.get_class_tag("file_format")
         url = f"{cls.base_url}/{cls.data_url}"
@@ -88,12 +99,77 @@ class _BaseModel(BaseObject):
             hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
         )
         full_path = os.path.join(cache_dir, local_file_name)
-
         if file_format == "bif":
             return BIFReader(full_path).get_model()
-        # elif file_format == "json":
-        #     return JSONReader(full_path).get_model()
-        elif file_format == "txt":
+        else:
+            raise ValueError(f"Unsupported file format: {file_format}")
+
+
+class ContinuousExampleMixin:
+
+    @classmethod
+    def load_model_object(cls):
+        """Fetches/reads from cache the data associated with the continuous model."""
+        name = cls.get_class_tag("name")
+        file_format = cls.get_class_tag("file_format")
+        url = f"{cls.base_url}/{cls.data_url}"
+        local_file_name = f"{name}.{file_format}"
+        cls._get_raw_data(local_file_name, url)
+        cache_dir = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
+        )
+        full_path = os.path.join(cache_dir, local_file_name)
+        if file_format == "json":
+            with open(full_path, "r") as f:
+                data = json.load(f)
+            # Extract nodes, arcs, and CPDs from the JSON file
+            nodes = data.get("nodes")
+            arcs = data.get("arcs")
+            cpds_data = data.get("cpds")
+
+            model = LinearGaussianBayesianNetwork(arcs)
+            model.add_nodes_from(nodes)
+
+            cpds = []
+            for node, cpd_info in cpds_data.items():
+                coefficients = cpd_info["coefficients"]
+                var = cpd_info["variable"]
+                parents = cpd_info["parents"]
+
+                intercept = coefficients["(Intercept)"][0]
+
+                parent_coeffs = [coefficients[parent][0] for parent in parents]
+
+                cpd = LinearGaussianCPD(
+                    variable=node,
+                    beta=[intercept] + parent_coeffs,
+                    std=math.sqrt(var),
+                    evidence=parents,
+                )
+                cpds.append(cpd)
+
+            model.add_cpds(*cpds)
+            return model
+        else:
+            raise ValueError(f"Unsupported file format: {file_format}")
+
+
+class DAGExampleMixin:
+    @classmethod
+    def load_model_object(cls):
+        """Fetches/reads from cache the data associated with the DAG model."""
+        name = cls.get_class_tag("name")
+        file_format = cls.get_class_tag("file_format")
+        url = f"{cls.base_url}/{cls.data_url}"
+        local_file_name = f"{name}.{file_format}"
+        cls._get_raw_data(local_file_name, url)
+        cache_dir = os.path.join(
+            PGMPY_DATA_HOME,
+            hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
+        )
+        full_path = os.path.join(cache_dir, local_file_name)
+        if file_format == "txt":
             with open(full_path, "r") as f:
                 return DAG.from_dagitty(f.read())
         else:
@@ -110,8 +186,8 @@ def load_model(name: str):
         Name of the example model to load.
     """
     all_models = all_objects(
-        object_types="_BaseModel",
-        package_name="pgmpy.models.examples",
+        object_types=_BaseExampleModel,
+        package_name="pgmpy.models.example_models",
         return_names=False,
     )
 
@@ -142,8 +218,8 @@ def list_models(**filter_tags) -> list[str]:
         List of names of all available example models.
     """
     all_models = all_objects(
-        object_types="_BaseModel",
-        package_name="pgmpy.models.examples",
+        object_types=_BaseExampleModel,
+        package_name="pgmpy.models.example_models",
         return_names=False,
         filter_tags=filter_tags,
     )
