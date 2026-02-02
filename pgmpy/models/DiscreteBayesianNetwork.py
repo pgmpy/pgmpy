@@ -1816,9 +1816,8 @@ class DiscreteBayesianNetwork(DAG):
         reader_class = supported_formats_reader_map[filetype]
 
         if filetype == "bif":
-            n_jobs = kwargs.get("n_jobs", -1)
             state_name_type = kwargs.get("state_name_type", str)
-            reader = reader_class(path=filename, n_jobs=n_jobs)
+            reader = reader_class(path=filename)
             return reader.get_model(state_name_type=state_name_type)
 
         else:

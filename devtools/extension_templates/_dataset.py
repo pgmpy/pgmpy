@@ -1,32 +1,33 @@
 # This extension template provides instructions to add new datasets to pgmpy.
 #
 # Please follow the following steps:
-# 1. Copy this file to `pgmpy/datasets` and rename the file as `_your_dataset.py`
+# 1. Copy this file to `pgmpy/datasets` and rename the file as `your_dataset_name.py` (e.g., `my_dataset.py`).
+#    Note: Do NOT start the filename with an underscore `_`, otherwise it won't be discovered.
 # 2. Go through the file and address all the TODOs.
-# 3. Add an import statement in the `pgmpy/datasets/__init__` file.
+# 3. Add an import statement in the `pgmpy/datasets/__init__.py` file (e.g. `from .my_dataset import MyDataset`).
 # 4. If you would like to contribute the dataset to pgmpy, please add the dataset name to ALL_DATASETS in
 #   `pgmpy/tests/test_datasets/test_datasets.py` file.
 
 import pandas
 
 from pgmpy.base import DAG
-from pgmpy.datasets import register_dataset_class
 from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 
-@register_dataset_class  # TODO: Rename the class for your dataset.
+# TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
+# class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
 class YourDatasetClass(_BaseDataset):
 
-    # TODO: Rename the name; this is the name that `load_dataset` method uses.
-    name = "your_dataset_name"
-
-    # TODO: Fill in the tags for your dataset. Expected data types are mentioned.
-    tags = {
+    # TODO: Fill in the tags for your dataset.
+    # Note: 'name' is mandatory and must match the string used in load_dataset().
+    _tags = {
+        "name": "your_dataset_name",
         "n_variables": int,
         "n_samples": int,
         "has_ground_truth": bool,
         "has_expert_knowledge": bool,
+        "has_missing_data": bool,
         "is_simulated": bool,
         "is_interventional": bool,
         "is_discrete": bool,
@@ -44,13 +45,21 @@ class YourDatasetClass(_BaseDataset):
 
     # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
     # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
-
     expert_knowledge_url = None
+
+    # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
+    missing_values_marker = None
+
+    # TODO: If the dataset has categorical variables, list them here.
+    categorical_variables = []
+
+    # TODO: If the dataset has ordinal variables, define the category orderings (lower to higher) for each of them here.
+    ordinal_variables = dict()
 
     # TODO: If the ground truth file is in dagitty format, remove the following `load_ground_truth` method.
     @classmethod
     def load_ground_truth(cls) -> DAG:
-        if not cls.tags.get("has_ground_truth"):
+        if not cls.get_class_tag("has_ground_truth"):
             return None
 
         _ = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
@@ -72,7 +81,7 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the expert knowledge is in the expected format, remove the following `load_expert_knowledge` method.
     @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
-        if not cls.tags.get("has_expert_knowledge"):
+        if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
         _ = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)

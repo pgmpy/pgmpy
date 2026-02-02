@@ -1,5 +1,6 @@
 from math import isclose
-from pgmpy.utils._safe_import import _safe_import
+
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.global_vars import logger
 
