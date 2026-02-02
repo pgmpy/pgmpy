@@ -6,7 +6,7 @@ from typing import Any, Dict, Union
 
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
-from skbase.utils.dependencies._import import _safe_import
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import PGMPY_DATA_HOME
