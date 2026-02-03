@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - The warning helps users identify potentially problematic state names.
    - This affects `BIFWriter`, `XMLBIFWriter`, `NETWriter`, and `XDSLWriter` classes.
    - Note: While XDSL format can handle commas in state names, a warning is still issued for consistency.
+2. Adeded simulated dataset car-evaluation and feedbacks.
 
 ### Changed
 1. `BIFWriter.get_states` no longer silently replaces commas with underscores in state names.

@@ -44,6 +44,8 @@ from .wine_quality import (  # noqa: F401
     WineQualityRed,
     WineQualityRedWhiteMixed,
 )
+from .car_evaluation import CarEvaluation
+from .feedback import Feedback
 
 
 __all__ = [
