@@ -25,6 +25,7 @@ from pgmpy.estimators import (
     StructureScore,
 )
 from pgmpy.estimators.StructureScore import get_scoring_method
+from pgmpy.global_vars import logger
 
 
 class HillClimbSearch(StructureEstimator):
@@ -56,6 +57,11 @@ class HillClimbSearch(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
+        logger.warning(
+            "DeprecationWarning: This HillClimbSearch class will be removed in a future release. "
+            "Please use the new sklearn compatible HillClimbSearch class from the "
+            "pgmpy.causal_discovery module instead."
+        )
         self.use_cache = use_cache
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
