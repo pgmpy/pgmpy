@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
@@ -58,6 +59,195 @@ def test_build_skeleton_fake_ci(estimator, variant):
     expected_edges = {("A", "C"), ("A", "D")}
     for u, v in skel.edges():
         assert (u, v) in expected_edges or (v, u) in expected_edges
+class TestPCEstimatorFromIndependences(unittest.TestCase):
+    def test_build_skeleton_from_ind(self):
+        # Specify a set of independencies
+        for variant in ["orig", "stable", "parallel"]:
+            ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
+            ind = ind.closure()
+            estimator = PC(independencies=ind)
+            skel, sep_sets = estimator.estimate(
+                variant=variant,
+                ci_test="independence_match",
+                return_type="skeleton",
+                n_jobs=2,
+                show_progress=False,
+            )
+
+            expected_edges = {("A", "D"), ("B", "D"), ("C", "D")}
+            expected_sepsets = {
+                frozenset(("A", "C")): tuple(),
+                frozenset(("A", "B")): tuple(),
+                frozenset(("C", "B")): tuple(),
+            }
+            for u, v in skel.edges():
+                self.assertTrue(
+                    ((u, v) in expected_edges) or ((v, u) in expected_edges)
+                )
+            self.assertEqual(sep_sets, expected_sepsets)
+
+            # Generate independencies from a model.
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
+            estimator = PC(independencies=model.get_independencies())
+            skel, sep_sets = estimator.estimate(
+                variant=variant,
+                ci_test="independence_match",
+                return_type="skeleton",
+                n_jobs=2,
+                show_progress=False,
+            )
+
+            expected_edges = model.edges()
+            expected_sepsets1 = {
+                frozenset(("D", "C")): ("B",),
+                frozenset(("E", "B")): ("C",),
+                frozenset(("A", "D")): tuple(),
+                frozenset(("E", "D")): ("C",),
+                frozenset(("E", "A")): ("C",),
+                frozenset(("A", "B")): tuple(),
+            }
+            expected_sepsets2 = {
+                frozenset(("D", "C")): ("B",),
+                frozenset(("E", "B")): ("C",),
+                frozenset(("A", "D")): tuple(),
+                frozenset(("E", "D")): ("B",),
+                frozenset(("E", "A")): ("C",),
+                frozenset(("A", "B")): tuple(),
+            }
+            for u, v in skel.edges():
+                self.assertTrue(
+                    ((u, v) in expected_edges) or ((v, u) in expected_edges)
+                )
+
+            self.assertTrue(
+                (sep_sets == expected_sepsets1) or (sep_sets == expected_sepsets2)
+            )
+
+    def test_skeleton_to_pdag(self):
+        # D - A - C - B  ==> D - A -> C <- B
+        skel = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
+        sep_sets = {
+            frozenset({"D", "C"}): ("A",),
+            frozenset({"A", "B"}): tuple(),
+            frozenset({"D", "B"}): ("A",),
+        }
+        directed_edges, undirected_edges = PC.orient_colliders(skel, sep_sets)
+        # Convert frozensets to tuples for PDAG constructor
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
+        )
+
+        # C - A - B  ==> C -> A <- B
+        skel = nx.Graph([("A", "B"), ("A", "C")])
+        sep_sets = {frozenset({"B", "C"}): ()}
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set([("B", "A"), ("C", "A")]),
+        )
+
+        # C - A - B ==> C - A - B
+        skel = nx.Graph([("A", "B"), ("A", "C")])
+        sep_sets = {frozenset({"B", "C"}): ("A",)}
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
+        )
+
+        # {A, B} - C - D ==> {A, B} -> C -> D
+        skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
+        sep_sets = {
+            frozenset({"A", "B"}): tuple(),
+            frozenset({"A", "D"}): ("C",),
+            frozenset({"B", "D"}): ("C",),
+        }
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
+        )
+
+        # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
+        skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
+        sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
+        )
+
+        skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
+        sep_sets = {frozenset({"A", "C"}): ("B",)}
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
+        pdag = pdag.apply_meeks_rules(apply_r4=False)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "B"),
+                    ("B", "A"),
+                    ("B", "C"),
+                    ("C", "B"),
+                    ("A", "D"),
+                    ("B", "D"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
+    def test_estimate_dag(self):
+        for variant in ["orig", "stable", "parallel"]:
+            ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
+            ind = ind.closure()
+            estimator = PC(independencies=ind)
+            model = estimator.estimate(
+                variant="orig",
+                ci_test="independence_match",
+                return_type="dag",
+                n_jobs=2,
+                show_progress=False,
+            )
+            expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
+            self.assertEqual(model.edges(), expected_edges)
+
+            model = DiscreteBayesianNetwork(
+                [("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")]
+            )
+            estimator = PC(independencies=model.get_independencies())
+            estimated_model = estimator.estimate(
+                variant="orig",
+                ci_test="independence_match",
+                return_type="dag",
+                n_jobs=2,
+                show_progress=False,
+            )
+            expected_edges_1 = set(model.edges())
+            expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
+            self.assertTrue(
+                (set(estimated_model.edges()) == expected_edges_1)
+                or (set(estimated_model.edges()) == expected_edges_2)
+            )
+
+    def tearDown(self):
+        get_reusable_executor().shutdown(wait=True)
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable"])
