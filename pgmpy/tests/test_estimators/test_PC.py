@@ -6,6 +6,7 @@ import pandas as pd
 from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
@@ -165,7 +166,10 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             frozenset({"A", "B"}): tuple(),
             frozenset({"D", "B"}): ("A",),
         }
-        pdag = PC.orient_colliders(skel, sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skel, sep_sets)
+        # Convert frozensets to tuples for PDAG constructor
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
@@ -174,7 +178,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         # C - A - B  ==> C -> A <- B
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ()}
-        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),
@@ -184,7 +190,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         # C - A - B ==> C - A - B
         skel = nx.Graph([("A", "B"), ("A", "C")])
         sep_sets = {frozenset({"B", "C"}): ("A",)}
-        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),
@@ -198,7 +206,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
             frozenset({"A", "D"}): ("C",),
             frozenset({"B", "D"}): ("C",),
         }
-        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
@@ -207,7 +217,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
         # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
-        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
@@ -215,7 +227,9 @@ class TestPCEstimatorFromIndependences(unittest.TestCase):
 
         skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
         sep_sets = {frozenset({"A", "C"}): ("B",)}
-        pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        directed_edges, undirected_edges = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         self.assertSetEqual(
             set(pdag.edges()),

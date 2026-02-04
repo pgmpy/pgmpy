@@ -257,12 +257,12 @@ class PC(BaseConstraintEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on collider structures.
-        edges, nodes = self.orient_colliders(
+        directed_edges, undirected_edges = self.orient_colliders(
             skel, separating_sets, expert_knowledge.temporal_ordering
         )
-        pdag = PDAG()
-        pdag.add_edges_from(edges)
-        pdag.add_nodes_from(nodes)
+        # Convert frozensets to tuples for PDAG constructor
+        undirected_ebunch = [tuple(sorted(edge)) for edge in undirected_edges]
+        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_ebunch)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
