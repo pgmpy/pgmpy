@@ -54,6 +54,7 @@ class _BaseDataset(BaseObject):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -151,6 +152,8 @@ class _BaseDataset(BaseObject):
         df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+        if cls.get_class_tag("has_index_col"):
+            df.drop(df.columns[0], axis=1, inplace=True)
         if len(cls.categorical_variables) > 0:
             for col in cls.categorical_variables:
                 df[col] = df[col].astype("category")
