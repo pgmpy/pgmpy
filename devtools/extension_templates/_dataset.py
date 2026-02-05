@@ -28,6 +28,7 @@ class YourDatasetClass(_BaseDataset):
         "has_ground_truth": bool,
         "has_expert_knowledge": bool,
         "has_missing_data": bool,
+        "has_index_col": bool,
         "is_simulated": bool,
         "is_interventional": bool,
         "is_discrete": bool,

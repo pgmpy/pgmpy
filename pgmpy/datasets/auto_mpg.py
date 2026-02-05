@@ -25,7 +25,7 @@ class AutoMpg(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/auto-mpg/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/auto-mpg/"
 
     data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
     ground_truth_url = None
