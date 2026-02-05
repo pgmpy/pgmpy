@@ -126,9 +126,14 @@ class _BaseDataset(BaseObject):
         Checks if the data is cached locally; if not, fetches it from the URL and caches it.
         """
         name = cls.get_class_tag("name")
+        base_url = getattr(cls, "base_url", None)
+        if not base_url:
+            raise ValueError(
+                f"{cls.__name__}.base_url must be set to a non-empty string to enable caching."
+            )
         cache_dir_path = os.path.join(
             PGMPY_DATA_HOME,
-            hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
+            hashlib.sha256(f"{name}_{base_url}".encode()).hexdigest(),
         )
 
         path = os.path.join(cache_dir_path, data_type)
