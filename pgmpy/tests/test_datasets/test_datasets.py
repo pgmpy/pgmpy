@@ -30,7 +30,6 @@ ALL_DATASETS = [
     "goldberg",
     "hitters",
     "htru2",
-    "hungary_chickenpox",
     "iq_brain_size",
     "lead",
     "myocardial_infarction",
