@@ -1,5 +1,6 @@
 from pgmpy.causal_discovery._base import _ConstraintMixin, _ScoreMixin
 from pgmpy.causal_discovery.HillClimbSearch import HillClimbSearch
+from pgmpy.causal_discovery.MMHC import MMHC
 from pgmpy.causal_discovery.PC import PC
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     "_ScoreMixin",
     "PC",
     "HillClimbSearch",
+    "MMHC",
 ]
