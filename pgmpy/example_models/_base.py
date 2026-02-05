@@ -1,3 +1,4 @@
+import gzip
 import hashlib
 import json
 import math
@@ -45,7 +46,7 @@ class _BaseExampleModel(BaseObject):
     _tags = {
         "name": None,
         "type": None,
-        "file_format": None,
+        # "file_format": None,
         "n_nodes": None,
         "n_edges": None,
     }
@@ -91,16 +92,20 @@ class DiscreteExampleMixin:
         name = cls.get_class_tag("name")
         file_format = cls.get_class_tag("file_format")
         url = f"{cls.base_url}/{cls.data_url}"
-        local_file_name = f"{name}.{file_format}"
-        cls._get_raw_data(local_file_name, url)
+        compressed_file_name = f"{name}.{file_format}.gz"
+        cls._get_raw_data(compressed_file_name, url)
 
         cache_dir = os.path.join(
             PGMPY_DATA_HOME,
             hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
         )
-        full_path = os.path.join(cache_dir, local_file_name)
+        compressed_path = os.path.join(cache_dir, compressed_file_name)
         if file_format == "bif":
-            return BIFReader(full_path).get_model()
+            with gzip.open(compressed_path, "rt", encoding="utf-8") as f:
+                bif_text = f.read()
+            reader = BIFReader(string=bif_text)
+            return reader.get_model()
+
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
 
@@ -134,7 +139,7 @@ class ContinuousExampleMixin:
             cpds = []
             for node, cpd_info in cpds_data.items():
                 coefficients = cpd_info["coefficients"]
-                var = cpd_info["variable"]
+                var = cpd_info["variance"][0]
                 parents = cpd_info["parents"]
 
                 intercept = coefficients["(Intercept)"][0]
@@ -171,7 +176,7 @@ class DAGExampleMixin:
         full_path = os.path.join(cache_dir, local_file_name)
         if file_format == "txt":
             with open(full_path, "r") as f:
-                return DAG.from_dagitty(f.read())
+                return DAG.from_dagitty(string=f.read())
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
 
