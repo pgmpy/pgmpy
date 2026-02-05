@@ -80,6 +80,7 @@ class _BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        self.n_features_in_ = len(X.columns)
         return X
 
     def fit(self, X: pd.DataFrame, y=None):
@@ -94,36 +95,29 @@ class _BaseCausalDiscovery(BaseEstimator):
         self,
         X=None,
         true_graph=None,
-        scoring_method=None,
-        **kwargs,
+        metric=None,
     ):
         """
         Method to calculate the score of the fitted causal graph.
 
         The score can be calculated either against a dataset (`X`) or against a ground truth model (`true_graph`).
         Hence, only one of the two parameters should be provided. Depending on whether `X` is provided or
-        `true_graph`, the `scoring_method` should be chosen accordingly.
+        `true_graph`, the `metric` should be chosen accordingly.
 
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Test data used for scoring the learned causal model. If provided, `scoring_method` should be a metric that
+            Test data used for scoring the learned causal model. If provided, `metric` should be a metric that
             can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
 
         true_graph : pgmpy.base.DAG, optional
-            The true model graph for scoring the learned causal model. If provided, `scoring_method` should be a metric
+            The true model graph for scoring the learned causal model. If provided, `metric` should be a metric
             that compares graphs. You can find all such metrics using:
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
-        scoring_method : pgmpy.metrics._BaseSupervisedMetric or pgmpy.metrics._BaseUnsupervisedMetric, optional
+        metric : str or pgmpy.metrics._Base.*Metric instance, optional
             Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
             argument (`X` or `true_graph`) will be selected internally.
-
-        **kwargs
-            Additional keyword arguments passed directly to the scoring method initialization. The accepted arguments
-            depend on the specific scoring method class used. Refer to the chosen metric's documentation in
-            :mod:`pgmpy.metrics` for the list of supported keyword arguments (for example, to configure which metrics
-            are computed or how they are aggregated).
 
         Returns
         -------
@@ -139,7 +133,7 @@ class _BaseCausalDiscovery(BaseEstimator):
         >>> from pgmpy.datasets import load_dataset
         >>> data = load_dataset("lead")
         >>> dag = PC(return_type="dag").fit(data)
-        >>> score = dag.score(X=data, scoring_method="correlation_score")
+        >>> score = dag.score(X=data, metric="correlation_score")
         """
         check_is_fitted(self, "causal_graph_")
 
@@ -148,6 +142,7 @@ class _BaseCausalDiscovery(BaseEstimator):
             validate_data(
                 self,
                 X=X,
+                dtype=None,
                 accept_sparse=False,
                 ensure_all_finite=True,
                 reset=False,
@@ -155,36 +150,32 @@ class _BaseCausalDiscovery(BaseEstimator):
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
-            if scoring_method is None:
+            if metric is None:
                 scoring_class = get_metrics(requires_data=True, is_default=True)[0]
-                scoring_method = scoring_class(**kwargs)
+                metric = scoring_class()
 
-            elif isinstance(scoring_method, str):
-                scoring_class = get_metrics(name=scoring_method)
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
                 if len(scoring_class) == 0:
-                    raise ValueError(
-                        f"No scoring method found with name: {scoring_method}"
-                    )
+                    raise ValueError(f"No scoring method found with name: {metric}")
 
-                scoring_method = scoring_class[0](**kwargs)
+                metric = scoring_class[0]()
 
-            return scoring_method.evaluate(X, self.causal_graph_)
+            return metric.evaluate(X, self.causal_graph_)
 
         # Case 2: When true graph is provided.
         elif true_graph is not None:
-            if scoring_method is None:
+            if metric is None:
                 scoring_class = get_metrics(requires_true_graph=True, is_default=True)
-                scoring_method = scoring_class[0](**kwargs)
-            elif isinstance(scoring_method, str):
-                scoring_class = get_metrics(name=scoring_method)
+                metric = scoring_class[0]()
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
                 if len(scoring_class) == 0:
-                    raise ValueError(
-                        f"No scoring method found with name: {scoring_method}"
-                    )
+                    raise ValueError(f"No scoring method found with name: {metric}")
 
-                scoring_method = scoring_class[0](**kwargs)
+                metric = scoring_class[0]()
 
-            return scoring_method.evaluate(
+            return metric.evaluate(
                 true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
             )
         else:

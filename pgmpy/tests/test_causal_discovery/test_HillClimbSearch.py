@@ -17,7 +17,7 @@ from pgmpy.utils import get_example_model
 
 def expected_failed_checks(estimator):
     return {
-        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method."
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
     }
 
 
@@ -412,15 +412,13 @@ def test_score():
     assert np.round(corr_score, 4) > 0.5
     assert shd, 2
 
-    corr_score = est.score(
-        X=data, scoring_method=CorrelationScore(significance_level=0.01)
-    )
-    shd = est.score(true_graph=asia_model, scoring_method=SHD())
+    corr_score = est.score(X=data, metric=CorrelationScore(significance_level=0.01))
+    shd = est.score(true_graph=asia_model, metric=SHD())
 
     assert np.round(corr_score, 4) > 0.5
     assert shd, 2
 
-    structure_score = est.score(X=data, scoring_method="structure_score")
-    shd = est.score(true_graph=asia_model, scoring_method="SHD")
+    structure_score = est.score(X=data, metric="structure_score")
+    shd = est.score(true_graph=asia_model, metric="SHD")
     assert np.round(structure_score, 4) > -3e4
     assert shd, 2
