@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 1. Incompatibality with networkx==3.2.
 2. `CausalInference.get_minimal_adjustment_set` to accept string variable names.
-3. Bug in EM when latent varaibles are present.
+3. Bug in EM when latent variables are present.
 4. `compat_fns.copy` to consider the case when int or float is passed.
 5. Fixes issue with `BayesianNetwork.fit_update` when running with CUDA backend.
 
@@ -198,7 +198,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 1. Adds a `fit_update` method to `BayesianNetwork` for updating model using new data.
 2. Adds `simulate` method to `BayesianNetwork` and `DynamicBayesianNetwork` to simulated data under different conditions.
-3. Adds `DynamicBayesianNetwork.fit` method to learn model paramters from data.
+3. Adds `DynamicBayesianNetwork.fit` method to learn model parameters from data.
 4. `ApproxInference` class to do approximate inference on models using sampling.
 5. Robust tests for all sampling methods.
 6. Adds `BayesianNetwork.load` and `BayesianNetwork.save` to quickly read and write files.
@@ -217,7 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.15] - 2021-06-30
 ### Added
-1. Adds network pruning for inference algrithms to reduce the size of network before
+1. Adds network pruning for inference algorithms to reduce the size of network before
    running inference.
 2. Adds support for latent variables in DAG and BayesianModel.
 3. Parallel implementation for parameter estimation algorithms.
@@ -285,7 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 1. Refactors ConstraintBasedEstimators into PC with a lot of general improvements.
-2. Improved (faster, new arguments) indepenedence tests with changes in argument.
+2. Improved (faster, new arguments) independence tests with changes in argument.
 3. Refactors `sample_discrete` method. Sampling algorithms much faster.
 4. Refactors `HillClimbSearch` to be faster.
 5. Sampling methods now return dataframe of type categorical.
@@ -330,7 +330,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BdeuScore is renamed to BDeuScore.
 - Refactoring of NaiveBayes
 - Overhaul of CI and setup infrastructure.
-- query methods check for common variabls in variable and evidence argument.
+- query methods check for common variables in variable and evidence argument.
 
 ### Fixed
 - Example notebooks for Inference.
