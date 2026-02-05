@@ -46,7 +46,7 @@ class _BaseExampleModel(BaseObject):
     _tags = {
         "name": None,
         "type": None,
-        # "file_format": None,
+        "file_format": None,
         "n_nodes": None,
         "n_edges": None,
     }
