@@ -13,8 +13,9 @@ class HungaryChickenpox(_BaseDataset):
         "name": "hungary_chickenpox",
         "n_variables": 20,
         "n_samples": 522,
-        "has_ground_truth": False,
+        "has_ground_truth": True,
         "has_expert_knowledge": True,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -24,13 +25,13 @@ class HungaryChickenpox(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
         "real/hungary-chickenpox/"
     )
 
     data_url = base_url + "data/hungary-chickenpox.continuous.txt"
 
-    ground_truth_url = None
+    ground_truth_url = "ground.truth/hungary_county_edges.txt"
     expert_knowledge_url = None
 
     categorical_variables = []
