@@ -1,7 +1,7 @@
 from ._base import DAGExampleMixin, _BaseExampleModel
 
 
-class Acid1996(DAGExampleMixin, _BaseExampleModel):
+class Acid_1996(DAGExampleMixin, _BaseExampleModel):
 
     _tags = {
         "name": "Acid_1996",
