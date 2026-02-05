@@ -3,11 +3,11 @@ import itertools
 import networkx as nx
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
-from pgmpy.identification import BaseIdentification
+from pgmpy.identification import _BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class Adjustment(BaseIdentification):
+class Adjustment(_BaseIdentification):
     """
     Given a causal graph, finds the adjustment set.
 

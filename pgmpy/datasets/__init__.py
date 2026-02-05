@@ -5,6 +5,7 @@ from .airfoil import Airfoil  # noqa: F401
 from .algeria import Algeria  # noqa: F401
 from .boston_housing import BostonHousing  # noqa: F401
 from .galton_stature import GaltonStature  # noqa: F401
+from .dropouts import Dropouts  # noqa: F401
 from .sachs import (  # noqa: F401
     SachsContinuous,
     SachsContinuousJittered,
