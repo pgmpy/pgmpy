@@ -9,6 +9,7 @@ class Goldberg(_CovarianceMixin, _BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": True,
         "is_interventional": False,
         "is_discrete": False,
@@ -18,7 +19,7 @@ class Goldberg(_CovarianceMixin, _BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
         "refs/heads/main/real/goldberg/"
     )
 

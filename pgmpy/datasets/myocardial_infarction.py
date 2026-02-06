@@ -10,11 +10,12 @@ class MyocardialInfarction(_BaseDataset):
 
     _tags = {
         "name": "myocardial_infarction",
-        "n_variables": 124,
+        "n_variables": 123,
         "n_samples": 1700,
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": True,
+        "has_index_col": True,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -24,7 +25,7 @@ class MyocardialInfarction(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/"
         "heads/main/real/myocardial-infarction-complications/"
     )
 
