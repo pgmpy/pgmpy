@@ -6,6 +6,7 @@ class Alarm(DiscreteMixin, _BaseExampleModel):
         "name": "alarm",
         "n_nodes": 37,
         "n_edges": 46,
+        "is_parameterized": True,
         "is_discrete": True,
         "is_continuous": False,
         "is_hybrid": False,
