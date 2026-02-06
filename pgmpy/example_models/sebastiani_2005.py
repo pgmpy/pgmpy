@@ -12,8 +12,8 @@ class Sebastiani2005(DAGMixin, _BaseExampleModel):
 
     _tags = {
         "name": "sebastiani_2005",
-        "n_nodes": 34,
-        "n_edges": 44,
+        "n_nodes": 60,
+        "n_edges": 36,
         "is_parameterized": False,
     }
     data_url = "dags/Sebastiani_2005.txt"
