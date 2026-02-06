@@ -3,6 +3,7 @@ import io
 from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
+
 class Feedback(_BaseDataset):
 
     _tags = {
@@ -15,7 +16,7 @@ class Feedback(_BaseDataset):
         "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
-        "is_discrete": False, 
+        "is_discrete": False,
         "is_continuous": False,
         "is_mixed": True,
         "is_ordinal": True,
@@ -26,6 +27,6 @@ class Feedback(_BaseDataset):
 
     expert_knowledge_url = base_url + "ground.truth/feedback_knowledge.txt"
 
-    categorical_variables = ['recipe_code', 'user_id', 'sentiment']
-    
+    categorical_variables = ["recipe_code", "user_id", "sentiment"]
+
     ordinal_variables = dict()
