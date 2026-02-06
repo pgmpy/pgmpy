@@ -20,6 +20,7 @@ CONTINUOUS_MODELS = [
     "arth150",
     "ecoli70",
     "magic_niab",
+    "magic_irri",
 ]
 
 HYBRID_MODELS = []
