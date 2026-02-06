@@ -14,6 +14,9 @@ DISCRETE_MODELS = [
     "alarm",
     "cancer",
     "earthquake",
+    "hailfinder",
+    "hepar2",
+    "win95pts",
 ]
 
 CONTINUOUS_MODELS = [
