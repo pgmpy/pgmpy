@@ -12,7 +12,7 @@ class MagicIRRI(ContinuousMixin, _BaseExampleModel):
     _tags = {
         "name": "magic_irri",
         "n_nodes": 64,
-        "n_edges": 107,
+        "n_edges": 102,
         "is_parameterized": True,
         "is_discrete": False,
         "is_continuous": True,
