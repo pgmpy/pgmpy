@@ -1,7 +1,7 @@
-from ._base import ContinuousExampleMixin, _BaseExampleModel
+from ._base import ContinuousMixin, _BaseExampleModel
 
 
-class arth150(ContinuousExampleMixin, _BaseExampleModel):
+class arth150(ContinuousMixin, _BaseExampleModel):
 
     _tags = {
         "name": "arth150",
