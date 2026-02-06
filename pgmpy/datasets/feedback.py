@@ -12,6 +12,7 @@ class Feedback(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False, 
@@ -27,36 +28,4 @@ class Feedback(_BaseDataset):
 
     categorical_variables = ['recipe_code', 'user_id', 'sentiment']
     
-    ordinal_variables = {
-        "rating": [0, 1, 2, 3, 4, 5],
-        "user_reputation": [1, 2, 3, 4, 5]
-    }
-
-    @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        """
-        Loads the feedback data. We use utf-8-sig to handle 
-        potential BOM markers in review CSVs.
-        """
-        raw_data = cls._get_raw_data("data", cls.data_url)
-        return pd.read_csv(io.BytesIO(raw_data), encoding="utf-8-sig")
-
-    @classmethod
-    def load_expert_knowledge(cls) -> ExpertKnowledge:
-        """
-        Defines causal constraints: 
-        1. Reputation -> Rating
-        2. Rating -> Upvotes
-        """
-        if not cls.get_class_tag("has_expert_knowledge"):
-            return None
-        
-        return ExpertKnowledge(
-            required_edges=[
-                ('user_reputation', 'rating'),
-                ('rating', 'up_votes')
-            ],
-            forbidden_edges=[
-                ('up_votes', 'user_reputation')
-            ]
-        )
+    ordinal_variables = dict()

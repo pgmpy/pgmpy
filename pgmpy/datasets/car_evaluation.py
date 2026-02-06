@@ -11,6 +11,7 @@ class CarEvaluation(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": True,
@@ -28,27 +29,6 @@ class CarEvaluation(_BaseDataset):
 
     categorical_variables = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety', 'class']
 
-    ordinal_variables = {
-        "buying": ["low", "med", "high", "vhigh"],
-        "maint": ["low", "med", "high", "vhigh"],
-        "doors": ["2", "3", "4", "5more"],
-        "persons": ["2", "4", "more"],
-        "lug_boot": ["small", "med", "big"],
-        "safety": ["low", "med", "high"],
-        "class": ["unacc", "acc", "good", "vgood"]
-    }
-
-    @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        """
-        Custom loader because the raw UCI file lacks a header row.
-        """
-        raw_data = cls._get_raw_data("data", cls.data_url)
-        data_str = raw_data.decode("utf-8")
-        
-        column_names = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety', 'class']
-        
-        df = pd.read_csv(io.StringIO(data_str), names=column_names, header=None)
-        return df
+    ordinal_variables = dict()
 
     

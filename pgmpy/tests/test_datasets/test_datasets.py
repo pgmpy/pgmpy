@@ -52,6 +52,8 @@ ALL_DATASETS = [
     "wine_quality_red_white_mixed",
     "wine_quality_white",
     "yacht_hydrodynamics",
+    "car_evaluation",
+    "feedback",
 ]
 
 
