@@ -9,6 +9,7 @@ class SachsMixed(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
@@ -17,7 +18,7 @@ class SachsMixed(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = (
         base_url
@@ -48,6 +49,7 @@ class SachsContinuous(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -56,7 +58,7 @@ class SachsContinuous(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = base_url + "data/sachs.2005.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
@@ -74,6 +76,7 @@ class SachsDiscrete(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": True,
@@ -82,7 +85,7 @@ class SachsDiscrete(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = base_url + "data/sachs.2005.discrete.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
@@ -112,6 +115,7 @@ class SachsContinuousLogScale(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -120,7 +124,7 @@ class SachsContinuousLogScale(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = base_url + "data/sachs.2005.logxplus10.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
@@ -138,6 +142,7 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
@@ -146,7 +151,7 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = (
         base_url + "data/sachs.2005.logxplus10.jittered.eperimental.continuous.txt"
@@ -166,6 +171,7 @@ class SachsContinuousJittered(_BaseDataset):
         "has_ground_truth": True,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
@@ -174,7 +180,7 @@ class SachsContinuousJittered(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/sachs/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
     data_url = base_url + "data/sachs.2005.with.jittered.experimental.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"

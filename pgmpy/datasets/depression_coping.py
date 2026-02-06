@@ -4,11 +4,12 @@ from pgmpy.datasets._base import _BaseDataset
 class DepressionCoping(_BaseDataset):
     _tags = {
         "name": "depression_coping",
-        "n_variables": 79,
+        "n_variables": 78,
         "n_samples": 127,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": True,
+        "has_index_col": True,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -18,7 +19,7 @@ class DepressionCoping(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
         "real/depression-coping/"
     )
 
