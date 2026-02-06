@@ -1,5 +1,3 @@
-import pandas as pd
-import io
 from pgmpy.datasets._base import _BaseDataset
 
 

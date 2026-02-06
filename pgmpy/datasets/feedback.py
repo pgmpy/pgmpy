@@ -1,7 +1,4 @@
-import pandas as pd
-import io
 from pgmpy.datasets._base import _BaseDataset
-from pgmpy.estimators import ExpertKnowledge
 
 
 class Feedback(_BaseDataset):
