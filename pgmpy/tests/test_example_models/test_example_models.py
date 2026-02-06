@@ -9,17 +9,39 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 
+
 DISCRETE_MODELS = [
     "asia",
     "alarm",
     "cancer",
     "earthquake",
+    "pathfinder",
+    "pigs",
+    "water",
+    "munin",
+    "munin1",
+    "munin2",
+    "munin3",
+    "munin4",
+    "andes",
+    "diabetes",
+    "link",
+    "hailfinder",
+    "hepar2",
+    "win95pts",
+    "insurance",
+    "child",
+    "barley",
+    "sachs",
+    "mildew",
+    "survey",
 ]
 
 CONTINUOUS_MODELS = [
     "arth150",
     "ecoli70",
     "magic_niab",
+    "magic_irri",
 ]
 
 HYBRID_MODELS = []
