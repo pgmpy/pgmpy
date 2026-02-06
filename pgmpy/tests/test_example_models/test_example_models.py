@@ -9,11 +9,22 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 
-ALL_MODELS = [
+DISCRETE_MODELS = [
+    "asia",
     "alarm",
+]
+
+CONTINUOUS_MODELS = [
     "arth150",
+]
+
+HYBRID_MODELS = []
+
+DAGS = [
     "acid_1996",
 ]
+
+ALL_MODELS = DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS
 
 
 def test_list_models():
