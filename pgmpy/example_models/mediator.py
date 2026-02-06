@@ -3,7 +3,7 @@ from ._base import DAGMixin, _BaseExampleModel
 
 class Mediator(DAGMixin, _BaseExampleModel):
     """
-    Simple mediator DAG (X -> I -> Y, X -> Y, with Z as common cause).
+    Simple mediator DAG (X -> I -> Y, X <- Z -> I .
     """
 
     _tags = {
