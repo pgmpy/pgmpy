@@ -19,12 +19,15 @@ DISCRETE_MODELS = [
 CONTINUOUS_MODELS = [
     "arth150",
     "ecoli70",
+    "magic_niab",
 ]
 
 HYBRID_MODELS = []
 
 DAGS = [
     "acid_1996",
+    "m_bias",
+    "confounding",
 ]
 
 ALL_MODELS = DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS
