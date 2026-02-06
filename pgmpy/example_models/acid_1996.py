@@ -13,7 +13,7 @@ class Acid_1996(DAGMixin, _BaseExampleModel):
     _tags = {
         "name": "acid_1996",
         "n_nodes": 18,
-        "n_edges": 24,
+        "n_edges": 22,
         "is_parameterized": False,
     }
     data_url = "dags/Acid_1996.txt"
