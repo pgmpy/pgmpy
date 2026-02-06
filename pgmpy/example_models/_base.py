@@ -4,18 +4,16 @@ import json
 import math
 import os
 import shutil
+from urllib.request import urlopen
 
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
-from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
-
-requests = _safe_import("requests")
 
 
 class _BaseExampleModel(BaseObject):
@@ -54,9 +52,10 @@ class _BaseExampleModel(BaseObject):
                 raw_data = f.read()
         else:
             os.makedirs(path, exist_ok=True)
-            resp = requests.get(f"{cls.base_url}/{cls.data_url}", timeout=60)
-            resp.raise_for_status()
-            raw_data = resp.content
+
+            with urlopen(f"{cls.base_url}/{cls.data_url}", timeout=60) as response:
+                raw_data = response.read()
+
             with open(file_path, "wb") as f:
                 f.write(raw_data)
         return raw_data
