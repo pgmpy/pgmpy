@@ -9,12 +9,17 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 
+
 DISCRETE_MODELS = [
     "asia",
     "alarm",
     "cancer",
     "earthquake",
     "child",
+    "barley",
+    "sachs",
+    "mildew",
+    "survey",
 ]
 
 CONTINUOUS_MODELS = [
