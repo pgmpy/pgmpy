@@ -14,6 +14,11 @@ DISCRETE_MODELS = [
     "alarm",
     "cancer",
     "earthquake",
+    "munin",
+    "munin1",
+    "munin2",
+    "munin3",
+    "munin4",
 ]
 
 CONTINUOUS_MODELS = [
