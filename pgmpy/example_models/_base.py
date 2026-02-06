@@ -71,6 +71,10 @@ class _BaseExampleModel(BaseObject):
 
 
 class DiscreteMixin:
+    """
+    Mixin class for loading discrete Bayesian networks from BIF files.
+    """
+
     @classmethod
     def load_model_object(cls):
         return BIFReader(
@@ -79,6 +83,10 @@ class DiscreteMixin:
 
 
 class ContinuousMixin:
+    """
+    Mixin class for loading continuous Bayesian networks from JSON files.
+    """
+
     @classmethod
     def load_model_object(cls):
         data = json.loads(cls._get_raw_data().decode("utf-8"))
@@ -112,6 +120,10 @@ class ContinuousMixin:
 
 
 class DAGMixin:
+    """
+    Mixin class for loading DAGs from dagitty string format.
+    """
+
     @classmethod
     def load_model_object(cls):
         return DAG.from_dagitty(string=cls._get_raw_data().decode("utf-8"))
