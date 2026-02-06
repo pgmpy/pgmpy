@@ -44,9 +44,8 @@ from .wine_quality import (  # noqa: F401
     WineQualityRed,
     WineQualityRedWhiteMixed,
 )
-from .car_evaluation import CarEvaluation # noqa: F401
-from .feedback import Feedback # noqa: F401
-
+from .car_evaluation import CarEvaluation  # noqa: F401
+from .feedback import Feedback  # noqa: F401
 
 __all__ = [
     "_BaseDataset",
