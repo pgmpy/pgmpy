@@ -134,3 +134,31 @@ def test_feature_names(rand_data):
     est.fit(rand_data)
     assert hasattr(est, "n_features_in_")
     assert hasattr(est, "feature_names_in_")
+
+
+def test_search_space():
+    adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+    search_space = [
+        ("Age", "Education"),
+        ("Education", "HoursPerWeek"),
+        ("Education", "Income"),
+        ("HoursPerWeek", "Income"),
+        ("Age", "Income"),
+    ]
+    expert_knowledge = ExpertKnowledge(search_space=search_space)
+    est = GES(scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag")
+    est.fit(adult_data)
+    for edge in est.causal_graph_.edges():
+        assert edge in search_space
+
+
+def test_temporal_order(titanic_data2):
+    expert_knowledge = ExpertKnowledge(temporal_order=[["Pclass", "Sex"], ["Survived"]])
+    est = GES(
+        scoring_method="k2",
+        expert_knowledge=expert_knowledge,
+        return_type="dag",
+    )
+    est.fit(titanic_data2)
+    expected_edges = {("Sex", "Survived"), ("Sex", "Pclass"), ("Pclass", "Survived")}
+    assert set(est.causal_graph_.edges()) == expected_edges
