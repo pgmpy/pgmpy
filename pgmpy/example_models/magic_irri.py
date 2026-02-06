@@ -5,8 +5,8 @@ class MagicIRRI(ContinuousMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] R. Opgen-Rhein and K. Strimmer (2007). From Correlation to Causation Networks: a Simple Approximate Learning
-    Algorithm and its Application to High-Dimensional Plant Gene Expression Data. BMC System Biology, 1(37).
+    ..[1] Model developed as an example of multiple trait modelling in plant genetics for the invited talk “Bayesian Networks, MAGIC Populations
+    and Multiple Trait Prediction” delivered by Marco Scutari at the 5th International Conference on Quantitative Genetics (ICQG 2016).
     """
 
     _tags = {
