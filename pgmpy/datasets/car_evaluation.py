@@ -30,4 +30,3 @@ class CarEvaluation(_BaseDataset):
     categorical_variables = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety', 'class']
 
     ordinal_variables = dict()
-    
