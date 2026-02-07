@@ -1,7 +1,7 @@
 from ._base import DAGMixin, _BaseExampleModel
 
 
-class Acid_1996(DAGMixin, _BaseExampleModel):
+class Acid1996(DAGMixin, _BaseExampleModel):
     """
     References
     ----------

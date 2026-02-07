@@ -48,8 +48,17 @@ HYBRID_MODELS = []
 
 DAGS = [
     "acid_1996",
-    "m_bias",
     "confounding",
+    "didelez_2010",
+    "kampen_2014",
+    "mediator",
+    "m_bias",
+    "paths",
+    "polzer_2012",
+    "schipf_2010",
+    "sebastiani_2005",
+    "shrier_2008",
+    "thoemmes_2013",
 ]
 
 ALL_MODELS = DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS
