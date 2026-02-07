@@ -7,18 +7,16 @@ import re
 import shutil
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.request import urlopen
 
 import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
-from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.global_vars import PGMPY_DATA_HOME
-
-requests = _safe_import("requests")
 
 
 @dataclass
@@ -138,9 +136,10 @@ class _BaseDataset(BaseObject):
                 raw_data = f.read()
         else:
             os.makedirs(cache_dir_path, exist_ok=True)
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            raw_data = resp.content
+
+            with urlopen(url, timeout=60) as response:
+                raw_data = response.read()
+
             with open(path, "wb") as f:
                 f.write(raw_data)
         return raw_data
