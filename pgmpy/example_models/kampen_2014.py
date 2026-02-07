@@ -11,7 +11,7 @@ class Kampen2014(DAGMixin, _BaseExampleModel):
     _tags = {
         "name": "kampen_2014",
         "n_nodes": 12,
-        "n_edges": 20,
+        "n_edges": 24,
         "is_parameterized": False,
     }
     data_url = "dags/Kampen_2014.txt"
