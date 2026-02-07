@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
@@ -15,48 +14,46 @@ ALL_DATASETS = [
     "algerian_forest",
     "apple_watch_fitbit",
     "auto_mpg",
+    "blue_driver",
     "boston_housing",
     "cities",
     "college_plans",
-    "lead",
-    "spartina",
-    "goldberg",
-    "hitters",
-    "pittsburgh_bridges",
-    "residential_building",
+    "contraceptive_method",
+    "cover_type",
     "credit_approval",
+    "cystic_fibrosis",
     "depression_coping",
     "dropouts",
-    "iq_brain_size",
-    "contraceptive_method",
-    "myocardial_infarction",
-    "htru2",
     "dry_bean",
-    "cystic_fibrosis",
-    "south_german_credit",
-    "pima_diabetes",
     "galton_stature",
-    "sachs_mixed",
+    "goldberg",
+    "hitters",
+    "htru2",
+    "iq_brain_size",
+    "lead",
+    "myocardial_infarction",
+    "pima_diabetes",
+    "pittsburgh_bridges",
+    "residential_building",
     "sachs_continuous",
-    "sachs_discrete",
-    "sachs_continuous_logscale",
-    "sachs_continuous_jittered_logscale",
     "sachs_continuous_jittered",
-    "superconductivity",
-    "yacht_hydrodynamics",
-    "student_performance",
+    "sachs_continuous_jittered_logscale",
+    "sachs_continuous_logscale",
+    "sachs_discrete",
+    "sachs_mixed",
     "seoul_bike",
+    "south_german_credit",
+    "spartina",
+    "student_performance",
+    "superconductivity",
     "uscrime",
     "wine_quality_red",
-    "wine_quality_white",
     "wine_quality_red_white_mixed",
+    "wine_quality_white",
+    "yacht_hydrodynamics",
 ]
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_list_datasets():
     found_datasets = list_datasets()
     for dataset in ALL_DATASETS:
@@ -71,12 +68,8 @@ def test_list_datasets():
     assert "abalone_mixed" not in cont_names
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -100,10 +93,6 @@ def test_load_dataset():
             assert dataset.data.isna().any().any()
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_load_covariance_dataset():
     for name in ["goldberg", "spartina", "lead", "cities"]:
         dataset = load_dataset(name)
@@ -116,10 +105,6 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
