@@ -1,244 +1,355 @@
+from collections.abc import Hashable
 from itertools import combinations
-from typing import Hashable, List, Optional, Tuple, Union
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import (
-    ExpertKnowledge,
-    StructureEstimator,
-    StructureScore,
-)
+from pgmpy.base import PDAG
+from pgmpy.estimators import ExpertKnowledge, StructureEstimator, StructureScore
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
 
 
 class GES(StructureEstimator):
-    """
-    Implementation of Greedy Equivalence Search (GES) causal discovery / structure learning algorithm.
+    """Implementation of Greedy Equivalence Search (GES) causal discovery algorithm.
 
-    GES is a score-based causal discovery / structure learning algorithm that works in three phases:
-        1. Forward phase: New edges are added such that the model score improves.
-        2. Backward phase: Edges are removed from the model such that the model score improves.
-        3. Edge flipping phase: Edge orientations are flipped such that model score improves.
+    GES is a score-based causal discovery algorithm that searches over the space
+    of equivalence classes (CPDAGs) using two phases:
+        1. Forward phase: Insert edges using the Insert operator until no improvement.
+        2. Backward phase: Delete edges using the Delete operator until no improvement.
 
     Parameters
     ----------
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.nan`.
-        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
     use_caching: boolean
         If True, uses caching of score for faster computation.
-        Note: Caching only works for scoring methods which are decomposable. Can
-        give wrong results in case of custom scoring methods.
 
     References
     ----------
     Chickering, David Maxwell. "Optimal structure identification with greedy search."
       Journal of machine learning research 3.Nov (2002): 507-554.
+
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
         self.use_cache = use_cache
+        super().__init__(data=data, **kwargs)
 
-        super(GES, self).__init__(data=data, **kwargs)
+    def _neighbors_of_in_pdag(self, pdag: PDAG, node: Hashable) -> set[Hashable]:
+        """Returns the set of neighbors (undirected adjacencies) of node in pdag."""
+        return pdag.undirected_neighbors(node)
 
-    def _legal_edge_additions(
-        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
-        """
-        Returns a list of all edges that can be added to the graph such that it remains a DAG.
-        """
-        edges = []
-        for u, v in combinations(current_model.nodes(), 2):
-            if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u) and (
-                    (u, v) not in expert_knowledge.forbidden_edges
-                ):
-                    edges.append((u, v))
-                if not nx.has_path(current_model, u, v) and (
-                    (v, u) not in expert_knowledge.forbidden_edges
-                ):
-                    edges.append((v, u))
-        return edges
+    def _adjacent_in_pdag(self, pdag: PDAG, node: Hashable) -> set[Hashable]:
+        """Returns all nodes adjacent to node (directed or undirected)."""
+        return pdag.all_neighbors(node)
 
-    def _legal_edge_removals(
-        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
-        """
-        Returns a list of all edges that can be removed from the graph such that it remains a DAG.
-        """
-        edges = []
-        for u, v in current_model.edges():
-            if (u, v) not in expert_knowledge.required_edges:
-                edges.append((u, v))
-        return edges
+    def _is_clique(self, pdag: PDAG, nodes: set[Hashable]) -> bool:
+        """Check if the given set of nodes forms a clique in the PDAG."""
+        for u, v in combinations(nodes, 2):
+            if not pdag.is_adjacent(u, v):
+                return False
+        return True
 
-    def _legal_edge_flips(
-        self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
-        """
-        Returns a list of all the edges in the `current_model` that can be flipped such that the model
-        remains a DAG.
-        """
-        potential_flips = []
-        edges = list(current_model.edges())
-        for u, v in edges:
-            if ((u, v) not in expert_knowledge.required_edges) and (
-                (v, u) not in expert_knowledge.forbidden_edges
-            ):
-                current_model.remove_edge(u, v)
-                if not nx.has_path(current_model, u, v):
-                    potential_flips.append((v, u))
+    def _valid_insert_operators(
+        self,
+        pdag: PDAG,
+        expert_knowledge: ExpertKnowledge,
+    ) -> list[tuple[Hashable, Hashable, set[Hashable]]]:
+        """Find all valid Insert(x, y, T) operators for the current PDAG.
 
-                # Restore the edge to get to the original model
-                current_model.add_edge(u, v)
-        return potential_flips
+        An Insert(x, y, T) operator adds edge x -> y and orients previously
+        undirected edges from T to y as t -> y.
+
+        Validity conditions (Chickering 2002, Theorem 15):
+        1. x and y are not adjacent in pdag
+        2. T is a subset of neighbors of y that are not adjacent to x
+        3. T union neighbors of y that are adjacent to x is a clique
+        """
+        operators = []
+        nodes = list(pdag.nodes())
+
+        for x in nodes:
+            for y in nodes:
+                if x == y:
+                    continue
+                if pdag.is_adjacent(x, y):
+                    continue
+                if (x, y) in expert_knowledge.forbidden_edges:
+                    continue
+
+                neighbors_y = self._neighbors_of_in_pdag(pdag, y)
+                neighbors_y_adj_x = {n for n in neighbors_y if pdag.is_adjacent(n, x)}
+                neighbors_y_not_adj_x = neighbors_y - neighbors_y_adj_x
+
+                for t_size in range(len(neighbors_y_not_adj_x) + 1):
+                    for T in combinations(neighbors_y_not_adj_x, t_size):
+                        T = set(T)
+                        clique_set = T | neighbors_y_adj_x
+                        if self._is_clique(pdag, clique_set):
+                            operators.append((x, y, T))
+
+        return operators
+
+    def _valid_delete_operators(
+        self,
+        pdag: PDAG,
+        expert_knowledge: ExpertKnowledge,
+    ) -> list[tuple[Hashable, Hashable, set[Hashable]]]:
+        """Find all valid Delete(x, y, H) operators for the current PDAG.
+
+        A Delete(x, y, H) operator removes edge x - y (or x -> y) and orients
+        previously undirected edges from H to y as h -> y.
+
+        Validity conditions (Chickering 2002, Theorem 17):
+        1. x and y are adjacent in pdag
+        2. H is a subset of neighbors of y that are adjacent to x
+        3. H union neighbors of y that are not adjacent to x is a clique
+        """
+        operators = []
+
+        for x, y in list(pdag.edges()):
+            if (x, y) in expert_knowledge.required_edges:
+                continue
+
+            is_undirected = pdag.has_undirected_edge(x, y)
+
+            neighbors_y = self._neighbors_of_in_pdag(pdag, y)
+            if is_undirected:
+                neighbors_y = neighbors_y - {x}
+
+            neighbors_y_adj_x = {n for n in neighbors_y if pdag.is_adjacent(n, x)}
+            neighbors_y_not_adj_x = neighbors_y - neighbors_y_adj_x
+
+            for h_size in range(len(neighbors_y_adj_x) + 1):
+                for H in combinations(neighbors_y_adj_x, h_size):
+                    H = set(H)
+                    clique_set = H | neighbors_y_not_adj_x
+                    if self._is_clique(pdag, clique_set):
+                        operators.append((x, y, H))
+
+        return operators
+
+    def _apply_insert(
+        self,
+        pdag: PDAG,
+        x: Hashable,
+        y: Hashable,
+        T: set[Hashable],
+    ) -> PDAG:
+        """Apply Insert(x, y, T) operator to the PDAG.
+
+        Adds edge x -> y and orients edges from T to y.
+        Then applies Meek's rules to complete the CPDAG.
+        """
+        new_pdag = pdag.copy()
+
+        new_pdag.add_edge(x, y)
+        new_pdag.directed_edges.add((x, y))
+
+        for t in T:
+            if new_pdag.has_undirected_edge(t, y):
+                new_pdag.orient_undirected_edge(t, y, inplace=True)
+
+        new_pdag = new_pdag.apply_meeks_rules(apply_r4=True, inplace=False)
+        return new_pdag
+
+    def _apply_delete(
+        self,
+        pdag: PDAG,
+        x: Hashable,
+        y: Hashable,
+        H: set[Hashable],
+    ) -> PDAG:
+        """Apply Delete(x, y, H) operator to the PDAG.
+
+        Removes edge x - y (or x -> y) and orients edges from H to y.
+        Then applies Meek's rules to complete the CPDAG.
+        """
+        new_pdag = pdag.copy()
+
+        if pdag.has_undirected_edge(x, y):
+            new_pdag.undirected_edges.discard((x, y))
+            new_pdag.undirected_edges.discard((y, x))
+            new_pdag.remove_edge(x, y)
+            new_pdag.remove_edge(y, x)
+        else:
+            new_pdag.directed_edges.discard((x, y))
+            new_pdag.remove_edge(x, y)
+
+        for h in H:
+            if new_pdag.has_undirected_edge(h, y):
+                new_pdag.orient_undirected_edge(h, y, inplace=True)
+
+        new_pdag = new_pdag.apply_meeks_rules(apply_r4=True, inplace=False)
+        return new_pdag
+
+    def _compute_insert_delta(
+        self,
+        pdag: PDAG,
+        x: Hashable,
+        y: Hashable,
+        T: set[Hashable],
+        score_fn,
+    ) -> float:
+        """Compute the score delta for Insert(x, y, T).
+
+        For decomposable scores, the score change only depends on the
+        local score at y. The new parents of y will be the old parents
+        plus x and T.
+        """
+        neighbors_y_adj_x = {
+            n for n in self._neighbors_of_in_pdag(pdag, y) if pdag.is_adjacent(n, x)
+        }
+        old_parents = pdag.directed_parents(y) | neighbors_y_adj_x
+        new_parents = old_parents | {x} | T
+
+        old_score = score_fn(y, list(old_parents))
+        new_score = score_fn(y, list(new_parents))
+
+        return new_score - old_score
+
+    def _compute_delete_delta(
+        self,
+        pdag: PDAG,
+        x: Hashable,
+        y: Hashable,
+        H: set[Hashable],
+        score_fn,
+    ) -> float:
+        """Compute the score delta for Delete(x, y, H).
+
+        For decomposable scores, the score change only depends on the
+        local score at y.
+        """
+        neighbors_y = self._neighbors_of_in_pdag(pdag, y)
+        if pdag.has_undirected_edge(x, y):
+            neighbors_y = neighbors_y - {x}
+
+        neighbors_y_not_adj_x = {n for n in neighbors_y if not pdag.is_adjacent(n, x)}
+
+        old_parents = pdag.directed_parents(y) | neighbors_y_not_adj_x | H
+        if pdag.has_directed_edge(x, y):
+            old_parents = old_parents | {x}
+
+        new_parents = old_parents - {x}
+
+        old_score = score_fn(y, list(old_parents))
+        new_score = score_fn(y, list(new_parents))
+
+        return new_score - old_score
 
     def estimate(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        scoring_method: str | StructureScore | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         min_improvement: float = 1e-6,
         debug: bool = False,
     ) -> PDAG:
-        """
-        Estimates the DAG from the data.
+        """Estimates the equivalence class (CPDAG) from the data using GES.
 
         Parameters
         ----------
         scoring_method: str or StructureScore instance
-            The score to be optimized during structure estimation.  Supported
+            The score to be optimized during structure estimation. Supported
             structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
-            ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
-            be an instance of `StructureScore`.
+            ll-cg, aic-cg, bic-cg.
 
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance (default: None)
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            allows specification of required and forbidden edges, as well as temporal
-            order of nodes.
+            Expert knowledge to be used with the algorithm.
 
         min_improvement: float
-            The operation (edge addition, removal, or flipping) would only be performed if the
-            model score improves by atleast `min_improvement`.
+            Minimum score improvement required to apply an operator.
+
+        debug: bool
+            If True, prints debug information during search.
 
         Returns
         -------
-        Estimated model: pgmpy.base.DAG
-            A `DAG` at a (local) score maximum.
+        Estimated model: pgmpy.base.PDAG
+            A CPDAG representing the learned equivalence class.
 
         Examples
         --------
         >>> import numpy as np
-        >>> # Simulate some sample data from a known model to learn the model structure from
         >>> from pgmpy.utils import get_example_model
         >>> np.random.seed(42)
         >>> model = get_example_model("alarm")
         >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 
-        >>> # Learn the model structure using GES algorithm from `df`
         >>> from pgmpy.estimators import GES
         >>> est = GES(df)
-        >>> dag = est.estimate(scoring_method="bic-d")
-        >>> len(dag.nodes())
+        >>> cpdag = est.estimate(scoring_method="bic-d")
+        >>> len(cpdag.nodes())
         37
-        >>> len(dag.edges())
-        48
-        """
 
-        # Step 0: Initial checks and setup for arguments
+        """
         score_c: ScoreCache
         _, score_c = get_scoring_method(scoring_method, self.data, self.use_cache)
         score_fn = score_c.local_score
 
-        # Step 1: Initialize an empty model.
-        current_model = DAG()
-        current_model.add_nodes_from(list(self.data.columns))
+        current_pdag = PDAG()
+        current_pdag.add_nodes_from(list(self.data.columns))
+
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
 
-        expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, only_edges=False
-        )
-
-        # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
-            potential_edges = self._legal_edge_additions(
-                current_model, expert_knowledge
-            )
-            score_deltas = np.zeros(len(potential_edges))
-            for index, (u, v) in enumerate(potential_edges):
-                current_parents = current_model.get_parents(v)
-                score_delta = score_fn(v, current_parents + [u]) - score_fn(
-                    v, current_parents
-                )
-                score_deltas[index] = score_delta
+            operators = self._valid_insert_operators(current_pdag, expert_knowledge)
 
-            if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
+            if not operators:
                 break
 
-            edge_to_add = potential_edges[np.argmax(score_deltas)]
-            current_model.add_edge(edge_to_add[0], edge_to_add[1])
-            if debug:
-                logger.info(
-                    f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}"
-                )
+            best_delta = -np.inf
+            best_op = None
 
-        # Step 3: Backward Step: Iteratively remove edges till score stops improving.
-        while True:
-            potential_removals = self._legal_edge_removals(
-                current_model, expert_knowledge
-            )
-            score_deltas = np.zeros(len(potential_removals))
+            for x, y, T in operators:
+                delta = self._compute_insert_delta(current_pdag, x, y, T, score_fn)
+                if delta > best_delta:
+                    best_delta = delta
+                    best_op = (x, y, T)
 
-            for index, (u, v) in enumerate(potential_removals):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(
-                    v, [node for node in current_parents if node != u]
-                ) - score_fn(v, current_parents)
-            if (len(potential_removals) == 0) or (
-                np.all(score_deltas < min_improvement)
-            ):
+            if best_delta < min_improvement:
                 break
-            edge_to_remove = potential_removals[np.argmax(score_deltas)]
-            current_model.remove_edge(edge_to_remove[0], edge_to_remove[1])
+
+            x, y, T = best_op
+            current_pdag = self._apply_insert(current_pdag, x, y, T)
+
             if debug:
                 logger.info(
-                    f"Removing edge {edge_to_remove[0]} -> {edge_to_remove[1]}. Improves score by: {score_deltas.max()}"
+                    f"Insert({x}, {y}, {T}). Score improvement: {best_delta:.4f}"
                 )
 
-        # Step 4: Flip Edges: Iteratively try to flip edges till score stops improving.
         while True:
-            potential_flips = self._legal_edge_flips(current_model, expert_knowledge)
-            score_deltas = np.zeros(len(potential_flips))
-            for index, (u, v) in enumerate(potential_flips):
-                v_parents = current_model.get_parents(v)
-                u_parents = current_model.get_parents(u)
-                score_deltas[index] = (
-                    score_fn(v, v_parents + [u]) - score_fn(v, v_parents)
-                ) + (
-                    score_fn(u, [node for node in u_parents if node != v])
-                    - score_fn(u, u_parents)
-                )
+            operators = self._valid_delete_operators(current_pdag, expert_knowledge)
 
-            if (len(potential_flips) == 0) or (np.all(score_deltas < min_improvement)):
+            if not operators:
                 break
-            edge_to_flip = potential_flips[np.argmax(score_deltas)]
-            current_model.remove_edge(edge_to_flip[1], edge_to_flip[0])
-            current_model.add_edge(edge_to_flip[0], edge_to_flip[1])
+
+            best_delta = -np.inf
+            best_op = None
+
+            for x, y, H in operators:
+                delta = self._compute_delete_delta(current_pdag, x, y, H, score_fn)
+                if delta > best_delta:
+                    best_delta = delta
+                    best_op = (x, y, H)
+
+            if best_delta < min_improvement:
+                break
+
+            x, y, H = best_op
+            current_pdag = self._apply_delete(current_pdag, x, y, H)
+
             if debug:
                 logger.info(
-                    f"Fliping edge {edge_to_flip[1]} -> {edge_to_flip[0]}. Improves score by: {score_deltas.max()}"
+                    f"Delete({x}, {y}, {H}). Score improvement: {best_delta:.4f}"
                 )
 
-        # Step 5: Return the model.
-        return current_model
+        return current_pdag
