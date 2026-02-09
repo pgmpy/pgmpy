@@ -49,6 +49,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
+    logger.warning(
+        "Deprecation Warning: `get_example_model` is deprecated and will be removed in a future release. "
+        "Please use `pgmpy.example_models.load_model` instead."
+    )
     cat_models = {
         "asia",
         "cancer",
