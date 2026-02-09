@@ -13,41 +13,55 @@
     "projects": [{
      "guid": "pgmpy",
      "name": "pgmpy",
-     "description": "Python package for learning (Structure and Parameter), inference (Probabilistic and Causal), and simulations in Bayesian Networks.",
+     "description": "Python package for Causal AI.",
      "webpageUrl": {
-         "url": "https://github.com/pgmpy/pgmpy"
+         "url": "https://github.com/pgmpy/"
      },
      "repositoryUrl": {
-         "url": "https://github.com/pgmpy/pgmpy"
+         "url": "https://github.com/pgmpy/"
      },
      "licenses": ["spdx:MIT"],
      "tags": ["data-science", "machine-learning", "statistics", "bayesian-networks", "python"]
     }],
 
     "funding": {
-        "channels": [{
+        "channels": [
+			{
             "guid": "github",
             "type": "other",
             "address": "https://github.com/sponsors/pgmpy",
             "description": "Github Sponsor"
-        },
-	{
-        "guid": "bank",
-        "type": "bank",
-        "address": "IBAN: DE 0863 0910 1006 0167 4006 (Address: Talstraße 14, 89584 Ehingen, Germany)",
-        "description": "BIC: GENODES1EHI. Please include \"pgmpy\" in the purpose."
-        }
-	],
+        	},
+			{
+        	"guid": "bank",
+        	"type": "bank",
+        	"address": "IBAN: DE 0863 0910 1006 0167 4006 (Address: Talstraße 14, 89584 Ehingen, Germany)",
+        	"description": "BIC: GENODES1EHI. Please include \"pgmpy\" in the purpose."
+        	}
+		],
 
-        "plans": [{
-            "guid": "dev-part",
-            "status": "active",
-            "name": "Part-time Developer",
-            "description": "Support towards covering the cost of maintainers working part-time on the project.",
-            "amount": 25000,
-            "currency": "USD",
-            "frequency": "yearly",
-            "channels": ["github", "bank"]
-        }]
+        "plans": [
+			{
+            	"guid": "dev-part",
+            	"status": "active",
+            	"name": "Part-time Developer",
+            	"description": "Support towards covering the cost of maintainers working part-time on the project.",
+            	"amount": 25000,
+            	"currency": "USD",
+            	"frequency": "yearly",
+            	"channels": ["github", "bank"]
+        	}
+		],
+
+		"history": [
+			{
+				"year": 2025,
+            	"income": 10000,
+            	"expenses": 0,
+            	"taxes": 0,
+            	"currency": "USD",
+            	"description": "Funded by FLOSS/fund."
+			}
+		]
     }
 }

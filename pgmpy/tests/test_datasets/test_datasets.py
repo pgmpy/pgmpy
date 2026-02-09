@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
@@ -55,10 +54,6 @@ ALL_DATASETS = [
 ]
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_list_datasets():
     found_datasets = list_datasets()
     for dataset in ALL_DATASETS:
@@ -73,10 +68,6 @@ def test_list_datasets():
     assert "abalone_mixed" not in cont_names
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_load_dataset():
     for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)
@@ -102,10 +93,6 @@ def test_load_dataset():
             assert dataset.data.isna().any().any()
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_load_covariance_dataset():
     for name in ["goldberg", "spartina", "lead", "cities"]:
         dataset = load_dataset(name)
@@ -118,10 +105,6 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("requests", severity="none"),
-    reason="test only if requests is installed",
-)
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
