@@ -28,31 +28,31 @@ List datasets
 
 .. code-block:: python
 
-   from pgmpy.datasets import list_datasets
+    from pgmpy.datasets import list_datasets
 
-   # List all available datasets.
-   all_datasets = list_datasets()
+    # List all available datasets.
+    all_datasets = list_datasets()
 
-   # Filter by dataset tags.
-   continuous_datasets = list_datasets(is_continuous=True)
-   datasets_with_ground_truth = list_datasets(has_ground_truth=True)
+    # Filter by dataset tags.
+    continuous_datasets = list_datasets(is_continuous=True)
+    datasets_with_ground_truth = list_datasets(has_ground_truth=True)
 
 Load a dataset
 """"""""""""""
 
 .. code-block:: python
 
-   from pgmpy.datasets import load_dataset
+    from pgmpy.datasets import load_dataset
 
-   dataset = load_dataset("sachs_mixed")
+    dataset = load_dataset("sachs_mixed")
 
-   # Access the dataframe and metadata.
-   data = dataset.data
-   tags = dataset.tags
+    # Access the dataframe and metadata.
+    data = dataset.data
+    tags = dataset.tags
 
-   # Optional metadata, depending on dataset tags.
-   expert_knowledge = dataset.expert_knowledge
-   ground_truth = dataset.ground_truth
+    # Optional metadata, depending on dataset tags.
+    expert_knowledge = dataset.expert_knowledge
+    ground_truth = dataset.ground_truth
 
 Supported Datasets
 ------------------

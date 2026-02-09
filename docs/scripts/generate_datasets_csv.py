@@ -9,7 +9,6 @@ import ast
 import csv
 from pathlib import Path
 
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DATASETS_DIR = ROOT_DIR / "pgmpy" / "datasets"
 OUTPUT_CSV = ROOT_DIR / "docs" / "datasets.csv"
@@ -94,9 +93,7 @@ def generate_rows() -> list[dict]:
         if file_path.name.startswith("_"):
             continue
 
-        tree = ast.parse(
-            file_path.read_text(encoding="utf-8"), filename=str(file_path)
-        )
+        tree = ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
 
         for node in tree.body:
             if not isinstance(node, ast.ClassDef):
@@ -125,9 +122,7 @@ def main() -> None:
     fieldnames = [column_name for _, column_name in CSV_COLUMNS]
 
     with OUTPUT_CSV.open("w", encoding="utf-8", newline="") as file_obj:
-        writer = csv.DictWriter(
-            file_obj, fieldnames=fieldnames, lineterminator="\n"
-        )
+        writer = csv.DictWriter(file_obj, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
