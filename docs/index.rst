@@ -41,6 +41,7 @@
 
    started/base.rst
    examples.rst
+   example_models.rst
    models/base.rst
    factors/base.rst
    infer/base.rst
@@ -119,6 +120,8 @@ Examples
 ========
 
 **Example notebooks:** :doc:`examples`
+
+**Example models:** :doc:`example_models`
 
 **Tutorial notebooks:** :doc:`tutorial`
 
