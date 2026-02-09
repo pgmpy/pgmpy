@@ -41,6 +41,7 @@
 
    started/base.rst
    examples.rst
+   datasets.rst
    models/base.rst
    factors/base.rst
    infer/base.rst
