@@ -27,30 +27,30 @@ List models
 
 .. code-block:: python
 
-   from pgmpy.example_models import list_models
+    from pgmpy.example_models import list_models
 
-   # List all available example models.
-   all_models = list_models()
+    # List all available example models.
+    all_models = list_models()
 
-   # Filter by model tags.
-   discrete_models = list_models(is_discrete=True)
-   dag_only_models = list_models(is_parameterized=False)
+    # Filter by model tags.
+    discrete_models = list_models(is_discrete=True)
+    dag_only_models = list_models(is_parameterized=False)
 
 Load models
 """""""""""
 
 .. code-block:: python
 
-   from pgmpy.example_models import load_model
+    from pgmpy.example_models import load_model
 
-   # Load a parameterized discrete Bayesian network.
-   alarm = load_model("alarm")
+    # Load a parameterized discrete Bayesian network.
+    alarm = load_model("alarm")
 
-   # Load a DAG without parameters.
-   confounding = load_model("confounding")
+    # Load a DAG without parameters.
+    confounding = load_model("confounding")
 
-   # Load a parameterized continuous Bayesian network.
-   arth150 = load_model("arth150")
+    # Load a parameterized continuous Bayesian network.
+    arth150 = load_model("arth150")
 
 API Reference
 -------------
