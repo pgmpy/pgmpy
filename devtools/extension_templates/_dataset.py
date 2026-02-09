@@ -36,8 +36,15 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
+    # Mandatory: base_url must be set to a non-empty string (used for caching).
+    # Dataset loading will raise ValueError otherwise.
+    # TODO: Set the base URL for this dataset. Example:
+    #   base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/your_dataset/"
+    # Then set data_url (and optionally ground_truth_url, expert_knowledge_url) as base_url + "path/..." or full URLs.
+    base_url = None
+
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
-    # row containing the names of the columns.
+    # row containing the names of the columns. Can be base_url + "data/..." if you set base_url above.
     data_url = None
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.

@@ -4,6 +4,7 @@ import pytest
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -108,3 +109,11 @@ def test_load_covariance_dataset():
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
+
+
+def test_missing_base_url_raises_error():
+    class MissingBaseURLDataset(_BaseDataset):
+        _tags = {"name": "missing_base_url"}
+
+    with pytest.raises(ValueError, match="base_url must be set"):
+        MissingBaseURLDataset._get_raw_data("data", "https://example.com/test.tsv")
