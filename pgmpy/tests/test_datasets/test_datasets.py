@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "car-evaluation",
     "cities",
     "college_plans",
     "contraceptive_method",
@@ -25,6 +26,7 @@ ALL_DATASETS = [
     "depression_coping",
     "dropouts",
     "dry_bean",
+    "feedback",
     "galton_stature",
     "goldberg",
     "hitters",
@@ -51,8 +53,6 @@ ALL_DATASETS = [
     "wine_quality_red_white_mixed",
     "wine_quality_white",
     "yacht_hydrodynamics",
-    "car_evaluation",
-    "feedback",
 ]
 
 
