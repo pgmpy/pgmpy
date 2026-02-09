@@ -17,6 +17,7 @@ class BostonHousing(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -25,7 +26,7 @@ class BostonHousing(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/boston-housing/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/boston-housing/"
 
     data_url = base_url + "data/boston-housing.continuous.txt"
     ground_truth_url = None
