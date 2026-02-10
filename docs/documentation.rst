@@ -1,9 +1,11 @@
+:hide-toc:
+
 Documentation
 =============
 
 Detailed guides for each class of methods provided by pgmpy.
 
-.. grid:: 2
+.. grid:: 3
    :gutter: 3
 
    .. grid-item-card:: Causal Discovery and Structure Learning
