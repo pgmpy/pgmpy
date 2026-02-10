@@ -35,6 +35,36 @@
 }
 
 
+/* --- Header: show site name since logo is removed --- */
+.md-header__topic .md-ellipsis {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* --- Hero Section (logo + text side by side) --- */
+.hero-grid {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    margin: 1.5rem 0 2rem;
+}
+.hero-logo {
+    flex: 0 0 240px;
+}
+.hero-logo img {
+    width: 240px;
+    height: 240px;
+}
+.hero-text h1 {
+    margin: 0 0 0.25rem;
+    font-size: 2rem;
+}
+.hero-subtitle {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    color: var(--md-default-fg-color--light);
+}
+
 /* --- Header Tabs --- */
 .md-tabs {
     border-bottom: 1px solid var(--md-default-fg-color--lightest);
