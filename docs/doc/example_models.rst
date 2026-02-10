@@ -118,3 +118,9 @@ Gaussian Bayesian Networks
 
 Conditional Linear Gaussian Networks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See Also
+--------
+
+- **Previous:** :doc:`datasets` -- built-in datasets for testing
+- **Next:** :doc:`io` -- import and export models in various formats

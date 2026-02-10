@@ -10,6 +10,9 @@ This documentation targets data scientists and engineers who want practical work
 Bayesian Networks and causal graphs.
 
 Key pages
+/started/quickstart - task-oriented code examples to get started
+/examples - Jupyter notebook examples organized by topic
+/tutorial - in-depth tutorial notebooks (PGM basics to applications)
 /documentation - documentation landing page
 /doc/causal_discovery - structure learning and causal discovery
 /doc/parameter_estimation - estimating CPDs for known structures

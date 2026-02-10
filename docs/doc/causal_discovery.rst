@@ -108,3 +108,11 @@ Algorithms
    * - Expert In The Loop
      - Interactive
      - :class:`pgmpy.estimators.expert.ExpertInLoop`
+
+See Also
+--------
+
+- **Examples:** :doc:`Structure Learning <../examples/Structure_Learning>` | :doc:`Chow-Liu Tree <../examples/Structure_Learning_Chow_Liu>` | :doc:`TAN <../examples/Structure_Learning_TAN>` | :doc:`Expert Knowledge <../examples/Expert_Knowledge>`
+- **API Reference:** :doc:`Causal Discovery API <../structure_estimator/base>`
+- **Previous:** :doc:`custom_model` -- define a model from scratch
+- **Next:** :doc:`parameter_estimation` -- estimate CPDs for the learned structure

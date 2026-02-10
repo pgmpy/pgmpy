@@ -61,3 +61,11 @@ Algorithms
      - :class:`pgmpy.estimators.SEMEstimator.SEMEstimator`
    * - IV Estimator
      - :class:`pgmpy.estimators.SEMEstimator.IVEstimator`
+
+See Also
+--------
+
+- **Examples:** :doc:`Discrete BN Parameters <../examples/Parameter_Learning_Discrete_BN>` | :doc:`Factor Graph Parameters <../examples/Parameter_Learning_Factor_Graphs>`
+- **API Reference:** :doc:`Parameter Estimation API <../param_estimator/base>`
+- **Previous:** :doc:`causal_discovery` -- learn graph structure from data
+- **Next:** :doc:`probabilistic_inference` -- query the fitted model

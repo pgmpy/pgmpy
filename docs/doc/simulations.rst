@@ -41,3 +41,10 @@ Algorithms
      - :class:`pgmpy.sampling.Sampling.BayesianModelSampling`
    * - Gibbs Sampling
      - :class:`pgmpy.sampling.Sampling.GibbsSampling`
+
+See Also
+--------
+
+- **Examples:** :doc:`Simulating Data <../examples/Simulating_Data>`
+- **Previous:** :doc:`metrics` -- evaluate model quality
+- **Next:** :doc:`datasets` -- built-in datasets for testing

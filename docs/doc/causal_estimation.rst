@@ -77,3 +77,11 @@ heterogeneous treatment effect estimation.
      - :class:`pgmpy.prediction.NaiveIVRegressor.NaiveIVRegressor`
    * - Double ML Regressor
      - :class:`pgmpy.prediction.DoubleMLRegressor.DoubleMLRegressor`
+
+See Also
+--------
+
+- **Examples:** :doc:`Causal Inference <../examples/Causal_Inference>` | :doc:`Causal Games <../examples/Causal_Games>`
+- **API Reference:** :doc:`Causal Inference API <../causal_infer/base>`
+- **Previous:** :doc:`causal_identification` -- check identifiability
+- **Next:** :doc:`metrics` -- evaluate the learned model

@@ -42,3 +42,11 @@ Algorithms
      - :class:`pgmpy.identification.adjustment.Adjustment`
    * - Frontdoor
      - :class:`pgmpy.identification.frontdoor.Frontdoor`
+
+See Also
+--------
+
+- **Examples:** :doc:`Causal Inference <../examples/Causal_Inference>`
+- **API Reference:** :doc:`Causal Inference API <../causal_infer/base>`
+- **Previous:** :doc:`probabilistic_inference` -- query posterior probabilities
+- **Next:** :doc:`causal_estimation` -- estimate causal effects from data

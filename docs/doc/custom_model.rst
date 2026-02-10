@@ -91,3 +91,10 @@ Factor / CPD Types
      - :class:`~pgmpy.factors.continuous.LinearGaussianCPD.LinearGaussianCPD`
    * - FunctionalCPD
      - :class:`~pgmpy.factors.hybrid.FunctionalCPD.FunctionalCPD`
+
+See Also
+--------
+
+- **Examples:** :doc:`Creating a Discrete BN <../examples/Creating_Discrete_BN>` | :doc:`Creating a Linear BN <../examples/Creating_Linear_BN>` | :doc:`Dynamic BN <../examples/Dynamic_BN>` | :doc:`Defining CPDs <../examples/Defining_CPDs>`
+- **API Reference:** :doc:`Models <../models/base>` | :doc:`Factors <../factors/base>`
+- **Next:** :doc:`causal_discovery` -- learn graph structure from data

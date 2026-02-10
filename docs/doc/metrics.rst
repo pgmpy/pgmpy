@@ -68,3 +68,10 @@ Algorithms
    * - Fisher C
      - Unsupervised
      - :class:`pgmpy.metrics.FisherC`
+
+See Also
+--------
+
+- **API Reference:** :doc:`Metrics API <../metrics/metrics>`
+- **Previous:** :doc:`causal_estimation` -- estimate causal effects
+- **Next:** :doc:`simulations` -- generate synthetic data from a model

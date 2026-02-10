@@ -122,3 +122,9 @@ Available Datasets
    * - contraceptive_method
      - Mixed
      - Contraceptive method choice dataset
+
+See Also
+--------
+
+- **Previous:** :doc:`simulations` -- generate synthetic data from a model
+- **Next:** :doc:`example_models` -- pre-built Bayesian Networks for benchmarking

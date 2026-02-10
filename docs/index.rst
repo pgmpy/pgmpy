@@ -52,7 +52,7 @@ Key Features
       and frontdoor adjustment.
 
    .. grid-item-card:: Causal Identification
-      :link: causal_infer/base
+      :link: doc/causal_identification
       :link-type: doc
       :class-card: sd-card-hover
 
@@ -83,4 +83,4 @@ Workflow
    Examples <examples>
    API Reference <api>
    Citation <citation>
-   Getting Involved <contributing>
+   Getting Involved <development>

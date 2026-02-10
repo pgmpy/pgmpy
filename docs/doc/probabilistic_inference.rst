@@ -79,3 +79,11 @@ methods scale better to large networks where exact inference is intractable.
      - :class:`pgmpy.sampling.Sampling.BayesianModelSampling`
    * - Gibbs Sampling
      - :class:`pgmpy.sampling.Sampling.GibbsSampling`
+
+See Also
+--------
+
+- **Examples:** :doc:`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | :doc:`Monty Hall <../examples/Monty_Hall>` | :doc:`Junction Tree Inference <../examples/Junction_Tree_Inference>`
+- **API Reference:** :doc:`Inference API <../infer/base>`
+- **Previous:** :doc:`parameter_estimation` -- estimate model parameters
+- **Next:** :doc:`causal_identification` -- check whether a causal effect is identifiable
