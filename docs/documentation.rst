@@ -64,6 +64,13 @@ Detailed guides for each class of methods provided by pgmpy.
 
       Pre-built Bayesian Networks from standard repositories.
 
+   .. grid-item-card:: Simulations
+      :link: doc/simulations
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Generate synthetic data from Bayesian Networks.
+
    .. grid-item-card:: Exporting / Importing Models
       :link: doc/io
       :link-type: doc
@@ -89,5 +96,6 @@ Detailed guides for each class of methods provided by pgmpy.
    doc/metrics
    doc/datasets
    doc/example_models
+   doc/simulations
    doc/io
    doc/custom_model

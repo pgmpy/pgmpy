@@ -20,11 +20,13 @@ Example
     from pgmpy.models import DiscreteBayesianNetwork
 
     data = load_dataset("sachs_discrete")
-    dag = DiscreteBayesianNetwork([
-        ("PKA", "ERK"),
-        ("ERK", "Akt"),
-        ("PKA", "Akt"),
-    ])
+    dag = DiscreteBayesianNetwork(
+        [
+            ("PKA", "ERK"),
+            ("ERK", "Akt"),
+            ("PKA", "Akt"),
+        ]
+    )
     ci = CausalInference(dag)
     ate = ci.estimate_ate("PKA", "Akt", data)
     print(ate)
