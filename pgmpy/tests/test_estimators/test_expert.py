@@ -1,10 +1,10 @@
-import os
 import unittest
 
 import networkx as nx
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.base import DAG
 from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
 
 
@@ -277,3 +277,192 @@ class TestExpertInLoop(unittest.TestCase):
         # Check that specified orientations take precedence
         if ("Income", "Education") in dag.edges():
             assert ("Education", "Income") not in dag.edges()
+
+
+class TestFakeCI(unittest.TestCase):
+    def setUp(self):
+        self.data = pd.DataFrame(
+            {
+                "A": [1, 2, 3, 4, 5],
+                "B": [2, 3, 4, 5, 6],
+                "C": [3, 4, 5, 6, 7],
+                "D": [4, 5, 6, 7, 8],
+            }
+        )
+        self.estimator = ExpertInLoop(data=self.data)
+
+    def _make_weak_ci(self):
+        """Return a mock CI test that always reports a weak (non-significant) edge."""
+
+        def ci_test(X, Y, Z, data, boolean):
+            return (0.01, 0.9)  # low effect, high p-value
+
+        return ci_test
+
+    def _make_strong_ci(self):
+        """Return a mock CI test that always reports a strong (significant) edge."""
+
+        def ci_test(X, Y, Z, data, boolean):
+            return (0.5, 0.001)  # high effect, low p-value
+
+        return ci_test
+
+    def test_all_weak_edges_removed(self):
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+
+        result = self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=self._make_weak_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertTrue(len(result) > 0)
+        for edge in result:
+            self.assertIn(edge, [("A", "B"), ("B", "C")])
+
+    def test_all_strong_edges_kept(self):
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+
+        result = self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=self._make_strong_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertEqual(result, [])
+
+    def test_selective_removal(self):
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+
+        def mock_ci_test(X, Y, Z, data, boolean):
+            # A->B is weak, everything else is strong
+            if set([X, Y]) == {"A", "B"}:
+                return (0.01, 0.9)
+            return (0.5, 0.001)
+
+        result = self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=mock_ci_test,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertNotIn(("B", "C"), result)
+        self.assertNotIn(("C", "A"), result)
+
+    def test_new_edge_never_in_result(self):
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+
+        result = self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=self._make_weak_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertNotIn(("C", "A"), result)
+
+    def test_original_dag_not_modified(self):
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+        original_edges = set(dag.edges())
+        original_nodes = set(dag.nodes())
+
+        self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=self._make_weak_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertEqual(set(dag.edges()), original_edges)
+        self.assertEqual(set(dag.nodes()), original_nodes)
+
+    def test_longer_cycle(self):
+        """Test with a 4-node cycle: A -> B -> C -> D, adding D -> A."""
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C", "D"])
+        dag.add_edges_from([("A", "B"), ("B", "C"), ("C", "D")])
+
+        result = self.estimator._break_cycle(
+            dag,
+            "D",
+            "A",
+            ci_test=self._make_weak_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertTrue(len(result) > 0)
+        for edge in result:
+            self.assertIn(edge, [("A", "B"), ("B", "C"), ("C", "D")])
+        self.assertNotIn(("D", "A"), result)
+
+    def test_multiple_cycles(self):
+        """A -> B -> D and A -> C -> D; adding D -> A creates two cycles."""
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C", "D"])
+        dag.add_edges_from([("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")])
+
+        result = self.estimator._break_cycle(
+            dag,
+            "D",
+            "A",
+            ci_test=self._make_weak_ci(),
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertTrue(len(result) > 0)
+        self.assertNotIn(("D", "A"), result)
+        existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
+        for edge in result:
+            self.assertIn(edge, existing_edges)
+
+    def test_conditioning_set(self):
+        """The CI test must be called with Z = cycle_nodes - {X, Y}."""
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C"])
+        dag.add_edges_from([("A", "B"), ("B", "C")])
+
+        calls = []
+
+        def recording_ci_test(X, Y, Z, data, boolean):
+            calls.append((X, Y, set(Z)))
+            return (0.5, 0.001)  # strong – keeps all edges
+
+        self.estimator._break_cycle(
+            dag,
+            "C",
+            "A",
+            ci_test=recording_ci_test,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        self.assertTrue(len(calls) > 0)
+        for X, Y, Z in calls:
+            self.assertNotIn(X, Z)
+            self.assertNotIn(Y, Z)
+            self.assertTrue(Z.issubset({"A", "B", "C"}))

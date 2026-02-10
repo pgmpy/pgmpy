@@ -4,8 +4,7 @@
 # 1. Copy this file to `pgmpy/datasets` and rename the file as `your_dataset_name.py` (e.g., `my_dataset.py`).
 #    Note: Do NOT start the filename with an underscore `_`, otherwise it won't be discovered.
 # 2. Go through the file and address all the TODOs.
-# 3. Add an import statement in the `pgmpy/datasets/__init__.py` file (e.g. `from .my_dataset import MyDataset`).
-# 4. If you would like to contribute the dataset to pgmpy, please add the dataset name to ALL_DATASETS in
+# 3. If you would like to contribute the dataset to pgmpy, please add the dataset name to ALL_DATASETS in
 #   `pgmpy/tests/test_datasets/test_datasets.py` file.
 
 import pandas
@@ -28,6 +27,7 @@ class YourDatasetClass(_BaseDataset):
         "has_ground_truth": bool,
         "has_expert_knowledge": bool,
         "has_missing_data": bool,
+        "has_index_col": bool,
         "is_simulated": bool,
         "is_interventional": bool,
         "is_discrete": bool,
