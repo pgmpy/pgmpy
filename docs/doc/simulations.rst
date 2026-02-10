@@ -1,6 +1,9 @@
 Simulations
 ===========
 
+.. meta::
+   :description: Generate synthetic data by sampling from Bayesian Networks.
+
 Simulation generates synthetic data by sampling from a Bayesian Network.
 
 Given a DAG with CPDs, the joint distribution factorizes as

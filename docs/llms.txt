@@ -1,0 +1,23 @@
+pgmpy documentation
+
+Summary
+pgmpy is a Python library for causal inference and probabilistic graphical models.
+These docs explain structure learning, parameter estimation, inference, causal identification/estimation,
+metrics, datasets, and simulation.
+
+Key pages
+/documentation - documentation landing page
+/doc/causal_discovery - structure learning and causal discovery
+/doc/parameter_estimation - estimating CPDs for known structures
+/doc/probabilistic_inference - exact and approximate inference
+/doc/causal_identification - backdoor/frontdoor identification
+/doc/causal_estimation - estimating causal effects
+/doc/metrics - evaluation metrics
+/doc/datasets - built-in datasets
+/doc/example_models - pre-built Bayesian Networks
+/doc/simulations - sampling and synthetic data
+/doc/io - import/export formats
+/doc/custom_model - defining models and CPDs
+
+Sitemap
+/sitemap.xml

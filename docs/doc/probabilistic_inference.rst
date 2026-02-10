@@ -1,6 +1,9 @@
 Probabilistic Inference
 =======================
 
+.. meta::
+   :description: Compute posterior probabilities with exact or approximate inference algorithms.
+
 Probabilistic inference computes the probability of variables of interest
 given observed evidence.
 

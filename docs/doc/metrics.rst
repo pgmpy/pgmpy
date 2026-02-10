@@ -1,6 +1,9 @@
 Metrics
 =======
 
+.. meta::
+   :description: Evaluate learned graphs and models with supervised and unsupervised metrics in pgmpy.
+
 Metrics help quantify how good a learned model is, either by comparing it to a
 known ground-truth graph or by checking how well it matches the data.
 

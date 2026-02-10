@@ -1,6 +1,9 @@
 Causal Discovery and Structure Learning
 =======================================
 
+.. meta::
+   :description: Learn causal graphs from data using constraint- and score-based structure learning in pgmpy.
+
 Causal discovery (structure learning) finds which variables influence others
 by learning a directed graph from data.
 

@@ -1,6 +1,9 @@
 Parameter Estimation
 ====================
 
+.. meta::
+   :description: Estimate CPDs for known structures using MLE, Bayesian, or EM methods.
+
 Once a model structure is known, parameter estimation fills in the numbers for
 its conditional probability distributions (CPDs).
 

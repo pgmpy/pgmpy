@@ -1,6 +1,9 @@
 Exporting / Importing Models
 ============================
 
+.. meta::
+   :description: Import and export Bayesian Networks using common file formats like BIF, UAI, XMLBIF, and XDSL.
+
 pgmpy can read and write Bayesian Networks in common file formats to make your
 models portable across tools.
 

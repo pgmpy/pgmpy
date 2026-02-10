@@ -54,7 +54,7 @@ html_title = "pgmpy"
 html_favicon = "logo_favi.ico"
 html_logo = "logo.png"
 html_static_path = ["_static"]
-html_extra_path = ["robots.txt"]
+html_extra_path = ["robots.txt", "llms.txt", "llms-full.txt"]
 
 html_theme_options = {
     "repo_url": "https://github.com/pgmpy/pgmpy",

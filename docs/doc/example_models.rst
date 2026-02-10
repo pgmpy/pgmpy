@@ -1,6 +1,9 @@
 Example Models
 ==============
 
+.. meta::
+   :description: Load pre-built Bayesian Networks for inference, simulation, and benchmarking.
+
 pgmpy provides pre-built Bayesian Networks for testing, benchmarking, and
 learning.
 

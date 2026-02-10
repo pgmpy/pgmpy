@@ -1,6 +1,9 @@
 Example Datasets
 ================
 
+.. meta::
+   :description: Browse and load built-in datasets for benchmarking and learning with pgmpy.
+
 pgmpy includes built-in datasets for testing, benchmarking, and learning.
 
 Each dataset loads into a pandas DataFrame where rows are samples and columns

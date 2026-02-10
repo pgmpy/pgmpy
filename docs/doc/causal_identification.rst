@@ -1,6 +1,9 @@
 Causal Identification
 =====================
 
+.. meta::
+   :description: Check whether a causal effect is identifiable from a causal graph using backdoor and frontdoor criteria.
+
 Causal identification checks whether a causal effect can be computed from
 observational data given a causal graph.
 

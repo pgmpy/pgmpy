@@ -1,6 +1,9 @@
 Causal Estimation
 =================
 
+.. meta::
+   :description: Estimate causal effects from data after identification using do-calculus and regression-based estimators.
+
 Causal estimation quantifies how much changing a variable changes an outcome.
 
 More precisely, it estimates causal effects such as the average treatment

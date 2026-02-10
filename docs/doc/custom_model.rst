@@ -1,6 +1,9 @@
 Defining a Custom Model
 =======================
 
+.. meta::
+   :description: Define custom graphical models and CPD types in pgmpy to build Bayesian and Markov models.
+
 pgmpy lets you define different graphical model families and their
 corresponding factor or CPD types.
 
