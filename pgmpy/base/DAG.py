@@ -1110,11 +1110,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         from pgmpy.base import PDAG
 
-        return PDAG(
+        pdag = PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def do(
         self,
