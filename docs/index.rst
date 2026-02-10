@@ -6,13 +6,22 @@
 Welcome to pgmpy
 ================
 
-*Python library for Causal AI*
+*Python Library for Causal AI*
 
 pgmpy is a Python package for causal inference and probabilistic inference
 using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
 modularity and extensibility. Implementations of various algorithms for Causal
 Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
 (Sampling Based) and Exact inference, and Causal Inference are available.
+
+.. raw:: html
+
+   <div class="badge-container">
+     <a href="https://pypi.org/project/pgmpy/"><img src="https://img.shields.io/pypi/v/pgmpy?style=flat-square&amp;color=2E8B8E" alt="PyPI version"></a>
+     <a href="https://anaconda.org/conda-forge/pgmpy"><img src="https://img.shields.io/conda/vn/conda-forge/pgmpy?style=flat-square&amp;color=2E8B8E" alt="Conda version"></a>
+     <a href="https://github.com/pgmpy/pgmpy"><img src="https://img.shields.io/github/stars/pgmpy/pgmpy?style=flat-square&amp;color=2E8B8E" alt="GitHub stars"></a>
+     <a href="http://jmlr.org/papers/v25/23-0487.html"><img src="https://img.shields.io/badge/JMLR-2024-009688?style=flat-square" alt="JMLR 2024"></a>
+   </div>
 
 Key Features
 ------------

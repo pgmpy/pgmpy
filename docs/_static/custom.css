@@ -1,0 +1,85 @@
+/* ============================================
+   pgmpy Documentation — Custom Styles
+   ============================================ */
+
+/* --- Brand Color Override (match logo) --- */
+[data-md-color-scheme="default"] {
+    --md-accent-fg-color: #2E8B8E;
+    --md-accent-fg-color--transparent: rgba(46, 139, 142, 0.1);
+}
+[data-md-color-scheme="slate"] {
+    --md-accent-fg-color: #3A9FA2;
+    --md-accent-fg-color--transparent: rgba(58, 159, 162, 0.1);
+}
+
+/* --- Version Dropdown (click only, no hover) --- */
+.md-version:hover .md-version__list {
+    max-height: 0;
+    opacity: 0;
+}
+.md-version:focus-within .md-version__list {
+    max-height: 10rem;
+    opacity: 1;
+    transition: max-height 0ms, opacity 0.25s;
+}
+
+
+/* --- Badge Container --- */
+.badge-container {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+.badge-container a {
+    margin: 0 0.25rem;
+    display: inline-block;
+}
+
+
+/* --- Header Tabs --- */
+.md-tabs {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+.md-tabs__link {
+    font-size: 0.82rem;
+    font-weight: 500;
+    opacity: 0.85;
+}
+.md-tabs__link:hover,
+.md-tabs__link:focus {
+    opacity: 1;
+}
+.md-tabs__item--active .md-tabs__link {
+    opacity: 1;
+    font-weight: 600;
+    border-bottom: 2px solid var(--md-accent-fg-color, #009688);
+}
+
+/* --- Card Improvements --- */
+.sd-card.sd-card-hover {
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    border-top: 3px solid var(--md-accent-fg-color, #009688);
+}
+
+.sd-card.sd-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    border-color: var(--md-default-fg-color--lightest) !important;
+}
+
+[data-md-color-scheme="slate"] .sd-card.sd-card-hover:hover {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* --- Code Block Improvements --- */
+.highlight {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.highlight pre {
+    border-radius: 8px;
+}
+
+/* Copy button adjustment for rounded blocks */
+.md-clipboard {
+    border-radius: 0 8px 0 0;
+}

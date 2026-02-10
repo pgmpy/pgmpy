@@ -43,7 +43,7 @@ language = "en"
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 nbsphinx_execute = "never"
-pygments_style = "default"
+pygments_style = "tango"
 todo_include_todos = True
 
 # -- Options for HTML output ----------------------------------------------
@@ -77,7 +77,7 @@ html_theme_options = {
             "media": "(prefers-color-scheme: light)",
             "scheme": "default",
             "primary": "white",
-            "accent": "indigo",
+            "accent": "teal",
             "toggle": {
                 "icon": "material/weather-night",
                 "name": "Switch to dark mode",
@@ -87,7 +87,7 @@ html_theme_options = {
             "media": "(prefers-color-scheme: dark)",
             "scheme": "slate",
             "primary": "black",
-            "accent": "indigo",
+            "accent": "teal",
             "toggle": {
                 "icon": "material/weather-sunny",
                 "name": "Switch to light mode",
@@ -102,6 +102,8 @@ html_theme_options = {
     "toc_title_is_page_title": True,
     "globaltoc_collapse": True,
 }
+
+html_css_files = ["custom.css"]
 
 html_search_language = "en"
 htmlhelp_basename = "pgmpydoc"
