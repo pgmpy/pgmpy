@@ -90,6 +90,7 @@ class ExpertKnowledge:
         required_edges=None,
         temporal_order=None,
         search_space=None,
+        orientations=None,
         **kwargs,
     ):
         self.forbidden_edges = (
@@ -110,12 +111,14 @@ class ExpertKnowledge:
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
+        self.orientations = orientations or {}
+
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(
                 f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
-        elif type(edge_list) != set:
+        elif not isinstance(edge_list, set):
             return set(edge_list)
         else:
             return edge_list

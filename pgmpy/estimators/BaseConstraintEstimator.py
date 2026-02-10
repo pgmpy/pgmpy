@@ -61,7 +61,6 @@ class BaseConstraintEstimator(StructureEstimator):
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge: Optional[ExpertKnowledge] = None,
-        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -185,11 +184,14 @@ class BaseConstraintEstimator(StructureEstimator):
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
+        if expert_knowledge and expert_knowledge.search_space:
+            graph = UndirectedGraph(expert_knowledge.search_space)
+            graph.add_nodes_from(self.variables)
+        else:
+            graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        if expert_knowledge and expert_knowledge.forbidden_edges:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
-
+        temporal_ordering = expert_knowledge.temporal_ordering
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
         while not all(
@@ -199,9 +201,7 @@ class BaseConstraintEstimator(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
+                    if (u, v) not in expert_knowledge.required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -223,9 +223,7 @@ class BaseConstraintEstimator(StructureEstimator):
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
+                    if (u, v) not in expert_knowledge.required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -264,8 +262,7 @@ class BaseConstraintEstimator(StructureEstimator):
                 results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False)
-                    or ((u, v) not in expert_knowledge.required_edges)
+                    if (u, v) not in expert_knowledge.required_edges
                 )
                 for result in results:
                     if result is not None:
