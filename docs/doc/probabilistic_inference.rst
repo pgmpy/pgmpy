@@ -1,15 +1,44 @@
 Probabilistic Inference
 =======================
 
-Probabilistic inference is the task of computing posterior probability
-distributions over variables of interest given observed evidence. For example,
-given a medical diagnosis model and observed symptoms, inference computes the
-probability distribution over possible diseases.
+Probabilistic inference computes the probability of variables of interest
+given observed evidence.
 
-pgmpy provides both exact and approximate inference algorithms.
+Formally, inference computes a posterior such as
+:math:`P(X \mid e) = \frac{P(X, e)}{P(e)}`, often by summing out hidden
+variables or using sampling to approximate the result.
+
+Example
+-------
+
+.. code-block:: python
+
+    from pgmpy.inference import VariableElimination
+    from pgmpy.utils import get_example_model
+
+    model = get_example_model("alarm")
+    infer = VariableElimination(model)
+    variable = list(model.nodes())[0]
+    query = infer.query(variables=[variable])
+    print(query)
+
+When to use which
+-----------------
+
+- **Variable Elimination** -- General-purpose exact inference. Good default for
+  small to medium networks.
+- **Belief Propagation** -- Efficient for tree-structured networks or when
+  multiple queries share computation.
+- **MPLP** -- MAP (most probable explanation) inference via linear programming
+  relaxation.
+- **Approximate / Gibbs** -- Use when the network is too large for exact
+  inference or when approximate answers are acceptable.
+
+Algorithms
+----------
 
 Exact Inference
----------------
+^^^^^^^^^^^^^^^
 
 Exact inference computes the true posterior distribution. These methods are
 suitable for small to moderately sized networks.
@@ -30,7 +59,7 @@ suitable for small to moderately sized networks.
      - :class:`pgmpy.inference.dbn_inference.DBNInference`
 
 Approximate Inference
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Approximate inference uses sampling to estimate posterior distributions. These
 methods scale better to large networks where exact inference is intractable.
@@ -47,15 +76,3 @@ methods scale better to large networks where exact inference is intractable.
      - :class:`pgmpy.sampling.Sampling.BayesianModelSampling`
    * - Gibbs Sampling
      - :class:`pgmpy.sampling.Sampling.GibbsSampling`
-
-When to use which
------------------
-
-- **Variable Elimination** -- General-purpose exact inference. Good default for
-  small to medium networks.
-- **Belief Propagation** -- Efficient for tree-structured networks or when
-  multiple queries share computation.
-- **MPLP** -- MAP (most probable explanation) inference via linear programming
-  relaxation.
-- **Approximate / Gibbs** -- Use when the network is too large for exact
-  inference or when approximate answers are acceptable.

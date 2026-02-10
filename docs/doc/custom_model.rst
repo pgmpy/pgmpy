@@ -1,8 +1,29 @@
 Defining a Custom Model
 =======================
 
-pgmpy supports several types of graphical models. Each model type pairs with
-specific factor (CPD) types to define the joint probability distribution.
+pgmpy lets you define different graphical model families and their
+corresponding factor or CPD types.
+
+For a DAG model, the joint distribution factorizes as a product of local
+conditionals over parents:
+
+.. math::
+
+   P(X_1, \ldots, X_n) = \prod_{i=1}^n P(X_i \mid Pa_i)
+
+Example
+-------
+
+.. code-block:: python
+
+    from pgmpy.datasets import load_dataset
+    from pgmpy.estimators import MaximumLikelihoodEstimator
+    from pgmpy.models import DiscreteBayesianNetwork
+
+    data = load_dataset("sachs_discrete")
+    model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
+    fitted = model.fit(data, estimator=MaximumLikelihoodEstimator)
+    print(fitted.get_cpds())
 
 Model Types
 -----------
@@ -67,52 +88,3 @@ Factor / CPD Types
      - :class:`~pgmpy.factors.continuous.LinearGaussianCPD.LinearGaussianCPD`
    * - FunctionalCPD
      - :class:`~pgmpy.factors.hybrid.FunctionalCPD.FunctionalCPD`
-
-Example: Discrete Bayesian Network
------------------------------------
-
-.. code-block:: python
-
-    from pgmpy.models import BayesianNetwork
-    from pgmpy.factors.discrete import TabularCPD
-
-    # Define structure
-    model = BayesianNetwork([("D", "G"), ("I", "G"), ("G", "L")])
-
-    # Define CPDs
-    cpd_d = TabularCPD("D", 2, [[0.6], [0.4]])
-    cpd_i = TabularCPD("I", 2, [[0.7], [0.3]])
-    cpd_g = TabularCPD(
-        "G",
-        3,
-        [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
-        evidence=["D", "I"],
-        evidence_card=[2, 2],
-    )
-    cpd_l = TabularCPD(
-        "L",
-        2,
-        [[0.1, 0.4, 0.99], [0.9, 0.6, 0.01]],
-        evidence=["G"],
-        evidence_card=[3],
-    )
-
-    model.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l)
-    model.check_model()  # Returns True if valid
-
-Example: Linear Gaussian Bayesian Network
-------------------------------------------
-
-.. code-block:: python
-
-    from pgmpy.models import LinearGaussianBayesianNetwork
-    from pgmpy.factors.continuous import LinearGaussianCPD
-
-    model = LinearGaussianBayesianNetwork([("X", "Y"), ("Y", "Z")])
-
-    cpd_x = LinearGaussianCPD("X", [0.5], 1.0)
-    cpd_y = LinearGaussianCPD("Y", [0.2, 0.8], 0.5, ["X"])
-    cpd_z = LinearGaussianCPD("Z", [-0.3, 1.2], 0.3, ["Y"])
-
-    model.add_cpds(cpd_x, cpd_y, cpd_z)
-    model.check_model()

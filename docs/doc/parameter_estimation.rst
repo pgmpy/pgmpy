@@ -1,10 +1,43 @@
 Parameter Estimation
 ====================
 
-Once the structure of a graphical model is known, the next step is to estimate
-the parameters -- the conditional probability distributions (CPDs) at each node.
-pgmpy supports several estimation methods depending on the data type, model
-type, and whether data is fully observed or contains missing values.
+Once a model structure is known, parameter estimation fills in the numbers for
+its conditional probability distributions (CPDs).
+
+For discrete models, maximum likelihood estimation (MLE) sets each conditional
+probability from relative frequencies:
+
+.. math::
+
+   \hat{P}(X = x \mid Pa = p) = \frac{N(x, p)}{N(p)}
+
+Example
+-------
+
+.. code-block:: python
+
+    from pgmpy.datasets import load_dataset
+    from pgmpy.estimators import MaximumLikelihoodEstimator
+    from pgmpy.models import DiscreteBayesianNetwork
+
+    data = load_dataset("sachs_discrete")
+    model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
+
+    mle = MaximumLikelihoodEstimator(model, data)
+    cpds = mle.get_parameters()
+    model.add_cpds(*cpds)
+
+When to use which
+-----------------
+
+- **MLE** -- The default choice when data is fully observed. Computes CPDs
+  directly from frequency counts (discrete) or regression (continuous).
+- **Bayesian Estimation** -- Useful with small datasets where MLE may overfit.
+  Incorporates prior knowledge via Dirichlet priors (e.g., BDeu).
+- **EM** -- Required when the data contains missing values. Iterates between
+  imputing missing data and re-estimating parameters.
+- **SEM / IV Estimator** -- For Structural Equation Models with continuous
+  variables and linear relationships.
 
 Algorithms
 ----------
@@ -25,15 +58,3 @@ Algorithms
      - :class:`pgmpy.estimators.SEMEstimator.SEMEstimator`
    * - IV Estimator
      - :class:`pgmpy.estimators.SEMEstimator.IVEstimator`
-
-When to use which
------------------
-
-- **MLE** -- The default choice when data is fully observed. Computes CPDs
-  directly from frequency counts (discrete) or regression (continuous).
-- **Bayesian Estimation** -- Useful with small datasets where MLE may overfit.
-  Incorporates prior knowledge via Dirichlet priors (e.g., BDeu).
-- **EM** -- Required when the data contains missing values. Iterates between
-  imputing missing data and re-estimating parameters.
-- **SEM / IV Estimator** -- For Structural Equation Models with continuous
-  variables and linear relationships.

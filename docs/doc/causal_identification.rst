@@ -1,18 +1,30 @@
 Causal Identification
 =====================
 
-Causal identification determines whether a causal effect can be uniquely
-computed from observational data given a causal graph. Before estimating a
-causal effect, it is important to verify that the effect is identifiable --
-that is, the causal quantity can be expressed in terms of the observed data
-distribution.
+Causal identification checks whether a causal effect can be computed from
+observational data given a causal graph.
 
-pgmpy implements standard graphical criteria for identification:
+Formally, if a valid adjustment set :math:`Z` exists, the effect is
+identifiable and can be written as:
 
-- **Backdoor criterion** -- Identifies a set of variables to condition on that
-  blocks all backdoor (confounding) paths between treatment and outcome.
-- **Frontdoor criterion** -- Used when the backdoor criterion fails, by finding
-  mediator variables that satisfy the frontdoor conditions.
+.. math::
+
+   P(Y \mid do(X)) = \sum_Z P(Y \mid X, Z) P(Z)
+
+Example
+-------
+
+.. code-block:: python
+
+    from pgmpy.base import DAG
+    from pgmpy.identification import Adjustment
+
+    dag = DAG(
+        [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+        roles={"exposures": "X", "outcomes": "Y"},
+    )
+    identified = Adjustment(variant="minimal").identify(dag)
+    print(identified.get_role("adjustment"))
 
 Algorithms
 ----------

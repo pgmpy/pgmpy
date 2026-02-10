@@ -1,50 +1,30 @@
 Causal Discovery and Structure Learning
-========================================
+=======================================
 
-Causal discovery (also known as structure learning) is the task of learning the
-structure of a Directed Acyclic Graph (DAG) or its equivalence class from
-observational data. The learned graph encodes conditional independence
-relationships and, under certain assumptions, causal relationships between
-variables.
+Causal discovery (structure learning) finds which variables influence others
+by learning a directed graph from data.
 
-pgmpy provides two main families of algorithms:
+In more precise terms, we seek a directed acyclic graph (DAG) :math:`G` over
+variables :math:`X` that either satisfies conditional independencies like
+:math:`X \perp Y \mid Z` (constraint-based) or maximizes a score :math:`S(G; D)`
+(score-based) for data :math:`D`:
 
-- **Constraint-based** methods test conditional independencies in the data to
-  build the graph skeleton and orient edges (e.g., PC).
-- **Score-based** methods search the space of possible graphs and optimize a
-  scoring criterion (e.g., Hill-Climb, GES).
+.. math::
 
-Algorithms
-----------
+   G^* = \arg\max_G S(G; D)
 
-.. list-table::
-   :header-rows: 1
-   :widths: 30 20 50
+Example
+-------
 
-   * - Algorithm
-     - Type
-     - API Reference
-   * - PC
-     - Constraint-based
-     - :class:`pgmpy.estimators.PC.PC`
-   * - Hill-Climb Search
-     - Score-based
-     - :class:`pgmpy.estimators.HillClimbSearch.HillClimbSearch`
-   * - Greedy Equivalence Search (GES)
-     - Score-based
-     - :class:`pgmpy.estimators.GES.GES`
-   * - Tree Search
-     - Score-based
-     - :class:`pgmpy.estimators.TreeSearch.TreeSearch`
-   * - Exhaustive Search
-     - Score-based
-     - :class:`pgmpy.estimators.ExhaustiveSearch.ExhaustiveSearch`
-   * - Max-Min Hill-Climb (MMHC)
-     - Hybrid
-     - :class:`pgmpy.estimators.MmhcEstimator.MmhcEstimator`
-   * - Expert In The Loop
-     - Interactive
-     - :class:`pgmpy.estimators.expert.ExpertInLoop`
+.. code-block:: python
+
+    from pgmpy.datasets import load_dataset
+    from pgmpy.estimators import HillClimbSearch, BIC
+
+    data = load_dataset("sachs_discrete")
+    hc = HillClimbSearch(data)
+    model = hc.estimate(scoring_method=BIC(data))
+    print(model.edges())
 
 Conditional Independence Tests
 ------------------------------
@@ -93,3 +73,35 @@ structures. Available scoring functions:
      - Information-theoretic scores for discrete models
    * - BICGauss / AICGauss
      - Information-theoretic scores for Gaussian models
+
+Algorithms
+----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Algorithm
+     - Type
+     - API Reference
+   * - PC
+     - Constraint-based
+     - :class:`pgmpy.estimators.PC.PC`
+   * - Hill-Climb Search
+     - Score-based
+     - :class:`pgmpy.estimators.HillClimbSearch.HillClimbSearch`
+   * - Greedy Equivalence Search (GES)
+     - Score-based
+     - :class:`pgmpy.estimators.GES.GES`
+   * - Tree Search
+     - Score-based
+     - :class:`pgmpy.estimators.TreeSearch.TreeSearch`
+   * - Exhaustive Search
+     - Score-based
+     - :class:`pgmpy.estimators.ExhaustiveSearch.ExhaustiveSearch`
+   * - Max-Min Hill-Climb (MMHC)
+     - Hybrid
+     - :class:`pgmpy.estimators.MmhcEstimator.MmhcEstimator`
+   * - Expert In The Loop
+     - Interactive
+     - :class:`pgmpy.estimators.expert.ExpertInLoop`

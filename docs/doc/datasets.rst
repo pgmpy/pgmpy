@@ -1,23 +1,23 @@
 Example Datasets
 ================
 
-pgmpy includes a collection of built-in datasets for testing, benchmarking, and
-learning. Datasets can be loaded with a single function call and are returned
-as pandas DataFrames.
+pgmpy includes built-in datasets for testing, benchmarking, and learning.
 
-Usage
------
+Each dataset loads into a pandas DataFrame where rows are samples and columns
+are variables, making it easy to run structure learning or estimation pipelines.
+
+Example
+-------
 
 .. code-block:: python
 
-    from pgmpy.datasets import load_dataset, list_datasets
+    from pgmpy.datasets import load_dataset
+    from pgmpy.estimators import HillClimbSearch, BIC
 
-    # List all available datasets
-    print(list_datasets())
-
-    # Load a dataset
-    df = load_dataset("sachs_discrete")
-    print(df.head())
+    data = load_dataset("sachs_discrete")
+    hc = HillClimbSearch(data)
+    model = hc.estimate(scoring_method=BIC(data))
+    print(model.edges())
 
 Available Datasets
 ------------------
@@ -118,37 +118,4 @@ Available Datasets
      - Student college plan survey
    * - contraceptive_method
      - Mixed
-     - Contraceptive method choice
-   * - cystic_fibrosis
-     - Mixed
-     - Cystic fibrosis diagnosis
-   * - depression_coping
-     - Discrete
-     - Depression and coping mechanisms
-   * - dropouts
-     - Mixed
-     - Academic dropout prediction
-   * - galton_stature
-     - Continuous
-     - Galton's height inheritance data
-   * - goldberg
-     - Mixed
-     - Goldberg dataset
-   * - iq_brain_size
-     - Continuous
-     - IQ and brain size relationship
-   * - lead
-     - Mixed
-     - Lead exposure dataset
-   * - myocardial_infarction
-     - Mixed
-     - Myocardial infarction risk factors
-   * - pittsburgh_bridges
-     - Discrete
-     - Pittsburgh bridges dataset
-   * - spartina
-     - Continuous
-     - Spartina grass species data
-   * - uscrime
-     - Mixed
-     - US crime statistics
+     - Contraceptive method choice dataset

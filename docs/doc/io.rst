@@ -1,26 +1,29 @@
 Exporting / Importing Models
 ============================
 
-pgmpy supports reading and writing Bayesian Networks in several standard file
-formats. This allows interoperability with other tools such as bnlearn, GeNIe,
-SamIam, and others.
+pgmpy can read and write Bayesian Networks in common file formats to make your
+models portable across tools.
 
-Usage
------
+In practice, these formats store both structure and CPDs so models can be
+reused for inference, simulation, or further editing.
+
+Example
+-------
 
 .. code-block:: python
 
+    from pgmpy.inference import VariableElimination
+    from pgmpy.readwrite import BIFReader, BIFWriter
     from pgmpy.utils import get_example_model
-    from pgmpy.readwrite import BIFWriter, BIFReader
 
-    # Export a model to BIF format
     model = get_example_model("asia")
-    writer = BIFWriter(model)
-    writer.write_bif("asia.bif")
+    BIFWriter(model).write_bif("asia.bif")
 
-    # Import a model from BIF format
-    reader = BIFReader("asia.bif")
-    imported_model = reader.get_model()
+    imported = BIFReader("asia.bif").get_model()
+    infer = VariableElimination(imported)
+    variable = list(imported.nodes())[0]
+    query = infer.query(variables=[variable])
+    print(query)
 
 Supported Formats
 -----------------

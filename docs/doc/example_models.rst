@@ -1,28 +1,25 @@
 Example Models
 ==============
 
-pgmpy provides pre-built Bayesian Networks from the
-`bnlearn repository <http://www.bnlearn.com/bnrepository>`_ and
-`dagitty <https://www.dagitty.net/>`_. These models come fully parameterized
-and can be used for testing, benchmarking, and learning.
+pgmpy provides pre-built Bayesian Networks for testing, benchmarking, and
+learning.
 
-Usage
------
+These models are fully parameterized, so you can run inference immediately or
+simulate data from the joint distribution of the network.
+
+Example
+-------
 
 .. code-block:: python
 
+    from pgmpy.inference import VariableElimination
     from pgmpy.utils import get_example_model
 
-    # Load a pre-built Bayesian Network
     model = get_example_model("alarm")
-
-    # Inspect the model
-    print(model.nodes())
-    print(model.edges())
-    print(model.get_cpds("HISTORY"))
-
-    # Simulate data from the model
-    df = model.simulate(n_samples=1000)
+    infer = VariableElimination(model)
+    variable = list(model.nodes())[0]
+    query = infer.query(variables=[variable])
+    print(query)
 
 Available Models
 ----------------
@@ -118,40 +115,3 @@ Gaussian Bayesian Networks
 
 Conditional Linear Gaussian Networks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Model
-     - Description
-   * - sangiovese
-     - Sangiovese grape quality
-   * - mehra
-     - Mehra dataset
-
-DAGs (Structure Only)
-^^^^^^^^^^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Model
-     - Description
-   * - M-bias
-     - Classic M-bias confounding structure
-   * - confounding
-     - Simple confounding example
-   * - mediator
-     - Mediation DAG
-   * - paths
-     - Multiple causal paths example
-   * - Sebastiani_2005
-     - Sickle cell disease (Sebastiani et al., 2005)
-   * - Polzer_2012
-     - Obesity and health outcomes (Polzer et al., 2012)
-   * - Schipf_2010
-     - Metabolic syndrome (Schipf et al., 2010)
-   * - Shrier_2008
-     - Sports injury prevention (Shrier et al., 2008)
