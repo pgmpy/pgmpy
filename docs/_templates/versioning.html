@@ -1,0 +1,20 @@
+{% if versions %}
+<label for="version-select">{{ _('Select Version') }}</label>
+<select id="version-select" onchange="location = this.value;">
+  {% if versions.releases %}
+  <optgroup label="{{ _('Releases') }}">
+    {%- for item in versions.releases %}
+    <option value="{{ item.url }}">{{ item.name }}</option>
+    {%- endfor %}
+  </optgroup>
+  {% endif %}
+
+  {% if versions.in_development %}
+  <optgroup label="{{ _('In Development') }}">
+    {%- for item in versions.in_development %}
+    <option value="{{ item.url }}">{{ item.name }}</option>
+    {%- endfor %}
+  </optgroup>
+  {% endif %}
+</select>
+{% endif %}

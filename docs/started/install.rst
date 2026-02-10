@@ -1,36 +1,27 @@
 Installation
 ============
 
-pgmpy requires Python >=3.8, <=3.11. pgmpy is hosted on both pypi and anaconda. For installation through pypi, use the command:
+pgmpy supports Python >= 3.10.
+
+PyPI
+----
 
 .. code-block:: bash
 
-        pip install pgmpy
+   pip install pgmpy
 
-For installation through anaconda, use the command:
-
-.. code-block:: bash
-
-        conda install -c conda-forge pgmpy
-
-For installing the latest `dev` branch from github, use the command:
+Conda
+-----
 
 .. code-block:: bash
 
-        pip install git+https://github.com/pgmpy/pgmpy.git@dev
+   conda install -c conda-forge pgmpy
 
+Development Version
+-------------------
 
-Requirements
-------------
+To install the latest ``dev`` branch from GitHub:
 
-If installing manually, the following non-optional dependencies needs to be installed:
+.. code-block:: bash
 
-* numpy
-* scipy
-* scikit-learn
-* pandas
-* pyparsing
-* pytorch
-* statsmodels
-* tqdm
-* joblib
+   pip install git+https://github.com/pgmpy/pgmpy.git@dev

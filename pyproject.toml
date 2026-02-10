@@ -66,7 +66,7 @@ docs = [
   "sphinx>=5.0",
   "nbsphinx",
   "numpydoc",
-  "sphinx_rtd_theme",
+  "sphinx-immaterial",
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
@@ -126,7 +126,7 @@ skip = [
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "examples/*"]
+exclude = [".git", "examples/*", "docs"]
 target-version = "py311"
 extend-include = ["*.ipynb"]
 

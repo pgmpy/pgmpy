@@ -74,3 +74,10 @@ Extending pgmpy
    :glob:
 
    examples/Extending_pgmpy
+   examples/Functional_Bayesian_Network_Tutorial
+   examples/Junction_Tree_Inference
+
+.. toctree::
+   :hidden:
+
+   tutorial

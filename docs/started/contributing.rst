@@ -1,5 +1,3 @@
-.. orphan::
-
 Contributing to pgmpy
 =====================
 
