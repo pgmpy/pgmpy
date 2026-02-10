@@ -82,4 +82,5 @@ Workflow
    Documentation <documentation>
    Examples <examples>
    API Reference <api>
-   Development <development>
+   Citation <citation>
+   Getting Involved <contributing>
