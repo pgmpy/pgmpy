@@ -9,15 +9,18 @@ with the bnRep repository.
 """
 
 import numpy as np
-from pgmpy.models import DiscreteBayesianNetwork
+
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 def get_model():
-    model = DiscreteBayesianNetwork([
-        ("Class", "Survived"),
-        ("Sex", "Survived"),
-    ])
+    model = DiscreteBayesianNetwork(
+        [
+            ("Class", "Survived"),
+            ("Sex", "Survived"),
+        ]
+    )
 
     # Class prior
     cpd_class = TabularCPD(
@@ -39,12 +42,14 @@ def get_model():
     cpd_survived = TabularCPD(
         variable="Survived",
         variable_card=2,
-        values=np.array([
-            # Survived = Yes
-            [0.62, 0.47, 0.24, 0.11, 0.88, 0.73, 0.14, 0.86],
-            # Survived = No
-            [0.38, 0.53, 0.76, 0.89, 0.12, 0.27, 0.86, 0.14],
-        ]),
+        values=np.array(
+            [
+                # Survived = Yes
+                [0.62, 0.47, 0.24, 0.11, 0.88, 0.73, 0.14, 0.86],
+                # Survived = No
+                [0.38, 0.53, 0.76, 0.89, 0.12, 0.27, 0.86, 0.14],
+            ]
+        ),
         evidence=["Class", "Sex"],
         evidence_card=[4, 2],
         state_names={
@@ -59,4 +64,3 @@ def get_model():
     model.check_model()
 
     return model
-
