@@ -95,11 +95,10 @@ git push origin feature/your-descriptive-name
 
 ## Code Style & Best Practices
 
-* **Formatting:** Black is our standard—let pre-commit handle this.
-* **Naming:** Choose clear, descriptive names (avoid single-letter variables).
-* **Strings:** Use f-strings (f"{var} = {value}").
-* **File I/O:** Use context managers (with open(...) as f:).
-* **Remove dead code:** Turn all # TODO comments into GitHub issues.
+* **Formatting:** We use `ruff` for handling code formatting. If you have installed our pre-commit hook, it should be automatically taken care of at each commit.
+* **Naming:** Choose clear, descriptive names (avoid single-letter variables). Ideally, the variable name should give you a clear idea of what the variable represents.
+* **Strings:** Use f-strings (`f"{var} = {value}"`).
+* **File I/O:** Use context managers (`with open(...) as f:`).
 * **Commit messages:** Write concise, informative messages (see Thoughtbot’s guide).
 
 ## Writing Tests
@@ -110,9 +109,6 @@ Every new function or bug fix must include tests:
 * Aim for meaningful coverage rather than 100% lines.
 
 ## Seeking Help & Discussion
-If you have questions or want to brainstorm:
-* Discord channel: invite link in the repo’s README.
-* Mailing list: check the README for subscription info.
-
+If you have questions or want to discuss anything related to the project, please join our Discord server (the link is in the README). We also host weekly dev and Community meetings that you can join to ask any questions live or listen to what others are working on.
 
 All contributions—big and small—are welcome. Let’s build a better pgmpy together! Happy coding! 🚀
