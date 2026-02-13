@@ -1,7 +1,8 @@
 import json
 import math
-from typing import (Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple,
-                    Union)
+import io
+import os
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -121,15 +122,19 @@ class LinearGaussianBayesianNetwork(DAG):
 
     @classmethod
     def load(
-        cls, filename: str, filetype: str = "json", **kwargs: Any
+        cls,
+        filename: Union[str, os.PathLike, io.IOBase],
+        filetype: str = "json",
+        **kwargs: Any,
     ) -> "LinearGaussianBayesianNetwork":
         """
-        Read the model from a file.
+        Read the model from a file or a file-like object.
 
         Parameters
         ----------
-        filename: str
-            The path along with the filename where to read the file.
+        filename: str or file-like object
+            The path along with the filename where to read the file, or a
+            file-like object containing the model data.
 
         filetype: str (default: json)
             The format of the model file. Currently only 'json' is supported.
@@ -144,8 +149,14 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"LinearGaussianBayesianNetwork only supports 'json' format, got {filetype}"
             )
 
-        with open(filename, "r") as f:
-            data = json.load(f)
+        if isinstance(filename, (str, os.PathLike)):
+            with open(filename, "r") as f:
+                data = json.load(f)
+        else:
+            content = filename.read()
+            if isinstance(content, bytes):
+                content = content.decode("utf-8")
+            data = json.loads(content)
 
         nodes = data.get("nodes")
         edges = data.get("arcs") if "arcs" in data else data.get("edges")
@@ -161,7 +172,6 @@ class LinearGaussianBayesianNetwork(DAG):
             parents = cpd_info["parents"]
 
             intercept = coefficients["(Intercept)"][0]
-
             parent_coeffs = [coefficients[parent][0] for parent in parents]
 
             cpd = LinearGaussianCPD(
