@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 import os
+import io
 import shutil
 from urllib.request import urlopen
 
@@ -88,34 +89,13 @@ class ContinuousMixin:
 
     @classmethod
     def load_model_object(cls):
-        data = json.loads(cls._get_raw_data().decode("utf-8"))
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
+        from pgmpy.models import LinearGaussianBayesianNetwork
+        
+        raw_data = cls._get_raw_data()
 
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
+        file_obj = io.BytesIO(raw_data)
 
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
-
-            intercept = coefficients["(Intercept)"][0]
-
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        model.add_cpds(*cpds)
-        return model
+        return LinearGaussianBayesianNetwork.load(file_obj, filetype="json")
 
 
 class DAGMixin:
