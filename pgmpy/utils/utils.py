@@ -49,6 +49,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
+    logger.warning(
+        "Deprecation Warning: `get_example_model` is deprecated and will be removed in a future release. "
+        "Please use `pgmpy.example_models.load_model` instead."
+    )
     cat_models = {
         "asia",
         "cancer",
@@ -314,7 +318,7 @@ def llm_pairwise_orient(
     y: str
         The second variable's name
 
-    description: dict
+    descriptions: dict
         A dict of the form {variable: description}
           containing text description of the variables.
 
@@ -428,7 +432,9 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(
+            df[col]
+        ):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
