@@ -1,6 +1,6 @@
+import io
 import json
 import math
-import io
 import os
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, Union
 
@@ -124,8 +124,6 @@ class LinearGaussianBayesianNetwork(DAG):
     def load(
         cls,
         filename: Union[str, os.PathLike, io.IOBase],
-        filetype: str = "json",
-        **kwargs: Any,
     ) -> "LinearGaussianBayesianNetwork":
         """
         Read the model from a file or a file-like object.
@@ -136,18 +134,11 @@ class LinearGaussianBayesianNetwork(DAG):
             The path along with the filename where to read the file, or a
             file-like object containing the model data.
 
-        filetype: str (default: json)
-            The format of the model file. Currently only 'json' is supported.
-
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> model = LinearGaussianBayesianNetwork.load("ecoli70.json")
         """
-        if filetype != "json":
-            raise ValueError(
-                f"LinearGaussianBayesianNetwork only supports 'json' format, got {filetype}"
-            )
 
         if isinstance(filename, (str, os.PathLike)):
             with open(filename, "r") as f:
@@ -159,7 +150,7 @@ class LinearGaussianBayesianNetwork(DAG):
             data = json.loads(content)
 
         nodes = data.get("nodes")
-        edges = data.get("arcs") if "arcs" in data else data.get("edges")
+        edges = data.get("arcs")
         cpds_data = data.get("cpds")
 
         model = cls(edges)
@@ -185,7 +176,7 @@ class LinearGaussianBayesianNetwork(DAG):
         model.add_cpds(*cpds)
         return model
 
-    def save(self, filename: str, filetype: str = "json") -> None:
+    def save(self, filename: str) -> None:
         """
         Writes the model to a file.
 
@@ -194,20 +185,12 @@ class LinearGaussianBayesianNetwork(DAG):
         filename: str
             The path along with the filename where to write the file.
 
-        filetype: str (default: json)
-            The format in which to write the model to file. Currently only 'json'
-            is supported.
-
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("ecoli70")
+        >>> from pgmpy.datasets import load_model
+        >>> model = load_model("ecoli70")
         >>> model.save("ecoli70.json")
         """
-        if filetype != "json":
-            raise ValueError(
-                f"LinearGaussianBayesianNetwork only supports 'json' format, got {filetype}"
-            )
 
         model_data = {
             "nodes": list(self.nodes()),

@@ -1,3 +1,6 @@
+import io
+import json
+import os
 import unittest
 
 import numpy as np
@@ -566,3 +569,71 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
         self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
         self.assertEqual(model_from_str.get_cpds("smoking").std, 1)
+
+
+class TestLGBNIO(unittest.TestCase):
+    def setUp(self):
+        """Set up a complex test model"""
+        self.model = LinearGaussianBayesianNetwork([("A", "C"), ("B", "C"), ("B", "D")])
+        cpd_a = LinearGaussianCPD(variable="A", beta=[0.0], std=1.0)
+        cpd_b = LinearGaussianCPD(variable="B", beta=[2.5], std=0.5)
+        cpd_c = LinearGaussianCPD(
+            variable="C", beta=[1.0, 0.3, 0.7], std=0.8, evidence=["A", "B"]
+        )
+        cpd_d = LinearGaussianCPD(
+            variable="D", beta=[-1.5, 2.0], std=1.2, evidence=["B"]
+        )
+        self.model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d)
+        self.filename = "test_lgbn.json"
+
+    def tearDown(self):
+        """Clean up the test file"""
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+
+    def test_save_and_load(self):
+        """Test basic save and load functionality"""
+        self.model.save(self.filename)
+        loaded_model = LinearGaussianBayesianNetwork.load(self.filename)
+
+        self.assertCountEqual(self.model.nodes(), loaded_model.nodes())
+        self.assertCountEqual(self.model.edges(), loaded_model.edges())
+
+        for node in self.model.nodes():
+            original_cpd = self.model.get_cpds(node)
+            loaded_cpd = loaded_model.get_cpds(node)
+
+            np.testing.assert_allclose(original_cpd.beta, loaded_cpd.beta, rtol=1e-5)
+            np.testing.assert_allclose(original_cpd.std, loaded_cpd.std, rtol=1e-5)
+            self.assertEqual(list(original_cpd.evidence), list(loaded_cpd.evidence))
+
+    def test_load_from_file_object(self):
+        """Test loading from file-like object"""
+        self.model.save(self.filename)
+        with open(self.filename, "rb") as f:
+            file_obj = io.BytesIO(f.read())
+
+        loaded_model = LinearGaussianBayesianNetwork.load(file_obj)
+        self.assertCountEqual(self.model.nodes(), loaded_model.nodes())
+        self.assertCountEqual(self.model.edges(), loaded_model.edges())
+
+    def test_json_format(self):
+        """Test that saved JSON has correct structure"""
+        self.model.save(self.filename)
+        with open(self.filename, "r") as f:
+            data = json.load(f)
+
+        self.assertIn("nodes", data)
+        self.assertIn("arcs", data)
+        self.assertIn("cpds", data)
+
+        self.assertEqual(set(data["nodes"]), {"A", "B", "C", "D"})
+        self.assertIn(["A", "C"], data["arcs"])
+        self.assertIn(["B", "C"], data["arcs"])
+        self.assertIn(["B", "D"], data["arcs"])
+
+        cpd_c = data["cpds"]["C"]
+        self.assertIn("coefficients", cpd_c)
+        self.assertIn("variance", cpd_c)
+        self.assertIn("parents", cpd_c)
+        self.assertEqual(set(cpd_c["parents"]), {"A", "B"})

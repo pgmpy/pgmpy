@@ -1,9 +1,7 @@
 import gzip
 import hashlib
-import json
-import math
-import os
 import io
+import os
 import shutil
 from urllib.request import urlopen
 
@@ -11,9 +9,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
 
 
@@ -90,12 +86,12 @@ class ContinuousMixin:
     @classmethod
     def load_model_object(cls):
         from pgmpy.models import LinearGaussianBayesianNetwork
-        
+
         raw_data = cls._get_raw_data()
 
         file_obj = io.BytesIO(raw_data)
 
-        return LinearGaussianBayesianNetwork.load(file_obj, filetype="json")
+        return LinearGaussianBayesianNetwork.load(file_obj)
 
 
 class DAGMixin:
