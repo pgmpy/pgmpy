@@ -4,6 +4,7 @@ from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .shd import SHD
 from .structure_score import StructureScore
+from .sid import SID
 
 __all__ = [
     "_BaseSupervisedMetric",
