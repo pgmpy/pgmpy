@@ -9,6 +9,7 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 
+
 DISCRETE_MODELS = [
     "asia",
     "alarm",
