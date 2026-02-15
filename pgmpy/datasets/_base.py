@@ -5,8 +5,9 @@ import io
 import os
 import re
 import shutil
+import zipfile
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.request import urlopen
 
 import numpy as np
@@ -22,15 +23,18 @@ from pgmpy.global_vars import PGMPY_DATA_HOME
 @dataclass
 class Dataset:
     name: str
-    data: pd.DataFrame
+    data: Union[pd.DataFrame, Dict[int, pd.DataFrame]]
     expert_knowledge: Optional[ExpertKnowledge] = None
-    ground_truth: Optional[DAG] = None
-
+    ground_truth: Union[Optional[DAG], Dict[int, Dict[str, Any]]] = None
     tags: Dict[str, Any] = None
 
     def __str__(self) -> str:
+        if isinstance(self.data, dict):
+            data_info = f"Dict of {len(self.data)} DataFrames"
+        else:
+            data_info = f"DataFrame of size: {self.data.shape}"
         return (
-            f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
+            f"Dataset(name={self.name}, \n data= {data_info}, \n, "
             f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
         )
 
@@ -238,6 +242,71 @@ class _CovarianceMixin:
             columns=cov_matrix.columns,
         )
         return data
+
+
+class _TuebingenBenchmarkMixin:
+    """
+    Mixin for Tubingen datasets that consist of multiple independent pairs/files.
+    Returns dictionaries instead of single DataFrames/DAGs.
+    URL: https://webdav.tuebingen.mpg.de/cause-effect/
+    """
+
+    @classmethod
+    def load_dataframe(cls) -> Dict[int, pd.DataFrame]:
+        zip_content = cls._get_raw_data("data", cls.data_url)
+        pairs_dict = {}
+        with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
+            files = [f for f in z.namelist() if re.match(r"pair\d+\.txt", f)]
+            for file in files:
+                try:
+                    pair_id = int(re.search(r"\d+", file).group())
+                    with z.open(file) as f:
+                        df_pair = pd.read_csv(
+                            f, sep=r"\s+", header=None, names=["x", "y"]
+                        )
+                        pairs_dict[pair_id] = df_pair
+                except Exception:
+                    continue
+        return pairs_dict
+
+    @classmethod
+    def load_ground_truth(cls) -> Dict[int, dict]:
+        zip_content = cls._get_raw_data("data", cls.data_url)
+        gt_dict = {}
+        with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
+            files = [f for f in z.namelist() if re.match(r"pair\d+_des\.txt", f)]
+            for file in files:
+                try:
+                    pair_id = int(re.search(r"\d+", file).group())
+                    with z.open(file) as f:
+                        content = f.read().decode("utf-8-sig", errors="ignore").lower()
+                        cause, effect = None, None
+                        # for (x -> y, x --> y, x - - > y)
+                        if re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE):
+                            cause, effect = "x", "y"
+                        elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
+                            cause, effect = "y", "x"
+                        # for (x <- y, x <-- y)
+                        elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
+                            cause, effect = "y", "x"
+                        elif re.search(r"y\s*<\s*[- ]+\s*x", content, re.IGNORECASE):
+                            cause, effect = "x", "y"
+                        # Handles pair 88: "age causes relative change"
+                        elif "x causes y" in content or "age causes" in content:
+                            cause, effect = "x", "y"
+                        w_match = re.search(
+                            r"weighting factor[:\s]+([\d\.]+)", content, re.IGNORECASE
+                        )
+                        weight = float(w_match.group(1)) if w_match else 1.0
+                        if cause:
+                            gt_dict[pair_id] = {
+                                "cause": cause,
+                                "effect": effect,
+                                "weight": weight,
+                            }
+                except Exception:
+                    continue
+        return gt_dict
 
 
 def load_dataset(name: str) -> Dataset:
