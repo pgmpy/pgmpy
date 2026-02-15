@@ -301,9 +301,6 @@ class _TubingenBenchmarkMixin:
                             cause, effect = "y", "x"
                         elif re.search(r"y\s*<\s*[- ]+\s*x", content, re.IGNORECASE):
                             cause, effect = "x", "y"
-                        # Handles pair 88: "age causes relative change"
-                        elif "x causes y" in content or "age causes" in content:
-                            cause, effect = "x", "y"
                         weight = weights.get(pair_id, None)
                         if cause:
                             gt_dict[pair_id] = {
