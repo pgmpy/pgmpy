@@ -271,6 +271,16 @@ class _TuebingenBenchmarkMixin:
 
     @classmethod
     def load_ground_truth(cls) -> Dict[int, dict]:
+        meta_url = "https://webdav.tuebingen.mpg.de/cause-effect/pairmeta.txt"
+        raw_meta = cls._get_raw_data("metadata", meta_url).decode("utf-8")
+        weights = {}
+        for line in raw_meta.strip().splitlines():
+            parts = line.split()
+            if len(parts) < 6:
+                continue
+            pair_id = int(parts[0])
+            weight = float(parts[-1])
+            weights[pair_id] = weight
         zip_content = cls._get_raw_data("data", cls.data_url)
         gt_dict = {}
         with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
@@ -294,10 +304,7 @@ class _TuebingenBenchmarkMixin:
                         # Handles pair 88: "age causes relative change"
                         elif "x causes y" in content or "age causes" in content:
                             cause, effect = "x", "y"
-                        w_match = re.search(
-                            r"weighting factor[:\s]+([\d\.]+)", content, re.IGNORECASE
-                        )
-                        weight = float(w_match.group(1)) if w_match else 1.0
+                        weight = weights.get(pair_id, None)
                         if cause:
                             gt_dict[pair_id] = {
                                 "cause": cause,
