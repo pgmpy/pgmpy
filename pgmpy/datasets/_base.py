@@ -244,7 +244,7 @@ class _CovarianceMixin:
         return data
 
 
-class _TuebingenBenchmarkMixin:
+class _TubingenBenchmarkMixin:
     """
     Mixin for Tubingen datasets that consist of multiple independent pairs/files.
     Returns dictionaries instead of single DataFrames/DAGs.
