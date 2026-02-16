@@ -4,7 +4,7 @@ import pytest
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
-from pgmpy.datasets.ihdp import IHDP
+from pgmpy.datasets.ihdp import IHDP, IHDP2
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -60,6 +60,7 @@ def test_list_datasets():
     for dataset in ALL_DATASETS:
         assert dataset in found_datasets
     assert "ihdp" in found_datasets
+    assert "ihdp2" in found_datasets
 
     assert "abalone_continuous" not in list_datasets(has_ground_truth=True)
 
@@ -107,8 +108,11 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
 
-def test_load_ihdp(monkeypatch):
-    n_samples = IHDP.get_class_tag("n_samples")
+@pytest.mark.parametrize(
+    "dataset_class,dataset_name", [(IHDP, "ihdp"), (IHDP2, "ihdp2")]
+)
+def test_load_ihdp_family(monkeypatch, dataset_class, dataset_name):
+    n_samples = dataset_class.get_class_tag("n_samples")
     n_covariates = 25
     values = np.zeros((n_samples, 5 + n_covariates), dtype=float)
     values[:, 0] = np.arange(n_samples) % 2
@@ -121,10 +125,11 @@ def test_load_ihdp(monkeypatch):
 
     def mock_get_raw_data(cls, data_type, url):
         assert data_type == "data"
+        assert url == dataset_class.data_url
         return raw_data
 
-    monkeypatch.setattr(IHDP, "_get_raw_data", classmethod(mock_get_raw_data))
-    dataset = load_dataset("ihdp")
+    monkeypatch.setattr(dataset_class, "_get_raw_data", classmethod(mock_get_raw_data))
+    dataset = load_dataset(dataset_name)
     assert dataset.data.shape == (
         dataset.tags["n_samples"],
         dataset.tags["n_variables"],
