@@ -2,6 +2,7 @@ import gzip
 import json
 import math
 
+
 import pandas as pd
 
 try:
@@ -156,10 +157,7 @@ def get_example_model(model: str):
     }
 
     if model not in filenames:
-        raise ValueError(
-            f"Unknown model name: {model}. Please refer"
-            " documentation for valid model names."
-        )
+        raise ValueError(f"Unknown model name: {model}. Please refer documentation for valid model names.")
 
     path = filenames[model]
 
@@ -291,9 +289,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             )
     elif method == "quantile":
         for column in data.columns:
-            df_copy[column] = pd.qcut(
-                df_copy[column], q=cardinality[column], labels=labels.get(column)
-            )
+            df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
 
@@ -362,9 +358,7 @@ def llm_pairwise_orient(
         Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
         Do not add any formatting in the answer.
         """
-    response = completion(
-        model=llm_model, messages=[{"role": "user", "content": prompt}]
-    )
+    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
     response = response.choices[0].message.content
     response_txt = response.strip().lower().replace("*", "")
     if response_txt in ("a", "1"):
@@ -372,9 +366,7 @@ def llm_pairwise_orient(
     elif response_txt in ("b", "2"):
         return (y, x)
     else:
-        raise ValueError(
-            "Results from the LLM are unclear. Try calling the function again."
-        )
+        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):
@@ -432,9 +424,7 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(
-            df[col]
-        ):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
@@ -449,8 +439,7 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
-        f"inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
 
@@ -629,3 +618,87 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         )
 
     return panel
+
+
+def show_model_structure(model: object):
+    """Visualize the structure of a pgmpy model using Graphviz.
+
+        This function takes a pgmpy graph-based model (or any compatible graph
+    object) and returns a graphviz.Digraph object representing the graph
+    structure of the model. The input model may represent a directed, undirected, or partially
+    directed graph, and can originate from probabilistic models, structure
+    learning algorithms, causal discovery algorithms, or user-defined
+    custom graphs, provided that the object exposes standard graph
+    interfaces such as `nodes()` and `edges()`.
+
+    Parameters
+    ----------
+    model : pgmpy.base.DAG
+        A pgmpy model object such as DiscreteBayesianNetwork,
+        LinearGaussianBayesianNetwork, or a DAG returned by structure
+        learning or causal discovery algorithms.
+
+    Returns
+    -------
+    graphviz.Digraph
+        A Graphviz Digraph object representing the model structure.
+
+    Requirements
+    ------------
+    This function requires Graphviz to be installed both as:
+
+    1. A system dependency:
+        On Debian/Ubuntu:
+            sudo apt install graphviz
+
+    2. A Python wrapper:
+            pip install graphviz
+
+    Notes
+    -----
+    - This function only constructs and returns the graph object.
+        To render and display the graph, call:
+
+            dot.render(filename, view=True)
+
+    - Rendering requires the Graphviz executables (e.g., `dot`) to be
+        available on the system PATH.
+
+    - This function does not perform inference and does not require
+        CPDs to be present; it only visualizes the graph structure.
+
+    """
+    from pgmpy.base import DAG  # noqa: I001
+    from networkx import nodes
+
+    if not isinstance(model, DAG):
+        raise ValueError("This is not a valid model for visualization.")
+    # Check Python Graphviz wrapper
+    try:
+        import graphviz
+    except ImportError as exc:
+        raise ImportError(
+            "Python package 'graphviz' is required for showbn(). Install it using: pip install graphviz"
+        ) from exc
+    import shutil
+
+    # Check system Graphviz executable
+    if shutil.which("dot") is None:
+        raise RuntimeError(
+            "Graphviz executable 'dot' not found. "
+            "Please install Graphviz system package.\n"
+            "On Debian/Ubuntu: sudo apt install graphviz"
+        )
+    no_nodes = len(model)
+    no_edges = len(model.edges())
+    logger.info(f"Model has {no_nodes} nodes and {no_edges} edges.")
+    nodes = model.nodes()
+    edges = model.edges()
+    import graphviz
+
+    dot = graphviz.Digraph("model structure")
+    for node in nodes:
+        dot.node(str(node), str(node))
+    for u, v in edges:
+        dot.edge(str(u), str(v))
+    return dot
