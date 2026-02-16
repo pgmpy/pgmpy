@@ -4,6 +4,7 @@ import pytest
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets.ihdp import IHDP
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -58,6 +59,7 @@ def test_list_datasets():
     found_datasets = list_datasets()
     for dataset in ALL_DATASETS:
         assert dataset in found_datasets
+    assert "ihdp" in found_datasets
 
     assert "abalone_continuous" not in list_datasets(has_ground_truth=True)
 
@@ -103,6 +105,41 @@ def test_load_covariance_dataset():
         )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
+
+
+def test_load_ihdp(monkeypatch):
+    n_samples = IHDP.get_class_tag("n_samples")
+    n_covariates = 25
+    values = np.zeros((n_samples, 5 + n_covariates), dtype=float)
+    values[:, 0] = np.arange(n_samples) % 2
+    values[:, 1] = 2.0
+    values[:, 2] = 1.0
+    values[:, 3] = 0.5
+    values[:, 4] = 1.5
+    values[:, 5:] = np.arange(1, n_covariates + 1)
+    raw_data = pd.DataFrame(values).to_csv(index=False, header=False).encode("utf-8")
+
+    def mock_get_raw_data(cls, data_type, url):
+        assert data_type == "data"
+        return raw_data
+
+    monkeypatch.setattr(IHDP, "_get_raw_data", classmethod(mock_get_raw_data))
+    dataset = load_dataset("ihdp")
+    assert dataset.data.shape == (
+        dataset.tags["n_samples"],
+        dataset.tags["n_variables"],
+    )
+    expected_columns = {
+        "treatment",
+        "y_factual",
+        "y_cfactual",
+        "mu0",
+        "mu1",
+    }
+    assert expected_columns.issubset(set(dataset.data.columns))
+    assert dataset.data["treatment"].dtype.name == "category"
+    assert dataset.ground_truth is None
+    assert dataset.expert_knowledge is None
 
 
 def test_invalid_input():
