@@ -1,6 +1,6 @@
 #!/bin/bash
 __heredoc__='''
-Script to publish a new version of this library on PyPI. 
+Script to publish a new version of this library on PyPI.
 
 If your script has binary dependencies then we assume that you have built a
 proper binary wheel with auditwheel and it exists in the wheelhouse directory.
@@ -37,10 +37,10 @@ Usage:
 
     source $(secret_loader.sh)
 
-    MB_PYTHON_TAG=cp38-cp38m 
-    MB_PYTHON_TAG=cp37-cp37m 
-    MB_PYTHON_TAG=cp36-cp36m 
-    MB_PYTHON_TAG=cp35-cp35m 
+    MB_PYTHON_TAG=cp38-cp38m
+    MB_PYTHON_TAG=cp37-cp37m
+    MB_PYTHON_TAG=cp36-cp36m
+    MB_PYTHON_TAG=cp35-cp35m
     MB_PYTHON_TAG=cp27-cp27mu
 
     echo "MB_PYTHON_TAG = $MB_PYTHON_TAG"
@@ -134,11 +134,11 @@ for _MODE in "${MODE_LIST[@]}"
 do
     echo "_MODE = $_MODE"
     if [[ "$_MODE" == "sdist" ]]; then
-        python setup.py sdist 
+        python setup.py sdist
         WHEEL_PATH=$(ls dist/$NAME-$VERSION*.tar.gz)
         WHEEL_PATHS+=($WHEEL_PATH)
     elif [[ "$_MODE" == "native" ]]; then
-        python setup.py bdist_wheel 
+        python setup.py bdist_wheel
         WHEEL_PATH=$(ls dist/$NAME-$VERSION*.whl)
         WHEEL_PATHS+=($WHEEL_PATH)
     elif [[ "$_MODE" == "universal" ]]; then
@@ -195,7 +195,7 @@ do
         twine check $WHEEL_PATH.asc $WHEEL_PATH
 
         echo "Verifying wheels"
-        $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH 
+        $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH
     else
         echo "USE_GPG=False, Skipping GPG sign"
     fi
@@ -217,10 +217,10 @@ if [[ "$TAG_AND_UPLOAD" != "yes" ]]; then
         echo "ANS = $ANS"
         TAG_AND_UPLOAD="$ANS"
     else
-        echo "WRONG BRANCH: Not ready to publish VERSION='$VERSION' on branch='$CURRENT_BRANCH'" 
+        echo "WRONG BRANCH: Not ready to publish VERSION='$VERSION' on branch='$CURRENT_BRANCH'"
     fi
 else
-    echo "Do not want to publish VERSION='$VERSION' on branch='$CURRENT_BRANCH'" 
+    echo "Do not want to publish VERSION='$VERSION' on branch='$CURRENT_BRANCH'"
 fi
 
 
@@ -236,7 +236,7 @@ if [[ "$TAG_AND_UPLOAD" == "yes" ]]; then
         if [ "$USE_GPG" == "True" ]; then
             twine upload --username $TWINE_USERNAME --password=$TWINE_PASSWORD --sign $WHEEL_PATH.asc $WHEEL_PATH
         else
-            twine upload --username $TWINE_USERNAME --password=$TWINE_PASSWORD $WHEEL_PATH 
+            twine upload --username $TWINE_USERNAME --password=$TWINE_PASSWORD $WHEEL_PATH
         fi
     done
     echo """
