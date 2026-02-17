@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Algalactivity1(PlainBIFMixin, _BaseExampleModel):
+class Algalactivity1(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/algalactivity1",
         "n_nodes": 8,

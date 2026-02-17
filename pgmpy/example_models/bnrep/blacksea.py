@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Blacksea(PlainBIFMixin, _BaseExampleModel):
+class Blacksea(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/blacksea",
         "n_nodes": 48,

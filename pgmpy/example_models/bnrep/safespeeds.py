@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Safespeeds(PlainBIFMixin, _BaseExampleModel):
+class Safespeeds(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/safespeeds",
         "n_nodes": 9,

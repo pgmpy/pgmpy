@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Charleston(PlainBIFMixin, _BaseExampleModel):
+class Charleston(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/charleston",
         "n_nodes": 24,

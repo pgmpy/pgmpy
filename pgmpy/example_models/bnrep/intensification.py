@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Intensification(PlainBIFMixin, _BaseExampleModel):
+class Intensification(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/intensification",
         "n_nodes": 16,

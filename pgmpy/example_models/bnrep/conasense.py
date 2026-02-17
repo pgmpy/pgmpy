@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Conasense(PlainBIFMixin, _BaseExampleModel):
+class Conasense(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/conasense",
         "n_nodes": 4,

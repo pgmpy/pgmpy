@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Student2(PlainBIFMixin, _BaseExampleModel):
+class Student2(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/student2",
         "n_nodes": 26,

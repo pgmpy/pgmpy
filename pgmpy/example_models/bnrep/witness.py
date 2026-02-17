@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Witness(PlainBIFMixin, _BaseExampleModel):
+class Witness(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/witness",
         "n_nodes": 6,

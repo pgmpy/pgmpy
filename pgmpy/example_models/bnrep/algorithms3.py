@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Algorithms3(PlainBIFMixin, _BaseExampleModel):
+class Algorithms3(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/algorithms3",
         "n_nodes": 4,

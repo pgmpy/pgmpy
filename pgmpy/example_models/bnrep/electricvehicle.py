@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Electricvehicle(PlainBIFMixin, _BaseExampleModel):
+class Electricvehicle(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/electricvehicle",
         "n_nodes": 23,

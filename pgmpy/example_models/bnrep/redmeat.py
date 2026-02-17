@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Redmeat(PlainBIFMixin, _BaseExampleModel):
+class Redmeat(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/redmeat",
         "n_nodes": 11,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Ropesegment(PlainBIFMixin, _BaseExampleModel):
+class Ropesegment(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/ropesegment",
         "n_nodes": 11,

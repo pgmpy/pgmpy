@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Intentionalattacks(PlainBIFMixin, _BaseExampleModel):
+class Intentionalattacks(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/intentionalattacks",
         "n_nodes": 8,

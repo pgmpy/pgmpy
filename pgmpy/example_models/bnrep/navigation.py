@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Navigation(PlainBIFMixin, _BaseExampleModel):
+class Navigation(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/navigation",
         "n_nodes": 4,

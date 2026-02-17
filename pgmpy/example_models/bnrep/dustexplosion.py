@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Dustexplosion(PlainBIFMixin, _BaseExampleModel):
+class Dustexplosion(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/dustexplosion",
         "n_nodes": 26,

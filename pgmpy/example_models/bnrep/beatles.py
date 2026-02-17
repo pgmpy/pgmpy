@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Beatles(PlainBIFMixin, _BaseExampleModel):
+class Beatles(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/beatles",
         "n_nodes": 5,

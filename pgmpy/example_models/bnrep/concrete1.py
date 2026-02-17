@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Concrete1(PlainBIFMixin, _BaseExampleModel):
+class Concrete1(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/concrete1",
         "n_nodes": 4,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Oildepot(PlainBIFMixin, _BaseExampleModel):
+class Oildepot(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/oildepot",
         "n_nodes": 41,

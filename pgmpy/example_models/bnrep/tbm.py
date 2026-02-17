@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Tbm(PlainBIFMixin, _BaseExampleModel):
+class Tbm(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/tbm",
         "n_nodes": 10,

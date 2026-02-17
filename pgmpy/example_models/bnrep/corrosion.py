@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Corrosion(PlainBIFMixin, _BaseExampleModel):
+class Corrosion(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/corrosion",
         "n_nodes": 22,

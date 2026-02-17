@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Nanomaterials1(PlainBIFMixin, _BaseExampleModel):
+class Nanomaterials1(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/nanomaterials1",
         "n_nodes": 49,

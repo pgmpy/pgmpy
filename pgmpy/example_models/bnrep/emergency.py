@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Emergency(PlainBIFMixin, _BaseExampleModel):
+class Emergency(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/emergency",
         "n_nodes": 17,

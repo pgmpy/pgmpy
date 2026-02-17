@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Compaction(PlainBIFMixin, _BaseExampleModel):
+class Compaction(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/compaction",
         "n_nodes": 6,

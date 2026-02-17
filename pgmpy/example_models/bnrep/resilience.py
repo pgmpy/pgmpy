@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Resilience(PlainBIFMixin, _BaseExampleModel):
+class Resilience(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/resilience",
         "n_nodes": 36,

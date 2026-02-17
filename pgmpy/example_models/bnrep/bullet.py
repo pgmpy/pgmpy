@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Bullet(PlainBIFMixin, _BaseExampleModel):
+class Bullet(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/bullet",
         "n_nodes": 5,

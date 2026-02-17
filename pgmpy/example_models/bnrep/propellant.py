@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Propellant(PlainBIFMixin, _BaseExampleModel):
+class Propellant(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/propellant",
         "n_nodes": 49,

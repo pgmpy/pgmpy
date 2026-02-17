@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Blockchain(PlainBIFMixin, _BaseExampleModel):
+class Blockchain(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/blockchain",
         "n_nodes": 12,

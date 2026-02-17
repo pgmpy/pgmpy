@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Shipping(PlainBIFMixin, _BaseExampleModel):
+class Shipping(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/shipping",
         "n_nodes": 36,

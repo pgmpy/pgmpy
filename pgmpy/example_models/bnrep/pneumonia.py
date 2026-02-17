@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Pneumonia(PlainBIFMixin, _BaseExampleModel):
+class Pneumonia(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/pneumonia",
         "n_nodes": 62,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class PermaBN(PlainBIFMixin, _BaseExampleModel):
+class PermaBN(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/permaBN",
         "n_nodes": 14,

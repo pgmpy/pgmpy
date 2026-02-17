@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Oxygen(PlainBIFMixin, _BaseExampleModel):
+class Oxygen(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/oxygen",
         "n_nodes": 31,

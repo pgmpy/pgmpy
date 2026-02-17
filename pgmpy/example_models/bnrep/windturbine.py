@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Windturbine(PlainBIFMixin, _BaseExampleModel):
+class Windturbine(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/windturbine",
         "n_nodes": 122,

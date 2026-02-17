@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Orbital(PlainBIFMixin, _BaseExampleModel):
+class Orbital(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/orbital",
         "n_nodes": 60,

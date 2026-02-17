@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Curacao1(PlainBIFMixin, _BaseExampleModel):
+class Curacao1(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/curacao1",
         "n_nodes": 13,

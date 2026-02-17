@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Yangtze(PlainBIFMixin, _BaseExampleModel):
+class Yangtze(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/yangtze",
         "n_nodes": 31,

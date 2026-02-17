@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class BOPfailure3(PlainBIFMixin, _BaseExampleModel):
+class BOPfailure3(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/BOPfailure3",
         "n_nodes": 28,

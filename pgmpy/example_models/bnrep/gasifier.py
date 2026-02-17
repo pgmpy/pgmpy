@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Gasifier(PlainBIFMixin, _BaseExampleModel):
+class Gasifier(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/gasifier",
         "n_nodes": 40,

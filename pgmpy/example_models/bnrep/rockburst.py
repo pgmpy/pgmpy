@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Rockburst(PlainBIFMixin, _BaseExampleModel):
+class Rockburst(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/rockburst",
         "n_nodes": 6,

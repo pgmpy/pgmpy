@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Medicaltest(PlainBIFMixin, _BaseExampleModel):
+class Medicaltest(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/medicaltest",
         "n_nodes": 3,

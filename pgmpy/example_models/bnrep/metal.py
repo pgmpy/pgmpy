@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Metal(PlainBIFMixin, _BaseExampleModel):
+class Metal(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/metal",
         "n_nodes": 8,

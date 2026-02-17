@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Crypto(PlainBIFMixin, _BaseExampleModel):
+class Crypto(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/crypto",
         "n_nodes": 6,

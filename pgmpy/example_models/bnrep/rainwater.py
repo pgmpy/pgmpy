@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Rainwater(PlainBIFMixin, _BaseExampleModel):
+class Rainwater(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/rainwater",
         "n_nodes": 6,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Dragline(PlainBIFMixin, _BaseExampleModel):
+class Dragline(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/dragline",
         "n_nodes": 51,

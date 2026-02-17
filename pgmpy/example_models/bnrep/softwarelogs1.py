@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Softwarelogs1(PlainBIFMixin, _BaseExampleModel):
+class Softwarelogs1(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/softwarelogs1",
         "n_nodes": 5,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Rockquality(PlainBIFMixin, _BaseExampleModel):
+class Rockquality(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/rockquality",
         "n_nodes": 9,

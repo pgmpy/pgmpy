@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Liquidity(PlainBIFMixin, _BaseExampleModel):
+class Liquidity(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/liquidity",
         "n_nodes": 10,

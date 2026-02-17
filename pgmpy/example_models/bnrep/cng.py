@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Cng(PlainBIFMixin, _BaseExampleModel):
+class Cng(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/cng",
         "n_nodes": 86,

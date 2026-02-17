@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Vaccine(PlainBIFMixin, _BaseExampleModel):
+class Vaccine(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/vaccine",
         "n_nodes": 3,

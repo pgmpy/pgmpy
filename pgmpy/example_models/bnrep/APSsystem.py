@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class APSsystem(PlainBIFMixin, _BaseExampleModel):
+class APSsystem(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/APSsystem",
         "n_nodes": 10,

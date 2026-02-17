@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Trajectories(PlainBIFMixin, _BaseExampleModel):
+class Trajectories(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/trajectories",
         "n_nodes": 5,

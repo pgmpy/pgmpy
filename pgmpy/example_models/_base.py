@@ -78,7 +78,7 @@ class DiscreteMixin:
         ).get_model()
 
 
-class PlainBIFMixin:
+class BIFMixin:
     """
     Mixin class for loading discrete Bayesian networks from plain (non-gzipped) BIF files.
     """

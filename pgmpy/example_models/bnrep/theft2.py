@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Theft2(PlainBIFMixin, _BaseExampleModel):
+class Theft2(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/theft2",
         "n_nodes": 5,

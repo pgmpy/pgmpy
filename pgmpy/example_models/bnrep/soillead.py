@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Soillead(PlainBIFMixin, _BaseExampleModel):
+class Soillead(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/soillead",
         "n_nodes": 9,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class ConsequenceCovid(PlainBIFMixin, _BaseExampleModel):
+class ConsequenceCovid(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/consequenceCovid",
         "n_nodes": 15,

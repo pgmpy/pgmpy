@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class GDIpathway2(PlainBIFMixin, _BaseExampleModel):
+class GDIpathway2(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/GDIpathway2",
         "n_nodes": 28,

@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Augmenting(PlainBIFMixin, _BaseExampleModel):
+class Augmenting(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/augmenting",
         "n_nodes": 6,

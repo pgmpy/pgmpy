@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Polymorphic(PlainBIFMixin, _BaseExampleModel):
+class Polymorphic(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/polymorphic",
         "n_nodes": 22,

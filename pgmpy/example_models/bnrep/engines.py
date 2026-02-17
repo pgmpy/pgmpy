@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Engines(PlainBIFMixin, _BaseExampleModel):
+class Engines(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/engines",
         "n_nodes": 12,

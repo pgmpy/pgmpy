@@ -1,7 +1,7 @@
-from .._base import PlainBIFMixin, _BaseExampleModel
+from .._base import BIFMixin, _BaseExampleModel
 
 
-class Ricci(PlainBIFMixin, _BaseExampleModel):
+class Ricci(BIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/ricci",
         "n_nodes": 6,
