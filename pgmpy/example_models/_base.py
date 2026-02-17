@@ -1,7 +1,6 @@
 import gzip
 import hashlib
-import json
-import math
+import io
 import os
 import shutil
 from urllib.request import urlopen
@@ -10,9 +9,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
 
 
@@ -88,34 +85,13 @@ class ContinuousMixin:
 
     @classmethod
     def load_model_object(cls):
-        data = json.loads(cls._get_raw_data().decode("utf-8"))
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
+        from pgmpy.models import LinearGaussianBayesianNetwork
 
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
+        raw_data = cls._get_raw_data()
 
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
+        file_obj = io.BytesIO(raw_data)
 
-            intercept = coefficients["(Intercept)"][0]
-
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        model.add_cpds(*cpds)
-        return model
+        return LinearGaussianBayesianNetwork.load(file_obj)
 
 
 class DAGMixin:
@@ -150,7 +126,7 @@ def load_model(name: str):
     #  Loading a discrete Bayesian network with parameters.
 
     >>> from pgmpy.example_models import load_model
-    >>> model = load_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
     >>> len(model.nodes())
@@ -160,7 +136,7 @@ def load_model(name: str):
 
     # Loading a DAG without parameters.
 
-    >>> model = load_model("acid_1996")
+    >>> model = load_model("dagitty/acid_1996")
     >>> print(model)
     DAG with 18 nodes and 22 edges
     >>> len(model.nodes())
@@ -168,7 +144,7 @@ def load_model(name: str):
 
     # Loading a continuous Bayesian network with parameters.
 
-    >>> model = load_model("arht150")
+    >>> model = load_model("bnlearn/arth150")
     >>> print(model)
     LinearGaussianBayesianNetwork with 107 nodes and 150 edges
     """
@@ -210,11 +186,11 @@ def list_models(**filter_tags) -> list[str]:
     --------
     >>> from pgmpy.example_models import list_models
     >>> list_models()
-    ['alarm', 'arth150', ..... ]
+    ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
     >>> list_models(is_discrete=True)
-    ['alarm', 'asia', 'cancer', ..... ]
+    ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
     >>> list_models(is_parameterized=False)
-    ['acid_1996', ...., ]
+    ['dagitty/acid_1996', ...., ]
     """
     all_models = all_objects(
         object_types=_BaseExampleModel,

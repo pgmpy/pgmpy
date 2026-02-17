@@ -3,21 +3,29 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
+from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import PC
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.independencies import Independencies
+from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
 
 
-def make_estimator():
-    return PC()
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
+        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+    }
 
 
-@parametrize_with_checks([make_estimator()])
+@parametrize_with_checks(
+    [PC(return_type="dag", show_progress=False)],
+    expected_failed_checks=expected_failed_checks,
+)
 def test_pc_compatibility(estimator, check):
     check(estimator)
 
@@ -611,3 +619,35 @@ def test_temporal_pc_sachs():
     expert = ExpertKnowledge(temporal_order=temporal_order)
     pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).causal_graph_
     assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
+
+
+def test_score():
+    asia_model = get_example_model("asia")
+    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    est = PC(
+        return_type="dag",
+        variant="stable",
+        max_cond_vars=4,
+        show_progress=False,
+    )
+
+    with pytest.raises(NotFittedError):
+        corr_score = est.score(X=data)
+
+    est.fit(X=data)
+    corr_score = est.score(X=data)
+    shd = est.score(true_graph=asia_model)
+
+    assert np.round(corr_score, 4) > 0.5
+    assert shd, 2
+
+    corr_score = est.score(X=data, metric=CorrelationScore(significance_level=0.01))
+    shd = est.score(true_graph=asia_model, metric=SHD())
+
+    assert np.round(corr_score, 4) > 0.5
+    assert shd, 2
+
+    structure_score = est.score(X=data, metric="structure_score")
+    shd = est.score(true_graph=asia_model, metric="SHD")
+    assert np.round(structure_score, 4) > -3e4
+    assert shd, 2

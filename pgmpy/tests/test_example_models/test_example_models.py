@@ -9,56 +9,55 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 
-
 DISCRETE_MODELS = [
-    "asia",
-    "alarm",
-    "cancer",
-    "earthquake",
-    "pathfinder",
-    "pigs",
-    "water",
-    "munin",
-    "munin1",
-    "munin2",
-    "munin3",
-    "munin4",
-    "andes",
-    "diabetes",
-    "link",
-    "hailfinder",
-    "hepar2",
-    "win95pts",
-    "insurance",
-    "child",
-    "barley",
-    "sachs",
-    "mildew",
-    "survey",
+    "bnlearn/asia",
+    "bnlearn/alarm",
+    "bnlearn/cancer",
+    "bnlearn/earthquake",
+    "bnlearn/pathfinder",
+    "bnlearn/pigs",
+    "bnlearn/water",
+    "bnlearn/munin",
+    "bnlearn/munin1",
+    "bnlearn/munin2",
+    "bnlearn/munin3",
+    "bnlearn/munin4",
+    "bnlearn/andes",
+    "bnlearn/diabetes",
+    "bnlearn/link",
+    "bnlearn/hailfinder",
+    "bnlearn/hepar2",
+    "bnlearn/win95pts",
+    "bnlearn/insurance",
+    "bnlearn/child",
+    "bnlearn/barley",
+    "bnlearn/sachs",
+    "bnlearn/mildew",
+    "bnlearn/survey",
 ]
 
 CONTINUOUS_MODELS = [
-    "arth150",
-    "ecoli70",
-    "magic_niab",
-    "magic_irri",
+    "bnlearn/arth150",
+    "bnlearn/ecoli70",
+    "bnlearn/magic_niab",
+    "bnlearn/magic_irri",
 ]
 
 HYBRID_MODELS = []
 
 DAGS = [
-    "acid_1996",
-    "confounding",
-    "didelez_2010",
-    "kampen_2014",
-    "mediator",
-    "m_bias",
-    "paths",
-    "polzer_2012",
-    "schipf_2010",
-    "sebastiani_2005",
-    "shrier_2008",
-    "thoemmes_2013",
+    "dagitty/acid_1996",
+    "dagitty/confounding",
+    "dagitty/didelez_2010",
+    "dagitty/kampen_2014",
+    "dagitty/mediator",
+    "dagitty/m_bias",
+    "dagitty/paths",
+    "dagitty/polzer_2012",
+    "dagitty/schipf_2010",
+    "dagitty/sebastiani_2005",
+    "dagitty/shrier_2008",
+    "dagitty/thoemmes_2013",
 ]
 
 ALL_MODELS = DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS
@@ -67,13 +66,13 @@ ALL_MODELS = DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS
 def test_list_models():
     assert set(list_models()) == set(ALL_MODELS)
 
-    assert set(list_models(name="alarm")) == {"alarm"}
+    assert set(list_models(name="bnlearn/alarm")) == {"bnlearn/alarm"}
 
-    assert "alarm" in set(list_models(is_parameterized=True))
-    assert "arth150" in set(list_models(is_parameterized=True))
+    assert "bnlearn/alarm" in set(list_models(is_parameterized=True))
+    assert "bnlearn/arth150" in set(list_models(is_parameterized=True))
 
-    assert "alarm" in set(list_models(is_discrete=True))
-    assert "arth150" in set(list_models(is_continuous=True))
+    assert "bnlearn/alarm" in set(list_models(is_discrete=True))
+    assert "bnlearn/arth150" in set(list_models(is_continuous=True))
 
 
 def test_tags():
