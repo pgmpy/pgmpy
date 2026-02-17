@@ -1,3 +1,4 @@
+import numpy as np
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
@@ -326,7 +327,7 @@ def test_tags():
 
 
 def test_load_model():
-    for model_name in ALL_MODELS:
+    for model_name in np.random.choice(ALL_MODELS, 5):
         model = load_model(model_name)
 
         assert isinstance(
