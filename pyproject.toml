@@ -51,7 +51,6 @@ optional = [
   "pygraphviz",
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
-  "requests>=2.0",
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -62,8 +61,9 @@ tests = [
   "mock",
   "black",
   "pre-commit",
+  "jsonschema",
 ]
-docs =[
+docs = [
   "sphinx>=5.0",
   "nbsphinx",
   "numpydoc",

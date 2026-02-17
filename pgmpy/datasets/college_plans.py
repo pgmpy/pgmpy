@@ -10,6 +10,7 @@ class CollegePlans(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": True,
@@ -19,7 +20,7 @@ class CollegePlans(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
         "real/college-plans/"
     )
 

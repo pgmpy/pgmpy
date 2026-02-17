@@ -112,13 +112,13 @@ class BIFReader(object):
 
             # self.get_variables(), self.get_states(), self.get_property()
             if block_content.startswith("variable"):
-                name = name_expr.searchString(block_content)[0][0]
+                name = name_expr.search_string(block_content)[0][0]
                 self.variable_names.append(name)
                 self.variable_states[name] = list(
-                    state_expr.searchString(block_content)[0][0]
+                    state_expr.search_string(block_content)[0][0]
                 )
                 if self.include_properties:
-                    properties = property_expr.searchString(block_content)
+                    properties = property_expr.search_string(block_content)
                     self.variable_properties[name] = [
                         y.strip() for x in properties for y in x
                     ]
@@ -126,7 +126,7 @@ class BIFReader(object):
             # self.get_parents(), self.get_edges()
             elif block_content.startswith("probability"):
                 header_line = block_content.split("\n")[0]
-                names = probability_expr.searchString(header_line)[0]
+                names = probability_expr.search_string(header_line)[0]
                 var_name, parents = names[0], names[1:]
 
                 self.variable_parents[var_name] = parents
@@ -142,7 +142,7 @@ class BIFReader(object):
         }
 
         for block_content, var_name, parents in probability_blocks:
-            cpds_list = cpd_expr.searchString(block_content)
+            cpds_list = cpd_expr.search_string(block_content)
             n_rows = len(self.variable_states[var_name])
 
             if ("table " in block_content) or ("default " in block_content):
@@ -163,6 +163,8 @@ class BIFReader(object):
                     values_df = df.iloc[:, len_parents:]
 
                     for idx, parent in enumerate(parents):
+                        col = state_df.columns[idx]
+                        state_df = state_df.astype({col: "object"})
                         state_df.iloc[:, idx] = state_df.iloc[:, idx].map(
                             state_maps[parent]
                         )
@@ -178,7 +180,7 @@ class BIFReader(object):
         """
         # Defining an expression for valid word
         word_expr = Word(pp.unicode.alphanums + "_" + "-" + ".")
-        word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
+        word_expr2 = Word(init_chars=printables, exclude_chars=["{", "}", ",", " "])
         name_expr = Suppress("variable") + word_expr + Suppress("{")
         state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
         # Defining a variable state expression
@@ -213,7 +215,7 @@ class BIFReader(object):
             + Suppress(Optional(","))
         )
         word_expr2 = Word(
-            initChars=printables, excludeChars=[",", ")", " ", "("]
+            init_chars=printables, exclude_chars=[",", ")", " ", "("]
         ) + Suppress(Optional(","))
         # creating an expression for valid numbers, of the format
         # 1.00 or 1 or 1.00. 0.00 or 9.8e-5 etc
