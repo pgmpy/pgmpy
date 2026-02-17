@@ -573,7 +573,7 @@ class TestDAGParser(unittest.TestCase):
 
 class TestLGBNIO(unittest.TestCase):
     def setUp(self):
-        self.model = load_model("ecoli70")
+        self.model = load_model("bnlearn/ecoli70")
         self.filename = "ecoli70.json"
         self.model.save(self.filename)
 

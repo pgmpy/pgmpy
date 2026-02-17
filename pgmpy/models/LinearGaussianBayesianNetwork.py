@@ -190,7 +190,7 @@ class LinearGaussianBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.datasets import load_model
-        >>> model = load_model("ecoli70")
+        >>> model = load_model("bnlearn/ecoli70")
         >>> model.save("ecoli70.json")
         """
 
