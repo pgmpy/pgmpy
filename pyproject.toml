@@ -61,6 +61,7 @@ tests = [
   "mock",
   "black",
   "pre-commit",
+  "jsonschema",
 ]
 docs = [
   "sphinx>=5.0",
