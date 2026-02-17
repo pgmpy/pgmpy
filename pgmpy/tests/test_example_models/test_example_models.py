@@ -1,4 +1,3 @@
-import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
@@ -284,89 +283,6 @@ BNREP_CONTINUOUS_MODELS = [
     "bnrep/turbine2",
 ]
 
-# These 78 discrete bnrep models fail BIFReader parsing due to unsupported
-# BIF syntax (spaces/special chars in state names, etc.).
-BNREP_KNOWN_PARSE_FAILURES = {
-    "bnrep/accidents",
-    "bnrep/adhd",
-    "bnrep/agropastoral5",
-    "bnrep/aircrash",
-    "bnrep/airegulation1",
-    "bnrep/airegulation2",
-    "bnrep/airegulation3",
-    "bnrep/arcticwaters",
-    "bnrep/argument",
-    "bnrep/beam1",
-    "bnrep/blacksea",
-    "bnrep/burglar",
-    "bnrep/cardiovascular",
-    "bnrep/case",
-    "bnrep/compaction",
-    "bnrep/concrete1",
-    "bnrep/concrete2",
-    "bnrep/consequenceCovid",
-    "bnrep/coral1",
-    "bnrep/coral2",
-    "bnrep/coral3",
-    "bnrep/coral4",
-    "bnrep/coral5",
-    "bnrep/corical",
-    "bnrep/corticosteroid",
-    "bnrep/covid1",
-    "bnrep/covid2",
-    "bnrep/covid3",
-    "bnrep/crimescene",
-    "bnrep/curacao4",
-    "bnrep/curacao5",
-    "bnrep/dioxins",
-    "bnrep/disputed2",
-    "bnrep/disputed3",
-    "bnrep/disputed4",
-    "bnrep/estuary",
-    "bnrep/fingermarks1",
-    "bnrep/fire",
-    "bnrep/flood",
-    "bnrep/fluids1",
-    "bnrep/fluids2",
-    "bnrep/fluids3",
-    "bnrep/forest",
-    "bnrep/gonorrhoeae",
-    "bnrep/income",
-    "bnrep/intensification",
-    "bnrep/intentionalattacks",
-    "bnrep/kosterhavet",
-    "bnrep/macrophytes",
-    "bnrep/moodstate",
-    "bnrep/mountaingoat",
-    "bnrep/nanomaterials1",
-    "bnrep/nanomaterials2",
-    "bnrep/nuclearwaste",
-    "bnrep/nuisancegrowth",
-    "bnrep/onlinerisk",
-    "bnrep/orbital",
-    "bnrep/perioperative",
-    "bnrep/permaBN",
-    "bnrep/pneumonia",
-    "bnrep/rainwater",
-    "bnrep/safespeeds",
-    "bnrep/softwarelogs2",
-    "bnrep/softwarelogs3",
-    "bnrep/softwarelogs4",
-    "bnrep/soil",
-    "bnrep/soillead",
-    "bnrep/student1",
-    "bnrep/student2",
-    "bnrep/tbm",
-    "bnrep/tubercolosis",
-    "bnrep/twinframework",
-    "bnrep/urinary",
-    "bnrep/vessel2",
-    "bnrep/volleyball",
-    "bnrep/waterlead",
-    "bnrep/wheat",
-    "bnrep/yangtze",
-}
-
 ALL_MODELS = (
     DISCRETE_MODELS
     + CONTINUOUS_MODELS
@@ -411,11 +327,6 @@ def test_tags():
 
 def test_load_model():
     for model_name in ALL_MODELS:
-        if model_name in BNREP_KNOWN_PARSE_FAILURES:
-            with pytest.raises(Exception):
-                load_model(model_name)
-            continue
-
         model = load_model(model_name)
 
         assert isinstance(

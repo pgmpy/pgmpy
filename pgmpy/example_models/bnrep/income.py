@@ -5,7 +5,7 @@ class Income(PlainBIFMixin, _BaseExampleModel):
     _tags = {
         "name": "bnrep/income",
         "n_nodes": 13,
-        "n_edges": 19,
+        "n_edges": 20,
         "is_parameterized": True,
         "is_discrete": True,
         "is_continuous": False,
