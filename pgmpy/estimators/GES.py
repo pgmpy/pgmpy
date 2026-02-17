@@ -44,6 +44,11 @@ class GES(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
+        logger.warning(
+            "DeprecationWarning: This GES class will be removed in a future release. "
+            "Please use the new sklearn compatible GES class from the "
+            "pgmpy.causal_discovery module instead."
+        )
         self.use_cache = use_cache
 
         super(GES, self).__init__(data=data, **kwargs)
