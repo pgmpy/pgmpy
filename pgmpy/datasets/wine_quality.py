@@ -1,7 +1,7 @@
 from pgmpy.datasets._base import _BaseDataset
 
 BASE_URL = (
-    "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
+    "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
     "real/wine-quality/"
 )
 
@@ -22,6 +22,7 @@ class WineQualityRed(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -53,6 +54,7 @@ class WineQualityWhite(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -84,6 +86,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,

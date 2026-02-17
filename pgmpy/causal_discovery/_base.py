@@ -15,10 +15,11 @@ from typing import (
 )
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import validate_data
+from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -27,6 +28,7 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
+from pgmpy.metrics import get_metrics
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -78,6 +80,7 @@ class _BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        self.n_features_in_ = len(X.columns)
         return X
 
     def fit(self, X: pd.DataFrame, y=None):
@@ -87,6 +90,96 @@ class _BaseCausalDiscovery(BaseEstimator):
         """
         X = self._check_fit_data(X)
         return self._fit(X)
+
+    def score(
+        self,
+        X=None,
+        true_graph=None,
+        metric=None,
+    ):
+        """
+        Method to calculate the score of the fitted causal graph.
+
+        The score can be calculated either against a dataset (`X`) or against a ground truth model (`true_graph`).
+        Hence, only one of the two parameters should be provided. Depending on whether `X` is provided or
+        `true_graph`, the `metric` should be chosen accordingly.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame, optional
+            Test data used for scoring the learned causal model. If provided, `metric` should be a metric that
+            can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
+
+        true_graph : pgmpy.base.DAG, optional
+            The true model graph for scoring the learned causal model. If provided, `metric` should be a metric
+            that compares graphs. You can find all such metrics using:
+            `pgmpy.metrics.get_metrics(requires_true_graph=True)`
+
+        metric : str or pgmpy.metrics._Base.*Metric instance, optional
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
+            argument (`X` or `true_graph`) will be selected internally.
+
+        Returns
+        -------
+        score : float or other type
+            The calculated score of the learned causal graph according to the specified scoring method. The exact
+            return type depends on the chosen metric and may be a float, pandas.DataFrame, tuple, or another
+            metric-specific type.
+
+        Examples
+        --------
+        >>> from pgmpy.causal_discovery import PC
+        >>> from pgmpy.metrics import get_metrics
+        >>> from pgmpy.datasets import load_dataset
+        >>> data = load_dataset("lead")
+        >>> dag = PC(return_type="dag").fit(data)
+        >>> score = dag.score(X=data, metric="correlation_score")
+        """
+        check_is_fitted(self, "causal_graph_")
+
+        # Case 1: When data is provided.
+        if X is not None:
+            validate_data(
+                self,
+                X=X,
+                dtype=None,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=False,
+            )
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+
+            if metric is None:
+                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
+                metric = scoring_class()
+
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
+                if len(scoring_class) == 0:
+                    raise ValueError(f"No scoring method found with name: {metric}")
+
+                metric = scoring_class[0]()
+
+            return metric.evaluate(X, self.causal_graph_)
+
+        # Case 2: When true graph is provided.
+        elif true_graph is not None:
+            if metric is None:
+                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
+                metric = scoring_class[0]()
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
+                if len(scoring_class) == 0:
+                    raise ValueError(f"No scoring method found with name: {metric}")
+
+                metric = scoring_class[0]()
+
+            return metric.evaluate(
+                true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
+            )
+        else:
+            raise ValueError("Either `X` or `true_graph` needs to be specified")
 
 
 class _ConstraintMixin:
