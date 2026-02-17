@@ -620,16 +620,35 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     return panel
 
 
-def show_model_structure(model: object):
-    """Visualize the structure of a pgmpy model using Graphviz.
+def display_graph(dot):
+    """Display a graphviz Digraph object as an image using matplotlib.
 
-        This function takes a pgmpy graph-based model (or any compatible graph
-    object) and returns a graphviz.Digraph object representing the graph
-    structure of the model. The input model may represent a directed, undirected, or partially
-    directed graph, and can originate from probabilistic models, structure
-    learning algorithms, causal discovery algorithms, or user-defined
-    custom graphs, provided that the object exposes standard graph
-    interfaces such as `nodes()` and `edges()`.
+    Parameters
+    ----------
+    dot : graphviz.Digraph
+        A Graphviz Digraph object to display.
+
+    Returns
+    -------
+    None
+        Displays the graph in a matplotlib figure window.
+    """
+    import io
+
+    import matplotlib.pyplot as plt
+    from PIL import Image
+
+    png_bytes = dot.pipe(format="png")
+    image = Image.open(io.BytesIO(png_bytes))
+
+    plt.figure(figsize=(10, 8))
+    plt.imshow(image)
+    plt.axis("off")
+    plt.show()
+
+
+def show_model_structure(model, show=True):  # noqa: D417
+    """Visualize the structure of a pgmpy model using Graphviz.
 
     Parameters
     ----------
@@ -638,49 +657,25 @@ def show_model_structure(model: object):
         LinearGaussianBayesianNetwork, or a DAG returned by structure
         learning or causal discovery algorithms.
 
+    show : bool, optional (default=True)
+        If True, render and display the graph using matplotlib.
+        If False, return the Graphviz Digraph object only.
+
     Returns
     -------
     graphviz.Digraph
         A Graphviz Digraph object representing the model structure.
-
-    Requirements
-    ------------
-    This function requires Graphviz to be installed both as:
-
-    1. A system dependency:
-        On Debian/Ubuntu:
-            sudo apt install graphviz
-
-    2. A Python wrapper:
-            pip install graphviz
-
-    Notes
-    -----
-    - This function only constructs and returns the graph object.
-        To render and display the graph, call:
-
-            dot.render(filename, view=True)
-
-    - Rendering requires the Graphviz executables (e.g., `dot`) to be
-        available on the system PATH.
-
-    - This function does not perform inference and does not require
-        CPDs to be present; it only visualizes the graph structure.
-
     """
-    from pgmpy.base import DAG  # noqa: I001
-    from networkx import nodes
+    import shutil
 
-    if not isinstance(model, DAG):
-        raise ValueError("This is not a valid model for visualization.")
+    if not hasattr(model, "nodes") or not hasattr(model, "edges"):
+        raise ValueError("Model must expose nodes() and edges() methods for visualization.")
+
     # Check Python Graphviz wrapper
     try:
         import graphviz
     except ImportError as exc:
-        raise ImportError(
-            "Python package 'graphviz' is required for showbn(). Install it using: pip install graphviz"
-        ) from exc
-    import shutil
+        raise ImportError("Python package 'graphviz' is required. Install it using: pip install graphviz") from exc
 
     # Check system Graphviz executable
     if shutil.which("dot") is None:
@@ -689,16 +684,147 @@ def show_model_structure(model: object):
             "Please install Graphviz system package.\n"
             "On Debian/Ubuntu: sudo apt install graphviz"
         )
-    no_nodes = len(model)
-    no_edges = len(model.edges())
-    logger.info(f"Model has {no_nodes} nodes and {no_edges} edges.")
+
     nodes = model.nodes()
     edges = model.edges()
-    import graphviz
 
-    dot = graphviz.Digraph("model structure")
+    dot = graphviz.Digraph("model_structure")
+    dot.attr(rankdir="LR")
+
     for node in nodes:
         dot.node(str(node), str(node))
+
     for u, v in edges:
         dot.edge(str(u), str(v))
+
+    if show:
+        display_graph(dot)
+
     return dot
+
+
+def build_graph(model, marginals, evidence):
+    """Build a Graphviz Digraph object representing a model with marginal probabilities.
+
+    Parameters
+    ----------
+    model : pgmpy model
+        A pgmpy model object with nodes and edges.
+
+    marginals : dict
+        A dictionary mapping nodes to their marginal probability distributions.
+
+    evidence : dict, optional
+        A dictionary of evidence variables. Nodes in evidence will be highlighted.
+
+    Returns
+    -------
+    graphviz.Digraph
+        A Graphviz Digraph object representing the model structure with node labels
+        showing marginal probabilities and evidence nodes highlighted in gray.
+    """
+    from graphviz import Digraph
+
+    dot = Digraph(format="png")
+    dot.attr(rankdir="LR")
+    from pgmpy.factors.discrete import DiscreteFactor
+
+    for node in model.nodes():
+        label = node
+        if not isinstance(marginals[node], DiscreteFactor):
+            label += "\n(continuous)"
+        if node in marginals:
+            probs = marginals[node].values
+            label += "\n" + "\n".join(f"{state}: {p:.2f}" for state, p in zip(marginals[node].state_names[node], probs))
+
+        attrs = {}
+    if evidence and node in evidence:
+        attrs["style"] = "filled"
+        attrs["fillcolor"] = "lightgray"
+
+    dot.node(node, label=label, **attrs)
+
+    for u, v in model.edges():
+        dot.edge(u, v)
+
+    return dot
+
+
+def show_inference(model, evidence=None, inference_engine="VariableElimination"):
+    """Perform probabilistic inference on a pgmpy model and visualize the resulting posterior marginal distributions.
+
+    This function:
+    1. Instantiates the specified pgmpy inference engine
+    2. Runs inference on the model given optional evidence
+    3. Computes posterior marginal distributions for all non-evidence
+       variables
+    4. Visualizes the model structure annotated with inference results
+
+    The function does NOT implement inference algorithms itself; it
+    relies entirely on pgmpy's inference engines (e.g.,
+    VariableElimination, BeliefPropagation).
+
+    Parameters
+    ----------
+    model : pgmpy model
+        A pgmpy probabilistic graphical model that:
+        - Defines a graph structure (`nodes()`, `edges()`)
+        - Contains valid CPDs
+        - Supports inference operations
+
+    evidence : dict, optional
+        A dictionary of observed variables of the form:
+
+            {variable: value}
+
+        Evidence variables are treated as fixed and are highlighted
+        in the visualization. If None, inference is performed without
+        conditioning.
+
+    inference_engine : str, optional (default="VariableElimination")
+        The name of the inference engine class from `pgmpy.inference`
+        to use. Examples include:
+
+        - "VariableElimination"
+        - "BeliefPropagation"
+
+    Returns
+    -------
+    dict
+        A mapping from variable names to posterior marginal distributions
+        (typically `DiscreteFactor` objects), as returned by
+        `InferenceEngine.query()`.
+
+    Raises
+    ------
+    ValueError
+        If the specified inference engine is not available or if the
+        model does not support inference (e.g., missing CPDs).
+
+    Notes
+    -----
+    - This function visualizes **discrete variables only**.
+    - Continuous variables are included in the graph but not plotted
+      as probability distributions.
+    - Visualization is performed using Graphviz for layout and
+      Matplotlib for rendering.
+    """
+    from pgmpy import inference as pgmpy_inference
+
+    try:
+        InferenceClass = getattr(pgmpy_inference, inference_engine)
+    except AttributeError:
+        raise ValueError(f"Unknown inference engine '{inference_engine}'. Available engines are in pgmpy.inference.")
+
+    if not hasattr(model, "get_cpds"):
+        raise ValueError("Model does not contain CPDs. Inference cannot be performed.")
+
+    infer = InferenceClass(model)
+
+    # Run inference (example)
+    query_vars = [v for v in model.nodes() if v not in (evidence or {})]
+    result = infer.query(variables=query_vars, evidence=evidence or {})
+    dot = build_graph(model, result, evidence)
+    display_graph(dot)
+
+    return result
