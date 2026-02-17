@@ -8,7 +8,6 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
 
 
@@ -190,7 +189,6 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        score_c: ScoreCache
         _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
         score_fn = score_c.local_score
 
