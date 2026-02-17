@@ -1,7 +1,6 @@
 import gzip
 import hashlib
-import json
-import math
+import io
 import os
 import shutil
 from urllib.request import urlopen
@@ -10,9 +9,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
 
 
@@ -88,34 +85,13 @@ class ContinuousMixin:
 
     @classmethod
     def load_model_object(cls):
-        data = json.loads(cls._get_raw_data().decode("utf-8"))
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
+        from pgmpy.models import LinearGaussianBayesianNetwork
 
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
+        raw_data = cls._get_raw_data()
 
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
+        file_obj = io.BytesIO(raw_data)
 
-            intercept = coefficients["(Intercept)"][0]
-
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        model.add_cpds(*cpds)
-        return model
+        return LinearGaussianBayesianNetwork.load(file_obj)
 
 
 class DAGMixin:
