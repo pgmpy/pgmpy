@@ -13,15 +13,45 @@ class ConfusionMatrix(_BaseSupervisedMetric):
     Implements adjacency and orientation confusion matrices with standard
     classification metrics (precision, recall, F1, NPV, specificity).
 
+    Parameters
+    ----------
+    metrics : List[str], optional
+        List of metrics to compute. If None, computes all available metrics.
+        Available adjacency metrics: 'precision', 'recall', 'f1', 'npv', 'specificity'
+        Available orientation metrics: 'orientation_precision', 'orientation_recall'
+
     Examples
     --------
+    Compute all adjacency and orientation metrics:
+
     >>> from pgmpy.metrics import ConfusionMatrix
     >>> from pgmpy.base import DAG
-    >>> true_dag = DAG([('A', 'B'), ('B', 'C'), ('A', 'C')])
-    >>> est_dag = DAG([('A', 'B'), ('C', 'B')])
+    >>> true_dag = DAG([('Smoking', 'Lung_Cancer'), ('Smoking', 'Heart_Disease'),
+    ...                 ('Age', 'Heart_Disease'), ('Age', 'Lung_Cancer')])
+    >>> est_dag = DAG([('Smoking', 'Lung_Cancer'), ('Age', 'Heart_Disease')])
     >>> cm = ConfusionMatrix()
     >>> result = cm.evaluate(true_dag, est_dag)
     >>> result['adjacency_precision']
+    1.0
+    >>> result['adjacency_recall']
+    0.5
+    >>> result['adjacency_confusion_matrix']
+    {'tp': 2, 'fp': 0, 'fn': 2, 'tn': 2}
+
+    Compute only selected metrics:
+
+    >>> cm = ConfusionMatrix(metrics=['precision', 'recall', 'f1'])
+    >>> result = cm.evaluate(true_dag, est_dag)
+    >>> 'adjacency_f1' in result
+    True
+    >>> 'adjacency_npv' in result
+    False
+
+    Orientation metrics evaluate edge direction accuracy for correctly placed edges:
+
+    >>> cm = ConfusionMatrix(metrics=['orientation_precision', 'orientation_recall'])
+    >>> result = cm.evaluate(true_dag, est_dag)
+    >>> result['orientation_precision']
     1.0
     """
 
@@ -35,16 +65,6 @@ class ConfusionMatrix(_BaseSupervisedMetric):
     }
 
     def __init__(self, metrics: Optional[List[str]] = None):
-        """
-        Initialize confusion matrix metrics calculator.
-
-        Parameters
-        ----------
-        metrics : List[str], optional
-            List of metrics to compute. If None, computes all available metrics.
-            Available adjacency metrics: 'precision', 'recall', 'f1', 'npv', 'specificity'
-            Available orientation metrics: 'orientation_precision', 'orientation_recall'
-        """
         self.metrics = metrics or [
             'precision', 'recall', 'f1', 'npv', 'specificity',
             'orientation_precision', 'orientation_recall'
@@ -54,20 +74,9 @@ class ConfusionMatrix(_BaseSupervisedMetric):
     def _get_skeleton_adjacency_matrix(self, graph: Union[DAG, PDAG]) -> np.ndarray:
         """Get undirected skeleton adjacency matrix."""
         nodes_list = sorted(list(graph.nodes()))
-
-        if isinstance(graph, DAG):
-            nx_graph = nx.DiGraph(graph.edges())
-            nx_graph.add_nodes_from(nodes_list)
-            adj_matrix = nx.adjacency_matrix(nx_graph, nodelist=nodes_list).todense()
-            skeleton = adj_matrix + adj_matrix.T
-            skeleton[skeleton > 0] = 1
-            return skeleton
-        else:  # PDAG
-            nx_graph = nx.Graph()
-            for edge in graph.edges():
-                nx_graph.add_edge(edge[0], edge[1])
-            nx_graph.add_nodes_from(nodes_list)
-            return nx.adjacency_matrix(nx_graph, nodelist=nodes_list).todense()
+        skeleton = nx.Graph(graph.edges())
+        skeleton.add_nodes_from(nodes_list)
+        return nx.adjacency_matrix(skeleton, nodelist=nodes_list).todense()
 
     def _compute_adjacency_confusion_matrix(self, true_graph: Union[DAG, PDAG],
                                           est_graph: Union[DAG, PDAG]) -> Dict[str, int]:
@@ -92,13 +101,8 @@ class ConfusionMatrix(_BaseSupervisedMetric):
         """Compute conditional orientation confusion matrix for correctly placed edges."""
         nodes_list = sorted(list(true_graph.nodes()))
 
-        true_nx = nx.DiGraph(true_graph.edges())
-        true_nx.add_nodes_from(nodes_list)
-        true_adj = nx.adjacency_matrix(true_nx, nodelist=nodes_list).todense()
-
-        est_nx = nx.DiGraph(est_graph.edges())
-        est_nx.add_nodes_from(nodes_list)
-        est_adj = nx.adjacency_matrix(est_nx, nodelist=nodes_list).todense()
+        true_adj = nx.adjacency_matrix(true_graph, nodelist=nodes_list, weight=None).todense()
+        est_adj = nx.adjacency_matrix(est_graph, nodelist=nodes_list, weight=None).todense()
 
         true_skel = true_adj + true_adj.T
         est_skel = est_adj + est_adj.T
