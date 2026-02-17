@@ -1021,9 +1021,6 @@ class LinearGaussianBayesianNetwork(DAG):
         if not isinstance(other, LinearGaussianBayesianNetwork):
             return False
 
-        import ipdb
-
-        ipdb.set_trace()
         # Test for structure equality using the DAG's __eq__ method.
         super().__eq__(other)
 
