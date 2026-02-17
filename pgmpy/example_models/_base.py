@@ -126,7 +126,7 @@ def load_model(name: str):
     #  Loading a discrete Bayesian network with parameters.
 
     >>> from pgmpy.example_models import load_model
-    >>> model = load_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
     >>> len(model.nodes())
@@ -136,7 +136,7 @@ def load_model(name: str):
 
     # Loading a DAG without parameters.
 
-    >>> model = load_model("acid_1996")
+    >>> model = load_model("dagitty/acid_1996")
     >>> print(model)
     DAG with 18 nodes and 22 edges
     >>> len(model.nodes())
@@ -144,7 +144,7 @@ def load_model(name: str):
 
     # Loading a continuous Bayesian network with parameters.
 
-    >>> model = load_model("arht150")
+    >>> model = load_model("bnlearn/arth150")
     >>> print(model)
     LinearGaussianBayesianNetwork with 107 nodes and 150 edges
     """
@@ -186,11 +186,11 @@ def list_models(**filter_tags) -> list[str]:
     --------
     >>> from pgmpy.example_models import list_models
     >>> list_models()
-    ['alarm', 'arth150', ..... ]
+    ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
     >>> list_models(is_discrete=True)
-    ['alarm', 'asia', 'cancer', ..... ]
+    ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
     >>> list_models(is_parameterized=False)
-    ['acid_1996', ...., ]
+    ['dagitty/acid_1996', ...., ]
     """
     all_models = all_objects(
         object_types=_BaseExampleModel,
