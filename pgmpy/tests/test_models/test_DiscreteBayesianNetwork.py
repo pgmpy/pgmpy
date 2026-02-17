@@ -20,7 +20,7 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.independencies import Independencies
-from pgmpy.inference import ApproxInference, BeliefPropagation
+from pgmpy.inference import ApproxInference, BeliefPropagation, VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.utils import get_example_model
@@ -1525,6 +1525,33 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             np.random.randint(low=0, high=2, size=(1, 5)),
             columns=["A", "B", "C", "F", "E"],
         )[:]
+
+    def test_predict_probability_w_nans(self):
+        np.random.seed(42)
+        values = pd.DataFrame(
+            np.random.randint(low=0, high=2, size=(100, 5)),
+            columns=["A", "B", "C", "D", "E"],
+        )
+        fit_data = values[:80]
+        predict_data = values[80:].copy()
+        predict_data.drop("E", axis=1, inplace=True)
+        self.model_connected.fit(fit_data)
+        gen = np.random.default_rng(seed=42)
+        mask = gen.choice(
+            [True, False], size=predict_data.shape, p=[0.1, 0.9]
+        )
+        predict_data_masked = predict_data.mask(mask)
+        e_prob = self.model_connected.predict_probability(predict_data_masked)
+        self.assertEqual(e_prob.shape, (20, 2))
+        self.assertTrue(e_prob.isna().sum().sum() == 0)
+        model_inference = VariableElimination(self.model_connected)
+        for idx in np.where(mask)[0]:
+            evidence = predict_data_masked.iloc[idx, :].dropna().to_dict()
+            query_var = set(self.model_connected.nodes()) - set(evidence.keys())
+            expected_prob = model_inference.query(
+                variables=query_var, evidence=evidence
+            ).marginalize(query_var - {'E'}, inplace=False)
+            np_test.assert_allclose(e_prob.iloc[idx, :].values, expected_prob.values, atol=0)
 
     def test_predict_probability_errors(self):
         np.random.seed(42)
