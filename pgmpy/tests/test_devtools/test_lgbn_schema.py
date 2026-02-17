@@ -3,7 +3,7 @@ from pathlib import Path
 
 from jsonschema import validate
 
-from pgmpy.example_models.ecoli70 import Ecoli70
+from pgmpy.example_models.bnlearn.ecoli70 import Ecoli70
 
 
 def test_lgbn_schema():
