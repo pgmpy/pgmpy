@@ -326,7 +326,7 @@ class TestDAGCreation(unittest.TestCase):
         dag = DAG([("A", "X"), ("A", "B"), ("B", "X"), ("C", "B"), ("C", "Y")])
 
         result = dag.minimal_dseparator(start="X", end="Y")
-        self.assertIsNotNone(result)
+        self.assertEqual(result, {"B"})
 
     @unittest.skipUnless(
         _check_soft_dependencies("daft", severity="none"),
