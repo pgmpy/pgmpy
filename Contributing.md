@@ -2,7 +2,7 @@
 
 Welcome and thank you for your interest in making pgmpy even better! This guide
 walks you through everything you need to know to get started, from setting up
-your development environment to submitting pull requests and getting feedback. 
+your development environment to submitting pull requests and getting feedback.
 Please join our weekly community meetings on [Discord](https://discord.gg/DRkdKaumBs) if you have any questions or need help.
 
 ## Getting Started

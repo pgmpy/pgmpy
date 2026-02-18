@@ -163,7 +163,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     Use the PC algorithm to learn the causal structure from data:
 
-    >>> from pgmpy.estimators import PC
+    >>> from pgmpy.causal_discovery import PC
     >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
     >>> pc.fit(df)
     >>> pc.causal_graph_.edges()
