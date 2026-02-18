@@ -10,6 +10,8 @@ from .utils import (
     manual_pairwise_orient,
     preprocess_data,
     to_timeseries_format,
+    show_inference,
+    show_model_structure,
 )
 
 __all__ = [
@@ -27,4 +29,6 @@ __all__ = [
     "preprocess_data",
     "get_dataset_type",
     "to_timeseries_format",
+    "show_inference",
+    "show_model_structure",
 ]

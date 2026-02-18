@@ -1,9 +1,13 @@
 import gzip
+import io
 import json
 import math
 
-
+import graphviz
+import matplotlib.pyplot as plt
 import pandas as pd
+from graphviz import Digraph
+from PIL import Image
 
 try:
     from importlib.resources import files
@@ -11,6 +15,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import logger
 
 
@@ -633,11 +638,6 @@ def display_graph(dot):
     None
         Displays the graph in a matplotlib figure window.
     """
-    import io
-
-    import matplotlib.pyplot as plt
-    from PIL import Image
-
     png_bytes = dot.pipe(format="png")
     image = Image.open(io.BytesIO(png_bytes))
 
@@ -645,6 +645,7 @@ def display_graph(dot):
     plt.imshow(image)
     plt.axis("off")
     plt.show()
+    plt.savefig("graph.png", bbox_inches="tight")
 
 
 def show_model_structure(model, show=True):  # noqa: D417
@@ -666,24 +667,22 @@ def show_model_structure(model, show=True):  # noqa: D417
     graphviz.Digraph
         A Graphviz Digraph object representing the model structure.
     """
-    import shutil
-
     if not hasattr(model, "nodes") or not hasattr(model, "edges"):
         raise ValueError("Model must expose nodes() and edges() methods for visualization.")
 
     # Check Python Graphviz wrapper
-    try:
-        import graphviz
-    except ImportError as exc:
-        raise ImportError("Python package 'graphviz' is required. Install it using: pip install graphviz") from exc
+    # try:
+    #     import graphviz
+    # except ImportError as exc:
+    #     raise ImportError("Python package 'graphviz' is required. Install it using: pip install graphviz") from exc
 
     # Check system Graphviz executable
-    if shutil.which("dot") is None:
-        raise RuntimeError(
-            "Graphviz executable 'dot' not found. "
-            "Please install Graphviz system package.\n"
-            "On Debian/Ubuntu: sudo apt install graphviz"
-        )
+    # if shutil.which("dot") is None:
+    #     raise RuntimeError(
+    #         "Graphviz executable 'dot' not found. "
+    #         "Please install Graphviz system package.\n"
+    #         "On Debian/Ubuntu: sudo apt install graphviz"
+    #     )
 
     nodes = model.nodes()
     edges = model.edges()
@@ -723,26 +722,29 @@ def build_graph(model, marginals, evidence):
         A Graphviz Digraph object representing the model structure with node labels
         showing marginal probabilities and evidence nodes highlighted in gray.
     """
-    from graphviz import Digraph
-
     dot = Digraph(format="png")
     dot.attr(rankdir="LR")
     from pgmpy.factors.discrete import DiscreteFactor
 
     for node in model.nodes():
         label = node
-        if not isinstance(marginals[node], DiscreteFactor):
-            label += "\n(continuous)"
-        if node in marginals:
-            probs = marginals[node].values
-            label += "\n" + "\n".join(f"{state}: {p:.2f}" for state, p in zip(marginals[node].state_names[node], probs))
-
         attrs = {}
-    if evidence and node in evidence:
-        attrs["style"] = "filled"
-        attrs["fillcolor"] = "lightgray"
+        if node in marginals:
+            factor = marginals[node]
+            if isinstance(factor, DiscreteFactor):
+                probs = factor.values.flatten()
+                label += "\n" + "\n".join(
+                    f"{state}: {p:.2f}" for state, p in zip(marginals[node].state_names[node], probs)
+                )
+            else:
+                label += "\n(continuous)"
 
-    dot.node(node, label=label, **attrs)
+        if evidence and node in evidence:
+            attrs["style"] = "filled"
+            attrs["fillcolor"] = "lightgray"
+            label += f"\n(evidence: {evidence[node]})"
+
+        dot.node(node, label=label, **attrs)
 
     for u, v in model.edges():
         dot.edge(u, v)
@@ -750,7 +752,7 @@ def build_graph(model, marginals, evidence):
     return dot
 
 
-def show_inference(model, evidence=None, inference_engine="VariableElimination"):
+def show_inference(model, evidence=None, inference_engine="VariableElimination", show=True):
     """Perform probabilistic inference on a pgmpy model and visualize the resulting posterior marginal distributions.
 
     This function:
@@ -816,15 +818,27 @@ def show_inference(model, evidence=None, inference_engine="VariableElimination")
     except AttributeError:
         raise ValueError(f"Unknown inference engine '{inference_engine}'. Available engines are in pgmpy.inference.")
 
-    if not hasattr(model, "get_cpds"):
-        raise ValueError("Model does not contain CPDs. Inference cannot be performed.")
+    if not hasattr(model, "nodes") or not hasattr(model, "edges"):
+        raise ValueError(
+            f"Expected a pgmpy model, got {type(model).__name__}. Pass a valid BayesianNetwork or similar model."
+        )
+    if hasattr(model, "_tags"):
+        if not model._tags.get("is_parameterized", False):
+            raise ValueError("Inference cannot be performed on non-parameterized models.")
+    elif not hasattr(model, "get_cpds") or len(model.get_cpds()) == 0:
+        raise ValueError("Model does not define CPDs. Inference cannot be performed.")
 
     infer = InferenceClass(model)
 
     # Run inference (example)
     query_vars = [v for v in model.nodes() if v not in (evidence or {})]
-    result = infer.query(variables=query_vars, evidence=evidence or {})
-    dot = build_graph(model, result, evidence)
-    display_graph(dot)
 
-    return result
+    marginals = {}
+
+    for var in query_vars:
+        marginals[var] = infer.query(variables=[var], evidence=evidence or {}, show_progress=False)
+
+    dot = build_graph(model, marginals, evidence)
+    if show:
+        display_graph(dot)
+    return marginals

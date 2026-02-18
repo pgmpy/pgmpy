@@ -2,6 +2,7 @@ import os
 import random
 import unittest
 
+import graphviz
 import numpy as np
 import pandas as pd
 import pytest
@@ -13,6 +14,8 @@ from pgmpy.utils import (
     get_example_model,
     llm_pairwise_orient,
     preprocess_data,
+    show_inference,
+    show_model_structure,
 )
 
 
@@ -26,34 +29,26 @@ class TestDiscretization(unittest.TestCase):
         self.data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
     def test_rounding_disc(self):
-        df_disc = discretize(
-            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding"
-        )
+        df_disc = discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding")
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
 
-        df_disc = discretize(
-            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="quantile"
-        )
+        df_disc = discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="quantile")
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
 
 
 class TestPairwiseOrientation(unittest.TestCase):
-    @pytest.mark.skipif(
-        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
-    )
+    @pytest.mark.skipif("GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set")
     def test_llm(self):
         descriptions = {
             "Age": "The age of a person",
-            "Workclass": "The workplace where the person is "
-            "employed such as Private industry, or self employed",
-            "Education": "The highest level of education the " "person has finished",
+            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
+            "Education": "The highest level of education the person has finished",
             "MaritalStatus": "The marital status of the person",
-            "Occupation": "The kind of job the person does. "
-            "For example, sales, craft repair, clerical",
+            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
             "Relationship": "The relationship status of the person",
             "Race": "The ethnicity of the person",
             "Sex": "The sex or gender of the person",
@@ -63,24 +58,18 @@ class TestPairwiseOrientation(unittest.TestCase):
         }
 
         self.assertEqual(
-            llm_pairwise_orient(
-                x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"
-            ),
+            llm_pairwise_orient(x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"),
             ("Age", "Income"),
         )
         self.assertEqual(
-            llm_pairwise_orient(
-                x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"
-            ),
+            llm_pairwise_orient(x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"),
             ("Age", "Income"),
         )
 
 
 class TestPreprocessData(unittest.TestCase):
     def setUp(self):
-        self.data_raw = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
-        )
+        self.data_raw = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0)
 
         self.data_proc = self.data_raw.copy()
         self.data_proc["A_cat"] = self.data_proc.A_cat.astype("category")
@@ -236,3 +225,83 @@ class TestGetExampleModel(unittest.TestCase):
 
         cont_model = get_example_model("magic-irri")
         self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)
+
+
+class TestShowModelStructure(unittest.TestCase):
+    """Test visualization of model structure."""
+
+    def test_struct_of_cat_models(self):
+        """Test visualization of categorical models."""
+        asia_model = get_example_model("asia")
+        result = show_model_structure(asia_model, show=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, graphviz.Digraph)
+        self.assertGreaterEqual(len(result.body), 0)
+        self.assertEqual(len(result.body), len(asia_model.nodes()) + len(asia_model.edges()))
+
+    def test_Struct_of_cont_models(self):
+        """Test visualization of continuous models."""
+        ecoli_model = get_example_model("ecoli70")
+        result = show_model_structure(ecoli_model, show=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, graphviz.Digraph)
+        self.assertGreaterEqual(len(result.body), 0)
+        self.assertEqual(len(result.body), len(ecoli_model.nodes()) + len(ecoli_model.edges()))
+
+    def test_struct_of_dagitty_models(self):
+        """Test visualization of DAGitty models."""
+        dagitty_model = get_example_model("M-bias")
+        result = show_model_structure(dagitty_model, show=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, graphviz.Digraph)
+        self.assertGreaterEqual(len(result.body), 1)
+        self.assertEqual(len(result.body), len(dagitty_model.nodes()) + len(dagitty_model.edges()))
+
+    def test_invalid_model(self):
+        """Test handling of invalid model input."""
+        with self.assertRaises(ValueError):
+            show_model_structure("not_a_model", show=False)
+
+
+class TestShowInference(unittest.TestCase):
+    """Tests for show_inference visualization utility."""
+
+    def test_show_inference_with_evidence(self):
+        """Inference with valid evidence on a discrete model."""
+        asia_model = get_example_model("asia")
+        evidence = {"smoke": "no"}
+        result = show_inference(asia_model, evidence=evidence, show=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, dict)
+        self.assertGreater(len(result), 0)
+
+    def test_show_inference_without_evidence(self):
+        """Inference without conditioning evidence."""
+        asia_model = get_example_model("asia")
+        result = show_inference(asia_model, show=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, dict)
+        self.assertGreater(len(result), 0)
+
+    def test_invalid_inference_engine(self):
+        """Invalid inference engine name should raise ValueError."""
+        asia_model = get_example_model("asia")
+
+        with self.assertRaises(ValueError):
+            show_inference(
+                asia_model,
+                inference_engine="NotARealEngine",
+                show=False,
+            )
+
+    def test_non_parameterized_model(self):
+        """Inference should fail for models without CPDs."""
+        dagitty_model = get_example_model("M-bias")  # not parameterized
+
+        with self.assertRaises(ValueError):
+            show_inference(dagitty_model, show=False)
+
+    def test_invalid_model_input(self):
+        """Invalid model input should raise ValueError."""
+        with self.assertRaises(ValueError):
+            show_inference("not_a_model", show=False)
