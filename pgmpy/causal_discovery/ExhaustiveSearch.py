@@ -67,11 +67,10 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
     >>> import numpy as np
     >>> from pgmpy.causal_discovery import ExhaustiveSearch
     >>> data = pd.DataFrame(
-    ...     np.random.randint(low=0, high=2, size=(100, 3)),
-    ...     columns=['A', 'B', 'C']
+    ...     np.random.randint(low=0, high=2, size=(100, 3)), columns=["A", "B", "C"]
     ... )
-    >>> data = data.astype('category')
-    >>> est = ExhaustiveSearch(scoring_method='bic-d')
+    >>> data = data.astype("category")
+    >>> est = ExhaustiveSearch(scoring_method="bic-d")
     >>> est.fit(data)
     >>> est.causal_graph_.edges()
     """
@@ -153,7 +152,7 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
         ...         "Humidity": [65, 75],
         ...     }
         ... )
-        >>> data = data.astype('category')
+        >>> data = data.astype("category")
         >>> est = ExhaustiveSearch()
         >>> est.fit(data)
         >>> dags = list(est._all_dags())
@@ -197,11 +196,10 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
         >>> from pgmpy.causal_discovery import ExhaustiveSearch
         >>> np.random.seed(42)
         >>> data = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(100, 3)),
-        ...     columns=['A', 'B', 'C']
+        ...     np.random.randint(low=0, high=2, size=(100, 3)), columns=["A", "B", "C"]
         ... )
-        >>> data = data.astype('category')
-        >>> est = ExhaustiveSearch(scoring_method='k2')
+        >>> data = data.astype("category")
+        >>> est = ExhaustiveSearch(scoring_method="k2")
         >>> est.fit(data)
         >>> scores = est.all_scores()
         >>> for score, model in scores[:3]:
