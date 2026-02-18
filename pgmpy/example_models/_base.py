@@ -78,6 +78,16 @@ class DiscreteMixin:
         ).get_model()
 
 
+class BIFMixin:
+    """
+    Mixin class for loading discrete Bayesian networks from plain (non-gzipped) BIF files.
+    """
+
+    @classmethod
+    def load_model_object(cls):
+        return BIFReader(string=cls._get_raw_data().decode("utf-8")).get_model()
+
+
 class ContinuousMixin:
     """
     Mixin class for loading continuous Bayesian networks from JSON files.
@@ -147,6 +157,12 @@ def load_model(name: str):
     >>> model = load_model("bnlearn/arth150")
     >>> print(model)
     LinearGaussianBayesianNetwork with 107 nodes and 150 edges
+
+    # Loading a bnRep discrete Bayesian network.
+
+    >>> model = load_model("bnrep/asia")
+    >>> print(model)
+    DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
     target_model = all_objects(
         object_types=_BaseExampleModel,
