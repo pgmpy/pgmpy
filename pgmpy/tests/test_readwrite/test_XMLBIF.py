@@ -131,7 +131,8 @@ TEST_FILE = """<?xml version="1.0"?>
 
 
 class TestXMLBIFReaderMethods:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.reader = XMLBIFReader(string=TEST_FILE)
 
     def test_get_variables(self):
@@ -209,9 +210,6 @@ class TestXMLBIFReaderMethods:
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def teardown_method(self, method):
-        del self.reader
-
     def test_make_valid_state_name(self):
         model = DiscreteBayesianNetwork()
         writer = XMLBIFWriter(model)
@@ -234,10 +232,14 @@ class TestXMLBIFReaderMethods:
 
 
 class TestXMLBIFReaderMethodsFile:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         with open("dog_problem.xml", "w") as fout:
             fout.write(TEST_FILE)
         self.reader = XMLBIFReader("dog_problem.xml")
+        yield
+        del self.reader
+        os.remove("dog_problem.xml")
 
     def test_get_variables(self):
         var_expected = [
@@ -314,13 +316,10 @@ class TestXMLBIFReaderMethodsFile:
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def teardown_method(self, method):
-        del self.reader
-        os.remove("dog_problem.xml")
-
 
 class TestXMLBIFWriterMethodsString:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         reader = XMLBIFReader(string=TEST_FILE)
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
@@ -396,10 +395,14 @@ class TestXMLBIFWriterMethodsString:
     reason="execute only if required dependency present",
 )
 class TestXMLBIFReaderMethodsTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.reader = XMLBIFReader(string=TEST_FILE)
+        yield
+        del self.reader
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         var_expected = [
@@ -475,10 +478,6 @@ class TestXMLBIFReaderMethodsTorch:
 
     def test_model(self):
         self.reader.get_model().check_model()
-
-    def teardown_method(self, method):
-        del self.reader
-        config.set_backend("numpy")
 
 
 @pytest.mark.skipif(
@@ -486,12 +485,17 @@ class TestXMLBIFReaderMethodsTorch:
     reason="execute only if required dependency present",
 )
 class TestXMLBIFReaderMethodsFileTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         with open("dog_problem.xml", "w") as fout:
             fout.write(TEST_FILE)
         self.reader = XMLBIFReader("dog_problem.xml")
+        yield
+        del self.reader
+        os.remove("dog_problem.xml")
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         var_expected = [
@@ -568,18 +572,14 @@ class TestXMLBIFReaderMethodsFileTorch:
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def teardown_method(self, method):
-        del self.reader
-        os.remove("dog_problem.xml")
-        config.set_backend("numpy")
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXMLBIFWriterMethodsStringTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         reader = XMLBIFReader(string=TEST_FILE)
@@ -624,6 +624,8 @@ class TestXMLBIFWriterMethodsStringTorch:
             self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s
         )
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
+        yield
+        config.set_backend("numpy")
 
     def test_write_xmlbif_statefull(self):
         self.writer.write_xmlbif("dog_problem_output.xbif")
@@ -699,6 +701,3 @@ class TestXMLBIFWriterMethodsStringTorch:
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-
-    def teardown_method(self, method):
-        config.set_backend("numpy")

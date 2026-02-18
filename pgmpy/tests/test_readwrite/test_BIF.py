@@ -14,7 +14,8 @@ from pgmpy.readwrite import BIFReader, BIFWriter
 
 
 class TestBIFReader:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.reader = BIFReader(
             string="""
                 // Bayesian Network in the Interchange Format
@@ -278,9 +279,6 @@ class TestBIFReader:
         assert len(model.edges()) == 66
         assert len(model.get_cpds()) == 32
 
-    def teardown_method(self, method):
-        del self.reader
-
     def test_default_attribut_equal_table(self):
         default_reader = BIFReader(
             string="""
@@ -362,7 +360,8 @@ class TestBIFReader:
 
 
 class TestBIFWriter:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         variables = [
             "kid",
             "bowel-problem",
@@ -555,7 +554,8 @@ probability ( light-on | family-out ) {
     reason="execute only if required dependency present",
 )
 class TestBIFReaderTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.reader = BIFReader(
@@ -610,6 +610,9 @@ class TestBIFReaderTorch:
         self.water_model = BIFReader(
             "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
         )
+        yield
+        del self.reader
+        config.set_backend("numpy")
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
@@ -872,10 +875,6 @@ class TestBIFReaderTorch:
         for var in table_model.nodes():
             assert table_model.get_cpds(var) == default_model.get_cpds(var)
 
-    def teardown_method(self, method):
-        del self.reader
-        config.set_backend("numpy")
-
     def test_cpp_style_comments(self):
         reader = BIFReader(
             string=r"""
@@ -910,7 +909,8 @@ class TestBIFReaderTorch:
     reason="execute only if required dependency present",
 )
 class TestBIFWriterTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         variables = [
@@ -990,6 +990,8 @@ class TestBIFWriterTorch:
                 self.model.nodes[node][prop_name] = prop_value
 
         self.writer = BIFWriter(model=self.model, round_values=4)
+        yield
+        config.set_backend("numpy")
 
     def test_str(self):
         self.expected_string = """network unknown {
@@ -1057,6 +1059,3 @@ probability ( light-on | family-out ) {
         for var in self.model.nodes():
             assert self.model.get_cpds(var) == read_model.get_cpds(var)
         os.remove("test_bif.bif")
-
-    def teardown_method(self, method):
-        config.set_backend("numpy")

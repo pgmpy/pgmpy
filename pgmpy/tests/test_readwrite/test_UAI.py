@@ -9,7 +9,8 @@ from pgmpy.readwrite import UAIReader, UAIWriter
 
 
 class TestUAIReader:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """MARKOV
 3
 2 2 3
@@ -127,7 +128,8 @@ class TestUAIReader:
 
 
 class TestUAIWriter:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.maxDiff = None
         variables = [
             "kid",
@@ -266,7 +268,8 @@ class TestUAIWriter:
     reason="execute only if required dependency present",
 )
 class TestUAIReaderTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         string = """MARKOV
@@ -306,6 +309,8 @@ class TestUAIReaderTorch:
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
+        yield
+        config.set_backend("numpy")
 
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
@@ -384,16 +389,14 @@ class TestUAIReaderTorch:
         }
         assert dict(model.nodes) == node_expected
 
-    def teardown_method(self, method):
-        config.set_backend("numpy")
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestUAIWriterTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.maxDiff = None
@@ -487,6 +490,8 @@ class TestUAIWriterTorch:
             factors.append(factor)
         self.markovmodel.add_factors(*factors)
         self.markovwriter = UAIWriter(self.markovmodel, round_values=4)
+        yield
+        config.set_backend("numpy")
 
     def test_bayes_model(self):
         self.expected_bayes_file = """BAYES
@@ -527,6 +532,3 @@ class TestUAIWriterTorch:
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
         assert str(self.markovwriter.__str__()) == str(self.expected_markov_file)
-
-    def teardown_method(self, method):
-        config.set_backend("numpy")

@@ -12,7 +12,8 @@ from pgmpy.readwrite import XMLBeliefNetwork
 
 
 class TestXBNReader:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan" ROOT="Cancer">
                        <BNMODEL NAME="Cancer">
                           <STATICPROPERTIES>
@@ -316,7 +317,8 @@ class TestXBNReader:
 
 
 class TestXBNWriter:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         nodes = {
             "c": {
                 "STATES": ["Present", "Absent"],
@@ -524,7 +526,8 @@ class TestXBNWriter:
 
 
 class TestXBNReaderTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan" ROOT="Cancer">
                        <BNMODEL NAME="Cancer">
                           <STATICPROPERTIES>
@@ -827,7 +830,8 @@ class TestXBNReaderTorch:
 
 
 class TestXBNWriterTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         nodes = {
             "c": {
                 "STATES": ["Present", "Absent"],

@@ -87,7 +87,8 @@ TEST_WHITESPACE_MODEL = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class TestXDSLReaderMethodsString:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.reader = XDSLReader(string=TEST_FILE)
 
     def test_whitespace_error(self):
@@ -167,9 +168,6 @@ class TestXDSLReaderMethodsString:
 
     def test_model(self):
         self.reader.get_model().check_model()
-
-    def tearDown(self):
-        del self.reader
 
 
 DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -203,7 +201,8 @@ DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class TestXDSLWriterMethods:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.alarm_model_bn = get_example_model(model="alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
@@ -278,20 +277,19 @@ class TestXDSLWriterMethods:
 
         os.remove("alarm_model.xdsl")
 
-    def teardown_method(self, method):
-        del self.alarm_model_bn
-        del self.dummy_model
-        del self.writer_dummy
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXDSLReaderMethodsStringTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
         self.reader = XDSLReader(string=TEST_FILE)
+        yield
+        del self.reader
+        config.set_backend("numpy")
 
     def test_whitespace_error(self):
         with pytest.raises(ValueError):
@@ -371,17 +369,14 @@ class TestXDSLReaderMethodsStringTorch:
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def teardown_method(self, method):
-        del self.reader
-        config.set_backend("numpy")
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestXDSLWriterMethodsTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.alarm_model_bn = get_example_model(model="alarm")
@@ -426,6 +421,8 @@ class TestXDSLWriterMethodsTorch:
             evidence_card=[2],
         )
         self.model_with_whitespaces.add_cpds(cpd_a, cpd_b)
+        yield
+        config.set_backend("numpy")
 
     def test_whitespace_warning(self):
         with warnings.catch_warnings(record=True):
@@ -455,12 +452,6 @@ class TestXDSLWriterMethodsTorch:
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
         os.remove("alarm_model.xdsl")
-
-    def teardown_method(self, method):
-        del self.alarm_model_bn
-        del self.dummy_model
-        del self.writer_dummy
-        config.set_backend("numpy")
 
 
 class TestXDSLCommaWarning:

@@ -14,7 +14,8 @@ from pgmpy.utils import compat_fns, get_example_model
 
 
 class TestNETWriter:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         asia = get_example_model("asia")
         self.writer = NETWriter(asia)
 
@@ -202,7 +203,8 @@ potential (xray | either){
 
 
 class TestNETReader:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         net = """
         /// Bayesian Network in the Hugin (.net) Format
         /// Produced by Genie Software
@@ -407,11 +409,14 @@ class TestNETReader:
     reason="execute only if required dependency present",
 )
 class TestNETWriterTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         asia = get_example_model("asia")
         self.writer = NETWriter(asia)
+        yield
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         assert self.writer.get_variables() == [
@@ -564,16 +569,14 @@ potential (xray | either){
 """
         assert str(self.writer) == net
 
-    def teardown_method(self, method):
-        config.set_backend("numpy")
-
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestNETReaderTorch:
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         net = """
@@ -692,6 +695,8 @@ class TestNETReaderTorch:
             }
             """
         self.reader = NETReader(string=net)
+        yield
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         var_expected = [
@@ -773,6 +778,3 @@ class TestNETReaderTorch:
 
     def test_get_network_name(self):
         pass
-
-    def teardown_method(self, method):
-        config.set_backend("numpy")

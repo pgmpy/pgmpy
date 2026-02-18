@@ -29,7 +29,8 @@ class PyTestCompat:
 
 
 class TestPomdpXReaderString(PyTestCompat):
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """<pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -902,13 +903,10 @@ class TestPomdpXReaderString(PyTestCompat):
         self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
         self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
 
-    def teardown_method(self, method):
-        del self.reader_file
-        del self.reader_string
-
 
 class TestPomdpXWriter(PyTestCompat):
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.model_data = {
             "description": "",
             "discount": "0.95",
@@ -1731,7 +1729,8 @@ class TestPomdpXWriter(PyTestCompat):
 
 
 class TestPomdpXReaderStringTorch(PyTestCompat):
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """<pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -2604,13 +2603,10 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
         self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
         self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
 
-    def teardown_method(self, method):
-        del self.reader_file
-        del self.reader_string
-
 
 class TestPomdpXWriterTorch(PyTestCompat):
-    def setup_method(self, method):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.model_data = {
             "description": "",
             "discount": "0.95",
