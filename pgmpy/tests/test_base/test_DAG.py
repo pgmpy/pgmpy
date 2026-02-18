@@ -327,6 +327,7 @@ class TestDAGCreation(unittest.TestCase):
 
         result = dag.minimal_dseparator(start="X", end="Y")
         self.assertIsNotNone(result)
+
     @unittest.skipUnless(
         _check_soft_dependencies("daft", severity="none"),
         reason="execute only if required dependency present",
