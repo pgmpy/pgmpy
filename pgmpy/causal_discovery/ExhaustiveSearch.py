@@ -102,13 +102,9 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        _, scoring_method = get_scoring_method(
-            self.scoring_method, X, self.use_cache
-        )
+        _, scoring_method = get_scoring_method(self.scoring_method, X, self.use_cache)
 
-        best_dag = max(
-            self._all_dags(nodes=self.variables_), key=scoring_method.score
-        )
+        best_dag = max(self._all_dags(nodes=self.variables_), key=scoring_method.score)
 
         best_model = DAG()
         best_model.add_nodes_from(sorted(best_dag.nodes()))
