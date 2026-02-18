@@ -1537,9 +1537,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         predict_data.drop("E", axis=1, inplace=True)
         self.model_connected.fit(fit_data)
         gen = np.random.default_rng(seed=42)
-        mask = gen.choice(
-            [True, False], size=predict_data.shape, p=[0.1, 0.9]
-        )
+        mask = gen.choice([True, False], size=predict_data.shape, p=[0.1, 0.9])
         predict_data_masked = predict_data.mask(mask)
         e_prob = self.model_connected.predict_probability(predict_data_masked)
         self.assertEqual(e_prob.shape, (20, 2))
@@ -1550,8 +1548,10 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             query_var = set(self.model_connected.nodes()) - set(evidence.keys())
             expected_prob = model_inference.query(
                 variables=query_var, evidence=evidence
-            ).marginalize(query_var - {'E'}, inplace=False)
-            np_test.assert_allclose(e_prob.iloc[idx, :].values, expected_prob.values, atol=0)
+            ).marginalize(query_var - {"E"}, inplace=False)
+            np_test.assert_allclose(
+                e_prob.iloc[idx, :].values, expected_prob.values, atol=0
+            )
 
     def test_predict_probability_errors(self):
         np.random.seed(42)
