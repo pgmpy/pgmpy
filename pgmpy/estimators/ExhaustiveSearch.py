@@ -36,9 +36,24 @@ class ExhaustiveSearch(StructureEstimator):
         If True, uses caching of score for faster computation.
         Note: Caching only works for scoring methods which are decomposable. Can
         give wrong results in case of custom scoring methods.
+
+    .. deprecated::
+        This class has been moved to `pgmpy.causal_discovery.ExhaustiveSearch`.
+        Please update your imports accordingly. This version will be removed
+        in a future release.
     """
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
+        import warnings
+
+        warnings.warn(
+            "ExhaustiveSearch has been moved to pgmpy.causal_discovery. "
+            "Please use 'from pgmpy.causal_discovery import ExhaustiveSearch' instead. "
+            "This old import path will be removed in a future release.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
         _, self.scoring_method = get_scoring_method(
             scoring_method, self.data, use_cache
