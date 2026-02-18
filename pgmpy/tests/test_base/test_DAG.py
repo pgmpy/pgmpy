@@ -322,6 +322,12 @@ class TestDAGCreation(unittest.TestCase):
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",
     )
+    def test_minimal_dseparator_non_minimal_case(self):
+        dag = DAG([("A", "X"), ("A", "B"), ("B", "X"), ("C", "B"), ("C", "Y")])
+
+        result = dag.minimal_dseparator(start="X", end="Y")
+        self.assertIn(result, [{"B"}, {"C"}])
+
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         dag.to_daft(node_pos="circular")
