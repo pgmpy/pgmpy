@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import numpy as np
 import numpy.testing as np_test
@@ -7,12 +7,12 @@ from pgmpy.factors.discrete import NoisyORCPD, TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 
 
-class TestNoisyORInit(unittest.TestCase):
+class TestNoisyORInit:
     def test_class_init(self):
         cpd = NoisyORCPD(
             variable="Y", prob_values=[0.7, 0.6, 0.8], evidence=["X1", "X2", "X3"]
         )
-        self.assertEqual(cpd.variables, ["Y", "X1", "X2", "X3"])
+        assert cpd.variables == ["Y", "X1", "X2", "X3"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2, 2]))
         np_test.assert_array_equal(
             cpd.get_values().round(3),
@@ -24,16 +24,10 @@ class TestNoisyORInit(unittest.TestCase):
             ),
         )
 
-        self.assertRaises(
-            ValueError, NoisyORCPD, variable="X", prob_values=[0.7, 0.8], evidence=["Y"]
-        )
-        self.assertRaises(
-            ValueError,
-            NoisyORCPD,
-            variable="X",
-            prob_values=[0.7, 1.1],
-            evidence=["Y", "Z"],
-        )
+        with pytest.raises(ValueError):
+            NoisyORCPD(variable="X", prob_values=[0.7, 0.8], evidence=["Y"])
+        with pytest.raises(ValueError):
+            NoisyORCPD(variable="X", prob_values=[0.7, 1.1], evidence=["Y", "Z"])
 
     def test_inference(self):
         model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("B", "D")])
