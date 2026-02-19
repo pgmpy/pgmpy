@@ -214,9 +214,7 @@ class TestIndependencies:
     def test_is_equivalent(self):
         ind1 = Independencies(["X", ["Y", "W"], "Z"])
         ind2 = Independencies(["X", "Y", "Z"], ["X", "W", "Z"])
-        ind3 = Independencies(
-            ["X", "Y", "Z"], ["X", "W", "Z"], ["X", "Y", ["W", "Z"]]
-        )
+        ind3 = Independencies(["X", "Y", "Z"], ["X", "W", "Z"], ["X", "Y", ["W", "Z"]])
         assert not ind1.is_equivalent(ind2)
         assert ind1.is_equivalent(ind3)
 
@@ -246,9 +244,7 @@ class TestIndependencies:
         ind3 = Independencies(["W", ["X", "Y", "Z"]], ["W", "X", "Y"])
         reduced = ind3.reduce()
         assert len(reduced.independencies) == 1
-        assert reduced.independencies[0] == IndependenceAssertion(
-            "W", ["X", "Y", "Z"]
-        )
+        assert reduced.independencies[0] == IndependenceAssertion("W", ["X", "Y", "Z"])
 
         ind4 = Independencies(
             ["A", ["B", "C"], "D"],
