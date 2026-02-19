@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import numpy as np
 import pandas as pd
@@ -12,33 +12,54 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 
 
-class TestBayesianEstimator(unittest.TestCase):
-    def setUp(self):
-        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latent = DiscreteBayesianNetwork(
-            [("A", "C"), ("B", "C")], latents=["C"]
-        )
-        self.dag_with_latents = DAG([("A", "B"), ("B", "C")], latents=["C"])
-        self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        self.d2 = pd.DataFrame(
-            data={
-                "A": [0, 0, 1, 0, 2, 0, 2, 1, 0, 2],
-                "B": ["X", "Y", "X", "Y", "X", "Y", "X", "Y", "X", "Y"],
-                "C": [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-            }
-        )
-        self.est1 = BayesianEstimator(self.m1, self.d1)
-        self.est2 = BayesianEstimator(
-            self.m1, self.d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
-        )
-        self.est3 = BayesianEstimator(self.m1, self.d2)
+@pytest.fixture
+def model_setup():
+    m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+    model_latent = DiscreteBayesianNetwork(
+        [("A", "C"), ("B", "C")], latents=["C"]
+    )
+    dag_with_latents = DAG([("A", "B"), ("B", "C")], latents=["C"])
+    d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+    d2 = pd.DataFrame(
+        data={
+            "A": [0, 0, 1, 0, 2, 0, 2, 1, 0, 2],
+            "B": ["X", "Y", "X", "Y", "X", "Y", "X", "Y", "X", "Y"],
+            "C": [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        }
+    )
+    est1 = BayesianEstimator(m1, d1)
+    est2 = BayesianEstimator(
+        m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
+    )
+    est3 = BayesianEstimator(m1, d2)
 
-    def test_error_latent_model(self):
-        self.assertRaises(ValueError, BayesianEstimator, self.model_latent, self.d1)
-        self.assertRaises(ValueError, BayesianEstimator, self.dag_with_latents, self.d1)
+    return {
+        "m1": m1,
+        "model_latent": model_latent,
+        "dag_with_latents": dag_with_latents,
+        "d1": d1,
+        "d2": d2,
+        "est1": est1,
+        "est2": est2,
+        "est3": est3,
+    }
 
-    def test_estimate_cpd_dirichlet(self):
-        cpd_A = self.est1.estimate_cpd(
+
+@pytest.fixture(autouse=True)
+def cleanup():
+    yield
+    get_reusable_executor().shutdown(wait=True)
+
+
+class TestBayesianEstimator:
+    def test_error_latent_model(self, model_setup):
+        with pytest.raises(ValueError):
+            BayesianEstimator(model_setup["model_latent"], model_setup["d1"])
+        with pytest.raises(ValueError):
+            BayesianEstimator(model_setup["dag_with_latents"], model_setup["d1"])
+
+    def test_estimate_cpd_dirichlet(self, model_setup):
+        cpd_A = model_setup["est1"].estimate_cpd(
             "A", prior_type="dirichlet", pseudo_counts=[[0], [1]]
         )
         cpd_A_exp = TabularCPD(
@@ -47,24 +68,24 @@ class TestBayesianEstimator(unittest.TestCase):
             values=[[0.5], [0.5]],
             state_names={"A": [0, 1]},
         )
-        self.assertEqual(cpd_A, cpd_A_exp)
+        assert cpd_A == cpd_A_exp
 
         # also test passing pseudo_counts as np.array
         pseudo_counts = np.array([[0], [1]])
-        cpd_A = self.est1.estimate_cpd(
+        cpd_A = model_setup["est1"].estimate_cpd(
             "A", prior_type="dirichlet", pseudo_counts=pseudo_counts
         )
-        self.assertEqual(cpd_A, cpd_A_exp)
+        assert cpd_A == cpd_A_exp
 
-        cpd_B = self.est1.estimate_cpd(
+        cpd_B = model_setup["est1"].estimate_cpd(
             "B", prior_type="dirichlet", pseudo_counts=[[9], [3]]
         )
         cpd_B_exp = TabularCPD(
             "B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]}
         )
-        self.assertEqual(cpd_B, cpd_B_exp)
+        assert cpd_B == cpd_B_exp
 
-        cpd_C = self.est1.estimate_cpd(
+        cpd_C = model_setup["est1"].estimate_cpd(
             "C",
             prior_type="dirichlet",
             pseudo_counts=[[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]],
@@ -77,10 +98,10 @@ class TestBayesianEstimator(unittest.TestCase):
             evidence_card=[2, 2],
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
-        self.assertEqual(cpd_C, cpd_C_exp)
+        assert cpd_C == cpd_C_exp
 
-    def test_estimate_cpd_improper_prior(self):
-        cpd_C = self.est1.estimate_cpd(
+    def test_estimate_cpd_improper_prior(self, model_setup):
+        cpd_C = model_setup["est1"].estimate_cpd(
             "C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]]
         )
         cpd_C_correct = TabularCPD(
@@ -92,15 +113,13 @@ class TestBayesianEstimator(unittest.TestCase):
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
         # manual comparison because np.nan != np.nan
-        self.assertTrue(
-            (
-                (cpd_C.values == cpd_C_correct.values)
-                | np.isnan(cpd_C.values) & np.isnan(cpd_C_correct.values)
-            ).all()
-        )
+        assert (
+            (cpd_C.values == cpd_C_correct.values)
+            | np.isnan(cpd_C.values) & np.isnan(cpd_C_correct.values)
+        ).all()
 
-    def test_estimate_cpd_shortcuts(self):
-        cpd_C1 = self.est2.estimate_cpd(
+    def test_estimate_cpd_shortcuts(self, model_setup):
+        cpd_C1 = model_setup["est2"].estimate_cpd(
             "C", prior_type="BDeu", equivalent_sample_size=9
         )
         cpd_C1_correct = TabularCPD(
@@ -115,9 +134,9 @@ class TestBayesianEstimator(unittest.TestCase):
             evidence_card=[3, 2],
             state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
         )
-        self.assertEqual(cpd_C1, cpd_C1_correct)
+        assert cpd_C1 == cpd_C1_correct
 
-        cpd_C2 = self.est3.estimate_cpd("C", prior_type="K2")
+        cpd_C2 = model_setup["est3"].estimate_cpd("C", prior_type="K2")
         cpd_C2_correct = TabularCPD(
             "C",
             2,
@@ -129,19 +148,19 @@ class TestBayesianEstimator(unittest.TestCase):
             evidence_card=[3, 2],
             state_names={"A": [0, 1, 2], "B": ["X", "Y"], "C": [0, 1]},
         )
-        self.assertEqual(cpd_C2, cpd_C2_correct)
+        assert cpd_C2 == cpd_C2_correct
 
-    def test_get_parameters(self):
+    def test_get_parameters(self, model_setup):
         cpds = set(
             [
-                self.est3.estimate_cpd("A"),
-                self.est3.estimate_cpd("B"),
-                self.est3.estimate_cpd("C"),
+                model_setup["est3"].estimate_cpd("A"),
+                model_setup["est3"].estimate_cpd("B"),
+                model_setup["est3"].estimate_cpd("C"),
             ]
         )
-        self.assertSetEqual(set(self.est3.get_parameters(n_jobs=1)), cpds)
+        assert set(model_setup["est3"].get_parameters(n_jobs=1)) == cpds
 
-    def test_get_parameters2(self):
+    def test_get_parameters2(self, model_setup):
         pseudo_counts = {
             "A": [[1], [2], [3]],
             "B": [[4], [5]],
@@ -149,148 +168,153 @@ class TestBayesianEstimator(unittest.TestCase):
         }
         cpds = set(
             [
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]
                 ),
             ]
         )
-        self.assertSetEqual(
-            set(
-                self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-                )
-            ),
-            cpds,
-        )
+        assert set(
+            model_setup["est3"].get_parameters(
+                prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
+            )
+        ) == cpds
 
-    def test_get_parameters3(self):
+    def test_get_parameters3(self, model_setup):
         pseudo_counts = 0.1
         cpds = set(
             [
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "A", prior_type="dirichlet", pseudo_counts=pseudo_counts
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "B", prior_type="dirichlet", pseudo_counts=pseudo_counts
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "C", prior_type="dirichlet", pseudo_counts=pseudo_counts
                 ),
             ]
         )
-        self.assertSetEqual(
-            set(
-                self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-                )
-            ),
-            cpds,
-        )
+        assert set(
+            model_setup["est3"].get_parameters(
+                prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
+            )
+        ) == cpds
 
-    def test_node_specific_equivalent_sample_size(self):
+    def test_node_specific_equivalent_sample_size(self, model_setup):
         """Test BDeu with node-specific equivalent_sample_size dict."""
         ess_dict = {"A": 10, "B": 20, "C": 15}
-        cpds_dict = self.est3.get_parameters(
+        cpds_dict = model_setup["est3"].get_parameters(
             prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
         )
 
         cpds_manual = set(
             [
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "A", prior_type="bdeu", equivalent_sample_size=10
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "B", prior_type="bdeu", equivalent_sample_size=20
                 ),
-                self.est3.estimate_cpd(
+                model_setup["est3"].estimate_cpd(
                     "C", prior_type="bdeu", equivalent_sample_size=15
                 ),
             ]
         )
-        self.assertSetEqual(set(cpds_dict), cpds_manual)
+        assert set(cpds_dict) == cpds_manual
 
-    def test_node_specific_ess_partial_dict(self):
+    def test_node_specific_ess_partial_dict(self, model_setup):
         """Test that unspecified nodes default to 0 (or equivalent behavior) when dict is partial."""
         ess_dict = {"A": 10, "C": 15}
-        cpd_A_dict = self.est3.estimate_cpd(
+        cpd_A_dict = model_setup["est3"].estimate_cpd(
             "A", prior_type="bdeu", equivalent_sample_size=ess_dict
         )
-        cpd_B_dict = self.est3.estimate_cpd(
+        cpd_B_dict = model_setup["est3"].estimate_cpd(
             "B", prior_type="bdeu", equivalent_sample_size=ess_dict
         )
-        cpd_C_dict = self.est3.estimate_cpd(
+        cpd_C_dict = model_setup["est3"].estimate_cpd(
             "C", prior_type="bdeu", equivalent_sample_size=ess_dict
         )
 
-        cpd_A_manual = self.est3.estimate_cpd(
+        cpd_A_manual = model_setup["est3"].estimate_cpd(
             "A", prior_type="bdeu", equivalent_sample_size=10
         )
-        cpd_C_manual = self.est3.estimate_cpd(
+        cpd_C_manual = model_setup["est3"].estimate_cpd(
             "C", prior_type="bdeu", equivalent_sample_size=15
         )
-        cpd_B_manual = self.est3.estimate_cpd(
+        cpd_B_manual = model_setup["est3"].estimate_cpd(
             "B", prior_type="bdeu", equivalent_sample_size=0
         )
 
-        self.assertEqual(cpd_A_dict, cpd_A_manual)
-        self.assertEqual(cpd_B_dict, cpd_B_manual)
-        self.assertEqual(cpd_C_dict, cpd_C_manual)
+        assert cpd_A_dict == cpd_A_manual
+        assert cpd_B_dict == cpd_B_manual
+        assert cpd_C_dict == cpd_C_manual
 
-    def test_node_specific_ess_matches_uniform_ess(self):
+    def test_node_specific_ess_matches_uniform_ess(self, model_setup):
         """Test that uniform ESS dict matches scalar ESS."""
         ess_value = 12
         ess_dict = {"A": ess_value, "B": ess_value, "C": ess_value}
-        cpds_scalar = self.est3.get_parameters(
+        cpds_scalar = model_setup["est3"].get_parameters(
             prior_type="bdeu", equivalent_sample_size=ess_value, n_jobs=1
         )
-        cpds_dict = self.est3.get_parameters(
+        cpds_dict = model_setup["est3"].get_parameters(
             prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
         )
-        self.assertSetEqual(set(cpds_scalar), set(cpds_dict))
-
-    def tearDown(self):
-        del self.m1
-        del self.d1
-        del self.d2
-        del self.est1
-        del self.est2
-        get_reusable_executor().shutdown(wait=True)
+        assert set(cpds_scalar) == set(cpds_dict)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("daft-pgm", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("daft-pgm", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestBayesianEstimatorTorch(unittest.TestCase):
-    def setUp(self):
+class TestBayesianEstimatorTorch:
+    @pytest.fixture(autouse=True)
+    def setup_torch(self):
         config.set_backend("torch")
-
-        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latent = DiscreteBayesianNetwork(
+        m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        model_latent = DiscreteBayesianNetwork(
             [("A", "C"), ("B", "C")], latents=["C"]
         )
-        self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        self.d2 = pd.DataFrame(
+        d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        d2 = pd.DataFrame(
             data={
                 "A": [0, 0, 1, 0, 2, 0, 2, 1, 0, 2],
                 "B": ["X", "Y", "X", "Y", "X", "Y", "X", "Y", "X", "Y"],
                 "C": [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
             }
         )
-        self.est1 = BayesianEstimator(self.m1, self.d1)
-        self.est2 = BayesianEstimator(
-            self.m1, self.d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
+        est1 = BayesianEstimator(m1, d1)
+        est2 = BayesianEstimator(
+            m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
         )
-        self.est3 = BayesianEstimator(self.m1, self.d2)
+        est3 = BayesianEstimator(m1, d2)
+
+        self.m1 = m1
+        self.model_latent = model_latent
+        self.d1 = d1
+        self.d2 = d2
+        self.est1 = est1
+        self.est2 = est2
+        self.est3 = est3
+
+        yield
+
+        del self.m1
+        del self.d1
+        del self.d2
+        del self.est1
+        del self.est2
+        get_reusable_executor().shutdown(wait=True)
+        config.set_backend("numpy")
 
     def test_error_latent_model(self):
-        self.assertRaises(ValueError, BayesianEstimator, self.model_latent, self.d1)
+        with pytest.raises(ValueError):
+            BayesianEstimator(self.model_latent, self.d1)
 
     def test_estimate_cpd_dirichlet(self):
         cpd_A = self.est1.estimate_cpd(
@@ -302,14 +326,14 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             values=[[0.5], [0.5]],
             state_names={"A": [0, 1]},
         )
-        self.assertEqual(cpd_A, cpd_A_exp)
+        assert cpd_A == cpd_A_exp
 
         # also test passing pseudo_counts as np.array
         pseudo_counts = np.array([[0], [1]])
         cpd_A = self.est1.estimate_cpd(
             "A", prior_type="dirichlet", pseudo_counts=pseudo_counts
         )
-        self.assertEqual(cpd_A, cpd_A_exp)
+        assert cpd_A == cpd_A_exp
 
         cpd_B = self.est1.estimate_cpd(
             "B", prior_type="dirichlet", pseudo_counts=[[9], [3]]
@@ -317,7 +341,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         cpd_B_exp = TabularCPD(
             "B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]}
         )
-        self.assertEqual(cpd_B, cpd_B_exp)
+        assert cpd_B == cpd_B_exp
 
         cpd_C = self.est1.estimate_cpd(
             "C",
@@ -332,7 +356,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             evidence_card=[2, 2],
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
-        self.assertEqual(cpd_C, cpd_C_exp)
+        assert cpd_C == cpd_C_exp
 
     def test_estimate_cpd_improper_prior(self):
         cpd_C = self.est1.estimate_cpd(
@@ -347,13 +371,11 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
         # manual comparison because np.nan != np.nan
-        self.assertTrue(
-            (
-                (cpd_C.values == cpd_C_correct.values)
-                | config.get_compute_backend().isnan(cpd_C.values)
-                & config.get_compute_backend().isnan(cpd_C_correct.values)
-            ).all()
-        )
+        assert (
+            (cpd_C.values == cpd_C_correct.values)
+            | config.get_compute_backend().isnan(cpd_C.values)
+            & config.get_compute_backend().isnan(cpd_C_correct.values)
+        ).all()
 
     def test_estimate_cpd_shortcuts(self):
         cpd_C1 = self.est2.estimate_cpd(
@@ -371,7 +393,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             evidence_card=[3, 2],
             state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
         )
-        self.assertEqual(cpd_C1, cpd_C1_correct)
+        assert cpd_C1 == cpd_C1_correct
 
         cpd_C2 = self.est3.estimate_cpd("C", prior_type="K2")
         cpd_C2_correct = TabularCPD(
@@ -385,7 +407,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             evidence_card=[3, 2],
             state_names={"A": [0, 1, 2], "B": ["X", "Y"], "C": [0, 1]},
         )
-        self.assertEqual(cpd_C2, cpd_C2_correct)
+        assert cpd_C2 == cpd_C2_correct
 
     def test_get_parameters(self):
         cpds = [
@@ -394,9 +416,8 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             self.est3.estimate_cpd("C"),
         ]
         all_cpds = self.est3.get_parameters(n_jobs=1)
-        self.assertListEqual(
-            sorted(cpds, key=lambda t: t.variables[0]),
-            sorted(all_cpds, key=lambda t: t.variables[0]),
+        assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
+            all_cpds, key=lambda t: t.variables[0]
         )
 
     def test_get_parameters2(self):
@@ -421,9 +442,8 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         all_cpds = self.est3.get_parameters(
             prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
         )
-        self.assertListEqual(
-            sorted(cpds, key=lambda t: t.variables[0]),
-            sorted(all_cpds, key=lambda t: t.variables[0]),
+        assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
+            all_cpds, key=lambda t: t.variables[0]
         )
 
     def test_get_parameters3(self):
@@ -444,17 +464,6 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         all_cpds = self.est3.get_parameters(
             prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
         )
-        self.assertListEqual(
-            sorted(cpds, key=lambda t: t.variables[0]),
-            sorted(all_cpds, key=lambda t: t.variables[0]),
+        assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
+            all_cpds, key=lambda t: t.variables[0]
         )
-
-    def tearDown(self):
-        del self.m1
-        del self.d1
-        del self.d2
-        del self.est1
-        del self.est2
-        get_reusable_executor().shutdown(wait=True)
-
-        config.set_backend("numpy")
