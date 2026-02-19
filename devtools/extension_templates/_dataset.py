@@ -40,6 +40,9 @@ class YourDatasetClass(_BaseDataset):
     # row containing the names of the columns.
     data_url = None
 
+    # TODO: Add the base URL for the dataset files. This is required for the caching functionality.
+    base_url = None
+
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = None
 
