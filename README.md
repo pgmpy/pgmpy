@@ -5,7 +5,7 @@ pgmpy is a Python library for causal and probabilistic modeling using graphical 
 </div>
 
 
-|  | **[Documentation](https://pgmpy.org/)** · **[Examples](https://pgmpy.org/examples.html)** . **[Tutorials](https://github.com/pgmpy/pgmpy_tutorials)** |
+|  | **[Documentation](https://pgmpy.org/)** | **[Examples](https://pgmpy.org/examples.html)** | **[Tutorials](https://github.com/pgmpy/pgmpy_tutorials)** |
 |---|---|
 | **Open&#160;Source** | [![GitHub License](https://img.shields.io/github/license/pgmpy/pgmpy)](https://github.com/pgmpy/pgmpy/blob/main/LICENSE) |
 | **Tutorials** | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pgmpy/pgmpy/dev?filepath=examples)
