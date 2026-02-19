@@ -1,7 +1,5 @@
 import gzip
 import io
-import json
-import math
 
 import graphviz
 import matplotlib.pyplot as plt
@@ -641,6 +639,8 @@ def show_model_structure(model, show=True):  # noqa: D417
     #     raise ImportError("Python package 'graphviz' is required. Install it using: pip install graphviz") from exc
 
     # Check system Graphviz executable
+    # import shutil
+
     # if shutil.which("dot") is None:
     #     raise RuntimeError(
     #         "Graphviz executable 'dot' not found. "

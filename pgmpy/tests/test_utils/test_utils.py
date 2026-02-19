@@ -2,7 +2,7 @@ import os
 import random
 import unittest
 
-import graphviz
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -232,6 +232,8 @@ class TestShowModelStructure(unittest.TestCase):
     """Test visualization of model structure."""
 
     def test_struct_of_cat_models(self):
+        import graphviz
+
         """Test visualization of categorical models."""
         asia_model = load_model("asia")
         result = show_model_structure(asia_model, show=False)
@@ -241,6 +243,8 @@ class TestShowModelStructure(unittest.TestCase):
         self.assertEqual(len(result.body) - 1, len(asia_model.nodes()) + len(asia_model.edges()))
 
     def test_Struct_of_cont_models(self):
+        import graphviz
+
         """Test visualization of continuous models."""
         ecoli_model = load_model("ecoli70")
         result = show_model_structure(ecoli_model, show=False)
@@ -250,6 +254,8 @@ class TestShowModelStructure(unittest.TestCase):
         self.assertEqual(len(result.body) - 1, len(ecoli_model.nodes()) + len(ecoli_model.edges()))
 
     def test_struct_of_dagitty_models(self):
+        import graphviz
+
         """Test visualization of DAGitty models."""
         dagitty_model = load_model("m_bias")
         result = show_model_structure(dagitty_model, show=False)

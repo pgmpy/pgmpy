@@ -51,6 +51,8 @@ optional = [
   "pygraphviz",
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
+  "matplotlib>=3.10.8",
+  "graphviz>=0.21", # Requires system graphviz with 'dot' executable
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -90,6 +92,8 @@ all = [
   "litellm==1.61.15",
   "pyparsing>=3.0",
   "requests>=2.0",
+  "matplotlib>=3.10.8",
+  "graphviz>=0.21", 
 ]
 
 [project.urls]
