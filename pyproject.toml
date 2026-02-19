@@ -72,6 +72,8 @@ docs = [
   "sphinx-design",
   "sphinxext-opengraph",
   "sphinx_sitemap",
+  "jupyterlite-sphinx",
+  "jupyterlite-xeus",
 ]
 all = [
   "networkx>=3.0",

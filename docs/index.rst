@@ -115,6 +115,17 @@ Algorithms
 
 |
 
+Interactive Notebooks (JupyterLite)
+===================================
+
+You can now try pgmpy directly in your browser without any installation using JupyterLite.
+
+.. jupyterlite::
+   :width: 100%
+   :height: 600px
+
+|
+
 Examples
 ========
 

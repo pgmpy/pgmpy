@@ -48,6 +48,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx_sitemap",
+    "jupyterlite_sphinx",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -323,3 +324,8 @@ numpydoc_show_class_members = False
 
 # For sphinx sitemap
 html_baseurl = "https://pgmpy.org"
+
+# -- Options for jupyterlite_sphinx ----------------------------------------
+jupyterlite_dir = "."
+jupyterlite_contents = ["../examples"]
+jupyterlite_bind_ipython_console = True

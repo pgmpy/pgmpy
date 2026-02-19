@@ -1,0 +1,16 @@
+name: pgmpy-docs
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - networkx
+  - numpy
+  - scipy
+  - pandas
+  - scikit-learn
+  - statsmodels
+  - tqdm
+  - pyparsing
+  - joblib
+  - opt_einsum
+  - pgmpy
