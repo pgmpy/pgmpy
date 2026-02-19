@@ -27,7 +27,6 @@ def eq_assertions():
 @pytest.fixture
 def independencies():
     return {
-        "ind": Independencies(),
         "ind3": Independencies(
             ["a", ["b", "c", "d"], ["e", "f", "g"]], ["c", ["d", "e", "f"], ["g", "h"]]
         ),
@@ -81,7 +80,7 @@ class TestIndependenceAssertion:
             IndependenceAssertion(event1=["U"], event3=["Z"])
 
 
-class TestIndependeciesAssertionEq:
+class TestIndependenciesAssertionEq:
     def test_eq1(self, eq_assertions):
         i1, i2, i4, i6 = (
             eq_assertions["i1"],
@@ -178,7 +177,7 @@ class TestIndependencies:
             ("W", "Y", ["X", "Z"]),
             ("W", ["Y", "X"]),
             ("W", "X", ["Y", "Z"]),
-            ("W", [("X", "Z")], "Y"),
+            ("W", ["X", "Z"], "Y"),
             ("W", "X"),
             ("W", ["X", "Z"]),
             ("W", ["Y", "Z"], "X"),
