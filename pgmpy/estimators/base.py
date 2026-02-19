@@ -399,7 +399,7 @@ class MarginalEstimator(BaseEstimator):
                 diff_factor = mu2 + (y * -1)
 
                 if not diff_factor:
-                    raise ValueError("An error occured when calculating the gradient.")
+                    raise ValueError("An error occurred when calculating the gradient.")
 
                 diff = diff_factor.values.flatten()
 
