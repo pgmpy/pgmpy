@@ -36,7 +36,7 @@ logger.addFilter(DuplicateFilter())
 class Config:
     def __init__(self):
         """
-        Default configuration initilization.
+        Default configuration initialization.
         """
         self.BACKEND = "numpy"
         self.DTYPE = "float64"
