@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock, MagicMock, call
+from unittest.mock import Mock, MagicMock, call
 from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache
 from pgmpy.estimators import BIC
 import pandas as pd
