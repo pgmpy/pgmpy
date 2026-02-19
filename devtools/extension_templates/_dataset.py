@@ -13,6 +13,10 @@ from pgmpy.base import DAG
 from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
+# TODO: Define the base URL for your dataset files. This is used for caching and should be consistent
+# across all URLs in your dataset class. Example:
+# BASE_URL = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/your-dataset/"
+
 
 # TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
 # class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
@@ -38,6 +42,8 @@ class YourDatasetClass(_BaseDataset):
 
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
     # row containing the names of the columns.
+    # Note: base_url is used for caching and should be defined as a class attribute before data_url.
+    base_url = None
     data_url = None
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
