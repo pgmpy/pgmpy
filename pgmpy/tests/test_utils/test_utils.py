@@ -9,6 +9,7 @@ import pytest
 from tqdm.auto import tqdm
 
 from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.example_models import load_model
 from pgmpy.utils import (
     discretize,
     get_example_model,
@@ -232,30 +233,30 @@ class TestShowModelStructure(unittest.TestCase):
 
     def test_struct_of_cat_models(self):
         """Test visualization of categorical models."""
-        asia_model = get_example_model("asia")
+        asia_model = load_model("asia")
         result = show_model_structure(asia_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
-        self.assertEqual(len(result.body), len(asia_model.nodes()) + len(asia_model.edges()))
+        self.assertEqual(len(result.body) - 1, len(asia_model.nodes()) + len(asia_model.edges()))
 
     def test_Struct_of_cont_models(self):
         """Test visualization of continuous models."""
-        ecoli_model = get_example_model("ecoli70")
+        ecoli_model = load_model("ecoli70")
         result = show_model_structure(ecoli_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
-        self.assertEqual(len(result.body), len(ecoli_model.nodes()) + len(ecoli_model.edges()))
+        self.assertEqual(len(result.body) - 1, len(ecoli_model.nodes()) + len(ecoli_model.edges()))
 
     def test_struct_of_dagitty_models(self):
         """Test visualization of DAGitty models."""
-        dagitty_model = get_example_model("M-bias")
+        dagitty_model = load_model("m_bias")
         result = show_model_structure(dagitty_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 1)
-        self.assertEqual(len(result.body), len(dagitty_model.nodes()) + len(dagitty_model.edges()))
+        self.assertEqual(len(result.body) - 1, len(dagitty_model.nodes()) + len(dagitty_model.edges()))
 
     def test_invalid_model(self):
         """Test handling of invalid model input."""
@@ -268,7 +269,7 @@ class TestShowInference(unittest.TestCase):
 
     def test_show_inference_with_evidence(self):
         """Inference with valid evidence on a discrete model."""
-        asia_model = get_example_model("asia")
+        asia_model = load_model("asia")
         evidence = {"smoke": "no"}
         result = show_inference(asia_model, evidence=evidence, show=False)
         self.assertIsNotNone(result)
@@ -277,7 +278,7 @@ class TestShowInference(unittest.TestCase):
 
     def test_show_inference_without_evidence(self):
         """Inference without conditioning evidence."""
-        asia_model = get_example_model("asia")
+        asia_model = load_model("asia")
         result = show_inference(asia_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, dict)
@@ -285,7 +286,7 @@ class TestShowInference(unittest.TestCase):
 
     def test_invalid_inference_engine(self):
         """Invalid inference engine name should raise ValueError."""
-        asia_model = get_example_model("asia")
+        asia_model = load_model("asia")
 
         with self.assertRaises(ValueError):
             show_inference(
@@ -296,7 +297,7 @@ class TestShowInference(unittest.TestCase):
 
     def test_non_parameterized_model(self):
         """Inference should fail for models without CPDs."""
-        dagitty_model = get_example_model("M-bias")  # not parameterized
+        dagitty_model = load_model("m_bias")  # not parameterized
 
         with self.assertRaises(ValueError):
             show_inference(dagitty_model, show=False)

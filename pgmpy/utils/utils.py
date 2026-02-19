@@ -15,7 +15,6 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import logger
 
 
@@ -790,7 +789,7 @@ def show_inference(model, evidence=None, inference_engine="VariableElimination",
     if hasattr(model, "_tags"):
         if not model._tags.get("is_parameterized", False):
             raise ValueError("Inference cannot be performed on non-parameterized models.")
-    elif not hasattr(model, "get_cpds") or len(model.get_cpds()) == 0:
+    if not hasattr(model, "get_cpds") or len(model.get_cpds()) == 0:
         raise ValueError("Model does not define CPDs. Inference cannot be performed.")
 
     infer = InferenceClass(model)
