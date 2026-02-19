@@ -1,6 +1,4 @@
 import logging
-import unittest
-
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
@@ -49,7 +47,7 @@ class TestConfig:
     @pytest.mark.skipif(
         not _check_soft_dependencies("torch", severity="none")
         or not torch.cuda.is_available(),
-        reason="test only if torch and torch.cuda are available",
+        reason="test only if torch and torch.cuda is available",
     )
     def test_torch_gpu(self):
         config.set_backend(backend="torch", device="cuda", dtype=torch.float32)
@@ -69,7 +67,7 @@ class TestConfig:
     @pytest.mark.skipif(
         not _check_soft_dependencies("torch", severity="none")
         or not torch.cuda.is_available(),
-        reason="test only if torch and torch.cuda are available",
+        reason="test only if torch and torch.cuda is available",
     )
     def test_no_progress(self):
         config.set_show_progress(show_progress=False)
@@ -91,8 +89,16 @@ class TestConfig:
         config.set_show_progress(show_progress=True)
 
 
-class TestDuplicateFilter(unittest.TestCase):
-    def test_duplicate_filter(self):
+@pytest.fixture
+def reset_config():
+    """Fixture to reset config after each test."""
+    yield
+    config.set_backend("numpy")
+    config.set_show_progress(show_progress=True)
+
+
+class TestDuplicateFilter:
+    def test_duplicate_filter(self, reset_config):
         test_logger = logging.getLogger("test_logger")
         test_logger.setLevel(logging.INFO)
 
@@ -130,4 +136,4 @@ class TestDuplicateFilter(unittest.TestCase):
             "Third message",
         ]
 
-        self.assertEqual(captured_logs, expected_logs)
+        assert captured_logs == expected_logs
