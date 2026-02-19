@@ -5,6 +5,7 @@ import networkx as nx
 
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.global_vars import logger
+from pgmpy.utils.parser import parse_dagitty
 
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
@@ -90,6 +91,145 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None) -> "PDAG":
+        """
+        Initializes a `PDAG` instance using DAGitty syntax.
+
+        Creates a `PDAG` from the dagitty string. Supports DAG, MAG, and PAG syntax.
+        Undirected edges are represented using `o-o` or `--` syntax in dagitty.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A DAGitty style multiline string representing the model.
+            Supports dag { }, mag { }, and pag { } syntax.
+            Undirected edges use `o-o` or `--` syntax.
+
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG.from_dagitty(
+        ...     "dag { X -> Y [exposure] Y -> Z [outcome] X o-o Z }"
+        ... )
+
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG.from_dagitty(
+        ...     "pag { X o-> Y Y -- Z Z -> X }"
+        ... )
+        """
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, betas, nodes = parse_dagitty(dagitty_str)
+
+        # Separate directed and undirected edges
+        # Edges with 'o' marks or '--' are undirected
+        directed_edges = []
+        undirected_edges = []
+
+        for edge in ebunch:
+            if len(edge) == 4:
+                # 4-tuple: (left_var, right_var, left_mark, right_mark)
+                left_var, right_var, left_mark, right_mark = edge
+                # Undirected edges: contains 'o' or both marks are '-'
+                if "o" in (left_mark, right_mark) or (left_mark == "-" and right_mark == "-"):
+                    undirected_edges.append((left_var, right_var))
+                else:
+                    directed_edges.append((left_var, right_var))
+            else:
+                # 2-tuple: directed edge (backward compatible)
+                directed_edges.append((edge[0], edge[1]))
+
+        pdag = cls(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=roles.get("latents", []),
+            exposures=set(roles.get("exposure", [])),
+            outcomes=set(roles.get("outcome", [])),
+        )
+        pdag.add_nodes_from(nodes)
+
+        return pdag
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the PDAG to dagitty syntax representation.
+
+        The dagitty syntax represents PDAGs/CPDAGs using pag { statements } format.
+        Directed edges use `->` and undirected edges use `o-o`.
+
+        Returns
+        -------
+        str
+            String representation of the PDAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(
+        ...     directed_ebunch=[("A", "B")],
+        ...     undirected_ebunch=[("B", "C"), ("C", "D")],
+        ... )
+        >>> print(pdag.to_dagitty())
+        pag {
+        A -> B
+        B o-o C
+        C o-o D
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - Uses "pag { }" syntax to indicate partial ancestral graph.
+        - Undirected edges are represented using `o-o` syntax.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+
+        # Add directed edges
+        if self.directed_edges:
+            edge_statements = []
+            for parent, child in sorted(
+                self.directed_edges, key=lambda x: (str(x[0]), str(x[1]))
+            ):
+                parent_str = str(parent)
+                child_str = str(child)
+                edge_statements.append(f"{parent_str} -> {child_str}")
+            statements.extend(edge_statements)
+
+        # Add undirected edges using o-o syntax
+        if self.undirected_edges:
+            edge_statements = []
+            for parent, child in sorted(
+                self.undirected_edges, key=lambda x: (str(x[0]), str(x[1]))
+            ):
+                parent_str = str(parent)
+                child_str = str(child)
+                edge_statements.append(f"{parent_str} o-o {child_str}")
+            statements.extend(edge_statements)
+
+        # Add isolated nodes
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        content = "\n".join(statements)
+        if content:
+            return f"pag {{\n{content}\n}}"
+        else:
+            return "pag {\n}"
 
     def all_neighbors(self, node):
         """
