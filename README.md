@@ -172,7 +172,7 @@ df_func = func_bn.simulate(n_samples=1000, seed=123)
 
 ## Contributing
 
-We welcome all contributions --not just code-- to pgmpy. Please refer out
+We welcome all contributions --not just code-- to pgmpy. Please refer to our
 [contributing guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
 for more details. We also offer mentorship for new contributors and maintain a
 list of potential [mentored
