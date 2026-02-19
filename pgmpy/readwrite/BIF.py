@@ -219,11 +219,11 @@ class BIFReader(object):
         # Variable name: everything between "variable" and "{", allowing spaces
         name_expr = (
             Suppress("variable")
-            + pp.Regex(r"[^{]+").setParseAction(lambda t: t[0].strip())
+            + pp.Regex(r"[^{]+").set_parse_action(lambda t: t[0].strip())
             + Suppress("{")
         )
         # State names: comma-separated values that may contain spaces
-        state_value = pp.Regex(r"[^,};]+").setParseAction(lambda t: t[0].strip())
+        state_value = pp.Regex(r"[^,};]+").set_parse_action(lambda t: t[0].strip())
         # Defining a variable state expression
         variable_state_expr = (
             Suppress("type")
@@ -265,7 +265,7 @@ class BIFReader(object):
             + Suppress(")")
         )
         # State values in CPD rows: comma-separated values that may contain spaces
-        state_value = pp.Regex(r"[^,)]+").setParseAction(lambda t: t[0].strip())
+        state_value = pp.Regex(r"[^,)]+").set_parse_action(lambda t: t[0].strip())
         optional_expr = (
             Suppress("(")
             + state_value

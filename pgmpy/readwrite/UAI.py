@@ -75,7 +75,7 @@ class UAIReader(object):
         no_functions = Word(nums).setResultsName("no_functions")
         grammar += no_functions
         self.no_functions = int(grammar.parseString(self.network)["no_functions"])
-        integer = Word(nums).setParseAction(lambda t: int(t[0]))
+        integer = Word(nums).set_parse_action(lambda t: int(t[0]))
         for function in range(0, self.no_functions):
             scope_grammar = Word(nums).setResultsName("fun_scope_" + str(function))
             grammar += scope_grammar

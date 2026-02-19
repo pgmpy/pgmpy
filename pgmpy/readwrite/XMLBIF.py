@@ -412,7 +412,7 @@ class XMLBIFWriter(object):
         # Keep existing transformation logic
         s_fixed = (
             pp.CharsNotIn(pp.alphanums + "_")
-            .setParseAction(pp.replaceWith("_"))
+            .set_parse_action(pp.replaceWith("_"))
             .transformString(s)
         )
         if not s_fixed[0].isalpha():
