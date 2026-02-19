@@ -1413,3 +1413,112 @@ class TestSEMAlg(unittest.TestCase):
     def test_generate_samples(self):
         samples = self.small_model_lisrel.generate_samples(n_samples=100)
         samples = self.demo_lisrel.generate_samples(n_samples=100)
+
+
+class TestSEMGraphRoles(unittest.TestCase):
+    def setUp(self):
+        self.sem = SEMGraph(
+            ebunch=[
+                ("X", "Y"),
+                ("Y", "Z"),
+                ("Z", "W"),
+            ],
+            latents=["Z"],
+        )
+
+    # ===== Constructor Tests =====
+    def test_default_roles_empty(self):
+        sem = SEMGraph()
+        self.assertEqual(sem.exposures, set())
+        self.assertEqual(sem.outcomes, set())
+
+    def test_init_with_exposures(self):
+        sem = SEMGraph(ebunch=[("X", "Y")], exposures={"X"})
+        self.assertEqual(sem.exposures, {"X"})
+
+    def test_init_with_outcomes(self):
+        sem = SEMGraph(ebunch=[("X", "Y")], outcomes={"Y"})
+        self.assertEqual(sem.outcomes, {"Y"})
+
+    def test_init_with_both_roles(self):
+        sem = SEMGraph(
+            ebunch=[("X", "Y"), ("Y", "Z")],
+            exposures={"X"},
+            outcomes={"Z"},
+        )
+        self.assertEqual(sem.exposures, {"X"})
+        self.assertEqual(sem.outcomes, {"Z"})
+
+    def test_init_roles_dont_affect_latents(self):
+        sem = SEMGraph(
+            ebunch=[("X", "Y")],
+            latents=["X"],
+            exposures={"Y"},
+        )
+        self.assertIn("X", sem.latents)
+        self.assertEqual(sem.exposures, {"Y"})
+
+    # ===== Property Setter Tests =====
+    def test_set_exposures(self):
+        self.sem.exposures = {"X"}
+        self.assertEqual(self.sem.exposures, {"X"})
+
+    def test_set_outcomes(self):
+        self.sem.outcomes = {"W"}
+        self.assertEqual(self.sem.outcomes, {"W"})
+
+    def test_replace_exposures(self):
+        self.sem.exposures = {"X"}
+        self.sem.exposures = {"Y"}
+        self.assertEqual(self.sem.exposures, {"Y"})
+
+    def test_replace_outcomes(self):
+        self.sem.outcomes = {"W"}
+        self.sem.outcomes = {"Z"}
+        self.assertEqual(self.sem.outcomes, {"Z"})
+
+    def test_set_multiple_exposures(self):
+        self.sem.exposures = {"X", "Y"}
+        self.assertEqual(self.sem.exposures, {"X", "Y"})
+
+    def test_clear_exposures(self):
+        self.sem.exposures = {"X"}
+        self.sem.exposures = None
+        self.assertEqual(self.sem.exposures, set())
+
+    def test_clear_outcomes(self):
+        self.sem.outcomes = {"W"}
+        self.sem.outcomes = None
+        self.assertEqual(self.sem.outcomes, set())
+
+    # ===== with_role Tests =====
+    def test_with_role_exposures_inplace(self):
+        self.sem.with_role("exposures", {"X"}, inplace=True)
+        self.assertEqual(self.sem.exposures, {"X"})
+
+    def test_with_role_outcomes_inplace(self):
+        self.sem.with_role("outcomes", {"W"}, inplace=True)
+        self.assertEqual(self.sem.outcomes, {"W"})
+
+    def test_with_role_both_inplace(self):
+        self.sem.with_role("exposures", {"X"}, inplace=True)
+        self.sem.with_role("outcomes", {"W"}, inplace=True)
+        self.assertEqual(self.sem.exposures, {"X"})
+        self.assertEqual(self.sem.outcomes, {"W"})
+
+    # ===== Edge Cases =====
+    def test_empty_set_as_exposures(self):
+        self.sem.exposures = set()
+        self.assertEqual(self.sem.exposures, set())
+
+    def test_roles_independent_of_graph_structure(self):
+        sem = SEMGraph(
+            ebunch=[("A", "B"), ("B", "C")],
+            exposures={"A"},
+            outcomes={"C"},
+        )
+        self.assertEqual(sem.exposures, {"A"})
+        self.assertEqual(sem.outcomes, {"C"})
+
+    def tearDown(self):
+        del self.sem

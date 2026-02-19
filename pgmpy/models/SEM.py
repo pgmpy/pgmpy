@@ -108,7 +108,15 @@ class SEMGraph:
 
     """
 
-    def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
+    def __init__(
+        self,
+        ebunch=[],
+        latents=[],
+        err_corr=[],
+        err_var={},
+        exposures=None,
+        outcomes=None,
+    ):
         super(SEMGraph, self).__init__()
 
         # Construct the graph and set the parameters.
@@ -146,6 +154,50 @@ class SEMGraph:
             )
 
         self.full_graph_struct = self._get_full_graph_struct()
+
+        # Roles API
+        self._exposures = set(exposures) if exposures else set()
+        self._outcomes = set(outcomes) if outcomes else set()
+
+    @property
+    def exposures(self):
+        """Return exposure variables."""
+        return self._exposures
+
+    @exposures.setter
+    def exposures(self, variables):
+        """Set exposure variables."""
+        self._exposures = set(variables) if variables else set()
+
+    @property
+    def outcomes(self):
+        """Return outcome variables."""
+        return self._outcomes
+
+    @outcomes.setter
+    def outcomes(self, variables):
+        """Set outcome variables."""
+        self._outcomes = set(variables) if variables else set()
+
+    def with_role(self, role, variables, inplace=False):
+        """Assign a role to variables."""
+        if role == "exposures":
+            if inplace:
+                self._exposures = set(variables) if variables else set()
+                return self
+            else:
+                new_sem = self.copy() if hasattr(self, "copy") else self
+                new_sem._exposures = set(variables) if variables else set()
+                return new_sem
+        elif role == "outcomes":
+            if inplace:
+                self._outcomes = set(variables) if variables else set()
+                return self
+            else:
+                new_sem = self.copy() if hasattr(self, "copy") else self
+                new_sem._outcomes = set(variables) if variables else set()
+                return new_sem
+        return self
 
     def _variable_name_contains_non_string(self):
         """
