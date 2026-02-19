@@ -150,20 +150,21 @@ class _GraphRolesMixin:
 
     def is_valid_causal_structure(self) -> bool:
         """Validate that the causal structure makes sense."""
-        has_exposure = self.has_role("exposures")
-        has_outcome = self.has_role("outcomes")
+        # Accept both singular and plural forms of role names
+        has_exposure = self.has_role("exposure") or self.has_role("exposures")
+        has_outcome = self.has_role("outcome") or self.has_role("outcomes")
         valid = has_exposure and has_outcome
 
         problem_str = []
         if not has_exposure:
-            problem_str.append("no 'exposures' role was defined")
+            problem_str.append("no 'exposure(s)' role was defined")
         if not has_outcome:
-            problem_str.append("no 'outcomes' role was defined")
+            problem_str.append("no 'outcome(s)' role was defined")
         problem_str = ", and ".join(problem_str)
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposures' and one 'outcomes' "
+                f"{type(self)} must have at least one 'exposure' and one 'outcome' "
                 f"role defined, but {problem_str}."
             )
         return True
@@ -259,8 +260,11 @@ class _GraphRolesMixin:
         >>> G.exposures
         {'a'}
         """
+        # Accept both singular and plural forms
         if self.has_role("exposures"):
             return set(self.get_role("exposures"))
+        elif self.has_role("exposure"):
+            return set(self.get_role("exposure"))
         else:
             return set()
 
@@ -275,9 +279,14 @@ class _GraphRolesMixin:
             A set of exposure variables in the graph. These are the variables that represent the treatment or
             intervention being studied in a causal analysis.
         """
+        # Accept both singular and plural forms when checking/removing
         if self.has_role("exposures"):
             self.without_role(
                 role="exposures", variables=self.get_role("exposures"), inplace=True
+            )
+        if self.has_role("exposure"):
+            self.without_role(
+                role="exposure", variables=self.get_role("exposure"), inplace=True
             )
         self.with_role(role="exposures", variables=variables, inplace=True)
 
@@ -302,8 +311,11 @@ class _GraphRolesMixin:
         >>> G.outcomes
         {'b'}
         """
+        # Accept both singular and plural forms
         if self.has_role("outcomes"):
             return set(self.get_role("outcomes"))
+        elif self.has_role("outcome"):
+            return set(self.get_role("outcome"))
         else:
             return set()
 
@@ -319,8 +331,13 @@ class _GraphRolesMixin:
             that represent the response or dependent variables being studied
             in a causal analysis.
         """
+        # Accept both singular and plural forms when checking/removing
         if self.has_role("outcomes"):
             self.without_role(
                 role="outcomes", variables=self.get_role("outcomes"), inplace=True
+            )
+        if self.has_role("outcome"):
+            self.without_role(
+                role="outcome", variables=self.get_role("outcome"), inplace=True
             )
         self.with_role(role="outcomes", variables=variables, inplace=True)
