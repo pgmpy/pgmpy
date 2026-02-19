@@ -1,15 +1,15 @@
 import os
 import random
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 from tqdm.auto import tqdm
 
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.example_models import load_model
+from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
@@ -37,19 +37,25 @@ class TestDiscretization(unittest.TestCase):
         self.data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
     def test_rounding_disc(self):
-        df_disc = discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding")
+        df_disc = discretize(
+            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding"
+        )
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
 
-        df_disc = discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="quantile")
+        df_disc = discretize(
+            data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="quantile"
+        )
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
 
 
 class TestPairwiseOrientation(unittest.TestCase):
-    @pytest.mark.skipif("GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set")
+    @pytest.mark.skipif(
+        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
+    )
     def test_llm(self):
         descriptions = {
             "Age": "The age of a person",
@@ -66,18 +72,24 @@ class TestPairwiseOrientation(unittest.TestCase):
         }
 
         self.assertEqual(
-            llm_pairwise_orient(x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"),
+            llm_pairwise_orient(
+                x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"
+            ),
             ("Age", "Income"),
         )
         self.assertEqual(
-            llm_pairwise_orient(x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"),
+            llm_pairwise_orient(
+                x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"
+            ),
             ("Age", "Income"),
         )
 
 
 class TestPreprocessData(unittest.TestCase):
     def setUp(self):
-        self.data_raw = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0)
+        self.data_raw = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0
+        )
 
         self.data_proc = self.data_raw.copy()
         self.data_proc["A_cat"] = self.data_proc.A_cat.astype("category")
@@ -238,7 +250,9 @@ class TestGetExampleModel(unittest.TestCase):
 class TestShowModelStructure(unittest.TestCase):
     """Test visualization of model structure."""
 
-    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
+    @unittest.skipUnless(
+        HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests"
+    )
     def test_struct_of_cat_models(self):
         """Test visualization of categorical models."""
         asia_model = load_model("bnlearn/asia")
@@ -246,9 +260,13 @@ class TestShowModelStructure(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
-        self.assertEqual(len(result.body) - 1, len(asia_model.nodes()) + len(asia_model.edges()))
+        self.assertEqual(
+            len(result.body) - 1, len(asia_model.nodes()) + len(asia_model.edges())
+        )
 
-    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
+    @unittest.skipUnless(
+        HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests"
+    )
     def test_Struct_of_cont_models(self):
         """Test visualization of continuous models."""
         ecoli_model = load_model("bnlearn/ecoli70")
@@ -256,9 +274,13 @@ class TestShowModelStructure(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
-        self.assertEqual(len(result.body) - 1, len(ecoli_model.nodes()) + len(ecoli_model.edges()))
+        self.assertEqual(
+            len(result.body) - 1, len(ecoli_model.nodes()) + len(ecoli_model.edges())
+        )
 
-    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
+    @unittest.skipUnless(
+        HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests"
+    )
     def test_struct_of_dagitty_models(self):
         """Test visualization of DAGitty models."""
         dagitty_model = load_model("dagitty/m_bias")
@@ -266,7 +288,10 @@ class TestShowModelStructure(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 1)
-        self.assertEqual(len(result.body) - 1, len(dagitty_model.nodes()) + len(dagitty_model.edges()))
+        self.assertEqual(
+            len(result.body) - 1,
+            len(dagitty_model.nodes()) + len(dagitty_model.edges()),
+        )
 
     @patch("pgmpy.utils.utils.graphviz")
     def test_invalid_model(self, mock_graphviz):

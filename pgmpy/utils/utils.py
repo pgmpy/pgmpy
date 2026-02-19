@@ -13,6 +13,22 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
+try:
+    import graphviz
+    from graphviz import Digraph
+
+    HAS_GRAPHVIZ = True
+except ImportError:
+    HAS_GRAPHVIZ = False
+
+try:
+    import matplotlib.pyplot as plt
+    from PIL import Image
+
+    HAS_VISUALIZATION = True
+except ImportError:
+    HAS_VISUALIZATION = False
+
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import logger
 
@@ -601,6 +617,11 @@ def display_graph(dot):
     None
         Displays the graph in a matplotlib figure window.
     """
+
+    if not HAS_VISUALIZATION:
+        raise ImportError(
+            "matplotlib and Pillow are required for visualization. Install them with: pip install matplotlib Pillow"
+        )
     png_bytes = dot.pipe(format="png")
     image = Image.open(io.BytesIO(png_bytes))
 
@@ -630,6 +651,8 @@ def show_model_structure(model, show=True):  # noqa: D417
     graphviz.Digraph
         A Graphviz Digraph object representing the model structure.
     """
+    if not HAS_GRAPHVIZ:
+        raise ImportError("graphviz is required for visualization. Install it with: pip install graphviz")
     if not hasattr(model, "nodes") or not hasattr(model, "edges"):
         raise ValueError("Model must expose nodes() and edges() methods for visualization.")
 

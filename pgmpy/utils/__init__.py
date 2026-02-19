@@ -9,9 +9,9 @@ from .utils import (
     llm_pairwise_orient,
     manual_pairwise_orient,
     preprocess_data,
-    to_timeseries_format,
     show_inference,
     show_model_structure,
+    to_timeseries_format,
 )
 
 __all__ = [
