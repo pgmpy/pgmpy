@@ -13,6 +13,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import logger
 
 
@@ -632,22 +633,6 @@ def show_model_structure(model, show=True):  # noqa: D417
     if not hasattr(model, "nodes") or not hasattr(model, "edges"):
         raise ValueError("Model must expose nodes() and edges() methods for visualization.")
 
-    # Check Python Graphviz wrapper
-    # try:
-    #     import graphviz
-    # except ImportError as exc:
-    #     raise ImportError("Python package 'graphviz' is required. Install it using: pip install graphviz") from exc
-
-    # Check system Graphviz executable
-    # import shutil
-
-    # if shutil.which("dot") is None:
-    #     raise RuntimeError(
-    #         "Graphviz executable 'dot' not found. "
-    #         "Please install Graphviz system package.\n"
-    #         "On Debian/Ubuntu: sudo apt install graphviz"
-    #     )
-
     nodes = model.nodes()
     edges = model.edges()
 
@@ -688,7 +673,6 @@ def build_graph(model, marginals, evidence):
     """
     dot = Digraph(format="png")
     dot.attr(rankdir="LR")
-    from pgmpy.factors.discrete import DiscreteFactor
 
     for node in model.nodes():
         label = node

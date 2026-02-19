@@ -1,7 +1,7 @@
 import os
 import random
 import unittest
-
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,13 @@ from pgmpy.utils import (
     show_inference,
     show_model_structure,
 )
+
+try:
+    import graphviz
+
+    HAS_GRAPHVIZ = True
+except ImportError:
+    HAS_GRAPHVIZ = False
 
 
 class TestDiscretization(unittest.TestCase):
@@ -231,40 +238,38 @@ class TestGetExampleModel(unittest.TestCase):
 class TestShowModelStructure(unittest.TestCase):
     """Test visualization of model structure."""
 
+    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
     def test_struct_of_cat_models(self):
-        import graphviz
-
         """Test visualization of categorical models."""
-        asia_model = load_model("asia")
+        asia_model = load_model("bnlearn/asia")
         result = show_model_structure(asia_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
         self.assertEqual(len(result.body) - 1, len(asia_model.nodes()) + len(asia_model.edges()))
 
+    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
     def test_Struct_of_cont_models(self):
-        import graphviz
-
         """Test visualization of continuous models."""
-        ecoli_model = load_model("ecoli70")
+        ecoli_model = load_model("bnlearn/ecoli70")
         result = show_model_structure(ecoli_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 0)
         self.assertEqual(len(result.body) - 1, len(ecoli_model.nodes()) + len(ecoli_model.edges()))
 
+    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed, skipping visualization tests")
     def test_struct_of_dagitty_models(self):
-        import graphviz
-
         """Test visualization of DAGitty models."""
-        dagitty_model = load_model("m_bias")
+        dagitty_model = load_model("dagitty/m_bias")
         result = show_model_structure(dagitty_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, graphviz.Digraph)
         self.assertGreaterEqual(len(result.body), 1)
         self.assertEqual(len(result.body) - 1, len(dagitty_model.nodes()) + len(dagitty_model.edges()))
 
-    def test_invalid_model(self):
+    @patch("pgmpy.utils.utils.graphviz")
+    def test_invalid_model(self, mock_graphviz):
         """Test handling of invalid model input."""
         with self.assertRaises(ValueError):
             show_model_structure("not_a_model", show=False)
@@ -273,26 +278,29 @@ class TestShowModelStructure(unittest.TestCase):
 class TestShowInference(unittest.TestCase):
     """Tests for show_inference visualization utility."""
 
+    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed")
     def test_show_inference_with_evidence(self):
         """Inference with valid evidence on a discrete model."""
-        asia_model = load_model("asia")
+        asia_model = load_model("bnlearn/asia")
         evidence = {"smoke": "no"}
         result = show_inference(asia_model, evidence=evidence, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, dict)
         self.assertGreater(len(result), 0)
 
+    @unittest.skipUnless(HAS_GRAPHVIZ, "graphviz not installed")
     def test_show_inference_without_evidence(self):
         """Inference without conditioning evidence."""
-        asia_model = load_model("asia")
+        asia_model = load_model("bnlearn/asia")
         result = show_inference(asia_model, show=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, dict)
         self.assertGreater(len(result), 0)
 
-    def test_invalid_inference_engine(self):
+    @patch("pgmpy.utils.utils.graphviz")
+    def test_invalid_inference_engine(self, mock_graphviz):
         """Invalid inference engine name should raise ValueError."""
-        asia_model = load_model("asia")
+        asia_model = load_model("bnlearn/asia")
 
         with self.assertRaises(ValueError):
             show_inference(
@@ -301,14 +309,16 @@ class TestShowInference(unittest.TestCase):
                 show=False,
             )
 
-    def test_non_parameterized_model(self):
+    @patch("pgmpy.utils.utils.graphviz")
+    def test_non_parameterized_model(self, mock_graphviz):
         """Inference should fail for models without CPDs."""
-        dagitty_model = load_model("m_bias")  # not parameterized
+        dagitty_model = load_model("dagitty/m_bias")  # not parameterized
 
         with self.assertRaises(ValueError):
             show_inference(dagitty_model, show=False)
 
-    def test_invalid_model_input(self):
+    @patch("pgmpy.utils.utils.graphviz")
+    def test_invalid_model_input(self, mock_graphviz):
         """Invalid model input should raise ValueError."""
         with self.assertRaises(ValueError):
             show_inference("not_a_model", show=False)

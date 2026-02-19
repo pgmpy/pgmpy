@@ -94,6 +94,7 @@ all = [
   "requests>=2.0",
   "matplotlib>=3.10.8",
   "graphviz>=0.21", 
+  "pillow>=12.1.1",
 ]
 
 [project.urls]
