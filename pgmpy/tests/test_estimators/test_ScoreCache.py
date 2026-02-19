@@ -1,22 +1,22 @@
-import unittest
-from mock import Mock, MagicMock, call
+from unittest.mock import Mock, MagicMock, call
 from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache
 from pgmpy.estimators import BIC
 import pandas as pd
+import pytest
 
 
-class TestScoreCache(unittest.TestCase):
+class TestScoreCache:
     def test_caching(self):
         function_mock = Mock(side_effect=[1, 2])
         cache = LRUCache(function_mock, max_size=2)
 
-        self.assertEqual(cache("key1"), 1)
-        self.assertEqual(cache("key2"), 2)
+        assert cache("key1") == 1
+        assert cache("key2") == 2
 
         # Test will fail if the cache calls the function mock again
-        self.assertEqual(cache("key2"), 2)
-        self.assertEqual(cache("key1"), 1)
-        self.assertEqual(cache("key1"), 1)
+        assert cache("key2") == 2
+        assert cache("key1") == 1
+        assert cache("key1") == 1
 
     def test_small_cache(self):
         function_mock = Mock(side_effect=lambda key: {"key1": 1, "key2": 2}[key])
@@ -53,7 +53,7 @@ class TestScoreCache(unittest.TestCase):
         function_mock.assert_has_calls(expected_function_calls, any_order=False)
 
     def test_score_cache_invalid_scorer(self):
-        with self.assertRaises(AssertionError) as e:
+        with pytest.raises(AssertionError):
             ScoreCache("invalid_scorer", None)
 
     def test_score_cache(self):
@@ -70,10 +70,10 @@ class TestScoreCache(unittest.TestCase):
         base_scorer.local_score = Mock(side_effect=local_scores)
         cache = ScoreCache(base_scorer, data)
 
-        self.assertEqual(cache.local_score("key1", ["key2", "key3"]), -1)
-        self.assertEqual(cache.local_score("key1", ["key2", "key3"]), -1)  # cached
-        self.assertEqual(cache.local_score("key2", ["key3"]), -2)
-        self.assertEqual(cache.local_score("key2", ["key3"]), -2)  # cached
+        assert cache.local_score("key1", ["key2", "key3"]) == -1
+        assert cache.local_score("key1", ["key2", "key3"]) == -1  # cached
+        assert cache.local_score("key2", ["key3"]) == -2
+        assert cache.local_score("key2", ["key3"]) == -2  # cached
 
         expected_function_calls = [
             call("key1", ["key2", "key3"]),
