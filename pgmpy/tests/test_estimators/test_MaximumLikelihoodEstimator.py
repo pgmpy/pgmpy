@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import numpy as np
 import pandas as pd
@@ -12,20 +12,21 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
 
 
-class TestMLE(unittest.TestCase):
-    def setUp(self):
-        self.m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        self.model_latents = DiscreteBayesianNetwork(
+class TestMLE:
+    @pytest.fixture
+    def setup(self):
+        m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        model_latents = DiscreteBayesianNetwork(
             [("A", "C"), ("B", "C")], latents=["C"]
         )
-        self.data_latents = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0]})
-        self.m2 = JunctionTree()
-        self.m2.add_nodes_from([("A", "B")])
-        self.m3 = JunctionTree()
-        self.m3.add_edges_from([(("A", "C"), ("B", "C"))])
+        data_latents = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0]})
+        m2 = JunctionTree()
+        m2.add_nodes_from([("A", "B")])
+        m3 = JunctionTree()
+        m3.add_edges_from([(("A", "C"), ("B", "C"))])
 
-        self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        self.d2 = pd.DataFrame(
+        d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        d2 = pd.DataFrame(
             data={
                 "A": [0, np.nan, 1],
                 "B": [0, 1, 0],
@@ -35,13 +36,13 @@ class TestMLE(unittest.TestCase):
         )
         # Use Example from ML Machine Learning - A Probabilistic Perspective
         # Section 19.5.7.1.
-        self.d3 = pd.DataFrame(
+        d3 = pd.DataFrame(
             data={
                 "A": [0] * 43 + [0] * 9 + [1] * 44 + [1] * 4,
                 "B": [0] * 43 + [1] * 9 + [0] * 44 + [1] * 4,
             }
         )
-        self.cpds = [
+        cpds = [
             TabularCPD("A", 2, [[2.0 / 3], [1.0 / 3]]),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
             TabularCPD(
@@ -52,40 +53,59 @@ class TestMLE(unittest.TestCase):
                 evidence_card=[2, 2],
             ),
         ]
-        self.potentials1 = FactorDict.from_dataframe(
-            df=self.d3, marginals=self.m2.nodes
+        potentials1 = FactorDict.from_dataframe(
+            df=d3, marginals=m2.nodes
         )
-        self.m2.clique_beliefs = self.potentials1
+        m2.clique_beliefs = potentials1
 
-        self.potentials2 = FactorDict.from_dataframe(
-            df=self.d1, marginals=self.m3.nodes
+        potentials2 = FactorDict.from_dataframe(
+            df=d1, marginals=m3.nodes
         )
-        self.m3.clique_beliefs = self.potentials2
+        m3.clique_beliefs = potentials2
 
-        self.mle1 = MaximumLikelihoodEstimator(self.m1, self.d1)
-        self.mle2 = MaximumLikelihoodEstimator(model=self.m2, data=self.d3)
-        self.mle3 = MaximumLikelihoodEstimator(model=self.m3, data=self.d1)
+        mle1 = MaximumLikelihoodEstimator(m1, d1)
+        mle2 = MaximumLikelihoodEstimator(model=m2, data=d3)
+        mle3 = MaximumLikelihoodEstimator(model=m3, data=d1)
 
-    def test_error_latent_model(self):
-        self.assertRaises(
-            ValueError,
-            MaximumLikelihoodEstimator,
-            self.model_latents,
-            self.data_latents,
-        )
+        yield {
+            "m1": m1,
+            "model_latents": model_latents,
+            "data_latents": data_latents,
+            "m2": m2,
+            "m3": m3,
+            "d1": d1,
+            "d2": d2,
+            "d3": d3,
+            "cpds": cpds,
+            "potentials1": potentials1,
+            "potentials2": potentials2,
+            "mle1": mle1,
+            "mle2": mle2,
+            "mle3": mle3,
+        }
 
-    def test_get_parameters_incomplete_data(self):
-        self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
-        self.assertEqual(self.mle1.estimate_cpd("B"), self.cpds[1])
-        self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(self.mle1.get_parameters(n_jobs=1)), 3)
+        # Cleanup
+        get_reusable_executor().shutdown(wait=True)
 
-    def test_estimate_cpd(self):
-        self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
-        self.assertEqual(self.mle1.estimate_cpd("B"), self.cpds[1])
-        self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
+    def test_error_latent_model(self, setup):
+        with pytest.raises(ValueError):
+            MaximumLikelihoodEstimator(
+                setup["model_latents"],
+                setup["data_latents"],
+            )
 
-    def test_state_names1(self):
+    def test_get_parameters_incomplete_data(self, setup):
+        assert setup["mle1"].estimate_cpd("A") == setup["cpds"][0]
+        assert setup["mle1"].estimate_cpd("B") == setup["cpds"][1]
+        assert setup["mle1"].estimate_cpd("C") == setup["cpds"][2]
+        assert len(setup["mle1"].get_parameters(n_jobs=1)) == 3
+
+    def test_estimate_cpd(self, setup):
+        assert setup["mle1"].estimate_cpd("A") == setup["cpds"][0]
+        assert setup["mle1"].estimate_cpd("B") == setup["cpds"][1]
+        assert setup["mle1"].estimate_cpd("C") == setup["cpds"][2]
+
+    def test_state_names1(self, setup):
         m = DiscreteBayesianNetwork([("A", "B")])
         d = pd.DataFrame(data={"A": [2, 3, 8, 8, 8], "B": ["X", "O", "X", "O", "X"]})
         cpd_b = TabularCPD(
@@ -97,9 +117,9 @@ class TestMLE(unittest.TestCase):
             state_names={"A": [2, 3, 8], "B": ["O", "X"]},
         )
         mle2 = MaximumLikelihoodEstimator(m, d)
-        self.assertEqual(mle2.estimate_cpd("B"), cpd_b)
+        assert mle2.estimate_cpd("B") == cpd_b
 
-    def test_state_names2(self):
+    def test_state_names2(self, setup):
         m = DiscreteBayesianNetwork([("Light?", "Color"), ("Fruit", "Color")])
         d = pd.DataFrame(
             data={
@@ -121,21 +141,21 @@ class TestMLE(unittest.TestCase):
             },
         )
         mle2 = MaximumLikelihoodEstimator(m, d)
-        self.assertEqual(mle2.estimate_cpd("Color"), color_cpd)
+        assert mle2.estimate_cpd("Color") == color_cpd
 
-    def test_class_init(self):
+    def test_class_init(self, setup):
         mle = MaximumLikelihoodEstimator(
-            self.m1, self.d1, state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]}
+            setup["m1"], setup["d1"], state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]}
         )
-        self.assertEqual(mle.estimate_cpd("A"), self.cpds[0])
-        self.assertEqual(mle.estimate_cpd("B"), self.cpds[1])
-        self.assertEqual(mle.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
+        assert mle.estimate_cpd("A") == setup["cpds"][0]
+        assert mle.estimate_cpd("B") == setup["cpds"][1]
+        assert mle.estimate_cpd("C") == setup["cpds"][2]
+        assert len(mle.get_parameters(n_jobs=1)) == 3
 
-    def test_nonoccurring_values(self):
+    def test_nonoccurring_values(self, setup):
         mle = MaximumLikelihoodEstimator(
-            self.m1,
-            self.d1,
+            setup["m1"],
+            setup["d1"],
             state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 42, 1], 1: [2]},
         )
         cpds = [
@@ -156,13 +176,13 @@ class TestMLE(unittest.TestCase):
                 state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 42, 1]},
             ),
         ]
-        self.assertEqual(mle.estimate_cpd("A"), cpds[0])
-        self.assertEqual(mle.estimate_cpd("B"), cpds[1])
-        self.assertEqual(mle.estimate_cpd("C"), cpds[2])
-        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
+        assert mle.estimate_cpd("A") == cpds[0]
+        assert mle.estimate_cpd("B") == cpds[1]
+        assert mle.estimate_cpd("C") == cpds[2]
+        assert len(mle.get_parameters(n_jobs=1)) == 3
 
-    def test_missing_data(self):
-        e1 = MaximumLikelihoodEstimator(self.m1, self.d2, state_names={"C": [0, 1]})
+    def test_missing_data(self, setup):
+        e1 = MaximumLikelihoodEstimator(setup["m1"], setup["d2"], state_names={"C": [0, 1]})
         cpds1 = [
             TabularCPD("A", 2, [[0.5], [0.5]]),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
@@ -174,50 +194,44 @@ class TestMLE(unittest.TestCase):
                 evidence_card=[2, 2],
             ),
         ]
-        self.assertEqual(e1.estimate_cpd("A"), cpds1[0])
-        self.assertEqual(e1.estimate_cpd("B"), cpds1[1])
-        self.assertEqual(e1.estimate_cpd("C"), cpds1[2])
-        self.assertEqual(len(e1.get_parameters(n_jobs=1)), 3)
+        assert e1.estimate_cpd("A") == cpds1[0]
+        assert e1.estimate_cpd("B") == cpds1[1]
+        assert e1.estimate_cpd("C") == cpds1[2]
+        assert len(e1.get_parameters(n_jobs=1)) == 3
 
-    def test_estimate_potentials_smoke_test(self):
-        joint = self.mle3.estimate_potentials().product()
-        self.assertEqual(
-            joint.marginalize(variables=["B"], inplace=False),
-            self.potentials2[("A", "C")].normalize(inplace=False),
+    def test_estimate_potentials_smoke_test(self, setup):
+        joint = setup["mle3"].estimate_potentials().product()
+        assert (
+            joint.marginalize(variables=["B"], inplace=False)
+            == setup["potentials2"][("A", "C")].normalize(inplace=False)
         )
-        self.assertEqual(
-            joint.marginalize(variables=["A"], inplace=False),
-            self.potentials2[("B", "C")].normalize(inplace=False),
-        )
-
-    def test_partition_function(self):
-        model = self.m3.copy()
-        model.clique_beliefs = self.mle3.estimate_potentials()
-        self.assertEqual(model.get_partition_function(), 1.0)
-
-    def test_estimate_potentials(self):
-        self.assertEqual(
-            self.mle2.estimate_potentials()[("A", "B")],
-            self.potentials1[("A", "B")].normalize(inplace=False),
+        assert (
+            joint.marginalize(variables=["A"], inplace=False)
+            == setup["potentials2"][("B", "C")].normalize(inplace=False)
         )
 
-    def tearDown(self):
-        del self.m1
-        del self.d1
-        del self.d2
+    def test_partition_function(self, setup):
+        model = setup["m3"].copy()
+        model.clique_beliefs = setup["mle3"].estimate_potentials()
+        assert model.get_partition_function() == 1.0
 
-        get_reusable_executor().shutdown(wait=True)
+    def test_estimate_potentials(self, setup):
+        assert (
+            setup["mle2"].estimate_potentials()[("A", "B")]
+            == setup["potentials1"][("A", "B")].normalize(inplace=False)
+        )
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
 class TestMLETorch(TestMLE):
-    def setUp(self):
+    @pytest.fixture
+    def setup(self):
         config.set_backend("torch")
-        super().setUp()
+        # Call parent setup
+        yield from TestMLE.__dict__["setup"].__func__(self)
 
-    def tearDown(self):
-        super().tearDown()
+    def teardown_method(self):
         config.set_backend("numpy")
