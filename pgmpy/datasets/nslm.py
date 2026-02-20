@@ -5,7 +5,8 @@
 # 2. Go through the file and address all the TODOs.
 
 
-import pandas
+import pandas as pd
+import io
 
 from pgmpy.base import DAG
 from pgmpy.datasets._base import _BaseDataset
@@ -59,7 +60,7 @@ class NSLM(_BaseDataset):
         raw_data = cls._get_raw_data("data", cls.data_url)
 
         # TODO: Add logic to construct a pandas DataFrame object from data in line above.
-        dataframe = pandas.read_csv(io.BytesIO(raw_data), sep=",")
+        dataframe = pd.read_csv(io.BytesIO(raw_data), sep=",")
         return dataframe
 
     # TODO: If the expert knowledge is in the expected format, remove the following `load_expert_knowledge` method.
