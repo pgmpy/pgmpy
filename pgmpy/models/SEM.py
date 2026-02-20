@@ -41,7 +41,7 @@ class SEMGraph:
 
     Examples
     --------
-    Defining a model (Union sentiment model[1]) without setting any paramaters:
+    Defining a model (Union sentiment model[1]) without setting any parameters:
 
     >>> from pgmpy.models import SEMGraph
     >>> sem = SEMGraph(
@@ -990,7 +990,7 @@ class SEM(SEMGraph):
 
         Examples
         --------
-        Defining a model (Union sentiment model[1]) without setting any paramaters.
+        Defining a model (Union sentiment model[1]) without setting any parameters.
 
         >>> from pgmpy.models import SEM
         >>> sem = SEM.from_graph(
