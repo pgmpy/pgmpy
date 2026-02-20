@@ -31,6 +31,7 @@ ALL_DATASETS = [
     "htru2",
     "iq_brain_size",
     "lead",
+    "lucas",
     "myocardial_infarction",
     "pima_diabetes",
     "pittsburgh_bridges",
