@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import gzip
 import hashlib
-import inspect
 import io
 import os
 import shutil
@@ -14,6 +13,7 @@ from skbase.lookup import all_objects
 from pgmpy.base import DAG
 from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.readwrite import BIFReader
+from pgmpy.utils import _parse_docstring_references
 
 
 class _BaseExampleModel(BaseObject):
@@ -129,65 +129,6 @@ class DAGMixin:
         return DAG.from_dagitty(string=cls._get_raw_data().decode("utf-8"))
 
 
-def _parse_docstring_references(cls) -> str | None:
-    """
-    Extracts the References section from a class's docstring.
-
-    Parses RST-style references sections (e.g. ``.. [1] Citation text``) from
-    the class docstring.
-
-    Parameters
-    ----------
-    cls : type
-        The class whose docstring to parse.
-
-    Returns
-    -------
-    str or None
-        The references text (cleaned up and dedented) if found, None otherwise.
-    """
-    doc = inspect.getdoc(cls)
-    if not doc:
-        return None
-
-    lines = doc.split("\n")
-    ref_start = None
-    for i, line in enumerate(lines):
-        if line.strip() == "References":
-            # Check that the next line is a section underline (dashes)
-            if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
-                ref_start = i + 2
-                break
-
-    if ref_start is None:
-        return None
-
-    # Collect lines until the next section header or end of docstring
-    ref_lines = []
-    for line in lines[ref_start:]:
-        stripped = line.strip()
-        # Stop if we hit another section header (word followed by dashes on next line)
-        if (
-            stripped
-            and not stripped.startswith("..")
-            and not stripped.startswith("[")
-            and ref_lines
-            and ref_lines[-1].strip() == ""
-        ):
-            # Peek: if this looks like a section header, stop
-            break
-        ref_lines.append(line)
-
-    # Strip trailing blank lines
-    while ref_lines and not ref_lines[-1].strip():
-        ref_lines.pop()
-
-    if not ref_lines:
-        return None
-
-    return "\n".join(ref_lines)
-
-
 def _find_model_class(name: str):
     """
     Find a model class by its name tag.
@@ -240,7 +181,7 @@ def get_reference(name: str) -> str | None:
     Examples
     --------
     >>> from pgmpy.example_models import get_reference
-    >>> ref = get_reference("alarm")
+    >>> ref = get_reference("bnlearn/alarm")
     >>> print(ref)
     ..[1] I. A. Beinlich, ...
     """

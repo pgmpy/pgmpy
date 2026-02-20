@@ -3,6 +3,7 @@ from .mathext import cartesian, sample_discrete
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .utils import (
+    _parse_docstring_references,
     discretize,
     get_dataset_type,
     get_example_model,
@@ -13,6 +14,7 @@ from .utils import (
 )
 
 __all__ = [
+    "_parse_docstring_references",
     "cartesian",
     "sample_discrete",
     "StateNameMixin",

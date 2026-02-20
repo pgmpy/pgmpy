@@ -1,4 +1,5 @@
 import gzip
+import inspect
 
 import pandas as pd
 
@@ -9,6 +10,61 @@ except ImportError:
     from importlib_resources import files
 
 from pgmpy.global_vars import logger
+
+
+def _parse_docstring_references(cls):
+    """
+    Extracts the References section from a class's docstring.
+
+    Parses RST-style references sections (e.g. ``.. [1] Citation text`` or
+    ``..[1] Citation text``) from the class docstring. Both spaced and
+    unspaced ``..`` prefixes are supported to match the formats used in the
+    codebase.
+
+    Parameters
+    ----------
+    cls : type
+        The class whose docstring to parse.
+
+    Returns
+    -------
+    str or None
+        The references text (cleaned up and dedented) if found, None otherwise.
+    """
+    doc = inspect.getdoc(cls)
+    if not doc:
+        return None
+
+    lines = doc.split("\n")
+    ref_start = None
+    for i, line in enumerate(lines):
+        if line.strip() == "References":
+            # Check that the next line is a section underline (dashes)
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
+                ref_start = i + 2
+                break
+
+    if ref_start is None:
+        return None
+
+    # Collect lines until the next section header or end of docstring
+    ref_lines = []
+    for j, line in enumerate(lines[ref_start:], start=ref_start):
+        stripped = line.strip()
+        # Stop if we hit another section header: a non-empty line followed by
+        # a dashes underline on the next line.
+        if stripped and j + 1 < len(lines) and lines[j + 1].strip().startswith("---"):
+            break
+        ref_lines.append(line)
+
+    # Strip trailing blank lines
+    while ref_lines and not ref_lines[-1].strip():
+        ref_lines.pop()
+
+    if not ref_lines:
+        return None
+
+    return "\n".join(ref_lines)
 
 
 def get_example_model(model: str):
