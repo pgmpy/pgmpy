@@ -13,17 +13,14 @@ from pgmpy.base import DAG
 from pgmpy.datasets._base import _BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
-# TODO: Define the base URL for your dataset files. This is used for caching and should be consistent
-# across all URLs in your dataset class. Example:
-# BASE_URL = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/your-dataset/"
-
 
 # TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
 # class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
 class YourDatasetClass(_BaseDataset):
 
-    # TODO: Set base_url to the BASE_URL constant defined above.
-    base_url = BASE_URL
+    # TODO: Set base_url to the base URL for your dataset files. This is used for caching functionality.
+    # For example: base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/your-dataset/"
+    base_url = None
 
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
@@ -43,10 +40,10 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
-    # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
-    # row containing the names of the columns.
-    # Note: base_url should be set to BASE_URL (defined above) for caching functionality.
-    data_url = BASE_URL + "your-data-file.txt"
+    # TODO: Add the URL to the dataset. This should be relative to the base_url.
+    # For example: data_url = base_url + "data/your_dataset.txt"
+    # The current parser expects the dataset to be in a tabular form with the first row containing the names of the columns.
+    data_url = None
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = None
