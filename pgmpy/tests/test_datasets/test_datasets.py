@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets import get_reference, list_datasets, load_dataset
 from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
@@ -108,3 +108,30 @@ def test_load_covariance_dataset():
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
+
+
+def test_get_reference():
+    # Test that get_reference returns a string for a dataset with references
+    ref = get_reference("abalone_continuous")
+    assert isinstance(ref, str)
+    assert "Lopez-Paz" in ref
+
+    # Test that get_reference returns None for a dataset without references
+    ref = get_reference("sachs_mixed")
+    assert ref is None
+
+    # Test that get_reference raises ValueError for non-existent dataset
+    with pytest.raises(ValueError):
+        get_reference("non_existent_dataset")
+
+
+def test_load_dataset_has_reference():
+    # Test that Dataset dataclass includes reference field
+    dataset = load_dataset("abalone_continuous")
+    assert hasattr(dataset, "reference")
+    assert isinstance(dataset.reference, str)
+    assert "Lopez-Paz" in dataset.reference
+
+    # Test dataset without references
+    dataset = load_dataset("sachs_mixed")
+    assert dataset.reference is None

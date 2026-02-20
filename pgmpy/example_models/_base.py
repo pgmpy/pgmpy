@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import gzip
 import hashlib
+import inspect
 import io
 import os
 import shutil
@@ -65,6 +68,18 @@ class _BaseExampleModel(BaseObject):
         if os.path.exists(PGMPY_DATA_HOME):
             shutil.rmtree(PGMPY_DATA_HOME)
 
+    @classmethod
+    def get_reference(cls) -> str | None:
+        """
+        Extracts and returns the References section from the class docstring.
+
+        Returns
+        -------
+        str or None
+            The references text if found in the docstring, None otherwise.
+        """
+        return _parse_docstring_references(cls)
+
 
 class DiscreteMixin:
     """
@@ -112,6 +127,131 @@ class DAGMixin:
     @classmethod
     def load_model_object(cls):
         return DAG.from_dagitty(string=cls._get_raw_data().decode("utf-8"))
+
+
+def _parse_docstring_references(cls) -> str | None:
+    """
+    Extracts the References section from a class's docstring.
+
+    Parses RST-style references sections (e.g. ``.. [1] Citation text``) from
+    the class docstring.
+
+    Parameters
+    ----------
+    cls : type
+        The class whose docstring to parse.
+
+    Returns
+    -------
+    str or None
+        The references text (cleaned up and dedented) if found, None otherwise.
+    """
+    doc = inspect.getdoc(cls)
+    if not doc:
+        return None
+
+    lines = doc.split("\n")
+    ref_start = None
+    for i, line in enumerate(lines):
+        if line.strip() == "References":
+            # Check that the next line is a section underline (dashes)
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
+                ref_start = i + 2
+                break
+
+    if ref_start is None:
+        return None
+
+    # Collect lines until the next section header or end of docstring
+    ref_lines = []
+    for line in lines[ref_start:]:
+        stripped = line.strip()
+        # Stop if we hit another section header (word followed by dashes on next line)
+        if (
+            stripped
+            and not stripped.startswith("..")
+            and not stripped.startswith("[")
+            and ref_lines
+            and ref_lines[-1].strip() == ""
+        ):
+            # Peek: if this looks like a section header, stop
+            break
+        ref_lines.append(line)
+
+    # Strip trailing blank lines
+    while ref_lines and not ref_lines[-1].strip():
+        ref_lines.pop()
+
+    if not ref_lines:
+        return None
+
+    return "\n".join(ref_lines)
+
+
+def _find_model_class(name: str):
+    """
+    Find a model class by its name tag.
+
+    Parameters
+    ----------
+    name : str
+        Name of the model.
+
+    Returns
+    -------
+    type or None
+        The model class if found, None otherwise.
+    """
+    target_models = all_objects(
+        object_types=_BaseExampleModel,
+        package_name="pgmpy.example_models",
+        filter_tags={"name": name},
+        return_names=False,
+    )
+
+    if target_models:
+        return target_models[0]
+    return None
+
+
+def get_reference(name: str) -> str | None:
+    """
+    Get the reference/citation for an example model by name.
+
+    Returns the references section from the model's class docstring,
+    which contains the original source citation(s).
+
+    Parameters
+    ----------
+    name : str
+        Name of the example model.
+
+    Returns
+    -------
+    str or None
+        The reference text if available, None if the model has no
+        documented references.
+
+    Raises
+    ------
+    ValueError
+        If no model with the given name is found.
+
+    Examples
+    --------
+    >>> from pgmpy.example_models import get_reference
+    >>> ref = get_reference("alarm")
+    >>> print(ref)
+    ..[1] I. A. Beinlich, ...
+    """
+    target_cls = _find_model_class(name)
+
+    if target_cls is None:
+        raise ValueError(
+            f"Model with name '{name}' not found. Please use list_models() to see available models."
+        )
+
+    return target_cls.get_reference()
 
 
 def load_model(name: str):
@@ -164,19 +304,14 @@ def load_model(name: str):
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
-    target_model = all_objects(
-        object_types=_BaseExampleModel,
-        package_name="pgmpy.example_models",
-        filter_tags={"name": name},
-        return_names=False,
-    )
+    target_cls = _find_model_class(name)
 
-    if target_model is None:
+    if target_cls is None:
         raise ValueError(
-            f"Model with name '{name}' not found. Please use list_models() to see available datasets."
+            f"Model with name '{name}' not found. Please use list_models() to see available models."
         )
 
-    return target_model[0].load_model_object()
+    return target_cls.load_model_object()
 
 
 def list_models(**filter_tags) -> list[str]:

@@ -1,8 +1,9 @@
 import numpy as np
+import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.example_models import list_models, load_model
+from pgmpy.example_models import get_reference, list_models, load_model
 from pgmpy.example_models._base import _BaseExampleModel
 from pgmpy.models import (
     DiscreteBayesianNetwork,
@@ -362,3 +363,25 @@ def test_load_model():
             )
         else:
             assert isinstance(model, DAG)
+
+
+def test_get_reference():
+    # Test that get_reference returns a string for a model with references
+    ref = get_reference("bnlearn/alarm")
+    assert isinstance(ref, str)
+    assert "Beinlich" in ref
+
+    ref = get_reference("bnlearn/asia")
+    assert isinstance(ref, str)
+    assert "Lauritzen" in ref
+
+    # Test that get_reference raises ValueError for non-existent model
+    with pytest.raises(ValueError):
+        get_reference("non_existent_model")
+
+
+def test_get_reference_all_models():
+    # Verify get_reference works for all models (returns str or None)
+    for model_name in ALL_MODELS:
+        ref = get_reference(model_name)
+        assert ref is None or isinstance(ref, str)

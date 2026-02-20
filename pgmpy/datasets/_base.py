@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import io
 import os
 import re
@@ -25,13 +26,15 @@ class Dataset:
     data: pd.DataFrame
     expert_knowledge: Optional[ExpertKnowledge] = None
     ground_truth: Optional[DAG] = None
+    reference: Optional[str] = None
 
     tags: Dict[str, Any] = None
 
     def __str__(self) -> str:
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n "
+            f"reference={self.reference}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -183,6 +186,18 @@ class _BaseDataset(BaseObject):
         )
         return DAG.from_dagitty(raw_data)
 
+    @classmethod
+    def get_reference(cls) -> Optional[str]:
+        """
+        Extracts and returns the References section from the class docstring.
+
+        Returns
+        -------
+        str or None
+            The references text if found in the docstring, None otherwise.
+        """
+        return _parse_docstring_references(cls)
+
     @staticmethod
     def clear_cache() -> None:
         """
@@ -240,6 +255,129 @@ class _CovarianceMixin:
         return data
 
 
+def _parse_docstring_references(cls) -> Optional[str]:
+    """
+    Extracts the References section from a class's docstring.
+
+    Parses RST-style references sections (e.g. ``.. [1] Citation text``) from
+    the class docstring.
+
+    Parameters
+    ----------
+    cls : type
+        The class whose docstring to parse.
+
+    Returns
+    -------
+    str or None
+        The references text (cleaned up and dedented) if found, None otherwise.
+    """
+    doc = inspect.getdoc(cls)
+    if not doc:
+        return None
+
+    lines = doc.split("\n")
+    ref_start = None
+    for i, line in enumerate(lines):
+        if line.strip() == "References":
+            # Check that the next line is a section underline (dashes)
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
+                ref_start = i + 2
+                break
+
+    if ref_start is None:
+        return None
+
+    # Collect lines until the next section header or end of docstring
+    ref_lines = []
+    for line in lines[ref_start:]:
+        stripped = line.strip()
+        # Stop if we hit another section header (word followed by dashes on next line)
+        if (
+            stripped
+            and not stripped.startswith("..")
+            and not stripped.startswith("[")
+            and ref_lines
+            and ref_lines[-1].strip() == ""
+        ):
+            # Peek: if this looks like a section header, stop
+            break
+        ref_lines.append(line)
+
+    # Strip trailing blank lines
+    while ref_lines and not ref_lines[-1].strip():
+        ref_lines.pop()
+
+    if not ref_lines:
+        return None
+
+    return "\n".join(ref_lines)
+
+
+def _find_dataset_class(name: str):
+    """
+    Find a dataset class by its name tag.
+
+    Parameters
+    ----------
+    name : str
+        Name of the dataset.
+
+    Returns
+    -------
+    type or None
+        The dataset class if found, None otherwise.
+    """
+    all_datasets = all_objects(
+        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
+    )
+
+    for cls in all_datasets:
+        if cls.get_class_tag("name") == name:
+            return cls
+    return None
+
+
+def get_reference(name: str) -> Optional[str]:
+    """
+    Get the reference/citation for a dataset by name.
+
+    Returns the references section from the dataset's class docstring,
+    which contains the original source citation(s).
+
+    Parameters
+    ----------
+    name : str
+        Name of the dataset.
+
+    Returns
+    -------
+    str or None
+        The reference text if available, None if the dataset has no
+        documented references.
+
+    Raises
+    ------
+    ValueError
+        If no dataset with the given name is found.
+
+    Examples
+    --------
+    >>> from pgmpy.datasets import get_reference
+    >>> ref = get_reference("abalone_continuous")
+    >>> print(ref)
+    .. [1] Lopez-Paz, D., ...
+    """
+    target_cls = _find_dataset_class(name)
+
+    if target_cls is None:
+        raise ValueError(
+            f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
+        )
+
+    return target_cls.get_reference()
+
+
 def load_dataset(name: str) -> Dataset:
     """
     Load a dataset by name.
@@ -255,16 +393,10 @@ def load_dataset(name: str) -> Dataset:
     >>> dataset = load_dataset("sachs_mixed")
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
+    >>> reference = dataset.reference
     """
-    all_datasets = all_objects(
-        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
-    )
+    target_cls = _find_dataset_class(name)
 
-    target_cls = None
-    for cls in all_datasets:
-        if cls.get_class_tag("name") == name:
-            target_cls = cls
-            break
     if target_cls is None:
         raise ValueError(
             f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
@@ -275,6 +407,7 @@ def load_dataset(name: str) -> Dataset:
         data=target_cls.load_dataframe(),
         expert_knowledge=target_cls.load_expert_knowledge(),
         ground_truth=target_cls.load_ground_truth(),
+        reference=target_cls.get_reference(),
         tags=target_cls.get_class_tags(),
     )
 
