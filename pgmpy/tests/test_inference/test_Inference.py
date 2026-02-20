@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-import unittest
 from collections import defaultdict
 
 import numpy as np
+import pytest
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import Inference
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 
 
-class TestInferenceBase(unittest.TestCase):
+class TestInferenceBase:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.bayesian = DiscreteBayesianNetwork(
             [("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")]
@@ -41,75 +42,57 @@ class TestInferenceBase(unittest.TestCase):
     def test_bayesian_inference_init(self):
         infer_bayesian = Inference(self.bayesian)
         infer_bayesian._initialize_structures()
-        self.assertEqual(set(infer_bayesian.variables), {"a", "b", "c", "d", "e"})
-        self.assertEqual(
-            infer_bayesian.cardinality, {"a": 2, "b": 2, "c": 2, "d": 2, "e": 2}
+        assert set(infer_bayesian.variables) == {"a", "b", "c", "d", "e"}
+        assert infer_bayesian.cardinality == {"a": 2, "b": 2, "c": 2, "d": 2, "e": 2}
+        assert isinstance(infer_bayesian.factors, defaultdict)
+        assert set(infer_bayesian.factors["a"]) == set(
+            [
+                self.bayesian.get_cpds("a").to_factor(),
+                self.bayesian.get_cpds("b").to_factor(),
+            ]
         )
-        self.assertIsInstance(infer_bayesian.factors, defaultdict)
-        self.assertEqual(
-            set(infer_bayesian.factors["a"]),
-            set(
-                [
-                    self.bayesian.get_cpds("a").to_factor(),
-                    self.bayesian.get_cpds("b").to_factor(),
-                ]
-            ),
+        assert set(infer_bayesian.factors["b"]) == set(
+            [
+                self.bayesian.get_cpds("b").to_factor(),
+                self.bayesian.get_cpds("c").to_factor(),
+            ]
         )
-        self.assertEqual(
-            set(infer_bayesian.factors["b"]),
-            set(
-                [
-                    self.bayesian.get_cpds("b").to_factor(),
-                    self.bayesian.get_cpds("c").to_factor(),
-                ]
-            ),
+        assert set(infer_bayesian.factors["c"]) == set(
+            [
+                self.bayesian.get_cpds("c").to_factor(),
+                self.bayesian.get_cpds("d").to_factor(),
+            ]
         )
-        self.assertEqual(
-            set(infer_bayesian.factors["c"]),
-            set(
-                [
-                    self.bayesian.get_cpds("c").to_factor(),
-                    self.bayesian.get_cpds("d").to_factor(),
-                ]
-            ),
+        assert set(infer_bayesian.factors["d"]) == set(
+            [
+                self.bayesian.get_cpds("d").to_factor(),
+                self.bayesian.get_cpds("e").to_factor(),
+            ]
         )
-        self.assertEqual(
-            set(infer_bayesian.factors["d"]),
-            set(
-                [
-                    self.bayesian.get_cpds("d").to_factor(),
-                    self.bayesian.get_cpds("e").to_factor(),
-                ]
-            ),
-        )
-        self.assertEqual(
-            set(infer_bayesian.factors["e"]),
-            set([self.bayesian.get_cpds("e").to_factor()]),
+        assert set(infer_bayesian.factors["e"]) == set(
+            [self.bayesian.get_cpds("e").to_factor()]
         )
 
     def test_markov_inference_init(self):
         infer_markov = Inference(self.markov)
         infer_markov._initialize_structures()
-        self.assertEqual(set(infer_markov.variables), {"a", "b", "c", "d"})
-        self.assertEqual(infer_markov.cardinality, {"a": 2, "b": 2, "c": 2, "d": 2})
-        self.assertEqual(
-            infer_markov.factors,
-            {
-                "a": [
-                    DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100])),
-                    DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20])),
-                ],
-                "b": [
-                    DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100])),
-                    DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1])),
-                ],
-                "c": [
-                    DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20])),
-                    DiscreteFactor(["c", "d"], [2, 2], np.array([60, 60, 40, 40])),
-                ],
-                "d": [
-                    DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1])),
-                    DiscreteFactor(["c", "d"], [2, 2], np.array([60, 60, 40, 40])),
-                ],
-            },
-        )
+        assert set(infer_markov.variables) == {"a", "b", "c", "d"}
+        assert infer_markov.cardinality == {"a": 2, "b": 2, "c": 2, "d": 2}
+        assert infer_markov.factors == {
+            "a": [
+                DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100])),
+                DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20])),
+            ],
+            "b": [
+                DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100])),
+                DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1])),
+            ],
+            "c": [
+                DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20])),
+                DiscreteFactor(["c", "d"], [2, 2], np.array([60, 60, 40, 40])),
+            ],
+            "d": [
+                DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1])),
+                DiscreteFactor(["c", "d"], [2, 2], np.array([60, 60, 40, 40])),
+            ],
+        }

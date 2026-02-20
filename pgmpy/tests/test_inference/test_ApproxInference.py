@@ -1,5 +1,4 @@
-import unittest
-
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -9,7 +8,8 @@ from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.utils import get_example_model
 
 
-class TestApproxInferenceBN(unittest.TestCase):
+class TestApproxInferenceBN:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.alarm_model = get_example_model("alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
@@ -19,34 +19,34 @@ class TestApproxInferenceBN(unittest.TestCase):
     def test_query_marg(self):
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], samples=self.samples
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], samples=self.samples, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], joint=False
         )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], samples=self.samples, joint=False
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
     def test_query_evidence(self):
         query_results = self.infer_alarm.query(
@@ -55,7 +55,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
@@ -63,7 +63,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
@@ -71,7 +71,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
@@ -79,7 +79,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
@@ -88,7 +88,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
@@ -97,7 +97,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             joint=False,
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
     def test_virtual_evidence(self):
         virtual_evid = TabularCPD(
@@ -112,7 +112,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY"], virtual_evidence=[virtual_evid]
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
@@ -126,10 +126,11 @@ class TestApproxInferenceBN(unittest.TestCase):
             virtual_evidence=[virtual_evid],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
 
-class TestApproxInferenceDBN(unittest.TestCase):
+class TestApproxInferenceDBN:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = DBN()
         self.model.add_edges_from(
@@ -164,36 +165,37 @@ class TestApproxInferenceDBN(unittest.TestCase):
     def test_inference(self):
         res1 = self.infer.query([("Y", 1)], seed=42)
         expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        assert res1.__eq__(expected1, atol=0.01)
         res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
         expected2 = DiscreteFactor(
             [("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029]
         )
-        self.assertTrue(res2.__eq__(expected2, atol=0.01))
+        assert res2.__eq__(expected2, atol=0.01)
         res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
         expected3 = DiscreteFactor(
             [("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030]
         )
-        self.assertTrue(res3.__eq__(expected3, atol=0.01))
+        assert res3.__eq__(expected3, atol=0.01)
 
     def test_evidence(self):
         res1 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        assert res1.__eq__(expected1, atol=0.01)
 
     def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        assert res1.__eq__(expected1, atol=0.01)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestApproxInferenceBNTorch(unittest.TestCase):
+class TestApproxInferenceBNTorch:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         config.set_backend("torch")
 
@@ -202,37 +204,41 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         self.alarm_ve = VariableElimination(self.alarm_model)
         self.samples = self.alarm_model.simulate(int(1e4))
 
+        yield
+
+        config.set_backend("numpy")
+
     def test_query_marg(self):
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"], samples=self.samples
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], samples=self.samples, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], joint=False
         )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], samples=self.samples, joint=False
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
     def test_query_evidence(self):
         query_results = self.infer_alarm.query(
@@ -241,7 +247,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
@@ -249,7 +255,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
@@ -257,7 +263,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
@@ -265,7 +271,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
@@ -274,7 +280,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
@@ -283,7 +289,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             joint=False,
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
     def test_virtual_evidence(self):
         virtual_evid = TabularCPD(
@@ -298,7 +304,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         ve_results = self.alarm_ve.query(
             variables=["HISTORY"], virtual_evidence=[virtual_evid]
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        assert query_results.__eq__(ve_results, atol=0.01)
 
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
@@ -312,17 +318,15 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             virtual_evidence=[virtual_evid],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert query_results.__eq__(ve_results, atol=0.01)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestApproxInferenceDBNTorch(unittest.TestCase):
+class TestApproxInferenceDBNTorch:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         config.set_backend("torch")
 
@@ -356,32 +360,33 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         self.model.initialize_initial_state()
         self.infer = ApproxInference(self.model)
 
+        yield
+
+        config.set_backend("numpy")
+
     def test_inference(self):
         res1 = self.infer.query([("Y", 1)], seed=42)
         expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        assert res1.__eq__(expected1, atol=0.01)
         res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
         expected2 = DiscreteFactor(
             [("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029]
         )
-        self.assertTrue(res2.__eq__(expected2, atol=0.01))
+        assert res2.__eq__(expected2, atol=0.01)
         res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
         expected3 = DiscreteFactor(
             [("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030]
         )
-        self.assertTrue(res3.__eq__(expected3, atol=0.01))
+        assert res3.__eq__(expected3, atol=0.01)
 
     def test_evidence(self):
         res1 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        assert res1.__eq__(expected1, atol=0.01)
 
     def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
-        self.assertTrue(res1.__eq__(expected1, atol=0.01))
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert res1.__eq__(expected1, atol=0.01)

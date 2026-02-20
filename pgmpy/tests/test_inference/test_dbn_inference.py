@@ -1,7 +1,6 @@
-import unittest
-
 import numpy as np
 import numpy.testing as np_test
+import pytest
 from scipy.special import softmax
 
 from pgmpy.factors.discrete import TabularCPD
@@ -13,7 +12,8 @@ from pgmpy.models import DynamicBayesianNetwork
 # Huange Wang, Xiaoguang Gao, Chris P. Thompson
 
 
-class TestDBNInference(unittest.TestCase):
+class TestDBNInference:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         dbn_1 = DynamicBayesianNetwork()
         dbn_1.add_edges_from(
@@ -187,7 +187,7 @@ class TestDBNInference(unittest.TestCase):
 
         bnet.add_cpds(*bnet_cpds)
 
-        ie = DBNInference(bnet)
+        # ie = DBNInference(bnet)
 
         # TODO: an assertion to test a complex network
 
@@ -228,7 +228,7 @@ class TestDBNInference(unittest.TestCase):
         inference = DBNInference(dbn)
 
         # Basic sanity checks
-        self.assertIsNotNone(inference.start_bayesian_model)
-        self.assertIsNotNone(inference.one_and_half_model)
-        self.assertIsNotNone(inference.start_junction_tree)
-        self.assertIsNotNone(inference.one_and_half_junction_tree)
+        assert inference.start_bayesian_model is not None
+        assert inference.one_and_half_model is not None
+        assert inference.start_junction_tree is not None
+        assert inference.one_and_half_junction_tree is not None
