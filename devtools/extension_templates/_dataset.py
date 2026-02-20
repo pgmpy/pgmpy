@@ -48,6 +48,9 @@ class YourDatasetClass(_BaseDataset):
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = None
 
+    # TODO: Add the base URL for the dataset. This is used for caching and constructing full URLs.
+    base_url = None
+
     # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
     # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
     expert_knowledge_url = None
