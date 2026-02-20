@@ -56,10 +56,10 @@ class NSLM(_BaseDataset):
     # TODO: If the data is in tabular text format, remove the following `load_dataframe` method.
     @classmethod
     def load_dataframe(cls) -> pandas.DataFrame:
-        _ = cls._get_raw_data("data", cls.data_url)
+        raw_data = cls._get_raw_data("data", cls.data_url)
 
         # TODO: Add logic to construct a pandas DataFrame object from data in line above.
-        dataframe = None
+        dataframe = pd.read_csv(io.BytesIO(raw_data), sep=",")
         return dataframe
 
     # TODO: If the expert knowledge is in the expected format, remove the following `load_expert_knowledge` method.
