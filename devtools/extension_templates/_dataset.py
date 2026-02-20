@@ -20,7 +20,7 @@ class YourDatasetClass(_BaseDataset):
 
     # TODO: Set base_url to the base URL for your dataset files. This is used for caching functionality.
     # For example: base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/your-dataset/"
-    base_url = None
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/your-dataset/"
 
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
