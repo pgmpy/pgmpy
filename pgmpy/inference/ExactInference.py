@@ -324,9 +324,10 @@ class VariableElimination(Inference):
         if isinstance(self.model, DiscreteBayesianNetwork) and (
             virtual_evidence is not None
         ):
+            orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            return self.query(
+            result = self.query(
                 variables=variables,
                 evidence={**evidence, **virt_evidence},
                 virtual_evidence=None,
@@ -334,6 +335,8 @@ class VariableElimination(Inference):
                 joint=joint,
                 show_progress=show_progress,
             )
+            self.__init__(orig_model)
+            return result
 
         # Step 3: Prune the network based on variables and evidence.
         if isinstance(self.model, DiscreteBayesianNetwork):
@@ -586,15 +589,18 @@ class VariableElimination(Inference):
         if isinstance(self.model, DiscreteBayesianNetwork) and (
             virtual_evidence is not None
         ):
+            orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            return self.map_query(
+            result = self.map_query(
                 variables=variables,
                 evidence={**evidence, **virt_evidence},
                 virtual_evidence=None,
                 elimination_order=elimination_order,
                 show_progress=show_progress,
             )
+            self.__init__(orig_model)
+            return result
 
         if isinstance(self.model, DiscreteBayesianNetwork):
             model_reduced, evidence = self._prune_bayesian_model(variables, evidence)
