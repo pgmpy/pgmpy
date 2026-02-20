@@ -36,8 +36,11 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
+    # TODO: Add the base URL for the dataset. This is required for caching functionality.
+    base_url = None
+
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
-    # row containing the names of the columns.
+    # row containing the names of the columns. Typically: data_url = base_url + "data/your_data_file.txt"
     data_url = None
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
