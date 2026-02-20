@@ -38,7 +38,7 @@ class NSLM(_BaseDataset):
 
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
     # row containing the names of the columns.
-    data_url = https://raw.githubusercontent.com/grf-labs/grf/refs/heads/master/experiments/acic18/synthetic_data.csv
+    data_url = "https://raw.githubusercontent.com/grf-labs/grf/refs/heads/master/experiments/acic18/synthetic_data.csv"
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = None
