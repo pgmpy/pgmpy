@@ -54,11 +54,11 @@ class _CausalChamberBase(_BaseDataset):
         """
         try:
             import causalchamber.datasets as datasets
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
-                "The 'causalchamber' package is required to load this dataset. "
+                f"{e}. The 'causalchamber' package is required to load this dataset. "
                 "Install it using: pip install causalchamber"
-            )
+            ) from None
 
         if cls.dataset_name is None or cls.experiment_name is None:
             raise ValueError(
@@ -92,11 +92,11 @@ class _CausalChamberBase(_BaseDataset):
 
         try:
             from causalchamber.ground_truth import graph
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
-                "The 'causalchamber' package is required. "
+                f"{e}. The 'causalchamber' package is required. "
                 "Install it using: pip install causalchamber"
-            )
+            ) from None
 
         if cls.chamber is None or cls.configuration is None:
             raise ValueError(
