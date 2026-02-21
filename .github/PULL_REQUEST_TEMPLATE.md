@@ -1,5 +1,7 @@
+# DO NOT REMOVE THIS CHECKLIST 
+
 ### Your checklist for this pull request
-**Do not** remove this checklist. Your PR **won't** get reviewed if this checklist is not present in the PR.
+Your PR **won't** get reviewed if this checklist is not present in the PR.
 
 Please complete the following checklist after creating the PR.
 
