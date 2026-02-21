@@ -35,7 +35,7 @@ class TestConfig:
         not _check_soft_dependencies("torch", severity="none"),
         reason="test only if torch is available",
     )
-    def test_torch_cpu(self):
+    def test_torch_cpu(self):  # pragma: no cover
         config.set_backend(backend="torch", device="cpu", dtype=torch.float32)
 
         assert config.BACKEND == "torch"
@@ -55,7 +55,7 @@ class TestConfig:
         or not torch.cuda.is_available(),
         reason="test only if torch and torch.cuda are available",
     )
-    def test_torch_gpu(self):
+    def test_torch_gpu(self):  # pragma: no cover
         config.set_backend(backend="torch", device="cuda", dtype=torch.float32)
 
         assert config.BACKEND == "torch"
