@@ -70,11 +70,6 @@ class TestConfig:
         assert config.SHOW_PROGRESS is True
         assert config.get_show_progress() is True
 
-    @pytest.mark.skipif(
-        not _check_soft_dependencies("torch", severity="none")
-        or not torch.cuda.is_available(),
-        reason="test only if torch and torch.cuda are available",
-    )
     def test_no_progress(self):
         config.set_show_progress(show_progress=False)
 
