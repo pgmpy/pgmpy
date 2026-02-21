@@ -1,10 +1,3 @@
-# This extension template provides instructions to add new datasets to pgmpy.
-#
-# Please follow the following steps:
-
-# 2. Go through the file and address all the TODOs.
-
-
 import pandas
 import io
 
