@@ -108,6 +108,13 @@ Every new function or bug fix must include tests:
 * Integration tests if your change spans multiple modules.
 * Aim for meaningful coverage rather than 100% lines.
 
+## For New Contributors
+
+* We have beginner friendly issues labelled as "Good First Issue". You can filter by the label on GitHub issues to see
+  the complete list.
+* Before starting to work on any issue, please comment on it to get it assigned to you.
+* Please try to discuss your design/solution on the issues page before opening a PR.
+
 ## Seeking Help & Discussion
 If you have questions or want to discuss anything related to the project, please join our Discord server (the link is in the README). We also host weekly dev and Community meetings that you can join to ask any questions live or listen to what others are working on.
 
