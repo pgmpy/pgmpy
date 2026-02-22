@@ -148,8 +148,6 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 # class MBias(DAGMixin, _BaseExampleModel):
 #     """
-#     M-bias structure - A classic example of collider bias.
-#
 #     References
 #     ----------
 #     ..[1] Pearl, J. (2009). Causality: Models, Reasoning and Inference.
