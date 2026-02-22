@@ -33,6 +33,7 @@ class SHD(_BaseSupervisedMetric):
         "lower_is_better": True,
         "is_symmetric": True,
         "supported_graph_types": (DAG,),
+        "is_default": True,
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):

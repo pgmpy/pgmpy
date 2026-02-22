@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pgmpy.org/schemas/lgbn.json",
+  "title": "Linear Gaussian Bayesian Network",
+  "description": "Schema for Linear Gaussian Bayesian Network (LGBN) JSON files used by pgmpy",
+  "type": "object",
+  "required": ["nodes", "arcs", "cpds"],
+  "additionalProperties": false,
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "description": "List of node names in the network",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "arcs": {
+      "type": "array",
+      "description": "List of directed edges as [source, target] pairs",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "cpds": {
+      "type": "object",
+      "description": "Conditional Probability Distributions for each node",
+      "additionalProperties": {
+        "$ref": "#/$defs/cpd"
+      },
+      "minProperties": 1
+    }
+  },
+  "$defs": {
+    "cpd": {
+      "type": "object",
+      "description": "Linear Gaussian CPD for a single node",
+      "required": ["coefficients", "variance", "parents"],
+      "additionalProperties": false,
+      "properties": {
+        "coefficients": {
+          "type": "object",
+          "description": "Regression coefficients including intercept",
+          "properties": {
+            "(Intercept)": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": ["(Intercept)"],
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 1,
+            "maxItems": 1
+          },
+          "minProperties": 1
+        },
+        "variance": {
+          "type": "array",
+          "description": "Variance of the Gaussian noise (must be positive)",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "parents": {
+          "type": "array",
+          "description": "List of parent node names",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
