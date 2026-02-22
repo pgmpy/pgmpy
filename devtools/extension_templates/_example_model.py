@@ -24,13 +24,10 @@ from .._base import DiscreteMixin, _BaseExampleModel
 # TODO: Rename the class to match your model name (use PascalCase, e.g., MyModel, AsiaNetwork).
 class YourModelName(DiscreteMixin, _BaseExampleModel):
     """
-    [One line description of the model.]
+    [Optional: Short description of the model.]
 
-    [Optional: Add a longer description if needed, explaining what the model represents,
-    its purpose, or any interesting characteristics.]
-
-    This model contains [X] nodes and [Y] edges, representing [domain description].
-
+    [Note: Most existing models only include the References section below; add a description
+    here only if it provides useful context for the model.]
     References
     ----------
     ..[1] Author, A., & Author, B. (Year). Title of the paper. Journal Name, Volume(Issue), Pages.
@@ -39,7 +36,9 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
     """
 
     # TODO: Fill in the metadata tags for your model.
-    # All tags are required. Set boolean tags to True or False as appropriate.
+    # All tags are required, except that is_discrete, is_continuous, and is_hybrid should
+    # only be provided when is_parameterized=True (omit them entirely otherwise). Set
+    # boolean tags to True or False as appropriate.
     _tags = {
         # Unique identifier for the model. Format: "source/model_name" (e.g., "bnlearn/asia", "dagitty/confounding")
         "name": "source/your_model_name",
@@ -111,11 +110,11 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #   - is_hybrid: Mix of discrete and continuous variables
 #
 # References:
-#   - Always include at least one reference in the docstring
+#   - We strongly recommend including at least one reference in the docstring when available,
+#     but this is not strictly required (some existing models, e.g. from bnrep, omit references
+#     to match their original sources).
 #   - Use proper citation format (author, year, title, journal/conference, etc.)
-#   - Include DOI or URL when available
-#   - Multiple references can be added as [1], [2], etc.
-#
+#   - Include DOI or URL when available; multiple references can be added as [1], [2], etc.
 # EXAMPLE IMPLEMENTATIONS:
 # ========================
 #
@@ -170,7 +169,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 # class arth150(ContinuousMixin, _BaseExampleModel):
 #     """
-#     Arthritis data with 150 edges - A large continuous Bayesian network.
+
 #
 #     References
 #     ----------
