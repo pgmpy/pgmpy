@@ -894,11 +894,27 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi = self.normalize(inplace=False)
         p = phi.values.ravel()
 
-        # TODO: Fix this to make it work natively in torch.
-        p = compat_fns.to_numpy(p)
+        if config.get_backend() == "torch":
+            import torch
 
-        rng = np.random.default_rng(seed=seed)
-        indexes = rng.choice(range(len(p)), size=n, p=p)
+            # torch.multinomial requires floating-point input
+            if not p.is_floating_point():
+                p = p.float()
+
+            # Use a local generator to avoid mutating global RNG state,
+            # matching the isolation semantics of np.random.default_rng.
+            generator = torch.Generator(device=p.device)
+            if seed is not None:
+                generator.manual_seed(seed)
+
+            indexes = torch.multinomial(
+                p, num_samples=n, replacement=True, generator=generator
+            ).tolist()
+        else:
+            p = compat_fns.to_numpy(p)
+            rng = np.random.default_rng(seed=seed)
+            indexes = rng.choice(range(len(p)), size=n, p=p)
+
         samples = []
         index_to_state = {}
         for index in indexes:

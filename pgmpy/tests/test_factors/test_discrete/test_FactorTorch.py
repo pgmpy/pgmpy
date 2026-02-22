@@ -5,16 +5,14 @@ from shutil import get_terminal_size
 
 import numpy as np
 import numpy.testing as np_test
+import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors import factor_divide, factor_product, factor_sum_product
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
-from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns, get_example_model
 
 
@@ -891,6 +889,12 @@ class TestFactorMethodsTorch(unittest.TestCase):
             np.array([1, 2, 3, 4]) / 10,
             decimal=2,
         )
+
+    def test_sample_seed_determinism(self):
+        phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
+        samples1 = phi1.sample(100, seed=42)
+        samples2 = phi1.sample(100, seed=42)
+        pd.testing.assert_frame_equal(samples1, samples2)
 
     def test_hash(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
@@ -2824,7 +2828,7 @@ class TestTabularCPDInitTorch(unittest.TestCase):
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
         terminal_width, terminal_height = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
-        table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
+        table_width = len(list_rows_str[0])
 
         # TODO: test table height
 
@@ -3097,7 +3101,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         )
 
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             np_test.assert_almost_equal(
