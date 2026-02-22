@@ -7,7 +7,7 @@ import re
 import shutil
 import zipfile
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.request import urlopen
 
 import numpy as np
@@ -23,18 +23,15 @@ from pgmpy.global_vars import PGMPY_DATA_HOME
 @dataclass
 class Dataset:
     name: str
-    data: Union[pd.DataFrame, Dict[int, pd.DataFrame]]
+    data: pd.DataFrame
     expert_knowledge: Optional[ExpertKnowledge] = None
-    ground_truth: Union[Optional[DAG], Dict[int, Dict[str, Any]]] = None
+    ground_truth: Optional[DAG] = None
+
     tags: Dict[str, Any] = None
 
     def __str__(self) -> str:
-        if isinstance(self.data, dict):
-            data_info = f"Dict of {len(self.data)} DataFrames"
-        else:
-            data_info = f"DataFrame of size: {self.data.shape}"
         return (
-            f"Dataset(name={self.name}, \n data= {data_info}, \n, "
+            f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
             f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
         )
 
@@ -252,65 +249,35 @@ class _TubingenBenchmarkMixin:
     """
 
     @classmethod
-    def load_dataframe(cls) -> Dict[int, pd.DataFrame]:
+    def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
         zip_content = cls._get_raw_data("data", cls.data_url)
-        pairs_dict = {}
         with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
-            files = [f for f in z.namelist() if re.match(r"pair\d+\.txt", f)]
-            for file in files:
-                try:
-                    pair_id = int(re.search(r"\d+", file).group())
-                    with z.open(file) as f:
-                        df_pair = pd.read_csv(
-                            f, sep=r"\s+", header=None, names=["x", "y"]
-                        )
-                        pairs_dict[pair_id] = df_pair
-                except Exception:
-                    continue
-        return pairs_dict
+            file_name = f"pair{pair_id:04}.txt"
+            with z.open(file_name) as f:
+                return pd.read_csv(f, sep=r"\s+", header=None, names=["x", "y"])
 
     @classmethod
-    def load_ground_truth(cls) -> Dict[int, dict]:
-        meta_url = "https://webdav.tuebingen.mpg.de/cause-effect/pairmeta.txt"
-        raw_meta = cls._get_raw_data("metadata", meta_url).decode("utf-8")
-        weights = {}
-        for line in raw_meta.strip().splitlines():
-            parts = line.split()
-            if len(parts) < 6:
-                continue
-            pair_id = int(parts[0])
-            weight = float(parts[-1])
-            weights[pair_id] = weight
+    def load_ground_truth(cls, pair_id: int) -> pd.DataFrame:
         zip_content = cls._get_raw_data("data", cls.data_url)
-        gt_dict = {}
         with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
-            files = [f for f in z.namelist() if re.match(r"pair\d+_des\.txt", f)]
-            for file in files:
-                try:
-                    pair_id = int(re.search(r"\d+", file).group())
-                    with z.open(file) as f:
-                        content = f.read().decode("utf-8-sig", errors="ignore").lower()
-                        cause, effect = None, None
-                        # for (x -> y, x --> y, x - - > y)
-                        if re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE):
-                            cause, effect = "x", "y"
-                        elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
-                            cause, effect = "y", "x"
-                        # for (x <- y, x <-- y)
-                        elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
-                            cause, effect = "y", "x"
-                        elif re.search(r"y\s*<\s*[- ]+\s*x", content, re.IGNORECASE):
-                            cause, effect = "x", "y"
-                        weight = weights.get(pair_id, None)
-                        if cause:
-                            gt_dict[pair_id] = {
-                                "cause": cause,
-                                "effect": effect,
-                                "weight": weight,
-                            }
-                except Exception:
-                    continue
-        return gt_dict
+            desc_file = f"pair{pair_id:04}_des.txt"
+            with z.open(desc_file) as f:
+                content = f.read().decode("utf-8-sig", errors="ignore").lower()
+                # for (x -> y, x --> y, x - - > y) and for cases 86,88
+                if (
+                    re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE)
+                    or "x causes y" in content
+                    or pair_id in (86, 88)
+                ):
+                    return DAG([("x", "y")])
+                elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
+                    return DAG([("y", "x")])
+                # for (x <- y, x <-- y)
+                elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
+                    return DAG([("y", "x")])
+                elif re.search(r"y\s*<\s*[- ]+\s*x", content, re.IGNORECASE):
+                    return DAG([("x", "y")])
+            return None
 
 
 def load_dataset(name: str) -> Dataset:
@@ -329,25 +296,49 @@ def load_dataset(name: str) -> Dataset:
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
     """
+    pair_id = None
+    search_name = name
+    if name == "tubingen" and pair_id is None:
+        raise ValueError(
+            "Tubingen dataset requires a pair id. Use 'tubingen/<pair_id>'."
+        )
+    if name.startswith("tubingen/"):
+        search_name = "tubingen"
+        name_parts = name.split("/")
+        if len(name_parts) == 2 and name_parts[1].isdigit():
+            pair_id = int(name_parts[1])
+        else:
+            raise ValueError(
+                f"Invalid Tubingen pair name '{name}'. Expected format: 'tubingen/<pair_id>'."
+            )
+
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
     )
 
     target_cls = None
     for cls in all_datasets:
-        if cls.get_class_tag("name") == name:
+        if cls.get_class_tag("name") == search_name:
             target_cls = cls
             break
     if target_cls is None:
         raise ValueError(
-            f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
+            f"Dataset with name '{search_name}' not found. Please use list_datasets() to see available datasets."
         )
 
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(),
+        data=(
+            target_cls.load_dataframe(pair_id)
+            if pair_id is not None
+            else target_cls.load_dataframe()
+        ),
         expert_knowledge=target_cls.load_expert_knowledge(),
-        ground_truth=target_cls.load_ground_truth(),
+        ground_truth=(
+            target_cls.load_ground_truth(pair_id)
+            if pair_id is not None
+            else target_cls.load_ground_truth()
+        ),
         tags=target_cls.get_class_tags(),
     )
 
