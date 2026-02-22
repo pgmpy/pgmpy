@@ -2,7 +2,9 @@
 #
 # Please follow the following steps:
 # 1. Copy this file to the appropriate subdirectory in `pgmpy/example_models` (e.g., `pgmpy/example_models/bnlearn/my_model.py`).
-#    If adding a new model source, create a new subdirectory in `pgmpy/example_models`.
+#    If adding a new model source, create a new subdirectory in `pgmpy/example_models` and add an `__init__.py`
+#    file to that directory so it becomes a Python package; otherwise models in that source will not be
+#    discovered by `load_model()` / `list_models()`.
 #    Note: Do NOT start the filename with an underscore `_`, otherwise it won't be discovered.
 # 2. Go through the file and address all the TODOs.
 # 3. If you would like to contribute the model to pgmpy, please add the model name to the appropriate test list in
