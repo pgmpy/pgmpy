@@ -171,7 +171,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 # ---------------------------------------
 # from .._base import ContinuousMixin, _BaseExampleModel
 #
-# class Arth150(ContinuousMixin, _BaseExampleModel):
+# class arth150(ContinuousMixin, _BaseExampleModel):
 #     """
 #     Arthritis data with 150 edges - A large continuous Bayesian network.
 #
