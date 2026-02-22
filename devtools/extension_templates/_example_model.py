@@ -124,8 +124,6 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 # class Asia(DiscreteMixin, _BaseExampleModel):
 #     """
-#     Asia network - A small Bayesian network for diagnosing lung diseases.
-#
 #     References
 #     ----------
 #     ..[1] Lauritzen, S., & Spiegelhalter, D. (1988). Local Computation with
