@@ -101,7 +101,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #   - False: Model is structure-only (just nodes and edges)
 #
 # is_discrete, is_continuous, is_hybrid:
-#   - Only relevant if is_parameterized=True
+#   - Include these tags ONLY when is_parameterized=True; omit them entirely when is_parameterized=False
 #   - Exactly one must be True for parameterized models
 #   - is_discrete: All variables are discrete (e.g., binary, categorical)
 #   - is_continuous: All variables are continuous (e.g., Gaussian)
