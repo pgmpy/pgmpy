@@ -62,7 +62,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
     #   - "discrete/asia.bif.gz" for a gzipped BIF file
     #   - "bnrep/asia.bif" for a plain BIF file
     #   - "continuous/arth150.json" for a JSON file
-    #   - "dagitty/confounding.txt" for a dagitty format file
+    #   - "dags/confounding.txt" for a dagitty format file
     data_url = "path/to/your_model_file"
 
     # TODO: If you need custom loading logic that doesn't fit the standard mixins,
