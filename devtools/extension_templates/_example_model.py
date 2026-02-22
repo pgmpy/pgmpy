@@ -156,12 +156,10 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #     """
 #     _tags = {
 #         "name": "dagitty/m_bias",
-#         "n_nodes": 4,
-#         "n_edges": 4,
+#         "n_nodes": 5,
+#         "n_edges": 5,
 #         "is_parameterized": False,
-#         "is_discrete": False,
-#         "is_continuous": False,
-#         "is_hybrid": False,
+
 #     }
 #     data_url = "dags/M-bias.txt"
 #
