@@ -90,8 +90,9 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 # ==============================
 #
 # name:
-#   - Format: "source/model_name" (lowercase with underscores)
-#   - Examples: "bnlearn/asia", "bnrep/alarm", "dagitty/m_bias"
+#   - Format: "source/model_name". Use a consistent convention (often lowercase with underscores),
+#     but the key requirements are uniqueness and matching the string used in `load_model`.
+#   - Examples: "bnlearn/asia", "bnrep/APSsystem", "dagitty/m_bias"
 #   - Must be unique across all models
 #
 # n_nodes and n_edges:
