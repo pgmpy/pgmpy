@@ -1,4 +1,5 @@
 import pandas as pd
+
 from pgmpy.datasets._base import _BaseDataset
 
 
@@ -20,7 +21,6 @@ class NSLM(_BaseDataset):
         "is_ordinal": False,
     }
 
-
     base_url = (
         "https://raw.githubusercontent.com/grf-labs/grf/"
         "refs/heads/master/experiments/"
@@ -35,11 +35,10 @@ class NSLM(_BaseDataset):
     categorical_variables = ["schoolid", "Z", "C1", "C2", "C3", "XC"]
     ordinal_variables = dict()
 
-
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
-        dataframe = pd.read_csv(cls.data_url)
+        df = pd.read_csv(cls.data_url)
         if len(cls.categorical_variables) > 0:
             for col in cls.categorical_variables:
-                dataframe[col] = dataframe[col].astype("category")
-        return dataframe
+                df[col] = df[col].astype("category")
+        return df
