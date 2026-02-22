@@ -164,7 +164,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #         "is_continuous": False,
 #         "is_hybrid": False,
 #     }
-#     data_url = "dagitty/m_bias.txt"
+#     data_url = "dags/M-bias.txt"
 #
 #
 # Example 3: Continuous Bayesian Network
