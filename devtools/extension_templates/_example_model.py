@@ -151,8 +151,9 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #     """
 #     References
 #     ----------
-#     ..[1] Pearl, J. (2009). Causality: Models, Reasoning and Inference.
-#            Cambridge University Press.
+#     ..[1] Acid, S., & De Campos, L. M. (1996). An algorithm for finding minimum
+#            d-separating sets in belief networks. Proceedings of the Twelfth
+#            International Conference on Uncertainty in Artificial Intelligence, 3-10.
 #     """
 #     _tags = {
 #         "name": "dagitty/m_bias",
