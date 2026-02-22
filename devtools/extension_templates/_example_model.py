@@ -83,7 +83,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
         # raw_data = cls._get_raw_data()
         # # Your custom parsing logic here
         # return model
-        pass
+        return super().load_model_object()
 
 
 # GUIDELINES FOR MODEL METADATA
