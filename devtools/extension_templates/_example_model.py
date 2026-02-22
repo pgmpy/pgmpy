@@ -21,7 +21,9 @@ from .._base import DiscreteMixin, _BaseExampleModel
 # from .._base import BIFMixin, ContinuousMixin, DAGMixin
 
 
-# TODO: Rename the class to match your model name (use PascalCase, e.g., MyModel, AsiaNetwork).
+# TODO: Rename the class to match your model name. PascalCase is recommended
+# (e.g., MyModel, AsiaNetwork), but note that some existing example models may
+# use different naming styles.
 class YourModelName(DiscreteMixin, _BaseExampleModel):
     """
     [Optional: Short description of the model.]
@@ -48,11 +50,10 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
         "n_edges": None,  # TODO: Replace with integer value
         # Whether the model includes parameters (CPDs) or is just the structure
         "is_parameterized": True,  # TODO: Set to True if model has CPDs, False for structure only
-        # Whether all variables are discrete (only applicable if is_parameterized=True)
+        # TODO: Include the following three tags ONLY if is_parameterized=True; omit them entirely otherwise.
+        # Exactly one of is_discrete, is_continuous, is_hybrid must be True.
         "is_discrete": True,  # TODO: Set appropriately
-        # Whether all variables are continuous (only applicable if is_parameterized=True)
         "is_continuous": False,  # TODO: Set appropriately
-        # Whether the model has both discrete and continuous variables (only applicable if is_parameterized=True)
         "is_hybrid": False,  # TODO: Set appropriately
     }
 
