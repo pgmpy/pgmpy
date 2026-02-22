@@ -894,8 +894,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi = self.normalize(inplace=False)
         p = phi.values.ravel()
 
+<<<<<<< Updated upstream
         if config.get_backend() == "torch":
             import torch
+
+            if not isinstance(p, torch.Tensor):
+                p = torch.as_tensor(p, device=config.get_device())
 
             # torch.multinomial requires floating-point input
             if not p.is_floating_point():
@@ -915,6 +919,34 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             rng = np.random.default_rng(seed=seed)
             indexes = rng.choice(range(len(p)), size=n, p=p)
 
+=======
+        # Use torch.multinomial when backend is torch.
+        # If `p` is still a NumPy array convert it to a torch tensor.
+        if config.get_backend() == "torch":
+            import torch
+
+            if not isinstance(p, torch.Tensor):
+                p = torch.as_tensor(
+                    p, device=config.get_device(), dtype=config.get_dtype()
+                )
+            else:
+                if p.device != config.get_device():
+                    p = p.to(device=config.get_device())
+                if not p.is_floating_point():
+                    p = p.type(config.get_dtype())
+
+            if seed is not None:
+                torch.manual_seed(seed)
+
+            indexes = torch.multinomial(p, num_samples=n, replacement=True)
+            if isinstance(indexes, torch.Tensor):
+                indexes = indexes.cpu().tolist()
+        else:
+            p = compat_fns.to_numpy(p)
+
+            rng = np.random.default_rng(seed=seed)
+            indexes = rng.choice(range(len(p)), size=n, p=p)
+>>>>>>> Stashed changes
         samples = []
         index_to_state = {}
         for index in indexes:
