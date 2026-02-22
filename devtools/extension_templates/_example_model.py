@@ -126,7 +126,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 #     References
 #     ----------
-#     .. [1] Lauritzen, S., & Spiegelhalter, D. (1988). Local Computation with
+#     ..[1] Lauritzen, S., & Spiegelhalter, D. (1988). Local Computation with
 #            Probabilities on Graphical Structures and their Application to Expert
 #            Systems. Journal of the Royal Statistical Society: Series B, 50(2):157-224.
 #     """
@@ -152,7 +152,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 #     References
 #     ----------
-#     .. [1] Pearl, J. (2009). Causality: Models, Reasoning and Inference.
+#     ..[1] Pearl, J. (2009). Causality: Models, Reasoning and Inference.
 #            Cambridge University Press.
 #     """
 #     _tags = {
@@ -177,7 +177,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
 #
 #     References
 #     ----------
-#     .. [1] Scutari, M., et al. (2010). Learning Bayesian Networks with the
+#     ..[1] Scutari, M., et al. (2010). Learning Bayesian Networks with the
 #            bnlearn R Package. Journal of Statistical Software, 35(3), 1-22.
 #     """
 #     _tags = {
