@@ -244,3 +244,20 @@ class TestBackdoorPaths:
             or "B" in adjustment_vars
             or "E" in adjustment_vars
         )
+
+
+def test_docstring_usage_pattern():
+    dag = DAG(
+        [("x1", "y1"), ("z1", "x1"), ("z1", "y1")],
+        roles={"exposures": "x1", "outcomes": "y1"},
+    )
+    graph, success = Adjustment(variant="minimal").identify(dag)
+    assert success is True
+    
+    roles = graph.get_role_dict()
+    assert "exposures" in roles
+    assert "outcomes" in roles
+    assert "adjustment" in roles
+    
+    assert Adjustment(variant="minimal").validate(graph) is True
+
