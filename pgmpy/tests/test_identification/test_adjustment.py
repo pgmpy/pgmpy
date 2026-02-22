@@ -253,11 +253,10 @@ def test_docstring_usage_pattern():
     )
     graph, success = Adjustment(variant="minimal").identify(dag)
     assert success is True
-    
+
     roles = graph.get_role_dict()
     assert "exposures" in roles
     assert "outcomes" in roles
     assert "adjustment" in roles
-    
-    assert Adjustment(variant="minimal").validate(graph) is True
 
+    assert Adjustment(variant="minimal").validate(graph) is True
