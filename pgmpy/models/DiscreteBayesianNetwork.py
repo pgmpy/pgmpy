@@ -920,7 +920,7 @@ class DiscreteBayesianNetwork(DAG):
             complete_data = pd.concat([predicted_df, known_df], axis="columns")
             complete_data.index = row
             complete_data = complete_data.reindex(columns=all_columns)
-            predictions = pd.concat([predictions, complete_data], copy=False)
+            predictions = pd.concat([predictions, complete_data])
 
         return predictions.sort_index()
 
