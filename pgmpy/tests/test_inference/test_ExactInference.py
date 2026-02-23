@@ -545,27 +545,33 @@ class TestSnowNetwork(unittest.TestCase):
 
     def test_virt_evidence_no_model_mutation(self):
         # Regression test: VariableElimination.query/map_query with virtual
-        # evidence must not permanently add nodes to self.model — the virtual
-        # helper node (__Traffic) must be absent after the call returns.
+        # evidence must not permanently mutate self.model.
+        # Bug: before the fix, each virtual-evidence call added a "__Traffic"
+        # helper node to the model permanently, so subsequent plain queries
+        # would produce wrong results and node-sets would grow without bound.
         virt_evidence = TabularCPD("Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]})
         infer = VariableElimination(self.model)
-        n_nodes_before = infer.model.number_of_nodes()
+        nodes_before = set(infer.model.nodes())
 
+        # Baseline: plain query before any virtual-evidence call.
+        baseline = infer.query(["Snow"], show_progress=False)
+
+        # (a) query() with virtual evidence must leave the model intact.
         infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
-        self.assertEqual(
-            infer.model.number_of_nodes(),
-            n_nodes_before,
-            "query() with virtual evidence must not permanently add nodes to self.model",
-        )
+        self.assertEqual(set(infer.model.nodes()), nodes_before)
+        self.assertFalse(any(n.startswith("__") for n in infer.model.nodes()))
 
+        # (b) map_query() with virtual evidence must leave the model intact.
         infer.map_query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
-        self.assertEqual(
-            infer.model.number_of_nodes(),
-            n_nodes_before,
-            "map_query() with virtual evidence must not permanently add nodes to self.model",
-        )
+        self.assertEqual(set(infer.model.nodes()), nodes_before)
+        self.assertFalse(any(n.startswith("__") for n in infer.model.nodes()))
 
-        # Repeated calls must produce identical results (no accumulated mutation).
+        # (c) A plain query after a virtual-evidence query must return the
+        # same result as the baseline (model not permanently altered).
+        result_after = infer.query(["Snow"], show_progress=False)
+        np_test.assert_array_almost_equal(result_after.values, baseline.values)
+
+        # (d) Repeated virtual-evidence calls must be idempotent.
         result1 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
         result2 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
         np_test.assert_array_almost_equal(result1.values, result2.values)
