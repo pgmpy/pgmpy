@@ -558,23 +558,29 @@ class TestSnowNetwork(unittest.TestCase):
 
         # (a) query() with virtual evidence must leave the model intact.
         infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
-        self.assertEqual(set(infer.model.nodes()), nodes_before)
-        self.assertFalse(any(n.startswith("__") for n in infer.model.nodes()))
+        nodes_after = set(infer.model.nodes())
+        self.assertEqual(nodes_before, nodes_after)
+        self.assertFalse(any(n.startswith("__") for n in nodes_after))
 
         # (b) map_query() with virtual evidence must leave the model intact.
         infer.map_query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
-        self.assertEqual(set(infer.model.nodes()), nodes_before)
-        self.assertFalse(any(n.startswith("__") for n in infer.model.nodes()))
+        nodes_after = set(infer.model.nodes())
+        self.assertEqual(nodes_before, nodes_after)
+        self.assertFalse(any(n.startswith("__") for n in nodes_after))
 
         # (c) A plain query after a virtual-evidence query must return the
         # same result as the baseline (model not permanently altered).
         result_after = infer.query(["Snow"], show_progress=False)
         np_test.assert_array_almost_equal(result_after.values, baseline.values)
 
-        # (d) Repeated virtual-evidence calls must be idempotent.
+        # (d) Repeated virtual-evidence calls must be idempotent in both
+        # result values and model structure.
         result1 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
         result2 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
         np_test.assert_array_almost_equal(result1.values, result2.values)
+        nodes_after = set(infer.model.nodes())
+        self.assertEqual(nodes_before, nodes_after)
+        self.assertFalse(any(n.startswith("__") for n in nodes_after))
 
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
