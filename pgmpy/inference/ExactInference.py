@@ -327,15 +327,17 @@ class VariableElimination(Inference):
             orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            result = self.query(
-                variables=variables,
-                evidence={**evidence, **virt_evidence},
-                virtual_evidence=None,
-                elimination_order=elimination_order,
-                joint=joint,
-                show_progress=show_progress,
-            )
-            self.__init__(orig_model)
+            try:
+                result = self.query(
+                    variables=variables,
+                    evidence={**evidence, **virt_evidence},
+                    virtual_evidence=None,
+                    elimination_order=elimination_order,
+                    joint=joint,
+                    show_progress=show_progress,
+                )
+            finally:
+                self.__init__(orig_model)
             return result
 
         # Step 3: Prune the network based on variables and evidence.
@@ -592,14 +594,16 @@ class VariableElimination(Inference):
             orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            result = self.map_query(
-                variables=variables,
-                evidence={**evidence, **virt_evidence},
-                virtual_evidence=None,
-                elimination_order=elimination_order,
-                show_progress=show_progress,
-            )
-            self.__init__(orig_model)
+            try:
+                result = self.map_query(
+                    variables=variables,
+                    evidence={**evidence, **virt_evidence},
+                    virtual_evidence=None,
+                    elimination_order=elimination_order,
+                    show_progress=show_progress,
+                )
+            finally:
+                self.__init__(orig_model)
             return result
 
         if isinstance(self.model, DiscreteBayesianNetwork):

@@ -635,6 +635,35 @@ class TestSnowNetwork(unittest.TestCase):
                     )
                     self.assertEqual(map4, {"Late": "yes"})
 
+    def test_virt_evidence_no_model_mutation(self):
+        # Regression test: VariableElimination.query/map_query with virtual
+        # evidence must not permanently add nodes to self.model — the virtual
+        # helper node (__Traffic) must be absent after the call returns.
+        virt_evidence = TabularCPD(
+            "Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]}
+        )
+        infer = VariableElimination(self.model)
+        n_nodes_before = infer.model.number_of_nodes()
+
+        infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
+        self.assertEqual(
+            infer.model.number_of_nodes(),
+            n_nodes_before,
+            "query() with virtual evidence must not permanently add nodes to self.model",
+        )
+
+        infer.map_query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
+        self.assertEqual(
+            infer.model.number_of_nodes(),
+            n_nodes_before,
+            "map_query() with virtual evidence must not permanently add nodes to self.model",
+        )
+
+        # Repeated calls must produce identical results (no accumulated mutation).
+        result1 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
+        result2 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
+        np_test.assert_array_almost_equal(result1.values, result2.values)
+
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
