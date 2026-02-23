@@ -50,7 +50,7 @@ class UAIReader(object):
 
         if "#" in self.network:
             self.network = (
-                Regex("#.*").suppress().transformString(self.network)
+                Regex("#.*").suppress().transform_string(self.network)
             )  # removing comments from the file
 
         self.grammar = self.get_grammar()
@@ -64,25 +64,25 @@ class UAIReader(object):
         """
         Returns the grammar of the UAI file.
         """
-        network_name = Word(alphas).setResultsName("network_name")
-        no_variables = Word(nums).setResultsName("no_variables")
+        network_name = Word(alphas).set_results_name("network_name")
+        no_variables = Word(nums).set_results_name("no_variables")
         grammar = network_name + no_variables
-        self.no_variables = int(grammar.parseString(self.network)["no_variables"])
-        domain_variables = (Word(nums) * self.no_variables).setResultsName(
+        self.no_variables = int(grammar.parse_string(self.network)["no_variables"])
+        domain_variables = (Word(nums) * self.no_variables).set_results_name(
             "domain_variables"
         )
         grammar += domain_variables
-        no_functions = Word(nums).setResultsName("no_functions")
+        no_functions = Word(nums).set_results_name("no_functions")
         grammar += no_functions
-        self.no_functions = int(grammar.parseString(self.network)["no_functions"])
-        integer = Word(nums).setParseAction(lambda t: int(t[0]))
+        self.no_functions = int(grammar.parse_string(self.network)["no_functions"])
+        integer = Word(nums).set_parse_action(lambda t: int(t[0]))
         for function in range(0, self.no_functions):
-            scope_grammar = Word(nums).setResultsName("fun_scope_" + str(function))
+            scope_grammar = Word(nums).set_results_name("fun_scope_" + str(function))
             grammar += scope_grammar
-            function_scope = grammar.parseString(self.network)[
+            function_scope = grammar.parse_string(self.network)[
                 "fun_scope_" + str(function)
             ]
-            function_grammar = ((integer) * int(function_scope)).setResultsName(
+            function_grammar = ((integer) * int(function_scope)).set_results_name(
                 "fun_" + str(function)
             )
             grammar += function_grammar
@@ -91,14 +91,14 @@ class UAIReader(object):
             Word(nums) + Optional(Literal(".") + Optional(Word(nums)))
         )
         for function in range(0, self.no_functions):
-            no_values_grammar = Word(nums).setResultsName(
+            no_values_grammar = Word(nums).set_results_name(
                 "fun_no_values_" + str(function)
             )
             grammar += no_values_grammar
-            no_values = grammar.parseString(self.network)[
+            no_values = grammar.parse_string(self.network)[
                 "fun_no_values_" + str(function)
             ]
-            values_grammar = ((floatnumber) * int(no_values)).setResultsName(
+            values_grammar = ((floatnumber) * int(no_values)).set_results_name(
                 "fun_values_" + str(function)
             )
             grammar += values_grammar
@@ -120,7 +120,7 @@ class UAIReader(object):
         >>> reader.get_network_type()
         'MARKOV'
         """
-        network_type = self.grammar.parseString(self.network)
+        network_type = self.grammar.parse_string(self.network)
         return network_type["network_name"]
 
     def get_variables(self):
@@ -164,7 +164,7 @@ class UAIReader(object):
         {'var_0': '2', 'var_1': '2', 'var_2': '3'}
         """
         domain = {}
-        var_domain = self.grammar.parseString(self.network)["domain_variables"]
+        var_domain = self.grammar.parse_string(self.network)["domain_variables"]
         for var in range(0, len(var_domain)):
             domain["var_" + str(var)] = var_domain[var]
         return domain
@@ -186,7 +186,7 @@ class UAIReader(object):
         """
         edges = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)[
+            function_variables = self.grammar.parse_string(self.network)[
                 "fun_" + str(function)
             ]
             if isinstance(function_variables, int):
@@ -223,20 +223,20 @@ class UAIReader(object):
         """
         tables = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)[
+            function_variables = self.grammar.parse_string(self.network)[
                 "fun_" + str(function)
             ]
             if isinstance(function_variables, int):
                 function_variables = [function_variables]
             if self.network_type == "BAYES":
                 child_var = "var_" + str(function_variables[-1])
-                values = self.grammar.parseString(self.network)[
+                values = self.grammar.parse_string(self.network)[
                     "fun_values_" + str(function)
                 ]
                 tables.append((child_var, list(values)))
             elif self.network_type == "MARKOV":
                 function_variables = ["var_" + str(var) for var in function_variables]
-                values = self.grammar.parseString(self.network)[
+                values = self.grammar.parse_string(self.network)[
                     "fun_values_" + str(function)
                 ]
                 tables.append((function_variables, list(values)))
