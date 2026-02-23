@@ -1597,6 +1597,15 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         for node in sorted(nx.isolates(self), key=str):
             statements.append(str(node))
 
+        for role in sorted(self.get_roles()):
+            dagitty_role = {
+                "exposures": "exposure",
+                "outcomes": "outcome",
+                "latents": "latent",
+            }.get(role, role)
+            for var in sorted(self.get_role(role)):
+                statements.append(f"{var} [{dagitty_role}]")
+
         content = "\n".join(statements)
         if content:
             return f"dag {{\n{content}\n}}"

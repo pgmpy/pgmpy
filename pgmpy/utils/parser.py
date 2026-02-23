@@ -68,6 +68,8 @@ def parse_lavaan(lines):
 
 
 def parse_dagitty(lines):
+    target_type = "DAG"
+
     def handle_edge_stat(edge_stat, latents, ebunch, betas):
         all_vars = set()
         # ParseResults type is resolved at call time (ParseResults imported later)
@@ -164,7 +166,7 @@ def parse_dagitty(lines):
         # For DAG we keep the old behavior (u, v) and create artificial latent for <->.
         for left_var in sorted(left_vars):
             for right_var in sorted(right_vars):
-                if target_type.upper() in ("MAG", "PAG", "PDAG"):
+                if target_type.upper() in ("MAG", "PAG", "PDAG", "ADMG"):
                     t = str(token)
                     left_mark = char_to_mark(t[0])
                     right_mark = char_to_mark(t[-1])
@@ -247,7 +249,7 @@ def parse_dagitty(lines):
         m = re.match(r"^\s*(\w+)", first_nonempty, flags=re.IGNORECASE)
         if m:
             hdr = m.group(1).lower()
-            if hdr in ("dag", "mag", "pag"):
+            if hdr in ("dag", "mag", "pag", "admg"):
                 target_type = hdr.upper()
 
     # Step 1: DAGitty Grammar in pyparsing
@@ -299,10 +301,11 @@ def parse_dagitty(lines):
                 # Accept headers "dag", "mag", or "pag" (case insensitive).
                 # Remove the header token (whatever it is) instead of assuming "dag".
                 m_hdr = re.match(r"^\s*(\w+)", first_line, flags=re.IGNORECASE)
-                if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag"):
-                    cleaned_dag = True
-                    # remove the header token from the start so the "{" is handled below
-                    first_line = first_line[m_hdr.end() :]
+                if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag", "admg"):
+                        cleaned_dag = True
+                        # remove the header token from the start so the "{" is handled below
+                        target_type = m_hdr.group(1).upper()
+                        first_line = first_line[m_hdr.end() :]
             start_loc = first_line.find("{")
             if start_loc >= 0:
                 first_line = first_line[start_loc + 1 :].strip()
@@ -324,7 +327,7 @@ def parse_dagitty(lines):
 
     # Step 3: Parse lines
     ebunch = []
-    roles = {"outcome": [], "exposure": [], "latents": []}
+    roles = {"outcomes": [], "exposures": [], "latents": []}
     latents = roles["latents"]
     betas = {}
     nodes = set()
@@ -344,9 +347,9 @@ def parse_dagitty(lines):
                     if option.startswith("latent") or option == "l":
                         roles["latents"].append(name)
                     elif option.startswith("outcome") or option.startswith("o"):
-                        roles["outcome"].append(name)
+                        roles["outcomes"].append(name)
                     elif option.startswith("exposure") or option.startswith("e"):
-                        roles["exposure"].append(name)
+                        roles["exposures"].append(name)
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch, betas)
 

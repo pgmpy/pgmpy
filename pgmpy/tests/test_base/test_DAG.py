@@ -655,16 +655,16 @@ class TestDAGCreation(unittest.TestCase):
 
         self.assertEqual(hash(dag1), hash(dag2))
 
-        dag1 = dag1.with_role("exposures", "E")
+        dag1 = dag1.with_role("exposures", "Z")
         self.assertNotEqual(hash(dag1), hash(dag2))
 
-        dag2 = dag2.with_role("exposures", "E")
+        dag2 = dag2.with_role("exposures", "Z")
         self.assertEqual(hash(dag1), hash(dag2))
 
-        dag1 = dag1.with_role("outcomes", "D")
+        dag1 = dag1.with_role("outcomes", "Z")
         self.assertNotEqual(hash(dag1), hash(dag2))
 
-        dag2 = dag2.with_role("outcomes", "D")
+        dag2 = dag2.with_role("outcomes", "Z")
         self.assertEqual(hash(dag1), hash(dag2))
 
     def test_latents_with_role(self):

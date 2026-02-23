@@ -470,6 +470,104 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
+    def to_dagitty(self) -> str:
+        """
+        Convert the PDAG to dagitty syntax representation.
+
+        Returns
+        -------
+        str
+            String representation of the PDAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[('X', 'Y')], undirected_ebunch=[('X', 'Z')])
+        >>> print(pdag.to_dagitty())
+        pdag {
+        X -> Y
+        X -- Z
+        }
+        """
+        statements = []
+
+        # Directed edges
+        edge_statements = []
+        for u, v in self.directed_edges:
+            edge_statements.append(f"{u} -> {v}")
+
+        # Undirected edges
+        for u, v in self.undirected_edges:
+            if str(u) < str(v):
+                edge_statements.append(f"{u} -- {v}")
+
+        statements.extend(sorted(edge_statements))
+
+        # Isolated nodes
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        # Roles
+        for role in sorted(self.get_roles()):
+            dagitty_role = {
+                "exposures": "exposure",
+                "outcomes": "outcome",
+                "latents": "latent",
+            }.get(role, role)
+            for var in sorted(self.get_role(role)):
+                statements.append(f"{var} [{dagitty_role}]")
+
+        content = "\n".join(statements)
+        return f"pdag {{\n{content}\n}}"
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes a `PDAG` instance using DAGitty syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline string representing the model.
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Returns
+        -------
+        PDAG
+            A PDAG instance created from the DAGitty representation.
+        """
+        from pgmpy.utils.parser import parse_dagitty
+
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_str)
+        directed = []
+        undirected = []
+        for e in ebunch:
+            if len(e) == 2:
+                directed.append(e)
+            elif len(e) == 4:
+                u, v, m1, m2 = e
+                if (m1, m2) == ("-", ">"):
+                    directed.append((u, v))
+                elif (m1, m2) == (">", "-"):
+                    directed.append((v, u))
+                elif (m1, m2) == ("-", "-"):
+                    undirected.append((u, v))
+
+        pdag = cls(
+            directed_ebunch=directed, undirected_ebunch=undirected, roles=roles
+        )
+        pdag.add_nodes_from(nodes)
+        return pdag
+
     def __eq__(self, other):
         """
         Checks if two PDAGs are equal. Two PDAGs are considered equal if they

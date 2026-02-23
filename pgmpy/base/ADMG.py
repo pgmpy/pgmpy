@@ -572,6 +572,99 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
 
         return m_connected_set
 
+    def to_dagitty(self) -> str:
+        """
+        Convert the ADMG to dagitty syntax representation.
+
+        Returns
+        -------
+        str
+            String representation of the ADMG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import ADMG
+        >>> admg = ADMG(directed_ebunch=[('X', 'Y')], bidirected_ebunch=[('X', 'Z')])
+        >>> print(admg.to_dagitty())
+        admg {
+        X <-> Z
+        X -> Y
+        }
+        """
+        statements = []
+
+        # Directed edges
+        edge_statements = []
+        for u, v, data in self.edges(data=True):
+            if data.get("type") == "directed":
+                edge_statements.append(f"{u} -> {v}")
+            elif data.get("type") == "bidirected":
+                if str(u) < str(v):
+                    edge_statements.append(f"{u} <-> {v}")
+
+        statements.extend(sorted(edge_statements))
+
+        # Isolated nodes
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        # Roles
+        for role in sorted(self.get_roles()):
+            dagitty_role = {
+                "exposures": "exposure",
+                "outcomes": "outcome",
+                "latents": "latent",
+            }.get(role, role)
+            for var in sorted(self.get_role(role)):
+                statements.append(f"{var} [{dagitty_role}]")
+
+        content = "\n".join(statements)
+        return f"admg {{\n{content}\n}}"
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes an `ADMG` instance using DAGitty syntax.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline string representing the model.
+        filename: str (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Returns
+        -------
+        ADMG
+            An ADMG instance created from the DAGitty representation.
+        """
+        from pgmpy.utils.parser import parse_dagitty
+
+        if filename:
+            with open(filename, "r") as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_str)
+        directed = []
+        bidirected = []
+        for e in ebunch:
+            if len(e) == 2:
+                directed.append(e)
+            elif len(e) == 4:
+                u, v, m1, m2 = e
+                if (m1, m2) == ("-", ">"):
+                    directed.append((u, v))
+                elif (m1, m2) == (">", ">"):
+                    bidirected.append((u, v))
+
+        admg = cls(directed_ebunch=directed, bidirected_ebunch=bidirected, roles=roles)
+        admg.add_nodes_from(nodes)
+        return admg
+
     def __eq__(self, other):
         """
         Checks if two ADMGs are equal. Two ADMGs are considered equal if they

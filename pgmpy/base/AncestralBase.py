@@ -608,19 +608,33 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             ("-", "o"): "--@",
             ("-", "-"): "--",
         }
-        for u, v in self.edges:
+        for u, v in sorted(self.edges):
             marks = self.edges[u, v]["marks"]
             u_mark, v_mark = marks[u], marks[v]
             if (u_mark, v_mark) in edge_map:
                 symbol = edge_map[(u_mark, v_mark)]
-                if symbol in ["<-", "<-@", "--@"]:
-                    lines.append(f"{v} {symbol[::-1]} {u}")
+                if symbol == "<-":
+                    lines.append(f"{v} -> {u}")
+                elif symbol == "<-@":
+                    lines.append(f"{v} @-> {u}")
+                elif symbol == "--@":
+                    lines.append(f"{v} @-- {u}")
+                elif symbol == ">-":
+                    lines.append(f"{v} -< {u}")
                 else:
                     lines.append(f"{u} {symbol} {v}")
 
-        for role in self.get_roles():
-            for var in self.get_role(role):
-                lines.append(f"{var} [{role}]")
+        for node in sorted(nx.isolates(self), key=str):
+            lines.append(str(node))
+
+        for role in sorted(self.get_roles()):
+            dagitty_role = {
+                "exposures": "exposure",
+                "outcomes": "outcome",
+                "latents": "latent",
+            }.get(role, role)
+            for var in sorted(self.get_role(role)):
+                lines.append(f"{var} [{dagitty_role}]")
 
         lines.append("}")
         return "\n".join(lines)
@@ -663,7 +677,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             raise ValueError("Either `filename` or `string` need to be specified")
 
         ebunch, roles, _, nodes = parse_dagitty(dagitty_lines)
-        return cls(ebunch=ebunch, roles=roles)
+        obj = cls(ebunch=ebunch, roles=roles)
+        obj.add_nodes_from(nodes)
+        return obj
 
     def __eq__(self, other):
         """
@@ -706,11 +722,11 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             return False
 
         self_edges = {
-            (u, v, frozenset(data["marks"].items()))
+            (tuple(sorted((u, v))), frozenset(data["marks"].items()))
             for u, v, data in self.edges(data=True)
         }
         other_edges = {
-            (u, v, frozenset(data["marks"].items()))
+            (tuple(sorted((u, v))), frozenset(data["marks"].items()))
             for u, v, data in other.edges(data=True)
         }
 
