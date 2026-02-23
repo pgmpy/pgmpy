@@ -34,6 +34,12 @@ class _LucasBase(_BaseDataset):
 
 
 class Lucas0Train(_LucasBase):
+    """
+    References
+    ----------
+    .. [1] https://www.causality.inf.ethz.ch/data/LUCAS.html
+    """
+
     _tags = {
         **_LucasBase._common_tags,
         "name": "lucas0_train",
@@ -48,6 +54,12 @@ class Lucas0Train(_LucasBase):
 
 
 class Lucas0Test(_LucasBase):
+    """
+    References
+    ----------
+    .. [1] https://www.causality.inf.ethz.ch/data/LUCAS.html
+    """
+
     _tags = {
         **_LucasBase._common_tags,
         "name": "lucas0_test",
@@ -62,6 +74,12 @@ class Lucas0Test(_LucasBase):
 
 
 class Lucas1Test(_LucasBase):
+    """
+    References
+    ----------
+    .. [1] https://www.causality.inf.ethz.ch/data/LUCAS.html
+    """
+
     _tags = {
         **_LucasBase._common_tags,
         "name": "lucas1_test",
@@ -76,6 +94,12 @@ class Lucas1Test(_LucasBase):
 
 
 class Lucas2Test(_LucasBase):
+    """
+    References
+    ----------
+    .. [1] https://www.causality.inf.ethz.ch/data/LUCAS.html
+    """
+
     _tags = {
         **_LucasBase._common_tags,
         "name": "lucas2_test",
