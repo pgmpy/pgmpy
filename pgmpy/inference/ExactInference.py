@@ -46,27 +46,20 @@ class VariableElimination(Inference):
         dict: Modified working factors.
         """
 
-        working_factors = {
-            node: {(factor, None) for factor in self.factors[node]}
-            for node in self.factors
-        }
+        working_factors = {node: {(factor, None) for factor in self.factors[node]} for node in self.factors}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
                 for factor, origin in working_factors[evidence_var]:
-                    factor_reduced = factor.reduce(
-                        [(evidence_var, evidence[evidence_var])], inplace=False
-                    )
+                    factor_reduced = factor.reduce([(evidence_var, evidence[evidence_var])], inplace=False)
                     for var in factor_reduced.scope():
                         working_factors[var].remove((factor, origin))
                         working_factors[var].add((factor_reduced, evidence_var))
                 del working_factors[evidence_var]
         return working_factors
 
-    def _get_elimination_order(
-        self, variables, evidence, elimination_order, show_progress=True
-    ):
+    def _get_elimination_order(self, variables, evidence, elimination_order, show_progress=True):
         """
         Deals with all elimination order parameters given to _variable_elimination method
         and returns a list of variables that are to be eliminated
@@ -79,32 +72,16 @@ class VariableElimination(Inference):
         -------
         list: A list of variables names in the order they need to be eliminated.
         """
-        to_eliminate = (
-            set(self.variables)
-            - set(variables)
-            - set(evidence.keys() if evidence else [])
-        )
+        to_eliminate = set(self.variables) - set(variables) - set(evidence.keys() if evidence else [])
 
         # Step 1: If elimination_order is a list, verify it's correct and return.
         # Step 1.1: Check that not of the `variables` and `evidence` is in the elimination_order.
-        if hasattr(elimination_order, "__iter__") and (
-            not isinstance(elimination_order, str)
-        ):
-            if any(
-                var in elimination_order
-                for var in set(variables).union(
-                    set(evidence.keys() if evidence else [])
-                )
-            ):
-                raise ValueError(
-                    "Elimination order contains variables which are in"
-                    " variables or evidence args"
-                )
+        if hasattr(elimination_order, "__iter__") and (not isinstance(elimination_order, str)):
+            if any(var in elimination_order for var in set(variables).union(set(evidence.keys() if evidence else []))):
+                raise ValueError("Elimination order contains variables which are in variables or evidence args")
             # Step 1.2: Check if elimination_order has variables which are not in the model.
             elif any(var not in self.model.nodes() for var in elimination_order):
-                elimination_order = list(
-                    filter(lambda t: t in self.model.nodes(), elimination_order)
-                )
+                elimination_order = list(filter(lambda t: t in self.model.nodes(), elimination_order))
 
             # Step 1.3: Check if the elimination_order has all the variables that need to be eliminated.
             elif to_eliminate != set(elimination_order):
@@ -117,24 +94,20 @@ class VariableElimination(Inference):
             return elimination_order
 
         # Step 2: If elimination order is None or a Markov model, return a random order.
-        elif (elimination_order is None) or (
-            not isinstance(self.model, DiscreteBayesianNetwork)
-        ):
+        elif (elimination_order is None) or (not isinstance(self.model, DiscreteBayesianNetwork)):
             return to_eliminate
 
         # Step 3: If elimination order is a str, compute the order using the specified heuristic.
-        elif isinstance(elimination_order, str) and isinstance(
-            self.model, DiscreteBayesianNetwork
-        ):
+        elif isinstance(elimination_order, str) and isinstance(self.model, DiscreteBayesianNetwork):
             heuristic_dict = {
                 "weightedminfill": WeightedMinFill,
                 "minneighbors": MinNeighbors,
                 "minweight": MinWeight,
                 "minfill": MinFill,
             }
-            elimination_order = heuristic_dict[elimination_order.lower()](
-                self.model
-            ).get_elimination_order(nodes=to_eliminate, show_progress=show_progress)
+            elimination_order = heuristic_dict[elimination_order.lower()](self.model).get_elimination_order(
+                nodes=to_eliminate, show_progress=show_progress
+            )
             return elimination_order
 
     def _variable_elimination(
@@ -296,32 +269,24 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
 
-        if isinstance(
-            self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)
-        ):
+        if isinstance(self.model, (LinearGaussianBayesianNetwork, FunctionalBayesianNetwork)):
             raise NotImplementedError(
                 f"Variable Elimination is not supported for {self.model.__class__.__name__}."
                 f"Please use the 'predict' method of the {self.model.__class__.__name__} class instead."
             )
 
         # Step 1: Parameter Checks
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables)
-        )
+        common_vars = set(evidence if evidence is not None else []).intersection(set(variables))
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
         if not variables:
-            raise ValueError(
-                "The `variables` argument to query() must contain at least one variable."
-            )
+            raise ValueError("The `variables` argument to query() must contain at least one variable.")
 
         # Step 2: If virtual_evidence is provided, modify the network.
-        if isinstance(self.model, DiscreteBayesianNetwork) and (
-            virtual_evidence is not None
-        ):
+        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
             orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -355,25 +320,15 @@ class VariableElimination(Inference):
             reduce_indexes = []
             reshape_indexes = []
             for phi in factors:
-                indexes_to_reduce = [
-                    phi.variables.index(var)
-                    for var in set(phi.variables).intersection(evidence_vars)
-                ]
+                indexes_to_reduce = [phi.variables.index(var) for var in set(phi.variables).intersection(evidence_vars)]
                 indexer = [slice(None)] * len(phi.variables)
                 for index in indexes_to_reduce:
-                    indexer[index] = phi.get_state_no(
-                        phi.variables[index], evidence[phi.variables[index]]
-                    )
+                    indexer[index] = phi.get_state_no(phi.variables[index], evidence[phi.variables[index]])
                 reduce_indexes.append(tuple(indexer))
 
             # Step 5.2: Prepare values and index arrays to do use in einsum
             if isinstance(self.model, JunctionTree):
-                var_int_map = {
-                    var: i
-                    for i, var in enumerate(
-                        set(itertools.chain(*model_reduced.nodes()))
-                    )
-                }
+                var_int_map = {var: i for i, var in enumerate(set(itertools.chain(*model_reduced.nodes())))}
             else:
                 var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
 
@@ -385,27 +340,13 @@ class VariableElimination(Inference):
                     if len(set(phi.variables) - evidence_var_set) > 0:
                         # if phi.variable not in evidence_var_set:
                         einsum_expr.append((phi.values[reduce_indexes[index]]))
-                        einsum_expr.append(
-                            [
-                                var_int_map[var]
-                                for var in phi.variables
-                                if var not in evidence.keys()
-                            ]
-                        )
+                        einsum_expr.append([var_int_map[var] for var in phi.variables if var not in evidence.keys()])
             else:
                 for index, phi in enumerate(factors):
                     einsum_expr.append((phi.values[reduce_indexes[index]]))
-                    einsum_expr.append(
-                        [
-                            var_int_map[var]
-                            for var in phi.variables
-                            if var not in evidence.keys()
-                        ]
-                    )
+                    einsum_expr.append([var_int_map[var] for var in phi.variables if var not in evidence.keys()])
 
-            result_values = contract(
-                *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
-            )
+            result_values = contract(*einsum_expr, [var_int_map[var] for var in variables], optimize="greedy")
 
             # Step 5.3: Prepare return values.
             result = DiscreteFactor(
@@ -430,14 +371,10 @@ class VariableElimination(Inference):
                     (DiscreteBayesianNetwork, JunctionTree, DynamicBayesianNetwork),
                 ):
                     for var in variables:
-                        result_dict[var] = result.marginalize(
-                            all_vars - {var}, inplace=False
-                        ).normalize(inplace=False)
+                        result_dict[var] = result.marginalize(all_vars - {var}, inplace=False).normalize(inplace=False)
                 else:
                     for var in variables:
-                        result_dict[var] = result.marginalize(
-                            all_vars - {var}, inplace=False
-                        )
+                        result_dict[var] = result.marginalize(all_vars - {var}, inplace=False)
 
                 return result_dict
 
@@ -574,17 +511,13 @@ class VariableElimination(Inference):
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            variables
-        )
+        common_vars = set(evidence if evidence is not None else []).intersection(variables)
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        if isinstance(self.model, DiscreteBayesianNetwork) and (
-            virtual_evidence is not None
-        ):
+        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
             orig_model = self.model.copy()
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -654,16 +587,10 @@ class VariableElimination(Inference):
 
         # If the elimination order does not contain the same variables as the model
         if set(elimination_order) != set(self.variables):
-            raise ValueError(
-                "Set of variables in elimination order"
-                " different from variables in model"
-            )
+            raise ValueError("Set of variables in elimination order different from variables in model")
 
         eliminated_variables = set()
-        working_factors = {
-            node: [factor.scope() for factor in self.factors[node]]
-            for node in self.factors
-        }
+        working_factors = {node: [factor.scope() for factor in self.factors[node]] for node in self.factors}
 
         # The set of cliques that should be in the induced graph
         cliques = set()
@@ -674,11 +601,7 @@ class VariableElimination(Inference):
         # Removing all the factors containing the variables which are
         # eliminated (as all the factors should be considered only once)
         for var in elimination_order:
-            factors = [
-                factor
-                for factor in working_factors[var]
-                if not set(factor).intersection(eliminated_variables)
-            ]
+            factors = [factor for factor in working_factors[var] if not set(factor).intersection(eliminated_variables)]
             phi = set(itertools.chain(*factors)).difference({var})
             cliques.add(tuple(phi))
             del working_factors[var]
@@ -686,9 +609,7 @@ class VariableElimination(Inference):
                 working_factors[variable].append(list(phi))
             eliminated_variables.add(var)
 
-        edges_comb = [
-            itertools.combinations(c, 2) for c in filter(lambda x: len(x) > 1, cliques)
-        ]
+        edges_comb = [itertools.combinations(c, 2) for c in filter(lambda x: len(x) > 1, cliques)]
         return nx.Graph(itertools.chain(*edges_comb))
 
     def induced_width(self, elimination_order):
@@ -795,9 +716,7 @@ class BeliefPropagation(Inference):
 
         # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
         self.clique_beliefs[receiving_clique] *= (
-            sigma / self.sepset_beliefs[sepset_key]
-            if self.sepset_beliefs[sepset_key]
-            else sigma
+            sigma / self.sepset_beliefs[sepset_key] if self.sepset_beliefs[sepset_key] else sigma
         )
 
         # \mu_{i, j} = \sigma_{i \rightarrow j}
@@ -843,10 +762,7 @@ class BeliefPropagation(Inference):
             marginal_2 = getattr(self.clique_beliefs[edge[1]], operation)(
                 list(frozenset(edge[1]) - sepset), inplace=False
             )
-            if (
-                marginal_1 != marginal_2
-                or marginal_1 != self.sepset_beliefs[sepset_key]
-            ):
+            if marginal_1 != marginal_2 or marginal_1 != self.sepset_beliefs[sepset_key]:
                 return False
         return True
 
@@ -868,13 +784,8 @@ class BeliefPropagation(Inference):
         Daphne Koller and Nir Friedman.
         """
         # Initialize clique beliefs as well as sepset beliefs
-        self.clique_beliefs = {
-            clique: self.junction_tree.get_factors(clique)
-            for clique in self.junction_tree.nodes()
-        }
-        self.sepset_beliefs = {
-            frozenset(edge): None for edge in self.junction_tree.edges()
-        }
+        self.clique_beliefs = {clique: self.junction_tree.get_factors(clique) for clique in self.junction_tree.nodes()}
+        self.sepset_beliefs = {frozenset(edge): None for edge in self.junction_tree.edges()}
 
         for clique in self.junction_tree.nodes():
             if not self._is_converged(operation=operation):
@@ -883,9 +794,7 @@ class BeliefPropagation(Inference):
                 # upward pass
                 for neighbor_clique in neighbors:
                     self._update_beliefs(neighbor_clique, clique, operation=operation)
-                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(
-                    self.junction_tree, clique
-                )
+                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(self.junction_tree, clique)
                 # update the beliefs of all the nodes starting from the root to leaves using root's belief
                 # downward pass
                 for edge in bfs_edges:
@@ -993,9 +902,7 @@ class BeliefPropagation(Inference):
         """
         self._calibrate_junction_tree(operation="maximize")
 
-    def _query(
-        self, variables, operation, evidence=None, joint=True, show_progress=True
-    ):
+    def _query(self, variables, operation, evidence=None, joint=True, show_progress=True):
         """
         This is a generalized query method that can be used for both query and map query.
 
@@ -1044,9 +951,7 @@ class BeliefPropagation(Inference):
         # Find a tree T' such that query_variables are a subset of scope(T')
         nodes_with_query_variables = set()
         for var in query_variables:
-            nodes_with_query_variables.update(
-                filter(lambda x: var in x, self.junction_tree.nodes())
-            )
+            nodes_with_query_variables.update(filter(lambda x: var in x, self.junction_tree.nodes()))
         subtree_nodes = nodes_with_query_variables
 
         # Conversion of set to tuple just for indexing
@@ -1073,9 +978,7 @@ class BeliefPropagation(Inference):
         if len(subtree.nodes()) == 1:
             root_node = list(subtree.nodes())[0]
         else:
-            root_node = tuple(
-                filter(lambda x: len(list(subtree.neighbors(x))) == 1, subtree.nodes())
-            )[0]
+            root_node = tuple(filter(lambda x: len(list(subtree.neighbors(x))) == 1, subtree.nodes()))[0]
         clique_potential_list = [self.clique_beliefs[root_node]]
 
         # For other nodes in the subtree compute the clique potentials as follows
@@ -1088,8 +991,7 @@ class BeliefPropagation(Inference):
             parent_node = parent_nodes.pop()
             for child_node in set(subtree.neighbors(parent_node)) - nodes_traversed:
                 clique_potential_list.append(
-                    self.clique_beliefs[child_node]
-                    / self.sepset_beliefs[frozenset([parent_node, child_node])]
+                    self.clique_beliefs[child_node] / self.sepset_beliefs[frozenset([parent_node, child_node])]
                 )
                 parent_nodes.update([child_node])
             nodes_traversed.update([parent_node])
@@ -1107,9 +1009,7 @@ class BeliefPropagation(Inference):
                 show_progress=show_progress,
             )
         elif operation == "maximize":
-            return variable_elimination.map_query(
-                variables=variables, evidence=evidence, show_progress=show_progress
-            )
+            return variable_elimination.map_query(variables=variables, evidence=evidence, show_progress=show_progress)
 
     def query(
         self,
@@ -1168,18 +1068,14 @@ class BeliefPropagation(Inference):
         orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables)
-        )
+        common_vars = set(evidence if evidence is not None else []).intersection(set(variables))
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
         # Step 2: If virtual_evidence is provided, modify model and evidence.
-        if isinstance(self.model, DiscreteBayesianNetwork) and (
-            virtual_evidence is not None
-        ):
+        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.query(
@@ -1210,9 +1106,7 @@ class BeliefPropagation(Inference):
         else:
             return result
 
-    def map_query(
-        self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
-    ):
+    def map_query(self, variables=None, evidence=None, virtual_evidence=None, show_progress=True):
         """
         MAP Query method using belief propagation. Returns the highest probable
         state in the joint distributon of `variables`.
@@ -1257,9 +1151,7 @@ class BeliefPropagation(Inference):
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            variables
-        )
+        common_vars = set(evidence if evidence is not None else []).intersection(variables)
 
         if common_vars:
             raise ValueError(
@@ -1273,9 +1165,7 @@ class BeliefPropagation(Inference):
         # Make a copy of the original model and then replace self.model with it later.
         orig_model = self.model.copy()
 
-        if isinstance(self.model, DiscreteBayesianNetwork) and (
-            virtual_evidence is not None
-        ):
+        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.map_query(
@@ -1324,9 +1214,7 @@ class BeliefPropagationWithMessagePassing(Inference):
     """
 
     def __init__(self, model: FactorGraph, check_model=True):
-        assert isinstance(
-            model, FactorGraph
-        ), "Model must be an instance of FactorGraph"
+        assert isinstance(model, FactorGraph), "Model must be an instance of FactorGraph"
         if check_model:
             model.check_model()
         self.model = model
@@ -1388,40 +1276,24 @@ class BeliefPropagationWithMessagePassing(Inference):
             """
             if self.evidence is not None and variable in self.evidence.keys():
                 # Is an observed variable
-                return self.bp.model.get_point_mass_message(
-                    variable, self.evidence[variable]
-                )
+                return self.bp.model.get_point_mass_message(variable, self.evidence[variable])
 
             virtual_messages = []
-            if (
-                self.virtual_evidence is not None
-                and variable
-                in self.bp._get_virtual_evidence_var_list(self.virtual_evidence)
+            if self.virtual_evidence is not None and variable in self.bp._get_virtual_evidence_var_list(
+                self.virtual_evidence
             ):
-                virtual_messages = [
-                    cpd.values
-                    for cpd in self.virtual_evidence
-                    if cpd.variables[0] == variable
-                ]
+                virtual_messages = [cpd.values for cpd in self.virtual_evidence if cpd.variables[0] == variable]
 
-            incoming_factors = [
-                factor
-                for factor in list(self.bp.model.neighbors(variable))
-                if factor != from_factor
-            ]
+            incoming_factors = [factor for factor in list(self.bp.model.neighbors(variable)) if factor != from_factor]
 
             if len(incoming_factors) == 0:
                 # Is an unobserved leaf variable
-                return self.bp.calc_variable_node_message(
-                    variable, [] + virtual_messages
-                )
+                return self.bp.calc_variable_node_message(variable, [] + virtual_messages)
             else:
                 # Else, get the incoming messages from all incoming factors
                 incoming_messages = []
                 for factor in incoming_factors:
-                    incoming_message = self.schedule_factor_node_messages(
-                        factor, variable
-                    )
+                    incoming_message = self.schedule_factor_node_messages(factor, variable)
 
                     if self.all_messages is not None:
                         # Store the message if it's not already stored
@@ -1430,9 +1302,7 @@ class BeliefPropagationWithMessagePassing(Inference):
                             self.all_messages[factor_node_key] = incoming_message
 
                     incoming_messages.append(incoming_message)
-                return self.bp.calc_variable_node_message(
-                    variable, incoming_messages + virtual_messages
-                )
+                return self.bp.calc_variable_node_message(variable, incoming_messages + virtual_messages)
 
         def schedule_factor_node_messages(self, factor, from_variable):
             """
@@ -1457,16 +1327,10 @@ class BeliefPropagationWithMessagePassing(Inference):
                 # Else, get the incoming messages from all incoming variables
                 incoming_messages = []
                 for var in incoming_vars:
-                    incoming_messages.append(
-                        self.schedule_variable_node_messages(var, factor)
-                    )
-                return self.bp.calc_factor_node_message(
-                    factor, incoming_messages, from_variable
-                )
+                    incoming_messages.append(self.schedule_variable_node_messages(var, factor))
+                return self.bp.calc_factor_node_message(factor, incoming_messages, from_variable)
 
-    def query(
-        self, variables, evidence=None, virtual_evidence=None, get_messages=False
-    ):
+    def query(self, variables, evidence=None, virtual_evidence=None, get_messages=False):
         """
         Computes the posterior distributions for each of the queried variable,
         given the `evidence`, and the `virtual_evidence`. Optionally also returns
@@ -1525,9 +1389,7 @@ class BeliefPropagationWithMessagePassing(Inference):
         ...     virtual_evidence=[TabularCPD(["A"], 2, [[0.3], [0.7]])],
         ... )
         """
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables)
-        )
+        common_vars = set(evidence if evidence is not None else []).intersection(set(variables))
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -1544,9 +1406,7 @@ class BeliefPropagationWithMessagePassing(Inference):
                     f"`virtual_evidence`. Found in both: {common_vars}"
                 )
 
-        query = self._RecursiveMessageSchedulingQuery(
-            self, variables, evidence, virtual_evidence, get_messages
-        )
+        query = self._RecursiveMessageSchedulingQuery(self, variables, evidence, virtual_evidence, get_messages)
         return query.run()
 
     def calc_variable_node_message(self, variable, incoming_messages):
@@ -1592,9 +1452,7 @@ class BeliefPropagationWithMessagePassing(Inference):
         """
         cpt = factor.values
 
-        assert (
-            len(incoming_messages) == cpt.ndim - 1
-        ), f"Error computing factor node message for {target_var}. "
+        assert len(incoming_messages) == cpt.ndim - 1, f"Error computing factor node message for {target_var}. "
         "The number of incoming messages must equal the card(CPT) - 1"
 
         if len(incoming_messages) == 0:
@@ -1611,8 +1469,6 @@ class BeliefPropagationWithMessagePassing(Inference):
         incoming_messages = list(reversed(incoming_messages))
 
         # Reduce the CPT with the inverted list of incoming messages
-        outgoing_message = reduce(
-            lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt
-        )
+        outgoing_message = reduce(lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt)
         # Normalise
         return outgoing_message / sum(outgoing_message)
