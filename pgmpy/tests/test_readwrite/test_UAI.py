@@ -1,6 +1,5 @@
 import unittest
 
-import networkx as nx
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
@@ -229,6 +228,7 @@ class TestUAIWriter(unittest.TestCase):
     def test_bayes_model(self):
         self.expected_bayes_file = """BAYES
 6
+# VARIABLE_NAMES: bowel-problem,dog-out,family-out,hear-bark,kid,light-on
 2 2 2 2 2 2
 6
 1 0
@@ -255,6 +255,7 @@ class TestUAIWriter(unittest.TestCase):
     def test_markov_model(self):
         self.expected_markov_file = """MARKOV
 3
+# VARIABLE_NAMES: var_0,var_1,var_2
 2 2 3
 2
 2 0 1
@@ -267,6 +268,14 @@ class TestUAIWriter(unittest.TestCase):
         self.assertEqual(
             str(self.markovwriter.__str__()), str(self.expected_markov_file)
         )
+
+    def test_roundtrip_preserves_variable_names(self):
+        """Regression test for issue #2185: UAI roundtrip loses variable names."""
+        uai_str = str(UAIWriter(self.bayesmodel))
+        reader = UAIReader(string=uai_str)
+        model2 = reader.get_model()
+        self.assertSetEqual(set(self.bayesmodel.nodes()), set(model2.nodes()))
+        self.assertSetEqual(set(self.bayesmodel.edges()), set(model2.edges()))
 
 
 @unittest.skipUnless(
@@ -503,6 +512,7 @@ class TestUAIWriterTorch(unittest.TestCase):
     def test_bayes_model(self):
         self.expected_bayes_file = """BAYES
 6
+# VARIABLE_NAMES: bowel-problem,dog-out,family-out,hear-bark,kid,light-on
 2 2 2 2 2 2
 6
 1 0
@@ -529,6 +539,7 @@ class TestUAIWriterTorch(unittest.TestCase):
     def test_markov_model(self):
         self.expected_markov_file = """MARKOV
 3
+# VARIABLE_NAMES: var_0,var_1,var_2
 2 2 3
 2
 2 0 1
