@@ -188,6 +188,20 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
+    def test_query_uses_model_states_issue_1941(self):
+        """Regression test for GitHub issue #1941.
+
+        When state_names is None, query() should read states from
+        self.model.states instead of inferring from samples, so that
+        all possible states are always represented.
+        """
+        result = self.infer.query([("Y", 0)], seed=42)
+        # Model states for ("Y", 0) are [0, 1]; both must be present.
+        self.assertEqual(len(result.state_names[("Y", 0)]), 2)
+        vals = result.values
+        self.assertAlmostEqual(sum(vals), 1.0, places=2)
+        self.assertTrue(all(v >= 0 for v in vals))
+
 
 @unittest.skipUnless(
     _check_soft_dependencies("torch", severity="none"),
