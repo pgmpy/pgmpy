@@ -772,6 +772,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         Finds the minimal d-separating set for `start` and `end`.
 
+        Uses the moralized ancestral graph approach: constructs the
+        ancestral graph of {start, end}, moralizes it (connecting
+        co-parents), converts to undirected, and finds the minimum
+        vertex cut between start and end. This guarantees a truly
+        minimal separator, unlike a greedy approach that can miss
+        smaller separators outside the immediate parents.
+
         Parameters
         ----------
         start: node
@@ -781,7 +788,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             The second node.
 
         include_latents: boolean (default: False)
-            If true, latent variables are consider for minimal d-seperator.
+            If true, latent variables are considered for
+            minimal d-separator.
 
         Examples
         --------
@@ -792,44 +800,61 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         References
         ----------
         [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
-          Judea Pearl. Finding minimal d-separators. Computer Science Department,
-            University of California, 1998.
+          Judea Pearl. Finding minimal d-separators. Computer Science
+          Department, University of California, 1998.
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError(
                 "No possible separators because start and end are adjacent"
             )
+
         an_graph = self.get_ancestral_graph([start, end])
-        separator = set(
-            itertools.chain(self.predecessors(start), self.predecessors(end))
-        )
+
+        # Build the moral graph of the ancestral subgraph: connect
+        # all co-parents (nodes sharing a common child) and drop
+        # edge directions.
+        moral = an_graph.to_undirected()
+        for node in an_graph.nodes():
+            parents = list(an_graph.predecessors(node))
+            for i in range(len(parents)):
+                for j in range(i + 1, len(parents)):
+                    moral.add_edge(parents[i], parents[j])
+
+        # If start and end are not connected in the moral graph,
+        # the empty set is already a valid d-separator.
+        if not nx.has_path(moral, start, end):
+            return set()
+
+        # Compute minimum vertex cut on the moral graph.
+        separator = nx.minimum_node_cut(moral, start, end)
 
         if not include_latents:
-            # If any of the parents were latents, take the latent's parent
+            # If any separator nodes are latent, replace them with
+            # their parents (recursively) until no latents remain.
             while separator.intersection(self.latents):
                 separator_copy = separator.copy()
-                for u in separator:
+                for u in list(separator_copy):
                     if u in self.latents:
-                        separator_copy.remove(u)
+                        separator_copy.discard(u)
                         separator_copy.update(set(self.predecessors(u)))
                 separator = separator_copy
 
-        # Remove the start and end nodes in case it reaches there while removing latents.
-        separator.difference_update({start, end})
+            # Remove start/end in case they crept in via latent
+            # replacement.
+            separator.difference_update({start, end})
 
-        # If the initial set is not able to d-separate, no d-separator is possible.
-        if an_graph.is_dconnected(start, end, observed=separator):
-            return None
+            # After latent replacement the expanded set may no
+            # longer d-separate.  Verify and return None if not.
+            if an_graph.is_dconnected(start, end, observed=separator):
+                return None
 
-        # Go through the separator set, remove one element and check if it remains
-        # a dseparating set.
-        minimal_separator = separator.copy()
+            # Greedily prune to restore minimality after the
+            # latent expansion.
+            for u in list(separator):
+                if not an_graph.is_dconnected(start, end, observed=separator - {u}):
+                    separator.discard(u)
 
-        for u in separator:
-            if not an_graph.is_dconnected(start, end, observed=minimal_separator - {u}):
-                minimal_separator.remove(u)
-
-        return minimal_separator
+        return separator
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
