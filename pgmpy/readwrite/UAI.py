@@ -48,6 +48,15 @@ class UAIReader(object):
         else:
             raise ValueError("Must specify either path or string.")
 
+        # Extract variable names from comment before stripping comments
+        self._variable_names = None
+        for line in self.network.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("# VARIABLE_NAMES:"):
+                names_str = stripped[len("# VARIABLE_NAMES:") :].strip()
+                self._variable_names = names_str.split(",")
+                break
+
         if "#" in self.network:
             self.network = (
                 Regex("#.*").suppress().transformString(self.network)
@@ -126,9 +135,9 @@ class UAIReader(object):
     def get_variables(self):
         """
         Returns a list of variables.
-        Each variable is represented by an index of list.
-        For example if the no of variables are 4 then the list will be
-        [var_0, var_1, var_2, var_3]
+        If the UAI file contains a VARIABLE_NAMES comment, the original
+        variable names are preserved. Otherwise, variables are named
+        var_0, var_1, etc.
 
         Returns
         -------
@@ -141,6 +150,11 @@ class UAIReader(object):
         >>> reader.get_variables()
         ['var_0', 'var_1', 'var_2']
         """
+        if (
+            self._variable_names is not None
+            and len(self._variable_names) == self.no_variables
+        ):
+            return list(self._variable_names)
         variables = []
         for var in range(0, self.no_variables):
             var_name = "var_" + str(var)
@@ -166,7 +180,7 @@ class UAIReader(object):
         domain = {}
         var_domain = self.grammar.parseString(self.network)["domain_variables"]
         for var in range(0, len(var_domain)):
-            domain["var_" + str(var)] = var_domain[var]
+            domain[self.variables[var]] = var_domain[var]
         return domain
 
     def get_edges(self):
@@ -192,12 +206,12 @@ class UAIReader(object):
             if isinstance(function_variables, int):
                 function_variables = [function_variables]
             if self.network_type == "BAYES":
-                child_var = "var_" + str(function_variables[-1])
+                child_var = self.variables[function_variables[-1]]
                 function_variables = function_variables[:-1]
                 for var in function_variables:
-                    edges.append(("var_" + str(var), child_var))
+                    edges.append((self.variables[var], child_var))
             elif self.network_type == "MARKOV":
-                function_variables = ["var_" + str(var) for var in function_variables]
+                function_variables = [self.variables[var] for var in function_variables]
                 edges.extend(list(combinations(function_variables, 2)))
         return set(edges)
 
@@ -229,13 +243,13 @@ class UAIReader(object):
             if isinstance(function_variables, int):
                 function_variables = [function_variables]
             if self.network_type == "BAYES":
-                child_var = "var_" + str(function_variables[-1])
+                child_var = self.variables[function_variables[-1]]
                 values = self.grammar.parseString(self.network)[
                     "fun_values_" + str(function)
                 ]
                 tables.append((child_var, list(values)))
             elif self.network_type == "MARKOV":
-                function_variables = ["var_" + str(var) for var in function_variables]
+                function_variables = [self.variables[var] for var in function_variables]
                 values = self.grammar.parseString(self.network)[
                     "fun_values_" + str(function)
                 ]
@@ -344,6 +358,10 @@ class UAIWriter(object):
         """
         self.network += self.no_nodes + "\n"
         domain = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
+        # Store variable names as a comment for roundtrip preservation
+        self.network += (
+            "# VARIABLE_NAMES: " + ",".join([str(var[0]) for var in domain]) + "\n"
+        )
         self.network += " ".join([var[1] for var in domain]) + "\n"
         self.network += str(len(self.functions)) + "\n"
         for fun in self.functions:
