@@ -81,6 +81,14 @@ class TestMarkovNetworkCreation(unittest.TestCase):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
         self.assertEqual(len(list(self.graph.neighbors("b"))), 2)
 
+    def test_repr(self):
+        self.graph.add_edges_from([("a", "b"), ("b", "c")])
+        r = repr(self.graph)
+        self.assertIn("DiscreteMarkovNetwork", r)
+        self.assertIn("nodes=3", r)
+        self.assertIn("edges=2", r)
+        self.assertIn("factors=0", r)
+
     def tearDown(self):
         del self.graph
 
@@ -297,7 +305,6 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         # Verify that the clique potential was created correctly
         clique_factors = junction_tree.get_factors()
         self.assertEqual(len(clique_factors), 1)
-        clique_potential = clique_factors[0]
 
         # Verify the junction tree structure
         self.assertListEqual(
