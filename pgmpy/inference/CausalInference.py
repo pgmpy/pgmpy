@@ -172,7 +172,7 @@ class CausalInference(object):
         >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
-        frozenset()
+        frozenset({frozenset()})
         """
         logger.warning(
             "Deprecation Warning: This method will be deprecated in future releases. "
@@ -186,7 +186,7 @@ class CausalInference(object):
             raise AssertionError("Make sure both X and Y are observed.")
 
         if self.is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
-            return frozenset()
+            return frozenset({frozenset()})
 
         possible_adjustment_variables = (
             set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
@@ -597,28 +597,28 @@ class CausalInference(object):
             backdoor_sets = self.get_all_backdoor_adjustment_sets(X, Y)
             if len(backdoor_sets) > 0:
                 result["backdoor set"] = backdoor_sets
-        except:
+        except Exception:
             pass
 
         try:
             frontdoor_sets = self.get_all_frontdoor_adjustment_sets(X, Y)
             if len(frontdoor_sets) > 0:
                 result["frontdoor set"] = frontdoor_sets
-        except:
+        except Exception:
             pass
 
         try:
             instruments = self.get_ivs(X, Y)
             if len(instruments) > 0:
                 result["instrumental variables"] = instruments
-        except:
+        except Exception:
             pass
 
         try:
             conditional_ivs = self.get_conditional_ivs(X, Y)
             if len(conditional_ivs) > 0:
                 result["conditional instrumental variables"] = conditional_ivs
-        except:
+        except Exception:
             pass
 
         try:
@@ -627,7 +627,7 @@ class CausalInference(object):
                 result["total conditional instrumental variables"] = (
                     total_conditional_ivs
                 )
-        except:
+        except Exception:
             pass
 
         return result
@@ -1076,12 +1076,12 @@ class CausalInference(object):
 
         # Step 3.1: If no do variable specified, do a normal probabilistic inference.
         if do == {}:
-            return infer.query(variables, evidence, show_progress=False)
+            return infer.query(variables, evidence, show_progress=False, **kwargs)
         # Step 3.2: If no adjustment is required, do a normal probabilistic
         #           inference with do variables as the evidence.
         elif len(adjustment_set) == 0:
             evidence = {**evidence, **do}
-            return infer.query(variables, evidence, show_progress=False)
+            return infer.query(variables, evidence, show_progress=False, **kwargs)
 
         # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
         values = []
@@ -1095,7 +1095,7 @@ class CausalInference(object):
             if var in adjustment_set.intersection(evidence.keys())
         }
         if len(evidence_adj_inter) != 0:
-            p_z = infer.query(adjustment_set, show_progress=False).reduce(
+            p_z = infer.query(adjustment_set, show_progress=False, **kwargs).reduce(
                 [(key, value) for key, value in evidence_adj_inter.items()],
                 inplace=False,
             )
@@ -1114,7 +1114,9 @@ class CausalInference(object):
                     },
                 )
         else:
-            p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
+            p_z = infer.query(
+                adjustment_set, evidence=evidence, show_progress=False, **kwargs
+            )
 
         adj_states = []
         for var in adjustment_set:
@@ -1133,7 +1135,7 @@ class CausalInference(object):
             }
             evidence = {**do, **adj_evidence}
             values.append(
-                infer.query(variables, evidence=evidence, show_progress=False)
+                infer.query(variables, evidence=evidence, show_progress=False, **kwargs)
                 * p_z.get_value(**adj_evidence)
             )
 

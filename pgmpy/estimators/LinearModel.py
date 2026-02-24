@@ -1,5 +1,5 @@
 import statsmodels.api as sm
-from statsmodels.api import OLS, GLS, WLS
+from statsmodels.api import GLS, OLS, WLS
 
 
 class LinearEstimator(object):
@@ -22,12 +22,12 @@ class LinearEstimator(object):
         return self.estimator(endog=endog, exog=exog, **kwargs)
 
     def fit(self, X, Y, Z, data, **kwargs):
-        self.estimator = self._model(X, Y, Z, data, **kwargs).fit()
-        self.ate = self.estimator.params[X]
+        self.result = self._model(X, Y, Z, data, **kwargs).fit()
+        self.ate = self.result.params[X]
         return self
 
     def _get_ate(self):
         return self.ate
 
     def summary(self):
-        return self.estimator.summary()
+        return self.result.summary()

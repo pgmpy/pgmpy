@@ -71,7 +71,7 @@ class ApproxInference(object):
         if isinstance(variables, (set, tuple)):
             variables = list(variables)
 
-        if joint == True:
+        if joint:
             return self._get_factor_from_df(
                 samples.groupby(variables, observed=False).size() / samples.shape[0],
                 state_names,
