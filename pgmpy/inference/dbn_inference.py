@@ -151,6 +151,7 @@ class DBNInference(Inference):
                 for node in evidence_dict
                 if node[1] == time_slice
             }
+        return {}
 
     def _marginalize_factor(self, nodes, factor):
         """
