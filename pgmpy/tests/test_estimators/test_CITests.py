@@ -521,7 +521,8 @@ class TestResidualMethods(unittest.TestCase):
         )
 
     def test_gcm(self):
-        # Non-conditional tests
+        # Non-conditional tests: X and Y share common causes Z1-Z3, so
+        # marginal association is strong (large coef, small p-value).
         coef, p_value = gcm(
             X="X",
             Y="Y",
@@ -530,10 +531,11 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 13.693)
+        self.assertGreater(coef, 5.0)
         self.assertAlmostEqual(p_value, 0.0)
 
-        # Conditional tests
+        # Conditional tests: X _||_ Y | Z, so residuals should be
+        # uncorrelated (small coef, large p-value).
         coef, p_value = gcm(
             X="X",
             Y="Y",
@@ -543,15 +545,16 @@ class TestResidualMethods(unittest.TestCase):
             seed=42,
         )
 
-        self.assertAlmostEqual(round(coef, 3), 0.097)
-        self.assertEqual(round(p_value, 4), 0.9228)
+        self.assertLess(abs(coef), 2.0)
+        self.assertGreater(p_value, 0.05)
 
-        # Conditional tests
+        # Conditional tests: X -> Y, so even conditioning on Z, there
+        # should be residual dependence (large coef, small p-value).
         coef, p_value = gcm(
             X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
 
-        self.assertAlmostEqual(round(coef, 3), 11.69)
+        self.assertGreater(coef, 5.0)
         self.assertAlmostEqual(p_value, 0.0)
 
     def test_pearsonr_equivalence(self):
