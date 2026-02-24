@@ -52,6 +52,13 @@ class JunctionTree(ClusterGraph):
         if ebunch:
             self.add_edges_from(ebunch)
 
+    def __repr__(self):
+        return (
+            f"<JunctionTree(nodes={len(self.nodes())},"
+            f" edges={len(self.edges())},"
+            f" factors={len(self.factors)}) at {hex(id(self))}>"
+        )
+
     def add_edge(self, u, v, **kwargs):
         """
         Add an edge between two clique nodes.

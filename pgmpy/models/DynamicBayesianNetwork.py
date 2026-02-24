@@ -152,6 +152,13 @@ class DynamicBayesianNetwork(DAG):
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
+    def __repr__(self):
+        return (
+            f"<DynamicBayesianNetwork(nodes={len(self.nodes())},"
+            f" edges={len(self.edges())},"
+            f" cpds={len(self.cpds)}) at {hex(id(self))}>"
+        )
+
     def add_node(self, node, **attr):
         """
         Adds a single node to the Network
