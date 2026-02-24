@@ -513,6 +513,23 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(sorted(self.G1.nodes()), sorted(["grade", "intel"]))
         self.assertRaises(ValueError, self.G1.get_cpds, "diff")
 
+    def test_remove_node_marginalizes_correctly_issue_2007(self):
+        # Regression: remove_node used to marginalize by summing equally over
+        # the removed node's states instead of weighting by its prior.
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[0.8], [0.2]])
+        cpd_b = TabularCPD(
+            "B",
+            2,
+            [[0.9, 0.1], [0.1, 0.9]],
+            evidence=["A"],
+            evidence_card=[2],
+        )
+        model.add_cpds(cpd_a, cpd_b)
+        model.remove_node("A")
+        # P(B=0) = 0.9*0.8 + 0.1*0.2 = 0.74
+        np_test.assert_array_almost_equal(model.get_cpds("B").values, [0.74, 0.26])
+
     def test_remove_nodes_from(self):
         self.G1.remove_nodes_from(["diff", "grade"])
         self.assertEqual(sorted(self.G1.nodes()), sorted(["intel"]))
@@ -1089,6 +1106,36 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
         )
 
+    def test_fit_preserves_state_names_issue_2207(self):
+        # Regression: fit() used to overwrite state_names with only the states
+        # observed in the training data, losing any extra states from CPDs.
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD(
+            "A",
+            3,
+            [[0.2], [0.3], [0.5]],
+            state_names={"A": ["low", "medium", "high"]},
+        )
+        cpd_b = TabularCPD(
+            "B",
+            2,
+            [[0.4, 0.9, 0.8], [0.6, 0.1, 0.2]],
+            evidence=["A"],
+            evidence_card=[3],
+            state_names={"A": ["low", "medium", "high"], "B": [0, 1]},
+        )
+        model.add_cpds(cpd_a, cpd_b)
+
+        # Data only has 'low' and 'medium', missing 'high'
+        data = pd.DataFrame(
+            {"A": ["low", "low", "medium", "medium"], "B": [0, 1, 0, 1]}
+        )
+        model.fit(data)
+
+        # 'high' should still be in the state_names
+        self.assertEqual(model.get_cpds("A").variable_card, 3)
+        self.assertIn("high", model.get_cpds("A").state_names["A"])
+
     def test_fit_update(self):
         model = get_example_model("asia")
         model_copy = model.copy()
@@ -1545,6 +1592,22 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         self.assertRaises(
             ValueError, self.model_connected.predict_probability, predict_data
         )
+
+    def test_predict_bp_parallel_no_keyerror_issue_2274(self):
+        # Regression: BeliefPropagation.map_query modifies shared clique_beliefs.
+        # With threading (require="sharedmem"), concurrent callers corrupt each
+        # other's state, raising KeyError on clique lookup (~intermittent).
+        titanic = DiscreteBayesianNetwork()
+        titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic.fit(self.titanic_data2[500:])
+
+        # Run 5 times to increase chance of catching race conditions
+        for _ in range(5):
+            result = titanic.predict(
+                self.titanic_data2[["Sex", "Pclass"]][:30],
+                algo=BeliefPropagation,
+            )
+            self.assertEqual(result.shape, (30, 3))
 
     def tearDown(self):
         del self.model_connected
