@@ -199,7 +199,7 @@ class BaseConstraintEstimator(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
+                    if (not enforce_expert_knowledge) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in self._get_potential_sepsets(
@@ -223,7 +223,7 @@ class BaseConstraintEstimator(StructureEstimator):
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
+                    if (not enforce_expert_knowledge) or (
                         (u, v) not in expert_knowledge.required_edges
                     ):
                         for separating_set in self._get_potential_sepsets(
@@ -264,7 +264,7 @@ class BaseConstraintEstimator(StructureEstimator):
                 results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False)
+                    if (not enforce_expert_knowledge)
                     or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:

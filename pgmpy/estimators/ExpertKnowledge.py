@@ -115,7 +115,7 @@ class ExpertKnowledge:
             raise TypeError(
                 f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
-        elif type(edge_list) != set:
+        elif not isinstance(edge_list, set):
             return set(edge_list)
         else:
             return edge_list
@@ -259,7 +259,7 @@ class ExpertKnowledge:
 
             if pdag.has_undirected_edge(u, v):
                 pdag.orient_undirected_edge(u, v, inplace=True)
-            elif pdag.has_edge(u, v) is False:
+            elif not pdag.has_edge(u, v):
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. "
                     f"Ignoring edge {u}->{v} from required edges"

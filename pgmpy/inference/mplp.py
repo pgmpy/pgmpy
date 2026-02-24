@@ -506,7 +506,7 @@ class Mplp(Inference):
                     break
                 add_triplets.append(sorted_scores.pop())
             # Break from the tighten triplets loop if there are no triplets to add if the prolong is set to False
-            if not add_triplets and prolong is False:
+            if not add_triplets and not prolong:
                 break
             # Update the eligible triplets to tighten the relaxation
             self._update_triangles(add_triplets)

@@ -306,7 +306,7 @@ class ExpertInLoop(StructureEstimator):
                 edge_direction = orientation_fn(
                     selected_edge.u, selected_edge.v, **kwargs
                 )
-                if use_cache is True and edge_direction is not None:
+                if use_cache and edge_direction is not None:
                     self.orientation_cache.add(edge_direction)
 
                 if (
