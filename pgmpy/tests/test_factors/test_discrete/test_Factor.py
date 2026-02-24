@@ -505,6 +505,21 @@ class TestFactorMethods(unittest.TestCase):
             ],
         )
 
+    def test_normalize_zero_sum(self):
+        """
+        Regression test for GitHub issue #1595.
+        normalize() should raise ValueError when factor values sum to zero,
+        instead of silently producing NaN values.
+        """
+        phi_zero = DiscreteFactor(
+            variables=["x1", "x2"],
+            cardinality=[2, 2],
+            values=np.zeros(4),
+        )
+        self.assertRaises(ValueError, phi_zero.normalize)
+        # Also test not-in-place variant
+        self.assertRaises(ValueError, phi_zero.normalize, inplace=False)
+
     def test_reduce(self):
         self.phi1.reduce([("x1", 0), ("x2", 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
@@ -670,6 +685,17 @@ class TestFactorMethods(unittest.TestCase):
         )
 
         self.assertEqual(prod.variables, ["x1", "x2", "x3", "x4"])
+
+    def test_product_scalar_tensor_issue_2364(self):
+        # Regression: 0-dim numpy arrays (and torch tensors) were not recognized
+        # as scalars by product() and sum(), causing AttributeError.
+        phi = DiscreteFactor(["x1"], [2], [0.3, 0.7])
+        scalar = np.float64(0.5)  # 0-dim numpy scalar, same ndim==0 as torch tensor
+        result = phi * scalar
+        np_test.assert_array_almost_equal(result.values, [0.15, 0.35])
+
+        result_add = phi + scalar
+        np_test.assert_array_almost_equal(result_add.values, [0.8, 1.2])
 
     def test_factor_divide(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 2, 4])
@@ -2801,7 +2827,7 @@ class TestTabularCPDInit(unittest.TestCase):
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
         terminal_width, terminal_height = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
-        table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
+        table_width = len(list_rows_str[0])
 
         # TODO: test table height
 
@@ -3064,7 +3090,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         )
 
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             np_test.assert_array_equal(
