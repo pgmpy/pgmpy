@@ -318,6 +318,26 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    def test_minimal_dseparator_issue_2354(self):
+        # Regression test: old implementation returned {C, D} instead of {B}
+        # because it only considered parents of start/end as candidates.
+        dag = DAG([("A", "B"), ("B", "C"), ("B", "D"), ("C", "E"), ("D", "E")])
+        self.assertEqual(dag.minimal_dseparator(start="A", end="E"), {"B"})
+
+        # Fork: B is the only separator between A and C
+        dag_fork = DAG([("B", "A"), ("B", "C")])
+        self.assertEqual(dag_fork.minimal_dseparator(start="A", end="C"), {"B"})
+
+        # Collider: A -> C <- B means A and B are already d-separated
+        dag_collider = DAG([("A", "C"), ("B", "C")])
+        self.assertEqual(dag_collider.minimal_dseparator(start="A", end="B"), set())
+
+        # Longer chain: minimal separator should be a single node
+        dag_long = DAG([("A", "B"), ("B", "C"), ("C", "D"), ("D", "E")])
+        result = dag_long.minimal_dseparator(start="A", end="E")
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result.issubset({"B", "C", "D"}))
+
     @unittest.skipUnless(
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",
