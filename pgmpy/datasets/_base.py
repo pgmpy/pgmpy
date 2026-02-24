@@ -275,8 +275,6 @@ class _TubingenBenchmarkMixin:
                 # for (x <- y, x <-- y)
                 elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
                     return DAG([("y", "x")])
-                elif re.search(r"y\s*<\s*[- ]+\s*x", content, re.IGNORECASE):
-                    return DAG([("x", "y")])
             return None
 
 

@@ -107,7 +107,7 @@ def test_load_covariance_dataset():
 
 def test_load_tubingen_dataset():
 
-    for i in [1, 86, 88, 108]:
+    for i in [1, 47, 86, 88, 108]:
         dataset = load_dataset(f"tubingen/{i}")
 
         assert dataset.name == f"tubingen/{i}"
