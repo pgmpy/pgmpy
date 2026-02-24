@@ -281,6 +281,30 @@ class TestLGBNMethods(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
 
+    def test_virtual_intervention_with_evidence_issue_2409(self):
+        """Regression test for GitHub issue #2409.
+
+        When a virtual intervention CPD has evidence variables that differ
+        from the original CPD's parents, the graph edges must be updated
+        to match, otherwise to_joint_gaussian() raises a KeyError.
+        """
+        model = LinearGaussianBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
+        cpd_a = LinearGaussianCPD("A", beta=[1.0], std=1.0)
+        cpd_b = LinearGaussianCPD("B", beta=[2.0], std=1.0)
+        cpd_c = LinearGaussianCPD(
+            "C", beta=[0.0, 1.0, 1.0], std=1.0, evidence=["A", "B"]
+        )
+        cpd_d = LinearGaussianCPD("D", beta=[0.0, 1.0], std=1.0, evidence=["C"])
+        model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d)
+
+        # Replace C's CPD: drop A from evidence, keep only B
+        new_cpd = LinearGaussianCPD(
+            variable="C", beta=[1.0, 2.0], evidence=["B"], std=1.0
+        )
+        df = model.simulate(n_samples=100, virtual_intervention=[new_cpd], seed=42)
+        self.assertEqual(df.shape, (100, 4))
+        self.assertFalse(df.isnull().any().any())
+
     def test_fit(self):
         # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
