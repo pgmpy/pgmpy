@@ -2,6 +2,7 @@ import pytest
 
 from pgmpy.independencies import IndependenceAssertion, Independencies
 
+
 @pytest.fixture
 def eq_assertions():
     return {
