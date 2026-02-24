@@ -2,8 +2,6 @@
 
 from collections import defaultdict
 
-import numpy as np
-
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
 from pgmpy.utils import compat_fns
@@ -59,6 +57,13 @@ class ClusterGraph(UndirectedGraph):
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
+
+    def __repr__(self):
+        return (
+            f"<ClusterGraph(nodes={len(self.nodes())},"
+            f" edges={len(self.edges())},"
+            f" factors={len(self.factors)}) at {hex(id(self))}>"
+        )
 
     def add_node(self, node, **kwargs):
         """
