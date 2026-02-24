@@ -337,14 +337,14 @@ class TestBackdoorPaths(unittest.TestCase):
         inference = CausalInference(game1)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game1_sem(self):
         game1 = SEMGraph(ebunch=[("X", "A"), ("A", "Y"), ("A", "B")])
         inference = CausalInference(game1)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game2_bn(self):
         game2 = DiscreteBayesianNetwork(
@@ -361,7 +361,7 @@ class TestBackdoorPaths(unittest.TestCase):
         inference = CausalInference(game2)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game2_sem(self):
         game2 = SEMGraph(
@@ -378,7 +378,7 @@ class TestBackdoorPaths(unittest.TestCase):
         inference = CausalInference(game2)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game3_bn(self):
         game3 = DiscreteBayesianNetwork(
@@ -403,14 +403,14 @@ class TestBackdoorPaths(unittest.TestCase):
         inference = CausalInference(game4)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game4_sem(self):
         game4 = SEMGraph([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")])
         inference = CausalInference(game4)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(deconfounders, frozenset())
+        self.assertEqual(deconfounders, frozenset({frozenset()}))
 
     def test_game5_bn(self):
         game5 = DiscreteBayesianNetwork(
@@ -991,7 +991,10 @@ class TestBayesianIV(unittest.TestCase):
         frontdoor_model = DiscreteBayesianNetwork(ebunch=[("X", "M"), ("M", "Y")])
         causal_inf = CausalInference(frontdoor_model)
         methods = causal_inf.identification_method("X", "Y")
-        expected_frontdoor = {"frontdoor set": {frozenset({"M"})}}
+        expected_frontdoor = {
+            "backdoor set": frozenset({frozenset()}),
+            "frontdoor set": frozenset({frozenset({"M"})}),
+        }
         self.assertEqual(methods, expected_frontdoor)
 
         iv_model = DiscreteBayesianNetwork(
@@ -1287,6 +1290,22 @@ class TestDoQuery(unittest.TestCase):
             str(cm.exception),
         )
 
+    def test_query_forwards_kwargs_issue_2401(self):
+        # Regression: **kwargs were accepted but never forwarded to infer.query()
+        # Passing elimination_order should work without error and produce
+        # identical results to the default.
+        result_default = self.simp_infer.query(variables=["C"], do={"T": 1})
+        result_kwargs = self.simp_infer.query(
+            variables=["C"], do={"T": 1}, elimination_order="greedy"
+        )
+        np_test.assert_array_almost_equal(result_default.values, result_kwargs.values)
+
+        # Also test the no-do path (Step 3.1)
+        result_nodo = self.simp_infer.query(
+            variables=["C"], evidence={"T": 1}, elimination_order="greedy"
+        )
+        np_test.assert_array_almost_equal(result_nodo.values, np.array([0.5, 0.5]))
+
 
 class TestEstimator(unittest.TestCase):
     def test_create_estimator(self):
@@ -1343,3 +1362,39 @@ class TestEstimator(unittest.TestCase):
         self.assertAlmostEqual(
             infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1
         )
+
+    def test_estimate_ate_nan_empty_backdoor_issue_1616(self):
+        """Regression test for GitHub issue #1616.
+
+        estimate_ate() returned NaN when:
+        1. The valid backdoor adjustment set is the empty set (no confounders),
+           causing get_all_backdoor_adjustment_sets to return frozenset()
+           instead of frozenset({frozenset()}).
+        2. LinearEstimator.fit() clobbered self.estimator with the fitted
+           result, breaking reuse across multiple adjustment sets.
+        """
+        model = DiscreteBayesianNetwork(
+            [("T", "B"), ("B", "Y"), ("Z", "Y"), ("Z", "T")]
+        )
+        np.random.seed(42)
+        Z = np.random.randn(2000)
+        T = 0.5 * Z + np.random.randn(2000)
+        B = 0.7 * T + np.random.randn(2000)
+        Y = 0.3 * B + 0.4 * Z + np.random.randn(2000)
+        data = pd.DataFrame({"T": T, "B": B, "Y": Y, "Z": Z})
+
+        ci = CausalInference(model)
+
+        # Empty set is a valid backdoor for T -> B (no confounders)
+        adj_sets = ci.get_all_backdoor_adjustment_sets("T", "B")
+        self.assertIn(frozenset(), adj_sets)
+
+        # estimand_strategy='all' triggers iteration over multiple adj sets
+        ate_all = ci.estimate_ate(
+            "T", "Y", data=data, estimator_type="linear", estimand_strategy="all"
+        )
+        self.assertFalse(np.isnan(ate_all), "ATE should not be NaN")
+
+        # Default strategy should also work
+        ate_default = ci.estimate_ate("T", "Y", data=data, estimator_type="linear")
+        self.assertFalse(np.isnan(ate_default), "ATE should not be NaN")
