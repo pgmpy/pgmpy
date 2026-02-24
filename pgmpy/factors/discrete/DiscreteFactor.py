@@ -527,7 +527,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self if inplace else self.copy()
 
-        phi.values = phi.values / (phi.values.sum())
+        total = phi.values.sum()
+        if total == 0:
+            raise ValueError(
+                "Factor values sum to zero. "
+                "Normalization is undefined for a zero-sum factor. "
+                "This may indicate contradictory evidence."
+            )
+        phi.values = phi.values / total
 
         if not inplace:
             return phi
@@ -670,7 +677,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                  [16., 18.]]]])
         """
         phi = self if inplace else self.copy()
-        if isinstance(phi1, (int, float)):
+        if isinstance(phi1, (int, float)) or (hasattr(phi1, "ndim") and phi1.ndim == 0):
             phi.values += phi1
         else:
             phi1 = phi1.copy()
@@ -762,7 +769,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                  [55, 77]]]]
         """
         phi = self if inplace else self.copy()
-        if isinstance(phi1, (int, float)):
+        if isinstance(phi1, (int, float)) or (hasattr(phi1, "ndim") and phi1.ndim == 0):
             phi.values *= phi1
         else:
             # Compute the new values
