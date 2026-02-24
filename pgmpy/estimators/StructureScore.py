@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
+import statsmodels.api as sm
 from scipy.special import gammaln
 from scipy.stats import multivariate_normal
 
@@ -992,12 +992,12 @@ class LogLikelihoodGauss(StructureScore):
         ValueError
             If the GLM cannot be fitted due to missing or non-numeric data.
         """
+        y = self.data[variable]
         if len(parents) == 0:
-            glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
+            X = sm.add_constant(pd.DataFrame(index=self.data.index))
         else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+            X = sm.add_constant(self.data[list(parents)])
+        glm_model = sm.GLM(y, X, family=sm.families.Gaussian()).fit()
 
         return (glm_model.llf, glm_model.df_model)
 
