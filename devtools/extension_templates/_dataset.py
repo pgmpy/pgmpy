@@ -36,6 +36,9 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
+    # TODO: Set the base URL prefix for the dataset files. This is used by the caching mechanism in `_get_raw_data`.
+    base_url = None
+
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
     # row containing the names of the columns.
     data_url = None
