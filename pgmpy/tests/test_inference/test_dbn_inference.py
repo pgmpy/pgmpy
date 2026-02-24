@@ -187,7 +187,7 @@ class TestDBNInference(unittest.TestCase):
 
         bnet.add_cpds(*bnet_cpds)
 
-        ie = DBNInference(bnet)
+        DBNInference(bnet)
 
         # TODO: an assertion to test a complex network
 
@@ -232,3 +232,27 @@ class TestDBNInference(unittest.TestCase):
         self.assertIsNotNone(inference.one_and_half_model)
         self.assertIsNotNone(inference.start_junction_tree)
         self.assertIsNotNone(inference.one_and_half_junction_tree)
+
+    def test_forward_inference_no_evidence(self):
+        """
+        Regression test for GitHub issues #1638, #1737, #1744.
+        _get_evidence used to return None when evidence was not provided,
+        which could cause AttributeError in downstream code.
+        """
+        query_result = self.dbn_inference_1.forward_inference([("X", 0)])
+        self.assertIn(("X", 0), query_result)
+        np_test.assert_array_almost_equal(
+            query_result[("X", 0)].values, np.array([0.84, 0.16])
+        )
+
+    def test_backward_inference_no_evidence(self):
+        """
+        Regression test for GitHub issues #1638, #1737, #1744.
+        _get_evidence used to return None when evidence was not provided,
+        which could cause AttributeError in downstream code.
+        """
+        query_result = self.dbn_inference_2.backward_inference([("Y", 0)])
+        self.assertIn(("Y", 0), query_result)
+        np_test.assert_array_almost_equal(
+            query_result[("Y", 0)].values, np.array([0.225, 0.775])
+        )
