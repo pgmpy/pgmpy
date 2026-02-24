@@ -201,11 +201,58 @@ class DiscreteBayesianNetwork(DAG):
          <TabularCPD representing P(D:2) at 0x7f28248e26a0>]
         """
         affected_nodes = [v for u, v in self.edges() if u == node]
+        removed_cpd = self.get_cpds(node=node)
 
         for affected_node in affected_nodes:
-            node_cpd = self.get_cpds(node=affected_node)
-            if node_cpd:
-                node_cpd.marginalize([node], inplace=True)
+            child_cpd = self.get_cpds(node=affected_node)
+            if child_cpd:
+                if removed_cpd:
+                    # Weight by the removed node's distribution before marginalizing
+                    # so that P(child | rest) = sum_node P(child | node, rest) * P(node | ...)
+                    child_factor = child_cpd.to_factor()
+                    removed_factor = removed_cpd.to_factor()
+                    product = child_factor * removed_factor
+                    product.marginalize([node], inplace=True)
+                    product.normalize(inplace=True)
+
+                    # Rebuild the TabularCPD from the marginalized factor
+                    new_evidence = [v for v in child_cpd.variables[1:] if v != node]
+                    new_evidence += [
+                        v
+                        for v in product.variables
+                        if v != affected_node and v not in new_evidence
+                    ]
+                    if new_evidence:
+                        new_evidence_card = [
+                            int(product.get_cardinality([v])[v]) for v in new_evidence
+                        ]
+                    else:
+                        new_evidence_card = None
+
+                    new_cpd = TabularCPD(
+                        variable=affected_node,
+                        variable_card=int(
+                            product.get_cardinality([affected_node])[affected_node]
+                        ),
+                        values=product.values.flatten("C").reshape(
+                            int(
+                                product.get_cardinality([affected_node])[affected_node]
+                            ),
+                            -1,
+                        ),
+                        evidence=new_evidence if new_evidence else None,
+                        evidence_card=new_evidence_card,
+                        state_names={
+                            v: product.state_names[v] for v in product.variables
+                        },
+                    )
+                    # Reorder to match the factor's variable ordering
+                    if new_evidence:
+                        new_cpd.reorder_parents(new_evidence, inplace=True)
+                    self.remove_cpds(affected_node)
+                    self.add_cpds(new_cpd)
+                else:
+                    child_cpd.marginalize([node], inplace=True)
 
         if self.get_cpds(node=node):
             self.remove_cpds(node)
@@ -608,7 +655,7 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+    def fit(self, data, estimator=None, state_names=None, n_jobs=1, **kwargs) -> "DAG":
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -670,6 +717,13 @@ class DiscreteBayesianNetwork(DAG):
         else:
             if not issubclass(estimator, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
+
+        # If state_names not explicitly provided, preserve any existing CPD state_names
+        # so that states present in the model but absent from data are not lost.
+        if not state_names and bn.cpds:
+            state_names = {}
+            for cpd in bn.cpds:
+                state_names.update(cpd.state_names)
 
         _estimator = estimator(
             bn,
@@ -883,7 +937,7 @@ class DiscreteBayesianNetwork(DAG):
             lambda t: t.index.tolist()
         )
         data_unique = data_unique_indexes.index.to_frame()
-        pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
+        pred_values = Parallel(n_jobs=n_jobs)(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(
                     set(data_point.index[data_point.isna()])
