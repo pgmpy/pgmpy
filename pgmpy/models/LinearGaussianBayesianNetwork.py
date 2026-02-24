@@ -663,16 +663,25 @@ class LinearGaussianBayesianNetwork(DAG):
 
                 model.remove_node(var)
 
-        # Step 3: If virtual_interventions are specified, change the CPD's of intervened variables
-        # to specified ones and remove the incoming nodes
+        # Step 3: If virtual_interventions are specified, change the CPD's of
+        # intervened variables to specified ones and update the graph edges
+        # to match the new CPD's evidence list.
         for cpd in virtual_intervention:
             var = cpd.variable
             old_cpd = model.get_cpds(var)
             model.remove_cpds(old_cpd)
             model.add_cpds(cpd)
 
-            for parent in list(model.get_parents(var)):
+            new_evidence = set(cpd.evidence) if cpd.evidence else set()
+            old_parents = set(model.get_parents(var))
+
+            # Remove edges from parents not in new CPD's evidence
+            for parent in old_parents - new_evidence:
                 model.remove_edge(parent, var)
+
+            # Add edges from new evidence variables not already parents
+            for ev_var in new_evidence - old_parents:
+                model.add_edge(ev_var, var)
 
         mean, cov = model.to_joint_gaussian()
         variables = list(nx.topological_sort(model))
