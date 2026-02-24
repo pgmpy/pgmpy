@@ -9,9 +9,9 @@ class Frontdoor(_BaseIdentification):
     """
     Given a causal graph, finds the set of variables satisfying frontdoor criterion.
 
-    Given a causal graph with `exposure` and `outcome` roles specified, the
-    `FrontdoorIdentification` class provides methods to find the set of variables
-    satisfying the frontdoor criterion with respect to `exposure` and `outcome` in
+    Given a causal graph with `exposures` and `outcomes` roles specified, the
+    `Frontdoor` class provides methods to find the set of variables
+    satisfying the frontdoor criterion with respect to `exposures` and `outcomes` in
     the causal graph.
 
     Parameters
@@ -23,6 +23,7 @@ class Frontdoor(_BaseIdentification):
     Examples
     --------
     >>> from pgmpy.base import DAG
+    >>> from pgmpy.identification import Frontdoor
     >>> dag = DAG(
     ...     ebunch=[
     ...         ("X", "M"),
@@ -31,11 +32,12 @@ class Frontdoor(_BaseIdentification):
     ...         ("U", "Y"),
     ...     ],
     ...     roles={"exposures": "X", "outcomes": "Y"},
+    ...     latents={"U"},
     ... )
-    >>> dag_with_adj, is_identified = FrontdoorIdentification().identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
-    >>> FrontdoorIdentification.validate(dag)
+    >>> dag_with_adj, is_identified = Frontdoor().identify(dag)
+    >>> dag_with_adj.get_role("frontdoor")
+    ['M']
+    >>> Frontdoor().validate(dag_with_adj)
     True
     """
 
