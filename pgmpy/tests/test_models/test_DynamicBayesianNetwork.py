@@ -78,6 +78,14 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
             ],
         )
 
+    def test_repr(self):
+        self.network.add_edge(("a", 0), ("b", 0))
+        r = repr(self.network)
+        self.assertIn("DynamicBayesianNetwork", r)
+        self.assertIn("nodes=", r)
+        self.assertIn("edges=", r)
+        self.assertIn("cpds=0", r)
+
     def tearDown(self):
         del self.network
 

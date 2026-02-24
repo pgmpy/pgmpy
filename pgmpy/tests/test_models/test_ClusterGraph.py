@@ -37,6 +37,14 @@ class TestClusterGraphCreation(unittest.TestCase):
     def test_add_single_edge_raises_error(self):
         self.assertRaises(ValueError, self.graph.add_edge, ("a", "b"), ("c", "d"))
 
+    def test_repr(self):
+        self.graph.add_edge(("a", "b"), ("b", "c"))
+        r = repr(self.graph)
+        self.assertIn("ClusterGraph", r)
+        self.assertIn("nodes=2", r)
+        self.assertIn("edges=1", r)
+        self.assertIn("factors=0", r)
+
     def tearDown(self):
         del self.graph
 

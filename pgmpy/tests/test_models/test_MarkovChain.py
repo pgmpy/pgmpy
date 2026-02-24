@@ -49,6 +49,13 @@ class TestMarkovChain(unittest.TestCase):
         del self.model
         del self.sample
 
+    def test_repr(self):
+        model = MC(["intel", "diff"], [3, 2])
+        r = repr(model)
+        self.assertIn("MarkovChain", r)
+        self.assertIn("variables=2", r)
+        self.assertIn("transition_models=2", r)
+
     @patch("pgmpy.models.MarkovChain._check_state", autospec=True)
     def test_init(self, check_state):
         model = MC(self.variables, self.card, self.start_state)

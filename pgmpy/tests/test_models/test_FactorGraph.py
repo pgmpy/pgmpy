@@ -44,6 +44,14 @@ class TestFactorGraphCreation(unittest.TestCase):
     def test_add_self_loop_raises_error(self):
         self.assertRaises(ValueError, self.graph.add_edge, "a", "a")
 
+    def test_repr(self):
+        self.graph.add_edges_from([("a", "phi1"), ("b", "phi1")])
+        r = repr(self.graph)
+        self.assertIn("FactorGraph", r)
+        self.assertIn("nodes=3", r)
+        self.assertIn("edges=2", r)
+        self.assertIn("factors=0", r)
+
     def tearDown(self):
         del self.graph
 

@@ -42,6 +42,14 @@ class TestJunctionTreeCreation(unittest.TestCase):
         self.graph.add_edge(("b", "c"), ("c", "d"))
         self.assertRaises(ValueError, self.graph.add_edge, ("c", "d"), ("a", "b"))
 
+    def test_repr(self):
+        self.graph.add_edge(("a", "b"), ("b", "c"))
+        r = repr(self.graph)
+        self.assertIn("JunctionTree", r)
+        self.assertIn("nodes=2", r)
+        self.assertIn("edges=1", r)
+        self.assertIn("factors=0", r)
+
     def tearDown(self):
         del self.graph
 

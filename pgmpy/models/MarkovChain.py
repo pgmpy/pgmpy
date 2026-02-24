@@ -85,6 +85,12 @@ class MarkovChain(object):
         if start_state is None or self._check_state(start_state):
             self.state = start_state
 
+    def __repr__(self):
+        return (
+            f"<MarkovChain(variables={len(self.variables)},"
+            f" transition_models={len(self.transition_models)}) at {hex(id(self))}>"
+        )
+
     def set_start_state(self, start_state):
         """
         Set the start state of the Markov Chain. If the start_state is given as an array-like iterable, its contents
