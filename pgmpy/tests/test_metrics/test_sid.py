@@ -112,8 +112,8 @@ def test_sid_no_edges_in_both(sid_scorer):
     true.add_nodes_from([1, 2, 3])
     est = DAG()
     est.add_nodes_from([1, 2, 3])
-    # Pa_true(i) = {} for all i. Empty est graph: is 1 d-connected to 2 given {}? No edges → No.
-    # So all pairs pass condition B → SID = 0
+    # Pa_true(i) = {} for all i. Empty est graph: are 1 and 2 d-separated given {}? No edges → Yes.
+    # So all pairs satisfy the backdoor (condition B: d-separation) → SID = 0
     assert sid_scorer(true, est) == 0
 
 
