@@ -82,9 +82,10 @@ def test_sid_is_not_symmetric(sid_scorer):
 
 def test_sid_symmetric_only_when_identical(sid_scorer):
     """Identical graphs → SID = 0 in both directions"""
-    dag = DAG([(1, 2), (2, 3)])
-    assert sid_scorer(dag, dag) == 0
-    assert sid_scorer(dag, dag) == 0
+    dag1 = DAG([(1, 2), (2, 3)])
+    dag2 = DAG([(1, 2), (2, 3)])
+    assert sid_scorer(dag1, dag2) == 0
+    assert sid_scorer(dag2, dag1) == 0
 
 
 # -----------------------------------------------------------------------
