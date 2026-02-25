@@ -35,7 +35,7 @@ class SID(_BaseSupervisedMetric):
     >>> est_dag = DAG([(2, 1), (2, 3)])
     >>> sid = SID()
     >>> sid(true_causal_graph=true_dag, est_causal_graph=est_dag)
-    2
+    4
 
     References
     ----------
