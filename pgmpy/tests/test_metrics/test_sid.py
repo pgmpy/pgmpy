@@ -89,7 +89,7 @@ def test_sid_symmetric_only_when_identical(sid_scorer):
 
 
 # -----------------------------------------------------------------------
-# GROUP 3: Edge cases — zero-division and empty graphs (3 tests)
+# GROUP 3: Edge cases — small and empty graphs (3 tests)
 # -----------------------------------------------------------------------
 
 
