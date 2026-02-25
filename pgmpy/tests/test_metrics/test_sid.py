@@ -21,7 +21,7 @@ def test_sid_identical_dags_is_zero(sid_scorer):
 
 
 def test_sid_fully_wrong_graph(sid_scorer):
-    """Est graph has no edges (empty) → all pairs fail backdoor → SID = n*(n-1)"""
+    """Est graph has no edges (empty); in this setup all pairs satisfy backdoor ⇒ SID = 0"""
     true = DAG([(1, 2), (2, 3)])
     est = DAG()
     est.add_nodes_from([1, 2, 3])
