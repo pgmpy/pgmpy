@@ -19,40 +19,201 @@ from pgmpy.models import (
 from pgmpy.utils import get_example_model
 
 
+@pytest.fixture
+def torch_backend():
+    config.set_backend("torch")
+    yield
+    config.set_backend("numpy")
+
+
+@pytest.fixture
+def bayesian_model(torch_backend):
+    bayesian_model = DiscreteBayesianNetwork(
+        [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
+    )
+    cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
+    cpd_r = TabularCPD("R", 2, values=[[0.4], [0.6]])
+    cpd_j = TabularCPD(
+        "J",
+        2,
+        values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
+        evidence=["A", "R"],
+        evidence_card=[2, 2],
+    )
+    cpd_q = TabularCPD(
+        "Q", 2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=["J"], evidence_card=[2]
+    )
+    cpd_l = TabularCPD(
+        "L",
+        2,
+        values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+        evidence=["J", "G"],
+        evidence_card=[2, 2],
+    )
+    cpd_g = TabularCPD("G", 2, values=[[0.6], [0.4]])
+    bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
+    return bayesian_model
+
+
+@pytest.fixture
+def bayesian_inference(bayesian_model):
+    bayesian_inference = VariableElimination(bayesian_model)
+    return bayesian_inference
+
+
+@pytest.fixture
+def snow_network_torch_model(torch_backend):
+    model = DiscreteBayesianNetwork(
+        [
+            ("Snow", "Risk"),
+            ("Snow", "Traffic"),
+            ("Traffic", "Late"),
+            ("Risk", "Late"),
+        ]
+    )
+
+    cpd_snow = TabularCPD(
+        "Snow", 2, [[0.4], [0.6]], state_names={"Snow": ["yes", "no"]}
+    )
+    cpd_risk = TabularCPD(
+        "Risk",
+        2,
+        [[0.8, 0.4], [0.2, 0.6]],
+        evidence=["Snow"],
+        evidence_card=[2],
+        state_names={"Snow": ["yes", "no"], "Risk": ["yes", "no"]},
+    )
+    cpd_traffic = TabularCPD(
+        "Traffic",
+        2,
+        [[0.4, 0.65], [0.6, 0.35]],
+        evidence=["Snow"],
+        evidence_card=[2],
+        state_names={"Traffic": ["normal", "slow"], "Snow": ["yes", "no"]},
+    )
+    cpd_late = TabularCPD(
+        "Late",
+        2,
+        [[0.45, 0.85, 0.1, 0.7], [0.55, 0.15, 0.90, 0.30]],
+        evidence=["Risk", "Traffic"],
+        evidence_card=[2, 2],
+        state_names={
+            "Late": ["yes", "no"],
+            "Traffic": ["normal", "slow"],
+            "Risk": ["yes", "no"],
+        },
+    )
+    model.add_cpds(cpd_snow, cpd_risk, cpd_traffic, cpd_late)
+    return model
+
+
+@pytest.fixture
+def test_duplicated_factors_markov_inference(torch_backend):
+    markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
+    f1 = DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2)
+    f2 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=np.eye(2) * 2)
+    markov_model.add_factors(f1, f2)
+    markov_inference = VariableElimination(markov_model)
+    return markov_inference
+
+
+@pytest.fixture
+def variable_elimination_markov_inference(torch_backend):
+    # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
+    # are under consideration for inference so this should be fine.
+    markov_model = DiscreteMarkovNetwork(
+        [
+            ("A", "J"),
+            ("R", "J"),
+            ("J", "Q"),
+            ("J", "L"),
+            ("G", "L"),
+            ("A", "R"),
+            ("J", "G"),
+        ]
+    )
+
+    factor_a = TabularCPD("A", 2, values=[[0.2], [0.8]]).to_factor()
+    factor_r = TabularCPD("R", 2, values=[[0.4], [0.6]]).to_factor()
+    factor_j = TabularCPD(
+        "J",
+        2,
+        values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
+        evidence=["A", "R"],
+        evidence_card=[2, 2],
+    ).to_factor()
+    factor_q = TabularCPD(
+        "Q", 2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=["J"], evidence_card=[2]
+    ).to_factor()
+    factor_l = TabularCPD(
+        "L",
+        2,
+        values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+        evidence=["J", "G"],
+        evidence_card=[2, 2],
+    ).to_factor()
+    factor_g = TabularCPD("G", 2, [[0.6], [0.4]]).to_factor()
+
+    markov_model.add_factors(factor_a, factor_r, factor_j, factor_q, factor_l, factor_g)
+    markov_inference = VariableElimination(markov_model)
+    return markov_inference
+
+
+@pytest.fixture
+def junction_tree(torch_backend):
+    junction_tree = JunctionTree([(("A", "B"), ("B", "C")), (("B", "C"), ("C", "D"))])
+    phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
+    phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
+    phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+    junction_tree.add_factors(phi1, phi2, phi3)
+    return junction_tree
+
+
+@pytest.fixture
+def belief_propagation_with_message_passing():
+    factor_graph = FactorGraph()
+    factor_graph.add_nodes_from(["A", "B", "C", "D"])
+
+    phi1 = DiscreteFactor(["A"], [2], [0.4, 0.6])
+    phi2 = DiscreteFactor(["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]])
+    phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
+    phi4 = DiscreteFactor(
+        ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
+    )
+
+    factor_graph.add_factors(phi1, phi2, phi3, phi4)
+
+    factor_graph.add_edges_from(
+        [
+            (phi1, "A"),
+            ("A", phi2),
+            (phi2, "B"),
+            ("B", phi3),
+            (phi3, "C"),
+            ("B", phi4),
+            (phi4, "D"),
+        ]
+    )
+
+    belief_propagation = BeliefPropagationWithMessagePassing(factor_graph)
+    return belief_propagation
+
+
+@pytest.fixture
+def variable_elimination_lgm(torch_backend):
+    from pgmpy.utils import get_example_model
+
+    lgbm = get_example_model("ecoli70")
+    return lgbm
+
+
+@pytest.fixture
+def variable_elimination_fbn(torch_backend):
+    fbn = FunctionalBayesianNetwork([("X", "Y")])
+    return fbn
+
+
 class TestVariableElimination:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.bayesian_model = DiscreteBayesianNetwork(
-            [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
-        )
-        cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
-        cpd_r = TabularCPD("R", 2, values=[[0.4], [0.6]])
-        cpd_j = TabularCPD(
-            "J",
-            2,
-            values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
-            evidence=["A", "R"],
-            evidence_card=[2, 2],
-        )
-        cpd_q = TabularCPD(
-            "Q", 2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=["J"], evidence_card=[2]
-        )
-        cpd_l = TabularCPD(
-            "L",
-            2,
-            values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
-            evidence=["J", "G"],
-            evidence_card=[2, 2],
-        )
-        cpd_g = TabularCPD("G", 2, values=[[0.6], [0.4]])
-        self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
-
-        self.bayesian_inference = VariableElimination(self.bayesian_model)
-
-        yield
-
-        del self.bayesian_inference
-        del self.bayesian_model
 
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
@@ -66,7 +227,7 @@ class TestVariableElimination:
 
         assert "must contain at least one variable" in str(context.value)
 
-    def test_query_single_variable(self):
+    def test_query_single_variable(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -74,14 +235,14 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["J"], elimination_order=order, show_progress=False
             )
             assert query_result == DiscreteFactor(
                 variables=["J"], cardinality=[2], values=[0.416, 0.584]
             )
 
-    def test_query_multiple_variable(self):
+    def test_query_multiple_variable(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -89,7 +250,7 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["Q", "J"], elimination_order=order, show_progress=False
             )
             assert query_result == DiscreteFactor(
@@ -98,7 +259,7 @@ class TestVariableElimination:
                 values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
             )
 
-    def test_query_single_variable_with_evidence(self):
+    def test_query_single_variable_with_evidence(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -106,7 +267,7 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J"],
                 evidence={"A": 0, "R": 1},
                 elimination_order=order,
@@ -116,7 +277,7 @@ class TestVariableElimination:
                 variables=["J"], cardinality=[2], values=[0.6, 0.4]
             )
 
-    def test_query_multiple_variable_with_evidence(self):
+    def test_query_multiple_variable_with_evidence(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -124,7 +285,7 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J", "Q"],
                 evidence={"A": 0, "R": 0, "G": 0, "L": 1},
                 elimination_order=order,
@@ -136,7 +297,7 @@ class TestVariableElimination:
                 values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             )
 
-    def test_query_multiple_times(self):
+    def test_query_multiple_times(self, bayesian_inference):
         # This just tests that the models are not getting modified while querying them
         for order in [
             "greedy",
@@ -145,19 +306,19 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["J"], elimination_order=order, show_progress=False
             )
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["J"], elimination_order=order, show_progress=False
             )
             assert query_result == DiscreteFactor(
                 variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
             )
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["Q", "J"], elimination_order=order, show_progress=False
             )
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["Q", "J"], elimination_order=order, show_progress=False
             )
             assert query_result == DiscreteFactor(
@@ -166,13 +327,13 @@ class TestVariableElimination:
                 values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
             )
 
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J"],
                 evidence={"A": 0, "R": 1},
                 elimination_order=order,
                 show_progress=False,
             )
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J"],
                 evidence={"A": 0, "R": 1},
                 elimination_order=order,
@@ -182,13 +343,13 @@ class TestVariableElimination:
                 variables=["J"], cardinality=[2], values=[0.6, 0.4]
             )
 
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J", "Q"],
                 evidence={"A": 0, "R": 0, "G": 0, "L": 1},
                 elimination_order=order,
                 show_progress=False,
             )
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J", "Q"],
                 evidence={"A": 0, "R": 0, "G": 0, "L": 1},
                 elimination_order=order,
@@ -200,7 +361,7 @@ class TestVariableElimination:
                 values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             )
 
-    def test_query_common_var(self):
+    def test_query_common_var(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -209,40 +370,40 @@ class TestVariableElimination:
             "WeightedMinFill",
         ]:
             with pytest.raises(ValueError):
-                self.bayesian_inference.query(
+                bayesian_inference.query(
                     variables=["J"],
                     evidence=["J"],
                     elimination_order=order,
                 )
 
-    def test_max_marginal(self):
+    def test_max_marginal(self, bayesian_inference):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(), 0.1659, decimal=4
+            bayesian_inference.max_marginal(), 0.1659, decimal=4
         )
 
-    def test_max_marginal_var(self):
+    def test_max_marginal_var(self, bayesian_inference):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G"]), 0.6, decimal=4
+            bayesian_inference.max_marginal(["G"]), 0.6, decimal=4
         )
 
-    def test_max_marginal_var1(self):
+    def test_max_marginal_var1(self, bayesian_inference):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R"]), 0.36, decimal=4
+            bayesian_inference.max_marginal(["G", "R"]), 0.36, decimal=4
         )
 
-    def test_max_marginal_var2(self):
+    def test_max_marginal_var2(self, bayesian_inference):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R", "A"]), 0.288, decimal=4
+            bayesian_inference.max_marginal(["G", "R", "A"]), 0.288, decimal=4
         )
 
-    def test_max_marginal_common_var(self):
+    def test_max_marginal_common_var(self, bayesian_inference):
         with pytest.raises(ValueError):
-            self.bayesian_inference.max_marginal(
+            bayesian_inference.max_marginal(
                 variables=["J"],
                 evidence=["J"],
             )
 
-    def test_map_query(self):
+    def test_map_query(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -250,18 +411,18 @@ class TestVariableElimination:
             "MinWeight",
             "WeightedMinFill",
         ]:
-            map_query = self.bayesian_inference.map_query(
+            map_query = bayesian_inference.map_query(
                 elimination_order=order, show_progress=False
             )
             assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self):
-        map_query = self.bayesian_inference.map_query(
+    def test_map_query_with_evidence(self, bayesian_inference):
+        map_query = bayesian_inference.map_query(
             ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_map_query_common_var(self):
+    def test_map_query_common_var(self, bayesian_inference):
         for order in [
             "greedy",
             "MinFill",
@@ -270,13 +431,13 @@ class TestVariableElimination:
             "WeightedMinFill",
         ]:
             with pytest.raises(ValueError):
-                self.bayesian_inference.map_query(
+                bayesian_inference.map_query(
                     variables=["J"],
                     evidence=["J"],
                     elimination_order=order,
                 )
 
-    def test_elimination_order(self):
+    def test_elimination_order(self, bayesian_inference):
         # Check all the heuristics give the same results.
         for elimination_order in [
             "WeightedMinFill",
@@ -284,14 +445,14 @@ class TestVariableElimination:
             "MinWeight",
             "MinFill",
         ]:
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 ["J"], elimination_order=elimination_order, show_progress=False
             )
             assert query_result == DiscreteFactor(
                 variables=["J"], cardinality=[2], values=[0.416, 0.584]
             )
 
-            query_result = self.bayesian_inference.query(
+            query_result = bayesian_inference.query(
                 variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
             )
             assert query_result == DiscreteFactor(
@@ -299,7 +460,7 @@ class TestVariableElimination:
             )
 
         # Check when elimination order has extra variables. Because of pruning.
-        query_result = self.bayesian_inference.query(
+        query_result = bayesian_inference.query(
             ["J"], elimination_order=["A", "R", "L", "Q", "G"], show_progress=False
         )
         assert query_result == DiscreteFactor(
@@ -308,15 +469,13 @@ class TestVariableElimination:
 
         # Check for when elimination order doesn't have all the variables
         with pytest.raises(ValueError):
-            self.bayesian_inference.query(
+            bayesian_inference.query(
                 variables=["J"],
                 elimination_order=["A"],
             )
 
-    def test_induced_graph(self):
-        induced_graph = self.bayesian_inference.induced_graph(
-            ["G", "Q", "A", "J", "L", "R"]
-        )
+    def test_induced_graph(self, bayesian_inference):
+        induced_graph = bayesian_inference.induced_graph(["G", "Q", "A", "J", "L", "R"])
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
         assert [
             ["A", "J"],
@@ -329,75 +488,29 @@ class TestVariableElimination:
             ["L", "R"],
         ] == result_edges
 
-    def test_induced_width(self):
-        result_width = self.bayesian_inference.induced_width(
-            ["G", "Q", "A", "J", "L", "R"]
-        )
+    def test_induced_width(self, bayesian_inference):
+        result_width = bayesian_inference.induced_width(["G", "Q", "A", "J", "L", "R"])
         assert 2 == result_width
 
-    def test_invalid_state_name(self):
+    def test_invalid_state_name(self, bayesian_inference):
         """Test handling of invalid state names."""
         with pytest.raises(KeyError):
-            self.bayesian_inference.query(
+            bayesian_inference.query(
                 variables=["J"], evidence={"A": -1}, show_progress=False
             )
 
-    def test_invalid_variable_name(self):
+    def test_invalid_variable_name(self, bayesian_inference):
         """Test handling of invalid variable names."""
         with pytest.raises(ValueError):
-            self.bayesian_inference.query(
+            bayesian_inference.query(
                 variables=["J"], evidence={"wrong_variable": 0}, show_progress=False
             )
 
 
 class TestSnowNetwork:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.model = DiscreteBayesianNetwork(
-            [
-                ("Snow", "Risk"),
-                ("Snow", "Traffic"),
-                ("Traffic", "Late"),
-                ("Risk", "Late"),
-            ]
-        )
-
-        cpd_snow = TabularCPD(
-            "Snow", 2, [[0.4], [0.6]], state_names={"Snow": ["yes", "no"]}
-        )
-        cpd_risk = TabularCPD(
-            "Risk",
-            2,
-            [[0.8, 0.4], [0.2, 0.6]],
-            evidence=["Snow"],
-            evidence_card=[2],
-            state_names={"Snow": ["yes", "no"], "Risk": ["yes", "no"]},
-        )
-        cpd_traffic = TabularCPD(
-            "Traffic",
-            2,
-            [[0.4, 0.65], [0.6, 0.35]],
-            evidence=["Snow"],
-            evidence_card=[2],
-            state_names={"Traffic": ["normal", "slow"], "Snow": ["yes", "no"]},
-        )
-        cpd_late = TabularCPD(
-            "Late",
-            2,
-            [[0.45, 0.85, 0.1, 0.7], [0.55, 0.15, 0.90, 0.30]],
-            evidence=["Risk", "Traffic"],
-            evidence_card=[2, 2],
-            state_names={
-                "Late": ["yes", "no"],
-                "Traffic": ["normal", "slow"],
-                "Risk": ["yes", "no"],
-            },
-        )
-        self.model.add_cpds(cpd_snow, cpd_risk, cpd_traffic, cpd_late)
-
-    def test_queries(self):
+    def test_queries(self, snow_network_torch_model):
         for algo in [VariableElimination, BeliefPropagation]:
-            infer = algo(self.model)
+            infer = algo(snow_network_torch_model)
             query1 = infer.query(
                 ["Snow"], evidence={"Traffic": "slow"}, show_progress=False
             )
@@ -419,8 +532,8 @@ class TestSnowNetwork:
                     evidence={"Traffic": "slow"},
                 )
 
-    def test_elimination_order(self):
-        infer = VariableElimination(self.model)
+    def test_elimination_order(self, snow_network_torch_model):
+        infer = VariableElimination(snow_network_torch_model)
         for order in ["MinFill", "MinNeighbors", "MinWeight", "WeightedMinFill"]:
             computed_order = infer._get_elimination_order(
                 variables=["Traffic"], evidence={}, elimination_order=order
@@ -458,8 +571,8 @@ class TestSnowNetwork:
             )
             np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
 
-    def test_joint_distribution(self):
-        infer = VariableElimination(self.model)
+    def test_joint_distribution(self, snow_network_torch_model):
+        infer = VariableElimination(snow_network_torch_model)
         for order in [
             "greedy",
             "MinFill",
@@ -481,7 +594,7 @@ class TestSnowNetwork:
             for var in ["Snow", "Risk"]:
                 assert query_joint[var] == query_expected[var]
 
-    def test_virt_evidence(self):
+    def test_virt_evidence(self, snow_network_torch_model):
         virt_evidence_cpd = TabularCPD(
             "Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]}
         )
@@ -490,7 +603,7 @@ class TestSnowNetwork:
         )
         for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
             for algo in [VariableElimination, BeliefPropagation]:
-                infer = algo(self.model)
+                infer = algo(snow_network_torch_model)
                 query1 = infer.query(
                     ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
                 )
@@ -541,7 +654,7 @@ class TestSnowNetwork:
         for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
             for virt_evidence1 in [virt_evidence1_cpd, virt_evidence1_factor]:
                 for algo in [VariableElimination, BeliefPropagation]:
-                    infer = algo(self.model)
+                    infer = algo(snow_network_torch_model)
                     query1 = infer.query(
                         ["Snow"],
                         virtual_evidence=[virt_evidence, virt_evidence1],
@@ -605,100 +718,52 @@ class TestSnowNetwork:
 
 
 class TestVariableEliminationDuplicatedFactors:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
-        f1 = DiscreteFactor(
-            variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2
+    def test_duplicated_factors(self, test_duplicated_factors_markov_inference):
+        query_result = test_duplicated_factors_markov_inference.query(
+            ["A"], show_progress=False
         )
-        f2 = DiscreteFactor(
-            variables=["A", "C"], cardinality=[2, 2], values=np.eye(2) * 2
-        )
-        self.markov_model.add_factors(f1, f2)
-        self.markov_inference = VariableElimination(self.markov_model)
-
-    def test_duplicated_factors(self):
-        query_result = self.markov_inference.query(["A"], show_progress=False)
         assert query_result == DiscreteFactor(
             variables=["A"], cardinality=[2], values=np.array([4, 4])
         )
 
 
 class TestVariableEliminationMarkov:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
-        # are under consideration for inference so this should be fine.
-        self.markov_model = DiscreteMarkovNetwork(
-            [
-                ("A", "J"),
-                ("R", "J"),
-                ("J", "Q"),
-                ("J", "L"),
-                ("G", "L"),
-                ("A", "R"),
-                ("J", "G"),
-            ]
-        )
-
-        factor_a = TabularCPD("A", 2, values=[[0.2], [0.8]]).to_factor()
-        factor_r = TabularCPD("R", 2, values=[[0.4], [0.6]]).to_factor()
-        factor_j = TabularCPD(
-            "J",
-            2,
-            values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
-            evidence=["A", "R"],
-            evidence_card=[2, 2],
-        ).to_factor()
-        factor_q = TabularCPD(
-            "Q", 2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=["J"], evidence_card=[2]
-        ).to_factor()
-        factor_l = TabularCPD(
-            "L",
-            2,
-            values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
-            evidence=["J", "G"],
-            evidence_card=[2, 2],
-        ).to_factor()
-        factor_g = TabularCPD("G", 2, [[0.6], [0.4]]).to_factor()
-
-        self.markov_model.add_factors(
-            factor_a, factor_r, factor_j, factor_q, factor_l, factor_g
-        )
-        self.markov_inference = VariableElimination(self.markov_model)
-
-        yield
-
-        del self.markov_inference
-        del self.markov_model
 
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
-    def test_query_single_variable(self):
-        query_result = self.markov_inference.query(["J"], show_progress=False)
+    def test_query_single_variable(self, variable_elimination_markov_inference):
+        query_result = variable_elimination_markov_inference.query(
+            ["J"], show_progress=False
+        )
         assert query_result == DiscreteFactor(
             variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
         )
 
-    def test_query_multiple_variable(self):
-        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
+    def test_query_multiple_variable(self, variable_elimination_markov_inference):
+        query_result = variable_elimination_markov_inference.query(
+            ["Q", "J"], show_progress=False
+        )
         assert query_result == DiscreteFactor(
             variables=["Q", "J"],
             cardinality=[2, 2],
             values=np.array([[0.3744, 0.1168], [0.0416, 0.4672]]),
         )
 
-    def test_query_single_variable_with_evidence(self):
-        query_result = self.markov_inference.query(
+    def test_query_single_variable_with_evidence(
+        self, variable_elimination_markov_inference
+    ):
+        query_result = variable_elimination_markov_inference.query(
             variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         assert query_result == DiscreteFactor(
             variables=["J"], cardinality=[2], values=[0.072, 0.048]
         )
 
-    def test_query_multiple_variable_with_evidence(self):
-        query_result = self.markov_inference.query(
+    def test_query_multiple_variable_with_evidence(
+        self, variable_elimination_markov_inference
+    ):
+        query_result = variable_elimination_markov_inference.query(
             variables=["J", "Q"],
             evidence={"A": 0, "R": 0, "G": 0, "L": 1},
             show_progress=False,
@@ -709,38 +774,46 @@ class TestVariableEliminationMarkov:
             values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
         )
 
-    def test_query_multiple_times(self):
+    def test_query_multiple_times(self, variable_elimination_markov_inference):
         # This just tests that the models are not getting modified while querying them
-        query_result = self.markov_inference.query(["J"], show_progress=False)
-        query_result = self.markov_inference.query(["J"], show_progress=False)
+        query_result = variable_elimination_markov_inference.query(
+            ["J"], show_progress=False
+        )
+        query_result = variable_elimination_markov_inference.query(
+            ["J"], show_progress=False
+        )
         assert query_result == DiscreteFactor(
             variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
         )
 
-        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
-        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
+        query_result = variable_elimination_markov_inference.query(
+            ["Q", "J"], show_progress=False
+        )
+        query_result = variable_elimination_markov_inference.query(
+            ["Q", "J"], show_progress=False
+        )
         assert query_result == DiscreteFactor(
             variables=["Q", "J"],
             cardinality=[2, 2],
             values=np.array([[0.3744, 0.1168], [0.0416, 0.4672]]),
         )
 
-        query_result = self.markov_inference.query(
+        query_result = variable_elimination_markov_inference.query(
             variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
-        query_result = self.markov_inference.query(
+        query_result = variable_elimination_markov_inference.query(
             variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         assert query_result == DiscreteFactor(
             variables=["J"], cardinality=[2], values=[0.072, 0.048]
         )
 
-        query_result = self.markov_inference.query(
+        query_result = variable_elimination_markov_inference.query(
             variables=["J", "Q"],
             evidence={"A": 0, "R": 0, "G": 0, "L": 1},
             show_progress=False,
         )
-        query_result = self.markov_inference.query(
+        query_result = variable_elimination_markov_inference.query(
             variables=["J", "Q"],
             evidence={"A": 0, "R": 0, "G": 0, "L": 1},
             show_progress=False,
@@ -751,38 +824,42 @@ class TestVariableEliminationMarkov:
             values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
         )
 
-    def test_max_marginal(self):
+    def test_max_marginal(self, variable_elimination_markov_inference):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(), 0.1659, decimal=4
+            variable_elimination_markov_inference.max_marginal(), 0.1659, decimal=4
         )
 
-    def test_max_marginal_var(self):
+    def test_max_marginal_var(self, variable_elimination_markov_inference):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G"]), 0.1659, decimal=4
+            variable_elimination_markov_inference.max_marginal(["G"]), 0.1659, decimal=4
         )
 
-    def test_max_marginal_var1(self):
+    def test_max_marginal_var1(self, variable_elimination_markov_inference):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G", "R"]), 0.1659, decimal=4
+            variable_elimination_markov_inference.max_marginal(["G", "R"]),
+            0.1659,
+            decimal=4,
         )
 
-    def test_max_marginal_var2(self):
+    def test_max_marginal_var2(self, variable_elimination_markov_inference):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G", "R", "A"]), 0.1659, decimal=4
+            variable_elimination_markov_inference.max_marginal(["G", "R", "A"]),
+            0.1659,
+            decimal=4,
         )
 
-    def test_map_query(self):
-        map_query = self.markov_inference.map_query(show_progress=False)
+    def test_map_query(self, variable_elimination_markov_inference):
+        map_query = variable_elimination_markov_inference.map_query(show_progress=False)
         assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self):
-        map_query = self.markov_inference.map_query(
+    def test_map_query_with_evidence(self, variable_elimination_markov_inference):
+        map_query = variable_elimination_markov_inference.map_query(
             ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_induced_graph(self):
-        induced_graph = self.markov_inference.induced_graph(
+    def test_induced_graph(self, variable_elimination_markov_inference):
+        induced_graph = variable_elimination_markov_inference.induced_graph(
             ["G", "Q", "A", "J", "L", "R"]
         )
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
@@ -797,8 +874,8 @@ class TestVariableEliminationMarkov:
             ["L", "R"],
         ] == result_edges
 
-    def test_induced_width(self):
-        result_width = self.markov_inference.induced_width(
+    def test_induced_width(self, variable_elimination_markov_inference):
+        result_width = variable_elimination_markov_inference.induced_width(
             ["G", "Q", "A", "J", "L", "R"]
         )
         assert 2 == result_width
@@ -834,48 +911,8 @@ class TestVariableEliminationMarkov:
 
 
 class TestBeliefPropagation:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.junction_tree = JunctionTree(
-            [(("A", "B"), ("B", "C")), (("B", "C"), ("C", "D"))]
-        )
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
-        self.junction_tree.add_factors(phi1, phi2, phi3)
-
-        self.bayesian_model = DiscreteBayesianNetwork(
-            [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
-        )
-        cpd_a = TabularCPD("A", 2, values=[[0.2], [0.8]])
-        cpd_r = TabularCPD("R", 2, values=[[0.4], [0.6]])
-        cpd_j = TabularCPD(
-            "J",
-            2,
-            values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
-            evidence=["A", "R"],
-            evidence_card=[2, 2],
-        )
-        cpd_q = TabularCPD(
-            "Q", 2, values=[[0.9, 0.2], [0.1, 0.8]], evidence=["J"], evidence_card=[2]
-        )
-        cpd_l = TabularCPD(
-            "L",
-            2,
-            values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
-            evidence=["J", "G"],
-            evidence_card=[2, 2],
-        )
-        cpd_g = TabularCPD("G", 2, values=[[0.6], [0.4]])
-        self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
-
-        yield
-
-        del self.junction_tree
-        del self.bayesian_model
-
-    def test_calibrate_clique_belief(self):
-        belief_propagation = BeliefPropagation(self.junction_tree)
+    def test_calibrate_clique_belief(self, junction_tree):
+        belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.calibrate()
         clique_belief = belief_propagation.get_clique_beliefs()
 
@@ -898,8 +935,8 @@ class TestBeliefPropagation:
         assert clique_belief[("B", "C")] == b_B_C
         assert clique_belief[("C", "D")] == b_C_D
 
-    def test_calibrate_sepset_belief(self):
-        belief_propagation = BeliefPropagation(self.junction_tree)
+    def test_calibrate_sepset_belief(self, junction_tree):
+        belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.calibrate()
         sepset_belief = belief_propagation.get_sepset_beliefs()
 
@@ -929,8 +966,8 @@ class TestBeliefPropagation:
             sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values
         )
 
-    def test_max_calibrate_clique_belief(self):
-        belief_propagation = BeliefPropagation(self.junction_tree)
+    def test_max_calibrate_clique_belief(self, junction_tree):
+        belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.max_calibrate()
         clique_belief = belief_propagation.get_clique_beliefs()
 
@@ -952,8 +989,8 @@ class TestBeliefPropagation:
         assert clique_belief[("B", "C")] == b_B_C
         assert clique_belief[("C", "D")] == b_C_D
 
-    def test_max_calibrate_sepset_belief(self):
-        belief_propagation = BeliefPropagation(self.junction_tree)
+    def test_max_calibrate_sepset_belief(self, junction_tree):
+        belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.max_calibrate()
         sepset_belief = belief_propagation.get_sepset_beliefs()
 
@@ -986,15 +1023,15 @@ class TestBeliefPropagation:
     # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
-    def test_query_single_variable(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_query_single_variable(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(["J"], show_progress=False)
         assert query_result == DiscreteFactor(
             variables=["J"], cardinality=[2], values=[0.416, 0.584]
         )
 
-    def test_query_multiple_variable(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_query_multiple_variable(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(["Q", "J"], show_progress=False)
         assert query_result == DiscreteFactor(
             variables=["J", "Q"],
@@ -1002,8 +1039,8 @@ class TestBeliefPropagation:
             values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
         )
 
-    def test_query_single_variable_with_evidence(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_query_single_variable_with_evidence(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(
             variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
@@ -1011,8 +1048,8 @@ class TestBeliefPropagation:
             variables=["J"], cardinality=[2], values=np.array([0.6, 0.4])
         )
 
-    def test_query_multiple_variable_with_evidence(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_query_multiple_variable_with_evidence(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(
             variables=["J", "Q"],
             evidence={"A": 0, "R": 0, "G": 0, "L": 1},
@@ -1024,25 +1061,25 @@ class TestBeliefPropagation:
             values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
         )
 
-    def test_query_common_var(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_query_common_var(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         with pytest.raises(ValueError):
             belief_propagation.query(variables=["J"], evidence=["J"])
 
-    def test_map_query(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_map_query(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         map_query = belief_propagation.map_query(show_progress=False)
         assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_map_query_with_evidence(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         map_query = belief_propagation.map_query(
             ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_map_query_common_var(self):
-        belief_propagation = BeliefPropagation(self.bayesian_model)
+    def test_map_query_common_var(self, bayesian_model):
+        belief_propagation = BeliefPropagation(bayesian_model)
         with pytest.raises(ValueError):
             belief_propagation.map_query(variables=["J"], evidence=["J"])
 
@@ -1096,49 +1133,23 @@ class TestBeliefPropagation:
 
 
 class TestBeliefPropagationWithMessagePassing:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.factor_graph = FactorGraph()
-        self.factor_graph.add_nodes_from(["A", "B", "C", "D"])
-
-        phi1 = DiscreteFactor(["A"], [2], [0.4, 0.6])
-        phi2 = DiscreteFactor(
-            ["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]]
-        )
-        phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
-        phi4 = DiscreteFactor(
-            ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
-        )
-
-        self.factor_graph.add_factors(phi1, phi2, phi3, phi4)
-
-        self.factor_graph.add_edges_from(
-            [
-                (phi1, "A"),
-                ("A", phi2),
-                (phi2, "B"),
-                ("B", phi3),
-                (phi3, "C"),
-                ("B", phi4),
-                (phi4, "D"),
-            ]
-        )
-
-        self.belief_propagation = BeliefPropagationWithMessagePassing(self.factor_graph)
-
-    def test_query_single_variable(self):
-        res = self.belief_propagation.query(["C"])
+    def test_query_single_variable(self, belief_propagation_with_message_passing):
+        res = belief_propagation_with_message_passing.query(["C"])
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
 
-    def test_query_multiple_variable(self):
-        res = self.belief_propagation.query(["A", "B", "C", "D"])
+    def test_query_multiple_variable(self, belief_propagation_with_message_passing):
+        res = belief_propagation_with_message_passing.query(["A", "B", "C", "D"])
         assert np.allclose(res["A"].values, np.array([0.4, 0.6]), atol=1e-20)
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
         assert np.allclose(res["D"].values, np.array([0.168, 0.143, 0.689]), atol=1e-20)
 
-    def test_query_single_variable_with_evidence(self):
-        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+    def test_query_single_variable_with_evidence(
+        self, belief_propagation_with_message_passing
+    ):
+        res = belief_propagation_with_message_passing.query(
+            ["B", "C"], {"A": 1, "D": 0}
+        )
         assert np.allclose(
             res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
         )
@@ -1146,8 +1157,12 @@ class TestBeliefPropagationWithMessagePassing:
             res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
         )
 
-    def test_query_multiple_variable_with_evidence(self):
-        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+    def test_query_multiple_variable_with_evidence(
+        self, belief_propagation_with_message_passing
+    ):
+        res = belief_propagation_with_message_passing.query(
+            ["B", "C"], {"A": 1, "D": 0}
+        )
         assert np.allclose(
             res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
         )
@@ -1155,19 +1170,23 @@ class TestBeliefPropagationWithMessagePassing:
             res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
         )
 
-    def test_query_single_variable_with_virtual_evidence(self):
+    def test_query_single_variable_with_virtual_evidence(
+        self, belief_propagation_with_message_passing
+    ):
         ve = [TabularCPD("A", 2, [[0.1], [0.9]])]
-        res = self.belief_propagation.query(["B"], virtual_evidence=ve)
+        res = belief_propagation_with_message_passing.query(["B"], virtual_evidence=ve)
         assert np.allclose(
             res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
         )
 
-    def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
+    def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(
+        self, belief_propagation_with_message_passing
+    ):
         ve = [
             TabularCPD("A", 2, [[0.027], [0.972]]),
             TabularCPD("B", 3, [[0.3], [0.6], [0.1]]),
         ]
-        res = self.belief_propagation.query(
+        res = belief_propagation_with_message_passing.query(
             ["B", "C"], evidence={"D": 0}, virtual_evidence=ve
         )
         assert np.allclose(
@@ -1177,28 +1196,40 @@ class TestBeliefPropagationWithMessagePassing:
             res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20
         )
 
-    def test_query_allows_multiple_virtual_evidence_per_variable(self):
+    def test_query_allows_multiple_virtual_evidence_per_variable(
+        self, belief_propagation_with_message_passing
+    ):
         ve1 = [
             TabularCPD("A", 2, [[0.1], [0.9]]),
             TabularCPD("A", 2, [[0.3], [0.7]]),
         ]
-        res1 = self.belief_propagation.query(["B"], virtual_evidence=ve1)
+        res1 = belief_propagation_with_message_passing.query(
+            ["B"], virtual_evidence=ve1
+        )
         cpd = TabularCPD("A", 2, [[0.1 * 0.3], [0.9 * 0.7]])
         cpd.normalize()
-        res2 = self.belief_propagation.query(["B"], virtual_evidence=[cpd])
+        res2 = belief_propagation_with_message_passing.query(
+            ["B"], virtual_evidence=[cpd]
+        )
         assert np.allclose(res1["B"].values, res2["B"].values, atol=1e-20)
         assert np.allclose(
             res2["B"].values, np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20
         )
 
-    def test_query_error_obs_var_has_evidence(self):
+    def test_query_error_obs_var_has_evidence(
+        self, belief_propagation_with_message_passing
+    ):
         with pytest.raises(ValueError):
-            self.belief_propagation.query(
+            belief_propagation_with_message_passing.query(
                 ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
             )
 
-    def test_query_single_variable_can_return_all_computed_messages(self):
-        res, messages = self.belief_propagation.query(["B"], get_messages=True)
+    def test_query_single_variable_can_return_all_computed_messages(
+        self, belief_propagation_with_message_passing
+    ):
+        res, messages = belief_propagation_with_message_passing.query(
+            ["B"], get_messages=True
+        )
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
         # Assert on messages values
         assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
@@ -1216,8 +1247,12 @@ class TestBeliefPropagationWithMessagePassing:
             atol=1e-20,
         )
 
-    def test_query_multiple_variable_returns_each_message_once(self):
-        res, messages = self.belief_propagation.query(["C", "B"], get_messages=True)
+    def test_query_multiple_variable_returns_each_message_once(
+        self, belief_propagation_with_message_passing
+    ):
+        res, messages = belief_propagation_with_message_passing.query(
+            ["C", "B"], get_messages=True
+        )
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
 
@@ -1250,21 +1285,8 @@ class TestBeliefPropagationWithMessagePassing:
     reason="execute only if required dependency present",
 )
 class TestVariableEliminationLinearGaussianAndFunctionalBayesian:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        from pgmpy.utils import get_example_model
-
-        config.set_backend("torch")
-
-        self.lgbm = get_example_model("ecoli70")
-        self.fbn = FunctionalBayesianNetwork([("X", "Y")])
-
-        yield
-
-        config.set_backend("numpy")
-
-    def test_query_linear_gaussian(self):
-        inference = VariableElimination(self.lgbm)
+    def test_query_linear_gaussian(self, variable_elimination_lgm):
+        inference = VariableElimination(variable_elimination_lgm)
         with pytest.raises(
             NotImplementedError,
             match="Variable Elimination is not supported for LinearGaussianBayesianNetwork."
@@ -1272,8 +1294,8 @@ class TestVariableEliminationLinearGaussianAndFunctionalBayesian:
         ):
             inference.query(["Y"])
 
-    def test_query_functional_bayesian(self):
-        inference = VariableElimination(self.fbn)
+    def test_query_functional_bayesian(self, variable_elimination_fbn):
+        inference = VariableElimination(variable_elimination_fbn)
         with pytest.raises(
             NotImplementedError,
             match="Variable Elimination is not supported for FunctionalBayesianNetwork."

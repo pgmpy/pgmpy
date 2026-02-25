@@ -23,116 +23,127 @@ def model():
     return model
 
 
-class TestBaseElimination:
-    @pytest.fixture(autouse=True)
-    def setUp(self, model):
-        self.model = model
-        self.elimination_order = BaseEliminationOrder(self.model)
+@pytest.fixture
+def test_elimination_order(model):
+    elimination_order = BaseEliminationOrder(model)
+    return elimination_order
 
-    def test_cost(self):
+
+@pytest.fixture
+def test_weighted_min_fill_elimination_order(model):
+    elimination_order = WeightedMinFill(model)
+    return elimination_order
+
+
+@pytest.fixture
+def test_min_neighbors_elimination_order(model):
+    elimination_order = MinNeighbors(model)
+    return elimination_order
+
+
+@pytest.fixture
+def test_min_weight_elimination_order(model):
+    elimination_order = MinWeight(model)
+    return elimination_order
+
+
+@pytest.fixture
+def test_min_fill_elimination_order(model):
+    elimination_order = MinFill(model)
+    return elimination_order
+
+
+class TestBaseElimination:
+    def test_cost(self, test_elimination_order):
         costs = {"diff": 0, "sat": 0, "reco": 0, "grade": 0, "intel": 0}
         for var, expected_cost in costs.items():
-            assert self.elimination_order.cost(var) == expected_cost
+            assert test_elimination_order.cost(var) == expected_cost
 
-    def test_fill_in_edges(self):
-        assert list(self.elimination_order.fill_in_edges("diff")) == []
+    def test_fill_in_edges(self, test_elimination_order):
+        assert list(test_elimination_order.fill_in_edges("diff")) == []
 
 
 class TestWeightedMinFill:
-    @pytest.fixture(autouse=True)
-    def setUp(self, model):
-        self.model = model
-        self.elimination_order = WeightedMinFill(self.model)
-
-    def test_cost(self):
+    def test_cost(self, test_weighted_min_fill_elimination_order):
         costs = {"diff": 4, "sat": 0, "reco": 0, "grade": 12, "intel": 12}
         for var, expected_cost in costs.items():
-            assert self.elimination_order.cost(var) == expected_cost
+            assert test_weighted_min_fill_elimination_order.cost(var) == expected_cost
 
-    def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            show_progress=False
+    def test_elimination_order(self, test_weighted_min_fill_elimination_order):
+        elimination_order = (
+            test_weighted_min_fill_elimination_order.get_elimination_order(
+                show_progress=False
+            )
         )
         assert set(elimination_order[:2]) == {"sat", "reco"}
         assert set(elimination_order[2:]) == {"grade", "intel", "diff"}
 
-    def test_elimination_order_given_nodes(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            nodes=["diff", "grade", "sat"], show_progress=False
+    def test_elimination_order_given_nodes(
+        self, test_weighted_min_fill_elimination_order
+    ):
+        elimination_order = (
+            test_weighted_min_fill_elimination_order.get_elimination_order(
+                nodes=["diff", "grade", "sat"], show_progress=False
+            )
         )
         assert elimination_order == ["sat", "diff", "grade"]
 
 
 class TestMinNeighbors:
-    @pytest.fixture(autouse=True)
-    def setUp(self, model):
-        self.model = model
-        self.elimination_order = MinNeighbors(self.model)
+    def test_cost(self, test_min_neighbors_elimination_order):
+        assert test_min_neighbors_elimination_order.cost("grade") == 3
+        assert test_min_neighbors_elimination_order.cost("reco") == 1
+        assert test_min_neighbors_elimination_order.cost("intel") == 3
 
-    def test_cost(self):
-        assert self.elimination_order.cost("grade") == 3
-        assert self.elimination_order.cost("reco") == 1
-        assert self.elimination_order.cost("intel") == 3
-
-    def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order(self, test_min_neighbors_elimination_order):
+        elimination_order = test_min_neighbors_elimination_order.get_elimination_order(
             show_progress=False
         )
         assert set(elimination_order[:2]) == {"sat", "reco"}
         assert set(elimination_order[2:]) == {"diff", "grade", "intel"}
 
-    def test_elimination_order_given_nodes(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order_given_nodes(self, test_min_neighbors_elimination_order):
+        elimination_order = test_min_neighbors_elimination_order.get_elimination_order(
             nodes=["diff", "grade", "sat"], show_progress=False
         )
         assert elimination_order == ["sat", "diff", "grade"]
 
 
 class TestMinWeight:
-    @pytest.fixture(autouse=True)
-    def setUp(self, model):
-        self.model = model
-        self.elimination_order = MinWeight(self.model)
+    def test_cost(self, test_min_weight_elimination_order):
+        assert test_min_weight_elimination_order.cost("diff") == 4
+        assert test_min_weight_elimination_order.cost("intel") == 8
+        assert test_min_weight_elimination_order.cost("reco") == 2
 
-    def test_cost(self):
-        assert self.elimination_order.cost("diff") == 4
-        assert self.elimination_order.cost("intel") == 8
-        assert self.elimination_order.cost("reco") == 2
-
-    def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order(self, test_min_weight_elimination_order):
+        elimination_order = test_min_weight_elimination_order.get_elimination_order(
             show_progress=False
         )
         assert elimination_order[0] in ["sat", "reco"]
         assert elimination_order[1] in ["sat", "reco"]
         assert set(elimination_order[2:]) == {"diff", "intel", "grade"}
 
-    def test_elimination_order_given_nodes(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order_given_nodes(self, test_min_weight_elimination_order):
+        elimination_order = test_min_weight_elimination_order.get_elimination_order(
             nodes=["diff", "grade", "sat"], show_progress=False
         )
         assert elimination_order == ["sat", "diff", "grade"]
 
 
 class TestMinFill:
-    @pytest.fixture(autouse=True)
-    def setUp(self, model):
-        self.model = model
-        self.elimination_order = MinFill(self.model)
+    def test_cost(self, test_min_fill_elimination_order):
+        assert test_min_fill_elimination_order.cost("diff") == 0
+        assert test_min_fill_elimination_order.cost("intel") == 1
+        assert test_min_fill_elimination_order.cost("sat") == 0
 
-    def test_cost(self):
-        assert self.elimination_order.cost("diff") == 0
-        assert self.elimination_order.cost("intel") == 1
-        assert self.elimination_order.cost("sat") == 0
-
-    def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order(self, test_min_fill_elimination_order):
+        elimination_order = test_min_fill_elimination_order.get_elimination_order(
             show_progress=False
         )
         assert set(elimination_order) == {"diff", "grade", "sat", "reco", "intel"}
 
-    def test_elimination_order_given_nodes(self):
-        elimination_order = self.elimination_order.get_elimination_order(
+    def test_elimination_order_given_nodes(self, test_min_fill_elimination_order):
+        elimination_order = test_min_fill_elimination_order.get_elimination_order(
             nodes=["diff", "grade", "intel"], show_progress=False
         )
         assert set(elimination_order) == {"diff", "grade", "intel"}
