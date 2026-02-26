@@ -37,8 +37,6 @@ class NSLM(_BaseDataset):
 
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
-        df = pd.read_csv(cls.data_url)
-        if len(cls.categorical_variables) > 0:
-            for col in cls.categorical_variables:
-                df[col] = df[col].astype("category")
-        return df
+        return pd.read_csv(
+            cls.data_url, dtype={k: "category" for k in cls.categorical_variables}
+        )
