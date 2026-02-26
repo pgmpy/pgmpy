@@ -27,7 +27,7 @@ def torch_backend():
 
 
 @pytest.fixture
-def bayesian_model(torch_backend):
+def bayesian_model():
     bayesian_model = DiscreteBayesianNetwork(
         [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
     )
@@ -62,7 +62,7 @@ def bayesian_inference(bayesian_model):
 
 
 @pytest.fixture
-def snow_network_torch_model(torch_backend):
+def snow_network_model():
     model = DiscreteBayesianNetwork(
         [
             ("Snow", "Risk"),
@@ -108,7 +108,7 @@ def snow_network_torch_model(torch_backend):
 
 
 @pytest.fixture
-def test_duplicated_factors_markov_inference(torch_backend):
+def test_duplicated_factors_markov_inference():
     markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
     f1 = DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2)
     f2 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=np.eye(2) * 2)
@@ -118,7 +118,7 @@ def test_duplicated_factors_markov_inference(torch_backend):
 
 
 @pytest.fixture
-def variable_elimination_markov_inference(torch_backend):
+def variable_elimination_markov_inference():
     # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
     # are under consideration for inference so this should be fine.
     markov_model = DiscreteMarkovNetwork(
@@ -160,7 +160,7 @@ def variable_elimination_markov_inference(torch_backend):
 
 
 @pytest.fixture
-def junction_tree(torch_backend):
+def junction_tree():
     junction_tree = JunctionTree([(("A", "B"), ("B", "C")), (("B", "C"), ("C", "D"))])
     phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
     phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
@@ -508,9 +508,9 @@ class TestVariableElimination:
 
 
 class TestSnowNetwork:
-    def test_queries(self, snow_network_torch_model):
+    def test_queries(self, snow_network_model):
         for algo in [VariableElimination, BeliefPropagation]:
-            infer = algo(snow_network_torch_model)
+            infer = algo(snow_network_model)
             query1 = infer.query(
                 ["Snow"], evidence={"Traffic": "slow"}, show_progress=False
             )
@@ -532,8 +532,8 @@ class TestSnowNetwork:
                     evidence={"Traffic": "slow"},
                 )
 
-    def test_elimination_order(self, snow_network_torch_model):
-        infer = VariableElimination(snow_network_torch_model)
+    def test_elimination_order(self, snow_network_model):
+        infer = VariableElimination(snow_network_model)
         for order in ["MinFill", "MinNeighbors", "MinWeight", "WeightedMinFill"]:
             computed_order = infer._get_elimination_order(
                 variables=["Traffic"], evidence={}, elimination_order=order
@@ -571,8 +571,8 @@ class TestSnowNetwork:
             )
             np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
 
-    def test_joint_distribution(self, snow_network_torch_model):
-        infer = VariableElimination(snow_network_torch_model)
+    def test_joint_distribution(self, snow_network_model):
+        infer = VariableElimination(snow_network_model)
         for order in [
             "greedy",
             "MinFill",
@@ -594,7 +594,7 @@ class TestSnowNetwork:
             for var in ["Snow", "Risk"]:
                 assert query_joint[var] == query_expected[var]
 
-    def test_virt_evidence(self, snow_network_torch_model):
+    def test_virt_evidence(self, snow_network_model):
         virt_evidence_cpd = TabularCPD(
             "Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]}
         )
@@ -603,7 +603,7 @@ class TestSnowNetwork:
         )
         for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
             for algo in [VariableElimination, BeliefPropagation]:
-                infer = algo(snow_network_torch_model)
+                infer = algo(snow_network_model)
                 query1 = infer.query(
                     ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
                 )
@@ -654,7 +654,7 @@ class TestSnowNetwork:
         for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
             for virt_evidence1 in [virt_evidence1_cpd, virt_evidence1_factor]:
                 for algo in [VariableElimination, BeliefPropagation]:
-                    infer = algo(snow_network_torch_model)
+                    infer = algo(snow_network_model)
                     query1 = infer.query(
                         ["Snow"],
                         virtual_evidence=[virt_evidence, virt_evidence1],
