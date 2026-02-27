@@ -248,6 +248,31 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         if not inplace:
             return pdag
+        
+    def subgraph(self, nodes):
+        """
+        Returns the subgraph of the PDAG induced by the specified nodes.
+
+        Parameters
+        ----------
+        nodes: list, array-like
+            List of nodes for which to return the subgraph.
+
+        Returns
+        -------
+        pgmpy.base.PDAG: The subgraph of the PDAG induced by the specified nodes.
+        """
+        pdag = PDAG(
+            directed_ebunch=[(u, v) for (u, v) in self.directed_edges if u in nodes and v in nodes],
+            undirected_ebunch=[(u, v) for (u, v) in self.undirected_edges if u in nodes and v in nodes],
+            latents=list(self.latents.intersection(nodes)),
+            exposures=self.exposures.intersection(nodes),
+            outcomes=self.outcomes.intersection(nodes)
+        )
+
+        for role, vars in self.get_role_dict().items():
+            pdag.with_role(role=role, variables=set(vars).intersection(nodes), inplace=True)
+        return pdag
 
     def _check_new_unshielded_collider(self, u, v):
         """
