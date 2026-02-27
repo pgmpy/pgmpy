@@ -675,7 +675,7 @@ class TestPDAG(unittest.TestCase):
 
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
-    
+
     def test_subgraph(self):
         pdag = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
@@ -683,11 +683,14 @@ class TestPDAG(unittest.TestCase):
             latents=["A"],
             roles={"exposures": ("B", "D"), "outcomes": ["C"]},
         )
-        sub_pdag = pdag.subgraph(nodes=["A", "B", "C"])
+        pdag.add_node("E")
+        sub_pdag = pdag.subgraph(nodes=["A", "B", "C", "E"])
         self.assertEqual(set(sub_pdag.edges()), {("B", "A"), ("A", "B"), ("A", "C")})
-        self.assertEqual(set(sub_pdag.nodes()), {"A", "B", "C"})
+        self.assertEqual(set(sub_pdag.nodes()), {"A", "B", "C", "E"})
         self.assertEqual(set(sub_pdag.directed_edges), {("A", "C")})
-        self.assertEqual(set(tuple(sorted(e)) for e in sub_pdag.undirected_edges), {("A", "B")})
+        self.assertEqual(
+            set(tuple(sorted(e)) for e in sub_pdag.undirected_edges), {("A", "B")}
+        )
         self.assertEqual(set(sub_pdag.latents), {"A"})
         self.assertEqual(set(sub_pdag.get_role("exposures")), {"B"})
         self.assertEqual(set(sub_pdag.get_role("outcomes")), {"C"})

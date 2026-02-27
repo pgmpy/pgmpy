@@ -274,6 +274,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             outcomes=self.outcomes.intersection(nodes),
         )
 
+        pdag.add_nodes_from(set(nodes) & set(self.nodes()))
+
         for role, vars in self.get_role_dict().items():
             pdag.with_role(
                 role=role, variables=set(vars).intersection(nodes), inplace=True
