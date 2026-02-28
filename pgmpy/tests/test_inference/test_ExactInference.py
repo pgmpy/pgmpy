@@ -636,6 +636,7 @@ class TestSnowNetwork(unittest.TestCase):
                     self.assertEqual(map4, {"Late": "yes"})
 
 
+
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
         self.markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
