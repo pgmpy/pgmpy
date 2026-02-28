@@ -30,6 +30,8 @@ ALL_DATASETS = [
     "goldberg",
     "hitters",
     "htru2",
+    "ihdp",
+    "ihdp2",
     "iq_brain_size",
     "lead",
     "myocardial_infarction",
