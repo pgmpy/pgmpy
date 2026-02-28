@@ -520,6 +520,57 @@ class LinearGaussianBayesianNetwork(DAG):
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
 
+    def do(
+        self,
+        nodes: Union[Hashable, List[Hashable]],
+        inplace: bool = False,
+    ) -> Optional["LinearGaussianBayesianNetwork"]:
+        """
+        Applies the do operation by removing incoming edges to `nodes`.
+
+        For each intervened variable, also updates its CPD to remove evidence
+        variables so that graph structure and CPDs stay consistent.
+
+        Parameters
+        ----------
+        nodes: hashable or list
+            Variable(s) to apply the do-operator on.
+
+        inplace: bool (default: False)
+            If inplace=True, modifies the current object. Otherwise returns a new
+            intervened model.
+
+        Returns
+        -------
+        LinearGaussianBayesianNetwork or None
+            Intervened model if `inplace=False`, else None.
+        """
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
+            )
+
+        model = self if inplace else self.copy()
+        adj_model = DAG.do(model, nodes, inplace=inplace)
+
+        if adj_model.cpds:
+            for node in nodes:
+                node_cpd = adj_model.get_cpds(node=node)
+                new_cpd = LinearGaussianCPD(
+                    variable=node,
+                    beta=[node_cpd.beta[0]],
+                    std=node_cpd.std,
+                )
+                adj_model.remove_cpds(node_cpd)
+                adj_model.add_cpds(new_cpd)
+
+        return adj_model
+
     def simulate(
         self,
         n_samples: int = 1000,
@@ -629,15 +680,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
         # Step 2: If do is specified, modify the network structure.
         if do != {}:
-            for var, val in do.items():
-                # Step 2.1: Remove incoming edges to the intervened
-                #  node as well as remove the CPD's of the intervened nodes.
-                for parent in list(model.get_parents(var)):
-                    model.remove_edge(parent, var)
+            model = model.do(nodes=list(do.keys()), inplace=False)
 
+            for var, val in do.items():
                 model.remove_cpds(model.get_cpds(var))
 
-                # Step 2.2 : For each child of an intervened node, change its CPD to remove
+                # Step 2.1 : For each child of an intervened node, change its CPD to remove
                 #  the parent (intervened node) from the evidence and update its intercept accordingly
                 for child in model.get_children(var):
                     child_cpd = model.get_cpds(child)

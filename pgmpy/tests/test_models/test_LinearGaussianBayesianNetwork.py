@@ -266,6 +266,24 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
         np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
 
+    def test_do_returns_valid_intervened_model(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        intervened_model = self.model.do(["x2"])
+
+        self.assertEqual(set(intervened_model.edges()), {("x2", "x3")})
+        self.assertTrue(intervened_model.check_model())
+        self.assertEqual(intervened_model.get_cpds("x2").evidence, [])
+
+    def test_do_inplace_updates_cpds(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        self.model.do(["x2"], inplace=True)
+
+        self.assertEqual(set(self.model.edges()), {("x2", "x3")})
+        self.assertTrue(self.model.check_model())
+        self.assertEqual(self.model.get_cpds("x2").evidence, [])
+
     def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
         model = LinearGaussianBayesianNetwork([("A", "B")])
         cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
