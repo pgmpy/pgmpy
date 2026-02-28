@@ -284,6 +284,22 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertTrue(self.model.check_model())
         self.assertEqual(self.model.get_cpds("x2").evidence, [])
 
+    def test_do_accepts_single_node_argument(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+        intervened_model = self.model.do("x2")
+
+        self.assertEqual(set(intervened_model.edges()), {("x2", "x3")})
+        self.assertEqual(intervened_model.get_cpds("x2").evidence, [])
+
+    def test_do_without_cpds(self):
+        model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+
+        intervened_model = model.do(["x2"])
+
+        self.assertEqual(set(intervened_model.edges()), {("x2", "x3")})
+        self.assertEqual(len(intervened_model.get_cpds()), 0)
+
     def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
         model = LinearGaussianBayesianNetwork([("A", "B")])
         cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
