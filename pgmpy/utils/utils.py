@@ -1,6 +1,4 @@
 import gzip
-import json
-import math
 
 import pandas as pd
 
@@ -39,7 +37,7 @@ def get_example_model(model: str):
 
     Example
     -------
-    >>> from pgmpy.data import get_example_model
+    >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model(model="asia")
     >>> model
 
@@ -175,45 +173,10 @@ def get_example_model(model: str):
             return reader.get_model()
 
     elif model in cont_models:
-        from pgmpy.factors.continuous import LinearGaussianCPD
         from pgmpy.models import LinearGaussianBayesianNetwork
 
-        with open(files("pgmpy") / path, "r") as f:
-            data = json.load(f)
-
-        # Extract nodes, arcs, and CPDs from the JSON file
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
-
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
-
-        # Create CPDs and add them to the model
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
-
-            # Extract the intercept
-            intercept = coefficients["(Intercept)"][0]
-
-            # Extract the parent coefficients
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            # Create LinearGaussianCPD for the node
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        # Add CPDs to the model
-        model.add_cpds(*cpds)
-        return model
+        full_path = str(files("pgmpy") / path)
+        return LinearGaussianBayesianNetwork.load(full_path)
 
     elif model in dag_models:
         from pgmpy.base import DAG

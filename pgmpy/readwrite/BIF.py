@@ -16,7 +16,6 @@ try:
         Word,
         ZeroOrMore,
         nums,
-        printables,
     )
 except ImportError as e:
     raise ImportError(
@@ -98,6 +97,12 @@ class BIFReader(object):
         self.network_name = match.group(1) if match else None
 
         block_pattern = re.compile(r"(variable|probability).*?\}\n", re.DOTALL)
+        # Regex for parsing probability headers: handles spaces and dots in names
+        prob_header_re = re.compile(r"probability\s*\(\s*(.+?)(?:\s*\|\s*(.+?))?\s*\)")
+        # Regex for detecting table/default keywords (not inside state names)
+        table_keyword_re = re.compile(r"(?:^|\{)\s*(table|default)\s", re.MULTILINE)
+        # Regex for extracting state names from type declarations
+        state_decl_re = re.compile(r"type\s+\w+\s*\[\s*\d+\s*\]\s*\{([^}]+)\}\s*;")
 
         self.variable_states = {}
         self.variable_names = []
@@ -114,9 +119,13 @@ class BIFReader(object):
             if block_content.startswith("variable"):
                 name = name_expr.search_string(block_content)[0][0]
                 self.variable_names.append(name)
-                self.variable_states[name] = list(
-                    state_expr.search_string(block_content)[0][0]
-                )
+                state_match = state_decl_re.search(block_content)
+                raw_states = state_match.group(1)
+                if "," in raw_states:
+                    states = [s.strip() for s in raw_states.split(",") if s.strip()]
+                else:
+                    states = raw_states.split()
+                self.variable_states[name] = states
                 if self.include_properties:
                     properties = property_expr.search_string(block_content)
                     self.variable_properties[name] = [
@@ -126,12 +135,41 @@ class BIFReader(object):
             # self.get_parents(), self.get_edges()
             elif block_content.startswith("probability"):
                 header_line = block_content.split("\n")[0]
-                names = probability_expr.search_string(header_line)[0]
-                var_name, parents = names[0], names[1:]
+                prob_match = prob_header_re.search(header_line)
+                var_name = prob_match.group(1).strip()
+                if prob_match.group(2):
+                    # Has | separator: supports multi-word names
+                    parents = [p.strip() for p in prob_match.group(2).split(",")]
+                else:
+                    # No | separator: fall back to space-separated word splitting
+                    # (old BIF format: first word is variable, rest are parents)
+                    words = var_name.split()
+                    if len(words) > 1:
+                        var_name = words[0]
+                        parents = list(words[1:])
+                    else:
+                        parents = []
 
                 self.variable_parents[var_name] = parents
                 self.variable_edges.extend([[p, var_name] for p in parents])
                 probability_blocks.append((block_content, var_name, parents))
+
+        # Normalize variable names in probability references to match declarations
+        # (handles case mismatches like "neuroticism" vs "NEUROTICISM")
+        name_map = {name.lower(): name for name in self.variable_names}
+        normalized_parents = {}
+        normalized_edges = []
+        for var_name, parents in self.variable_parents.items():
+            norm_var = name_map.get(var_name.lower(), var_name)
+            norm_parents = [name_map.get(p.lower(), p) for p in parents]
+            normalized_parents[norm_var] = norm_parents
+            normalized_edges.extend([[p, norm_var] for p in norm_parents])
+        self.variable_parents = normalized_parents
+        self.variable_edges = normalized_edges
+        probability_blocks = [
+            (bc, name_map.get(vn.lower(), vn), [name_map.get(p.lower(), p) for p in ps])
+            for bc, vn, ps in probability_blocks
+        ]
 
         # self.get_values()
         self.variable_cpds = {}
@@ -145,7 +183,7 @@ class BIFReader(object):
             cpds_list = cpd_expr.search_string(block_content)
             n_rows = len(self.variable_states[var_name])
 
-            if ("table " in block_content) or ("default " in block_content):
+            if table_keyword_re.search(block_content):
                 arr = [float(j) for i in cpds_list for j in i]
                 arr = np.array(arr).reshape(n_rows, -1)
                 self.variable_cpds[var_name] = arr
@@ -178,20 +216,23 @@ class BIFReader(object):
         """
         A method that returns variable grammar
         """
-        # Defining an expression for valid word
-        word_expr = Word(pp.unicode.alphanums + "_" + "-" + ".")
-        word_expr2 = Word(init_chars=printables, exclude_chars=["{", "}", ",", " "])
-        name_expr = Suppress("variable") + word_expr + Suppress("{")
-        state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
+        # Variable name: everything between "variable" and "{", allowing spaces
+        name_expr = (
+            Suppress("variable")
+            + pp.Regex(r"[^{]+").setParseAction(lambda t: t[0].strip())
+            + Suppress("{")
+        )
+        # State names: comma-separated values that may contain spaces
+        state_value = pp.Regex(r"[^,};]+").setParseAction(lambda t: t[0].strip())
         # Defining a variable state expression
         variable_state_expr = (
             Suppress("type")
-            + Suppress(word_expr)
+            + Suppress(Word(pp.unicode.alphanums + "_" + "-" + "."))
             + Suppress("[")
             + Suppress(Word(nums))
             + Suppress("]")
             + Suppress("{")
-            + Group(state_expr)
+            + Group(state_value + ZeroOrMore(Suppress(",") + state_value))
             + Suppress("}")
             + Suppress(";")
         )
@@ -210,13 +251,10 @@ class BIFReader(object):
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
         word_expr = (
-            Word(pp.unicode.alphanums + "-" + "_")
+            Word(pp.unicode.alphanums + "-" + "_" + ".")
             + Suppress(Optional("|"))
             + Suppress(Optional(","))
         )
-        word_expr2 = Word(
-            init_chars=printables, exclude_chars=[",", ")", " ", "("]
-        ) + Suppress(Optional(","))
         # creating an expression for valid numbers, of the format
         # 1.00 or 1 or 1.00. 0.00 or 9.8e-5 etc
         num_expr = Word(nums + "-" + "+" + "e" + "E" + ".") + Suppress(Optional(","))
@@ -226,7 +264,14 @@ class BIFReader(object):
             + OneOrMore(word_expr)
             + Suppress(")")
         )
-        optional_expr = Suppress("(") + OneOrMore(word_expr2) + Suppress(")")
+        # State values in CPD rows: comma-separated values that may contain spaces
+        state_value = pp.Regex(r"[^,)]+").setParseAction(lambda t: t[0].strip())
+        optional_expr = (
+            Suppress("(")
+            + state_value
+            + ZeroOrMore(Suppress(",") + state_value)
+            + Suppress(")")
+        )
         probab_attributes = optional_expr | Suppress("table") | Suppress("default")
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 

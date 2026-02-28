@@ -1,9 +1,12 @@
+import io
+import os
 import unittest
 
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
+from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -566,3 +569,28 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
         self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
         self.assertEqual(model_from_str.get_cpds("smoking").std, 1)
+
+
+class TestLGBNIO(unittest.TestCase):
+    def setUp(self):
+        self.model = load_model("bnlearn/ecoli70")
+        self.filename = "ecoli70.json"
+        self.model.save(self.filename)
+
+    def test_save_and_load(self):
+        """Test basic save and load functionality"""
+        loaded_model = LinearGaussianBayesianNetwork.load("ecoli70.json")
+        assert self.model == loaded_model
+
+    def test_load_from_file_object(self):
+        """Test loading from file-like object"""
+        with open(self.filename, "rb") as f:
+            file_obj = io.BytesIO(f.read())
+
+        loaded_model = LinearGaussianBayesianNetwork.load(file_obj)
+        assert self.model == loaded_model
+
+    def tearDown(self):
+        """Clean up the test file"""
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
