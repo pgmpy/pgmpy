@@ -55,7 +55,7 @@ def bayesian_inference(bayesian_model):
 
 
 @pytest.fixture
-def test_duplicated_factors_markov_inference(torch_backend):
+def duplicated_factors_markov_inference(torch_backend):
     markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
     f1 = DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2)
     f2 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=np.eye(2) * 2)
@@ -668,8 +668,8 @@ class TestSnowNetworkTorch:
     reason="execute only if required dependency present",
 )
 class TestVariableEliminationDuplicatedFactors:
-    def test_duplicated_factors(self, test_duplicated_factors_markov_inference):
-        query_result = test_duplicated_factors_markov_inference.query(
+    def test_duplicated_factors(self, duplicated_factors_markov_inference):
+        query_result = duplicated_factors_markov_inference.query(
             ["A"], show_progress=False
         )
         assert query_result == DiscreteFactor(

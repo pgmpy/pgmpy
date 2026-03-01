@@ -5,7 +5,7 @@ from pgmpy.inference.mplp import Mplp
 from pgmpy.readwrite import UAIReader
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mplp_model():
     reader_file = UAIReader(
         "pgmpy/tests/test_readwrite/testdata/grid4x4_with_triplets.uai"
