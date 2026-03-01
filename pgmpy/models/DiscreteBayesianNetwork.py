@@ -212,16 +212,19 @@ class DiscreteBayesianNetwork(DAG):
                     child_factor = child_cpd.to_factor()
                     removed_factor = removed_cpd.to_factor()
                     product = child_factor * removed_factor
+                    # First marginalize out the removed node itself.
                     product.marginalize([node], inplace=True)
-                    product.normalize(inplace=True)
-
-                    # Rebuild the TabularCPD from the marginalized factor
+                    # Restrict the reconstructed CPD to the child's existing parents only.
+                    # Any extra variables introduced via removed_cpd are marginalized out so that
+                    # the CPD's evidence matches the graph parents, avoiding inconsistency.
                     new_evidence = [v for v in child_cpd.variables[1:] if v != node]
-                    new_evidence += [
+                    extra_vars = [
                         v
                         for v in product.variables
                         if v != affected_node and v not in new_evidence
                     ]
+                    if extra_vars:
+                        product.marginalize(extra_vars, inplace=True)
                     if new_evidence:
                         new_evidence_card = [
                             int(product.get_cardinality([v])[v]) for v in new_evidence
@@ -246,6 +249,7 @@ class DiscreteBayesianNetwork(DAG):
                             v: product.state_names[v] for v in product.variables
                         },
                     )
+                    new_cpd.normalize()
                     # Reorder to match the factor's variable ordering
                     if new_evidence:
                         new_cpd.reorder_parents(new_evidence, inplace=True)
@@ -720,7 +724,7 @@ class DiscreteBayesianNetwork(DAG):
 
         # If state_names not explicitly provided, preserve any existing CPD state_names
         # so that states present in the model but absent from data are not lost.
-        if not state_names and bn.cpds:
+        if state_names is None and bn.cpds:
             state_names = {}
             for cpd in bn.cpds:
                 state_names.update(cpd.state_names)

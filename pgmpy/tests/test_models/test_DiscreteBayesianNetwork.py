@@ -1136,6 +1136,32 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         self.assertEqual(model.get_cpds("A").variable_card, 3)
         self.assertIn("high", model.get_cpds("A").state_names["A"])
 
+    def test_fit_preserves_state_names_integer_data_issue_2207(self):
+        # Regression: fit() with integer-encoded data when CPD has integer state_names.
+        model = DiscreteBayesianNetwork([("X", "Y")])
+        cpd_x = TabularCPD(
+            "X",
+            3,
+            [[0.2], [0.3], [0.5]],
+            state_names={"X": [0, 1, 2]},
+        )
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.4, 0.9, 0.8], [0.6, 0.1, 0.2]],
+            evidence=["X"],
+            evidence_card=[3],
+            state_names={"X": [0, 1, 2], "Y": [0, 1]},
+        )
+        model.add_cpds(cpd_x, cpd_y)
+
+        # Integer data missing state 2
+        data = pd.DataFrame({"X": [0, 0, 1, 1], "Y": [0, 1, 0, 1]})
+        model.fit(data)
+
+        self.assertEqual(model.get_cpds("X").variable_card, 3)
+        self.assertIn(2, model.get_cpds("X").state_names["X"])
+
     def test_fit_update(self):
         model = get_example_model("asia")
         model_copy = model.copy()
@@ -1606,6 +1632,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             result = titanic.predict(
                 self.titanic_data2[["Sex", "Pclass"]][:30],
                 algo=BeliefPropagation,
+                n_jobs=2,
             )
             self.assertEqual(result.shape, (30, 3))
 
