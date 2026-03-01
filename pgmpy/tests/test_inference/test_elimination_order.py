@@ -69,7 +69,7 @@ class TestWeightedMinFill:
         for var, expected_cost in costs.items():
             assert weighted_min_fill_elimination_order.cost(var) == expected_cost
 
-    def elimination_order(self, weighted_min_fill_elimination_order):
+    def test_elimination_order(self, weighted_min_fill_elimination_order):
         elimination_order = weighted_min_fill_elimination_order.get_elimination_order(
             show_progress=False
         )
@@ -89,7 +89,7 @@ class TestMinNeighbors:
         assert min_neighbors_elimination_order.cost("reco") == 1
         assert min_neighbors_elimination_order.cost("intel") == 3
 
-    def elimination_order(self, min_neighbors_elimination_order):
+    def test_elimination_order(self, min_neighbors_elimination_order):
         elimination_order = min_neighbors_elimination_order.get_elimination_order(
             show_progress=False
         )
@@ -109,7 +109,7 @@ class TestMinWeight:
         assert min_weight_elimination_order.cost("intel") == 8
         assert min_weight_elimination_order.cost("reco") == 2
 
-    def elimination_order(self, min_weight_elimination_order):
+    def test_elimination_order(self, min_weight_elimination_order):
         elimination_order = min_weight_elimination_order.get_elimination_order(
             show_progress=False
         )
