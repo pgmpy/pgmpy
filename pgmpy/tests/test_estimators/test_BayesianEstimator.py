@@ -17,6 +17,17 @@ def shutdown_executor():
     get_reusable_executor().shutdown(wait=True)
 
 
+requires_daft = pytest.mark.skipif(
+    not _check_soft_dependencies("daft-pgm", severity="none"),
+    reason="execute only if required dependency present",
+)
+
+requires_torch = pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
+    reason="requires torch to be installed",
+)
+
+
 @pytest.fixture
 def models():
     m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
@@ -255,12 +266,6 @@ def test_node_specific_ess_matches_uniform_ess(models):
     assert set(cpds_scalar) == set(cpds_dict)
 
 
-requires_daft = pytest.mark.skipif(
-    not _check_soft_dependencies("daft-pgm", severity="none"),
-    reason="execute only if required dependency present",
-)
-
-
 @pytest.fixture
 def torch_models():
     config.set_backend("torch")
@@ -289,12 +294,14 @@ def torch_models():
     config.set_backend("numpy")
 
 
+@requires_torch
 def test_error_latent_model_torch(torch_models):
     with pytest.raises(ValueError):
         BayesianEstimator(torch_models["model_latent"], torch_models["d1"])
 
 
 @requires_daft
+@requires_torch
 def test_estimate_cpd_dirichlet_torch(torch_models):
     est1 = torch_models["est1"]
     cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=[[0], [1]])
@@ -331,6 +338,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
     assert cpd_C == cpd_C_exp
 
 
+@requires_torch
 def test_estimate_cpd_improper_prior_torch(torch_models):
     cpd_C = torch_models["est1"].estimate_cpd(
         "C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]]
@@ -352,6 +360,7 @@ def test_estimate_cpd_improper_prior_torch(torch_models):
 
 
 @requires_daft
+@requires_torch
 def test_estimate_cpd_shortcuts_torch(torch_models):
     est2, est3 = torch_models["est2"], torch_models["est3"]
     cpd_C1 = est2.estimate_cpd("C", prior_type="BDeu", equivalent_sample_size=9)
@@ -385,6 +394,7 @@ def test_estimate_cpd_shortcuts_torch(torch_models):
 
 
 @requires_daft
+@requires_torch
 def test_get_parameters_torch(torch_models):
     est3 = torch_models["est3"]
     cpds = [
@@ -399,6 +409,7 @@ def test_get_parameters_torch(torch_models):
 
 
 @requires_daft
+@requires_torch
 def test_get_parameters2_torch(torch_models):
     est3 = torch_models["est3"]
     pseudo_counts = {
@@ -426,6 +437,7 @@ def test_get_parameters2_torch(torch_models):
 
 
 @requires_daft
+@requires_torch
 def test_get_parameters3_torch(torch_models):
     est3 = torch_models["est3"]
     pseudo_counts = 0.1
