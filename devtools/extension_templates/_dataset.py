@@ -36,9 +36,12 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
+    # TODO: Add the base URL for your dataset assets (required for cache key generation in _BaseDataset).
+    base_url = "https://raw.githubusercontent.com/your-org/your-dataset-repo/main/your-dataset/"
+
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
     # row containing the names of the columns.
-    data_url = None
+    data_url = base_url + "data/your_dataset_name.txt"
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = None
