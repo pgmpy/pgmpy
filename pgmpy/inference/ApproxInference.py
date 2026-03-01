@@ -190,20 +190,16 @@ class ApproxInference(object):
         # possible states are represented (sampling may miss rare states).
         if state_names is None:
             if hasattr(self.model, "states") and self.model.states:
-                state_names = {
-                    var: self.model.states[var]
-                    for var in variables
-                    if var in self.model.states
-                }
-                # Fall back to sample-derived states for any missing variables
+                state_names = {}
                 for var in variables:
-                    if var not in state_names:
-                        if isinstance(self.model, DynamicBayesianNetwork):
-                            state_names[var] = list(
-                                samples.loc[:, [var]].iloc[:, 0].unique()
-                            )
-                        else:
-                            state_names[var] = list(samples.loc[:, var].unique())
+                    if var in self.model.states:
+                        state_names[var] = list(self.model.states[var])
+                    elif isinstance(self.model, DynamicBayesianNetwork):
+                        state_names[var] = list(
+                            samples.loc[:, [var]].iloc[:, 0].unique()
+                        )
+                    else:
+                        state_names[var] = list(samples.loc[:, var].unique())
             elif isinstance(self.model, DiscreteBayesianNetwork):
                 state_names = {
                     var: list(samples.loc[:, var].unique()) for var in variables

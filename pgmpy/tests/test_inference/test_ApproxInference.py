@@ -196,8 +196,8 @@ class TestApproxInferenceDBN(unittest.TestCase):
         all possible states are always represented.
         """
         result = self.infer.query([("Y", 0)], seed=42)
-        # Model states for ("Y", 0) are [0, 1]; both must be present.
-        self.assertEqual(len(result.state_names[("Y", 0)]), 2)
+        # Model states for ("Y", 0) are [0, 1]; both must be present and in canonical order.
+        self.assertEqual(result.state_names[("Y", 0)], [0, 1])
         vals = result.values
         self.assertAlmostEqual(sum(vals), 1.0, places=2)
         self.assertTrue(all(v >= 0 for v in vals))
