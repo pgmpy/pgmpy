@@ -15,52 +15,46 @@ def torch_backend():
     config.set_backend("numpy")
 
 
-def _build_infer_alarm():
-    alarm_model = get_example_model("alarm")
-    infer_alarm = ApproxInference(alarm_model)
-    return infer_alarm
+@pytest.fixture
+def alarm_model():
+    return get_example_model("alarm")
 
 
 @pytest.fixture
-def infer_alarm():
-    return _build_infer_alarm()
+def alarm_model_torch(torch_backend):
+    return get_example_model("alarm")
 
 
 @pytest.fixture
-def infer_alarm_torch(torch_backend):
-    return _build_infer_alarm()
-
-
-def _build_alarm_ve():
-    alarm_model = get_example_model("alarm")
-    alarm_ve = VariableElimination(alarm_model)
-    return alarm_ve
+def infer_alarm(alarm_model):
+    return ApproxInference(alarm_model)
 
 
 @pytest.fixture
-def alarm_variable_elimination():
-    return _build_alarm_ve()
+def infer_alarm_torch(alarm_model_torch):
+    return ApproxInference(alarm_model_torch)
 
 
 @pytest.fixture
-def alarm_variable_elimination_torch(torch_backend):
-    return _build_alarm_ve()
+def alarm_variable_elimination(alarm_model):
+    return VariableElimination(alarm_model)
 
 
-def _build_alarm_samples():
-    alarm_model = get_example_model("alarm")
+@pytest.fixture
+def alarm_variable_elimination_torch(alarm_model_torch):
+    return VariableElimination(alarm_model_torch)
+
+
+@pytest.fixture
+def alarm_samples(alarm_model):
     samples = alarm_model.simulate(int(1e4))
     return samples
 
 
 @pytest.fixture
-def alarm_samples():
-    return _build_alarm_samples()
-
-
-@pytest.fixture
-def alarm_samples_torch(torch_backend):
-    return _build_alarm_samples()
+def alarm_samples_torch(alarm_model_torch):
+    samples = alarm_model_torch.simulate(int(1e4))
+    return samples
 
 
 def _build_approx_inference_dbn_inference():
