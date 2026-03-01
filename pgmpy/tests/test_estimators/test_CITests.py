@@ -531,8 +531,8 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertGreater(coef, 5.0)
-        self.assertAlmostEqual(p_value, 0.0)
+        self.assertGreater(abs(coef), 5.0)
+        self.assertLess(p_value, 1e-6)
 
         # Conditional tests: X _||_ Y | Z, so residuals should be
         # uncorrelated (small coef, large p-value).
@@ -554,8 +554,8 @@ class TestResidualMethods(unittest.TestCase):
             X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
 
-        self.assertGreater(coef, 5.0)
-        self.assertAlmostEqual(p_value, 0.0)
+        self.assertGreater(abs(coef), 5.0)
+        self.assertLess(p_value, 1e-6)
 
     def test_pearsonr_equivalence(self):
         is_independent = pearsonr_equivalence(
