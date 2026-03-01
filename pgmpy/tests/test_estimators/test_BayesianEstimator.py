@@ -295,7 +295,7 @@ def test_error_latent_model_torch(torch_models):
 
 
 @requires_daft
-def test_estimate_cpd_dirichlet(torch_models):
+def test_estimate_cpd_dirichlet_torch(torch_models):
     est1 = torch_models["est1"]
     cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=[[0], [1]])
     cpd_A_exp = TabularCPD(
@@ -331,7 +331,7 @@ def test_estimate_cpd_dirichlet(torch_models):
     assert cpd_C == cpd_C_exp
 
 
-def test_estimate_cpd_improper_prior(torch_models):
+def test_estimate_cpd_improper_prior_torch(torch_models):
     cpd_C = torch_models["est1"].estimate_cpd(
         "C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]]
     )
@@ -352,7 +352,7 @@ def test_estimate_cpd_improper_prior(torch_models):
 
 
 @requires_daft
-def test_estimate_cpd_shortcuts(torch_models):
+def test_estimate_cpd_shortcuts_torch(torch_models):
     est2, est3 = torch_models["est2"], torch_models["est3"]
     cpd_C1 = est2.estimate_cpd("C", prior_type="BDeu", equivalent_sample_size=9)
     cpd_C1_correct = TabularCPD(
@@ -385,7 +385,7 @@ def test_estimate_cpd_shortcuts(torch_models):
 
 
 @requires_daft
-def test_get_parameters(torch_models):
+def test_get_parameters_torch(torch_models):
     est3 = torch_models["est3"]
     cpds = [
         est3.estimate_cpd("A"),
@@ -399,7 +399,7 @@ def test_get_parameters(torch_models):
 
 
 @requires_daft
-def test_get_parameters2(torch_models):
+def test_get_parameters2_torch(torch_models):
     est3 = torch_models["est3"]
     pseudo_counts = {
         "A": [[1], [2], [3]],
@@ -426,7 +426,7 @@ def test_get_parameters2(torch_models):
 
 
 @requires_daft
-def test_get_parameters3(torch_models):
+def test_get_parameters3_torch(torch_models):
     est3 = torch_models["est3"]
     pseudo_counts = 0.1
     cpds = {
