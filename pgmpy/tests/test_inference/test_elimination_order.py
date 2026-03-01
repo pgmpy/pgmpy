@@ -130,7 +130,7 @@ class TestMinFill:
         assert min_fill_elimination_order.cost("intel") == 1
         assert min_fill_elimination_order.cost("sat") == 0
 
-    def elimination_order(self, min_fill_elimination_order):
+    def test_elimination_order(self, min_fill_elimination_order):
         elimination_order = min_fill_elimination_order.get_elimination_order(
             show_progress=False
         )
