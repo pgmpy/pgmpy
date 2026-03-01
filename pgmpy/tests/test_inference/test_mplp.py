@@ -46,7 +46,7 @@ class TestTightenTripletOff:
 
         # The final Integrality gap after solving for the present case
         int_gap = mplp_model.get_integrality_gap()
-        assert int_gap == pytest.approx(64.59, abs=0.1)
+        assert int_gap == pytest.approx(64.59, abs=0.05)
 
 
 class TestTightenTripletOn:
