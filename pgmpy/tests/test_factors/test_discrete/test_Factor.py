@@ -690,7 +690,7 @@ class TestFactorMethods(unittest.TestCase):
         # Regression: 0-dim numpy arrays (and torch tensors) were not recognized
         # as scalars by product() and sum(), causing AttributeError.
         phi = DiscreteFactor(["x1"], [2], [0.3, 0.7])
-        scalar = np.float64(0.5)  # 0-dim numpy scalar, same ndim==0 as torch tensor
+        scalar = np.array(0.5)  # 0-dim numpy array, same ndim==0 as torch tensor result
         result = phi * scalar
         np_test.assert_array_almost_equal(result.values, [0.15, 0.35])
 
