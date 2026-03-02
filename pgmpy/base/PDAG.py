@@ -262,23 +262,29 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         -------
         pgmpy.base.PDAG: The subgraph of the PDAG induced by the specified nodes.
         """
+        node_set = set(nodes) & set(self.nodes())
+
         pdag = PDAG(
             directed_ebunch=[
-                (u, v) for (u, v) in self.directed_edges if u in nodes and v in nodes
+                (u, v)
+                for (u, v) in self.directed_edges
+                if u in node_set and v in node_set
             ],
             undirected_ebunch=[
-                (u, v) for (u, v) in self.undirected_edges if u in nodes and v in nodes
+                (u, v)
+                for (u, v) in self.undirected_edges
+                if u in node_set and v in node_set
             ],
-            latents=self.latents.intersection(nodes),
-            exposures=self.exposures.intersection(nodes),
-            outcomes=self.outcomes.intersection(nodes),
+            latents=self.latents.intersection(node_set),
+            exposures=self.exposures.intersection(node_set),
+            outcomes=self.outcomes.intersection(node_set),
         )
 
-        pdag.add_nodes_from(set(nodes) & set(self.nodes()))
+        pdag.add_nodes_from(node_set)
 
         for role, vars in self.get_role_dict().items():
             pdag.with_role(
-                role=role, variables=set(vars).intersection(nodes), inplace=True
+                role=role, variables=set(vars).intersection(node_set), inplace=True
             )
         return pdag
 
