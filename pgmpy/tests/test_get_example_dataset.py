@@ -7,13 +7,20 @@ Run with:
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+from urllib.parse import urlparse
 import pandas as pd
 
-from pgmpy.utils.get_example_model import (
+# BUG 1 FIX: import from the correct module — get_example_dataset, not get_example_model.
+from pgmpy.utils.get_example_dataset import (
     get_example_dataset,
     DEFAULT_BASE_URL,
 )
+
+
+# ---------------------------------------------------------------------------
+# 1.  DEFAULT_BASE_URL sanity check
+# ---------------------------------------------------------------------------
 
 class TestDefaultBaseUrl:
     def test_default_url_is_set(self):
@@ -21,18 +28,45 @@ class TestDefaultBaseUrl:
         assert DEFAULT_BASE_URL, "DEFAULT_BASE_URL must not be empty"
 
     def test_default_url_points_to_raw_github(self):
-        """The default URL must point to raw.githubusercontent.com."""
-        assert "raw.githubusercontent.com" in DEFAULT_BASE_URL
+        """
+        The default URL must point to raw.githubusercontent.com.
+
+        BUG 2 FIX: the previous version referenced an undefined variable `url`.
+        BUG 3 FIX (CodeQL — Incomplete URL substring sanitization):
+            Using `"raw.githubusercontent.com" in DEFAULT_BASE_URL` is unsafe
+            because the substring could appear anywhere in the string, e.g.:
+                https://evil.com?redirect=raw.githubusercontent.com
+            would pass the check despite pointing to the wrong host.
+            The correct approach is to parse the URL and assert on `netloc`
+            directly, which is the only component that represents the hostname.
+        """
+        parsed = urlparse(DEFAULT_BASE_URL)
+        assert parsed.netloc == "raw.githubusercontent.com", (
+            f"Expected netloc 'raw.githubusercontent.com', got '{parsed.netloc}'"
+        )
+
+    def test_default_url_uses_https_scheme(self):
+        """The default URL must use HTTPS, not HTTP."""
+        parsed = urlparse(DEFAULT_BASE_URL)
+        assert parsed.scheme == "https", (
+            f"Expected scheme 'https', got '{parsed.scheme}'"
+        )
 
     def test_default_url_contains_example_datasets(self):
-        """The default URL must reference the example_datasets repository."""
-        assert "example_datasets" in DEFAULT_BASE_URL
+        """The URL path must reference the example_datasets repository."""
+        parsed = urlparse(DEFAULT_BASE_URL)
+        assert "example_datasets" in parsed.path, (
+            f"'example_datasets' not found in URL path: '{parsed.path}'"
+        )
 
     def test_default_url_ends_with_slash(self):
         """URL must end with / so path joins work correctly."""
         assert DEFAULT_BASE_URL.endswith("/")
 
 
+# ---------------------------------------------------------------------------
+# 2.  base_url parameter is forwarded to the HTTP call
+# ---------------------------------------------------------------------------
 
 class TestBaseUrlParameter:
 
