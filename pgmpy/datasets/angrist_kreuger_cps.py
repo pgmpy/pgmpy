@@ -5,8 +5,8 @@ class AngristKreugerCPS(_BaseDataset):
     """
     References
     ----------
-    .. [1] Angrist, J. D., & Krueger, A. B. (1991). Does compulsory school attendance affect schooling and earnings?
-           The Quarterly Journal of Economics, 106(4), 979-1014.
+    .. [1] Angrist, J. D., & Krueger, A. B. (1995). Split-Sample Instrumental Variables Estimates of the Return to Schooling.
+           Journal of Business & Economic Statistics, 13(2), 225-235.
     """
 
     _tags = {
