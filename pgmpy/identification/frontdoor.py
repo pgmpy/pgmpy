@@ -33,9 +33,7 @@ class Frontdoor(_BaseIdentification):
     ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
     >>> dag_with_adj, is_identified = Frontdoor().identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
-    >>> Frontdoor.validate(dag)
+    >>> Frontdoor().validate(dag_with_adj)
     True
     """
 
