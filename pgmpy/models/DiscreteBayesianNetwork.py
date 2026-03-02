@@ -2,6 +2,7 @@
 
 import itertools
 from collections import defaultdict
+from copy import deepcopy
 from functools import reduce
 from operator import mul
 from typing import (
@@ -941,8 +942,12 @@ class DiscreteBayesianNetwork(DAG):
             lambda t: t.index.tolist()
         )
         data_unique = data_unique_indexes.index.to_frame()
-        pred_values = Parallel(n_jobs=n_jobs)(
-            delayed(model_inference.query if stochastic else model_inference.map_query)(
+        pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
+            delayed(
+                deepcopy(model_inference).query
+                if stochastic
+                else deepcopy(model_inference).map_query
+            )(
                 variables=missing_variables.union(
                     set(data_point.index[data_point.isna()])
                 ),
