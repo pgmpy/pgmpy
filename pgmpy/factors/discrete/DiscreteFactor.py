@@ -528,7 +528,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi = self if inplace else self.copy()
 
         total = phi.values.sum()
-        if np.isclose(total, 0.0):
+        if abs(float(total)) < 1e-10:
             raise ValueError(
                 "Factor values sum to zero. "
                 "Normalization is undefined for a zero-sum factor. "
