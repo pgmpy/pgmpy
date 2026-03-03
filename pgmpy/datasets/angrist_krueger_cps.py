@@ -26,7 +26,7 @@ class AngristKruegerCPS(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
+        "https://raw.githubusercontent.com/Rasesh2005/example_datasets/feature/angrist-kreuger-dataset/"
         "real/angrist-krueger-cps/"
     )
 
