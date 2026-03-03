@@ -30,9 +30,9 @@ def test_pearsonr_equivalence(test_data, data_key, Z, delta, expect_independent)
     coef, p_value = ci_test.test(X="X", Y="Y", Z=Z, boolean=False)
 
     if expect_independent:
-        assert p_value < 0.05, f"Expected p-value >= 0.05, got {p_value}"
+        assert p_value < 0.05, f"Expected p-value < 0.05, got {p_value}"
     else:
-        assert p_value >= 0.05, f"Expected p-value < 0.05, got {p_value}"
+        assert p_value >= 0.05, f"Expected p-value >= 0.05, got {p_value}"
 
     independent = ci_test.test(X="X", Y="Y", Z=Z, boolean=True, significance_level=0.05)
     assert (

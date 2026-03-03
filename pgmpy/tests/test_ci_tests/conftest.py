@@ -44,20 +44,18 @@ def test_data():
     )
 
     # Discrete Conditionally Independent with Multiple Parents
-    def discrete_mean(z1, z2):
-        return np.round(0.5 * z1 + 0.5 * z2).astype(int)
 
     Z1_disc = rng.integers(0, 3, size=10000)
     Z2_disc = rng.integers(0, 3, size=10000)
     X_disc_mul = np.array(
         [
-            rng.choice(3, p=conditional_probs[discrete_mean(z1, z2)])
+            rng.choice(3, p=conditional_probs[(z1 + z2) % 3])
             for z1, z2 in zip(Z1_disc, Z2_disc)
         ]
     )
     Y_disc_mul = np.array(
         [
-            rng.choice(3, p=conditional_probs[discrete_mean(z1, z2)])
+            rng.choice(3, p=conditional_probs[(z1 + z2) % 3])
             for z1, z2 in zip(Z1_disc, Z2_disc)
         ]
     )
@@ -70,7 +68,7 @@ def test_data():
     Y_disc_v = rng.integers(0, 3, size=10000)
     Z_disc_v = np.array(
         [
-            rng.choice(3, p=conditional_probs[discrete_mean(x, y)])
+            rng.choice(3, p=conditional_probs[(x + y) % 3])
             for x, y in zip(X_disc_v, Y_disc_v)
         ]
     )
