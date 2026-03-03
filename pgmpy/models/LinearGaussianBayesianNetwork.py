@@ -528,7 +528,7 @@ class LinearGaussianBayesianNetwork(DAG):
         virtual_intervention: Optional[List[LinearGaussianCPD]] = None,
         include_latents: bool = False,
         seed: Optional[int] = None,
-        missing_prob=None
+        missing_prob=None,
     ) -> pd.DataFrame:
         """
         Simulates data from the model.
@@ -716,15 +716,17 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 6: Remove latent variables if specified
         if not include_latents:
             df = df.drop(columns=self.latents)
-        
+
         if missing_prob is not None:
-            for node,prob in missing_prob.items():
+            for node, prob in missing_prob.items():
                 if node not in df.columns:
                     raise ValueError(f"{node}  not present in sampled data")
-                if not (0<= prob <=1):
-                    raise ValueError(f"Missing probability for {node} must be between 0 and 1")
-                mask=rng.random(len(df))<prob
-                df.loc[mask,node]=np.nan
+                if not (0 <= prob <= 1):
+                    raise ValueError(
+                        f"Missing probability for {node} must be between 0 and 1"
+                    )
+                mask = rng.random(len(df)) < prob
+                df.loc[mask, node] = np.nan
 
         return df
 

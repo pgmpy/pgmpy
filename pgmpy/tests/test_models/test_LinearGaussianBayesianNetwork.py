@@ -594,12 +594,12 @@ class TestLGBNIO(unittest.TestCase):
         """Clean up the test file"""
         if os.path.exists(self.filename):
             os.remove(self.filename)
-    
-    def test_simulate_missing_prob(self):
-        model =LinearGaussianBayesianNetwork([("X1","X2")])
-        cpd1=LinearGaussianCPD("X1",[0],1)
-        cpd2=LinearGaussianCPD("X2",[0,1],1,evidence=["X1"])
 
-        model.add_cpds(cpd1,cpd2)
-        df=model.simulate(n_samples=500,missing_prob={"X1":0.5})
-        assert df["X1"].isna().sum() >0
+    def test_simulate_missing_prob(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+
+        model.add_cpds(cpd1, cpd2)
+        df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
+        assert df["X1"].isna().sum() > 0
