@@ -603,3 +603,24 @@ class TestLGBNIO(unittest.TestCase):
         model.add_cpds(cpd1, cpd2)
         df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
         assert df["X1"].isna().sum() > 0
+
+    def test_simulate_missing_prob_invalid_node(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+        model.add_cpds(cpd1, cpd2)
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X3": 0.5})
+
+    def test_simulate_missing_prob_invalid_probability(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+        model.add_cpds(cpd1, cpd2)
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X1": -0.1})
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X1": 1.5})
