@@ -1,7 +1,7 @@
 import itertools
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.metrics._base import _BaseSupervisedMetric
 
 
 class CPDAGSHD(_BaseSupervisedMetric):
@@ -84,9 +84,7 @@ class CPDAGSHD(_BaseSupervisedMetric):
                 return g.to_pdag()
             # If already a PDAG, force canonicalization using Meek's rules
             # so partially oriented graphs in the same MEC become identical CPDAGs.
-            cpdag = g.copy()
-            cpdag.apply_meeks_rules(apply_r4=True, inplace=True)
-            return cpdag
+            return g.apply_meeks_rules(apply_r4=True, inplace=False)
 
         def edge_type(g, u, v):
             if g.has_directed_edge(u, v):
