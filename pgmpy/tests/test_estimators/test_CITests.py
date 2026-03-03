@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import numpy as np
 import pandas as pd
@@ -20,559 +20,543 @@ from pgmpy.estimators.CITests import (
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
+skip_on_ci = pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skipping residual tests on GitHub Actions.",
+)
 
-class TestCIRegistry(unittest.TestCase):
-    def test_ci_registry(self):
-        all_tests = ci_registry.list_all()
+skip_without_xgboost = pytest.mark.skipif(
+    not _check_soft_dependencies("xgboost", severity="none"),
+    reason="execute only if required dependency present",
+)
 
-        self.assertIn("chi_square", all_tests)
-        self.assertIn("g_sq", all_tests)
-        self.assertIn("log_likelihood", all_tests)
-        self.assertIn("modified_log_likelihood", all_tests)
-        self.assertIn("pearsonr", all_tests)
-        self.assertIn("pillai", all_tests)
-        self.assertIn("gcm", all_tests)
+def test_ci_registry():
+    all_tests = ci_registry.list_all()
+
+    assert "chi_square" in all_tests
+    assert "g_sq" in all_tests
+    assert "log_likelihood" in all_tests
+    assert "modified_log_likelihood" in all_tests
+    assert "pearsonr" in all_tests
+    assert "pillai" in all_tests
+    assert "gcm" in all_tests
 
 
-class TestPearsonr(unittest.TestCase):
-    def setUp(self):
-        rng = np.random.default_rng(seed=42)
+@pytest.fixture
+def pearsonr_data():
+    rng = np.random.default_rng(seed=42)
 
-        self.df_ind = pd.DataFrame(np.random.randn(1000, 3), columns=["X", "Y", "Z"])
+    df_ind = pd.DataFrame(
+        rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"]
+    )
 
-        Z = rng.normal(10000)
-        X = 3 * Z + rng.normal(loc=0, scale=0.1, size=10000)
-        Y = 2 * Z + rng.normal(loc=0, scale=0.1, size=10000)
+    Z = rng.normal(10000)
+    X = 3 * Z + rng.normal(loc=0, scale=0.1, size=10000)
+    Y = 2 * Z + rng.normal(loc=0, scale=0.1, size=10000)
 
-        self.df_cind = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+    df_cind = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-        Z1 = rng.normal(10000)
-        Z2 = rng.normal(10000)
-        X = 3 * Z1 + 2 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
-        Y = 2 * Z1 + 3 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
-        self.df_cind_mul = pd.DataFrame({"X": X, "Y": Y, "Z1": Z1, "Z2": Z2})
+    Z1 = rng.normal(10000)
+    Z2 = rng.normal(10000)
+    X = 3 * Z1 + 2 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
+    Y = 2 * Z1 + 3 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
+    df_cind_mul = pd.DataFrame({"X": X, "Y": Y, "Z1": Z1, "Z2": Z2})
 
-        X = rng.normal(10000)
-        Y = rng.normal(10000)
-        Z = 2 * X + 2 * Y + rng.normal(loc=0, scale=0.1, size=10000)
-        self.df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+    X = rng.normal(10000)
+    Y = rng.normal(10000)
+    Z = 2 * X + 2 * Y + rng.normal(loc=0, scale=0.1, size=10000)
+    df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-    def test_pearsonr(self):
-        coef, p_value = pearsonr(X="X", Y="Y", Z=[], data=self.df_ind, boolean=False)
-        self.assertTrue(coef < 0.1)
-        self.assertTrue(p_value > 0.05)
+    return df_ind, df_cind, df_cind_mul, df_vstruct
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z"], data=self.df_cind, boolean=False
-        )
-        self.assertTrue(coef < 0.1)
-        self.assertTrue(p_value > 0.05)
+def test_pearsonr(pearsonr_data):
+    df_ind, df_cind, df_cind_mul, df_vstruct = pearsonr_data
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2"], data=self.df_cind_mul, boolean=False
-        )
-        self.assertTrue(coef < 0.1)
-        self.assertTrue(p_value > 0.05)
+    coef, p_value = pearsonr(X="X", Y="Y", Z=[], data=df_ind, boolean=False)
+    assert coef < 0.1
+    assert p_value > 0.05
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z"], data=self.df_vstruct, boolean=False
-        )
-        self.assertTrue(abs(coef) > 0.9)
-        self.assertTrue(p_value < 0.05)
+    coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z"], data=df_cind, boolean=False
+    )
+    assert coef < 0.1
+    assert p_value > 0.05
+
+    coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z1", "Z2"], data=df_cind_mul, boolean=False
+    )
+    assert coef < 0.1
+    assert p_value > 0.05
+
+    coef, p_value = pearsonr(
+        X="X", Y="Y", Z=["Z"], data=df_vstruct, boolean=False
+    )
+    assert abs(coef) > 0.9
+    assert p_value < 0.05
 
         # Tests for when boolean=True
-        self.assertTrue(
-            pearsonr(X="X", Y="Y", Z=[], data=self.df_ind, significance_level=0.05)
-        )
-        self.assertTrue(
-            pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind, significance_level=0.05)
-        )
-        self.assertTrue(
-            pearsonr(
-                X="X",
-                Y="Y",
-                Z=["Z1", "Z2"],
-                data=self.df_cind_mul,
-                significance_level=0.05,
-            )
-        )
-        self.assertFalse(
-            pearsonr(
-                X="X", Y="Y", Z=["Z"], data=self.df_vstruct, significance_level=0.05
-            )
-        )
+    assert pearsonr(X="X", Y="Y", Z=[], data=df_ind, significance_level=0.05)
+    assert pearsonr(X="X", Y="Y", Z=["Z"], data=df_cind, significance_level=0.05)
+    assert pearsonr(X="X", Y="Y", Z=["Z1", "Z2"], data=df_cind_mul,significance_level=0.05)
+    assert not pearsonr(X="X", Y="Y", Z=["Z"], data=df_vstruct, significance_level=0.05)
 
 
-class TestDiscreteTests(unittest.TestCase):
-    def setUp(self):
-        self.df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+@pytest.fixture
+def df_adult():
+    return pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
 
-    def test_chisquare_adult_dataset(self):
-        # Comparison values taken from dagitty (DAGitty)
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
-        )
-        np_test.assert_almost_equal(coef, 57.75, decimal=1)
-        np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
-        self.assertEqual(dof, 4)
+def test_chisquare_adult_dataset(df_adult):
+    coef, p_value, dof = chi_square(
+        X="Age", Y="Immigrant", Z=[], data=df_adult, boolean=False
+    )
+    np_test.assert_almost_equal(coef, 57.75, decimal=1)
+    np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
+    assert dof == 4
 
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
-        )
-        np_test.assert_almost_equal(coef, 56.25, decimal=1)
-        np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
-        self.assertEqual(dof, 4)
+    coef, p_value, dof = chi_square(
+        X="Age", Y="Race", Z=[], data=df_adult, boolean=False
+    )
+    np_test.assert_almost_equal(coef, 56.25, decimal=1)
+    np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
+    assert dof == 4
 
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        )
-        np_test.assert_almost_equal(coef, 289.62, decimal=1)
-        np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
-        self.assertEqual(dof, 4)
+    coef, p_value, dof = chi_square(
+        X="Age", Y="Sex", Z=[], data=df_adult, boolean=False
+    )
+    np_test.assert_almost_equal(coef, 289.62, decimal=1)
+    np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
+    assert dof == 4
 
-        coef, p_value, dof = chi_square(
-            X="Education",
-            Y="HoursPerWeek",
-            Z=["Age", "Immigrant", "Race", "Sex"],
-            data=self.df_adult,
-            boolean=False,
-        )
-        np_test.assert_almost_equal(coef, 1460.11, decimal=1)
-        np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 316)
+    coef, p_value, dof = chi_square(
+        X="Education",
+        Y="HoursPerWeek",
+        Z=["Age", "Immigrant", "Race", "Sex"],
+        data=df_adult,
+        boolean=False,
+    )
+    np_test.assert_almost_equal(coef, 1460.11, decimal=1)
+    np_test.assert_almost_equal(p_value, 0, decimal=1)
+    assert dof == 316
 
-        coef, p_value, dof = chi_square(
-            X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        )
-        np_test.assert_almost_equal(coef, 0.2724, decimal=1)
-        np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
-        self.assertEqual(dof, 1)
+    coef, p_value, dof = chi_square(
+        X="Immigrant", Y="Sex", Z=[], data=df_adult, boolean=False
+    )
+    np_test.assert_almost_equal(coef, 0.2724, decimal=1)
+    np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
+    assert dof == 1
 
-        coef, p_value, dof = chi_square(
-            X="Education",
-            Y="MaritalStatus",
-            Z=["Age", "Sex"],
-            data=self.df_adult,
-            boolean=False,
-        )
-        np_test.assert_almost_equal(coef, 481.96, decimal=1)
-        np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 58)
+    coef, p_value, dof = chi_square(
+        X="Education",
+        Y="MaritalStatus",
+        Z=["Age", "Sex"],
+        data=df_adult,
+        boolean=False,
+    )
+    np_test.assert_almost_equal(coef, 481.96, decimal=1)
+    np_test.assert_almost_equal(p_value, 0, decimal=1)
+    assert dof == 58
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples. Update: Might be same from scipy=1.7.0
-        coef, p_value, dof = chi_square(
-            X="Income",
-            Y="Race",
-            Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
-            data=self.df_adult,
-            boolean=False,
+    coef, p_value, dof = chi_square(
+        X="Income",
+        Y="Race",
+        Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
+        data=df_adult,
+        boolean=False,
+    )
+    np_test.assert_almost_equal(coef, 66.39, decimal=1)
+    np_test.assert_almost_equal(p_value, 0.99, decimal=1)
+    assert dof == 136
+
+    coef, p_value, dof = chi_square(
+        X="Immigrant",
+        Y="Income",
+        Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
+        data=df_adult,
+        boolean=False,
+    )
+    np_test.assert_almost_equal(coef, 65.59, decimal=1)
+    np_test.assert_almost_equal(p_value, 0.999, decimal=2)
+    assert dof == 131
+
+
+def test_discrete_tests(df_adult):
+    for t in [
+        chi_square,
+        g_sq,
+        log_likelihood,
+        modified_log_likelihood,
+    ]:
+        assert not t(
+                X="Age",
+                Y="Immigrant",
+                Z=[],
+                data=df_adult,
+                boolean=True,
+                significance_level=0.05,
         )
-        np_test.assert_almost_equal(coef, 66.39, decimal=1)
-        np_test.assert_almost_equal(p_value, 0.99, decimal=1)
-        self.assertEqual(dof, 136)
-
-        coef, p_value, dof = chi_square(
-            X="Immigrant",
-            Y="Income",
-            Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
-            data=self.df_adult,
-            boolean=False,
+        assert not t(
+                X="Age",
+                Y="Race",
+                Z=[],
+                data=df_adult,
+                boolean=True,
+                significance_level=0.05,
         )
-        np_test.assert_almost_equal(coef, 65.59, decimal=1)
-        np_test.assert_almost_equal(p_value, 0.999, decimal=2)
-        self.assertEqual(dof, 131)
+        assert not t(
+                X="Age",
+                Y="Sex",
+                Z=[],
+                data=df_adult,
+                boolean=True,
+                significance_level=0.05,
+        )
 
-    def test_discrete_tests(self):
-        for t in [
-            chi_square,
-            g_sq,
-            log_likelihood,
-            modified_log_likelihood,
-        ]:
-            self.assertFalse(
-                t(
-                    X="Age",
-                    Y="Immigrant",
-                    Z=[],
-                    data=self.df_adult,
-                    boolean=True,
-                    significance_level=0.05,
-                )
-            )
-
-            self.assertFalse(
-                t(
-                    X="Age",
-                    Y="Race",
-                    Z=[],
-                    data=self.df_adult,
-                    boolean=True,
-                    significance_level=0.05,
-                )
-            )
-
-            self.assertFalse(
-                t(
-                    X="Age",
-                    Y="Sex",
-                    Z=[],
-                    data=self.df_adult,
-                    boolean=True,
-                    significance_level=0.05,
-                )
-            )
-
-            self.assertFalse(
-                t(
+        assert not t(
                     X="Education",
                     Y="HoursPerWeek",
                     Z=["Age", "Immigrant", "Race", "Sex"],
-                    data=self.df_adult,
+                    data=df_adult,
                     boolean=True,
                     significance_level=0.05,
-                )
-            )
-            self.assertTrue(
-                t(
-                    X="Immigrant",
-                    Y="Sex",
-                    Z=[],
-                    data=self.df_adult,
-                    boolean=True,
-                    significance_level=0.05,
-                )
-            )
-            self.assertFalse(
-                t(
-                    X="Education",
-                    Y="MaritalStatus",
-                    Z=["Age", "Sex"],
-                    data=self.df_adult,
-                    boolean=True,
-                    significance_level=0.05,
-                )
-            )
+        )
 
-    def test_exactly_same_vars(self):
-        x = np.random.choice([0, 1], size=1000)
-        y = x.copy()
-        df = pd.DataFrame({"x": x, "y": y})
+        assert t(
+            X="Immigrant",
+            Y="Sex",
+            Z=[],
+            data=df_adult,
+            boolean=True,
+            significance_level=0.05,
+        )
+        
+        assert not t(
+            X="Education",
+            Y="MaritalStatus",
+            Z=["Age", "Sex"],
+            data=df_adult,
+            boolean=True,
+            significance_level=0.05,
+        )
 
-        for t in [
-            chi_square,
-            g_sq,
-            log_likelihood,
-            modified_log_likelihood,
-        ]:
-            stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
-            self.assertEqual(dof, 1)
-            np_test.assert_almost_equal(p_value, 0, decimal=5)
+def test_exactly_same_vars():
+    x = np.random.choice([0, 1], size=1000)
+    y = x.copy()
+    df = pd.DataFrame({"x": x, "y": y})
+
+    for t in [
+        chi_square,
+        g_sq,
+        log_likelihood,
+        modified_log_likelihood,
+    ]:
+        stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
+        assert dof == 1
+        np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
-class TestResidualMethods(unittest.TestCase):
-    def setUp(self):
+@pytest.fixture
+def residual_data():
         # Create a combination of mixed data types
-        np.random.seed(42)
+    np.random.seed(42)
 
-        self.model_indep = LinearGaussianBayesianNetwork(
-            [
-                ("Z1", "X"),
-                ("Z2", "X"),
-                ("Z3", "X"),
-                ("Z1", "Y"),
-                ("Z2", "Y"),
-                ("Z3", "Y"),
-            ]
-        )
-        self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
-        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
-        self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
-        self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.cpd_y_indep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
-        )
-        self.model_indep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
-        )
-        self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
-
-        self.df_indep_cont_cont = self.df_indep.copy()
-        self.df_indep_cont_cont.Z2 = pd.cut(
-            self.df_indep_cont_cont.Z2,
-            bins=4,
-            ordered=False,
-            labels=["z21", "z22", "z23", "z24"],
-        )
-
-        self.df_indep_cat_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cont.X = pd.cut(
-            self.df_indep_cat_cont.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-
-        self.df_indep_cat_cat = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cat.X = pd.cut(
-            self.df_indep_cat_cat.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-        self.df_indep_cat_cat.Y = pd.cut(
-            self.df_indep_cat_cat.Y,
-            bins=4,
-            ordered=False,
-            labels=["y1", "y2", "y3", "y4"],
-        )
-
-        self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
-
-        self.model_dep = LinearGaussianBayesianNetwork(
-            [
-                ("Z1", "X"),
-                ("Z2", "X"),
-                ("Z3", "X"),
-                ("Z1", "Y"),
-                ("Z2", "Y"),
-                ("Z3", "Y"),
-                ("X", "Y"),
-            ]
-        )
-        self.cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
-        )
-        self.model_dep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
-        )
-        self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
-
-        self.df_dep_cont_cont = self.df_dep.copy()
-        self.df_dep_cont_cont.Z2 = pd.cut(
-            self.df_dep_cont_cont.Z2,
-            bins=4,
-            ordered=False,
-            labels=["z21", "z22", "z23", "z24"],
-        )
-
-        self.df_dep_cat_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cont.X = pd.cut(
-            self.df_dep_cat_cont.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-
-        self.df_dep_cat_cat = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cat.X = pd.cut(
-            self.df_dep_cat_cat.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-        self.df_dep_cat_cat.Y = pd.cut(
-            self.df_dep_cat_cat.Y,
-            bins=4,
-            ordered=False,
-            labels=["y1", "y2", "y3", "y4"],
-        )
-
-        self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
-
-    def test_pearsonr(self):
-        coef, p_value = pearsonr(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_indep,
-            boolean=False,
-            seed=42,
-        )
-        self.assertTrue(abs(coef) <= 0.1)
-        self.assertTrue(p_value >= 0.04)
-
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
-        )
-        self.assertTrue(coef >= 0.1)
-        self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
+    model_indep = LinearGaussianBayesianNetwork(
+        [
+            ("Z1", "X"),
+            ("Z2", "X"),
+            ("Z3", "X"),
+            ("Z1", "Y"),
+            ("Z2", "Y"),
+            ("Z3", "Y"),
+        ]
     )
-    def test_pillai_no_cond(self):
-        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
-        dep_pvalues = [0, 0, 0, 0, 0]
-
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_indep in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=[],
-                data=df_indep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
-
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
+    cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
+    cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
+    cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
+    cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
+    cpd_y_indep = LinearGaussianCPD(
+        "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
     )
-    def test_pillai_indep(self):
-        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
-
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_indep in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=["Z1", "Z2", "Z3"],
-                data=df_indep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
-
-        self.assertTrue(
-            np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}",
-        )
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
+    model_indep.add_cpds(
+        cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep
     )
-    def test_pillai_dependent(self):
-        dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
-        dep_pvalues = np.array([0, 0, 0, 0, 0])
 
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_dep in enumerate(
-            [
-                self.df_dep,
-                self.df_dep_cont_cont,
-                self.df_dep_cat_cont,
-                self.df_dep_cat_cat,
-                self.df_dep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=["Z1", "Z2", "Z3"],
-                data=df_dep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
+    df_indep = model_indep.simulate(n_samples=1000, seed=42)
 
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
+    df_indep_cont_cont = df_indep.copy()
+    df_indep_cont_cont.Z2 = pd.cut(
+        df_indep_cont_cont.Z2,
+        bins=4,
+        ordered=False,
+        labels=["z21", "z22", "z23", "z24"],
+    )
 
-    def test_gcm(self):
-        # Non-conditional tests
-        coef, p_value = gcm(
+    df_indep_cat_cont = df_indep_cont_cont.copy()
+    df_indep_cat_cont.X = pd.cut(
+        df_indep_cat_cont.X,
+        bins=4,
+        ordered=False,
+        labels=["x1", "x2", "x3", "x4"],
+    )
+
+    df_indep_cat_cat = df_indep_cont_cont.copy()
+    df_indep_cat_cat.X = pd.cut(
+        df_indep_cat_cat.X,
+        bins=4,
+        ordered=False,
+        labels=["x1", "x2", "x3", "x4"],
+    )
+
+    df_indep_cat_cat.Y = pd.cut(
+        df_indep_cat_cat.Y,
+        bins=4,
+        ordered=False,
+        labels=["y1", "y2", "y3", "y4"],
+    )
+
+    df_indep_ord_cont = df_indep_cont_cont.copy()
+    df_indep_ord_cont.X = pd.cut(df_indep_ord_cont.X, bins=4)
+
+    model_dep = LinearGaussianBayesianNetwork(
+        [
+            ("Z1", "X"),
+            ("Z2", "X"),
+            ("Z3", "X"),
+            ("Z1", "Y"),
+            ("Z2", "Y"),
+            ("Z3", "Y"),
+            ("X", "Y"),
+        ]
+    )
+
+    cpd_y_dep = LinearGaussianCPD(
+        "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
+    )
+
+    model_dep.add_cpds(
+        cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep
+    )
+
+    df_dep = model_dep.simulate(n_samples=1000, seed=42)
+
+    df_dep_cont_cont = df_dep.copy()
+    df_dep_cont_cont.Z2 = pd.cut(
+        df_dep_cont_cont.Z2,
+        bins=4,
+        ordered=False,
+        labels=["z21", "z22", "z23", "z24"],
+    )
+
+    df_dep_cat_cont = df_dep_cont_cont.copy()
+    df_dep_cat_cont.X = pd.cut(
+        df_dep_cat_cont.X,
+        bins=4,
+        ordered=False,
+        labels=["x1", "x2", "x3", "x4"],
+    )
+
+    df_dep_cat_cat = df_dep_cont_cont.copy()
+    df_dep_cat_cat.X = pd.cut(
+        df_dep_cat_cat.X,
+        bins=4,
+        ordered=False,
+        labels=["x1", "x2", "x3", "x4"],
+    )
+
+    df_dep_cat_cat.Y = pd.cut(
+        df_dep_cat_cat.Y,
+        bins=4,
+        ordered=False,
+        labels=["y1", "y2", "y3", "y4"],
+    )
+
+    df_dep_ord_cont = df_dep_cont_cont.copy()
+    df_dep_ord_cont.X = pd.cut(df_dep_ord_cont.X, bins=4)
+
+    return {
+        "indep": df_indep,
+        "indep_cont_cont": df_indep_cont_cont,
+        "indep_cat_cont": df_indep_cat_cont,
+        "indep_cat_cat": df_indep_cat_cat,
+        "indep_ord_cont": df_indep_ord_cont,
+        "dep": df_dep,
+        "dep_cont_cont": df_dep_cont_cont,
+        "dep_cat_cont": df_dep_cat_cont,
+        "dep_cat_cat": df_dep_cat_cat,
+        "dep_ord_cont": df_dep_ord_cont,
+    }
+
+@skip_on_ci
+def test_residual_pearsonr(residual_data):
+    coef, p_value = pearsonr(
+        X="X",
+        Y="Y",
+        Z=["Z1", "Z2", "Z3"],
+        data=residual_data["indep"],
+        boolean=False,
+        seed=42,
+    )
+    assert abs(coef) <= 0.1
+    assert p_value >= 0.04
+
+    coef, p_value = pearsonr(
+        X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=residual_data["dep"], boolean=False, seed=42
+    )
+    assert coef >= 0.1
+    assert np.isclose(p_value, 0, atol=1e-1)
+
+@skip_on_ci
+@skip_without_xgboost
+def test_pillai_no_cond(residual_data):
+    dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
+    dep_pvalues = [0, 0, 0, 0, 0]
+
+    computed_coefs = []
+    computed_pvalues = []
+    for i, df in enumerate(
+        [
+            residual_data["indep"],
+            residual_data["indep_cont_cont"],
+            residual_data["indep_cat_cont"],
+            residual_data["indep_cat_cat"],
+            residual_data["indep_ord_cont"],
+        ]
+    ):
+        coef, p_value = pillai_trace(
             X="X",
             Y="Y",
             Z=[],
-            data=self.df_indep,
+            data=df,
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 13.693)
-        self.assertAlmostEqual(p_value, 0.0)
+        computed_coefs.append(coef)
+        computed_pvalues.append(p_value)
 
-        # Conditional tests
-        coef, p_value = gcm(
+    assert np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2), (f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}")
+    assert np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2), (f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}")
+
+
+@skip_on_ci
+@skip_without_xgboost
+def test_pillai_indep(residual_data):
+    indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
+    indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
+
+    computed_coefs = []
+    computed_pvalues = []
+    for i, df in enumerate(
+        [
+            residual_data["indep"],
+            residual_data["indep_cont_cont"],
+            residual_data["indep_cat_cont"],
+            residual_data["indep_cat_cat"],
+            residual_data["indep_ord_cont"],
+        ]
+    ):
+        coef, p_value = pillai_trace(
             X="X",
             Y="Y",
             Z=["Z1", "Z2", "Z3"],
-            data=self.df_indep,
+            data=df,
             boolean=False,
             seed=42,
         )
+        computed_coefs.append(coef)
+        computed_pvalues.append(p_value)
 
-        self.assertAlmostEqual(round(coef, 3), 0.097)
-        self.assertEqual(round(p_value, 4), 0.9228)
+    assert np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2), (f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}")
+    assert np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2), (f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}")
+
+
+@skip_on_ci
+@skip_without_xgboost
+def test_pillai_dependent(residual_data):
+    dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
+    dep_pvalues = np.array([0, 0, 0, 0, 0])
+
+    computed_coefs = []
+    computed_pvalues = []
+    for i, df in enumerate(
+        [
+            residual_data["dep"],
+            residual_data["dep_cont_cont"],
+            residual_data["dep_cat_cont"],
+            residual_data["dep_cat_cat"],
+            residual_data["dep_ord_cont"],
+            ]
+    ):
+        coef, p_value = pillai_trace(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=df,
+            boolean=False,
+            seed=42,
+        )
+        computed_coefs.append(coef)
+        computed_pvalues.append(p_value)
+
+    assert np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2), (f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}")
+    assert np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2), (f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}")
+
+@skip_on_ci
+def test_gcm(residual_data):
+        # Non-conditional tests
+    coef, p_value = gcm(
+        X="X",
+        Y="Y",
+        Z=[],
+        data=residual_data["indep"],
+        boolean=False,
+        seed=42,
+    )
+    assert round(coef, 3) == pytest.approx(13.693)
+    assert p_value == pytest.approx(0.0)
 
         # Conditional tests
-        coef, p_value = gcm(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
-        )
+    coef, p_value = gcm(
+        X="X",
+        Y="Y",
+        Z=["Z1", "Z2", "Z3"],
+        data=residual_data["indep"],
+        boolean=False,
+        seed=42,
+    )
 
-        self.assertAlmostEqual(round(coef, 3), 11.69)
-        self.assertAlmostEqual(p_value, 0.0)
+    assert round(coef, 3) == pytest.approx(0.097)
+    assert round(p_value, 4) == pytest.approx(0.9228)
 
-    def test_pearsonr_equivalence(self):
-        is_independent = pearsonr_equivalence(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_dep,
-            boolean=True,
-            significance_level=0.05,
-            delta_th=0.3,
-        )
-        self.assertFalse(is_independent)
+        # Conditional tests
+    coef, p_value = gcm(
+        X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=residual_data["dep"], boolean=False, seed=42
+    )
 
-        is_independent = pearsonr_equivalence(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_dep,
-            boolean=False,
-            significance_level=0.05,
-            delta_th=0.5,
+    assert round(coef, 3) == pytest.approx(11.69)
+    assert p_value == pytest.approx(0.0)
+
+
+@skip_on_ci
+def test_pearsonr_equivalence(residual_data):
+    is_independent = pearsonr_equivalence(
+        X="X",
+        Y="Y",
+        Z=["Z1", "Z2", "Z3"],
+        data=residual_data["dep"],
+        boolean=True,
+        significance_level=0.05,
+        delta_th=0.3,
+    )
+    assert not is_independent
+
+    is_independent = pearsonr_equivalence(
+        X="X",
+        Y="Y",
+        Z=["Z1", "Z2", "Z3"],
+        data=residual_data["dep"],
+        boolean=False,
+        significance_level=0.05,
+        delta_th=0.5,
         )
-        self.assertTrue(is_independent)
+    assert is_independent
