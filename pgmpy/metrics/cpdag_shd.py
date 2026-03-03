@@ -82,16 +82,20 @@ class CPDAGSHD(_BaseSupervisedMetric):
         def to_cpdag(g):
             if isinstance(g, DAG):
                 return g.to_pdag()
-            return g
+            # If already a PDAG, force canonicalization using Meek's rules
+            # so partially oriented graphs in the same MEC become identical CPDAGs.
+            cpdag = g.copy()
+            cpdag.apply_meeks_rules(apply_r4=True, inplace=True)
+            return cpdag
 
-        def edge_type(pdag, u, v):
-            if pdag.has_directed_edge(u, v):
-                return (u, v)
-            if pdag.has_directed_edge(v, u):
-                return (v, u)
-            if pdag.has_undirected_edge(u, v):
-                return "undirected"
-            return "none"
+        def edge_type(g, u, v):
+            if g.has_directed_edge(u, v):
+                return (1, u, v)
+            elif g.has_directed_edge(v, u):
+                return (1, v, u)
+            elif g.has_undirected_edge(u, v):
+                return (0, 0, 0)
+            return (-1, -1, -1)
 
         true_cpdag = to_cpdag(true_causal_graph)
         est_cpdag = to_cpdag(est_causal_graph)

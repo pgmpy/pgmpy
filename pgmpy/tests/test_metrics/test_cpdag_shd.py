@@ -92,6 +92,19 @@ def test_cpdagshd_both_pdag_inputs(cpdag_scorer):
     assert cpdag_scorer(pdag1, pdag2) == 0
 
 
+def test_cpdagshd_uncompleted_pdag_input(cpdag_scorer):
+    """An uncompleted PDAG where Meek's rules will force orientation.
+
+    If X -> Y - Z and X,Z non-adjacent, Meek's Rule 1 forces Y -> Z.
+    Therefore, PDAG(dir=[X->Y], undir=[Y-Z]) should match PDAG(dir=[X->Y, Y->Z]).
+    """
+    pdag_partial = PDAG(directed_ebunch=[("X", "Y")], undirected_ebunch=[("Y", "Z")])
+    pdag_completed = PDAG(
+        directed_ebunch=[("X", "Y"), ("Y", "Z")], undirected_ebunch=[]
+    )
+    assert cpdag_scorer(pdag_partial, pdag_completed) == 0
+
+
 # -----------------------------------------------------------------------
 # GROUP 4: Symmetry.
 # -----------------------------------------------------------------------
