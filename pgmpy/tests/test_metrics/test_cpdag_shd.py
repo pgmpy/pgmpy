@@ -9,59 +9,56 @@ def cpdag_scorer():
     return CPDAGSHD()
 
 
-# -----------------------------------------------------------------------
-# GROUP 1: Core MEC-awareness — the fundamental property of this metric.
-# Markov-equivalent DAGs must score 0; SHD would give non-zero.
-# -----------------------------------------------------------------------
+# Setup isolated node cases safely outside the decorator
+missing_y_edge = DAG([("X", "Z")])
+missing_y_edge.add_node("Y")
+
+isolated_3_a = DAG([(1, 2)])
+isolated_3_a.add_node(3)
+isolated_3_b = DAG([(1, 2)])
+isolated_3_b.add_node(3)
 
 
-def test_cpdagshd_equivalent_dags_score_zero(cpdag_scorer):
-    """Chain and fork are Markov equivalent → CPDAGSHD = 0, SHD would give 1."""
-    chain = DAG([("X", "Y"), ("Y", "Z")])
-    fork = DAG([("Y", "X"), ("Y", "Z")])
-    assert cpdag_scorer(chain, fork) == 0
+@pytest.mark.parametrize(
+    "graph1, graph2, expected_score",
+    [
+        # 1. Equivalent DAGs map to the same score (0)
+        (
+            DAG([("X", "Y"), ("Y", "Z")]),
+            DAG([("Y", "X"), ("Y", "Z")]),
+            0,
+        ),  # Chain vs Fork
+        (DAG([(1, 2)]), DAG([(2, 1)]), 0),  # Reversible single edge
+        # 2. Identical raw PDAG inputs score 0
+        (DAG([(1, 2), (2, 3)]), DAG([(1, 2), (2, 3)]), 0),
+        (PDAG([("X", "Z"), ("Y", "Z")], []), PDAG([("X", "Z"), ("Y", "Z")], []), 0),
+        # 3. Uncompleted/raw PDAGs are properly canonicalized via Meek's Rules before scoring
+        (PDAG([("X", "Y")], [("Y", "Z")]), PDAG([("X", "Y"), ("Y", "Z")], []), 0),
+        # 4. Standard structural errors (extra, missing, or improperly oriented edges) correctly accumulate penalties
+        (
+            DAG([("X", "Y"), ("Y", "Z")]),
+            DAG([("X", "Z"), ("Y", "Z")]),
+            3,
+        ),  # Chain vs Collider
+        (DAG([("X", "Z"), ("Y", "Z")]), missing_y_edge, 2),  # Compelled vs missing
+        (
+            DAG([("X", "Y"), ("Y", "Z")]),
+            PDAG([("X", "Z"), ("Y", "Z")], []),
+            3,
+        ),  # DAG vs PDAG
+        # 5. Edge cases: empty graphs and isolated nodes
+        (DAG(), DAG(), 0),
+        (isolated_3_a, isolated_3_b, 0),
+    ],
+)
+def test_cpdagshd_scores(cpdag_scorer, graph1, graph2, expected_score):
+    """Data-driven test covering equivalence, types, and scores."""
+    # Ensure empty graphs have identical nodes
+    if len(graph1.nodes()) == 0 and len(graph2.nodes()) == 0:
+        graph1.add_nodes_from(["X", "Y", "Z"])
+        graph2.add_nodes_from(["X", "Y", "Z"])
 
-
-def test_cpdagshd_identical_dags(cpdag_scorer):
-    """Identical DAGs → CPDAGSHD = 0."""
-    dag = DAG([(1, 2), (2, 3)])
-    assert cpdag_scorer(dag, dag) == 0
-
-
-def test_cpdagshd_non_equivalent_dags_positive(cpdag_scorer):
-    """Chain vs collider are non-equivalent → CPDAGSHD > 0."""
-    chain = DAG([("X", "Y"), ("Y", "Z")])
-    collider = DAG([("X", "Z"), ("Y", "Z")])
-    assert cpdag_scorer(chain, collider) > 0
-
-
-# -----------------------------------------------------------------------
-# GROUP 2: Known exact values — traced and executed, do not change.
-# -----------------------------------------------------------------------
-
-
-def test_cpdagshd_chain_vs_collider_exact(cpdag_scorer):
-    """chain X→Y→Z vs collider X→Z←Y: all 3 node pairs differ → 3.
-
-    X-Y: undirected in chain-CPDAG, none in collider-CPDAG → mismatch
-    X-Z: none in chain-CPDAG,       X→Z in collider-CPDAG  → mismatch
-    Y-Z: undirected in chain-CPDAG, Y→Z in collider-CPDAG  → mismatch
-    """
-    chain = DAG([("X", "Y"), ("Y", "Z")])
-    collider = DAG([("X", "Z"), ("Y", "Z")])
-    assert cpdag_scorer(chain, collider) == 3
-
-
-def test_cpdagshd_reversed_reversible_edge(cpdag_scorer):
-    """Reversing a reversible edge keeps both DAGs in the same MEC → 0.
-
-    For a 2-node graph, the single edge is always reversible (no v-structures
-    can form), so both DAG([(1,2)]) and DAG([(2,1)]) map to the same CPDAG
-    with one undirected edge.
-    """
-    dag1 = DAG([(1, 2)])
-    dag2 = DAG([(2, 1)])
-    assert cpdag_scorer(dag1, dag2) == 0
+    assert cpdag_scorer(graph1, graph2) == expected_score
 
 
 def test_cpdagshd_compelled_edge_vs_missing(cpdag_scorer):
@@ -70,65 +67,6 @@ def test_cpdagshd_compelled_edge_vs_missing(cpdag_scorer):
     est = DAG([("X", "Z")])
     est.add_node("Y")
     assert cpdag_scorer(true, est) == 2
-
-
-# -----------------------------------------------------------------------
-# GROUP 3: PDAG input — metric must accept PDAG (default PC/GES output).
-# -----------------------------------------------------------------------
-
-
-def test_cpdagshd_pdag_est_input(cpdag_scorer):
-    """A PDAG estimated graph is accepted without conversion crash."""
-    pdag = PDAG(directed_ebunch=[("X", "Z"), ("Y", "Z")], undirected_ebunch=[])
-    dag = DAG([("X", "Y"), ("Y", "Z")])
-    result = cpdag_scorer(dag, pdag)
-    assert result == 3
-
-
-def test_cpdagshd_both_pdag_inputs(cpdag_scorer):
-    """Two identical PDAG inputs → 0."""
-    pdag1 = PDAG(directed_ebunch=[("X", "Z"), ("Y", "Z")], undirected_ebunch=[])
-    pdag2 = PDAG(directed_ebunch=[("X", "Z"), ("Y", "Z")], undirected_ebunch=[])
-    assert cpdag_scorer(pdag1, pdag2) == 0
-
-
-def test_cpdagshd_uncompleted_pdag_input(cpdag_scorer):
-    """An uncompleted PDAG where Meek's rules will force orientation.
-
-    If X -> Y - Z and X,Z non-adjacent, Meek's Rule 1 forces Y -> Z.
-    Therefore, PDAG(dir=[X->Y], undir=[Y-Z]) should match PDAG(dir=[X->Y, Y->Z]).
-    """
-    pdag_partial = PDAG(directed_ebunch=[("X", "Y")], undirected_ebunch=[("Y", "Z")])
-    pdag_completed = PDAG(
-        directed_ebunch=[("X", "Y"), ("Y", "Z")], undirected_ebunch=[]
-    )
-    assert cpdag_scorer(pdag_partial, pdag_completed) == 0
-
-
-# -----------------------------------------------------------------------
-# GROUP 4: Symmetry.
-# -----------------------------------------------------------------------
-
-
-def test_cpdagshd_is_symmetric(cpdag_scorer):
-    """CPDAGSHD(A, B) == CPDAGSHD(B, A)."""
-    chain = DAG([("X", "Y"), ("Y", "Z")])
-    collider = DAG([("X", "Z"), ("Y", "Z")])
-    assert cpdag_scorer(chain, collider) == cpdag_scorer(collider, chain)
-
-
-# -----------------------------------------------------------------------
-# GROUP 5: Edge cases.
-# -----------------------------------------------------------------------
-
-
-def test_cpdagshd_empty_graphs(cpdag_scorer):
-    """Both graphs have no edges → CPDAGSHD = 0."""
-    true = DAG()
-    true.add_nodes_from(["X", "Y", "Z"])
-    est = DAG()
-    est.add_nodes_from(["X", "Y", "Z"])
-    assert cpdag_scorer(true, est) == 0
 
 
 def test_cpdagshd_isolated_nodes(cpdag_scorer):
@@ -140,9 +78,11 @@ def test_cpdagshd_isolated_nodes(cpdag_scorer):
     assert cpdag_scorer(dag1, dag2) == 0
 
 
-# -----------------------------------------------------------------------
-# GROUP 6: Input validation.
-# -----------------------------------------------------------------------
+def test_cpdagshd_is_symmetric(cpdag_scorer):
+    """CPDAGSHD(A, B) == CPDAGSHD(B, A)."""
+    chain = DAG([("X", "Y"), ("Y", "Z")])
+    collider = DAG([("X", "Z"), ("Y", "Z")])
+    assert cpdag_scorer(chain, collider) == cpdag_scorer(collider, chain)
 
 
 def test_cpdagshd_unequal_nodes_raises(cpdag_scorer):
