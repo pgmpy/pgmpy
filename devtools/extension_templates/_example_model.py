@@ -32,9 +32,9 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
     here only if it provides useful context for the model.]
     References
     ----------
-    ..[1] Author, A., & Author, B. (Year). Title of the paper. Journal Name, Volume(Issue), Pages.
+    .. [1] Author, A., & Author, B. (Year). Title of the paper. Journal Name, Volume(Issue), Pages.
            URL or DOI if available.
-    ..[2] Additional reference if needed.
+    .. [2] Additional reference if needed.
     """
 
     # TODO: Fill in the metadata tags for your model.
