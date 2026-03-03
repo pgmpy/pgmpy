@@ -31,7 +31,7 @@ class StructureScore(_BaseUnsupervisedMetric):
     >>> from pgmpy.metrics import StructureScore
     >>> model = get_example_model("alarm")
     >>> data = model.simulate(int(1e4))
-    >>> scorer = StructureScore(scoring_method="bic-g")
+    >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)
     -106665.9383064447
     """
