@@ -3,11 +3,29 @@ from pgmpy.datasets._base import _BaseDataset
 
 class AngristKruegerCPS(_BaseDataset):
     """
+    The Angrist-Krueger CPS dataset is a subset of the Current Population
+    Survey (CPS) used for investigating the return to schooling using
+    split-sample instrumental variables. It contains 13,993 observations
+    and 58 variables.
+
+    This is a 'mixed' dataset containing both continuous and discrete
+    variables. Continuous variables include annual earnings (annwage),
+    weekly wages (wkwage), and their natural logarithms (lnyrwage,
+    lnwkwage).
+
+    Categorical variables include demographic indicators (e.g., black,
+    other, city), year indicators, and various interaction terms between
+    cohorts and regions (e.g., lot1b50, lott1-lott13). These are
+    explicitly typed as categorical to ensure statistical models treat
+    them as factors rather than continuous values.
+
     References
     ----------
     .. [1] Angrist, J. D., & Krueger, A. B. (1995). Split-Sample Instrumental
            Variables Estimates of the Return to Schooling. Journal of Business
            & Economic Statistics, 13(2), 225-235.
+           Source: https://economics.mit.edu/people/faculty/josh-angrist/
+           angrist-data-archive
     """
 
     _tags = {
