@@ -37,8 +37,9 @@ class CPDAGSHD(_BaseSupervisedMetric):
         The CPDAG-level structural Hamming distance. When both inputs are
         DAGs, the distance is zero if and only if they belong to the same
         Markov equivalence class. For PDAG inputs, the comparison is
-        performed directly without further canonicalization. The maximum
-        value is ``n * (n - 1) / 2`` where ``n`` is the number of nodes.
+        performed directly without further canonicalization. The metric counts
+        pairwise edge-type mismatches (none, undirected, or directional).
+        The maximum value is ``n * (n - 1) / 2`` where ``n`` is the number of nodes.
 
     Raises
     ------
@@ -88,12 +89,12 @@ class CPDAGSHD(_BaseSupervisedMetric):
 
         def edge_type(g, u, v):
             if g.has_directed_edge(u, v):
-                return (1, u, v)
+                return ("directed", u, v)
             elif g.has_directed_edge(v, u):
-                return (1, v, u)
+                return ("directed", v, u)
             elif g.has_undirected_edge(u, v):
-                return (0, 0, 0)
-            return (-1, -1, -1)
+                return ("undirected", frozenset([u, v]))
+            return ("none", None)
 
         true_cpdag = to_cpdag(true_causal_graph)
         est_cpdag = to_cpdag(est_causal_graph)
