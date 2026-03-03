@@ -520,6 +520,138 @@ class LinearGaussianBayesianNetwork(DAG):
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
 
+    def do(
+        self,
+        nodes: Union[Hashable, List[Hashable]],
+        values: Optional[Dict[Hashable, float]] = None,
+        inplace: bool = False,
+    ) -> "LinearGaussianBayesianNetwork":
+        r"""
+        Applies the do-operator to the Linear Gaussian Bayesian Network.
+
+        The do-operator, :math:`do(X = x)`, has the effect of removing all
+        incoming edges to :math:`X`, fixing :math:`X` to the constant
+        :math:`x`, and propagating that constant through every child's CPD
+        via the **intercept-shift rule**.
+
+        For a child :math:`Y` whose CPD before intervention is:
+
+        .. math::
+
+            Y \mid \mathbf{Pa}(Y) \sim
+            \mathcal{N}\!\bigl(\beta_0 + \beta_X X
+            + {\textstyle\sum_{j \neq X}} \beta_j X_j,\;
+            \sigma^2\bigr)
+
+        the updated intercept after :math:`do(X = c)` is:
+
+        .. math::
+
+            \beta_{0}^{\text{new}} = \beta_{0}^{\text{old}}
+            + \beta_X \cdot c
+
+        and :math:`X` is removed from :math:`Y`'s evidence list.  The
+        variance :math:`\sigma^2` is unchanged because it is independent of
+        the parent values in a Linear Gaussian model.
+
+        When ``values`` is ``None`` the graph surgery is still performed
+        (all edges severed, children updated) but no intercept shift is
+        applied.  This is equivalent to :math:`do(X = 0)`.
+
+        Parameters
+        ----------
+        nodes : hashable or list of hashable
+            The name(s) of the node(s) to intervene on.
+
+        values : dict, optional (default: None)
+            A dictionary mapping each intervened node to its fixed
+            numerical value, e.g. ``{"X": 2.5}``.
+            Keys that are not in ``nodes`` are silently ignored.
+            If ``None``, every intervened node is set to 0.
+
+        inplace : bool, default False
+            If ``True``, modifies the current model in-place;
+            otherwise returns a modified copy.
+
+        Returns
+        -------
+        LinearGaussianBayesianNetwork
+            The mutilated model (new instance, or ``self`` when
+            ``inplace=True``).
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([("X", "Y"), ("Y", "Z")])
+        >>> cpd_x = LinearGaussianCPD("X", [0], 1)
+        >>> cpd_y = LinearGaussianCPD("Y", [2, 0.5], 1, ["X"])
+        >>> cpd_z = LinearGaussianCPD("Z", [1, -1], 1, ["Y"])
+        >>> model.add_cpds(cpd_x, cpd_y, cpd_z)
+        >>> model_do = model.do("X", values={"X": 3.0})
+        >>> model_do.get_cpds("Y")
+        P(Y) = N(3.5; 1)
+
+        References
+        ----------
+        Causality: Models, Reasoning, and Inference, Judea Pearl (2000).
+        """
+        # Normalise nodes to a list.
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
+            )
+
+        values = {} if values is None else dict(values)
+        model = self if inplace else self.copy()
+
+        for var in nodes:
+            val = values.get(var, None)
+
+            # Step 1: Update every child's CPD.
+            #   - Absorb beta_X * c into the intercept (when c is given).
+            #   - Remove the intervened variable from evidence.
+            #   - Sever the outgoing edge var -> child.
+            for child in list(model.get_children(var)):
+                child_cpd = model.get_cpds(child)
+
+                new_evidence = list(child_cpd.evidence)
+                new_beta = list(child_cpd.beta)
+                parent_idx = new_evidence.index(var)
+
+                if val is not None:
+                    new_beta[0] += new_beta[parent_idx + 1] * val
+
+                del new_evidence[parent_idx]
+                del new_beta[parent_idx + 1]
+
+                model.remove_cpds(child_cpd)
+                model.add_cpds(
+                    LinearGaussianCPD(
+                        variable=child_cpd.variable,
+                        beta=new_beta,
+                        std=child_cpd.std,
+                        evidence=new_evidence,
+                    )
+                )
+                model.remove_edge(var, child)
+
+            # Step 2: Sever all incoming edges to the intervened node.
+            for parent in list(model.get_parents(var)):
+                model.remove_edge(parent, var)
+
+            # Step 3: Replace the intervened node's CPD with a point-mass.
+            model.remove_cpds(model.get_cpds(var))
+            fixed_val = val if val is not None else 0
+            model.add_cpds(LinearGaussianCPD(variable=var, beta=[fixed_val], std=0))
+
+        return model
+
     def simulate(
         self,
         n_samples: int = 1000,
@@ -627,40 +759,12 @@ class LinearGaussianBayesianNetwork(DAG):
                         f"The following nodes are present in the model: {self.nodes()}"
                     )
 
-        # Step 2: If do is specified, modify the network structure.
+        # Step 2: If do is specified, delegate to self.do() for graph surgery
+        #  and intercept-shift, then drop the (now-isolated) intervened nodes
+        #  so that to_joint_gaussian() only covers the remaining variables.
         if do != {}:
-            for var, val in do.items():
-                # Step 2.1: Remove incoming edges to the intervened
-                #  node as well as remove the CPD's of the intervened nodes.
-                for parent in list(model.get_parents(var)):
-                    model.remove_edge(parent, var)
-
-                model.remove_cpds(model.get_cpds(var))
-
-                # Step 2.2 : For each child of an intervened node, change its CPD to remove
-                #  the parent (intervened node) from the evidence and update its intercept accordingly
-                for child in model.get_children(var):
-                    child_cpd = model.get_cpds(child)
-
-                    new_evidence = list(child_cpd.evidence)
-                    new_beta = list(child_cpd.beta)
-
-                    parent_idx = child_cpd.evidence.index(var)
-                    new_beta[0] += new_beta[parent_idx + 1] * val
-
-                    del new_evidence[parent_idx]
-                    del new_beta[parent_idx + 1]
-
-                    new_cpd = LinearGaussianCPD(
-                        variable=child_cpd.variable,
-                        beta=new_beta,
-                        std=child_cpd.std,
-                        evidence=new_evidence,
-                    )
-
-                    model.remove_cpds(child_cpd)
-                    model.add_cpds(new_cpd)
-
+            model.do(nodes=list(do.keys()), values=do, inplace=True)
+            for var in do:
                 model.remove_node(var)
 
         # Step 3: If virtual_interventions are specified, change the CPD's of intervened variables
