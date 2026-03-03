@@ -727,14 +727,27 @@ class LinearGaussianBayesianNetwork(DAG):
         if not include_latents:
             df = df.drop(columns=self.latents)
 
+        # Step 7: Handle missing_prob argument
         if missing_prob is not None:
+            if not isinstance(missing_prob, dict):
+                raise ValueError(
+                    f"missing_prob should be dict[str, float]. Got {type(missing_prob)}"
+                )
+
             for node, prob in missing_prob.items():
                 if node not in df.columns:
-                    raise ValueError(f"{node}  not present in sampled data")
+                    raise ValueError(f"{node} not present in sampled data")
+
+                if not isinstance(prob, (int, float)):
+                    raise ValueError(f"Missing probability for {node} must be numeric")
+
                 if not (0 <= prob <= 1):
                     raise ValueError(
                         f"Missing probability for {node} must be between 0 and 1"
                     )
+
+            # Apply masking (post-processing stage)
+            for node, prob in missing_prob.items():
                 mask = rng.random(len(df)) < prob
                 df.loc[mask, node] = np.nan
 
