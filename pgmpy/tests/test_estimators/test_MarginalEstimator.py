@@ -134,7 +134,7 @@ def test_torch_marginal_loss(torch_models):
 
 
 @requires_torch
-def test_torch_clique_to_marginal(torch_models):
+def test_torch_clique_to_marginal():
     marginals = FactorDict(
         {
             variable: FactorDict(
@@ -161,7 +161,7 @@ def test_torch_clique_to_marginal(torch_models):
 
 
 @requires_torch
-def test_torch_clique_to_marginal_no_matching_cliques(torch_models):
+def test_torch_clique_to_marginal_no_matching_cliques():
     marginals = FactorDict(
         {
             variable: FactorDict(
