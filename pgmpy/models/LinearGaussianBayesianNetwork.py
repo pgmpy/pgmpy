@@ -557,6 +557,13 @@ class LinearGaussianBayesianNetwork(DAG):
 
         seed: int (default: None)
             Seed for the random number generator.
+        missing_prob: dict (default: None)
+            A dictionary specifying the probability of missingness for each variable.
+            Keys must be valid variable names in the model and values must be floats
+            between 0 and 1. Each sampled value is independently replaced with NaN
+            with the specified probability (MCAR assumption). A ValueError is raised
+            if a variable is not present in the sampled data or if the probability
+            is outside the range [0, 1].
         Returns
         -------
         pandas.DataFrame
@@ -583,6 +590,9 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
 
         Sampling with both intervention and evidence
+
+        Sampling with missing_prob
+        >>> model.simulate(n_samples=5, missing_prob={"x1": 0.5})
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence

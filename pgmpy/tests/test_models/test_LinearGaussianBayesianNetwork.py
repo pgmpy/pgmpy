@@ -602,7 +602,9 @@ class TestLGBNIO(unittest.TestCase):
 
         model.add_cpds(cpd1, cpd2)
         df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
-        assert df["X1"].isna().sum() > 0
+        nan_ratio = df["X1"].isna().mean()
+
+        self.assertTrue(0.4 <= nan_ratio <= 0.6)
 
     def test_simulate_missing_prob_invalid_node(self):
         model = LinearGaussianBayesianNetwork([("X1", "X2")])
