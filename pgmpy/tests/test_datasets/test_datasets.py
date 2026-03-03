@@ -11,6 +11,7 @@ ALL_DATASETS = [
     "abalone_mixed",
     "adult",
     "airfoil",
+    "angrist_krueger_qob",
     "algerian_forest",
     "apple_watch_fitbit",
     "auto_mpg",
