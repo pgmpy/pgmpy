@@ -318,7 +318,6 @@ class VariableElimination(Inference):
             #           evidence.
             evidence_vars = set(evidence)
             reduce_indexes = []
-            reshape_indexes = []
             for phi in factors:
                 indexes_to_reduce = [phi.variables.index(var) for var in set(phi.variables).intersection(evidence_vars)]
                 indexer = [slice(None)] * len(phi.variables)
