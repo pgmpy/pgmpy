@@ -109,4 +109,5 @@ class AngristKruegerCPS(_BaseDataset):
         "lott13",
         "recode",
     ]
-    ordinal_variables = dict()
+    # Mapping from variable name to an ordered sequence of categories for ordinal variables.
+    ordinal_variables = {}
