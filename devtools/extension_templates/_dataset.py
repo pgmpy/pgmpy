@@ -36,16 +36,19 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
+    # TODO: Add the base URL to the dataset directory. Required for caching downloaded files.
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/your_dataset_name/"
+
     # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
     # row containing the names of the columns.
-    data_url = None
+    data_url = base_url + "data/your_dataset_name.txt"
 
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
-    ground_truth_url = None
+    ground_truth_url = base_url + "ground.truth/your_dataset_name.ground.truth.txt"
 
     # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
     # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
-    expert_knowledge_url = None
+    expert_knowledge_url = base_url + "ground.truth/your_dataset_name.knowledge.txt"
 
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
