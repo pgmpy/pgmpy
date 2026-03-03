@@ -5,8 +5,9 @@ class AngristKruegerCPS(_BaseDataset):
     """
     References
     ----------
-    .. [1] Angrist, J. D., & Krueger, A. B. (1995). Split-Sample Instrumental Variables Estimates
-           of the Return to Schooling. Journal of Business & Economic Statistics, 13(2), 225-235.
+    .. [1] Angrist, J. D., & Krueger, A. B. (1995). Split-Sample Instrumental
+           Variables Estimates of the Return to Schooling. Journal of Business
+           & Economic Statistics, 13(2), 225-235.
     """
 
     _tags = {
@@ -26,8 +27,8 @@ class AngristKruegerCPS(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/Rasesh2005/example_datasets/feature/angrist-kreuger-dataset/"
-        "real/angrist-krueger-cps/"
+        "https://raw.githubusercontent.com/Rasesh2005/example_datasets/"
+        "feature/angrist-kreuger-dataset/real/angrist-krueger-cps/"
     )
 
     data_url = base_url + "data/angrist-krueger-cps.mixed.txt"
