@@ -153,4 +153,4 @@ def test_checksum_mismatch_message_contains_force_download_hint(monkeypatch, tmp
     monkeypatch.setattr(benchmark, "urlopen", lambda *args, **kwargs: _MockResponse(payload))
 
     with pytest.raises(ValueError, match="force_download=True"):
-        benchmark.load_alarm(n_samples=10)
+        benchmark._download_if_needed(dataset_name="alarm", force_download=True)
