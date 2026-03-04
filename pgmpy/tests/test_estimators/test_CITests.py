@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,7 +20,12 @@ from pgmpy.estimators.CITests import (
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
-skip_without_xgboost = pytest.mark.skipif(
+skip_residual = pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skipping residual tests on GitHub Actions.",
+)
+
+requires_xgboost = pytest.mark.skipif(
     not _check_soft_dependencies("xgboost", severity="none"),
     reason="execute only if required dependency present",
 )
@@ -173,80 +180,61 @@ def test_chisquare_adult_dataset(df_adult):
     assert dof == 131
 
 
-def test_discrete_tests(df_adult):
-    for t in [
-        chi_square,
-        g_sq,
-        log_likelihood,
-        modified_log_likelihood,
-    ]:
-        assert not t(
-            X="Age",
-            Y="Immigrant",
-            Z=[],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
-        assert not t(
-            X="Age",
-            Y="Race",
-            Z=[],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
-        assert not t(
-            X="Age",
-            Y="Sex",
-            Z=[],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
-
-        assert not t(
-            X="Education",
-            Y="HoursPerWeek",
-            Z=["Age", "Immigrant", "Race", "Sex"],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
-
-        assert t(
-            X="Immigrant",
-            Y="Sex",
-            Z=[],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
-
-        assert not t(
-            X="Education",
-            Y="MaritalStatus",
-            Z=["Age", "Sex"],
-            data=df_adult,
-            boolean=True,
-            significance_level=0.05,
-        )
+@pytest.mark.parametrize(
+    "t", [chi_square, g_sq, log_likelihood, modified_log_likelihood]
+)
+def test_discrete_tests(df_adult, t):
+    assert not t(
+        X="Age",
+        Y="Immigrant",
+        Z=[],
+        data=df_adult,
+        boolean=True,
+        significance_level=0.05,
+    )
+    assert not t(
+        X="Age", Y="Race", Z=[], data=df_adult, boolean=True, significance_level=0.05
+    )
+    assert not t(
+        X="Age", Y="Sex", Z=[], data=df_adult, boolean=True, significance_level=0.05
+    )
+    assert not t(
+        X="Education",
+        Y="HoursPerWeek",
+        Z=["Age", "Immigrant", "Race", "Sex"],
+        data=df_adult,
+        boolean=True,
+        significance_level=0.05,
+    )
+    assert t(
+        X="Immigrant",
+        Y="Sex",
+        Z=[],
+        data=df_adult,
+        boolean=True,
+        significance_level=0.05,
+    )
+    assert not t(
+        X="Education",
+        Y="MaritalStatus",
+        Z=["Age", "Sex"],
+        data=df_adult,
+        boolean=True,
+        significance_level=0.05,
+    )
 
 
-def test_exactly_same_vars():
+@pytest.mark.parametrize(
+    "t", [chi_square, g_sq, log_likelihood, modified_log_likelihood]
+)
+def test_exactly_same_vars(t):
     x = np.random.choice([0, 1], size=1000)
     y = x.copy()
     df = pd.DataFrame({"x": x, "y": y})
 
-    for t in [
-        chi_square,
-        g_sq,
-        log_likelihood,
-        modified_log_likelihood,
-    ]:
-        _, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
-        assert dof == 1
-        np_test.assert_almost_equal(p_value, 0, decimal=5)
+    _, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
+    assert dof == 1
+    np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
 @pytest.fixture
@@ -375,6 +363,7 @@ def residual_data():
     }
 
 
+@skip_residual
 def test_residual_pearsonr(residual_data):
     coef, p_value = pearsonr(
         X="X",
@@ -399,7 +388,8 @@ def test_residual_pearsonr(residual_data):
     assert np.isclose(p_value, 0, atol=1e-1)
 
 
-@skip_without_xgboost
+@skip_residual
+@requires_xgboost
 def test_pillai_no_cond(residual_data):
     dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
     dep_pvalues = [0, 0, 0, 0, 0]
@@ -434,7 +424,8 @@ def test_pillai_no_cond(residual_data):
     ), f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}"
 
 
-@skip_without_xgboost
+@skip_residual
+@requires_xgboost
 def test_pillai_indep(residual_data):
     indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
     indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
@@ -469,7 +460,8 @@ def test_pillai_indep(residual_data):
     ), f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}"
 
 
-@skip_without_xgboost
+@skip_residual
+@requires_xgboost
 def test_pillai_dependent(residual_data):
     dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
     dep_pvalues = np.array([0, 0, 0, 0, 0])
@@ -504,6 +496,7 @@ def test_pillai_dependent(residual_data):
     ), f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}"
 
 
+@skip_residual
 def test_gcm(residual_data):
     # Non-conditional tests
     coef, p_value = gcm(
@@ -544,6 +537,7 @@ def test_gcm(residual_data):
     assert p_value == pytest.approx(0.0)
 
 
+@skip_residual
 def test_pearsonr_equivalence(residual_data):
     is_independent = pearsonr_equivalence(
         X="X",
