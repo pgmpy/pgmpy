@@ -150,6 +150,38 @@ Mixture Data with arbitrary distributions
     # For learning and inference in Functional Bayesian Networks, please refer to the example notebook: https://github.com/pgmpy/pgmpy/blob/dev/examples/Functional_Bayesian_Network_Tutorial.ipynb
 
 
+Benchmark Datasets (ALARM and Asia)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+pgmpy provides two classic Bayesian Network benchmarks via on-demand loaders:
+
+- **ALARM**: A 37-node benchmark for intensive-care monitoring and probabilistic inference evaluation.
+- **Asia**: An 8-node benchmark (also called Lung Cancer) often used in teaching and quick benchmarking.
+
+.. code-block:: python
+
+    from pgmpy.datasets import load_alarm, load_asia, get_benchmark_metadata
+
+    # Sample benchmark data.
+    alarm_data = load_alarm(n_samples=1000, sample_id=0, random_state=42)
+    asia_data = load_asia(n_samples=1000)
+
+    # Optionally return the benchmark model as well.
+    alarm_data_2, alarm_model = load_alarm(n_samples=1000, return_model=True)
+
+    # Access citation and license metadata.
+    meta = get_benchmark_metadata("alarm")
+    print(meta["citation"])
+    print(meta["license"])
+
+The loader downloads model files on first use and stores them in
+``PGMPY_DATA_HOME/benchmark_datasets`` (``PGMPY_DATA_HOME`` defaults to ``~/.pgmpy``).
+To refresh the cached model file, set ``force_download=True``.
+
+These benchmark assets include citation and license information in
+``get_benchmark_metadata``.
+
+
 Next Steps
 ----------
 * :doc:`Examples <../examples>`
