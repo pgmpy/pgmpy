@@ -1,7 +1,6 @@
-import unittest
-
 import numpy as np
 import pandas as pd
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
@@ -12,178 +11,176 @@ from pgmpy.models.LinearGaussianBayesianNetwork import LinearGaussianBayesianNet
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 torch = _safe_import("torch")
 
-
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+pytestmark = pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestFCPD(unittest.TestCase):
-    def setUp(self):
-        config.set_backend("torch")
 
-    def test_class_init(self):
-        """
-        Test the initialization of the FunctionalCPD class.
-        """
-        cpd = FunctionalCPD(
-            variable="x3",
-            fn=lambda parent_sample: dist.Normal(
-                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
-            ),
-            parents=["x1", "x2"],
-        )
 
-        self.assertEqual(cpd.variable, "x3")
-        self.assertEqual(cpd.parents, ["x1", "x2"])
-        self.assertTrue(
-            callable(cpd.fn), "The function passed to FunctionalCPD must be callable."
-        )
+@pytest.fixture(autouse=True)
+def set_torch():
+    config.set_backend("torch")
+    yield
+    config.set_backend("numpy")
 
-    def test_linear_gaussian(self):
-        """
-        Test the equivalence of FunctionalCPD with LinearGaussianCPD sampling.
-        """
-        x1_cpd = LinearGaussianCPD("x1", [0], 1.0)
 
-        x2_cpd = LinearGaussianCPD("x2", [0], 1.0)
+def test_class_init():
+    """
+    Test the initialization of the FunctionalCPD class.
+    """
+    cpd = FunctionalCPD(
+        variable="x3",
+        fn=lambda parent_sample: dist.Normal(
+            1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+        ),
+        parents=["x1", "x2"],
+    )
 
-        x3_cpd = LinearGaussianCPD(
-            "x3",
-            [1.0, 0.2, 0.3],
-            1.0,
-            evidence=["x1", "x2"],
-        )
-        num_samples = 10000
+    assert cpd.variable == "x3"
+    assert cpd.parents == ["x1", "x2"]
+    assert callable(cpd.fn), "The function passed to FunctionalCPD must be callable."
 
-        lgbn = LinearGaussianBayesianNetwork([("x1", "x3"), ("x2", "x3")])
-        lgbn.add_cpds(x1_cpd, x2_cpd, x3_cpd)
 
-        linear_gaussian_samples = lgbn.simulate(num_samples, seed=42)
+def test_linear_gaussian():
+    """
+    Test the equivalence of FunctionalCPD with LinearGaussianCPD sampling.
+    """
+    x1_cpd = LinearGaussianCPD("x1", [0], 1.0)
 
-        functional_cpd = FunctionalCPD(
-            variable="x3",
-            fn=lambda parent_sample: dist.Normal(
-                1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
-            ),
-            parents=["x1", "x2"],
-        )
+    x2_cpd = LinearGaussianCPD("x2", [0], 1.0)
 
-        functional_samples = functional_cpd.sample(
-            num_samples, linear_gaussian_samples[["x1", "x2"]]
-        )
+    x3_cpd = LinearGaussianCPD(
+        "x3",
+        [1.0, 0.2, 0.3],
+        1.0,
+        evidence=["x1", "x2"],
+    )
+    num_samples = 10000
 
-        functional_mean = functional_samples.mean()
-        functional_variance = functional_samples.var()
-        linear_gaussian_mean = linear_gaussian_samples["x3"].mean()
-        linear_gaussian_variance = linear_gaussian_samples["x3"].var()
+    lgbn = LinearGaussianBayesianNetwork([("x1", "x3"), ("x2", "x3")])
+    lgbn.add_cpds(x1_cpd, x2_cpd, x3_cpd)
 
-        tolerance = 1e-1
+    linear_gaussian_samples = lgbn.simulate(num_samples, seed=42)
 
-        self.assertAlmostEqual(
-            functional_mean,
-            linear_gaussian_mean,
-            delta=tolerance,
-            msg=f"Functional mean ({functional_mean}) differs from LinearGaussian mean ({linear_gaussian_mean})",
-        )
-        self.assertAlmostEqual(
-            functional_variance,
-            linear_gaussian_variance,
-            delta=tolerance,
-            msg=f"Functional variance ({functional_variance})"
-            f" differs from LinearGaussian variance ({linear_gaussian_variance})",
-        )
+    functional_cpd = FunctionalCPD(
+        variable="x3",
+        fn=lambda parent_sample: dist.Normal(
+            1.0 + 0.2 * parent_sample["x1"] + 0.3 * parent_sample["x2"], 1
+        ),
+        parents=["x1", "x2"],
+    )
 
-    def test_different_distributions(self):
-        exp_cpd = FunctionalCPD("exponential", lambda _: dist.Exponential(rate=2.0))
+    functional_samples = functional_cpd.sample(
+        num_samples, linear_gaussian_samples[["x1", "x2"]]
+    )
 
-        exp_samples = exp_cpd.sample(n_samples=5000)
-        self.assertTrue(np.all(exp_samples >= 0))
-        self.assertAlmostEqual(np.mean(exp_samples), 0.5, delta=0.1)
+    # functional_mean = functional_samples.mean()
+    # functional_variance = functional_samples.var()
+    # linear_gaussian_mean = linear_gaussian_samples["x3"].mean()
+    # linear_gaussian_variance = linear_gaussian_samples["x3"].var()
 
-        uni_cpd = FunctionalCPD(
-            "uniform",
-            lambda parent: dist.Uniform(
-                low=parent["exponential"], high=parent["exponential"] + 5
-            ),
-            parents=["exponential"],
-        )
+    tolerance = 1e-1
 
-        exp_samples = pd.DataFrame({"exponential": exp_samples})
+    assert functional_samples.mean() == pytest.approx(
+        linear_gaussian_samples["x3"].mean(), abs=tolerance
+    )
+    assert functional_samples.var() == pytest.approx(
+        linear_gaussian_samples["x3"].var(), abs=tolerance
+    )
 
-        uni_samples = uni_cpd.sample(n_samples=5000, parent_sample=exp_samples)
 
-        self.assertTrue(np.all(uni_samples >= exp_samples["exponential"]))
-        self.assertTrue(np.all(uni_samples <= exp_samples["exponential"] + 5))
+def test_different_distributions():
+    exp_cpd = FunctionalCPD("exponential", lambda _: dist.Exponential(rate=2.0))
 
-    def test_sample_vectorized(self):
-        """
-        Test FunctionalCPD with vectorized sampling.
-        """
+    exp_samples = exp_cpd.sample(n_samples=5000)
+    assert np.all(exp_samples >= 0)
+    assert np.mean(exp_samples) == pytest.approx(0.5, abs=0.1)
 
-        def vectorized_fn(parent_sample):
-            x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
-            x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
-            mean = 1.0 + 0.5 * x1 + 0.25 * x2
-            return dist.Normal(mean, torch.ones_like(mean))
+    uni_cpd = FunctionalCPD(
+        "uniform",
+        lambda parent: dist.Uniform(
+            low=parent["exponential"], high=parent["exponential"] + 5
+        ),
+        parents=["exponential"],
+    )
 
-        cpd = FunctionalCPD(
-            variable="x3", fn=vectorized_fn, parents=["x1", "x2"], vectorized=True
-        )
+    exp_samples = pd.DataFrame({"exponential": exp_samples})
 
-        parent_samples = pd.DataFrame(
-            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
-        )
+    uni_samples = uni_cpd.sample(n_samples=5000, parent_sample=exp_samples)
 
-        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
-        self.assertEqual(len(samples), 1000)
-        self.assertTrue(np.isfinite(samples).all())
+    assert np.all(uni_samples >= exp_samples["exponential"])
+    assert np.all(uni_samples <= exp_samples["exponential"] + 5)
 
-    def test_sample_iterative(self):
-        """
-        Test FunctionalCPD with iterative sampling (vectorized=False).
-        """
 
-        def row_fn(row):
-            mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
-            return dist.Normal(mean, 1.0)
+def test_sample_vectorized():
+    """
+    Test FunctionalCPD with vectorized sampling.
+    """
 
-        cpd = FunctionalCPD(
-            variable="x3", fn=row_fn, parents=["x1", "x2"], vectorized=False
-        )
+    def vectorized_fn(parent_sample):
+        x1 = torch.tensor(parent_sample["x1"].values, dtype=torch.float32)
+        x2 = torch.tensor(parent_sample["x2"].values, dtype=torch.float32)
+        mean = 1.0 + 0.5 * x1 + 0.25 * x2
+        return dist.Normal(mean, torch.ones_like(mean))
 
-        parent_samples = pd.DataFrame(
-            {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
-        )
+    cpd = FunctionalCPD(
+        variable="x3", fn=vectorized_fn, parents=["x1", "x2"], vectorized=True
+    )
 
-        samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
-        self.assertEqual(len(samples), 1000)
-        self.assertTrue(np.isfinite(samples).all())
+    parent_samples = pd.DataFrame(
+        {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+    )
 
-    def test_vectorized_without_parent(self):
-        """
-        Test FunctionalCPD with vectorized sampling without parents.
-        """
+    samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+    assert len(samples) == 1000
+    assert np.isfinite(samples).all()
 
-        def vectorized_fn(parent_sample):
-            return dist.Normal(torch.zeros(1000), torch.ones(1000))
 
-        cpd = FunctionalCPD(variable="z", fn=vectorized_fn, parents=[], vectorized=True)
-        samples = cpd.sample(n_samples=1000)
-        self.assertEqual(len(samples), 1000)
-        self.assertTrue(np.isfinite(samples).all())
+def test_sample_iterative():
+    """
+    Test FunctionalCPD with iterative sampling (vectorized=False).
+    """
 
-    def test_iterative_without_parent(self):
-        """
-        Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
-        """
+    def row_fn(row):
+        mean = 1.0 + 0.5 * row["x1"] + 0.25 * row["x2"]
+        return dist.Normal(mean, 1.0)
 
-        def iterative_fn(parent_sample):
-            return dist.Normal(0.0, 1.0)
+    cpd = FunctionalCPD(
+        variable="x3", fn=row_fn, parents=["x1", "x2"], vectorized=False
+    )
 
-        cpd = FunctionalCPD(variable="z", fn=iterative_fn, parents=[], vectorized=False)
-        samples = cpd.sample(n_samples=1000)
-        self.assertEqual(len(samples), 1000)
-        self.assertTrue(np.isfinite(samples).all())
+    parent_samples = pd.DataFrame(
+        {"x1": np.random.randn(1000), "x2": np.random.randn(1000)}
+    )
 
-    def tearDown(self):
-        config.set_backend("numpy")
+    samples = cpd.sample(n_samples=1000, parent_sample=parent_samples)
+    assert len(samples) == 1000
+    assert np.isfinite(samples).all()
+
+
+def test_vectorized_without_parent():
+    """
+    Test FunctionalCPD with vectorized sampling without parents.
+    """
+
+    def vectorized_fn(_):
+        return dist.Normal(torch.zeros(1000), torch.ones(1000))
+
+    cpd = FunctionalCPD(variable="z", fn=vectorized_fn, parents=[], vectorized=True)
+    samples = cpd.sample(n_samples=1000)
+    assert len(samples) == 1000
+    assert np.isfinite(samples).all()
+
+
+def test_iterative_without_parent():
+    """
+    Test FunctionalCPD with iterative sampling (vectorized=False) without parents.
+    """
+
+    def iterative_fn(_):
+        return dist.Normal(0.0, 1.0)
+
+    cpd = FunctionalCPD(variable="z", fn=iterative_fn, parents=[], vectorized=False)
+    samples = cpd.sample(n_samples=1000)
+    assert len(samples) == 1000
+    assert np.isfinite(samples).all()
