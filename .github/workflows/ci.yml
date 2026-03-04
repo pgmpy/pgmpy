@@ -1,10 +1,14 @@
 name: Test
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
-on: [push, pull_request, merge_group]
+on:
+  push:
+    branches: ["dev"]
+  pull_request:
+  merge_group:
 
 jobs:
   test-nosoftdeps:
