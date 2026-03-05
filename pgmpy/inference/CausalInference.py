@@ -102,7 +102,9 @@ class CausalInference(object):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
         return f"{self.__class__.__name__}({variables})"
 
-    def is_valid_backdoor_adjustment_set(self, X, Y, Z=[]):
+    def is_valid_backdoor_adjustment_set(self, X, Y, Z=None):
+        if Z is None:
+            Z = []
         """
         Test whether Z is a valid backdoor adjustment set for estimating the causal impact of X on Y.
 
@@ -340,7 +342,9 @@ class CausalInference(object):
                     break
         return scaling_indicators
 
-    def _iv_transformations(self, X, Y, scaling_indicators={}):
+    def _iv_transformations(self, X, Y, scaling_indicators=None):
+        if scaling_indicators is None:
+            scaling_indicators = {}
         """
         Transforms the graph structure of SEM so that the d-separation criterion is
         applicable for finding IVs. The method transforms the graph for finding MIIV
@@ -406,7 +410,7 @@ class CausalInference(object):
 
         return full_graph, dependent_var
 
-    def get_ivs(self, X, Y, scaling_indicators={}):
+    def get_ivs(self, X, Y, scaling_indicators=None):
         """
         Returns the Instrumental variables(IVs) for the relation X -> Y
 
@@ -471,7 +475,7 @@ class CausalInference(object):
         # Remove {X, Y} because they can't be IV for X -> Y
         return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
 
-    def get_conditional_ivs(self, X, Y, scaling_indicators={}):
+    def get_conditional_ivs(self, X, Y, scaling_indicators=None):
         """
         Returns the conditional IVs for the relation X -> Y
 
@@ -540,7 +544,7 @@ class CausalInference(object):
                 continue
         return instruments
 
-    def get_total_conditional_ivs(self, X, Y, scaling_indicators={}):
+    def get_total_conditional_ivs(self, X, Y, scaling_indicators=None):
         all_paths = list(nx.all_simple_paths(self.dag, X, Y))
         nodes_on_paths = set([node for path in all_paths for node in path])
         nodes_on_paths = nodes_on_paths - {X, Y}
@@ -696,7 +700,9 @@ class CausalInference(object):
         else:
             return None
 
-    def _simple_decision(self, adjustment_sets=[]):
+    def _simple_decision(self, adjustment_sets=None):
+        if adjustment_sets is None:
+            adjustment_sets = []
         """
         Selects the smallest set from provided adjustment sets.
 

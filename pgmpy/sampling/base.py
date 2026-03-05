@@ -615,7 +615,9 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
         return position_bar, momentum_bar, grad_log
 
 
-def _return_samples(samples, state_names_map=None, columns_with_state_names=[]):
+def _return_samples(samples, state_names_map=None, columns_with_state_names=None):
+    if columns_with_state_names is None:
+        columns_with_state_names = []
     """
     A utility function to return samples according to type
     """

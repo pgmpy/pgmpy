@@ -74,12 +74,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
     3
     """
 
-    def __init__(self, ebunch=None, latents=[]):
+    def __init__(self, ebunch=None, latents=None):
         super(DiscreteMarkovNetwork, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
-        self.latents = latents
+        self.latents = latents if latents is not None else []
 
     def add_edge(self, u, v, **kwargs):
         """

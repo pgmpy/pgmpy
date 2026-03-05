@@ -65,7 +65,9 @@ class LinearGaussianCPD(BaseFactor):
     array([ 0.2, -2. ,  3. ,  7. ])
     """
 
-    def __init__(self, variable, beta, std, evidence=[]):
+    def __init__(self, variable, beta, std, evidence=None):
+        if evidence is None:
+            evidence = []
         try:
             hash(variable)
         except TypeError:

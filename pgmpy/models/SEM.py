@@ -108,8 +108,16 @@ class SEMGraph:
 
     """
 
-    def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
+    def __init__(self, ebunch=None, latents=None, err_corr=None, err_var=None):
         super(SEMGraph, self).__init__()
+        if ebunch is None:
+            ebunch = []
+        if latents is None:
+            latents = []
+        if err_corr is None:
+            err_corr = []
+        if err_var is None:
+            err_var = {}
 
         # Construct the graph and set the parameters.
         self.graph = nx.DiGraph()

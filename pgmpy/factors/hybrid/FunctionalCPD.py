@@ -48,7 +48,9 @@ class FunctionalCPD(BaseFactor):
     ['x1', 'x2']
     """
 
-    def __init__(self, variable, fn, parents=[], vectorized=False):
+    def __init__(self, variable, fn, parents=None, vectorized=False):
+        if parents is None:
+            parents = []
         self.variable = variable
         if not callable(fn):
             raise ValueError("`fn` must be a callable function.")

@@ -88,7 +88,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     +-------+-------+-------+-----------------+
     """
 
-    def __init__(self, variables, cardinality, values, state_names={}):
+    def __init__(self, variables, cardinality, values, state_names=None):
+        if state_names is None:
+            state_names = {}
         if isinstance(variables, str):
             raise TypeError("Variables: Expected type list or array like, got string")
 

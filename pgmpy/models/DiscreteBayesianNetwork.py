@@ -608,7 +608,9 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+    def fit(self, data, estimator=None, state_names=None, n_jobs=1, **kwargs) -> "DAG":
+        if state_names is None:
+            state_names = []
         """
         Estimates the CPD for each variable based on a given data set.
 

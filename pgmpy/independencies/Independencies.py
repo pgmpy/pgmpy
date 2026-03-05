@@ -440,7 +440,13 @@ class IndependenceAssertion(object):
     get_assertion
     """
 
-    def __init__(self, event1=[], event2=[], event3=[]):
+    def __init__(self, event1=None, event2=None, event3=None):
+        if event1 is None:
+            event1 = []
+        if event2 is None:
+            event2 = []
+        if event3 is None:
+            event3 = []
         r"""
         Initialize an IndependenceAssertion object with event1, event2 and event3 attributes.
 
