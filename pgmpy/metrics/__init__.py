@@ -1,6 +1,5 @@
 from ._base import _BaseSupervisedMetric, _BaseUnsupervisedMetric, get_metrics
 from .correlation_score import CorrelationScore
-from .cpdag_shd import CPDAGSHD
 from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .shd import SHD
@@ -10,7 +9,6 @@ __all__ = [
     "_BaseSupervisedMetric",
     "_BaseUnsupervisedMetric",
     "get_metrics",
-    "CPDAGSHD",
     "SHD",
     "CorrelationScore",
     "ImpliedCIs",
