@@ -1889,6 +1889,24 @@ class TestSimulation(unittest.TestCase):
                 show_progress=False,
             )
 
+    def test_simulate_virtual_evidence_wrong_cardinality(self):
+        bad_virtual_evidence = TabularCPD("U", 3, [[0.2], [0.5], [0.3]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
+    def test_simulate_virtual_evidence_nonexistent_node(self):
+        bad_virtual_evidence = TabularCPD("NONEXISTENT", 2, [[0.5], [0.5]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
     def test_simulate_virtual_intervention(self):
         # Use virtual intervention argument to simulate hard intervention and match values from inference
 
