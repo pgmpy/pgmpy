@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.inference import Inference
+from .base import Inference
 from pgmpy.inference.EliminationOrder import (
     MinFill,
     MinNeighbors,

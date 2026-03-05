@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.inference import Inference
+from .base import Inference
 from pgmpy.models import DiscreteMarkovNetwork
 
 
