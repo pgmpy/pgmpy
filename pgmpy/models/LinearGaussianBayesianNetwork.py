@@ -798,7 +798,7 @@ class LinearGaussianBayesianNetwork(DAG):
         if estimator not in {
             "mle",
         }:
-            raise ValueError("estimator must be one of {'mle', 'unbiased'}")
+            raise ValueError("estimator must be {'mle'}")
         if std_estimator not in {"mle", "unbiased"}:
             raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
 
