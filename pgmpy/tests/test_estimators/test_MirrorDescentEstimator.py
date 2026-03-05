@@ -34,7 +34,7 @@ def simple_factor_graph():
     return df, m2
 
 
-def test_estimate_example_smoke_test():
+def test_estimate_example_smoke_test(backend):
     data = pd.DataFrame(data={"a": [0, 0, 1, 1, 1], "b": [0, 1, 0, 1, 1]})
     model = FactorGraph()
     model.add_nodes_from(["a", "b"])
