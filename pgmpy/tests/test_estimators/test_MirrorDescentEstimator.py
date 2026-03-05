@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import numpy as np
 import pandas as pd
@@ -10,20 +10,31 @@ from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import FactorGraph, JunctionTree
 
+@pytest.fixture(params=["numpy", "torch"])
+def backend(request):
+    if request.param == "torch":
+        if not _check_soft_dependencies("torch", severity="none"):
+            pytest.skip("torch not installed")
+        request.node.add_marker(pytest.mark.torch)
+        config.set_backend("torch")
+    yield request.param
+    config.set_backend("numpy")
 
-class TestMarginalEstimator(unittest.TestCase):
-    def setUp(self) -> None:
-        self.df = pd.DataFrame({"A": np.repeat([0, 1], 50)})
-        self.m2 = FactorGraph()
-        self.m2.add_node("A")
-        self.factor = DiscreteFactor(
+@pytest.fixture
+def simple_factor_graph():
+        df = pd.DataFrame({"A": np.repeat([0, 1], 50)})
+        m2 = FactorGraph()
+        m2.add_node("A")
+        factor = DiscreteFactor(
             variables=["A"], cardinality=[2], values=np.zeros(2)
         )
-        self.m2.add_factors(self.factor)
-        self.m2.add_edges_from([("A", self.factor)])
-        self.m2.check_model()
+        m2.add_factors(factor)
+        m2.add_edges_from([("A", factor)])
+        m2.check_model()
 
-    def test_estimate_example_smoke_test(self):
+        return df, m2
+
+def test_estimate_example_smoke_test():
         data = pd.DataFrame(data={"a": [0, 0, 1, 1, 1], "b": [0, 1, 0, 1, 1]})
         model = FactorGraph()
         model.add_nodes_from(["a", "b"])
@@ -39,34 +50,34 @@ class TestMarginalEstimator(unittest.TestCase):
         tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a",)]
         )
-        self.assertEqual(
-            tree2.factors[0].get_value(a=0, b=0), tree2.factors[0].get_value(a=0, b=1)
-        )
-        self.assertEqual(
-            tree2.factors[0].get_value(a=1, b=0), tree2.factors[0].get_value(a=1, b=1)
-        )
-        self.assertAlmostEqual(float(tree2.factors[0].get_value(a=0, b=0)), 1.0)
-        self.assertAlmostEqual(float(tree2.factors[0].get_value(a=1, b=0)), 1.5)
+        assert tree2.factors[0].get_value(a=0, b=0) == tree2.factors[0].get_value(a=0, b=1)
+    
+        assert tree2.factors[0].get_value(a=1, b=0) == tree2.factors[0].get_value(a=1, b=1)
+        
+        assert pytest.approx(tree2.factors[0].get_value(a=0, b=0)) == 1.0
+        assert pytest.approx(tree2.factors[0].get_value(a=1, b=0)) == 1.5
 
-    def test_mirror_descent_estimator_l2(self):
-        mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
+def test_mirror_descent_estimator_l2(backend, simple_factor_graph):
+        df, m2 = simple_factor_graph
+        mirror_descent_estimator = MirrorDescentEstimator(m2, data=df)
         tree = mirror_descent_estimator.estimate(
             marginals=[("A",)], metric="L2", iterations=2, stepsize=1
         )
-        marginal = FactorDict.from_dataframe(df=self.df, marginals=[("A",)])[("A",)]
+        marginal = FactorDict.from_dataframe(df=df, marginals=[("A",)])[("A",)]
         diff = tree.factors[0].values.flatten() - marginal.values.flatten()
-        self.assertAlmostEqual(float(diff.sum()), 0.0)
+        assert pytest.approx(diff.sum()) == 0.0
 
-    def test_mirror_descent_estimator_l1(self):
-        mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
+def test_mirror_descent_estimator_l1(backend, simple_factor_graph):
+        df, m2 = simple_factor_graph
+        mirror_descent_estimator = MirrorDescentEstimator(m2, data=df)
         tree = mirror_descent_estimator.estimate(
             marginals=[("A",)], metric="L1", iterations=2, stepsize=1
         )
-        marginal = FactorDict.from_dataframe(df=self.df, marginals=[("A",)])[("A",)]
+        marginal = FactorDict.from_dataframe(df=df, marginals=[("A",)])[("A",)]
         diff = tree.factors[0].values.flatten() - marginal.values.flatten()
-        self.assertAlmostEqual(float(diff.sum()), 0.0)
+        assert pytest.approx(diff.sum()) == 0.0
 
-    def test_mirror_descent_warm_start(self):
+def test_mirror_descent_warm_start(backend):
         df = pd.DataFrame({"A": np.repeat([0, 1], 50), "B": np.repeat([1, 0], 50)})
         model = JunctionTree()
         model.add_node(node=["A", "B"])
@@ -95,9 +106,9 @@ class TestMarginalEstimator(unittest.TestCase):
             clique_to_marginal=clique_to_marginal,
             metric="L2",
         )
-        self.assertTrue(loss_2 < loss_1)
+        assert loss_2 < loss_1
 
-    def test_multi_clique_tree(self):
+def test_multi_clique_tree(backend):
         df = pd.DataFrame(
             data={
                 "a": [1, 0, 0, 1, 1],
@@ -115,7 +126,7 @@ class TestMarginalEstimator(unittest.TestCase):
                 (("b", "c"), ("c", "e")),
             ]
         )
-        self.assertTrue(len(model.nodes) > 1)
+        assert len(model.nodes) > 1
         for node in model.nodes():
             model.add_factors(
                 DiscreteFactor(
@@ -133,21 +144,3 @@ class TestMarginalEstimator(unittest.TestCase):
         for clique, belief in tree.clique_beliefs.items():
             diff = empirical_marginals[clique] + -1 * belief
             np.testing.assert_allclose(diff.values, 0.0)
-
-    def tearDown(self) -> None:
-        del self.m2
-        del self.df
-
-
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
-)
-class TestMarginalEstimatorTorch(TestMarginalEstimator):
-    def setUp(self) -> None:
-        config.set_backend("torch")
-        super().setUp()
-
-    def tearDown(self) -> None:
-        super().tearDown()
-        config.set_backend("numpy")
