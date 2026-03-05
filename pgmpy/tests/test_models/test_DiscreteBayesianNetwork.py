@@ -1863,6 +1863,27 @@ class TestSimulation(unittest.TestCase):
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
+    def test_simulate_virtual_evidence_invalid(self):
+        # Test that invalid virtual evidence raises proper ValueError
+        model = DiscreteBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD("B", 2, [[0.7, 0.2], [0.3, 0.8]], evidence=["A"], evidence_card=[2]),
+        )
+        model.check_model()
+
+        # Invalid: CPD with evidence (multi-variable scope: B and A)
+        invalid_ve = TabularCPD(
+            "B", 2, [[0.6, 0.4], [0.4, 0.6]], evidence=["A"], evidence_card=[2]
+        )
+
+        # Should raise ValueError (not TypeError) with clear message
+        with pytest.raises(
+            ValueError,
+            match="Virtual evidence should be defined on individual variables"
+        ):
+            model.simulate(n_samples=1, virtual_evidence=[invalid_ve])
+
     def test_simulate_virtual_intervention(self):
         # Use virtual intervention argument to simulate hard intervention and match values from inference
 

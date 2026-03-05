@@ -1599,9 +1599,10 @@ class DiscreteBayesianNetwork(DAG):
                         "Evidence provided for variable which is not in the model"
                     )
                 elif len(cpd.variables) > 1:
-                    raise (
-                        "Virtual evidence should be defined on individual variables."
-                        " Maybe you are looking for soft evidence."
+                    raise ValueError(
+                        "Virtual evidence should be defined on individual variables. "
+                        "Each virtual evidence CPD must have exactly one variable. "
+                        "Maybe you are looking for soft evidence."
                     )
                 elif self.get_cardinality(var) != cpd.get_cardinality([var])[var]:
                     raise ValueError(
