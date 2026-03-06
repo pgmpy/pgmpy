@@ -11,8 +11,10 @@ torch = _safe_import("torch")
 
 class TestOptimize:
     """
-    self = TestOptimize()
-    self.setUp()
+    Example usage of the test setup:
+
+    >>> self = TestOptimize()
+    >>> self.setup_method(None)
     """
 
     def setup_method(self, method):
