@@ -625,7 +625,7 @@ class TestBIFReaderTorch:
             "hear-bark",
             "family-out",
         ]
-        assert self.reader.get_variables() == var_expected
+        assert self.reader.variable_names == var_expected
 
     def test_variable_states(self):
         states_expected = {
