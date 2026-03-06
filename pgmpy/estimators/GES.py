@@ -6,14 +6,13 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.estimators import (
-    ExpertKnowledge,
-    StructureEstimator,
-    StructureScore,
-)
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
+
+from .base import StructureEstimator
+from .ExpertKnowledge import ExpertKnowledge
+from .StructureScore import StructureScore
 
 
 class GES(StructureEstimator):

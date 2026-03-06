@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import numpy.testing as npt
 
-from pgmpy.models import SEM, SEMAlg, SEMGraph
+from pgmpy.models import SEM, SEMGraph
 
 
 class TestSEM(unittest.TestCase):
@@ -1107,7 +1107,7 @@ class TestSEMGraph(unittest.TestCase):
         zeta_reorder = demo_lisrel.zeta[indexing, :][:, indexing]
         zeta_fixed_reorder = demo_lisrel.zeta_fixed_mask[indexing, :][:, indexing]
 
-        wedge_y_reorder = demo_lisrel.wedge_y[:, indexing]
+        _ = demo_lisrel.wedge_y[:, indexing]
 
         self.assertEqual(vars_ordered, eta_reorder)
         npt.assert_array_equal(
@@ -1411,5 +1411,5 @@ class TestSEMAlg(unittest.TestCase):
         self.small_model_lisrel = self.small_model.to_lisrel()
 
     def test_generate_samples(self):
-        samples = self.small_model_lisrel.generate_samples(n_samples=100)
-        samples = self.demo_lisrel.generate_samples(n_samples=100)
+        _ = self.small_model_lisrel.generate_samples(n_samples=100)
+        _ = self.demo_lisrel.generate_samples(n_samples=100)

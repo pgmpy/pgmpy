@@ -6,10 +6,12 @@ import pandas as pd
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient
+
+from .base import StructureEstimator
+from .ExpertKnowledge import ExpertKnowledge
 
 
 class ExpertInLoop(StructureEstimator):

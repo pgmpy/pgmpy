@@ -5,8 +5,9 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
-from .base import Inference
 from pgmpy.models import DiscreteMarkovNetwork
+
+from .base import Inference
 
 
 class Mplp(Inference):

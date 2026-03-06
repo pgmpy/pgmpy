@@ -38,7 +38,7 @@ if python_version_tuple()[0] < "3":
     _none_type = type(None)
     _int_type = int
     _float_type = float
-    _text_type = unicode
+    _text_type = unicode  # noqa: F821
     _binary_type = str
 else:
     from functools import partial, reduce
@@ -288,7 +288,7 @@ def simple_separated_format(separator):
 
 def _isconvertible(conv, string):
     try:
-        n = conv(string)
+        conv(string)
         return True
     except ValueError:
         return False

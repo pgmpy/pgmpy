@@ -3621,5 +3621,3 @@ class TestJointProbabilityDistributionMethods:
 #     def tearDown(self):
 #         del self.rule_cpd_without_rules
 #
-
-

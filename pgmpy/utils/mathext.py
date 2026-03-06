@@ -4,7 +4,6 @@ from typing import Any, Optional
 
 import numpy as np
 
-from pgmpy import config
 from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 

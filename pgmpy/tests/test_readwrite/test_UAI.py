@@ -1,6 +1,5 @@
 import unittest
 
-import networkx as nx
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 

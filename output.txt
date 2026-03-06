@@ -1,0 +1,117 @@
+﻿check yaml...............................................................[41mFailed[m
+[2m- hook id: check-yaml[m
+[2m- exit code: 1[m
+
+while scanning for the next token
+found character '%' that cannot start any token
+  in "meta.yaml", line 1, column 2
+
+fix end of files.........................................................[42mPassed[m
+trim trailing whitespace.................................................[42mPassed[m
+isort....................................................................[42mPassed[m
+black....................................................................[42mPassed[m
+flake8...................................................................[41mFailed[m
+[2m- hook id: flake8[m
+[2m- exit code: 1[m
+
+pgmpy/estimators/ExpertKnowledge.py:118:14: E721 do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
+pgmpy/estimators/MmhcEstimator.py:6:1: F401 'pgmpy.independencies.IndependenceAssertion' imported but unused
+pgmpy/estimators/MmhcEstimator.py:6:1: F401 'pgmpy.independencies.Independencies' imported but unused
+pgmpy/estimators/MmhcEstimator.py:7:1: F401 'pgmpy.models.DiscreteBayesianNetwork' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.AIC' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.BIC' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.K2' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.AICCondGauss' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.AICGauss' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.BDeu' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.BDs' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.BICCondGauss' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.BICGauss' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.LogLikelihoodCondGauss' imported but unused
+pgmpy/estimators/ScoreCache.py:2:1: F401 '.StructureScore.LogLikelihoodGauss' imported but unused
+pgmpy/estimators/TreeSearch.py:143:17: F541 f-string is missing placeholders
+pgmpy/extern/tabulate.py:41:18: F821 undefined name 'unicode'
+pgmpy/extern/tabulate.py:291:9: F841 local variable 'n' is assigned to but never used
+pgmpy/factors/discrete/__init__.py:3:1: F401 '.JointProbabilityDistribution.JointProbabilityDistribution' imported but unused
+pgmpy/factors/discrete/__init__.py:4:1: F401 '.NoisyOR.NoisyORCPD' imported but unused
+pgmpy/inference/CausalInference.py:600:9: E722 do not use bare 'except'
+pgmpy/inference/CausalInference.py:607:9: E722 do not use bare 'except'
+pgmpy/inference/CausalInference.py:614:9: E722 do not use bare 'except'
+pgmpy/inference/CausalInference.py:621:9: E722 do not use bare 'except'
+pgmpy/inference/CausalInference.py:630:9: E722 do not use bare 'except'
+pgmpy/inference/ExactInference.py:354:13: F841 local variable 'reshape_indexes' is assigned to but never used
+pgmpy/inference/base.py:6:1: F401 'numpy as np' imported but unused
+pgmpy/models/ClusterGraph.py:5:1: F401 'numpy as np' imported but unused
+pgmpy/models/SEM.py:6:1: F401 'networkx.algorithms.dag.descendants' imported but unused
+pgmpy/models/SEM.py:8:1: F401 'pgmpy.base.DAG' imported but unused
+pgmpy/models/SEM.py:9:1: F401 'pgmpy.global_vars.logger' imported but unused
+pgmpy/models/SEM.py:547:18: F841 local variable 'n' is assigned to but never used
+pgmpy/models/SEM.py:623:9: F841 local variable 'lisrel_observed' is assigned to but never used
+pgmpy/models/SEM.py:917:27: F821 undefined name 'var_names'
+pgmpy/models/SEM.py:917:45: F821 undefined name 'params'
+pgmpy/models/SEM.py:917:65: F821 undefined name 'fixed_masks'
+pgmpy/models/SEM.py:934:30: F821 undefined name 'fixed_masks'
+pgmpy/models/SEM.py:1121:40: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1122:44: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1123:40: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1123:59: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1129:18: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1130:36: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1131:40: F821 undefined name 'fixed_params'
+pgmpy/models/SEM.py:1132:44: F821 undefined name 'fixed_params'
+pgmpy/sampling/base.py:2:1: F401 'math' imported but unused
+pgmpy/sampling/base.py:3:1: F401 'os' imported but unused
+pgmpy/sampling/base.py:8:1: F401 'joblib.Parallel' imported but unused
+pgmpy/sampling/base.py:8:1: F401 'joblib.delayed' imported but unused
+pgmpy/sampling/base.py:11:1: F401 'pgmpy.config' imported but unused
+pgmpy/tests/__init__.py:1:1: F401 '.help_functions' imported but unused
+pgmpy/tests/test_estimators/test_ExhaustiveSearch.py:80:9: F841 local variable 'est_bdeu' is assigned to but never used
+pgmpy/tests/test_estimators/test_GES.py:49:9: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_GES.py:96:13: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_GES.py:111:9: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_HillClimbSearch.py:121:9: F841 local variable 'all_possible_edges' is assigned to but never used
+pgmpy/tests/test_estimators/test_HillClimbSearch.py:262:9: F841 local variable 'best_model' is assigned to but never used
+pgmpy/tests/test_estimators/test_HillClimbSearch.py:272:13: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_HillClimbSearch.py:320:13: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_HillClimbSearch.py:335:9: F841 local variable 'dag' is assigned to but never used
+pgmpy/tests/test_estimators/test_MmhcEstimator.py:7:1: F401 'pgmpy.factors.discrete.TabularCPD' imported but unused
+pgmpy/tests/test_estimators/test_SEMEstimator.py:107:9: F841 local variable 'summary' is assigned to but never used
+pgmpy/tests/test_estimators/test_SEMEstimator.py:119:9: F841 local variable 'summary' is assigned to but never used
+pgmpy/tests/test_estimators/test_SEMEstimator.py:129:9: F841 local variable 'summary' is assigned to but never used
+pgmpy/tests/test_estimators/test_SEMEstimator.py:140:9: F841 local variable 'summary' is assigned to but never used
+pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py:4:1: F401 'numpy.testing as np_test' imported but unused
+pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py:5:1: F401 'pandas as pd' imported but unused
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:13:1: F401 'pgmpy.factors.discrete.JointProbabilityDistribution as JPD' imported but unused
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:15:1: F401 'pgmpy.independencies.Independencies' imported but unused
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:17:1: F401 'pgmpy.models.DiscreteBayesianNetwork' imported but unused
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:17:1: F401 'pgmpy.models.DiscreteMarkovNetwork' imported but unused
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:2827:22: F841 local variable 'table_length' is assigned to but never used
+pgmpy/tests/test_factors/test_discrete/test_FactorTorch.py:3100:54: F841 local variable 'w' is assigned to but never used
+pgmpy/tests/test_inference/test_dbn_inference.py:190:9: F841 local variable 'ie' is assigned to but never used
+pgmpy/tests/test_models/test_DiscreteMarkovNetwork.py:300:9: F841 local variable 'clique_potential' is assigned to but never used
+pgmpy/tests/test_models/test_SEM.py:8:1: F401 'pgmpy.models.SEMAlg' imported but unused
+pgmpy/tests/test_models/test_SEM.py:1110:9: F841 local variable 'wedge_y_reorder' is assigned to but never used
+pgmpy/tests/test_models/test_SEM.py:1415:9: F841 local variable 'samples' is assigned to but never used
+pgmpy/tests/test_readwrite/test_PomdpX.py:444:5: F811 redefinition of unused 'test_reward_function' from line 310
+pgmpy/tests/test_readwrite/test_PomdpX.py:2142:5: F811 redefinition of unused 'test_reward_function' from line 2008
+pgmpy/tests/test_readwrite/test_UAI.py:3:1: F401 'networkx as nx' imported but unused
+pgmpy/tests/test_readwrite/test_XMLBIF.py:4:1: F401 'xml.etree.ElementTree as etree' imported but unused
+pgmpy/tests/test_readwrite/test_XMLBIF.py:583:1: F811 redefinition of unused 'TestXMLBIFWriterMethodsString' from line 322
+pgmpy/tests/test_readwrite/test_XMLBeliefNetwork.py:6:1: F401 'networkx as nx' imported but unused
+pgmpy/tests/test_readwrite/test_XMLBeliefNetwork.py:508:9: F841 local variable 'output' is assigned to but never used
+pgmpy/tests/test_readwrite/test_XMLBeliefNetwork.py:509:9: F841 local variable 'expected' is assigned to but never used
+pgmpy/tests/test_readwrite/test_XMLBeliefNetwork.py:1008:9: F841 local variable 'output' is assigned to but never used
+pgmpy/tests/test_readwrite/test_XMLBeliefNetwork.py:1009:9: F841 local variable 'expected' is assigned to but never used
+pgmpy/utils/mathext.py:7:1: F401 'pgmpy.config' imported but unused
+
+blackdoc.................................................................[41mFailed[m
+[2m- hook id: blackdoc[m
+[2m- exit code: 123[m
+
+error: cannot format C:\Users\jinuk\OneDrive\Documents\Projects\rocket 
+chat\pgmpy\.github\ISSUE_TEMPLATE\bug_report.md: Cannot parse: 22:0: <Paste 
+your code here>
+
+Oh no! \U0001f4a5 \U0001f494 \U0001f4a5
+585 files left unchanged, 1 file failed to reformat.
+

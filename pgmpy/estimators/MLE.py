@@ -8,10 +8,11 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
-from .base import ParameterEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
+
+from .base import ParameterEstimator
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):

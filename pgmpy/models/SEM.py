@@ -3,10 +3,7 @@ import itertools
 import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx.algorithms.dag import descendants
 
-from pgmpy.base import DAG
-from pgmpy.global_vars import logger
 from pgmpy.utils.parser import parse_lavaan
 
 
@@ -544,7 +541,7 @@ class SEMGraph:
         # xi
         y_vars, x_vars, eta_vars, xi_vars = var["y"], var["x"], var["eta"], var["xi"]
 
-        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
+        p, q, m, _ = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
 
         nodelist = y_vars + x_vars + eta_vars + xi_vars
         adj_matrix = nx.to_numpy_array(graph, nodelist=nodelist, weight=weight).T
@@ -620,7 +617,7 @@ class SEMGraph:
         """
         lisrel_err_graph = self.err_graph.copy()
         lisrel_latents = self.latents.copy()
-        lisrel_observed = self.observed.copy()
+        # lisrel_observed = self.observed.copy()
 
         # Add new latent nodes to convert it to LISREL format.
         mapping = {}
@@ -914,7 +911,9 @@ class SEM(SEMGraph):
 
         elif syntax.lower() == "lisrel":
             model = SEMAlg(
-                var_names=var_names, params=params, fixed_masks=fixed_masks
+                var_names=kwargs.get("var_names"),
+                params=kwargs.get("params"),
+                fixed_masks=kwargs.get("fixed_masks"),
             ).to_SEMGraph()
             # Initialize an empty SEMGraph instance and set the properties.
             # TODO: Boilerplate code, find a better way to do this.
@@ -931,7 +930,7 @@ class SEM(SEMGraph):
                 B=kwargs["B"],
                 zeta=kwargs["zeta"],
                 wedge_y=kwargs["wedge_y"],
-                fixed_values=fixed_masks,
+                fixed_values=kwargs.get("fixed_masks"),
             )
 
     @classmethod
@@ -1116,20 +1115,23 @@ class SEM(SEMGraph):
             ]
         )
 
+        if fixed_masks is None:
+            fixed_masks = params
+
         B = np.block(
             [
-                [np.zeros((m, m + n)), fixed_params["wedge_y"], np.zeros((m, q))],
-                [np.zeros((n, m + n + p)), fixed_params["wedge_x"]],
-                [np.zeros((p, m + n)), fixed_params["B"], fixed_params["gamma"]],
+                [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
+                [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
+                [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
                 [np.zeros((q, m + n + p + q))],
             ]
         )
         zeta = np.block(
             [
-                [fixed_params["theta_e"], np.zeros((m, n + p + q))],
-                [np.zeros((n, m)), fixed_params["theta_del"], np.zeros((n, p + q))],
-                [np.zeros((p, m + n)), fixed_params["psi"], np.zeros((p, q))],
-                [np.zeros((q, m + n + p)), fixed_params["phi"]],
+                [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
+                [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
+                [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
+                [np.zeros((q, m + n + p)), fixed_masks["phi"]],
             ]
         )
         observed = var_names["y"] + var_names["x"]

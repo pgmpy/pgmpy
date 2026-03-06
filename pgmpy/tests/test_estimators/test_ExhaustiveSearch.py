@@ -1,10 +1,10 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 
-from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch, K2
+from pgmpy.estimators import BIC, K2, BDeu, ExhaustiveSearch
 
 
 class TestBaseEstimator(unittest.TestCase):
@@ -77,7 +77,7 @@ class TestBaseEstimator(unittest.TestCase):
         self.assertSetEqual(set(est.nodes()), set(["A", "B", "C"]))
         self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
-        est_bdeu = self.est_rand.estimate()
+        self.est_rand.estimate()
         self.assertEqual(set(est.edges()), {("B", "A"), ("B", "C"), ("C", "A")})
 
         est_bic = self.est_rand.estimate()

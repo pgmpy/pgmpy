@@ -118,9 +118,7 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
         start_model = DiscreteBayesianNetwork(
             [("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")]
         )
-        all_possible_edges = set(
-            [(u, v) for u in start_model.nodes() for v in start_model.nodes()]
-        )
+        _ = set([(u, v) for u in start_model.nodes() for v in start_model.nodes()])
         legal_ops = self.est_titanic1._legal_operations(
             model=start_model,
             score=self.score_titanic1,
@@ -259,17 +257,15 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
             required_edges=[("A", "B"), ("B", "C")],
             forbidden_edges=[(u, v) for u in data.columns for v in data.columns],
         )
-        best_model = est.estimate(
-            scoring_method="k2", expert_knowledge=expert_knowledge
-        )
+        _ = est.estimate(scoring_method="k2", expert_knowledge=expert_knowledge)
 
     def test_estimate(self):
         for discrete_var_score in ["k2", "bdeu", "bds", "bic-d", "aic-d"]:
-            dag = self.est_rand.estimate(
+            _ = self.est_rand.estimate(
                 scoring_method=discrete_var_score, show_progress=False
             )
         for mixed_var_score in ["ll-cg", "aic-cg", "bic-cg"]:
-            dag = self.est_titanic1.estimate(
+            _ = self.est_titanic1.estimate(
                 scoring_method=mixed_var_score, show_progress=False
             )
 
@@ -317,7 +313,7 @@ class TestHillClimbEstimatorGaussian(unittest.TestCase):
     def test_estimate(self):
         est = HillClimbSearch(self.data)
         for score in ["aic-g", "bic-g"]:
-            dag = est.estimate(scoring_method=score, show_progress=False)
+            _ = est.estimate(scoring_method=score, show_progress=False)
 
 
 class TestHillClimbEstimatorMixed(unittest.TestCase):
@@ -332,4 +328,4 @@ class TestHillClimbEstimatorMixed(unittest.TestCase):
 
     def test_estimate(self):
         est = HillClimbSearch(self.data)
-        dag = est.estimate(scoring_method="ll-cg")
+        _ = est.estimate(scoring_method="ll-cg")

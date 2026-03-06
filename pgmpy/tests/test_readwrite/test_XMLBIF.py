@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-import xml.etree.ElementTree as etree
+from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as np_test
@@ -9,10 +9,9 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
-from unittest.mock import patch
-from pgmpy.global_vars import logger
 
 TEST_FILE = """<?xml version="1.0"?>
 
@@ -580,7 +579,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
     _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXMLBIFWriterMethodsString(unittest.TestCase):
+class TestXMLBIFWriterMethodsString2(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 

@@ -20,9 +20,9 @@ If the code is too long, feel free to put it in a public gist and link it in the
 -->
 
 ```python
-<Paste your code here>
-<please include all imports>
-<if data is required, try to find a small dummy data set that triggers the problem>
+# Paste your code here
+# please include all imports
+# if data is required, try to find a small dummy data set that triggers the problem
 ```
 
 **Expected behavior**

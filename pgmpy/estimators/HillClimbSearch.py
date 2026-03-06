@@ -19,13 +19,12 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import (
-    ExpertKnowledge,
-    StructureEstimator,
-    StructureScore,
-)
 from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
+
+from .base import StructureEstimator
+from .ExpertKnowledge import ExpertKnowledge
+from .StructureScore import StructureScore
 
 
 class HillClimbSearch(StructureEstimator):

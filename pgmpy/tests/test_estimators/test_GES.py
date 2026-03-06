@@ -45,8 +45,8 @@ class TestGESDiscrete(unittest.TestCase):
 
     def test_estimate(self):
 
-        dag = self.est_rand.estimate()
-        dag = self.est_titanic1.estimate()
+        self.est_rand.estimate()
+        self.est_titanic1.estimate()
 
         temporal_knowledge = ExpertKnowledge(
             temporal_order=[["Pclass", "Sex"], ["Survived"]]
@@ -93,7 +93,7 @@ class TestGESGauss(unittest.TestCase):
     def test_estimate(self):
         est = GES(self.data)
         for score in ["aic-g", "bic-g"]:
-            dag = est.estimate(scoring_method=score, debug=True)
+            _ = est.estimate(scoring_method=score, debug=True)
 
 
 class TestGESMixed(unittest.TestCase):
@@ -108,4 +108,4 @@ class TestGESMixed(unittest.TestCase):
 
     def test_estimate(self):
         est = GES(self.data)
-        dag = est.estimate(scoring_method="ll-cg")
+        _ = est.estimate(scoring_method="ll-cg")

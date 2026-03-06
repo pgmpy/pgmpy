@@ -104,19 +104,15 @@ class TestSEMEstimator(unittest.TestCase):
 
     def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union_lisrel)
-        summary = estimator.fit(
+        _ = estimator.fit(
             self.union_data, method="ml", opt="adam", max_iter=10**6, exit_delta=1e-1
         )
 
     def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
-        summary = estimator.fit(
-            self.custom_data, method="ml", max_iter=10**6, opt="adam"
-        )
-        summary = estimator.fit(
-            self.custom_data, method="uls", max_iter=10**6, opt="adam"
-        )
-        summary = estimator.fit(
+        _ = estimator.fit(self.custom_data, method="ml", max_iter=10**6, opt="adam")
+        _ = estimator.fit(self.custom_data, method="uls", max_iter=10**6, opt="adam")
+        _ = estimator.fit(
             self.custom_data,
             method="gls",
             max_iter=10**6,
@@ -126,7 +122,7 @@ class TestSEMEstimator(unittest.TestCase):
 
     def test_union_estimator_std_init(self):
         estimator = SEMEstimator(self.union_lisrel)
-        summary = estimator.fit(
+        _ = estimator.fit(
             self.union_data,
             method="ml",
             opt="adam",
@@ -137,7 +133,7 @@ class TestSEMEstimator(unittest.TestCase):
 
     def test_custom_estimator_std_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
-        summary = estimator.fit(
+        _ = estimator.fit(
             self.custom_data,
             method="ml",
             init_values="std",
@@ -168,5 +164,5 @@ class TestIVEstimator(unittest.TestCase):
 
     def test_fit(self):
         estimator = IVEstimator(self.model)
-        param, summary = estimator.fit(X="X", Y="Y", data=self.generated_data)
+        param, _ = estimator.fit(X="X", Y="Y", data=self.generated_data)
         self.assertTrue((param - 1) < 0.027)

@@ -9,10 +9,11 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
-from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
+
+from .base import ParameterEstimator
 
 
 class BayesianEstimator(ParameterEstimator):

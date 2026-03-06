@@ -8,8 +8,9 @@ import statsmodels.formula.api as smf
 from scipy.special import gammaln
 from scipy.stats import multivariate_normal
 
-from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
+
+from .base import BaseEstimator
 
 
 def get_scoring_method(

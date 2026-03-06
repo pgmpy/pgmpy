@@ -297,7 +297,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         # Verify that the clique potential was created correctly
         clique_factors = junction_tree.get_factors()
         self.assertEqual(len(clique_factors), 1)
-        clique_potential = clique_factors[0]
+        clique_factors[0]
 
         # Verify the junction tree structure
         self.assertListEqual(

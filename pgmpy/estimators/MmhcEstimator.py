@@ -2,11 +2,13 @@
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
-from pgmpy.independencies import IndependenceAssertion, Independencies
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.mathext import powerset
+
+from .base import StructureEstimator
+from .ExpertKnowledge import ExpertKnowledge
+from .HillClimbSearch import HillClimbSearch
+from .StructureScore import BDeu
 
 
 class MmhcEstimator(StructureEstimator):

@@ -12,7 +12,6 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
-from .base import Inference
 from pgmpy.inference.EliminationOrder import (
     MinFill,
     MinNeighbors,
@@ -28,6 +27,8 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
 )
 from pgmpy.utils import compat_fns
+
+from .base import Inference
 
 
 class VariableElimination(Inference):
@@ -350,7 +351,6 @@ class VariableElimination(Inference):
             #           evidence.
             evidence_vars = set(evidence)
             reduce_indexes = []
-            reshape_indexes = []
             for phi in factors:
                 indexes_to_reduce = [
                     phi.variables.index(var)

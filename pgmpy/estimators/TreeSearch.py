@@ -15,7 +15,8 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import StructureEstimator
+
+from .base import StructureEstimator
 
 
 class TreeSearch(StructureEstimator):
@@ -139,7 +140,7 @@ class TreeSearch(StructureEstimator):
         # Step 1.2: If estimator_type=tan, class_node must be specified
         if estimator_type == "tan" and class_node is None:
             raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
+                "class_node argument must be specified for estimator_type='tan'"
             )
         if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")

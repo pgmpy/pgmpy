@@ -1,14 +1,10 @@
 import itertools
-import math
-import os
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from opt_einsum import contract
 
-from pgmpy import config
 from pgmpy.inference import Inference
 from pgmpy.utils import _check_1d_array_object, _check_length_equal, compat_fns
 

@@ -3,6 +3,7 @@ from itertools import chain, combinations, tee
 
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
+
 from .base import Inference
 from .ExactInference import BeliefPropagation
 
