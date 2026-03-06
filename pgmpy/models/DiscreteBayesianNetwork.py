@@ -1393,23 +1393,44 @@ class DiscreteBayesianNetwork(DAG):
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
                      ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         """
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
+        if isinstance(nodes, (str, int, bytes)):
+            nodes = {nodes: None}
+        elif isinstance(nodes, (list, tuple, set)):
+            nodes = {node: None for node in nodes}
+        elif isinstance(nodes, dict):
+            pass
         else:
-            nodes = list(nodes)
-
-        if not set(nodes).issubset(set(self.nodes())):
             raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+                f"nodes must be a list, dictionary or a single node. Got: {type(nodes)}"
+            )
+
+        if not set(nodes.keys()).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes.keys()) - set(self.nodes())}"
             )
 
         model = self if inplace else self.copy()
-        adj_model = DAG.do(model, nodes, inplace=inplace)
+        adj_model = DAG.do(model, list(nodes.keys()), inplace=inplace)
 
         if adj_model.cpds:
-            for node in nodes:
+            for node, state in nodes.items():
                 cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+                if state is None:
+                    cpd.marginalize(cpd.variables[1:], inplace=True)
+                else:
+                    cpd.marginalize(cpd.variables[1:], inplace=True)
+                    new_values = np.zeros(cpd.variable_card)
+                    state_idx = cpd.name_to_no[node].get(state, state)
+                    new_values[state_idx] = 1.0
+                    cpd.values = new_values
+
+                    # Reduce the children CPDs and remove edges
+                    for child in list(adj_model.successors(node)):
+                        child_cpd = adj_model.get_cpds(node=child)
+                        if (child_cpd is not None) and (node in child_cpd.variables):
+                            child_cpd.reduce([(node, state)], inplace=True)
+                            adj_model.remove_edge(node, child)
+
         return adj_model
 
     def simulate(

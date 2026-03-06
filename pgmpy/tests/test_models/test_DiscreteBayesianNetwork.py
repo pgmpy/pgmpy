@@ -563,6 +563,31 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
             )
 
+    def test_do_with_states(self):
+        # Model: T -> C
+        model = DiscreteBayesianNetwork([("T", "C")])
+        cpd_t = TabularCPD("T", 2, [[0.6], [0.4]])
+        cpd_c = TabularCPD(
+            "C", 2, [[0.9, 0.4], [0.1, 0.6]], evidence=["T"], evidence_card=[2]
+        )
+        model.add_cpds(cpd_t, cpd_c)
+
+        # Intervention: do(T=0)
+        # Expected: T's CPD is [1, 0], C's CPD is [0.9, 0.1], no edge T -> C
+        model_do = model.do({"T": 0})
+
+        # Check graph
+        self.assertNotIn(("T", "C"), model_do.edges())
+
+        # Check T's CPD
+        cpd_t_post = model_do.get_cpds("T")
+        np_test.assert_array_equal(cpd_t_post.values, np.array([1.0, 0.0]))
+
+        # Check C's CPD
+        cpd_c_post = model_do.get_cpds("C")
+        self.assertListEqual(cpd_c_post.variables, ["C"])
+        np_test.assert_array_equal(cpd_c_post.values, np.array([0.9, 0.1]))
+
     def test_simulate(self):
         asia = get_example_model("asia")
         n_samples = int(1e3)
