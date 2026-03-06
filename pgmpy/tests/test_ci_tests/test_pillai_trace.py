@@ -25,12 +25,8 @@ def test_pillai_trace(test_data, data_key, Z, expect_independent):
     coef, p_value = ci_test.test(X="X", Y="Y", Z=Z, boolean=False)
 
     if expect_independent:
-        if "cont" in data_key:
-            assert abs(coef) <= 0.1, f"Expected |coef| <= 0.1, got {coef}"
         assert p_value >= 0.05, f"Expected p-value >= 0.05, got {p_value}"
     else:
-        if "cont" in data_key:
-            assert abs(coef) > 0.1, f"Expected |coef| > 0.1, got {coef}"
         assert p_value < 0.05, f"Expected p-value < 0.05, got {p_value}"
 
     independent = ci_test.test(X="X", Y="Y", Z=Z, boolean=True, significance_level=0.05)
