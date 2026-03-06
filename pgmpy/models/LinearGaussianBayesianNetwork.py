@@ -558,12 +558,10 @@ class LinearGaussianBayesianNetwork(DAG):
             Seed for the random number generator.
         Returns
         -------
-        pandas.DataFrame
-        pandas.DataFrame: generated samples
-            A pandas data frame with the generated samples.
+        pandas.DataFrame: A pandas data frame with the generated samples.
+
         Examples
         --------
-        >>> model.simulate(n_samples=3, seed=42)
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -573,15 +571,17 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+        >>> model.simulate(n_samples=3, seed=42)
 
         Sampling with intervention (do)
-        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
 
         Sampling with evidence
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
 
         Sampling with both intervention and evidence
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
