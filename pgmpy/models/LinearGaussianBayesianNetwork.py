@@ -501,9 +501,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd_b = LinearGaussianCPD(
         ...     variable="B", beta=[-5, 0.5], std=4, evidence=["A"]
         ... )
-        >>> cpd_c = LinearGaussianCPD(
-        ...     variable="C", beta=[4, -1], std=3, evidence=["x2"]
-        ... )
+        >>> cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
         >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
         >>> copy_model = model.copy()
         >>> copy_model.nodes()
@@ -869,14 +867,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> # Drop a column you want to predict (avoid inplace=True to keep return value)
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
         >>> df = model.simulate(n_samples=5)
-        >>> # Drop a column that we want to predict.
-        >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
+        >>> df = df.drop(columns=["folK"], axis=1)
         >>> model.predict(df)
-                   array([[0.13440001]]))
+        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
