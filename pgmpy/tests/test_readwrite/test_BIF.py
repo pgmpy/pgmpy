@@ -494,7 +494,6 @@ probability ( light-on | family-out ) {
 
 }
 """
-        self.maxDiff = None
         assert self.writer.__str__() == self.expected_string
 
     def test_write_read_equal(self):
@@ -1047,7 +1046,6 @@ probability ( light-on | family-out ) {
 
 }
 """
-        self.maxDiff = None
         assert self.writer.__str__() == self.expected_string
 
     def test_write_read_equal(self):

@@ -44,7 +44,6 @@ class TestUAIReader:
  0.0000 0.0000 10.0000
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
-        self.maxDiff = None
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
@@ -130,7 +129,6 @@ class TestUAIReader:
 class TestUAIWriter:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.maxDiff = None
         variables = [
             "kid",
             "bowel-problem",
@@ -305,7 +303,6 @@ class TestUAIReaderTorch:
  0.0000 0.0000 10.0000
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
-        self.maxDiff = None
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
@@ -399,7 +396,6 @@ class TestUAIWriterTorch:
     def _setup(self):
         config.set_backend("torch")
 
-        self.maxDiff = None
         variables = [
             "kid",
             "bowel-problem",

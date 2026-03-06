@@ -10,25 +10,7 @@ import pytest
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
 
 
-class PyTestCompat:
-    def assertEqual(self, a, b):
-        assert a == b
-
-    def assertListEqual(self, a, b):
-        assert list(a) == list(b)
-
-    def assertDictEqual(self, a, b):
-        assert dict(a) == dict(b)
-
-    def assertRaises(self, exc, callable_obj=None, *args, **kwargs):
-
-        if callable_obj is None:
-            return pytest.raises(exc)
-        with pytest.raises(exc):
-            callable_obj(*args, **kwargs)
-
-
-class TestPomdpXReaderString(PyTestCompat):
+class TestPomdpXReaderString:
     @pytest.fixture(autouse=True)
     def _setup(self):
         string = """<pomdpx version="1.0" id="rockSample"
@@ -234,9 +216,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
             ],
         }
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_variables(), var_expected)
-        self.assertEqual(self.reader_file.get_variables(), var_expected)
+        assert self.reader_string.get_variables() == var_expected
+        assert self.reader_file.get_variables() == var_expected
 
     def test_get_initial_belief_system(self):
         belief_expected = [
@@ -253,9 +234,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 "Parameter": [{"Instance": ["-"], "ProbTable": ["uniform"]}],
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_initial_beliefs(), belief_expected)
-        self.assertEqual(self.reader_file.get_initial_beliefs(), belief_expected)
+        assert self.reader_string.get_initial_beliefs() == belief_expected
+        assert self.reader_file.get_initial_beliefs() == belief_expected
 
     def test_get_state_transition_function(self):
         state_transition_function_expected = [
@@ -291,14 +271,13 @@ class TestPomdpXReaderString(PyTestCompat):
                 ],
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_state_transition_function(),
-            state_transition_function_expected,
+        assert (
+            self.reader_string.get_state_transition_function()
+            == state_transition_function_expected
         )
-        self.assertEqual(
-            self.reader_file.get_state_transition_function(),
-            state_transition_function_expected,
+        assert (
+            self.reader_file.get_state_transition_function()
+            == state_transition_function_expected
         )
 
     def test_obs_function(self):
@@ -323,9 +302,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 ],
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
-        self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
+        assert self.reader_string.get_obs_function() == obs_function_expected
+        assert self.reader_file.get_obs_function() == obs_function_expected
 
     def test_reward_function_1(self):
         reward_function_expected = [
@@ -342,13 +320,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 ],
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), reward_function_expected
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), reward_function_expected
-        )
+        assert self.reader_string.get_reward_function() == reward_function_expected
+        assert self.reader_file.get_reward_function() == reward_function_expected
 
     def test_get_parameter_dd(self):
         string = """
@@ -402,11 +375,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            expected_dd_parameter, self.reader_string.get_initial_beliefs()
-        )
-        self.assertEqual(expected_dd_parameter, self.reader_file.get_initial_beliefs())
+        assert expected_dd_parameter == self.reader_string.get_initial_beliefs()
+        assert expected_dd_parameter == self.reader_file.get_initial_beliefs()
 
     def test_initial_belief_dd(self):
         string = """
@@ -457,9 +427,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
-        self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
+        assert self.reader_string.get_initial_beliefs() == expected_belief_dd
+        assert self.reader_file.get_initial_beliefs() == expected_belief_dd
 
     def test_reward_function_2(self):
         string = """
@@ -557,13 +526,8 @@ class TestPomdpXReaderString(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), expected_reward_function_dd
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), expected_reward_function_dd
-        )
+        assert self.reader_string.get_reward_function() == expected_reward_function_dd
+        assert self.reader_file.get_reward_function() == expected_reward_function_dd
 
     def test_state_transition_function(self):
         string = """
@@ -757,14 +721,13 @@ class TestPomdpXReaderString(PyTestCompat):
                 },
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_state_transition_function(),
-            expected_state_transition_function,
+        assert (
+            self.reader_string.get_state_transition_function()
+            == expected_state_transition_function
         )
-        self.assertEqual(
-            self.reader_file.get_state_transition_function(),
-            expected_state_transition_function,
+        assert (
+            self.reader_file.get_state_transition_function()
+            == expected_state_transition_function
         )
 
     def test_obs_function_dd(self):
@@ -899,12 +862,11 @@ class TestPomdpXReaderString(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
-        self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
+        assert self.reader_string.get_obs_function() == expected_obs_function
+        assert self.reader_file.get_obs_function() == expected_obs_function
 
 
-class TestPomdpXWriter(PyTestCompat):
+class TestPomdpXWriter:
     @pytest.fixture(autouse=True)
     def _setup(self):
         self.model_data = {
@@ -1056,10 +1018,7 @@ class TestPomdpXWriter(PyTestCompat):
   <RewardVar vname="reward_rover" />
 </Variable>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.get_variables(), etree.tostring(expected_variables)
-        )
+        assert self.writer.get_variables() == etree.tostring(expected_variables)
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -1087,10 +1046,8 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </InitialStateBelief>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_initial_belief()),
-            str(etree.tostring(expected_belief_xml)),
+        assert str(self.writer.add_initial_belief()) == str(
+            etree.tostring(expected_belief_xml)
         )
 
     def test_add_transition_function(self):
@@ -1167,10 +1124,8 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </StateTransitionFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_state_transition_function(),
-            etree.tostring(expected_transition_xml),
+        assert self.writer.add_state_transition_function() == etree.tostring(
+            expected_transition_xml
         )
 
     def test_add_obs_function(self):
@@ -1209,10 +1164,7 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </ObsFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_obs_function(), etree.tostring(expected_obs_xml)
-        )
+        assert self.writer.add_obs_function() == etree.tostring(expected_obs_xml)
 
     def test_add_reward_function(self):
         expected_reward_xml = etree.XML(
@@ -1246,10 +1198,7 @@ class TestPomdpXWriter(PyTestCompat):
   </Func>
 </RewardFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_reward_xml)
-        )
+        assert self.writer.add_reward_function() == etree.tostring(expected_reward_xml)
 
     def test_initial_state_belief_dd(self):
         self.model_data = {
@@ -1293,11 +1242,9 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </InitialStateBelief>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_initial_belief().decode("utf-8").replace(" ", ""),
-            etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
-        )
+        assert self.writer.add_initial_belief().decode("utf-8").replace(
+            " ", ""
+        ) == etree.tostring(expected_xml).decode("utf-8").replace(" ", "")
 
     @pytest.mark.skipif(
         sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
@@ -1488,10 +1435,8 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </StateTransitionFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_state_transition_function()),
-            str(etree.tostring(expected_xml)),
+        assert str(self.writer.add_state_transition_function()) == str(
+            etree.tostring(expected_xml)
         )
 
     @pytest.mark.skipif(
@@ -1623,10 +1568,7 @@ class TestPomdpXWriter(PyTestCompat):
   </CondProb>
 </ObsFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
-        )
+        assert str(self.writer.add_obs_function()) == str(etree.tostring(expected_xml))
 
     def test_reward_function_dd(self):
         self.model_data = {
@@ -1722,13 +1664,10 @@ class TestPomdpXWriter(PyTestCompat):
   </Func>
 </RewardFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_xml)
-        )
+        assert self.writer.add_reward_function() == etree.tostring(expected_xml)
 
 
-class TestPomdpXReaderStringTorch(PyTestCompat):
+class TestPomdpXReaderStringTorch:
     @pytest.fixture(autouse=True)
     def _setup(self):
         string = """<pomdpx version="1.0" id="rockSample"
@@ -1934,9 +1873,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
             ],
         }
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_variables(), var_expected)
-        self.assertEqual(self.reader_file.get_variables(), var_expected)
+        assert self.reader_string.get_variables() == var_expected
+        assert self.reader_file.get_variables() == var_expected
 
     def test_get_initial_belief_system(self):
         belief_expected = [
@@ -1953,9 +1891,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 "Parameter": [{"Instance": ["-"], "ProbTable": ["uniform"]}],
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_initial_beliefs(), belief_expected)
-        self.assertEqual(self.reader_file.get_initial_beliefs(), belief_expected)
+        assert self.reader_string.get_initial_beliefs() == belief_expected
+        assert self.reader_file.get_initial_beliefs() == belief_expected
 
     def test_get_state_transition_function(self):
         state_transition_function_expected = [
@@ -1991,14 +1928,13 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 ],
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_state_transition_function(),
-            state_transition_function_expected,
+        assert (
+            self.reader_string.get_state_transition_function()
+            == state_transition_function_expected
         )
-        self.assertEqual(
-            self.reader_file.get_state_transition_function(),
-            state_transition_function_expected,
+        assert (
+            self.reader_file.get_state_transition_function()
+            == state_transition_function_expected
         )
 
     def test_obs_function(self):
@@ -2023,9 +1959,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 ],
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
-        self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
+        assert self.reader_string.get_obs_function() == obs_function_expected
+        assert self.reader_file.get_obs_function() == obs_function_expected
 
     def test_reward_function_3(self):
         reward_function_expected = [
@@ -2042,13 +1977,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 ],
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), reward_function_expected
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), reward_function_expected
-        )
+        assert self.reader_string.get_reward_function() == reward_function_expected
+        assert self.reader_file.get_reward_function() == reward_function_expected
 
     def test_get_parameter_dd(self):
         string = """
@@ -2102,11 +2032,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            expected_dd_parameter, self.reader_string.get_initial_beliefs()
-        )
-        self.assertEqual(expected_dd_parameter, self.reader_file.get_initial_beliefs())
+        assert expected_dd_parameter == self.reader_string.get_initial_beliefs()
+        assert expected_dd_parameter == self.reader_file.get_initial_beliefs()
 
     def test_initial_belief_dd(self):
         string = """
@@ -2157,9 +2084,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
-        self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
+        assert self.reader_string.get_initial_beliefs() == expected_belief_dd
+        assert self.reader_file.get_initial_beliefs() == expected_belief_dd
 
     def test_reward_function_4(self):
         string = """
@@ -2257,13 +2183,8 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), expected_reward_function_dd
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), expected_reward_function_dd
-        )
+        assert self.reader_string.get_reward_function() == expected_reward_function_dd
+        assert self.reader_file.get_reward_function() == expected_reward_function_dd
 
     def test_state_transition_function(self):
         string = """
@@ -2457,14 +2378,13 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 },
             },
         ]
-        self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_state_transition_function(),
-            expected_state_transition_function,
+        assert (
+            self.reader_string.get_state_transition_function()
+            == expected_state_transition_function
         )
-        self.assertEqual(
-            self.reader_file.get_state_transition_function(),
-            expected_state_transition_function,
+        assert (
+            self.reader_file.get_state_transition_function()
+            == expected_state_transition_function
         )
 
     def test_obs_function_dd(self):
@@ -2599,12 +2519,11 @@ class TestPomdpXReaderStringTorch(PyTestCompat):
                 },
             }
         ]
-        self.maxDiff = None
-        self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
-        self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
+        assert self.reader_string.get_obs_function() == expected_obs_function
+        assert self.reader_file.get_obs_function() == expected_obs_function
 
 
-class TestPomdpXWriterTorch(PyTestCompat):
+class TestPomdpXWriterTorch:
     @pytest.fixture(autouse=True)
     def _setup(self):
         self.model_data = {
@@ -2756,10 +2675,7 @@ class TestPomdpXWriterTorch(PyTestCompat):
   <RewardVar vname="reward_rover" />
 </Variable>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.get_variables(), etree.tostring(expected_variables)
-        )
+        assert self.writer.get_variables() == etree.tostring(expected_variables)
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -2787,10 +2703,8 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </InitialStateBelief>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_initial_belief()),
-            str(etree.tostring(expected_belief_xml)),
+        assert str(self.writer.add_initial_belief()) == str(
+            etree.tostring(expected_belief_xml)
         )
 
     def test_add_transition_function(self):
@@ -2867,10 +2781,8 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </StateTransitionFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_state_transition_function(),
-            etree.tostring(expected_transition_xml),
+        assert self.writer.add_state_transition_function() == etree.tostring(
+            expected_transition_xml
         )
 
     def test_add_obs_function(self):
@@ -2909,10 +2821,7 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </ObsFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_obs_function(), etree.tostring(expected_obs_xml)
-        )
+        assert self.writer.add_obs_function() == etree.tostring(expected_obs_xml)
 
     def test_add_reward_function(self):
         expected_reward_xml = etree.XML(
@@ -2946,10 +2855,7 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </Func>
 </RewardFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_reward_xml)
-        )
+        assert self.writer.add_reward_function() == etree.tostring(expected_reward_xml)
 
     def test_initial_state_belief_dd(self):
         self.model_data = {
@@ -2993,11 +2899,9 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </InitialStateBelief>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_initial_belief().decode("utf-8").replace(" ", ""),
-            etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
-        )
+        assert self.writer.add_initial_belief().decode("utf-8").replace(
+            " ", ""
+        ) == etree.tostring(expected_xml).decode("utf-8").replace(" ", "")
 
     @pytest.mark.skipif(
         sys.version_info[1] >= 8, reason="xml ordering different in python 3.8"
@@ -3188,10 +3092,8 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </StateTransitionFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_state_transition_function()),
-            str(etree.tostring(expected_xml)),
+        assert str(self.writer.add_state_transition_function()) == str(
+            etree.tostring(expected_xml)
         )
 
     @pytest.mark.skipif(
@@ -3323,10 +3225,7 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </CondProb>
 </ObsFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
-        )
+        assert str(self.writer.add_obs_function()) == str(etree.tostring(expected_xml))
 
     def test_reward_function_dd(self):
         self.model_data = {
@@ -3422,7 +3321,4 @@ class TestPomdpXWriterTorch(PyTestCompat):
   </Func>
 </RewardFunction>"""
         )
-        self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_xml)
-        )
+        assert self.writer.add_reward_function() == etree.tostring(expected_xml)

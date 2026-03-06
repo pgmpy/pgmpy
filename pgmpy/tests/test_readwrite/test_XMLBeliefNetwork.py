@@ -925,7 +925,6 @@ class TestXBNWriterTorch:
         for var, properties in nodes.items():
             model._node[var] = properties
 
-        self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
     @pytest.mark.skipif(
