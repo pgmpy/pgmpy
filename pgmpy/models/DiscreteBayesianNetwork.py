@@ -1408,8 +1408,18 @@ class DiscreteBayesianNetwork(DAG):
 
         if adj_model.cpds:
             for node in nodes:
-                cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+                cpd = adj_model.get_cpds(node)
+
+                if cpd is None:
+                    continue
+
+                # Remove parent variables from CPD
+                parents = cpd.variables[1:]
+
+                if parents:
+                    cpd.marginalize(parents, inplace=True)
+
+                adj_model.add_cpds(cpd)
         return adj_model
 
     def simulate(
