@@ -56,7 +56,7 @@ class TestOptimize:
             )
 
 
-class Testpinverse:
+class TestPinverse:
     @pytest.mark.skipif(config.BACKEND == "numpy", reason="backend is numpy")
     def test_pinverse(self):
         mat = np.random.randn(5, 5)
