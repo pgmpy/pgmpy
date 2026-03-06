@@ -479,7 +479,7 @@ class TestXDSLCommaWarning:
             tmp_path = tmp.name
 
         try:
-            with caplog.at_level(logging.WARNING):
+            with caplog.at_level(logging.WARNING, logger="pgmpy"):
                 writer = XDSLWriter(model)
                 writer.write_xdsl(tmp_path)
 
