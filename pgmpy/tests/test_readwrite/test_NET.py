@@ -185,7 +185,7 @@ potential (xray | either){
         with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
             tmp_path = tmp.name
         try:
-            with caplog.at_level(logging.WARNING):
+            with caplog.at_level(logging.WARNING, logger="pgmpy"):
                 writer.write_net(tmp_path)
 
             # Verify the warning was logged
