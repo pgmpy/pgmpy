@@ -1,4 +1,3 @@
-import pytest
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
