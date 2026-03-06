@@ -293,7 +293,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         >>> pdag = PDAG(
         ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
         ... )
-        >>> pdag.apply_meeks_rules()
+        >>> pdag.apply_meeks_rules(inplace=True)
         >>> pdag.directed_edges
         {('A', 'B'), ('B', 'C')}
         """
@@ -306,17 +306,13 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         while changed:
             changed = False
 
-            # Rule 1: If X -> Y - Z and
-            #            (X not adj Z) and
-            #            (adding Y -> Z doesn't create cycle) and
-            #            (adding Y -> Z doesn't create an unshielded collider) =>  Y → Z
+            # Rule 1: If X -> Y - Z and (X not adj Z) => Y → Z
             for y in pdag.nodes():
                 # Select x's such that there are directed edges x -> y.
                 for x in pdag.directed_parents(y):
                     for z in pdag.undirected_neighbors(y):
                         if (
                             (not pdag.is_adjacent(x, z))
-                            and (not pdag._check_new_unshielded_collider(y, z))
                             and (not nx.has_path(pdag._directed_graph(), z, y))
                         ):
                             pdag.orient_undirected_edge(y, z, inplace=True)
@@ -379,7 +375,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                                 break
         if not inplace:
             return pdag
-
+               
     def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
