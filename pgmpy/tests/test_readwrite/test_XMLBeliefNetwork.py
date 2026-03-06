@@ -149,7 +149,6 @@ class TestXBNReader:
         assert properties["VERSION"] == "0.2"
         assert properties["CREATOR"] == "Microsoft Research DTAS"
         properties = self.reader_file.get_static_properties()
-        properties = self.reader_file.get_static_properties()
         assert properties["FORMAT"] == "MSR DTAS XML"
         assert properties["VERSION"] == "0.2"
         assert properties["CREATOR"] == "Microsoft Research DTAS"
