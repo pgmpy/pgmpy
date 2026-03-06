@@ -1,3 +1,7 @@
+import io
+import json
+import math
+import os
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, Union
 
 import networkx as nx
@@ -115,6 +119,101 @@ class LinearGaussianBayesianNetwork(DAG):
             roles=roles,
         )
         self.cpds = []
+
+    @classmethod
+    def load(
+        cls,
+        filename: Union[str, os.PathLike, io.IOBase],
+    ) -> "LinearGaussianBayesianNetwork":
+        """
+        Read the model from a JSON file or a file-like object of a JSON file.
+
+        Parameters
+        ----------
+        filename: str or file-like object
+            The path along with the filename where to read the file, or a
+            file-like object containing the model data.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork.load("ecoli70.json")
+        >>> print(model)
+        LinearGaussianBayesianNetwork with 46 nodes and 70 edges
+        """
+
+        if isinstance(filename, (str, os.PathLike)):
+            with open(filename, "r") as f:
+                data = json.load(f)
+        else:
+            content = filename.read()
+            if isinstance(content, bytes):
+                content = content.decode("utf-8")
+            data = json.loads(content)
+
+        nodes = data.get("nodes")
+        edges = data.get("arcs")
+        cpds_data = data.get("cpds")
+
+        model = cls(edges)
+        model.add_nodes_from(nodes)
+
+        cpds = []
+        for node, cpd_info in cpds_data.items():
+            coefficients = cpd_info["coefficients"]
+            var = cpd_info["variance"][0]
+            parents = cpd_info["parents"]
+
+            intercept = coefficients["(Intercept)"][0]
+            parent_coeffs = [coefficients[parent][0] for parent in parents]
+
+            cpd = LinearGaussianCPD(
+                variable=node,
+                beta=[intercept] + parent_coeffs,
+                std=math.sqrt(var),
+                evidence=parents,
+            )
+            cpds.append(cpd)
+
+        model.add_cpds(*cpds)
+        return model
+
+    def save(self, filename: str) -> None:
+        """
+        Writes the model to a JSON file.
+
+        Parameters
+        ----------
+        filename: str
+            The path along with the filename where to write the file.
+
+        Examples
+        --------
+        >>> from pgmpy.datasets import load_model
+        >>> model = load_model("bnlearn/ecoli70")
+        >>> model.save("ecoli70.json")
+        """
+
+        model_data = {
+            "nodes": list(self.nodes()),
+            "arcs": list(self.edges()),
+            "cpds": {},
+        }
+
+        for cpd in self.get_cpds():
+            coeffs_dict = {"(Intercept)": [float(cpd.beta[0])]}
+            for idx, parent in enumerate(cpd.evidence):
+                coeffs_dict[parent] = [float(cpd.beta[idx + 1])]
+
+            cpd_data = {
+                "coefficients": coeffs_dict,
+                "variance": [float(cpd.std**2)],
+                "parents": list(cpd.evidence),
+            }
+            model_data["cpds"][cpd.variable] = cpd_data
+
+        with open(filename, "w") as f:
+            json.dump(model_data, f, indent=4)
 
     def add_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
@@ -402,9 +501,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd_b = LinearGaussianCPD(
         ...     variable="B", beta=[-5, 0.5], std=4, evidence=["A"]
         ... )
-        >>> cpd_c = LinearGaussianCPD(
-        ...     variable="C", beta=[4, -1], std=3, evidence=["x2"]
-        ... )
+        >>> cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
         >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
         >>> copy_model = model.copy()
         >>> copy_model.nodes()
@@ -770,14 +867,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> # Drop a column you want to predict (avoid inplace=True to keep return value)
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
         >>> df = model.simulate(n_samples=5)
-        >>> # Drop a column that we want to predict.
-        >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
+        >>> df = df.drop(columns=["folK"], axis=1)
         >>> model.predict(df)
-                   array([[0.13440001]]))
+        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -903,3 +998,34 @@ class LinearGaussianBayesianNetwork(DAG):
 
         lgbn_model.add_cpds(*cpds)
         return lgbn_model
+
+    def __eq__(self, other):
+        """
+        Checks equality of two LinearGaussianBayesianNetwork objects. Two models are equal if they have the same
+        structure and the same CPDs.
+
+        Parameters
+        ----------
+        other: LinearGaussianBayesianNetwork instance
+            The model to compare with.
+
+        Returns
+        -------
+        bool
+            True if the two LinearGaussianCPD objects are equal, False otherwise.
+        """
+        if not isinstance(other, LinearGaussianBayesianNetwork):
+            return False
+
+        # Test for structure equality using the DAG's __eq__ method.
+        super().__eq__(other)
+
+        # Test for LinearGaussianCPD equality.
+        self_cpds = {cpd.variable: cpd for cpd in self.cpds}
+        other_cpds = {cpd.variable: cpd for cpd in other.cpds}
+
+        for var in self_cpds:
+            if self_cpds[var] != other_cpds[var]:
+                return False
+
+        return True

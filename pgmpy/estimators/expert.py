@@ -45,9 +45,12 @@ class ExpertInLoop(StructureEstimator):
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            effect, p_value = ci_test(
-                X=u, Y=v, Z=cond_set, data=self.data, boolean=False
-            )
+            result = ci_test(X=u, Y=v, Z=cond_set, data=self.data, boolean=False)
+
+            if len(result) == 3:
+                effect, p_value, _ = result
+            else:
+                effect, p_value = result
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
         return pd.DataFrame(
@@ -332,7 +335,7 @@ class ExpertInLoop(StructureEstimator):
                     edge_direction[0],
                     edge_direction[1],
                     ci_test=ci_test,
-                    effect_size_threshol=effect_size_threshold,
+                    effect_size_threshold=effect_size_threshold,
                     pval_threshold=pval_threshold,
                 )
                 blacklisted_edges.extend(edges_to_remove)
@@ -365,7 +368,7 @@ class ExpertInLoop(StructureEstimator):
         edges_to_remove = []
         temp_dag = dag.copy()
         temp_dag.add_edges_from([(u, v)])
-        for cycle in nx.cycles(temp_dag):
+        for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
                 if not ((x == u) and (y == v)):
                     Z = set(cycle) - set([x, y])
