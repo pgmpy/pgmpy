@@ -100,6 +100,12 @@ class CorrelationScore(_BaseUnsupervisedMetric):
 
     def _evaluate(self, X, causal_graph):
         # Step 1: Validate inputs
+        if len(causal_graph.nodes()) < 2:
+            raise ValueError(
+                "The causal graph must have at least 2 nodes to compute the"
+                f" correlation score. Got {len(causal_graph.nodes())} node(s)."
+            )
+
         if not callable(self.score):
             raise ValueError(
                 f"score should be scikit-learn classification metric. Got {self.score}"
