@@ -531,7 +531,7 @@ probability ( light-on | family-out ) {
 
         try:
             writer = BIFWriter(model)
-            with caplog.at_level(logging.WARNING):
+            with caplog.at_level(logging.WARNING, logger="pgmpy"):
                 writer.write_bif(tmp_path)
 
             # Verify the warning was logged
