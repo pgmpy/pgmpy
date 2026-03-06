@@ -238,7 +238,9 @@ class SEMGraph:
                     break
         return scaling_indicators
 
-    def active_trail_nodes(self, variables, observed=None, avoid_nodes=None, struct="full"):
+    def active_trail_nodes(
+        self, variables, observed=None, avoid_nodes=None, struct="full"
+    ):
         if observed is None:
             observed = []
         if avoid_nodes is None:
