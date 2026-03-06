@@ -238,7 +238,11 @@ class SEMGraph:
                     break
         return scaling_indicators
 
-    def active_trail_nodes(self, variables, observed=[], avoid_nodes=[], struct="full"):
+    def active_trail_nodes(self, variables, observed=None, avoid_nodes=None, struct="full"):
+        if observed is None:
+            observed = []
+        if avoid_nodes is None:
+            avoid_nodes = []
         """
         Finds all the observed variables which are d-connected to `variables` in the `graph_struct`
         when `observed` variables are observed.
@@ -970,7 +974,13 @@ class SEM(SEMGraph):
         return cls(syntax="lavaan", lavaan_str=lavaan_str)
 
     @classmethod
-    def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
+    def from_graph(cls, ebunch, latents=None, err_corr=None, err_var=None):
+        if latents is None:
+            latents = []
+        if err_corr is None:
+            err_corr = []
+        if err_var is None:
+            err_var = {}
         """
         Initializes a `SEM` instance using graphical structure.
 
