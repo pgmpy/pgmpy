@@ -197,7 +197,7 @@ def test_pre_compute_reduce_maps(bayesian_model):
     assert list(index_to_weight[1]) == [0.7, 0.3]
 
 
-def test_pred_compute_reduce_maps_partial_evidence(bayesian_model):
+def test_pre_compute_reduce_maps_partial_evidence(bayesian_model):
     base_infer = BayesianModelInference(bayesian_model)
     state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
         "J", ["A"], [(1,), (0,)]
