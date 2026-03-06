@@ -7,7 +7,7 @@ Please complete the following checklist after creating the PR.
 
 - [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side) against our **dev branch** (left side). Please do not request your **dev branch**.
 - [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)?
-- [ ] Make sure that the pull request fully address the linked issue and is within its defined scope.
+- [ ] Make sure that the pull request fully addresses the linked issue and is within its defined scope.
 - [ ] Are all the GitHub Actions checks passing? If not, they will need to be fixed before review. You can reference logs for the failing check to identify the issue.
 
 Did you use a Large language model (LLM) to assist you in making changes? If yes, please go through the following checklist too:
