@@ -83,6 +83,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         "requires_data": True,
         "lower_is_better": False,
         "supported_graph_types": (DAG,),
+        "is_default": True,
     }
 
     def __init__(

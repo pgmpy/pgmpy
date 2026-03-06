@@ -15,6 +15,7 @@ class DryBean(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -23,7 +24,7 @@ class DryBean(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/real/dry-bean/"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/dry-bean/"
 
     data_url = base_url + "data/drybean.data.mixed.maximum.7.txt"
     ground_truth_url = None
