@@ -100,10 +100,11 @@ class CorrelationScore(_BaseUnsupervisedMetric):
 
     def _evaluate(self, X, causal_graph):
         # Step 1: Validate inputs
-        if len(causal_graph.nodes()) < 2:
+        num_nodes = causal_graph.number_of_nodes()
+        if num_nodes < 2:
             raise ValueError(
                 "The causal graph must have at least 2 nodes to compute the"
-                f" correlation score. Got {len(causal_graph.nodes())} node(s)."
+                f" correlation score. Got {num_nodes} node(s)."
             )
 
         if not callable(self.score):
