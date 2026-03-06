@@ -637,7 +637,7 @@ $values
             fout.write(writer)
 
     def write_bif(self, filename):
-        logger.warn(
+        logger.warning(
             "The `BIFWriter.write_bif` has been deprecated. Please use `BIFWriter.write` instead."
         )
         self.write(filename)
