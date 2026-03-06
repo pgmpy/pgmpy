@@ -9,11 +9,9 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    MaximumLikelihoodEstimator,
-    ParameterEstimator,
-)
+from pgmpy.estimators.base import ParameterEstimator
+from pgmpy.estimators.BayesianEstimator import BayesianEstimator
+from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
