@@ -1,5 +1,5 @@
-{% set name = "pgmpy" %}
-{% set version = "1.0.0" %}
+# {% set name = "pgmpy" %}
+# {% set version = "1.0.0" %}
 
 package:
   name: "{{ name|lower }}"
