@@ -915,6 +915,74 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Return values
         return (missing_vars, mu_cond, cov_cond)
 
+    def predict_probability(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predicts the conditional distribution of the missing variables given
+        the observed variables in `data`. For a Linear Gaussian Bayesian
+        Network every conditional distribution is also Gaussian, so the result
+        is a DataFrame with two columns per missing variable:
+
+        - ``{var}_mean``: conditional mean for each row of data.
+        - ``{var}_std``:  conditional standard deviation (same for all rows,
+          because the covariance of a Gaussian conditional does not depend on
+          the observed values).
+
+        The behaviour is analogous to
+        :meth:`~pgmpy.models.DiscreteBayesianNetwork.predict_probability`,
+        which returns per-state probabilities for discrete networks.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            A DataFrame with a *subset* of the model variables as columns.
+            The columns present are treated as observed; the remaining model
+            variables are treated as missing and their distributions are
+            returned.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame indexed like ``data`` with columns
+            ``{var}_mean`` and ``{var}_std`` for each missing variable,
+            ordered by topological sort.
+
+        Raises
+        ------
+        ValueError
+            If no variable is missing (all model variables are present in
+            ``data``), or if ``data`` contains columns not in the model.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> cpd1 = LinearGaussianCPD("x1", [1], 4)
+        >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+        >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> df = model.simulate(n_samples=5, seed=42)
+        >>> df_obs = df.drop(columns=["x2"])
+        >>> model.predict_probability(df_obs)
+           x2_mean    x2_std
+        0 -6.04...   2.40...
+        1 -6.61...   2.40...
+        ...
+        """
+        missing_vars, mu_cond, cov_cond = self.predict(data)
+
+        # Per-variable conditional std comes from the diagonal of cov_cond.
+        std_cond = np.sqrt(np.diag(cov_cond))
+
+        result = {}
+        for i, var in enumerate(missing_vars):
+            result[f"{var}_mean"] = mu_cond[:, i]
+            result[f"{var}_std"] = std_cond[i]
+
+        return pd.DataFrame(result, index=data.index)
+
     def to_markov_model(self) -> None:
         """
         For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.

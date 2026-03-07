@@ -400,6 +400,59 @@ class TestLGBNMethods(unittest.TestCase):
                 )
             )
 
+    def test_predict_probability_simple(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=10, seed=42)
+        df_obs = df.drop("x2", axis=1)
+
+        prob = self.model.predict_probability(df_obs)
+
+        # Check columns and index
+        self.assertIn("x2_mean", prob.columns)
+        self.assertIn("x2_std", prob.columns)
+        self.assertEqual(list(prob.index), list(df_obs.index))
+
+        # Mean should match the mu_cond returned by predict()
+        _, mu_cond, cov_cond = self.model.predict(df_obs)
+        np_test.assert_array_almost_equal(
+            prob["x2_mean"].values, mu_cond[:, 0], decimal=8
+        )
+
+        # Std should equal sqrt of cov diagonal (same for all rows)
+        expected_std = np.sqrt(cov_cond[0, 0])
+        np_test.assert_array_almost_equal(
+            prob["x2_std"].values, np.full(10, expected_std), decimal=8
+        )
+
+    def test_predict_probability_multiple_missing(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(["x2", "x3"], axis=1)
+
+        prob = self.model.predict_probability(df_obs)
+
+        # Should have 4 columns (mean + std for each of x2, x3)
+        self.assertEqual(prob.shape, (5, 4))
+        for var in ["x2", "x3"]:
+            self.assertIn(f"{var}_mean", prob.columns)
+            self.assertIn(f"{var}_std", prob.columns)
+
+        # Stds must be positive
+        for var in ["x2", "x3"]:
+            self.assertTrue((prob[f"{var}_std"] > 0).all())
+
+        # Std should be the same in every row (homoscedastic)
+        self.assertTrue((prob["x2_std"] == prob["x2_std"].iloc[0]).all())
+        self.assertTrue((prob["x3_std"] == prob["x3_std"].iloc[0]).all())
+
+    def test_predict_probability_raises(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df_full = self.model.simulate(n_samples=5, seed=42)
+
+        # All variables observed → no missing → ValueError
+        with self.assertRaises(ValueError):
+            self.model.predict_probability(df_full)
+
     def test_get_random_cpds(self):
         model = get_example_model("alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
