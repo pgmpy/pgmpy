@@ -451,5 +451,8 @@ def test_warm_start(rand_data):
         scoring_method="k2", return_type="dag", show_progress=False, warm_start=True
     )
     est_warm2.fit(rand_data)
-    with pytest.raises(ValueError, match="warm_start=True requires the data to have the same variables"):
+    with pytest.raises(
+        ValueError,
+        match="warm_start=True requires the data to have the same variables",
+    ):
         est_warm2.fit(rand_data[["A", "B"]])
