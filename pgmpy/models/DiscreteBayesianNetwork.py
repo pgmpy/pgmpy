@@ -1405,7 +1405,6 @@ class DiscreteBayesianNetwork(DAG):
 
         model = self if inplace else self.copy()
         adj_model = DAG.do(model, nodes, inplace=inplace)
-    
 
         if adj_model.cpds:
             for node in nodes:
@@ -1417,7 +1416,6 @@ class DiscreteBayesianNetwork(DAG):
                     if cpd is None:
                         continue
 
-                    
                     parents = cpd.variables[1:]
 
                     if parents:
@@ -1426,10 +1424,10 @@ class DiscreteBayesianNetwork(DAG):
 
                         adj_model.remove_cpds(cpd)
                         adj_model.add_cpds(new_cpd)
-        """  At first glance, it checks whether adj_model has any CPDs. 
+        """  At first glance, it checks whether adj_model has any CPDs.
         if it does, it iterates through each node in the `nodes` list and retrieves its children.
         for each CPD of the children, it checks if the CPD is not None.This is safty check.
-          If the CPD exists, it retrieves the parents of the child node from the CPD's variables 
+          If the CPD exists, it retrieves the parents of the child node from the CPD's variables
           (excluding the first variable which is the child itself).
           If there are parents, it creates a list of evidence by setting each parent variable to state 0.(do state
               0 is needed because after do operation, the variable will only have one state left which is 0)
@@ -1437,7 +1435,6 @@ class DiscreteBayesianNetwork(DAG):
                 Finally, it removes the old CPD from the model and adds the new reduced CPD to the model.
           """
         return adj_model
-
 
     def simulate(
         self,
