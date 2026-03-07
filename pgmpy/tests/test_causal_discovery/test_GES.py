@@ -176,3 +176,34 @@ class TestGESScoringMethods:
         )
         est = GES(scoring_method=scoring_method, return_type="dag")
         est.fit(data)
+
+
+class TestGESWarmStart:
+    """Tests for GES warm_start behaviour."""
+
+    def test_warm_start_reuses_graph(self, rand_data):
+        # With warm_start=True, the second fit uses the previously learned graph.
+        est = GES(scoring_method="k2", return_type="dag", warm_start=True)
+        est.fit(rand_data)
+        first_graph = est.causal_graph_.copy()
+        # Second fit on the same data: already at the optimum, so graph unchanged.
+        est.fit(rand_data)
+        assert set(est.causal_graph_.edges()) == set(first_graph.edges())
+
+    def test_cold_start_resets_graph(self, rand_data):
+        # Without warm_start, each fit independently starts from an empty DAG.
+        est = GES(scoring_method="k2", return_type="dag", warm_start=False)
+        est.fit(rand_data)
+        first_graph = est.causal_graph_.copy()
+        est.fit(rand_data)
+        assert set(est.causal_graph_.edges()) == set(first_graph.edges())
+
+    def test_warm_start_variable_mismatch_raises(self, rand_data):
+        # warm_start=True must raise ValueError if variable set changes.
+        est = GES(scoring_method="k2", return_type="dag", warm_start=True)
+        est.fit(rand_data)
+        with pytest.raises(
+            ValueError,
+            match="warm_start=True requires the data to have the same variables",
+        ):
+            est.fit(rand_data[["A", "B"]])

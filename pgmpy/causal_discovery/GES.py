@@ -63,6 +63,12 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         Note: Caching only works for scoring methods which are decomposable.
         Can give incorrect results for custom non-decomposable scoring methods.
 
+    warm_start : bool, default=False
+        If True, the result of the previous call to `fit` is used as the
+        starting graph for the next call, which can speed up convergence
+        when fitting on similar or incrementally updated datasets. When
+        False (default), each call to `fit` starts from an empty DAG.
+
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
@@ -115,12 +121,14 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
         use_cache: bool = True,
+        warm_start: bool = False,
     ):
         self.scoring_method = scoring_method
         self.expert_knowledge = expert_knowledge
         self.return_type = return_type
         self.min_improvement = min_improvement
         self.use_cache = use_cache
+        self.warm_start = warm_start
 
     def _legal_edge_additions(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
@@ -192,8 +200,20 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
         score_fn = score_c.local_score
 
-        current_model = DAG()
-        current_model.add_nodes_from(self.variables_)
+        # If warm_start is enabled and the estimator was previously fitted, use the
+        # previously learned graph (converted to a DAG) as the starting point.
+        if self.warm_start and hasattr(self, "causal_graph_"):
+            if not set(self.causal_graph_.nodes()) == set(self.variables_):
+                raise ValueError(
+                    "warm_start=True requires the data to have the same variables as the previous fit."
+                )
+            if hasattr(self.causal_graph_, "to_dag"):
+                current_model = self.causal_graph_.to_dag()
+            else:
+                current_model = self.causal_graph_.copy()
+        else:
+            current_model = DAG()
+            current_model.add_nodes_from(self.variables_)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()

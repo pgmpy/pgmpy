@@ -97,6 +97,14 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
 
+    warm_start : bool, default=False
+        If True, the result of the previous call to `fit` is used as the
+        starting graph for the next call. This can speed up convergence when
+        fitting on similar or incrementally updated datasets. When False
+        (default), each call to `fit` starts fresh from `start_dag` (or an
+        empty graph if `start_dag` is None). Note: `warm_start=True`
+        overrides `start_dag` on all calls after the first.
+
     Attributes
     ----------
     causal_graph_ : DAG
@@ -151,6 +159,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         max_iter: int = int(1e6),
         use_cache: bool = True,
         show_progress: bool = True,
+        warm_start: bool = False,
     ):
         self.scoring_method = scoring_method
         self.start_dag = start_dag
@@ -162,6 +171,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.max_iter = max_iter
         self.use_cache = use_cache
         self.show_progress = show_progress
+        self.warm_start = warm_start
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -186,7 +196,18 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         score_fn = score_c.local_score
 
         # Step 1.2: Check the start_dag
-        if self.start_dag is None:
+        # If warm_start is enabled and the estimator was previously fitted, use the
+        # previously learned graph (converted to a DAG) as the starting point.
+        if self.warm_start and hasattr(self, "causal_graph_"):
+            if hasattr(self.causal_graph_, "to_dag"):
+                start_dag = self.causal_graph_.to_dag()
+            else:
+                start_dag = self.causal_graph_.copy()
+            if not set(start_dag.nodes()) == set(self.variables_):
+                raise ValueError(
+                    "warm_start=True requires the data to have the same variables as the previous fit."
+                )
+        elif self.start_dag is None:
             start_dag = DAG()
             start_dag.add_nodes_from(self.variables_)
         elif not isinstance(self.start_dag, DAG) or not set(

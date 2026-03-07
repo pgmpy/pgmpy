@@ -423,3 +423,33 @@ def test_score():
     shd = est.score(true_graph=asia_model, metric="SHD")
     assert np.round(structure_score, 4) > -3e4
     assert shd, 2
+
+
+def test_warm_start(rand_data):
+    # Without warm_start: each fit starts from scratch (empty graph).
+    est_cold = HillClimbSearch(
+        scoring_method="k2", return_type="dag", show_progress=False, warm_start=False
+    )
+    est_cold.fit(rand_data)
+    first_graph = est_cold.causal_graph_.copy()
+    est_cold.fit(rand_data)
+    # Cold restart should yield same graph on same data.
+    assert set(est_cold.causal_graph_.edges()) == set(first_graph.edges())
+
+    # With warm_start: second fit starts from the previously learned graph.
+    est_warm = HillClimbSearch(
+        scoring_method="k2", return_type="dag", show_progress=False, warm_start=True
+    )
+    est_warm.fit(rand_data)
+    first_warm_graph = est_warm.causal_graph_.copy()
+    # Second fit with same data should converge quickly (already at optimum).
+    est_warm.fit(rand_data)
+    assert set(est_warm.causal_graph_.edges()) == set(first_warm_graph.edges())
+
+    # warm_start=True should raise an error if variable set changes.
+    est_warm2 = HillClimbSearch(
+        scoring_method="k2", return_type="dag", show_progress=False, warm_start=True
+    )
+    est_warm2.fit(rand_data)
+    with pytest.raises(ValueError, match="warm_start=True requires the data to have the same variables"):
+        est_warm2.fit(rand_data[["A", "B"]])
