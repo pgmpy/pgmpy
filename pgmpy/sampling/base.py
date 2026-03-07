@@ -5,7 +5,6 @@ import os
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from opt_einsum import contract
 
 from pgmpy import config

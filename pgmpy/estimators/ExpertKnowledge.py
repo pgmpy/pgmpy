@@ -115,10 +115,9 @@ class ExpertKnowledge:
             raise TypeError(
                 f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
-        elif type(edge_list) != set:
+        if not isinstance(edge_list, set):
             return set(edge_list)
-        else:
-            return edge_list
+        return edge_list
 
     def _validate_temporal_order(self, nodes):
         """

@@ -4,8 +4,6 @@ import networkx as nx
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
-from pgmpy.independencies import IndependenceAssertion, Independencies
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.mathext import powerset
 
 
@@ -90,9 +88,8 @@ class MmhcEstimator(StructureEstimator):
             n=self.state_names.keys(), create_using=nx.Graph
         ).edges()
 
-        expert_knowledge = ExpertKnowledge(
-            forbidden_edges=possible_edges - skel.to_directed().edges()
-        )
+        forbidden = set(possible_edges) - set(skel.to_directed().edges())
+        expert_knowledge = ExpertKnowledge(forbidden_edges=forbidden)
 
         model = hc.estimate(
             scoring_method=scoring_method,

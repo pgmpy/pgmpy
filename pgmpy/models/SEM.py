@@ -914,7 +914,9 @@ class SEM(SEMGraph):
 
         elif syntax.lower() == "lisrel":
             model = SEMAlg(
-                var_names=var_names, params=params, fixed_masks=fixed_masks
+                var_names=kwargs["var_names"],
+                params=kwargs["params"],
+                fixed_masks=kwargs.get("fixed_masks"),
             ).to_SEMGraph()
             # Initialize an empty SEMGraph instance and set the properties.
             # TODO: Boilerplate code, find a better way to do this.
