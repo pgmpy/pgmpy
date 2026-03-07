@@ -5,11 +5,13 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
-from sklearn.utils.validation import check_is_fitted, validate_data
-
+from sklearn.utils.validation import check_is_fitted
 from pgmpy.prediction._base import _BaseCausalPrediction
 
-
+def validate_data(estimator, X, y=None, *args, **kwargs):
+    if y is None:
+        return estimator._validate_data(X, *args, **kwargs)
+    return estimator._validate_data(X, y, *args, **kwargs)
 class DoubleMLRegressor(_BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
@@ -229,7 +231,8 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         self.n_folds_ = self.n_folds
 
         # Step 0.3: Validate `X` and `y`
-        validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
+        def validate_data(estimator, X, y=None, *args, **kwargs):
+            return estimator._validate_data(X, y, *args, **kwargs)
 
         # Step 0.4: Validate single exposure and outcome.
         exposure_vars = self.causal_graph.get_role("exposure")
@@ -363,9 +366,10 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         check_is_fitted(self, "outcome_est_")
         check_is_fitted(self, "treatment_est_")
 
-        validate_data(
-            self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False
-        )
+        def validate_data(estimator, X, y=None, *args, **kwargs):
+            if y is None:
+                return estimator._validate_data(X, *args, **kwargs)
+            return estimator._validate_data(X, y, *args, **kwargs)
 
         # Step 1: Prepare feature DataFrame
         X_df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)

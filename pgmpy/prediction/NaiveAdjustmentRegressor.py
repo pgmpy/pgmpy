@@ -7,13 +7,14 @@ from typing import Optional
 import numpy as np
 from sklearn.base import BaseEstimator, clone
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import (
-    check_is_fitted,
-    validate_data,
-)
+from sklearn.utils.validation import check_is_fitted
 
 from pgmpy.prediction._base import _BaseCausalPrediction
 
+def validate_data(estimator, X, y=None, *args, **kwargs):
+    if y is None:
+        return estimator._validate_data(X, *args, **kwargs)
+    return estimator._validate_data(X, y, *args, **kwargs)
 
 class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     """

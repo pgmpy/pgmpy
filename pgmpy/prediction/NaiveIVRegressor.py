@@ -3,11 +3,14 @@ from typing import Any, Optional
 import pandas as pd
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import check_is_fitted, validate_data
-
+from sklearn.utils.validation import check_is_fitted
+from sklearn.base import BaseEstimator
 from pgmpy.prediction._base import _BaseCausalPrediction
 
-
+def validate_data(estimator, X, y=None, *args, **kwargs):
+    if y is None:
+        return estimator._validate_data(X, *args, **kwargs)
+    return estimator._validate_data(X, y, *args, **kwargs)
 class NaiveIVRegressor(_BaseCausalPrediction):
     """
     Implements Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
@@ -200,8 +203,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
         """
 
         # Step 0: validate Inputs
-        validate_data(
-            self,
+        X, y = self._validate_data(
             X,
             y,
             accept_sparse=False,
@@ -209,7 +211,6 @@ class NaiveIVRegressor(_BaseCausalPrediction):
             ensure_min_features=2,
             dtype="numeric",
         )
-
         # Step 1: Initialize data structures and read roles from DAG.
 
         if self.stage1_estimator is None:

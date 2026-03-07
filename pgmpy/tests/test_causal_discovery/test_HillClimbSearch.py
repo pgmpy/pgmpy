@@ -23,8 +23,7 @@ def expected_failed_checks(estimator):
 
 
 @parametrize_with_checks(
-    [HillClimbSearch(return_type="dag", show_progress=False)],
-    expected_failed_checks=expected_failed_checks,
+    [HillClimbSearch(return_type="dag", show_progress=False)]
 )
 def test_hillclimb_compatibility(estimator, check):
     check(estimator)
