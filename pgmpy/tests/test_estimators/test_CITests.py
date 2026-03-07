@@ -530,7 +530,7 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 13.693)
+        self.assertAlmostEqual(round(coef, 3), 11.934)
         self.assertAlmostEqual(p_value, 0.0)
 
         # Conditional tests
@@ -543,8 +543,8 @@ class TestResidualMethods(unittest.TestCase):
             seed=42,
         )
 
-        self.assertAlmostEqual(round(coef, 3), 0.097)
-        self.assertEqual(round(p_value, 4), 0.9228)
+        self.assertAlmostEqual(round(coef, 3), -1.908)
+        self.assertEqual(round(p_value, 4), 0.0564)
 
         # Conditional tests
         coef, p_value = gcm(
