@@ -1408,7 +1408,18 @@ class DiscreteBayesianNetwork(DAG):
 
         if adj_model.cpds:
             for node in nodes:
+            
+                node_cpd = adj_model.get_cpds(node=node)
+                if node_cpd is not None:
+                    if len(node_cpd.variables) > 1:
+                        reduced_cpd = node_cpd.reduce([(node, 0)], inplace=False)
+                        reduced_cpd.normalize()
+                        adj_model.remove_cpds(node_cpd)
+                        adj_model.add_cpds(reduced_cpd)
+            
+            
                 children = adj_model.get_children(node)
+                
 
                 for child in children:
                     cpd = adj_model.get_cpds(child)
@@ -1416,11 +1427,12 @@ class DiscreteBayesianNetwork(DAG):
                     if cpd is None:
                         continue
 
-                    parents = [p for p in cpd.variables[1:] if p == node]
+                        
 
                     if node in cpd.variables[1:]:
                         new_cpd = cpd.reduce([(node, 0)], inplace=False)
-                       
+                        if new_cpd.variables[1:]:
+                            new_cpd.evidence = [v for v in new_cpd.variables[1:]]
                         new_cpd.normalize()
 
                         adj_model.remove_cpds(cpd)
