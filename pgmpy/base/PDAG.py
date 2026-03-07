@@ -1,5 +1,5 @@
 import itertools
-from typing import Hashable, Iterable
+from typing import Hashable, Iterable, Iterator
 
 import networkx as nx
 
@@ -455,6 +455,242 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                             pass
                 break
         return dag
+
+    def _mcs_enum_component(self, comp: set, mpdag: "PDAG") -> Iterator:
+        """
+        Yield all MCS selection orderings of the undirected subgraph induced
+        on *comp* in *mpdag*, using the MCS-ENUM bucket structure.
+
+        This is a helper for :meth:`enumerate_dags`. Each yielded ordering is a list
+        of nodes in MCS selection order (equivalently, the reverse of a perfect
+        elimination ordering for the chordal undirected subgraph). A node's index in
+        the list gives its position used to orient undirected edges in
+        :meth:`enumerate_dags`: an edge u-v is oriented u→v when u has a smaller
+        index than v.
+
+        Parameters
+        ----------
+        comp : set
+            Node set of one non-trivial connected component of the undirected
+            subgraph of *mpdag*.
+        mpdag : PDAG
+            The MPDAG obtained by applying all Meek rules to ``self``.
+
+        Yields
+        ------
+        list
+            A MCS selection ordering (list of nodes) for *comp*.
+        """
+        nodes = list(comp)
+        n = len(nodes)
+        comp_set = set(nodes)
+        undir_nb = {v: mpdag.undirected_neighbors(v) & comp_set for v in nodes}
+
+        # Step 1: Initialise the MCS bucket structure.
+        #         invA[v] counts how many already-placed nodes are undirected
+        #         neighbours of v (i.e. v's "label" in the MCS traversal).
+        #         A[k] holds all unplaced nodes whose label equals k.
+        #         maxA[0] tracks the index of the highest non-empty bucket so
+        #         we can always pick the next vertex in O(1).
+        invA = {v: 0 for v in nodes}
+        A = [set() for _ in range(n + 1)]
+        A[0] = set(nodes)
+        maxA = [0]  # wrapped in a list so the closures below can mutate it
+
+        tau = []  # MCS ordering built up during recursion
+        placed = set()
+
+        # Step 2: Helpers to place / unplace a vertex and keep the bucket
+        #         structure consistent.  After every placement, recompute
+        #         maxA downward so _rec() always reads a valid bucket index.
+        def _recompute_maxA():
+            while maxA[0] > 0 and not A[maxA[0]]:
+                maxA[0] -= 1
+
+        def setv(v):
+            # Remove v from its current bucket and mark it placed.
+            A[invA[v]].discard(v)
+            placed.add(v)
+            tau.append(v)
+            # Promote each unplaced neighbour of v to the next bucket.
+            for w in undir_nb[v]:
+                if w not in placed:
+                    A[invA[w]].discard(w)
+                    invA[w] += 1
+                    A[invA[w]].add(w)
+                    if invA[w] > maxA[0]:
+                        maxA[0] = invA[w]
+            _recompute_maxA()
+
+        def resetv(v):
+            # Undo setv(v): remove v from placed and demote its neighbours.
+            placed.discard(v)
+            tau.pop()
+            A[invA[v]].add(v)
+            for w in undir_nb[v]:
+                if w not in placed:
+                    A[invA[w]].discard(w)
+                    invA[w] -= 1
+                    A[invA[w]].add(w)
+            _recompute_maxA()
+
+        # Step 3: Pruning via Lemma 1 (Wienöbst et al., 2023).
+        #         When branching from A[maxA[0]], we may only choose vertices
+        #         reachable from the first candidate via same-bucket undirected
+        #         edges among unplaced nodes.  Choosing outside this connected
+        #         set would produce a duplicate AMO.
+        def _dfs_reachable(start):
+            cur = maxA[0]
+            visited = {start}
+            stack = [start]
+            while stack:
+                u = stack.pop()
+                for w in undir_nb[u]:
+                    if w not in placed and w not in visited and invA[w] == cur:
+                        visited.add(w)
+                        stack.append(w)
+            return visited
+
+        # Step 4: Recursive enumeration.
+        #         Pick any vertex v from the highest non-empty bucket, then
+        #         branch over all reachable candidates in that bucket.  Place
+        #         each candidate u, recurse, then undo (backtrack).  When all
+        #         n nodes have been placed, yield the completed ordering.
+        def _rec():
+            if len(tau) == n:
+                yield list(tau)
+                return
+            v = next(iter(A[maxA[0]]))
+            for u in _dfs_reachable(v):
+                setv(u)
+                yield from _rec()
+                resetv(u)
+
+        yield from _rec()
+
+    def _stream_orderings(self, comps: list, mpdag: "PDAG") -> Iterator:
+        """
+        Yield combined position-index dicts for all non-trivial components.
+
+        Streams the Cartesian product of per-component elimination orderings without
+        materialising all orderings of any component at once. For each restart of an
+        earlier component's generator the later components' generators are re-created
+        from scratch, keeping peak memory O(n_components * n).
+
+        Parameters
+        ----------
+        comps : list of set
+            Non-trivial connected components of the undirected subgraph of *mpdag*.
+        mpdag : PDAG
+            The MPDAG obtained by applying all Meek rules to ``self``.
+
+        Yields
+        ------
+        dict
+            Mapping of node → position index across all components combined.
+        """
+        # Base case: no components remain — yield an empty mapping.
+        if not comps:
+            yield {}
+            return
+        # Recursive case: iterate all AMO orderings of the first component and
+        # combine each with every combined ordering of the remaining components.
+        # Later generators are re-created from scratch on each outer iteration
+        # to avoid generator exhaustion, keeping peak memory O(n_components * n).
+        for ordering in self._mcs_enum_component(comps[0], mpdag):
+            pos = {v: i for i, v in enumerate(ordering)}
+            for rest_pos in self._stream_orderings(comps[1:], mpdag):
+                yield {**pos, **rest_pos}
+
+    def enumerate_dags(self, *, max_dags: int | float = float("inf")) -> Iterator:
+        """
+        Enumerates all DAGs in the Markov equivalence class (MEC) represented by the
+        PDAG.
+
+        Uses the MCS-ENUM algorithm (Wienöbst et al., 2023) which generates each DAG
+        with linear delay O(n + m) per DAG, where n is the number of nodes and m the
+        number of edges. The total number of DAGs in a MEC can be exponential; use
+        ``max_dags`` to limit the output.
+
+        Parameters
+        ----------
+        max_dags : int or float, default=float("inf")
+            Maximum number of DAGs to yield. Defaults to ``float("inf")`` so that
+            all DAGs are yielded. Pass a non-negative integer to cap the output early.
+
+        Yields
+        ------
+        pgmpy.base.DAG
+            DAG instances belonging to the MEC of self.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> # Undirected chain A - B - C: three DAGs in the MEC.
+        >>> pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C")])
+        >>> dags = list(pdag.enumerate_dags())
+        >>> len(dags)
+        3
+        >>> sorted(dags[0].edges())
+        [('A', 'B'), ('B', 'C')]
+        >>> # V-structure A → C ← B has exactly one DAG extension.
+        >>> pdag2 = PDAG(directed_ebunch=[("A", "C"), ("B", "C")])
+        >>> len(list(pdag2.enumerate_dags()))
+        1
+
+        References
+        ----------
+        .. [1] Wienöbst, M., Bannach, M., & Liśkiewicz, M. (2023). Efficient
+               enumeration of Markov equivalent DAGs. AAAI 2023.
+               https://arxiv.org/abs/2301.12212
+        """
+        from pgmpy.base import DAG
+
+        # Step 1: Validate max_dags argument.
+        if max_dags < 0:
+            raise ValueError(
+                f"max_dags must be a non-negative integer or float('inf'), got {max_dags}."
+            )
+        if max_dags == 0:
+            return
+
+        # Step 2: Maximally orient the PDAG via Meek's rules (R1–R4) to obtain the
+        #         MPDAG.  All edges that can be oriented without changing the MEC are
+        #         now directed; the remaining undirected edges are genuinely ambiguous.
+        mpdag = self.apply_meeks_rules(apply_r4=True, inplace=False)
+
+        # Step 3: Extract the undirected subgraph and find its connected components.
+        #         Each non-trivial component (size > 1) is a UCCG (undirected connected
+        #         chordal graph) whose AMOs can be enumerated independently via MCS-ENUM.
+        ug = nx.Graph(mpdag.undirected_edges)
+        non_trivial_comps = [c for c in nx.connected_components(ug) if len(c) > 1]
+
+        # Step 4: If no undirected edges remain, the MPDAG is already a DAG — yield it.
+        if not non_trivial_comps:
+            dag = DAG(ebunch=mpdag.directed_edges)
+            dag.add_nodes_from(self.nodes())
+            dag.latents = self.latents
+            yield dag
+            return
+
+        # Step 5: Stream the Cartesian product of per-component AMO orderings.
+        #         For each combined position mapping, orient every undirected edge
+        #         u-v as u→v when u appears before v in the ordering, then yield
+        #         the resulting DAG.
+        count = 0
+        for tau_pos in self._stream_orderings(non_trivial_comps, mpdag):
+            dag = DAG(ebunch=mpdag.directed_edges)
+            dag.add_nodes_from(self.nodes())
+            dag.latents = self.latents
+            for u, v in mpdag.undirected_edges:
+                if tau_pos[u] < tau_pos[v]:
+                    dag.add_edge(u, v)
+                else:
+                    dag.add_edge(v, u)
+            yield dag
+            count += 1
+            if count >= max_dags:
+                return
 
     def to_graphviz(self) -> object:
         """

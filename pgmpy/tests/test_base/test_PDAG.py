@@ -675,3 +675,171 @@ class TestPDAG(unittest.TestCase):
 
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
+
+
+class TestPDAGEnumerateDags(unittest.TestCase):
+    def test_fully_directed_pdag_yields_one_dag(self):
+        """V-structure PDAG with no undirected edges yields exactly one DAG."""
+        pdag = PDAG(directed_ebunch=[("A", "C"), ("B", "C")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 1)
+        self.assertIsInstance(dags[0], DAG)
+        self.assertEqual(set(dags[0].edges()), {("A", "C"), ("B", "C")})
+
+    def test_single_undirected_edge_yields_both_orientations(self):
+        """A single undirected edge A - B yields exactly two DAGs."""
+        pdag = PDAG(undirected_ebunch=[("A", "B")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 2)
+        self.assertEqual(
+            {frozenset(d.edges()) for d in dags},
+            {frozenset({("A", "B")}), frozenset({("B", "A")})},
+        )
+
+    def test_undirected_chain_yields_three_dags_no_duplicates(self):
+        """Fully undirected chain A-B-C represents a MEC with 3 distinct DAGs."""
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 3)
+        self.assertEqual(
+            {frozenset(d.edges()) for d in dags},
+            {
+                frozenset({("A", "B"), ("B", "C")}),
+                frozenset({("B", "A"), ("B", "C")}),
+                frozenset({("B", "A"), ("C", "B")}),
+            },
+        )
+        # All DAGs must be in the same MEC: their CPDAGs must agree.
+        cpdags = [d.to_pdag() for d in dags]
+        ref_dir = set(cpdags[0].directed_edges)
+        ref_undir = {frozenset(e) for e in cpdags[0].undirected_edges}
+        for cpdag in cpdags[1:]:
+            self.assertEqual(set(cpdag.directed_edges), ref_dir)
+            self.assertEqual({frozenset(e) for e in cpdag.undirected_edges}, ref_undir)
+
+    def test_max_dags_limits_output(self):
+        """max_dags parameter caps the number of yielded DAGs."""
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C")])
+        self.assertEqual(len(list(pdag.enumerate_dags(max_dags=0))), 0)
+        self.assertEqual(len(list(pdag.enumerate_dags(max_dags=1))), 1)
+        self.assertEqual(len(list(pdag.enumerate_dags(max_dags=2))), 2)
+
+    def test_max_dags_negative_raises(self):
+        """Negative max_dags values raise ValueError."""
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C")])
+        with self.assertRaises(ValueError):
+            list(pdag.enumerate_dags(max_dags=-1))
+
+    def test_isolated_nodes_and_latents_preserved(self):
+        """Isolated nodes and latent variables are carried over to all yielded DAGs."""
+        pdag = PDAG(undirected_ebunch=[("A", "B")], latents=["A"])
+        pdag.add_node("Z")
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 2)
+        for d in dags:
+            self.assertIn("Z", d.nodes())
+            self.assertEqual(d.latents, {"A"})
+
+    def test_directed_edges_fixed_in_all_dags(self):
+        """Directed edges in the PDAG are preserved in all yielded DAGs."""
+        pdag = PDAG(
+            directed_ebunch=[("A", "C"), ("B", "C")], undirected_ebunch=[("A", "B")]
+        )
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 2)
+        for d in dags:
+            self.assertTrue(d.has_edge("A", "C"))
+            self.assertTrue(d.has_edge("B", "C"))
+
+    def test_independent_components_combine_via_product(self):
+        """Two independent undirected edges yield 2 × 2 = 4 distinct DAGs."""
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("C", "D")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 4)
+        edge_sets = [frozenset(d.edges()) for d in dags]
+        self.assertEqual(len(edge_sets), len(set(edge_sets)))
+
+    def test_separator_vertex_two_triangles(self):
+        """Two triangles sharing a single separator node must not raise RuntimeError."""
+        # B is the separator: triangle A-B-C and triangle B-D-E.
+        # This exercises the case where a bucket empties after setv() with no
+        # promoted neighbours, which previously caused StopIteration in _rec().
+        pdag = PDAG(
+            undirected_ebunch=[
+                ("A", "B"),
+                ("A", "C"),
+                ("B", "C"),
+                ("B", "D"),
+                ("B", "E"),
+                ("D", "E"),
+            ]
+        )
+        dags = list(pdag.enumerate_dags())
+        self.assertGreater(len(dags), 0)
+        edge_sets = [frozenset(d.edges()) for d in dags]
+        self.assertEqual(len(edge_sets), len(set(edge_sets)))
+
+    def test_figure1_paper_six_dags(self):
+        """
+        CPDAG from Figure 1 of Wienöbst et al. (2023).
+
+        The CPDAG has two undirected connected chordal components (UCCGs):
+          - Path a - c - f  →  3 AMOs
+          - Edge b - e      →  2 AMOs
+        with fixed directed edges a→d, b→d, e→g, f→g across the whole MEC.
+        Total distinct DAGs: 3 × 2 = 6.
+        """
+        pdag = PDAG(
+            undirected_ebunch=[("a", "c"), ("c", "f"), ("b", "e")],
+            directed_ebunch=[("a", "d"), ("b", "d"), ("e", "g"), ("f", "g")],
+        )
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 6)
+        # All outputs must be distinct.
+        edge_sets = [frozenset(d.edges()) for d in dags]
+        self.assertEqual(len(edge_sets), len(set(edge_sets)))
+        # Fixed directed edges must appear unchanged in every DAG.
+        for d in dags:
+            self.assertIn(("a", "d"), d.edges())
+            self.assertIn(("b", "d"), d.edges())
+            self.assertIn(("e", "g"), d.edges())
+            self.assertIn(("f", "g"), d.edges())
+
+    def test_pcalg_pdag2alldags_comparison(self):
+        """
+        Results cross-checked against R's pcalg::pdag2allDags.
+
+        Three independent cases verify count and uniqueness.
+        """
+        # Case 1: Undirected triangle (K3) — every acyclic orientation is valid
+        # since all pairs are adjacent (no v-structures can be created).
+        # Verified with pcalg::pdag2allDags: 6 DAGs (= 3! topological orderings).
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C"), ("A", "C")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 6)
+        edge_sets = {frozenset(d.edges()) for d in dags}
+        self.assertEqual(len(edge_sets), 6)
+
+        # Case 2: Mixed PDAG — v-structure A→C←B with undirected edge A-B.
+        # Meek rules do not fire on A-B (neither A nor B has a directed parent),
+        # so A-B remains undirected, yielding exactly 2 DAGs.
+        # Verified with pcalg::pdag2allDags: 2 DAGs.
+        pdag = PDAG(
+            directed_ebunch=[("A", "C"), ("B", "C")],
+            undirected_ebunch=[("A", "B")],
+        )
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 2)
+        for d in dags:
+            self.assertIn(("A", "C"), d.edges())
+            self.assertIn(("B", "C"), d.edges())
+
+        # Case 3: Undirected path of 5 nodes A-B-C-D-E.
+        # Valid AMOs are exactly those with a single contiguous "source" end,
+        # giving one AMO per choice of direction reversal point: 5 DAGs total.
+        # Verified with pcalg::pdag2allDags: 5 DAGs.
+        pdag = PDAG(undirected_ebunch=[("A", "B"), ("B", "C"), ("C", "D"), ("D", "E")])
+        dags = list(pdag.enumerate_dags())
+        self.assertEqual(len(dags), 5)
+        edge_sets = {frozenset(d.edges()) for d in dags}
+        self.assertEqual(len(edge_sets), 5)
