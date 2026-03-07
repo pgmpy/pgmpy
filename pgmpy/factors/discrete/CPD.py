@@ -12,7 +12,7 @@ import pandas as pd
 
 from pgmpy import config
 from pgmpy.extern import tabulate
-from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.discrete.DiscreteFactor import DiscreteFactor
 from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 

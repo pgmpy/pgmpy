@@ -7,7 +7,9 @@ import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
 
 from pgmpy.factors.base import factor_product
-from pgmpy.factors.discrete import DiscreteFactor
+
+# from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.discrete.DiscreteFactor import DiscreteFactor
 
 
 class FactorDict(dict):

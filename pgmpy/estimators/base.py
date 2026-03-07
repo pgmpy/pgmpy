@@ -7,7 +7,6 @@ import pandas as pd
 
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.inference.ExactInference import BeliefPropagation
 from pgmpy.utils import preprocess_data
 
 
@@ -318,6 +317,8 @@ class MarginalEstimator(BaseEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
+        from pgmpy.inference.ExactInference import BeliefPropagation
+
         super().__init__(data, **kwargs)
         self.belief_propagation = BeliefPropagation(model=model)
         self.theta = None
