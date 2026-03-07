@@ -1258,11 +1258,15 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})  # doctest: +ELLIPSIS
+        >>> dag.to_daft(
+        ...     node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)}
+        ... )  # doctest: +ELLIPSIS
         <daft.PGM at ...>
         >>> dag.to_daft(node_pos="circular")  # doctest: +ELLIPSIS
         <daft.PGM at ...>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})  # doctest: +ELLIPSIS
+        >>> dag.to_daft(
+        ...     node_pos="circular", pgm_params={"observed_style": "inner"}
+        ... )  # doctest: +ELLIPSIS
         <daft.PGM at ...>
         >>> dag.to_daft(
         ...     node_pos="circular",
