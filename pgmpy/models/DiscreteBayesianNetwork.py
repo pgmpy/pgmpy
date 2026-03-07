@@ -1409,7 +1409,15 @@ class DiscreteBayesianNetwork(DAG):
         if adj_model.cpds:
             for node in nodes:
                 cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+                uniform_vals = np.ones((cpd.variable_card, 1)) / cpd.variable_card
+                new_cpd = TabularCPD(
+                    variable=node,
+                    variable_card=cpd.variable_card,
+                    values=uniform_vals,
+                    state_names={node: list(cpd.state_names[node])},
+                )
+                adj_model.remove_cpds(cpd)
+                adj_model.add_cpds(new_cpd)
         return adj_model
 
     def simulate(
