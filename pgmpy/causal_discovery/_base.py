@@ -19,8 +19,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import check_is_fitted
-from sklearn.utils.validation import validate_data
+from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config

@@ -17,19 +17,20 @@ Bayesian Networks and DAGs that can then be plotted using graphviz.
 
 .. code-block:: python
 
-   # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+    # Get an example model
+    from pgmpy.utils import get_example_model
 
-   # Convert model into pygraphviz object
-   model_graphviz = model.to_graphviz()
+    model = get_example_model("sachs")
 
-   # Plot the model.
-   model_graphviz.draw("sachs.png", prog="dot")
+    # Convert model into pygraphviz object
+    model_graphviz = model.to_graphviz()
 
-   # Other file formats can also be specified.
-   model_graphviz.draw("sachs.pdf", prog="dot")
-   model_graphviz.draw("sachs.svg", prog="dot")
+    # Plot the model.
+    model_graphviz.draw("sachs.png", prog="dot")
+
+    # Other file formats can also be specified.
+    model_graphviz.draw("sachs.pdf", prog="dot")
+    model_graphviz.draw("sachs.svg", prog="dot")
 
 The output `sachs.png` is shown below. Users can also tryout other layout methods supported by pygraphviz such as: `neato`, `dot`, `twopi`, `circo`, `fdp`, `nop`.
 
@@ -43,22 +44,25 @@ Daft is a python package that uses matplotlib to render high quality plots suita
 
 .. code-block:: python
 
-   # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+    # Get an example model
+    from pgmpy.utils import get_example_model
 
-   # Get a daft object.
-   model_daft = model.to_daft()
-   # To open the plot
-   model_daft.render()
-   # Save the plot
-   model_daft.savefig('sachs.png')
+    model = get_example_model("sachs")
 
-   # Daft provides plenty of options for customization. Please refer DAG.to_daft documentation and daft's documentation.
-   model_daft_custom = model.to_daft(node_pos='shell',
-                                     pgm_params={'observed_style': 'shade', 'grid_unit': 3},
-                                     edge_params={('PKA', 'P38'): {'label': 2}},
-                                     node_params={'Mek': {'shape': 'rectangle'}})
+    # Get a daft object.
+    model_daft = model.to_daft()
+    # To open the plot
+    model_daft.render()
+    # Save the plot
+    model_daft.savefig("sachs.png")
+
+    # Daft provides plenty of options for customization. Please refer DAG.to_daft documentation and daft's documentation.
+    model_daft_custom = model.to_daft(
+        node_pos="shell",
+        pgm_params={"observed_style": "shade", "grid_unit": 3},
+        edge_params={("PKA", "P38"): {"label": 2}},
+        node_params={"Mek": {"shape": "rectangle"}},
+    )
 
 The output of the two plots above.
 
@@ -74,13 +78,14 @@ Lastly, as both `pgmpy.models.BayesianNetwork` and `pgmpy.base.DAG` inherit `net
 
 .. code-block:: python
 
-   import networkx as nx
-   import matplotlib.pyplot as plt
+    import networkx as nx
+    import matplotlib.pyplot as plt
 
-   # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+    # Get an example model
+    from pgmpy.utils import get_example_model
 
-   # Plot the model
-   nx.draw(model)
-   plt.draw()
+    model = get_example_model("sachs")
+
+    # Plot the model
+    nx.draw(model)
+    plt.draw()

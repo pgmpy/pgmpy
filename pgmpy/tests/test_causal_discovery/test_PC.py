@@ -22,9 +22,7 @@ def expected_failed_checks(estimator):
     }
 
 
-@parametrize_with_checks(
-    [PC(return_type="dag", show_progress=False)]
-)
+@parametrize_with_checks([PC(return_type="dag", show_progress=False)])
 def test_pc_compatibility(estimator, check):
     check(estimator)
 

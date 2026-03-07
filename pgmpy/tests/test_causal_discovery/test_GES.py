@@ -18,9 +18,7 @@ def expected_failed_checks(estimator):
     }
 
 
-@parametrize_with_checks(
-    [GES(return_type="dag")]
-)
+@parametrize_with_checks([GES(return_type="dag")])
 def test_ges_compatibility(estimator, check):
     check(estimator)
 

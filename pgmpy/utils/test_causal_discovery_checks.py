@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 def check_causal_discovery_interface(estimator):
@@ -13,8 +13,7 @@ def check_causal_discovery_interface(estimator):
 
     # Generate dummy dataset
     data = pd.DataFrame(
-        np.random.randint(0, 2, size=(100, 5)),
-        columns=[f"X{i}" for i in range(5)]
+        np.random.randint(0, 2, size=(100, 5)), columns=[f"X{i}" for i in range(5)]
     )
 
     # Run fit

@@ -1,10 +1,10 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 
-from pgmpy.estimators import BDeu, BIC, ExhaustiveSearch, K2
+from pgmpy.estimators import BIC, K2, BDeu, ExhaustiveSearch
 
 
 class TestBaseEstimator(unittest.TestCase):

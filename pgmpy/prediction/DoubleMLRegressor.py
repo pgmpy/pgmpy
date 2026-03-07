@@ -6,12 +6,16 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted
+
 from pgmpy.prediction._base import _BaseCausalPrediction
+
 
 def validate_data(estimator, X, y=None, *args, **kwargs):
     if y is None:
         return estimator._validate_data(X, *args, **kwargs)
     return estimator._validate_data(X, y, *args, **kwargs)
+
+
 class DoubleMLRegressor(_BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
