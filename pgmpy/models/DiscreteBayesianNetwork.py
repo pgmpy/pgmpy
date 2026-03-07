@@ -1413,9 +1413,7 @@ class DiscreteBayesianNetwork(DAG):
                 if node_cpd is not None:
                     if len(node_cpd.variables) > 1:
                         parents = node_cpd.variables[1:]
-                        evidence = [(parent, 0) for parent in parents]
-
-                        reduced_cpd = node_cpd.reduce(evidence, inplace=False)
+                        node_cpd.marginalize(parents, inplace=True)
                         reduced_cpd.normalize()
                         adj_model.remove_cpds(node_cpd)
                         adj_model.add_cpds(reduced_cpd)
