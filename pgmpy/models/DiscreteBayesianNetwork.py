@@ -1405,22 +1405,39 @@ class DiscreteBayesianNetwork(DAG):
 
         model = self if inplace else self.copy()
         adj_model = DAG.do(model, nodes, inplace=inplace)
+    
 
         if adj_model.cpds:
             for node in nodes:
-                cpd = adj_model.get_cpds(node)
+                children = adj_model.get_children(node)
 
-                if cpd is None:
-                    continue
+                for child in children:
+                    cpd = adj_model.get_cpds(child)
 
-                # Remove parent variables from CPD
-                parents = cpd.variables[1:]
+                    if cpd is None:
+                        continue
 
-                if parents:
-                    cpd.marginalize(parents, inplace=True)
+                    
+                    parents = cpd.variables[1:]
 
-                adj_model.add_cpds(cpd)
+                    if parents:
+                        evidence = [(parent, 0) for parent in parents]
+                        new_cpd = cpd.reduce(evidence, inplace=False)
+
+                        adj_model.remove_cpds(cpd)
+                        adj_model.add_cpds(new_cpd)
+        """  At first glance, it checks whether adj_model has any CPDs. 
+        if it does, it iterates through each node in the `nodes` list and retrieves its children.
+        for each CPD of the children, it checks if the CPD is not None.This is safty check.
+          If the CPD exists, it retrieves the parents of the child node from the CPD's variables 
+          (excluding the first variable which is the child itself).
+          If there are parents, it creates a list of evidence by setting each parent variable to state 0.(do state
+              0 is needed because after do operation, the variable will only have one state left which is 0)
+              Then it elimates the parent variables from the CPD by reducing it with the created evidence.
+                Finally, it removes the old CPD from the model and adds the new reduced CPD to the model.
+          """
         return adj_model
+
 
     def simulate(
         self,
