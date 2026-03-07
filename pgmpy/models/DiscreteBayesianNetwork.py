@@ -1416,11 +1416,12 @@ class DiscreteBayesianNetwork(DAG):
                     if cpd is None:
                         continue
 
-                    parents = cpd.variables[1:]
+                    parents = [p for p in cpd.variables[1:] if p == node]
 
                     if parents:
                         evidence = [(parent, 0) for parent in parents]
                         new_cpd = cpd.reduce(evidence, inplace=False)
+                        new_cpd.normalize()
 
                         adj_model.remove_cpds(cpd)
                         adj_model.add_cpds(new_cpd)
