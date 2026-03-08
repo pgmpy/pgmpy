@@ -573,7 +573,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> chain = DAG([("X", "Y"), ("Y", "Z")])
-        >>> str(chain.get_independencies()) in {"(X \\u27c2 Z | Y)", "(Z \\u27c2 X | Y)"}
+        >>> str(chain.get_independencies()) in {"(X ⟂ Z | Y)", "(Z ⟂ X | Y)"}
         True
         """
         nodes = set(self.nodes())
@@ -621,7 +621,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...     ]
         ... )
         >>> ind = student.local_independencies("grade")
-        >>> str(ind) in {"(grade \\u27c2 SAT | diff, intel)", "(grade \\u27c2 SAT | intel, diff)"}
+        >>> str(ind) in {"(grade ⟂ SAT | diff, intel)", "(grade ⟂ SAT | intel, diff)"}
         True
         """
 
@@ -1268,11 +1268,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         <daft.PGM ...>
         >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})  # doctest: +SKIP
         <daft.PGM ...>
-        >>> dag.to_daft(
+        >>> dag.to_daft(  # doctest: +SKIP
         ...     node_pos="circular",
         ...     edge_params={("a", "b"): {"label": 2}},
         ...     node_params={"a": {"shape": "rectangle"}},
-        ... )  # doctest: +SKIP
+        ... )
         <daft.PGM ...>
         """
         try:
@@ -1388,7 +1388,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, node names are generated as strings of the form "X_i"
+            where i ranges from 0 to n_nodes - 1.
 
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
@@ -1701,7 +1702,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
-        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> data = linear_model.simulate(n_samples=int(1e4))  # doctest: +SKIP
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
         >>> strengths = dag.edge_strength(data)  # doctest: +SKIP
