@@ -907,7 +907,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> student = DAG()
         >>> student.add_nodes_from(["diff", "intel", "grades"])
         >>> student.add_edges_from([("diff", "grades"), ("intel", "grades")])
-        >>> student.active_trail_nodes("diff") == {'diff': {'diff', 'grades'}}
+        >>> student.active_trail_nodes("diff") == {"diff": {"diff", "grades"}}
         True
         >>> (
         ...     student.active_trail_nodes(["diff", "intel"], observed="grades")
@@ -1262,11 +1262,15 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})  # doctest: +SKIP
+        >>> dag.to_daft(
+        ...     node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)}
+        ... )  # doctest: +SKIP
         <daft.PGM ...>
         >>> dag.to_daft(node_pos="circular")  # doctest: +SKIP
         <daft.PGM ...>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})  # doctest: +SKIP
+        >>> dag.to_daft(
+        ...     node_pos="circular", pgm_params={"observed_style": "inner"}
+        ... )  # doctest: +SKIP
         <daft.PGM ...>
         >>> edge_params = {("a", "b"): {"label": 2}}  # doctest: +SKIP
         >>> node_params = {"a": {"shape": "rectangle"}}  # doctest: +SKIP
