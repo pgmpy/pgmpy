@@ -1449,9 +1449,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        >>> model.draw("model.png", prog="neato")
+        >>> agraph = model.to_graphviz()  # doctest: +SKIP
+        >>> agraph  # doctest: +SKIP
+        <AGraph <Swig Object of type 'Agraph_t *' at ...>>
+        >>> agraph.draw("model.png", prog="neato")  # doctest: +SKIP
         """
         if plot_edge_strength:
             missing_strengths = []
