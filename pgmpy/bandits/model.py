@@ -9,9 +9,12 @@ class CausalBanditModel:
     """
     Represents a causal bandit environment derived from a Bayesian Network.
 
-    Wraps a ``DiscreteBayesianNetwork`` and exposes an arm/action interface
-    where each arm corresponds to a hard or soft intervention on a subset of
-    variables.  The reward is the value of a designated reward variable.
+    In a causal bandit, each "arm" is an intervention (``do`` operation) on
+    one or more variables in a causal graph, and the "reward" is the value of
+    a designated outcome variable.  This class wraps a
+    ``DiscreteBayesianNetwork`` and translates between bandit terminology
+    (arms, rewards) and causal inference operations (``do``, ``query``,
+    ``simulate``).
 
     Parameters
     ----------
@@ -25,18 +28,19 @@ class CausalBanditModel:
         Names of nodes the agent can intervene on.
 
     intervention_type : str (default: ``"hard"``)
-        ``"hard"`` for atomic do-interventions, ``"soft"`` for stochastic /
-        virtual interventions specified via ``TabularCPD`` objects.
+        ``"hard"`` for atomic do-interventions (force a variable to a single
+        state), ``"soft"`` for stochastic interventions specified via
+        ``TabularCPD`` objects that replace the variable's original CPD.
 
     reward_type : str or None (default: ``None``)
-        ``"binary"`` or ``"categorical"`` or ``"continuous"``.  If ``None``,
-        auto-detected from the reward variable's CPD cardinality (2 → binary,
-        otherwise categorical).
+        ``"binary"``, ``"categorical"``, or ``"continuous"``.  If ``None``,
+        auto-detected from the reward variable's CPD cardinality
+        (2 → ``"binary"``, otherwise ``"categorical"``).
 
     reward_mapping : dict or None (default: ``None``)
         Maps reward-variable state names to numeric values, e.g.
-        ``{"low": 0, "med": 0.5, "high": 1}``.  When ``None`` and the reward
-        is binary, state names ``"0"``/``"1"`` are used as-is (cast to float).
+        ``{"low": 0, "med": 0.5, "high": 1}``.  When ``None`` and the
+        reward is binary, state names are cast to float directly.
 
     Examples
     --------
@@ -89,19 +93,18 @@ class CausalBanditModel:
         self.reward_mapping = reward_mapping
         self._ci = CausalInference(model)
 
-        # Per-variable intervention space: maps variable → list of allowed
-        # values.  For hard interventions these are state-name strings; for
-        # soft interventions they are ``TabularCPD`` objects.
+        # Per-variable intervention space.
+        # Hard: maps variable → list of state-name strings.
+        # Soft: maps variable → list of TabularCPD objects.
         self._intervention_space = {}
         model_states = model.states
         for var in self.intervenable_variables:
             if intervention_type == "hard":
                 self._intervention_space[var] = list(model_states[var])
             else:
-                # Soft: no default values; user must call set_intervention_space
                 self._intervention_space[var] = []
 
-        # Reward type
+        # Reward type auto-detection.
         if reward_type is not None:
             self.reward_type = reward_type
         else:
@@ -113,12 +116,13 @@ class CausalBanditModel:
     # ------------------------------------------------------------------
     def set_intervention_space(self, variable, values):
         """
-        Restrict or define the intervention values for *variable*.
+        Restrict or define the allowed intervention values for *variable*.
 
         Parameters
         ----------
         variable : str
             Must be one of ``intervenable_variables``.
+
         values : list
             For hard interventions: list of state-name strings.
             For soft interventions: list of ``TabularCPD`` objects.
@@ -126,12 +130,12 @@ class CausalBanditModel:
         if variable not in self.intervenable_variables:
             raise ValueError(f"'{variable}' is not an intervenable variable.")
 
-        model_states = self.model.states
         if self.intervention_type == "hard":
+            model_states = self.model.states
             for v in values:
                 if v not in model_states[variable]:
                     raise ValueError(
-                        f"State '{v}' is not a valid state for variable '{variable}'. "
+                        f"State '{v}' is not valid for variable '{variable}'. "
                         f"Valid states: {model_states[variable]}"
                     )
             self._intervention_space[variable] = list(values)
@@ -156,29 +160,24 @@ class CausalBanditModel:
         -------
         list of dict
             Each dict maps intervenable variable names to intervention values.
-            For hard interventions the values are state-name strings; for soft
-            interventions the values are ``TabularCPD`` objects.
         """
         if self.intervention_type == "hard":
             var_values = [
                 [(var, v) for v in self._intervention_space[var]]
                 for var in self.intervenable_variables
             ]
-            actions = [
-                {var: val for var, val in combo} for combo in product(*var_values)
-            ]
         else:
-            # Soft: each variable has a list of TabularCPD alternatives
             var_values = [
                 [(var, cpd) for cpd in self._intervention_space[var]]
                 for var in self.intervenable_variables
             ]
-            if all(len(v) > 0 for v in var_values):
-                actions = [
-                    {var: val for var, val in combo} for combo in product(*var_values)
-                ]
-            else:
-                actions = []
+
+        if all(len(v) > 0 for v in var_values):
+            actions = [
+                {var: val for var, val in combo} for combo in product(*var_values)
+            ]
+        else:
+            actions = []
 
         if include_observational:
             actions = [{}] + actions
@@ -189,13 +188,13 @@ class CausalBanditModel:
     # ------------------------------------------------------------------
     def expected_reward(self, action):
         """
-        Compute the expected reward distribution under *action*.
+        Compute the exact reward distribution under *action* using do-calculus.
 
         Parameters
         ----------
         action : dict
-            Intervention dict (hard: ``{var: state_str}``, or ``{}``
-            for observational).
+            Intervention dict, e.g. ``{"T": "1"}`` or ``{}`` for no
+            intervention.
 
         Returns
         -------
@@ -203,7 +202,9 @@ class CausalBanditModel:
         """
         do = {k: v for k, v in action.items() if isinstance(v, str)}
         return self._ci.query(
-            variables=[self.reward_variable], do=do if do else None, show_progress=False
+            variables=[self.reward_variable],
+            do=do if do else None,
+            show_progress=False,
         )
 
     def observe(self, action, n_samples=1, seed=None):
@@ -214,34 +215,31 @@ class CausalBanditModel:
         ----------
         action : dict
             Intervention dict.
+
         n_samples : int
             Number of samples to draw.
+
         seed : int or None
             Random seed for reproducibility.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with at least the reward-variable column.
+            Simulated data including the reward-variable column.
         """
         if self.intervention_type == "hard" or not action:
             do = action if action else None
-            samples = self.model.simulate(
-                n_samples=n_samples,
-                do=do,
-                seed=seed,
-                show_progress=False,
+            return self.model.simulate(
+                n_samples=n_samples, do=do, seed=seed, show_progress=False
             )
         else:
-            # Soft intervention: action values are TabularCPD objects
             virtual_intervention = list(action.values())
-            samples = self.model.simulate(
+            return self.model.simulate(
                 n_samples=n_samples,
                 virtual_intervention=virtual_intervention,
                 seed=seed,
                 show_progress=False,
             )
-        return samples
 
     def get_numeric_reward(self, observation):
         """
