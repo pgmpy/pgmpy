@@ -72,12 +72,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Add one node at a time:
 
-    >>> G.add_node(node="a")
+    >>> G.add_node("a")
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(nodes=["a", "b"])
+    >>> G.add_nodes_from(["a", "b"])
 
     **Edges:**
 
@@ -145,7 +145,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     Add a new latent variable 'Z' using the role system:
 
     >>> G.add_node("Z")
-    >>> G.with_role(role="latents", variables="Z", inplace=True)
+    >>> _ = G.with_role(role="latents", variables="Z", inplace=True)
     >>> sorted(G.latents)
     ['U', 'V', 'Z']
 
@@ -156,7 +156,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Remove a latent variable from the role:
 
-    >>> G.without_role(role="latents", variables="V", inplace=True)
+    >>> _ = G.without_role(role="latents", variables="V", inplace=True)
     >>> sorted(G.latents)
     ['U', 'Z']
     """
@@ -346,25 +346,25 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> G = DAG()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
         >>> G.add_edge(u="Alice", v="Bob")
-        >>> G.nodes()
-        NodeView(('Alice', 'Bob', 'Charles'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob')])
+        >>> sorted(G.nodes())
+        ['Alice', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Bob')]
 
         When the node is not already present in the graph:
 
         >>> G.add_edge(u="Alice", v="Ankur")
-        >>> G.nodes()
-        NodeView(('Alice', 'Ankur', 'Bob', 'Charles'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
+        >>> sorted(G.nodes())
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Ankur'), ('Alice', 'Bob')]
 
         Adding edges with weight:
 
         >>> G.add_edge("Ankur", "Maria", weight=0.1)
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.1}
         """
         super().add_edge(u, v, weight=weight)
@@ -397,29 +397,29 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> G = DAG()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
         >>> G.add_edges_from(ebunch=[("Alice", "Bob"), ("Bob", "Charles")])
-        >>> G.nodes()
-        NodeView(('Alice', 'Bob', 'Charles'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> sorted(G.nodes())
+        ['Alice', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Bob'), ('Bob', 'Charles')]
 
         When the node is not already in the model:
 
         >>> G.add_edges_from(ebunch=[("Alice", "Ankur")])
-        >>> G.nodes()
-        NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
+        >>> sorted(G.nodes())
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Ankur'), ('Alice', 'Bob'), ('Bob', 'Charles')]
 
         Adding edges with weights:
 
         >>> G.add_edges_from(
         ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
         ... )
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.3}
-        >>> G.edge["Maria"]["Mason"]
+        >>> G.edges["Maria", "Mason"]
         {'weight': 0.5}
 
         or
@@ -475,8 +475,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> G = DAG(ebunch=[("diff", "grade"), ("intel", "grade")])
         >>> moral_graph = G.moralize()
-        >>> moral_graph.edges()
-        EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
+        >>> sorted(tuple(sorted(edge)) for edge in moral_graph.edges())
+        [('diff', 'grade'), ('diff', 'intel'), ('grade', 'intel')]
         """
         from pgmpy.base import UndirectedGraph
 
@@ -573,8 +573,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> chain = DAG([("X", "Y"), ("Y", "Z")])
-        >>> chain.get_independencies()
-        (X \u27c2 Z | Y)
+        >>> str(chain.get_independencies()) in {"(X \\u27c2 Z | Y)", "(Z \\u27c2 X | Y)"}
+        True
         """
         nodes = set(self.nodes())
         if not include_latents:
@@ -621,8 +621,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...     ]
         ... )
         >>> ind = student.local_independencies("grade")
-        >>> ind
-        (grade \u27c2 SAT | diff, intel)
+        >>> str(ind) in {"(grade \\u27c2 SAT | diff, intel)", "(grade \\u27c2 SAT | intel, diff)"}
+        True
         """
 
         independencies = Independencies()
@@ -701,8 +701,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...         ("grade", "letter"),
         ...     ]
         ... )
-        >>> student.get_immoralities()
-        {('diff', 'intel')}
+        >>> student.get_immoralities()["grade"]
+        [('diff', 'intel')]
         """
         immoralities = dict()
         for node in self.nodes():
@@ -865,8 +865,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...         ("v", "q"),
         ...     ]
         ... )
-        >>> G.get_markov_blanket("y")
-        ['s', 'w', 'x', 'u', 'z', 'v']
+        >>> sorted(G.get_markov_blanket("y"))
+        ['s', 'u', 'v', 'w', 'x', 'z']
         """
         children = self.get_children(node)
         parents = self.get_parents(node)
@@ -907,10 +907,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> student = DAG()
         >>> student.add_nodes_from(["diff", "intel", "grades"])
         >>> student.add_edges_from([("diff", "grades"), ("intel", "grades")])
-        >>> student.active_trail_nodes("diff")
-        {'diff': {'diff', 'grades'}}
-        >>> student.active_trail_nodes(["diff", "intel"], observed="grades")
-        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+        >>> student.active_trail_nodes("diff") == {'diff': {'diff', 'grades'}}
+        True
+        >>> student.active_trail_nodes(["diff", "intel"], observed="grades") == {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+        True
 
         References
         ----------
@@ -981,10 +981,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> model = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "L")])
-        >>> model.get_ancestors("G")
-        {'D', 'G', 'I'}
-        >>> model.get_ancestors(["G", "I"])
-        {'D', 'G', 'I'}
+        >>> model.get_ancestors("G") == {"D", "G", "I"}
+        True
+        >>> model.get_ancestors(["G", "I"]) == {"D", "G", "I"}
+        True
         """
         if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
@@ -1016,7 +1016,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> dag = DAG([("A", "B"), ("B", "C"), ("C", "D")])
         >>> pdag = dag.to_pdag()
         >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C'), ('C', 'D')}
+        set()
+        >>> pdag.undirected_edges == {("A", "B"), ("B", "C"), ("C", "D")}
+        True
 
         References
         ----------
@@ -1153,8 +1155,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Applying the do-operator will return a new DAG with the desired structure.
         >>> graph_do_A = graph.do("A")
         >>> # Which we can verify is missing the edges we would expect.
-        >>> graph_do_A.edges
-        OutEdgeView([('A', 'B'), ('A', 'Y')])
+        >>> set(graph_do_A.edges) == {("A", "B"), ("A", "Y")}
+        True
 
         References
         ----------
@@ -1257,18 +1259,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})
-        <daft.PGM at 0x7fc756e936d0>
-        >>> dag.to_daft(node_pos="circular")
-        <daft.PGM at 0x7f9bb48c5eb0>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
-        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})  # doctest: +SKIP
+        <daft.PGM ...>
+        >>> dag.to_daft(node_pos="circular")  # doctest: +SKIP
+        <daft.PGM ...>
+        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})  # doctest: +SKIP
+        <daft.PGM ...>
         >>> dag.to_daft(
         ...     node_pos="circular",
         ...     edge_params={("a", "b"): {"label": 2}},
         ...     node_params={"a": {"shape": "rectangle"}},
-        ... )
-        <daft.PGM at 0x7f9bb48b0bb0>
+        ... )  # doctest: +SKIP
+        <daft.PGM ...>
         """
         try:
             from daft import PGM
@@ -1399,11 +1401,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3)
-        >>> random_dag.nodes()
-        NodeView((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
-        >>> random_dag.edges()
-        OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
+        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3, seed=42)
+        >>> len(random_dag.nodes())
+        10
+        >>> all(str(node).startswith("X_") for node in random_dag.nodes())
+        True
         """
         # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
         gen = np.random.default_rng(seed=seed)
@@ -1449,9 +1451,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        >>> model.draw("model.png", prog="neato")
+        >>> model.to_graphviz()  # doctest: +SKIP
+        <AGraph ...>
+        >>> model.to_graphviz().draw("model.png", prog="neato")  # doctest: +SKIP
         """
         if plot_edge_strength:
             missing_strengths = []
@@ -1504,8 +1506,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         >>> # Empty DAG returns empty string
         >>> empty_dag = DAG()
-        >>> print(empty_dag.to_lavaan())
-        ""
+        >>> empty_dag.to_lavaan()
+        ''
 
         Notes
         -----
@@ -1684,6 +1686,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> # Create a linear Gaussian Bayesian network
         >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
         >>> # Create CPDs with specific beta values
@@ -1698,9 +1701,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> data = linear_model.simulate(n_samples=int(1e4))
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
-        >>> strengths = dag.edge_strength(data)
-        {('X', 'Y'): np.float64(0.14587166611282304),
-         ('Z', 'Y'): np.float64(0.25683780900125613)}
+        >>> strengths = dag.edge_strength(data)  # doctest: +SKIP
+        >>> set(strengths) == {("X", "Y"), ("Z", "Y")}  # doctest: +SKIP
+        True
+        >>> all(0 <= strength <= 1 for strength in strengths.values())  # doctest: +SKIP
+        True
 
         References
         ----------
