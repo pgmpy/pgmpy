@@ -5,7 +5,6 @@ import io
 import os
 import re
 import shutil
-import zipfile
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.request import urlopen
@@ -244,38 +243,37 @@ class _CovarianceMixin:
 class _TubingenBenchmarkMixin:
     """
     Mixin for Tubingen datasets that consist of multiple independent pairs/files.
-    Returns dictionaries instead of single DataFrames/DAGs.
     URL: https://webdav.tuebingen.mpg.de/cause-effect/
     """
 
     @classmethod
     def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
-        zip_content = cls._get_raw_data("data", cls.data_url)
-        with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
-            file_name = f"pair{pair_id:04}.txt"
-            with z.open(file_name) as f:
-                return pd.read_csv(f, sep=r"\s+", header=None, names=["x", "y"])
+        url = f"{cls.base_url}/pair{pair_id:04}.txt"
+        cache_name = f"pair_{pair_id:04}_data"
+        raw_data = cls._get_raw_data(cache_name, url)
+        return pd.read_csv(
+            io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"]
+        )
 
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> pd.DataFrame:
-        zip_content = cls._get_raw_data("data", cls.data_url)
-        with zipfile.ZipFile(io.BytesIO(zip_content)) as z:
-            desc_file = f"pair{pair_id:04}_des.txt"
-            with z.open(desc_file) as f:
-                content = f.read().decode("utf-8-sig", errors="ignore").lower()
-                # for (x -> y, x --> y, x - - > y) and for cases 86,88
-                if (
-                    re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE)
-                    or "x causes y" in content
-                    or pair_id in (86, 88)
-                ):
-                    return DAG([("x", "y")])
-                elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
-                    return DAG([("y", "x")])
-                # for (x <- y, x <-- y)
-                elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
-                    return DAG([("y", "x")])
-            return None
+        url = f"{cls.base_url}/pair{pair_id:04}_des.txt"
+        cache_name = f"pair_{pair_id:04}_desc"
+        raw_data = cls._get_raw_data(cache_name, url)
+        content = raw_data.decode("utf-8-sig", errors="ignore").lower()
+        # for (x -> y, x --> y, x - - > y) and for cases 86,88
+        if (
+            re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE)
+            or "x causes y" in content
+            or pair_id in (86, 88)
+        ):
+            return DAG([("x", "y")])
+        elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
+            return DAG([("y", "x")])
+        # for (x <- y, x <-- y)
+        elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
+            return DAG([("y", "x")])
+        return None
 
 
 def load_dataset(name: str) -> Dataset:

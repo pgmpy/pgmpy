@@ -21,5 +21,4 @@ class Tubingen(_TubingenBenchmarkMixin, _BaseDataset):
         "is_mixed": True,
         "is_ordinal": False,
     }
-    base_url = "https://webdav.tuebingen.mpg.de/cause-effect/"
-    data_url = "https://webdav.tuebingen.mpg.de/cause-effect/pairs.zip"
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/pairwise-tubingen/pairs"
