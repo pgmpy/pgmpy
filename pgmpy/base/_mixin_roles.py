@@ -146,7 +146,7 @@ class _GraphRolesMixin:
                         attr.pop("roles")
                     else:
                         attr["roles"] = roles
-        
+
         if inplace:
             return None
         return new_graph
