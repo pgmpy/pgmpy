@@ -557,18 +557,20 @@ class LinearGaussianBayesianNetwork(DAG):
 
         seed: int (default: None)
             Seed for the random number generator.
+
         missing_prob: dict (default: None)
             A dictionary specifying the probability of missingness for each variable.
-            Keys must be valid variable names in the model and values must be floats
+            Keys must be valid variable names in the model, and values must be floats
             between 0 and 1. Each sampled value is independently replaced with NaN
             with the specified probability (MCAR assumption). A ValueError is raised
             if a variable is not present in the sampled data or if the probability
             is outside the range [0, 1].
+
         Returns
         -------
-        pandas.DataFrame
         pandas.DataFrame: generated samples
             A pandas data frame with the generated samples.
+
         Examples
         --------
         >>> model.simulate(n_samples=3, seed=42)
