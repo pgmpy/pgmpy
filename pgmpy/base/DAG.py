@@ -1268,10 +1268,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         <daft.PGM ...>
         >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})  # doctest: +SKIP
         <daft.PGM ...>
+        >>> edge_params = {("a", "b"): {"label": 2}}  # doctest: +SKIP
+        >>> node_params = {"a": {"shape": "rectangle"}}  # doctest: +SKIP
         >>> dag.to_daft(  # doctest: +SKIP
-        ...     node_pos="circular",
-        ...     edge_params={("a", "b"): {"label": 2}},
-        ...     node_params={"a": {"shape": "rectangle"}},
+        ...     node_pos="circular", edge_params=edge_params, node_params=node_params
         ... )
         <daft.PGM ...>
         """
