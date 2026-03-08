@@ -347,7 +347,11 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
                 chi += c
                 dof += d
-        p_value = 1 - stats.chi2.cdf(chi, df=dof)
+        if dof == 0:
+            chi = 0
+            p_value = 1
+        else:
+            p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
     if boolean:

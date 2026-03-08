@@ -16,6 +16,7 @@ from pgmpy.estimators.CITests import (
     pearsonr,
     pearsonr_equivalence,
     pillai_trace,
+    power_divergence,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -268,6 +269,23 @@ class TestDiscreteTests(unittest.TestCase):
             stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
             np_test.assert_almost_equal(p_value, 0, decimal=5)
+
+    def test_power_divergence_zero_dof(self):
+        data = pd.DataFrame(
+            {
+                "X": [0, 0, 1, 1],
+                "Y": [0, 1, 0, 1],
+                "Z": [0, 1, 0, 1],
+            }
+        )
+
+        chi, p_value, dof = power_divergence(
+            X="X", Y="Y", Z=["Z"], data=data, boolean=False
+        )
+
+        self.assertEqual(chi, 0)
+        self.assertEqual(p_value, 1)
+        self.assertEqual(dof, 0)
 
 
 @unittest.skipIf(
