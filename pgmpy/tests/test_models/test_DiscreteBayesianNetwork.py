@@ -1863,6 +1863,50 @@ class TestSimulation(unittest.TestCase):
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
+    def test_simulate_invalid_virtual_evidence_scope(self):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD(
+                "B",
+                2,
+                [[0.7, 0.2], [0.3, 0.8]],
+                evidence=["A"],
+                evidence_card=[2],
+            ),
+        )
+        bad_virtual_evidence = TabularCPD(
+            "B",
+            2,
+            [[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+        )
+        with self.assertRaises(ValueError):
+            model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
+    def test_simulate_virtual_evidence_wrong_cardinality(self):
+        bad_virtual_evidence = TabularCPD("U", 3, [[0.2], [0.5], [0.3]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
+    def test_simulate_virtual_evidence_nonexistent_node(self):
+        bad_virtual_evidence = TabularCPD("NONEXISTENT", 2, [[0.5], [0.5]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
     def test_simulate_virtual_intervention(self):
         # Use virtual intervention argument to simulate hard intervention and match values from inference
 
