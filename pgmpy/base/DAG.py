@@ -909,7 +909,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> student.add_edges_from([("diff", "grades"), ("intel", "grades")])
         >>> student.active_trail_nodes("diff") == {'diff': {'diff', 'grades'}}
         True
-        >>> student.active_trail_nodes(["diff", "intel"], observed="grades") == {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+        >>> (
+        ...     student.active_trail_nodes(["diff", "intel"], observed="grades")
+        ...     == {"diff": {"diff", "intel"}, "intel": {"diff", "intel"}}
+        ... )
         True
 
         References
