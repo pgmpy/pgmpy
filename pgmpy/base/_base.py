@@ -415,7 +415,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         for u, v, key, edge_type in ebunch:
             graph_copy.add_edge(u, v, edge_type=edge_type, key=key)
         for role, vars in self.get_role_dict().items():
-            graph_copy.with_role(role=role, variables=vars, inplace=True)
+            graph_copy.with_role(role=role, variables=vars, inplace=False)
 
         return graph_copy
 
