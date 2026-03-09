@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import warnings
+
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
@@ -33,6 +35,13 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
+        warnings.warn(
+            "MmhcEstimator is deprecated and will be removed in a future release. "
+            "Please use pgmpy.causal_discovery.MMHC instead, which provides a "
+            "sklearn-compatible API with fit() and score() methods.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super(MmhcEstimator, self).__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
