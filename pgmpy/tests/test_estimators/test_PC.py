@@ -8,6 +8,7 @@ from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import PC, ExpertKnowledge
+from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
@@ -353,6 +354,23 @@ def test_search_space():
     )
     for edge in dag.edges():
         assert edge in search_space
+
+
+def test_get_potential_sepsets_respects_earliest_temporal_order():
+    graph = nx.Graph([("U", "V"), ("U", "A"), ("U", "B"), ("V", "C")])
+    temporal_ordering = {"V": 0, "B": 0, "C": 0, "A": 1, "U": 2}
+
+    sep_sets = set(
+        BaseConstraintEstimator._get_potential_sepsets(
+            u="U",
+            v="V",
+            temporal_ordering=temporal_ordering,
+            graph=graph,
+            lim_neighbors=1,
+        )
+    )
+
+    assert sep_sets == {("B",), ("C",)}
 
 
 requires_xgboost = pytest.mark.skipif(
