@@ -87,7 +87,7 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
         >>> G.add_edge(u="Alice", v="Bob")
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
@@ -97,13 +97,13 @@ class UndirectedGraph(nx.Graph):
         When the node is not already present in the graph:
         >>> G.add_edge(u="Alice", v="Ankur")
         >>> G.nodes()
-        NodeView('Alice', 'Ankur', 'Bob', 'Charles'))
+        NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
         >>> G.edges()
         EdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
         >>> G.add_edge("Ankur", "Maria", weight=0.1)
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.1}
         """
         super(UndirectedGraph, self).add_edge(u, v, weight=weight)
@@ -132,7 +132,7 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
         >>> G.add_edges_from(ebunch=[("Alice", "Bob"), ("Bob", "Charles")])
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
@@ -142,17 +142,17 @@ class UndirectedGraph(nx.Graph):
         When the node is not already in the model:
         >>> G.add_edges_from(ebunch=[("Alice", "Ankur")])
         >>> G.nodes()
-        NodeView(('Alice', 'Ankur', 'Charles', 'Bob'))
+        NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
         >>> G.edges()
-        EdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
+        EdgeView([('Alice', 'Bob'), ('Alice', 'Ankur'), ('Bob', 'Charles')])
 
         Adding edges with weights:
         >>> G.add_edges_from(
         ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
         ... )
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.3}
-        >>> G.edge["Maria"]["Mason"]
+        >>> G.edges["Maria", "Mason"]
         {'weight': 0.5}
         """
         ebunch = list(ebunch)
