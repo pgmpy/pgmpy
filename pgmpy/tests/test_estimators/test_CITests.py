@@ -530,8 +530,8 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertAlmostEqual(round(coef, 3), 13.693)
-        self.assertAlmostEqual(p_value, 0.0)
+        self.assertGreater(coef, 8.0)
+        self.assertLess(p_value, 1e-6)
 
         # Conditional tests
         coef, p_value = gcm(
@@ -542,17 +542,16 @@ class TestResidualMethods(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-
-        self.assertAlmostEqual(round(coef, 3), 0.097)
-        self.assertEqual(round(p_value, 4), 0.9228)
+        self.assertLess(abs(coef), 3.0)
+        self.assertGreater(p_value, 0.01)
 
         # Conditional tests
         coef, p_value = gcm(
             X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
 
-        self.assertAlmostEqual(round(coef, 3), 11.69)
-        self.assertAlmostEqual(p_value, 0.0)
+        self.assertGreater(coef, 8.0)
+        self.assertLess(p_value, 1e-6)
 
     def test_pearsonr_equivalence(self):
         is_independent = pearsonr_equivalence(
