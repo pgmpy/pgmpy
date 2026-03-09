@@ -1,0 +1,7 @@
+[ENH] Add check_causal_discovery method to test compliance of causal algorithms (#2839)
+
+This commit solves the problem of ensuring that newly implemented causal discovery algorithms adhere to the unified pgmpy interface. Implemented a new utility function `check_causal_discovery` to validate that a given estimator has the required `fit` and `score` methods, properly sets interior attributes like `causal_graph_` and `n_features_in_` after being fitted, and correctly handles errors.
+
+- Developed `check_causal_discovery` inside `pgmpy/utils/estimator_checks.py`.
+- Registered the function in `pgmpy/utils/__init__.py`.
+- Added a dedicated test suite in `pgmpy/tests/test_utils/test_estimator_checks.py`.

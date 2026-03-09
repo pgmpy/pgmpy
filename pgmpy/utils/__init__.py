@@ -1,4 +1,5 @@
 from .check_functions import _check_1d_array_object, _check_length_equal
+from .estimator_checks import check_causal_discovery
 from .mathext import cartesian, sample_discrete
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
@@ -18,6 +19,7 @@ __all__ = [
     "StateNameMixin",
     "_check_1d_array_object",
     "_check_length_equal",
+    "check_causal_discovery",
     "optimize",
     "pinverse",
     "get_example_model",
