@@ -69,6 +69,13 @@ def test_without_role_inplace_true_returns_none(basic_dag):
     assert "roles" not in basic_dag.nodes["X"]
 
 
+def test_with_role_inplace_false_does_not_mutate_original(basic_dag):
+    basic_dag.with_role(role="exposures", variables="X", inplace=True)
+    original_roles = basic_dag.nodes["X"]["roles"].copy()
+    basic_dag.with_role(role="outcomes", variables="X", inplace=False)
+    assert basic_dag.nodes["X"]["roles"] == original_roles
+
+
 def test_get_roles_and_get_role_dict(basic_dag):
     basic_dag.with_role(role="exposures", variables="X", inplace=True)
     basic_dag.with_role(role="outcomes", variables={"Y", "Z"}, inplace=True)
