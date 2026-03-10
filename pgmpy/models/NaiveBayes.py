@@ -109,7 +109,7 @@ class NaiveBayes(DiscreteBayesianNetwork):
         """
         if not obs_nodes_list:
             return set()
-        return set(obs_nodes_list) | set(self.dependent)
+        return {self.dependent}
 
     def active_trail_nodes(self, start, observed=None):
         """
