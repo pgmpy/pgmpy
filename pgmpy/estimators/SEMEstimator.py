@@ -448,8 +448,9 @@ class IVEstimator:
         -------
         tuple: (float, statsmodels.regression.linear_model.RegressionResultsWrapper)
             A tuple where the first element is the estimated causal parameter
-            for X -> Y, and the second element is the full OLS summary from the
-            second stage regression.
+            for X -> Y, and the second element is the fitted OLS results object
+            from the second stage regression (a RegressionResultsWrapper). Call
+            `.summary()` on this object to get the textual summary.
 
         Examples
         --------
@@ -470,7 +471,7 @@ class IVEstimator:
         ... )
         >>> data = model.to_lisrel().generate_samples(100000)
         >>> estimator = IVEstimator(model)
-        >>> param, summary = estimator.fit(X="X", Y="Y", data=data)
+        >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)
