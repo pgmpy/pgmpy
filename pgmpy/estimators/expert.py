@@ -371,8 +371,13 @@ class ExpertInLoop(StructureEstimator):
         for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
                 if not ((x == u) and (y == v)):
-                    Z = set(cycle) - set([x, y])
-                    effect, pvalue = ci_test(x, y, Z=Z, data=self.data, boolean=False)
+                    Z = [node for node in cycle if node not in {x, y}]
+                    result = ci_test(X=x, Y=y, Z=Z, data=self.data, boolean=False)
+
+                    if len(result) == 3:
+                        effect, pvalue, _ = result
+                    else:
+                        effect, pvalue = result
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
                         logger.info(f"Removing edge: {x} -> {y} to fix cycle")
