@@ -62,6 +62,11 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
     >>> result = cm.evaluate(true_dag, est_dag)
     >>> "cm" in result
     False
+
+    References
+    ----------
+    .. [1] Bryan Andrews, Joseph Ramsey, Gregory F. Cooper Proceedings of Machine Learning Research,
+           PMLR 104:4-21, 2019. https://proceedings.mlr.press/v104/andrews19a.html
     """
 
     _tags = {
