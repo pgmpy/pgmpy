@@ -22,7 +22,7 @@ jobs:
         uses: actions/stale@v10.2.0
         with:
           stale-pr-message: 'This PR has had no activity for 14 days and is now marked as stale.'
-          days-before-pr-stale: 14
+          days-before-pr-stale: 5
           stale-pr-label: 'status: stale'
 
           stale-issue-message: 'This issue has been open for 1 month with no activity and is now marked as stale.'
