@@ -96,7 +96,7 @@ class _GraphRolesMixin:
                 if var not in new_graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = set(new_graph.nodes[var].get("roles", set()))
+                    existing_role = new_graph.nodes[var].get("roles", set())
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
@@ -105,13 +105,12 @@ class _GraphRolesMixin:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = set(new_graph.nodes[var].get("roles", set()))
+                    existing_role = new_graph.nodes[var].get("roles", set())
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
-        if inplace:
-            return None
-        return new_graph
+        if not inplace:
+            return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
         """Return a new graph with the specified role removed.
@@ -141,7 +140,7 @@ class _GraphRolesMixin:
 
         for v, attr in new_graph.nodes(data=True):
             if variables is None or v in variables:
-                roles = set(attr.get("roles", set()))
+                roles = attr.get("roles", set())
                 if isinstance(roles, set) and role in roles:
                     roles.discard(role)
                     if len(roles) == 0:
@@ -149,9 +148,8 @@ class _GraphRolesMixin:
                     else:
                         attr["roles"] = roles
 
-        if inplace:
-            return None
-        return new_graph
+        if not inplace:
+            return new_graph
 
     def is_valid_causal_structure(self) -> bool:
         """Validate that the causal structure makes sense."""

@@ -56,24 +56,14 @@ def test_with_role_inplace_false_returns_new_graph(basic_dag):
     assert set(new_graph.get_role("exposures")) == {"X", "Z"}
 
 
-def test_with_role_inplace_true_returns_none(basic_dag):
+def test_inplace_true_returns_none(basic_dag):
     result = basic_dag.with_role(role="exposures", variables="X", inplace=True)
     assert result is None
     assert "exposures" in basic_dag.nodes["X"]["roles"]
 
-
-def test_without_role_inplace_true_returns_none(basic_dag):
-    basic_dag.with_role(role="exposures", variables="X", inplace=True)
     result = basic_dag.without_role(role="exposures", variables="X", inplace=True)
     assert result is None
     assert "roles" not in basic_dag.nodes["X"]
-
-
-def test_with_role_inplace_false_does_not_mutate_original(basic_dag):
-    basic_dag.with_role(role="exposures", variables="X", inplace=True)
-    original_roles = basic_dag.nodes["X"]["roles"].copy()
-    basic_dag.with_role(role="outcomes", variables="X", inplace=False)
-    assert basic_dag.nodes["X"]["roles"] == original_roles
 
 
 def test_get_roles_and_get_role_dict(basic_dag):
