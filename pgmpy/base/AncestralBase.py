@@ -580,7 +580,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag3.add_edge("X", "Y", "-", ">")
         >>> mag3.latents = {"L"}
         >>> mag3 = mag3.with_role("exposures", "X")
-        >>> mag3 = mag3.with_role("outcome", "Y")
+        >>> mag3 = mag3.with_role("outcomes", "Y")
         >>> print(mag3.to_dagitty())
         mag {
         L -> X
@@ -650,7 +650,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ... B -> C
         ... L [latents]
         ... B [outcome]
-        ... A [exposures]
+        ... A [exposure]
         ... }'''
         >>> mag = MAG.from_dagitty(dag_str)
         """
