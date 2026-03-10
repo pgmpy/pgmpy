@@ -17,7 +17,6 @@ from pgmpy.estimators import MmhcEstimator
 from pgmpy.metrics import CorrelationScore
 from pgmpy.utils import get_example_model
 
-
 # ---------------------------------------------------------------------------
 # sklearn compatibility checks
 # ---------------------------------------------------------------------------
@@ -51,9 +50,7 @@ def test_mmhc_compatibility(estimator, check):
 def simple_data():
     """Small discrete dataset where X, Y, Z are causes of 'sum'."""
     rng = np.random.default_rng(42)
-    df = pd.DataFrame(
-        rng.integers(0, 2, size=(2000, 3)), columns=list("XYZ")
-    )
+    df = pd.DataFrame(rng.integers(0, 2, size=(2000, 3)), columns=list("XYZ"))
     df["sum"] = df.sum(axis=1)
     return df
 
@@ -228,7 +225,10 @@ def test_significance_level_affects_skeleton(simple_data):
     est_strict.fit(simple_data)
 
     # Stricter threshold should be at most as dense as the looser one
-    assert est_strict.skeleton_.number_of_edges() <= est_default.skeleton_.number_of_edges()
+    assert (
+        est_strict.skeleton_.number_of_edges()
+        <= est_default.skeleton_.number_of_edges()
+    )
 
 
 # ---------------------------------------------------------------------------

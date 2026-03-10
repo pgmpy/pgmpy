@@ -111,7 +111,7 @@ class MMHC(_BaseCausalDiscovery):
 
     Inspect the intermediate MMPC skeleton and the final graph:
 
-    >>> est.skeleton_.edges()   # undirected skeleton from MMPC phase
+    >>> est.skeleton_.edges()  # undirected skeleton from MMPC phase
     >>> est.causal_graph_.edges()  # oriented edges from HC phase
 
     References
@@ -163,15 +163,12 @@ class MMHC(_BaseCausalDiscovery):
 
         def assoc(var_x, var_y, conditioning_set):
             """Negative p-value of the CI test — higher means more associated."""
-            return 1 - chi_square(
-                var_x, var_y, conditioning_set, X, boolean=False
-            )[1]
+            return 1 - chi_square(var_x, var_y, conditioning_set, X, boolean=False)[1]
 
         def min_assoc(var_x, var_y, conditioning_vars):
             """Minimal association of var_x, var_y over all subsets of conditioning_vars."""
             return min(
-                assoc(var_x, var_y, subset)
-                for subset in powerset(conditioning_vars)
+                assoc(var_x, var_y, subset) for subset in powerset(conditioning_vars)
             )
 
         def max_min_heuristic(node, current_neighbors):
