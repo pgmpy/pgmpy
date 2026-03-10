@@ -327,7 +327,7 @@ class TabularCPD(DiscreteFactor):
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model(model="alarm")
         >>> cpd = model.get_cpds(node="SAO2")
-        >>> cpd.to_csv(filename="sao2.cs")
+        >>> cpd.to_csv(filename="sao2.csv")
         """
         with open(filename, "w") as f:
             writer = csv.writer(f)
