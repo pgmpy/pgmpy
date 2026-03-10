@@ -316,7 +316,7 @@ class TestDiscreteTests(unittest.TestCase):
             X="X", Y="Y", Z=["Z"], data=data, boolean=False
         )
 
-        self.assertEqual(stat, 0)
+        self.assertAlmostEqual(stat, 0.0)
         self.assertEqual(dof, 0)
         self.assertTrue(np.isnan(p_value))
 

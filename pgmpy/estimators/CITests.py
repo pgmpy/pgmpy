@@ -142,7 +142,7 @@ def _get_contingency_table(
     if y_states is None:
         y_states = _get_series_states(data[Y])
 
-    contingency = pd.crosstab(data[X], data[Y], dropna=False)
+    contingency = pd.crosstab(data[X], data[Y], dropna=True)
     return contingency.reindex(index=x_states, columns=y_states, fill_value=0)
 
 
