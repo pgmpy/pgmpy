@@ -7,6 +7,7 @@ from numpy import testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators.CITests import (
+    _get_contingency_table,
     chi_square,
     ci_registry,
     g_sq,
@@ -16,6 +17,7 @@ from pgmpy.estimators.CITests import (
     pearsonr,
     pearsonr_equivalence,
     pillai_trace,
+    power_divergence,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -137,9 +139,9 @@ class TestDiscreteTests(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 1460.11, decimal=1)
+        np_test.assert_almost_equal(coef, 1342.67, decimal=1)
         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 316)
+        self.assertEqual(dof, 270)
 
         coef, p_value, dof = chi_square(
             X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
@@ -155,9 +157,9 @@ class TestDiscreteTests(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 481.96, decimal=1)
+        np_test.assert_almost_equal(coef, 473.60, decimal=1)
         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 58)
+        self.assertEqual(dof, 54)
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples. Update: Might be same from scipy=1.7.0
@@ -268,6 +270,55 @@ class TestDiscreteTests(unittest.TestCase):
             stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
             np_test.assert_almost_equal(p_value, 0, decimal=5)
+
+    def test_power_divergence_preserves_full_state_space_per_stratum(self):
+        data = pd.DataFrame(
+            {
+                "X": [0, 0, 1, 1],
+                "Y": [0, 1, 0, 1],
+                "Z": [0, 1, 0, 1],
+            }
+        )
+
+        z0_contingency = _get_contingency_table(
+            data.loc[data["Z"] == 0],
+            X="X",
+            Y="Y",
+            x_states=pd.Index([0, 1]),
+            y_states=pd.Index([0, 1]),
+        )
+        z1_contingency = _get_contingency_table(
+            data.loc[data["Z"] == 1],
+            X="X",
+            Y="Y",
+            x_states=pd.Index([0, 1]),
+            y_states=pd.Index([0, 1]),
+        )
+
+        pd.testing.assert_frame_equal(
+            z0_contingency,
+            pd.DataFrame(
+                [[1, 0], [1, 0]],
+                index=pd.Index([0, 1]),
+                columns=pd.Index([0, 1]),
+            ),
+        )
+        pd.testing.assert_frame_equal(
+            z1_contingency,
+            pd.DataFrame(
+                [[0, 1], [0, 1]],
+                index=pd.Index([0, 1]),
+                columns=pd.Index([0, 1]),
+            ),
+        )
+
+        stat, p_value, dof = power_divergence(
+            X="X", Y="Y", Z=["Z"], data=data, boolean=False
+        )
+
+        self.assertEqual(stat, 0)
+        self.assertEqual(dof, 0)
+        self.assertTrue(np.isnan(p_value))
 
 
 @unittest.skipIf(

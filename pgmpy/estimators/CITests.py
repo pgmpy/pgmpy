@@ -122,6 +122,30 @@ class CITestRegistry:
 ci_registry = CITestRegistry()
 
 
+def _get_series_states(series: pd.Series) -> pd.Index:
+    """Return the full state space represented by a discrete series."""
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        return pd.Index(series.cat.categories)
+    return pd.Index(series.dropna().unique())
+
+
+def _get_contingency_table(
+    data: pd.DataFrame,
+    X: str,
+    Y: str,
+    x_states: Optional[pd.Index] = None,
+    y_states: Optional[pd.Index] = None,
+) -> pd.DataFrame:
+    """Return an ``X``-by-``Y`` contingency table over the full state space."""
+    if x_states is None:
+        x_states = _get_series_states(data[X])
+    if y_states is None:
+        y_states = _get_series_states(data[Y])
+
+    contingency = pd.crosstab(data[X], data[Y], dropna=False)
+    return contingency.reindex(index=x_states, columns=y_states, fill_value=0)
+
+
 @ci_registry.register(
     name="independence_match",
     data_types=["discrete", "continuous", "mixed"],
@@ -314,7 +338,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-            data.groupby([X, Y], observed=False).size().unstack(Y, fill_value=0),
+            _get_contingency_table(data, X=X, Y=Y),
             lambda_=lambda_,
         )
 
@@ -322,13 +346,13 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     else:
         chi = 0
         dof = 0
+        x_states = _get_series_states(data[X])
+        y_states = _get_series_states(data[Y])
         for z_state, df in data.groupby(Z, observed=True):
             # Compute the contingency table
-            unique_x, x_inv = np.unique(df[X], return_inverse=True)
-            unique_y, y_inv = np.unique(df[Y], return_inverse=True)
-            contingency = np.bincount(
-                x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)
-            ).reshape(len(unique_x), len(unique_y))
+            contingency = _get_contingency_table(
+                df, X=X, Y=Y, x_states=x_states, y_states=y_states
+            ).to_numpy()
 
             # If all values of a column in the contingency table are zeros, skip the test.
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
