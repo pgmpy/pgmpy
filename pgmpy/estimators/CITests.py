@@ -123,7 +123,12 @@ ci_registry = CITestRegistry()
 
 
 def _get_series_states(series: pd.Series) -> pd.Index:
-    """Return the full state space represented by a discrete series."""
+    """
+    Return the possible states represented by a discrete series.
+
+    For categorical series, this returns all defined categories.
+    For non-categorical series, this returns the observed unique non-null values.
+    """
     if isinstance(series.dtype, pd.CategoricalDtype):
         return pd.Index(series.cat.categories)
     return pd.Index(series.dropna().unique())
@@ -136,14 +141,22 @@ def _get_contingency_table(
     x_states: Optional[pd.Index] = None,
     y_states: Optional[pd.Index] = None,
 ) -> pd.DataFrame:
-    """Return an ``X``-by-``Y`` contingency table over the full state space."""
+    """Return an ``X``-by-``Y`` contingency table over the represented state space."""
     if x_states is None:
         x_states = _get_series_states(data[X])
     if y_states is None:
         y_states = _get_series_states(data[Y])
 
-    contingency = pd.crosstab(data[X], data[Y], dropna=True)
-    return contingency.reindex(index=x_states, columns=y_states, fill_value=0)
+    x_codes = pd.Categorical(data[X], categories=x_states).codes
+    y_codes = pd.Categorical(data[Y], categories=y_states).codes
+    valid = (x_codes >= 0) & (y_codes >= 0)
+
+    contingency = np.bincount(
+        x_codes[valid] * len(y_states) + y_codes[valid],
+        minlength=len(x_states) * len(y_states),
+    ).reshape(len(x_states), len(y_states))
+
+    return pd.DataFrame(contingency, index=x_states, columns=y_states)
 
 
 @ci_registry.register(
@@ -337,8 +350,12 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
+        contingency = _get_contingency_table(data, X=X, Y=Y)
+        contingency = contingency.loc[
+            contingency.sum(axis=1) > 0, contingency.sum(axis=0) > 0
+        ]
         chi, p_value, dof, expected = stats.chi2_contingency(
-            _get_contingency_table(data, X=X, Y=Y),
+            contingency,
             lambda_=lambda_,
         )
 

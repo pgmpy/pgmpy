@@ -320,6 +320,33 @@ class TestDiscreteTests(unittest.TestCase):
         self.assertEqual(dof, 0)
         self.assertTrue(np.isnan(p_value))
 
+    def test_power_divergence_unconditional_ignores_unused_categorical_levels(self):
+        data = pd.DataFrame(
+            {
+                "X": pd.Categorical([0, 0, 1, 1], categories=[0, 1, 2]),
+                "Y": pd.Categorical([0, 1, 0, 1], categories=[0, 1, 2]),
+            }
+        )
+
+        contingency = _get_contingency_table(data, X="X", Y="Y")
+
+        pd.testing.assert_frame_equal(
+            contingency,
+            pd.DataFrame(
+                [[1, 1, 0], [1, 1, 0], [0, 0, 0]],
+                index=pd.Index([0, 1, 2]),
+                columns=pd.Index([0, 1, 2]),
+            ),
+        )
+
+        stat, p_value, dof = power_divergence(
+            X="X", Y="Y", Z=[], data=data, boolean=False
+        )
+
+        self.assertAlmostEqual(stat, 0.0)
+        self.assertAlmostEqual(p_value, 1.0)
+        self.assertEqual(dof, 1)
+
 
 @unittest.skipIf(
     os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
