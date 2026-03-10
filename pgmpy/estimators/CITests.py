@@ -147,8 +147,12 @@ def _get_contingency_table(
     if y_states is None:
         y_states = _get_series_states(data[Y])
 
-    x_codes = pd.Categorical(data[X], categories=x_states).codes
-    y_codes = pd.Categorical(data[Y], categories=y_states).codes
+    x_codes = pd.Categorical(data[X], categories=x_states).codes.astype(
+        np.int64, copy=False
+    )
+    y_codes = pd.Categorical(data[Y], categories=y_states).codes.astype(
+        np.int64, copy=False
+    )
     valid = (x_codes >= 0) & (y_codes >= 0)
 
     contingency = np.bincount(

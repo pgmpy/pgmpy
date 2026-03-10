@@ -356,6 +356,22 @@ class TestDiscreteTests(unittest.TestCase):
         self.assertAlmostEqual(p_value, 1.0)
         self.assertEqual(dof, 1)
 
+    def test_contingency_table_handles_large_categorical_code_ranges(self):
+        x_states = list(range(10))
+        y_states = list(range(20))
+        data = pd.DataFrame(
+            {
+                "X": pd.Categorical([9, 9, 8], categories=x_states),
+                "Y": pd.Categorical([19, 18, 17], categories=y_states),
+            }
+        )
+
+        contingency = _get_contingency_table(data, X="X", Y="Y")
+
+        self.assertEqual(contingency.loc[9, 19], 1)
+        self.assertEqual(contingency.loc[9, 18], 1)
+        self.assertEqual(contingency.loc[8, 17], 1)
+
 
 @unittest.skipIf(
     os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
