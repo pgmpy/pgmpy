@@ -3,3 +3,4 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/base/DAG.py
+pgmpy/base/MAG.py
