@@ -7,6 +7,7 @@ from numpy import testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators.CITests import (
+    _format_conditioning_state,
     _get_contingency_table,
     chi_square,
     ci_registry,
@@ -34,6 +35,14 @@ class TestCIRegistry(unittest.TestCase):
         self.assertIn("pearsonr", all_tests)
         self.assertIn("pillai", all_tests)
         self.assertIn("gcm", all_tests)
+
+    def test_format_conditioning_state(self):
+        self.assertEqual(_format_conditioning_state(["Z"], 1), "Z=1")
+        self.assertEqual(_format_conditioning_state(["Z"], ("x",)), "Z=x")
+        self.assertEqual(
+            _format_conditioning_state(["Z1", "Z2"], ("x", 1)),
+            "Z1=x, Z2=1",
+        )
 
 
 class TestPearsonr(unittest.TestCase):

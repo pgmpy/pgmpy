@@ -159,6 +159,16 @@ def _get_contingency_table(
     return pd.DataFrame(contingency, index=x_states, columns=y_states)
 
 
+def _format_conditioning_state(Z: list[str], z_state) -> str:
+    """Format a groupby conditioning state for logging."""
+    if len(Z) == 1:
+        if isinstance(z_state, tuple):
+            z_state = z_state[0]
+        return f"{Z[0]}={z_state}"
+
+    return ", ".join(f"{var}={state}" for var, state in zip(Z, z_state))
+
+
 @ci_registry.register(
     name="independence_match",
     data_types=["discrete", "continuous", "mixed"],
@@ -373,17 +383,10 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
             # If all values of a column in the contingency table are zeros, skip the test.
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
-                if isinstance(z_state, str):
-                    logger.info(
-                        f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples"
-                    )
-                else:
-                    z_str = ", ".join(
-                        [f"{var}={state}" for var, state in zip(Z, z_state)]
-                    )
-                    logger.info(
-                        f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples"
-                    )
+                z_str = _format_conditioning_state(Z, z_state)
+                logger.info(
+                    f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples"
+                )
             else:
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
                 chi += c
