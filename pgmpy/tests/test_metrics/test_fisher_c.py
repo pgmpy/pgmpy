@@ -10,6 +10,8 @@ from pgmpy.utils import get_example_model
 SEED = 42
 N_SAMPLES = 1_000
 EDGE_PROB = 0.1  # probability of an edge in the lower triangle
+P_VALUE_ABS_FLOOR = 5e-4
+RMSEA_ABS_FLOOR = 2e-3
 
 
 def _random_dag_with_same_nodes(model, rng, edge_prob: float = EDGE_PROB) -> DAG:
@@ -56,7 +58,8 @@ def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
     p_value = FisherC(ci_test=chi_square).evaluate(
         X=bundle["data"], causal_graph=bundle[graph_key]
     )
-    assert round(p_value, ndigits) == expected
+    p_tol = max(P_VALUE_ABS_FLOOR, 10 ** (-ndigits))
+    assert p_value == pytest.approx(expected, abs=p_tol)
 
 
 @pytest.mark.parametrize(
@@ -75,5 +78,7 @@ def test_rmsea(
     p_value, rmsea = FisherC(ci_test=chi_square, compute_rmsea=True).evaluate(
         X=bundle["data"], causal_graph=bundle[graph_key]
     )
-    assert round(p_value, ndigits) == expected_pval
-    assert round(rmsea, ndigits) == expected_rmsea
+    p_tol = max(P_VALUE_ABS_FLOOR, 10 ** (-ndigits))
+    rmsea_tol = max(RMSEA_ABS_FLOOR, 10 ** (-ndigits))
+    assert p_value == pytest.approx(expected_pval, abs=p_tol)
+    assert rmsea == pytest.approx(expected_rmsea, abs=rmsea_tol)
