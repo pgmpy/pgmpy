@@ -14,7 +14,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from pgmpy.causal_discovery import MMHC
 from pgmpy.estimators import MmhcEstimator
-from pgmpy.metrics import SHD, CorrelationScore
+from pgmpy.metrics import CorrelationScore
 from pgmpy.utils import get_example_model
 
 
