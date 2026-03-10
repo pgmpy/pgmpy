@@ -165,8 +165,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import PC
     >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
-    >>> pc.fit(df)
-    >>> pc.causal_graph_.edges()
+    >>> _ = pc.fit(df)
+    >>> _ = pc.causal_graph_.edges()
 
     Specify expert knowledge:
 
@@ -323,14 +323,15 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
+        >>> from pgmpy.causal_discovery import PC
+        >>> np.random.seed(42)
         >>> data = pd.DataFrame(
         ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
         ... )
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
         >>> c = PC(data)
-        >>> pdag = c._orient_colliders(*c._build_skeleton())
+        >>> pdag = c._orient_colliders(*c._build_skeleton(data))
         >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
         OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
         """
