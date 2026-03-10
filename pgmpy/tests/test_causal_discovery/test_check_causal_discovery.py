@@ -2,7 +2,7 @@ import unittest
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import PC
-from pgmpy.utils import check_causal_discovery
+from pgmpy.estimators.causal_discovery import check_causal_discovery
 
 
 class DummyEstimator1:
