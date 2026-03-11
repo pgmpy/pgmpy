@@ -119,7 +119,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ... )
         >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
-        >>> estimator.get_parameters()
+        >>> estimator.get_parameters()  # doctest: +ELLIPSIS
         [<TabularCPD representing P(A:2) at 0x...>, ...]
         """
 
@@ -248,29 +248,29 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> model.add_factors(factor1, factor2)
         >>> potentials = MaximumLikelihoodEstimator(model, data).estimate_potentials()
         >>> print(potentials[("A", "C")])
-        ╒══════╤══════╤════════════╕
-        │ A    │ C    │   phi(A,C) │
-        ╞══════╪══════╪════════════╡
-        │ A(0) │ C(0) │     0.0000 │
-        ├──────┼──────┼────────────┤
-        │ A(0) │ C(1) │     0.6667 │
-        ├──────┼──────┼────────────┤
-        │ A(1) │ C(0) │     0.3333 │
-        ├──────┼──────┼────────────┤
-        │ A(1) │ C(1) │     0.0000 │
-        ╘══════╧══════╧════════════╛
+        +------+------+------------+
+        | A    | C    |   phi(A,C) |
+        +======+======+============+
+        | A(0) | C(0) |     0.0000 |
+        +------+------+------------+
+        | A(0) | C(1) |     0.6667 |
+        +------+------+------------+
+        | A(1) | C(0) |     0.3333 |
+        +------+------+------------+
+        | A(1) | C(1) |     0.0000 |
+        +------+------+------------+
         >>> print(potentials[("B", "C")])
-        ╒══════╤══════╤════════════╕
-        │ B    │ C    │   phi(B,C) │
-        ╞══════╪══════╪════════════╡
-        │ B(0) │ C(0) │     1.0000 │
-        ├──────┼──────┼────────────┤
-        │ B(0) │ C(1) │     0.5000 │
-        ├──────┼──────┼────────────┤
-        │ B(1) │ C(0) │     0.0000 │
-        ├──────┼──────┼────────────┤
-        │ B(1) │ C(1) │     0.5000 │
-        ╘══════╧══════╧════════════╛
+        +------+------+------------+
+        | B    | C    |   phi(B,C) |
+        +======+======+============+
+        | B(0) | C(0) |     1.0000 |
+        +------+------+------------+
+        | B(0) | C(1) |     0.5000 |
+        +------+------+------------+
+        | B(1) | C(0) |     0.0000 |
+        +------+------+------------+
+        | B(1) | C(1) |     0.5000 |
+        +------+------+------------+
         """
         if not isinstance(self.model, JunctionTree):
             raise NotImplementedError(
