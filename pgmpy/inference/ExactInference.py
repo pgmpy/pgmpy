@@ -1028,9 +1028,9 @@ class BeliefPropagation(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> _ = model.fit(values)
         >>> inference = BeliefPropagation(model)
-        >>> phi_query = inference.query(["A", "B"])
+        >>> phi_query = inference.query(["A", "B"], show_progress=False)
 
         References
         ----------
@@ -1175,7 +1175,9 @@ class BeliefPropagation(Inference):
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
         >>> belief_propagation.query(
-        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        ...     variables=["J", "Q"], 
+        ...     evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+        ...     show_progress=False,
         ... )
         """
         evidence = evidence if evidence is not None else dict()
@@ -1271,8 +1273,10 @@ class BeliefPropagation(Inference):
         >>> cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
-        >>> belief_propagation.map_query(
-        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        >>> phi = belief_propagation.map_query(
+        ...     variables=["J", "Q"], 
+        ...     evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+        ...     show_progress=False,
         ... )
         """
         variables = [] if variables is None else variables
