@@ -864,7 +864,7 @@ class DiscreteBayesianNetwork(DAG):
         # Validate evidence states before prediction
         for col in data.columns:
             if col in state_names:
-                expected_states = set(state_names[col])
+                expected_states = set(map(lambda x: int(x) if hasattr(x, "item") else x, state_names[col]))
                 received_states = set(data[col].dropna().unique())
 
                 if not received_states.issubset(expected_states):
