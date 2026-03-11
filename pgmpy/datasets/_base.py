@@ -258,7 +258,7 @@ class _TubingenBenchmarkMixin:
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> pd.DataFrame:
         url = f"{cls.base_url}/pair{pair_id:04}_graph.txt"
-        cache_name = f"pair_{pair_id:04}_desc"
+        cache_name = f"pair_{pair_id:04}_graph"
         raw_data = cls._get_raw_data(cache_name, url)
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
