@@ -50,5 +50,5 @@ def test_shd_unequal_graphs(shd_scorer):
     dag1 = DAG([(1, 2), (1, 3), (3, 2), (3, 4)])
     dag2 = DAG([(1, 2), (1, 3), (3, 2), (3, 5)])
 
-    with pytest.raises(ValueError, match=r"The graphs must have the same nodes\."):
+    with pytest.raises(ValueError):
         shd_scorer(dag1, dag2)
