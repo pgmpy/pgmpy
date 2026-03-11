@@ -22,11 +22,11 @@ class NSLM(_BaseDataset):
     }
 
     base_url = (
-        "https://raw.githubusercontent.com/grf-labs/grf/"
-        "refs/heads/master/experiments/"
+        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
+        "refs/heads/main/nslm/"
     )
 
-    data_url = base_url + "acic18/synthetic_data.csv"
+    data_url = base_url + "data/synthetic_data.csv"
     ground_truth_url = None
     expert_knowledge_url = None
 
