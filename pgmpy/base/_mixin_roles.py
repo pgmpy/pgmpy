@@ -71,7 +71,7 @@ class _GraphRolesMixin:
         Parameters
         ----------
         role : str
-            The name of the role to assign, e.g., "exposure", "outcome".
+            The name of the role to assign, e.g., "exposures", "outcomes".
         variables : str, set, list, or any iterable
             The variables to assign to the role.
         inplace=False : bool, optional
@@ -117,7 +117,7 @@ class _GraphRolesMixin:
         Parameters
         ----------
         role : str
-            The name of the role to remove, e.g., "exposure", "outcome".
+            The name of the role to remove, e.g., "exposures", "outcomes".
         variables : str, set, list, or iterable, default = all variables with the role
             The variables to remove the role from. If not provided,
             all variables with the specified role will have it removed.
