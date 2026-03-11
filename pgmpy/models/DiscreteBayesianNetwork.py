@@ -856,10 +856,15 @@ class DiscreteBayesianNetwork(DAG):
         998 1
         999 0
         """
+        # Collect state names from CPDs
+        state_names = {}
+        for cpd in self.get_cpds():
+            state_names.update(cpd.state_names)
+
         # Validate evidence states before prediction
         for col in data.columns:
-            if hasattr(self, "states") and col in self.states:
-                expected_states = set(self.states[col])
+            if col in state_names:
+                expected_states = set(state_names[col])
                 received_states = set(data[col].dropna().unique())
 
                 if not received_states.issubset(expected_states):
