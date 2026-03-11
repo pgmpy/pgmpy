@@ -856,6 +856,19 @@ class DiscreteBayesianNetwork(DAG):
         998 1
         999 0
         """
+        # Validate evidence states before prediction
+        for col in data.columns:
+            if hasattr(self, "states") and col in self.states:
+                expected_states = set(self.states[col])
+                received_states = set(data[col].dropna().unique())
+
+                if not received_states.issubset(expected_states):
+                    raise ValueError(
+                        f"State name mismatch detected for variable '{col}'. "
+                        f"Model expects states: {expected_states}, "
+                        f"Received states: {received_states}"
+                    )
+                
         from pgmpy.inference import (
             ApproxInference,
             Inference,
