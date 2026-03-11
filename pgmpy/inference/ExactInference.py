@@ -1330,8 +1330,7 @@ class BeliefPropagationWithMessagePassing(Inference):
     Class for performing efficient inference using Belief Propagation method on factor graphs with no loops.
 
     The message-passing algorithm recursively parses the factor graph to propagate the
-    model's beliefs to infer the posterior distribution of the queried variable. The recursion
-    stops when reaching an observed variable or a unobserved root/leaf variable.
+    model's beliefs to infer the posterior distribution of the queried variable. The recursion stops when reaching an observed variable or a unobserved root/leaf variable.
 
     It does not work for loopy graphs.
 
