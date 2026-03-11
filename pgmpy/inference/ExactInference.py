@@ -1028,9 +1028,10 @@ class BeliefPropagation(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> _ = model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = BeliefPropagation(model)
-        >>> phi_query = inference.query(["A", "B"], show_progress=False)
+        >>> phi_query = inference.query(["A", "B"])
 
         References
         ----------
@@ -1174,11 +1175,10 @@ class BeliefPropagation(Inference):
         >>> cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
-        >>> phi = belief_propagation.map_query(
-        ...     variables=["J", "Q"], 
-        ...     evidence={"A": 0, "R": 0, "G": 0, "L": 1},
-        ...     show_progress=False,
-        ... )
+        >>> belief_propagation.query(
+        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        ... )  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(J:2, Q:2) at 0x...>
         """
         evidence = evidence if evidence is not None else dict()
         orig_model = self.model.copy()
@@ -1273,11 +1273,10 @@ class BeliefPropagation(Inference):
         >>> cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
-        >>> phi = belief_propagation.map_query(
-        ...     variables=["J", "Q"], 
-        ...     evidence={"A": 0, "R": 0, "G": 0, "L": 1},
-        ...     show_progress=False,
-        ... )
+        >>> belief_propagation.map_query(
+        ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+        ... )  # doctest: +SKIP
+        """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -1330,7 +1329,8 @@ class BeliefPropagationWithMessagePassing(Inference):
     Class for performing efficient inference using Belief Propagation method on factor graphs with no loops.
 
     The message-passing algorithm recursively parses the factor graph to propagate the
-    models beliefs to infer the posterior distribution of the queried variable. The recursion stops when reaching an observed variable or a unobserved root/leaf variable.
+    model's beliefs to infer the posterior distribution of the queried variable. The recursion
+    stops when reaching an observed variable or a unobserved root/leaf variable.
 
     It does not work for loopy graphs.
 
@@ -1519,7 +1519,7 @@ class BeliefPropagationWithMessagePassing(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.inference import BeliefPropagation
@@ -1548,11 +1548,12 @@ class BeliefPropagationWithMessagePassing(Inference):
         ...     ]
         ... )
         >>> belief_propagation = BeliefPropagation(factor_graph)
-        >>> phi = belief_propagation.query(
+        >>> belief_propagation.query(
         ...     variables=["B", "C"],
         ...     evidence={"D": 0},
         ...     virtual_evidence=[TabularCPD("A", 2, [[0.3], [0.7]])],
-        ... )
+        ... )  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(B:3, C:2) at 0x...>
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
@@ -1607,7 +1608,8 @@ class BeliefPropagationWithMessagePassing(Inference):
         Returns the outgoing message for a factor node, which is the
         multiplication of the incoming messages with the factor function (CPT).
 
-        The variables order in the incoming messages list must match the variables order in the CPTs dimensions
+        The variables' order in the incoming messages list must match the
+        variable's order in the CPT's dimensions
 
         Parameters
         ----------
