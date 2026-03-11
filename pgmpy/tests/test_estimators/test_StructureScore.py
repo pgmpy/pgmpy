@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import (
@@ -231,6 +232,31 @@ class TestLogLikeGauss(unittest.TestCase):
 
         self.assertAlmostEqual(self.score_fn.score(self.m1), -455.1058, places=3)
         self.assertAlmostEqual(self.score_fn.score(self.m2), -569.4505, places=3)
+
+    def test_score_integer_column_names_issue_2227(self):
+        """Regression test for GitHub issue #2227.
+
+        LogLikelihoodGauss (and subclasses BICGauss, AICGauss) failed with
+        PatsyError when column names were numeric strings because
+        smf.glm formula parsing could not distinguish variable names
+        from numeric constants.
+        """
+        np.random.seed(42)
+        data = pd.DataFrame(
+            {
+                "0": np.random.randn(100),
+                "1": np.random.randn(100),
+                "2": np.random.randn(100),
+            }
+        )
+        model = DiscreteBayesianNetwork([("0", "1"), ("1", "2")])
+        scorer = LogLikelihoodGauss(data)
+
+        score = scorer.score(model)
+        self.assertFalse(np.isnan(score))
+
+        ls = scorer.local_score("2", ["0", "1"])
+        self.assertFalse(np.isnan(ls))
 
 
 class TestAICGauss(unittest.TestCase):
