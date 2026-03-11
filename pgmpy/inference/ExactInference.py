@@ -292,7 +292,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(["A", "B"])
         """
@@ -491,7 +492,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(["A", "B"])
         """
@@ -569,7 +571,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(["A", "B"])
         """
@@ -644,9 +647,11 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
-        >>> inference.induced_graph(["C", "D", "A", "B", "E"])
+        >>> inference.induced_graph(["C", "D", "A", "B", "E"])  # doctest: +ELLIPSIS
+        <networkx.classes.graph.Graph object at 0x...>
         """
         self._initialize_structures()
 
@@ -712,7 +717,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> inference.induced_width(["C", "D", "A", "B", "E"])
         3
@@ -1512,6 +1518,7 @@ class BeliefPropagationWithMessagePassing(Inference):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.inference import BeliefPropagation
         >>> factor_graph = FactorGraph()
