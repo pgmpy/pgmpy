@@ -22,6 +22,7 @@ def data12():
         columns=["A", "B", "C", "D", "E"],
     )
 
+
 @pytest.fixture
 def data13():
     np.random.seed(0)
@@ -65,6 +66,7 @@ def data13():
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
     inference = BayesianModelSampling(model)
     return inference.forward_sample(size=10000)
+
 
 @pytest.fixture
 def data22():
