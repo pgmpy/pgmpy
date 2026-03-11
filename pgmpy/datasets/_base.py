@@ -257,23 +257,11 @@ class _TubingenBenchmarkMixin:
 
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> pd.DataFrame:
-        url = f"{cls.base_url}/pair{pair_id:04}_des.txt"
+        url = f"{cls.base_url}/pair{pair_id:04}_graph.txt"
         cache_name = f"pair_{pair_id:04}_desc"
         raw_data = cls._get_raw_data(cache_name, url)
-        content = raw_data.decode("utf-8-sig", errors="ignore").lower()
-        # for (x -> y, x --> y, x - - > y) and for cases 86,88
-        if (
-            re.search(r"x\s*[- ]+>\s*y", content, re.IGNORECASE)
-            or "x causes y" in content
-            or pair_id in (86, 88)
-        ):
-            return DAG([("x", "y")])
-        elif re.search(r"y\s*[- ]+>\s*x", content, re.IGNORECASE):
-            return DAG([("y", "x")])
-        # for (x <- y, x <-- y)
-        elif re.search(r"x\s*<\s*[- ]+\s*y", content, re.IGNORECASE):
-            return DAG([("y", "x")])
-        return None
+        content = raw_data.decode("utf-8-sig", errors="ignore")
+        return DAG.from_dagitty(content)
 
 
 def load_dataset(name: str) -> Dataset:
