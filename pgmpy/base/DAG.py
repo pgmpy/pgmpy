@@ -1700,12 +1700,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
+        >>> import numpy as np
+        >>> np.random.seed(42)
         >>> data = linear_model.simulate(n_samples=int(1e4))
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
-        >>> strengths = dag.edge_strength(data)  # doctest: +SKIP
-        {('X', 'Y'): np.float64(0.14587166611282304),
-         ('Z', 'Y'): np.float64(0.25683780900125613)}
+        >>> strengths = dag.edge_strength(data)
+        >>> strengths[("X", "Y")]
+        np.float64(0.1454172599124535)
+        >>> strengths[("Z", "Y")]
+        np.float64(0.26003467856256834)
 
         References
         ----------
