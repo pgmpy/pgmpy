@@ -1599,7 +1599,7 @@ class DiscreteBayesianNetwork(DAG):
                         "Evidence provided for variable which is not in the model"
                     )
                 elif len(cpd.variables) > 1:
-                    raise (
+                    raise ValueError(
                         "Virtual evidence should be defined on individual variables."
                         " Maybe you are looking for soft evidence."
                     )
