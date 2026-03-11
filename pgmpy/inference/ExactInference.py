@@ -1607,8 +1607,7 @@ class BeliefPropagationWithMessagePassing(Inference):
         Returns the outgoing message for a factor node, which is the
         multiplication of the incoming messages with the factor function (CPT).
 
-        The variables' order in the incoming messages list must match the
-        variable's order in the CPT's dimensions
+        The variables order in the incoming messages list must match the variables order in the CPTs dimensions
 
         Parameters
         ----------
