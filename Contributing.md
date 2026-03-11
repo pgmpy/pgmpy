@@ -2,7 +2,7 @@
 
 Welcome and thank you for your interest in making pgmpy even better! This guide
 walks you through everything you need to know to get started, from setting up
-your development environment to submitting pull requests and getting feedback. 
+your development environment to submitting pull requests and getting feedback.
 Please join our weekly community meetings on [Discord](https://discord.gg/DRkdKaumBs) if you have any questions or need help.
 
 ## Getting Started
@@ -95,11 +95,10 @@ git push origin feature/your-descriptive-name
 
 ## Code Style & Best Practices
 
-* **Formatting:** Black is our standard—let pre-commit handle this.
-* **Naming:** Choose clear, descriptive names (avoid single-letter variables).
-* **Strings:** Use f-strings (f"{var} = {value}").
-* **File I/O:** Use context managers (with open(...) as f:).
-* **Remove dead code:** Turn all # TODO comments into GitHub issues.
+* **Formatting:** We use `ruff` for handling code formatting. If you have installed our pre-commit hook, it should be automatically taken care of at each commit.
+* **Naming:** Choose clear, descriptive names (avoid single-letter variables). Ideally, the variable name should give you a clear idea of what the variable represents.
+* **Strings:** Use f-strings (`f"{var} = {value}"`).
+* **File I/O:** Use context managers (`with open(...) as f:`).
 * **Commit messages:** Write concise, informative messages (see Thoughtbot’s guide).
 
 ## Writing Tests
@@ -109,10 +108,15 @@ Every new function or bug fix must include tests:
 * Integration tests if your change spans multiple modules.
 * Aim for meaningful coverage rather than 100% lines.
 
-## Seeking Help & Discussion
-If you have questions or want to brainstorm:
-* Discord channel: invite link in the repo’s README.
-* Mailing list: check the README for subscription info.
+## For New Contributors
 
+* We have beginner friendly issues labelled as "Good First Issue". You can filter by the label on GitHub issues to see
+  the complete list.
+* Before starting to work on any issue, please comment on it to get it assigned to you.
+* Please try to discuss your design/solution on the issues page before opening a PR.
+* It is mandatory to fill in the PR checklist. PRs will be closed if the checklist is removed.
+
+## Seeking Help & Discussion
+If you have questions or want to discuss anything related to the project, please join our Discord server (the link is in the README). We also host weekly dev and Community meetings that you can join to ask any questions live or listen to what others are working on.
 
 All contributions—big and small—are welcome. Let’s build a better pgmpy together! Happy coding! 🚀

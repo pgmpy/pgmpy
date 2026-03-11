@@ -13,12 +13,12 @@ from pgmpy.prediction.DoubleMLRegressor import DoubleMLRegressor
 def dag():
     return DAG(
         ebunch=[("Z1", "D"), ("Z2", "D"), ("D", "Y"), ("Z1", "Y"), ("Z2", "Y")],
-        roles={"exposure": "D", "adjustment": ("Z1", "Z2"), "outcome": "Y"},
+        roles={"exposures": "D", "adjustment": ("Z1", "Z2"), "outcomes": "Y"},
     )
 
 
 def estimator_for_sklearn_checks():
-    G = DAG([(0, 3), (0, 1), (0, 2)], roles={"exposure": [0], "outcome": [3]})
+    G = DAG([(0, 3), (0, 1), (0, 2)], roles={"exposures": [0], "outcomes": [3]})
 
     est = DoubleMLRegressor(
         causal_graph=G,
@@ -70,7 +70,7 @@ def test_dataframe_input_for_both_x_and_y(dag):
     assert model.exposure_var_ == "D"
     assert model.outcome_var_ == "Y"
     assert set(model.adjustment_vars_) == {"Z1", "Z2"}
-    assert set(model.feature_columns_) == {"D", "Z1", "Z2"}
+    assert set(model.feature_columns_fit_) == {"D", "Z1", "Z2"}
     assert model.n_samples_ == 1000
 
     assert len(model.treatment_est_) == 3
@@ -82,7 +82,7 @@ def test_numpy_array_input_with_integer_dag_variables():
     # Construct DAG with stringified integer names to match DataFrame conversion behavior
     dag = DAG(
         ebunch=[(1, 0), (1, 2), (0, 2)],
-        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
+        roles={"exposures": [0], "outcomes": [2], "adjustment": [1]},
     )
 
     model = DoubleMLRegressor(
@@ -100,7 +100,7 @@ def test_numpy_array_input_with_integer_dag_variables():
     _ = model.fit(X_array, y_array)
     preds = model.predict(X_array)
     assert len(preds) == n_samples
-    assert model.feature_columns_ == [0, 1]
+    assert model.feature_columns_fit_ == [0, 1]
 
 
 def test_no_adjustment_variables():
@@ -111,7 +111,7 @@ def test_no_adjustment_variables():
     data = lgbn.simulate(n_samples=200, seed=42)
 
     dag = DAG(
-        ebunch=[("D", "Y")], roles={"exposure": "D", "outcome": "Y", "adjustment": []}
+        ebunch=[("D", "Y")], roles={"exposures": "D", "outcomes": "Y", "adjustment": []}
     )
     model = DoubleMLRegressor(
         causal_graph=dag,
@@ -125,7 +125,7 @@ def test_no_adjustment_variables():
     preds = model.predict(data[["D"]])
     assert len(preds) == len(data)
     assert model.adjustment_vars_ == []
-    assert list(model.feature_columns_) == ["D"]
+    assert list(model.feature_columns_fit_) == ["D"]
     assert hasattr(model, "effect_est_")
 
 
@@ -142,7 +142,7 @@ def test_multiple_adjustment_variables_and_noise_columns():
 
     dag = DAG(
         ebunch=[("U1", "X"), ("U1", "Y"), ("U2", "X"), ("U2", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["U1", "U2"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["U1", "U2"]},
     )
 
     model = DoubleMLRegressor(
@@ -159,7 +159,7 @@ def test_multiple_adjustment_variables_and_noise_columns():
     assert model.exposure_var_ == "X"
     assert set(model.adjustment_vars_) == {"U1", "U2"}
     # feature_columns_ should include exposure + adjustments + pretreatment (if any)
-    assert model.feature_columns_[:3] == ["X", "U1", "U2"]
+    assert model.feature_columns_fit_[:3] == ["X", "U1", "U2"]
     # n_features_in_ counts total columns passed to fit
     assert model.n_features_in_ == X_with_noise.shape[1]
 
@@ -167,7 +167,7 @@ def test_multiple_adjustment_variables_and_noise_columns():
 def test_error_handling_missing_roles_and_multiple_exposure():
     """Test various error conditions and validation."""
     # missing outcome role
-    dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposure": "X"})
+    dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposures": "X"})
     model1 = DoubleMLRegressor(
         causal_graph=dag_no_outcome,
         nuisance_estimators=LinearRegression(),
@@ -179,7 +179,7 @@ def test_error_handling_missing_roles_and_multiple_exposure():
     # multiple exposures should raise
     dag_multi_exposure = DAG(
         ebunch=[("X1", "Y"), ("X2", "Y")],
-        roles={"exposure": ["X1", "X2"], "outcome": "Y"},
+        roles={"exposures": ["X1", "X2"], "outcomes": "Y"},
     )
     model2 = DoubleMLRegressor(
         causal_graph=dag_multi_exposure,
@@ -192,7 +192,7 @@ def test_error_handling_missing_roles_and_multiple_exposure():
     # missing required columns in data
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["Z"]},
     )
     model3 = DoubleMLRegressor(
         causal_graph=dag,
@@ -238,8 +238,8 @@ def test_dag_roles_validation_and_pretreatment_support():
             ("P", "Y"),
         ],
         roles={
-            "exposure": "D",
-            "outcome": "Y",
+            "exposures": "D",
+            "outcomes": "Y",
             "adjustment": ["Z"],
             "pretreatment": ["P"],
         },
@@ -251,8 +251,8 @@ def test_dag_roles_validation_and_pretreatment_support():
         n_folds=1,
     )
     # Before fit the roles are accessible via DAG; check that role lists are non-empty
-    exposure_vars = model.causal_graph.get_role("exposure")
-    outcome_vars = model.causal_graph.get_role("outcome")
+    exposure_vars = model.causal_graph.get_role("exposures")
+    outcome_vars = model.causal_graph.get_role("outcomes")
     adjustment_vars = model.causal_graph.get_role("adjustment")
     pretreat_vars = model.causal_graph.get_role("pretreatment")
     assert exposure_vars and outcome_vars
@@ -267,7 +267,7 @@ def test_dag_roles_validation_and_pretreatment_support():
     Y = 1.2 * D + 0.3 * Z + rng.normal(scale=0.2, size=50)
     df = pd.DataFrame({"D": D, "Z": Z, "P": P})
     _ = model.fit(df, pd.Series(Y, name="Y"))
-    assert set(model.feature_columns_) >= {"D", "Z", "P"}
+    assert set(model.feature_columns_fit_) == {"D", "Z", "P"}
 
 
 def test_doubleml_recovers_theta_with_RF():
@@ -286,7 +286,7 @@ def test_doubleml_recovers_theta_with_RF():
 
     G = DAG(
         lgbn.edges(),
-        roles={"exposure": "X", "adjustment": ("U1", "U2"), "outcome": "Y"},
+        roles={"exposures": "X", "adjustment": ("U1", "U2"), "outcomes": "Y"},
     )
 
     est = DoubleMLRegressor(
@@ -347,9 +347,9 @@ def test_doubleml_recovers_theta_high_dim():
     G = DAG(
         dag.edges(),
         roles={
-            "exposure": "D",
+            "exposures": "D",
             "adjustment": [f"Z{i}" for i in range(1, 11)],
-            "outcome": "Y",
+            "outcomes": "Y",
         },
     )
 

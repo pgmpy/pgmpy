@@ -7,12 +7,13 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Ankur Ankan", email = "ankurankan@gmail.com" }
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Intended Audience :: Education",
   "Intended Audience :: Science/Research",
   "Operating System :: Unix",
@@ -60,8 +61,9 @@ tests = [
   "mock",
   "black",
   "pre-commit",
+  "jsonschema",
 ]
-docs =[
+docs = [
   "sphinx>=5.0",
   "nbsphinx",
   "numpydoc",
@@ -69,6 +71,7 @@ docs =[
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
+  "sphinx_sitemap",
 ]
 all = [
   "networkx>=3.0",
@@ -86,6 +89,7 @@ all = [
   "xgboost>=2.0.3",
   "litellm==1.61.15",
   "pyparsing>=3.0",
+  "requests>=2.0",
 ]
 
 [project.urls]
@@ -116,7 +120,10 @@ norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
 [tool.isort]
-skip = ["pgmpy/identification/__init__.py"]
+skip = [
+  "pgmpy/identification/__init__.py",
+  "pgmpy/datasets/__init__.py",
+]
 
 [tool.ruff]
 line-length = 120

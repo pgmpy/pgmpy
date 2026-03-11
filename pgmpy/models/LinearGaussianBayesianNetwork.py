@@ -1,4 +1,8 @@
-from typing import Any, Dict, Hashable, List, Optional, Set, Tuple, Union
+import io
+import json
+import math
+import os
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -13,26 +17,203 @@ from pgmpy.global_vars import logger
 
 class LinearGaussianBayesianNetwork(DAG):
     """
-    A Linear Gaussian Bayesian Network is a Bayesian Network whose
-    variables are all continuous, and whose CPDs are linear Gaussians.
+    Class to represent Linear Gaussian Bayesian Networks (LGBN).
 
-    An important result is that Linear Gaussian Bayesian Networks
-    are an alternative representation for the class of multivariate
-    Gaussian distributions.
+    A LGBN is a graphical model that represents a set of continuous random variables and their conditional dependencies
+    via a directed acyclic graph (DAG). In a LGBN, each variable is assumed to be conditionally normally distributed,
+    and the conditional probability distribution (CPD) of each variable given its parents is modeled as a linear
+    function of the parents' values plus Gaussian noise. This is equivalent to assumptions of a Linear Structural
+    Equation Model (SEM) with Gaussian noise.
+
+    Parameters
+    ----------
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes, default=None
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, optional (default: None)
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. If None, an empty set is used.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    # Defining a Linear Gaussian Bayesian Network.
+
+    >>> from pgmpy.models import LinearGaussianBayesianNetwork
+    >>> from pgmpy.factors.continuous import LinearGaussianCPD
+    >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+    >>> cpd1 = LinearGaussianCPD("x1", [1], 4)
+    >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+    >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+    >>> model.add_cpds(cpd1, cpd2, cpd3)
+    >>> for cpd in model.cpds:
+    ...     print(cpd)
+    ...
+    P(x1) = N(1; 4)
+    P(x2 | x1) = N(-5 + 0.5*x1; 4)
+    P(x3 | x2) = N(4 + -1*x2; 3)
+
+    # Simulating data from the model.
+
+    >>> df = model.simulate(n_samples=100, seed=42)
+    >>> print(df.columns)
+    Index(['x1', 'x2', 'x3'], dtype='object')
+
+    # Fitting the model to the simulated data.
+
+    >>> model.fit(df)
+
+    # Predicting missing variables.
+
+    >>> df_missing = df.drop(columns=["x3"])
+    >>> missing_vars, mu_cond, cov_cond = model.predict(df_missing)
+    >>> print(missing_vars)
+    ['x3']
+    >>> print(mu_cond)
+    [[ 0.13440001]
+     [-0.39458728]
+     [ 0.60606023]
+     [ 0.0732233 ]
+     [-0.07241039]
+     [ 0.43420811]
+     [ 0.23197845]
+     [ 0.35382335]
+     [ 0.11859155]
+     [ 0.18397848]]
     """
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
-        latents: Set[Hashable] = set(),
-        lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
     ) -> None:
         super(LinearGaussianBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
         self.cpds = []
+
+    @classmethod
+    def load(
+        cls,
+        filename: Union[str, os.PathLike, io.IOBase],
+    ) -> "LinearGaussianBayesianNetwork":
+        """
+        Read the model from a JSON file or a file-like object of a JSON file.
+
+        Parameters
+        ----------
+        filename: str or file-like object
+            The path along with the filename where to read the file, or a
+            file-like object containing the model data.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork.load("ecoli70.json")
+        >>> print(model)
+        LinearGaussianBayesianNetwork with 46 nodes and 70 edges
+        """
+
+        if isinstance(filename, (str, os.PathLike)):
+            with open(filename, "r") as f:
+                data = json.load(f)
+        else:
+            content = filename.read()
+            if isinstance(content, bytes):
+                content = content.decode("utf-8")
+            data = json.loads(content)
+
+        nodes = data.get("nodes")
+        edges = data.get("arcs")
+        cpds_data = data.get("cpds")
+
+        model = cls(edges)
+        model.add_nodes_from(nodes)
+
+        cpds = []
+        for node, cpd_info in cpds_data.items():
+            coefficients = cpd_info["coefficients"]
+            var = cpd_info["variance"][0]
+            parents = cpd_info["parents"]
+
+            intercept = coefficients["(Intercept)"][0]
+            parent_coeffs = [coefficients[parent][0] for parent in parents]
+
+            cpd = LinearGaussianCPD(
+                variable=node,
+                beta=[intercept] + parent_coeffs,
+                std=math.sqrt(var),
+                evidence=parents,
+            )
+            cpds.append(cpd)
+
+        model.add_cpds(*cpds)
+        return model
+
+    def save(self, filename: str) -> None:
+        """
+        Writes the model to a JSON file.
+
+        Parameters
+        ----------
+        filename: str
+            The path along with the filename where to write the file.
+
+        Examples
+        --------
+        >>> from pgmpy.datasets import load_model
+        >>> model = load_model("bnlearn/ecoli70")
+        >>> model.save("ecoli70.json")
+        """
+
+        model_data = {
+            "nodes": list(self.nodes()),
+            "arcs": list(self.edges()),
+            "cpds": {},
+        }
+
+        for cpd in self.get_cpds():
+            coeffs_dict = {"(Intercept)": [float(cpd.beta[0])]}
+            for idx, parent in enumerate(cpd.evidence):
+                coeffs_dict[parent] = [float(cpd.beta[idx + 1])]
+
+            cpd_data = {
+                "coefficients": coeffs_dict,
+                "variance": [float(cpd.std**2)],
+                "parents": list(cpd.evidence),
+            }
+            model_data["cpds"][cpd.variable] = cpd_data
+
+        with open(filename, "w") as f:
+            json.dump(model_data, f, indent=4)
 
     def add_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
@@ -320,9 +501,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd_b = LinearGaussianCPD(
         ...     variable="B", beta=[-5, 0.5], std=4, evidence=["A"]
         ... )
-        >>> cpd_c = LinearGaussianCPD(
-        ...     variable="C", beta=[4, -1], std=3, evidence=["x2"]
-        ... )
+        >>> cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
         >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
         >>> copy_model = model.copy()
         >>> copy_model.nodes()
@@ -347,6 +526,7 @@ class LinearGaussianBayesianNetwork(DAG):
         virtual_intervention: Optional[List[LinearGaussianCPD]] = None,
         include_latents: bool = False,
         seed: Optional[int] = None,
+        missing_prob=None,
     ) -> pd.DataFrame:
         """
         Simulates data from the model.
@@ -375,14 +555,21 @@ class LinearGaussianBayesianNetwork(DAG):
 
         seed: int (default: None)
             Seed for the random number generator.
+
+        missing_prob: dict (default: None)
+            A dictionary specifying the probability of missingness for each variable.
+            Keys must be valid variable names in the model, and values must be floats
+            between 0 and 1. Each sampled value is independently replaced with NaN
+            with the specified probability (MCAR assumption). A ValueError is raised
+            if a variable is not present in the sampled data or if the probability
+            is outside the range [0, 1].
+
         Returns
         -------
-        pandas.DataFrame
-        pandas.DataFrame: generated samples
-            A pandas data frame with the generated samples.
+        pandas.DataFrame: A pandas data frame with the generated samples.
+
         Examples
         --------
-        >>> model.simulate(n_samples=3, seed=42)
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -392,15 +579,17 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+        >>> model.simulate(n_samples=3, seed=42)
 
         Sampling with intervention (do)
-        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
 
         Sampling with evidence
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
 
         Sampling with both intervention and evidence
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
@@ -535,6 +724,30 @@ class LinearGaussianBayesianNetwork(DAG):
         if not include_latents:
             df = df.drop(columns=self.latents)
 
+        # Step 7: Handle missing_prob argument
+        if missing_prob is not None:
+            if not isinstance(missing_prob, dict):
+                raise ValueError(
+                    f"missing_prob should be dict[str, float]. Got {type(missing_prob)}"
+                )
+
+            for node, prob in missing_prob.items():
+                if node not in df.columns:
+                    raise ValueError(f"{node} not present in sampled data")
+
+                if not isinstance(prob, (int, float)):
+                    raise ValueError(f"Missing probability for {node} must be numeric")
+
+                if not (0 <= prob <= 1):
+                    raise ValueError(
+                        f"Missing probability for {node} must be between 0 and 1"
+                    )
+
+            # Apply masking (post-processing stage)
+            for node, prob in missing_prob.items():
+                mask = rng.random(len(df)) < prob
+                df.loc[mask, node] = np.nan
+
         return df
 
     def check_model(self) -> bool:
@@ -577,17 +790,23 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Parameters
         ----------
-        data: pd.DataFrame
-            Continuous-valued data containing all model variables.
-            A pandas DataFrame with the data to which to fit the model
-            structure. All variables must be continuously valued.
-            Currently only 'mle' (OLS) supported.
-            The estimator to use for estimating the parameters. Currently, MLE via OLS is the
-            only supported method.
-            'mle' uses ddof=0; 'unbiased' uses ddof = 1 + number_of_parents.
-            Whether to use maximum likelihood estimate (MLE) or unbiased estimate for standard
-            deviation. If 'mle', then ddof=0 is used while calculating standard deviation. If
-            unbiased, ddof = 1 + number of parents.
+        data : pd.DataFrame
+                Continuous-valued data containing all model variables.
+                A pandas DataFrame with the data to which to fit the model
+                structure. All variables must be continuously valued.
+
+        estimator : str, optional (default 'mle')
+                The estimator to use for mean estimation.
+                 - 'mle': Maximum Likelihood Estimation via OLS.
+                Currently, MLE via OLS is the only supported method for mean estimation.
+
+        std_estimator : str, optional (default 'unbiased')
+                The estimator to use for standard deviation estimation.
+                Must be one of:
+                    - 'mle': Maximum Likelihood Estimation. Uses ddof=0.
+                    - 'unbiased': Unbiased estimation. For root nodes, uses
+                    ddof=1. For non-root nodes, uses ddof = 1 + number of parents.
+
         Returns
         -------
         self
@@ -602,11 +821,11 @@ class LinearGaussianBayesianNetwork(DAG):
         ...     np.random.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
         ... )
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        >>> model.fit(df)
+        >>> model.fit(df, estimator="mle", std_estimator="unbiased")
         >>> model.cpds
-        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0>,
-        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
-         <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
+        [<LinearGaussianCPD: P(x1) = N(0.092; 0.825) at 0x78474cbdb350,
+        <LinearGaussianCPD: P(x2 | x1) = N(-0.058*x1 + -0.178; 0.983) at 0x78474be12ba0,
+        <LinearGaussianCPD: P(x3 | x2) = N(-0.141*x2 + 0.049; 1.11) at 0x78474be12750]
         """
         # Step 1: Check the input
         if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
@@ -617,7 +836,7 @@ class LinearGaussianBayesianNetwork(DAG):
         if estimator not in {
             "mle",
         }:
-            raise ValueError("estimator must be one of {'mle', 'unbiased'}")
+            raise ValueError("estimator must be {'mle'}")
         if std_estimator not in {"mle", "unbiased"}:
             raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
 
@@ -688,14 +907,12 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> # Drop a column you want to predict (avoid inplace=True to keep return value)
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
         >>> df = model.simulate(n_samples=5)
-        >>> # Drop a column that we want to predict.
-        >>> df = df.drop(columns=["folK"], axis=1, inplace=True)
+        >>> df = df.drop(columns=["folK"], axis=1)
         >>> model.predict(df)
-                   array([[0.13440001]]))
+        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -821,3 +1038,34 @@ class LinearGaussianBayesianNetwork(DAG):
 
         lgbn_model.add_cpds(*cpds)
         return lgbn_model
+
+    def __eq__(self, other):
+        """
+        Checks equality of two LinearGaussianBayesianNetwork objects. Two models are equal if they have the same
+        structure and the same CPDs.
+
+        Parameters
+        ----------
+        other: LinearGaussianBayesianNetwork instance
+            The model to compare with.
+
+        Returns
+        -------
+        bool
+            True if the two LinearGaussianCPD objects are equal, False otherwise.
+        """
+        if not isinstance(other, LinearGaussianBayesianNetwork):
+            return False
+
+        # Test for structure equality using the DAG's __eq__ method.
+        super().__eq__(other)
+
+        # Test for LinearGaussianCPD equality.
+        self_cpds = {cpd.variable: cpd for cpd in self.cpds}
+        other_cpds = {cpd.variable: cpd for cpd in other.cpds}
+
+        for var in self_cpds:
+            if self_cpds[var] != other_cpds[var]:
+                return False
+
+        return True

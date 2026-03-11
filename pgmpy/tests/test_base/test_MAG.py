@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from pgmpy.base import MAG
@@ -14,7 +16,7 @@ def mag():
         ("A", "D", "-", ">"),
         ("B", "C", "-", ">"),
     ]
-    roles = {"exposure": {"A"}, "outcome": {"D"}, "adjustment": {"B", "C"}}
+    roles = {"exposures": {"A"}, "outcomes": {"D"}, "adjustment": {"B", "C"}}
     return MAG(ebunch=edges, roles=roles)
 
 
@@ -66,16 +68,16 @@ class TestMAG:
             ("L", "Z", "-", ">"),
             ("U", "X", "-", ">"),
         ]
-        roles = {"exposure": "X", "outcome": "Z", "adjustment": {"Y"}}
+        roles = {"exposures": "X", "outcomes": "Z", "adjustment": {"Y"}}
         m1 = MAG(ebunch=e, latents={"L"}, roles=roles)
         m2 = MAG(
             ebunch=e,
             latents={"L"},
-            roles={"exposure": "X", "outcome": "Z", "adjustment": {"Y"}},
+            roles={"exposures": "X", "outcomes": "Z", "adjustment": {"Y"}},
         )
         assert m1 == m2
 
-        m3 = MAG(ebunch=e, latents={"L"}, roles={"exposure": "X"})
+        m3 = MAG(ebunch=e, latents={"L"}, roles={"exposures": "X"})
         assert m1 != m3
 
         m4 = MAG(
@@ -161,3 +163,35 @@ class TestMAG:
         assert mag.has_edge("C", "D")
         assert mag.has_edge("A", "D")
         assert mag.has_edge("B", "C")
+
+    def test_from_dagitty(self):
+        model_str = "mag { E [latent] A [e] J [o] {B, E} -> A; A -- J ; A -- M}"
+        model_from_str = MAG.from_dagitty(model_str)
+        with open("test_model.dagitty", "w") as f:
+            f.write(model_str)
+        model_from_file = MAG.from_dagitty(filename="test_model.dagitty")
+        os.remove("test_model.dagitty")
+
+        expected_edges = {("B", "A"), ("A", "E"), ("A", "J"), ("A", "M")}
+        expected_roles = {"outcomes": ["J"], "latents": ["E"], "exposures": ["A"]}
+
+        assert model_from_str.edges() == expected_edges
+        assert model_from_str.get_role_dict() == expected_roles
+        assert model_from_file.edges() == expected_edges
+        assert model_from_file.get_role_dict() == expected_roles
+
+    def test_from_dagitty_disconnected_graphs(self):
+        model_str = """
+            mag {
+                "Wet grass" [exposure]
+                'Large Name' <-> Node ; Rain -> "Wet grass"
+                Node [o]
+            }"""
+
+        model_from_str = MAG.from_dagitty(model_str)
+
+        expected_nodes = {"Large Name", "Node", "Rain", "Wet grass"}
+        expected_roles = {"outcomes": ["Node"], "exposures": ["Wet grass"]}
+
+        assert set(model_from_str.nodes()) == expected_nodes
+        assert model_from_str.get_role_dict() == expected_roles
