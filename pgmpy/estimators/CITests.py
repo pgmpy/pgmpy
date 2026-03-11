@@ -648,6 +648,8 @@ def _get_predictions(X, Y, Z, data, **kwargs):
             enable_categorical=enable_categorical,
             seed=kwargs.get("seed"),
             random_state=kwargs.get("seed"),
+            n_jobs=1,
+            tree_method="hist",
         )
 
         target_data = data.loc[:, target_col]
