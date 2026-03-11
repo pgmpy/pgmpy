@@ -1,19 +1,22 @@
+# The following checklist is mandatory.
+
+Your PR will be closed if you remove the checklist or do not answer the questions to a satisfactory level. Use of LLM is **strictly forbidden** for any part of this checklist (even for improving language).
+
 ### Your checklist for this pull request
-Please review the [guidelines for contributing](CONTRIBUTING.md) to this repository.
 
-- [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side) against our **dev branch** (left side).
-- [ ] Are all the GitHub Actions checks passing? If not, you will need to make changes to fix them. You can reference actions logs for the failing check to identify the issue.
+- [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)?
+- [ ] Does the PR fully address the linked issue and is within its defined scope? If you are still working on the PR, mark it as draft.
+- [ ] Are all the GitHub Actions checks passing? If not, mark your PR as draft while you fix it.
 
-Did you use a Large language model (LLM) to generate the PR (or parts of it)? If yes, please go through this checklist as well: 
-- [ ] Please include a short description of the algorithm / changes. This doesn't need to be a polished description, but it needs to be written manually by you.
-- [ ] Have you verified that the algorithm matches exactly with the reference paper?
-- [ ] Has the LLM added a bunch of try-except blocks? They will need to be removed; any error handling should be explicit.
-- [ ] If you used LLM for generating tests, they usually need to be compressed into a smaller set of tests.
+Please answer the following questions:
+
+- Did you use an LLM for any assistance? Please describe how and what you used it for?
+- What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered?
+- Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.
+- Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.
 
 ### Issue number(s) that this pull request fixes
 - Fixes #
 
 ### List of changes to the codebase in this pull request
-- 
--
 -

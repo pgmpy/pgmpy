@@ -110,7 +110,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     >>> G = DAG(
     ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-    ...     roles={"exposure": "X", "outcome": "Y"},
+    ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
 
     Roles can also be assigned after creation using the ``with_role`` method.
@@ -119,7 +119,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Vertices of a specific role can be retrieved using the ``get_role`` method.
 
-    >>> G.get_role("exposure")
+    >>> G.get_role("exposures")
     ['X']
     >>> G.get_role("adjustment")
     ['U', 'M']
@@ -1110,11 +1110,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         from pgmpy.base import PDAG
 
-        return PDAG(
+        pdag = PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def do(
         self,

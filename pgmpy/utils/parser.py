@@ -324,7 +324,7 @@ def parse_dagitty(lines):
 
     # Step 3: Parse lines
     ebunch = []
-    roles = {"outcome": [], "exposure": [], "latents": []}
+    roles = {"outcomes": [], "exposures": [], "latents": []}
     latents = roles["latents"]
     betas = {}
     nodes = set()
@@ -344,9 +344,9 @@ def parse_dagitty(lines):
                     if option.startswith("latent") or option == "l":
                         roles["latents"].append(name)
                     elif option.startswith("outcome") or option.startswith("o"):
-                        roles["outcome"].append(name)
+                        roles["outcomes"].append(name)
                     elif option.startswith("exposure") or option.startswith("e"):
-                        roles["exposure"].append(name)
+                        roles["exposures"].append(name)
             for edge_stat in results.get("edge_stat", []):
                 handle_edge_stat(edge_stat, latents, ebunch, betas)
 

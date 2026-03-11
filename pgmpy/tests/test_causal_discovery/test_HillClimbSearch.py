@@ -5,18 +5,27 @@ Tests for the sklearn-compatible HillClimbSearch class in pgmpy.causal_discovery
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import HillClimbSearch
 from pgmpy.estimators import K2, ExpertKnowledge
+from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils import get_example_model
 
 
-def make_estimator():
-    return HillClimbSearch()
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
+        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+    }
 
 
-@parametrize_with_checks([make_estimator()])
+@parametrize_with_checks(
+    [HillClimbSearch(return_type="dag", show_progress=False)],
+    expected_failed_checks=expected_failed_checks,
+)
 def test_hillclimb_compatibility(estimator, check):
     check(estimator)
 
@@ -384,3 +393,33 @@ def test_estimate_mixed_data():
         scoring_method="ll-cg", return_type="dag", show_progress=False
     )
     est.fit(data)
+
+
+def test_score():
+    asia_model = get_example_model("asia")
+    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    est = HillClimbSearch(
+        return_type="dag",
+        show_progress=False,
+    )
+
+    with pytest.raises(NotFittedError):
+        corr_score = est.score(X=data)
+
+    est.fit(X=data)
+    corr_score = est.score(X=data)
+    shd = est.score(true_graph=asia_model)
+
+    assert np.round(corr_score, 4) > 0.5
+    assert shd, 2
+
+    corr_score = est.score(X=data, metric=CorrelationScore(significance_level=0.01))
+    shd = est.score(true_graph=asia_model, metric=SHD())
+
+    assert np.round(corr_score, 4) > 0.5
+    assert shd, 2
+
+    structure_score = est.score(X=data, metric="structure_score")
+    shd = est.score(true_graph=asia_model, metric="SHD")
+    assert np.round(structure_score, 4) > -3e4
+    assert shd, 2

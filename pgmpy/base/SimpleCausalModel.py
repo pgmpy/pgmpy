@@ -63,7 +63,7 @@ class SimpleCausalModel(DAG):
     instruments: str, int, iterable, or None (default: None)
         If str or iterable, those would be used as the names of the instrumental variables,
         If an int, `instruments` number of variables will be generated with role-based prefixes: `I_0, I_1, ..., I_n`.
-        
+
     latents: iterable or None (default: None)
         List of latent variables.
 
