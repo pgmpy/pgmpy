@@ -1,85 +1,98 @@
-import unittest
-
 import networkx as nx
 import pandas as pd
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
 
 
-class TestExpertInLoop(unittest.TestCase):
-    def setUp(self):
-        df = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/adult_proc.csv", index_col=0
-        )
-        df.Age = pd.Categorical(
-            df.Age,
-            categories=["<21", "21-30", "31-40", "41-50", "51-60", "61-70", ">70"],
-            ordered=True,
-        )
-        df.Education = pd.Categorical(
-            df.Education,
-            categories=[
-                "Preschool",
-                "1st-4th",
-                "5th-6th",
-                "7th-8th",
-                "9th",
-                "10th",
-                "11th",
-                "12th",
-                "HS-grad",
-                "Some-college",
-                "Assoc-voc",
-                "Assoc-acdm",
-                "Bachelors",
-                "Prof-school",
-                "Masters",
-                "Doctorate",
-            ],
-            ordered=True,
-        )
-        df.HoursPerWeek = pd.Categorical(
-            df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True
-        )
-        df.Workclass = pd.Categorical(df.Workclass, ordered=False)
-        df.MaritalStatus = pd.Categorical(df.MaritalStatus, ordered=False)
-        df.Occupation = pd.Categorical(df.Occupation, ordered=False)
-        df.Relationship = pd.Categorical(df.Relationship, ordered=False)
-        df.Race = pd.Categorical(df.Race, ordered=False)
-        df.Sex = pd.Categorical(df.Sex, ordered=False)
-        df.NativeCountry = pd.Categorical(df.NativeCountry, ordered=False)
-        df.Income = pd.Categorical(df.Income, ordered=False)
+@pytest.fixture
+def adult_df():
+    df = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult_proc.csv", index_col=0)
+    df.Age = pd.Categorical(
+        df.Age,
+        categories=["<21", "21-30", "31-40", "41-50", "51-60", "61-70", ">70"],
+        ordered=True,
+    )
+    df.Education = pd.Categorical(
+        df.Education,
+        categories=[
+            "Preschool",
+            "1st-4th",
+            "5th-6th",
+            "7th-8th",
+            "9th",
+            "10th",
+            "11th",
+            "12th",
+            "HS-grad",
+            "Some-college",
+            "Assoc-voc",
+            "Assoc-acdm",
+            "Bachelors",
+            "Prof-school",
+            "Masters",
+            "Doctorate",
+        ],
+        ordered=True,
+    )
+    df.HoursPerWeek = pd.Categorical(
+        df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True
+    )
+    df.Workclass = pd.Categorical(df.Workclass, ordered=False)
+    df.MaritalStatus = pd.Categorical(df.MaritalStatus, ordered=False)
+    df.Occupation = pd.Categorical(df.Occupation, ordered=False)
+    df.Relationship = pd.Categorical(df.Relationship, ordered=False)
+    df.Race = pd.Categorical(df.Race, ordered=False)
+    df.Sex = pd.Categorical(df.Sex, ordered=False)
+    df.NativeCountry = pd.Categorical(df.NativeCountry, ordered=False)
+    df.Income = pd.Categorical(df.Income, ordered=False)
+    return df
 
-        self.estimator = ExpertInLoop(data=df)
-        self.descriptions = {
-            "Age": "The age of a person",
-            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
-            "Education": "The highest level of education the person has finished",
-            "MaritalStatus": "The marital status of the person",
-            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
-            "Relationship": "The relationship status of the person",
-            "Race": "The ethnicity of the person",
-            "Sex": "The sex or gender of the person",
-            "HoursPerWeek": "The number of hours per week the person works",
-            "NativeCountry": "The native country of the person",
-            "Income": "The income i.e. amount of money the person makes",
-        }
-        self.estimator_small = ExpertInLoop(
-            data=df[["Age", "Education", "Race", "Sex", "Income"]]
-        )
-        self.orientations_small = {
-            ("Education", "Income"),
-            ("Race", "Education"),
-            ("Age", "Education"),
-        }
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
+@pytest.fixture
+def estimator(adult_df):
+    return ExpertInLoop(data=adult_df)
+
+
+@pytest.fixture
+def descriptions():
+    return {
+        "Age": "The age of a person",
+        "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
+        "Education": "The highest level of education the person has finished",
+        "MaritalStatus": "The marital status of the person",
+        "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
+        "Relationship": "The relationship status of the person",
+        "Race": "The ethnicity of the person",
+        "Sex": "The sex or gender of the person",
+        "HoursPerWeek": "The number of hours per week the person works",
+        "NativeCountry": "The native country of the person",
+        "Income": "The income i.e. amount of money the person makes",
+    }
+
+
+@pytest.fixture
+def estimator_small(adult_df):
+    return ExpertInLoop(data=adult_df[["Age", "Education", "Race", "Sex", "Income"]])
+
+
+@pytest.fixture
+def orientations_small():
+    return {
+        ("Education", "Income"),
+        ("Race", "Education"),
+        ("Age", "Education"),
+    }
+
+
+class TestExpertInLoop:
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_estimate(self):
+    def test_estimate(self, estimator):
         true_edges = [
             # Education-related paths
             ("Age", "Education"),
@@ -113,7 +126,7 @@ class TestExpertInLoop(unittest.TestCase):
         ]
 
         true_dag = nx.DiGraph(true_edges)
-        true_dag.add_nodes_from(self.estimator.data.columns)
+        true_dag.add_nodes_from(estimator.data.columns)
 
         def oracle_orient(var1, var2, **kwargs):
             """Orientation function that knows the 'true' structure."""
@@ -125,7 +138,7 @@ class TestExpertInLoop(unittest.TestCase):
                 return None
 
         # Use the expert estimator with our oracle orientation function
-        estimated_dag = self.estimator.estimate(
+        estimated_dag = estimator.estimate(
             orientation_fn=oracle_orient,
             pval_threshold=0.05,
             effect_size_threshold=0.05,
@@ -133,15 +146,15 @@ class TestExpertInLoop(unittest.TestCase):
         )
 
         for u, v in estimated_dag.edges():
-            self.assertTrue(true_dag.has_edge(u, v))
+            assert true_dag.has_edge(u, v)
 
-        self.assertTrue(nx.is_directed_acyclic_graph(estimated_dag))
+        assert nx.is_directed_acyclic_graph(estimated_dag)
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_estimate_with_custom_orient_fn(self):
+    def test_estimate_with_custom_orient_fn(self, estimator_small):
         def custom_orient(var1, var2, **kwargs):
             # Always orient edges from alphabetically first to second
             if var1 < var2:
@@ -149,7 +162,7 @@ class TestExpertInLoop(unittest.TestCase):
             else:
                 return (var2, var1)
 
-        dag = self.estimator_small.estimate(
+        dag = estimator_small.estimate(
             orientation_fn=custom_orient,
             pval_threshold=0.1,
             effect_size_threshold=0.1,
@@ -157,18 +170,18 @@ class TestExpertInLoop(unittest.TestCase):
 
         # Check that all edges are oriented from alphabetically lower to higher
         for edge in dag.edges():
-            self.assertTrue(edge[0] < edge[1])
+            assert edge[0] < edge[1]
 
         # Check that orientations were cached
-        self.assertTrue(len(self.estimator_small.orientation_cache) > 0)
-        for edge in self.estimator_small.orientation_cache:
-            self.assertTrue(edge[0] < edge[1])
+        assert len(estimator_small.orientation_cache) > 0
+        for edge in estimator_small.orientation_cache:
+            assert edge[0] < edge[1]
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_estimate_with_orient_fn_kwargs(self):
+    def test_estimate_with_orient_fn_kwargs(self, estimator_small):
         def orient_with_kwargs(var1, var2, **kwargs):
             # Use a keyword argument to determine orientation
             if kwargs.get("reverse_alphabetical", False):
@@ -183,7 +196,7 @@ class TestExpertInLoop(unittest.TestCase):
                     return (var2, var1)
 
         # Test with reverse_alphabetical=True
-        dag_reverse = self.estimator_small.estimate(
+        dag_reverse = estimator_small.estimate(
             orientation_fn=orient_with_kwargs,
             reverse_alphabetical=True,
             pval_threshold=0.1,
@@ -192,13 +205,13 @@ class TestExpertInLoop(unittest.TestCase):
 
         # Check that all edges are oriented from alphabetically higher to lower
         for edge in dag_reverse.edges():
-            self.assertTrue(edge[0] > edge[1])
+            assert edge[0] > edge[1]
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_combined_expert_knowledge(self):
+    def test_combined_expert_knowledge(self, estimator):
         """Test combination of forbidden edges, required edges, and temporal order."""
         expert_knowledge = ExpertKnowledge(
             forbidden_edges=[("Age", "Income")],
@@ -207,7 +220,7 @@ class TestExpertInLoop(unittest.TestCase):
         )
 
         # Run the algorithm
-        dag = self.estimator.estimate(
+        dag = estimator.estimate(
             expert_knowledge=expert_knowledge,
             effect_size_threshold=0.0001,
             show_progress=False,
@@ -222,11 +235,11 @@ class TestExpertInLoop(unittest.TestCase):
             v_order = expert_knowledge.temporal_ordering[v]
             assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_edge_orientation_priority(self):
+    def test_edge_orientation_priority(self, estimator):
         """Test that edge orientation follows the correct priority order."""
         expert_knowledge = ExpertKnowledge(
             temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]]
@@ -236,7 +249,7 @@ class TestExpertInLoop(unittest.TestCase):
         orientations = {("Income", "Education")}  # Opposite of temporal order
 
         # Run the algorithm
-        dag = self.estimator.estimate(
+        dag = estimator.estimate(
             expert_knowledge=expert_knowledge,
             orientations=orientations,
             effect_size_threshold=0.0001,
@@ -248,81 +261,81 @@ class TestExpertInLoop(unittest.TestCase):
             assert ("Education", "Income") not in dag.edges()
 
 
-class TestFakeCI(unittest.TestCase):
-    def setUp(self):
-        self.data = pd.DataFrame(
-            {
-                "A": [1, 2, 3, 4, 5],
-                "B": [2, 3, 4, 5, 6],
-                "C": [3, 4, 5, 6, 7],
-                "D": [4, 5, 6, 7, 8],
-            }
-        )
-        self.estimator = ExpertInLoop(data=self.data)
+@pytest.fixture
+def fake_ci_estimator():
+    data = pd.DataFrame(
+        {
+            "A": [1, 2, 3, 4, 5],
+            "B": [2, 3, 4, 5, 6],
+            "C": [3, 4, 5, 6, 7],
+            "D": [4, 5, 6, 7, 8],
+        }
+    )
+    return ExpertInLoop(data=data)
 
-    def _make_weak_ci(self):
-        """Return a mock CI test that always reports a weak (non-significant) edge."""
 
-        def ci_test(X, Y, Z, data, boolean):
-            return (0.01, 0.9)  # low effect, high p-value
+@pytest.fixture
+def simple_dag():
+    dag = DAG()
+    dag.add_nodes_from(["A", "B", "C"])
+    dag.add_edges_from([("A", "B"), ("B", "C")])
+    return dag
 
-        return ci_test
 
-    def _make_strong_ci(self):
-        """Return a mock CI test that always reports a strong (significant) edge."""
+def make_weak_ci():
+    """Return a mock CI test that always reports a weak (non-significant) edge."""
 
-        def ci_test(X, Y, Z, data, boolean):
-            return (0.5, 0.001)  # high effect, low p-value
+    def ci_test(X, Y, Z, data, boolean):
+        return (0.01, 0.9)  # low effect, high p-value
 
-        return ci_test
+    return ci_test
 
-    def test_all_weak_edges_removed(self):
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
 
-        result = self.estimator._break_cycle(
-            dag,
+def make_strong_ci():
+    """Return a mock CI test that always reports a strong (significant) edge."""
+
+    def ci_test(X, Y, Z, data, boolean):
+        return (0.5, 0.001)  # high effect, low p-value
+
+    return ci_test
+
+
+class TestFakeCI:
+    def test_all_weak_edges_removed(self, fake_ci_estimator, simple_dag):
+        result = fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
-            ci_test=self._make_weak_ci(),
+            ci_test=make_weak_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertTrue(len(result) > 0)
+        assert len(result) > 0
         for edge in result:
-            self.assertIn(edge, [("A", "B"), ("B", "C")])
+            assert edge in [("A", "B"), ("B", "C")]
 
-    def test_all_strong_edges_kept(self):
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
-
-        result = self.estimator._break_cycle(
-            dag,
+    def test_all_strong_edges_kept(self, fake_ci_estimator, simple_dag):
+        result = fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
-            ci_test=self._make_strong_ci(),
+            ci_test=make_strong_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertEqual(result, [])
+        assert result == []
 
-    def test_selective_removal(self):
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
-
+    def test_selective_removal(self, fake_ci_estimator, simple_dag):
         def mock_ci_test(X, Y, Z, data, boolean):
             # A->B is weak, everything else is strong
             if set([X, Y]) == {"A", "B"}:
                 return (0.01, 0.9)
             return (0.5, 0.001)
 
-        result = self.estimator._break_cycle(
-            dag,
+        result = fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
             ci_test=mock_ci_test,
@@ -330,99 +343,88 @@ class TestFakeCI(unittest.TestCase):
             pval_threshold=0.05,
         )
 
-        self.assertNotIn(("B", "C"), result)
-        self.assertNotIn(("C", "A"), result)
+        assert ("B", "C") not in result
+        assert ("C", "A") not in result
 
-    def test_new_edge_never_in_result(self):
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
-
-        result = self.estimator._break_cycle(
-            dag,
+    def test_new_edge_never_in_result(self, fake_ci_estimator, simple_dag):
+        result = fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
-            ci_test=self._make_weak_ci(),
+            ci_test=make_weak_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertNotIn(("C", "A"), result)
+        assert ("C", "A") not in result
 
-    def test_original_dag_not_modified(self):
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
-        original_edges = set(dag.edges())
-        original_nodes = set(dag.nodes())
+    def test_original_dag_not_modified(self, fake_ci_estimator, simple_dag):
+        original_edges = set(simple_dag.edges())
+        original_nodes = set(simple_dag.nodes())
 
-        self.estimator._break_cycle(
-            dag,
+        fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
-            ci_test=self._make_weak_ci(),
+            ci_test=make_weak_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertEqual(set(dag.edges()), original_edges)
-        self.assertEqual(set(dag.nodes()), original_nodes)
+        assert set(simple_dag.edges()) == original_edges
+        assert set(simple_dag.nodes()) == original_nodes
 
-    def test_longer_cycle(self):
+    def test_longer_cycle(self, fake_ci_estimator):
         """Test with a 4-node cycle: A -> B -> C -> D, adding D -> A."""
         dag = DAG()
         dag.add_nodes_from(["A", "B", "C", "D"])
         dag.add_edges_from([("A", "B"), ("B", "C"), ("C", "D")])
 
-        result = self.estimator._break_cycle(
+        result = fake_ci_estimator._break_cycle(
             dag,
             "D",
             "A",
-            ci_test=self._make_weak_ci(),
+            ci_test=make_weak_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertTrue(len(result) > 0)
+        assert len(result) > 0
         for edge in result:
-            self.assertIn(edge, [("A", "B"), ("B", "C"), ("C", "D")])
-        self.assertNotIn(("D", "A"), result)
+            assert edge in [("A", "B"), ("B", "C"), ("C", "D")]
+        assert ("D", "A") not in result
 
-    def test_multiple_cycles(self):
+    def test_multiple_cycles(self, fake_ci_estimator):
         """A -> B -> D and A -> C -> D; adding D -> A creates two cycles."""
         dag = DAG()
         dag.add_nodes_from(["A", "B", "C", "D"])
         dag.add_edges_from([("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")])
 
-        result = self.estimator._break_cycle(
+        result = fake_ci_estimator._break_cycle(
             dag,
             "D",
             "A",
-            ci_test=self._make_weak_ci(),
+            ci_test=make_weak_ci(),
             effect_size_threshold=0.05,
             pval_threshold=0.05,
         )
 
-        self.assertTrue(len(result) > 0)
-        self.assertNotIn(("D", "A"), result)
+        assert len(result) > 0
+        assert ("D", "A") not in result
         existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
         for edge in result:
-            self.assertIn(edge, existing_edges)
+            assert edge in existing_edges
 
-    def test_conditioning_set(self):
+    def test_conditioning_set(self, fake_ci_estimator, simple_dag):
         """The CI test must be called with Z = cycle_nodes - {X, Y}."""
-        dag = DAG()
-        dag.add_nodes_from(["A", "B", "C"])
-        dag.add_edges_from([("A", "B"), ("B", "C")])
-
         calls = []
 
         def recording_ci_test(X, Y, Z, data, boolean):
             calls.append((X, Y, set(Z)))
             return (0.5, 0.001)  # strong – keeps all edges
 
-        self.estimator._break_cycle(
-            dag,
+        fake_ci_estimator._break_cycle(
+            simple_dag,
             "C",
             "A",
             ci_test=recording_ci_test,
@@ -430,8 +432,8 @@ class TestFakeCI(unittest.TestCase):
             pval_threshold=0.05,
         )
 
-        self.assertTrue(len(calls) > 0)
+        assert len(calls) > 0
         for X, Y, Z in calls:
-            self.assertNotIn(X, Z)
-            self.assertNotIn(Y, Z)
-            self.assertTrue(Z.issubset({"A", "B", "C"}))
+            assert X not in Z
+            assert Y not in Z
+            assert Z.issubset({"A", "B", "C"})

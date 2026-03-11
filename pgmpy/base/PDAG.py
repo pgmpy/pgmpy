@@ -50,7 +50,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
     ...     directed_ebunch=[("A", "C"), ("D", "C")],
     ...     undirected_ebunch=[("B", "A"), ("B", "D")],
     ...     latents=["E"],
-    ...     roles={"exposure": ["A"], "outcome": ["C"]},
+    ...     roles={"exposures": ["A"], "outcomes": ["C"]},
     ... )
     >>> pdag.directed_edges
     {('A', 'C'), ('D', 'C')}

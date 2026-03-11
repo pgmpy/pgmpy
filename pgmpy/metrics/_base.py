@@ -34,6 +34,11 @@ class _BaseSupervisedMetric(BaseObject):
                 f"but got {type(est_causal_graph)} instead."
             )
 
+        if not set(true_causal_graph.nodes()) == set(est_causal_graph.nodes()):
+            raise ValueError(
+                "The `true_causal_graph` and `est_causal_graph` must be on the same nodes."
+            )
+
         return self._evaluate(
             true_causal_graph=true_causal_graph,
             est_causal_graph=est_causal_graph,

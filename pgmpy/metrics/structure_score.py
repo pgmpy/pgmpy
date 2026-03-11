@@ -30,10 +30,10 @@ class StructureScore(_BaseUnsupervisedMetric):
     >>> from pgmpy.utils import get_example_model
     >>> from pgmpy.metrics import StructureScore
     >>> model = get_example_model("alarm")
-    >>> data = model.simulate(int(1e4))
-    >>> scorer = StructureScore(scoring_method="bic-g")
+    >>> data = model.simulate(int(1e4), seed=42)
+    >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)
-    -106665.9383064447
+    np.float64(-106325.43476616534)
     """
 
     _tags = {

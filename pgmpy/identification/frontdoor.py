@@ -35,8 +35,8 @@ class Frontdoor(_BaseIdentification):
     ...     latents={"U"},
     ... )
     >>> dag_with_adj, is_identified = Frontdoor().identify(dag)
-    >>> dag_with_adj.get_role("frontdoor")
-    ['M']
+    >>> dag_with_adj.roles
+    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
     >>> Frontdoor().validate(dag_with_adj)
     True
     """
