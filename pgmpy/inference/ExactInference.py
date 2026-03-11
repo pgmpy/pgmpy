@@ -1517,7 +1517,7 @@ class BeliefPropagationWithMessagePassing(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.inference import BeliefPropagation
@@ -1546,10 +1546,10 @@ class BeliefPropagationWithMessagePassing(Inference):
         ...     ]
         ... )
         >>> belief_propagation = BeliefPropagation(factor_graph)
-        >>> belief_propagation.query(
+        >>> phi = belief_propagation.query(
         ...     variables=["B", "C"],
         ...     evidence={"D": 0},
-        ...     virtual_evidence=[TabularCPD(["A"], 2, [[0.3], [0.7]])],
+        ...     virtual_evidence=[TabularCPD("A", 2, [[0.3], [0.7]])],
         ... )
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
