@@ -873,7 +873,6 @@ class DiscreteBayesianNetwork(DAG):
                         f"Model expects states: {expected_states}, "
                         f"Received states: {received_states}"
                     )
-                
         from pgmpy.inference import (
             ApproxInference,
             Inference,
