@@ -3,3 +3,4 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/base/SimpleCausalModel.py
+pgmpy/base/UndirectedGraph.py

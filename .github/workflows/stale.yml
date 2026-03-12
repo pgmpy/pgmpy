@@ -32,4 +32,6 @@ jobs:
           # Set to -1 to never close stale issues/PRs
           days-before-close: -1
 
+          operations-per-run: 2500
+
           ascending: true
