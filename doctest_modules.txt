@@ -2,3 +2,4 @@
 # Add a module path here after fixing its doctests to have them checked in CI.
 # Example:
 # pgmpy/base/DAG.py
+pgmpy/base/UndirectedGraph.py
