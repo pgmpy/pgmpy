@@ -469,7 +469,7 @@ class IVEstimator:
         ...     latents=["U"],
         ...     err_var={"Z1": 1, "Z2": 1, "W": 1, "X": 1, "U": 1, "Y": 1},
         ... )
-        >>> data = model.to_lisrel().generate_samples(100000)
+        >>> data = model.to_lisrel().generate_samples(500)
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
