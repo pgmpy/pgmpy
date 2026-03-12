@@ -3,6 +3,3 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/inference/ExactInference.py
-
-
-
