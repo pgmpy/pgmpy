@@ -137,9 +137,9 @@ class TestDiscreteTests(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 1460.11, decimal=1)
+        np_test.assert_almost_equal(coef, 1342.67, decimal=1)
         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 316)
+        self.assertEqual(dof, 270)
 
         coef, p_value, dof = chi_square(
             X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
@@ -155,9 +155,9 @@ class TestDiscreteTests(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 481.96, decimal=1)
+        np_test.assert_almost_equal(coef, 473.60, decimal=1)
         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        self.assertEqual(dof, 58)
+        self.assertEqual(dof, 54)
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples. Update: Might be same from scipy=1.7.0
@@ -253,6 +253,29 @@ class TestDiscreteTests(unittest.TestCase):
                     significance_level=0.05,
                 )
             )
+
+    def test_contingency_table_includes_all_states(self):
+        """Regression test for https://github.com/pgmpy/pgmpy/issues/2886.
+
+        When computing the conditional chi-square test, the contingency table
+        for each stratum must include all globally observed states of X and Y,
+        not just the states present in that stratum.
+        """
+        data = pd.DataFrame(
+            {
+                "X": [0, 0, 1, 1],
+                "Y": [0, 1, 0, 1],
+                "Z": [0, 1, 0, 1],
+            }
+        )
+        # With the bugfix, each stratum's contingency table is 2x2
+        # (including the missing Y states). Both strata have an all-zero
+        # column, so they are skipped, yielding chi=0, dof=0, p_value=1.
+        chi, p_value, dof = chi_square(X="X", Y="Y", Z=["Z"], data=data, boolean=False)
+        self.assertEqual(dof, 0)
+        self.assertEqual(chi, 0)
+        # When all strata are skipped (dof=0), chi2.cdf(0, df=0) is NaN
+        self.assertTrue(np.isnan(p_value))
 
     def test_exactly_same_vars(self):
         x = np.random.choice([0, 1], size=1000)

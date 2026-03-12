@@ -322,13 +322,18 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     else:
         chi = 0
         dof = 0
+        # Use global unique values so every stratum gets a consistently sized table
+        all_x = np.unique(data[X])
+        all_y = np.unique(data[Y])
+        n_x = len(all_x)
+        n_y = len(all_y)
         for z_state, df in data.groupby(Z, observed=True):
-            # Compute the contingency table
-            unique_x, x_inv = np.unique(df[X], return_inverse=True)
-            unique_y, y_inv = np.unique(df[Y], return_inverse=True)
-            contingency = np.bincount(
-                x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)
-            ).reshape(len(unique_x), len(unique_y))
+            # Compute the contingency table using global state indices
+            x_inv = np.searchsorted(all_x, df[X].values)
+            y_inv = np.searchsorted(all_y, df[Y].values)
+            contingency = np.bincount(x_inv * n_y + y_inv, minlength=n_x * n_y).reshape(
+                n_x, n_y
+            )
 
             # If all values of a column in the contingency table are zeros, skip the test.
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
