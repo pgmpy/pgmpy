@@ -3,3 +3,4 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/inference/ExactInference.py
+pgmpy/base/UndirectedGraph.py
