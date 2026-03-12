@@ -21,7 +21,7 @@ jobs:
       - name: Handle Stale Content
         uses: actions/stale@v10.2.0
         with:
-          stale-pr-message: 'This PR has had no activity for 14 days and is now marked as stale.'
+          stale-pr-message: 'This PR has had no activity for 5 days and is now marked as stale.'
           days-before-pr-stale: 5
           stale-pr-label: 'status: stale'
 
