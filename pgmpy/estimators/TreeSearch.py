@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import warnings
 from itertools import combinations
 
 import networkx as nx
@@ -52,6 +53,14 @@ class TreeSearch(StructureEstimator):
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
+        warnings.warn(
+            "DeprecationWarning: This TreeSearch class will be removed in a future "
+            "release. Please use the new sklearn compatible TreeSearch class from "
+            "the pgmpy.causal_discovery module instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 
@@ -139,7 +148,7 @@ class TreeSearch(StructureEstimator):
         # Step 1.2: If estimator_type=tan, class_node must be specified
         if estimator_type == "tan" and class_node is None:
             raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
+                "class_node argument must be specified for estimator_type='tan'"
             )
         if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")
@@ -245,7 +254,7 @@ class TreeSearch(StructureEstimator):
             edge_weights_fn = normalized_mutual_info_score
         elif not callable(edge_weights_fn):
             raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
+                "edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
                 f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
             )
 
@@ -322,7 +331,7 @@ class TreeSearch(StructureEstimator):
             edge_weights_fn = normalized_mutual_info_score
         elif not callable(edge_weights_fn):
             raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
+                "edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
                 f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
             )
 
