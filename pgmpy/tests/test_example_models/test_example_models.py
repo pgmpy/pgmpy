@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
@@ -362,3 +363,9 @@ def test_load_model():
             )
         else:
             assert isinstance(model, DAG)
+
+
+def test_load_model_not_found():
+    """Test that loading a non-existent model raises ValueError with informative message."""
+    with pytest.raises(ValueError, match="Model with name 'nonexistent/model' not found"):
+        load_model("nonexistent/model")
