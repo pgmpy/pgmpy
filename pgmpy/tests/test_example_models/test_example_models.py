@@ -1,4 +1,7 @@
+import re
+
 import numpy as np
+import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
@@ -362,3 +365,9 @@ def test_load_model():
             )
         else:
             assert isinstance(model, DAG)
+
+
+def test_load_model_invalid_name():
+    msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available datasets."
+    with pytest.raises(ValueError, match=re.escape(msg)):
+        load_model("bnrep/soilead")
