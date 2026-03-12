@@ -786,7 +786,8 @@ class LinearGaussianBayesianNetwork(DAG):
         self,
         data: pd.DataFrame,
         estimator: str = "mle",
-        std_estimator: str = "unbiased",
+        std_estimator: str = None,
+        **kwargs,
     ) -> "LinearGaussianBayesianNetwork":
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -795,34 +796,63 @@ class LinearGaussianBayesianNetwork(DAG):
         ----------
         data: pd.DataFrame
             Continuous-valued data containing all model variables.
-            A pandas DataFrame with the data to which to fit the model
-            structure. All variables must be continuously valued.
-            Currently only 'mle' (OLS) supported.
-            The estimator to use for estimating the parameters. Currently, MLE via OLS is the
-            only supported method.
-            'mle' uses ddof=0; 'unbiased' uses ddof = 1 + number_of_parents.
-            Whether to use maximum likelihood estimate (MLE) or unbiased estimate for standard
-            deviation. If 'mle', then ddof=0 is used while calculating standard deviation. If
-            unbiased, ddof = 1 + number of parents.
+            All variables must be continuously valued.
+
+        estimator: str
+            The estimator to use for parameter estimation. Options are:
+            - 'mle': Maximum Likelihood Estimation via OLS (default).
+            - 'bayesian': Bayesian estimation using Normal-Inverse-Gamma
+            conjugate priors.
+
+        std_estimator: str or None
+            Only applicable when estimator='mle'. Options are:
+            - 'mle': Uses ddof=0 when calculating standard deviation (default).
+            - 'unbiased': Uses ddof = 1 + number_of_parents.
+            Cannot be used with estimator='bayesian'.
+
+        **kwargs
+            Additional keyword arguments passed to the estimator.
+            For estimator='bayesian', these are forwarded to
+            LinearGaussianBayesianEstimator.get_parameters() and can
+            include B0, V0, alpha_0, beta_0, n_jobs.
+
         Returns
         -------
-        self
-        None: The estimated LinearGaussianCPDs are added to the model. They can
-            be accessed using `model.cpds`.
+        LinearGaussianBayesianNetwork
+            Returns self. The estimated LinearGaussianCPDs are added to
+            the model and can be accessed using `model.cpds`.
+
         Examples
         --------
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> df = pd.DataFrame(
-        ...     np.random.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
+        >>> np.random.seed(42)
+        >>> n = 30
+        >>> x = np.random.randn(n)
+        >>> y = 2.0 * x + 1.0 + np.random.randn(n) * 0.5
+        >>> df = pd.DataFrame({"x1": x, "x2": y})
+
+        MLE fit:
+
+        >>> model_mle = LinearGaussianBayesianNetwork([("x1", "x2")])
+        >>> model_mle.fit(df, estimator="mle")
+        >>> model_mle.cpds  # doctest: +ELLIPSIS
+        [<LinearGaussianCPD: P(x1) = N(-0.188; 0.9) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(2.051*x1 + 0.949; 0.471) at 0x...]
+
+        Bayesian fit with informative prior:
+
+        >>> model_bayes = LinearGaussianBayesianNetwork([("x1", "x2")])
+        >>> model_bayes.fit(
+        ...     df,
+        ...     estimator="bayesian",
+        ...     B0={"x1": np.array([0.0]), "x2": np.array([10.0, 0.0])},
+        ...     V0={"x1": np.eye(1) * 10, "x2": np.eye(2) * 0.5},
         ... )
-        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        >>> model.fit(df)
-        >>> model.cpds
-        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0>,
-        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
-         <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
+        >>> model_bayes.cpds  # doctest: +ELLIPSIS
+        [<LinearGaussianCPD: P(x1) = N(-0.188; 0.893) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(2.016*x1 + 1.508; 2.306) at 0x...]
         """
         # Step 1: Check the input
         if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
@@ -830,12 +860,27 @@ class LinearGaussianBayesianNetwork(DAG):
                 f"Following variables are missing in the data: {missing_vars}"
             )
 
-        if estimator not in {
-            "mle",
-        }:
-            raise ValueError("estimator must be one of {'mle', 'unbiased'}")
-        if std_estimator not in {"mle", "unbiased"}:
+        if estimator not in {"mle", "bayesian"}:
+            raise ValueError("estimator must be one of {'mle', 'bayesian'}")
+
+        if std_estimator is not None and std_estimator not in {"mle", "unbiased"}:
             raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
+
+        if estimator == "bayesian" and std_estimator is not None:
+            raise ValueError("std_estimator is only applicable when estimator='mle'")
+
+        if estimator == "mle" and std_estimator is None:
+            std_estimator = "mle"
+
+        # Step 2: Estimate the LinearGaussianCPDs
+        if estimator == "bayesian":
+            from pgmpy.estimators import LinearGaussianBayesianEstimator
+
+            est = LinearGaussianBayesianEstimator(self, data)
+            cpds = est.get_parameters(**kwargs)
+            # Step 2a: Add the estimated CPDs to the model if estimator='bayesian'
+            self.add_cpds(*cpds)
+            return self
 
         # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
