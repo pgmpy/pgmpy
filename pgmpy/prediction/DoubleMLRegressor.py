@@ -48,7 +48,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
     ----------
     causal_graph : DAG, PDAG, ADMG, MAG, or PAG
         Causal graph with defined variable roles. The causal graph must have
-        the following roles: `exposure`, `outcome`, and `adjustment`.
+        the following roles: `exposures`, `outcomes`, and `adjustment`.
         Additionally, `pretreatment` can be specified.
 
     nuisance_estimators: an estimator or a tuple of estimators of size 2 (default=LinearRegression)
@@ -125,7 +125,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
 
     >>> # construct a DAG (roles must match DataFrame column names)
     >>> dag = DAG(
-    ...     lgbn.edges(), roles={"exposure": "T", "adjustment": "X", "outcome": "Y"}
+    ...     lgbn.edges(), roles={"exposures": "T", "adjustment": "X", "outcomes": "Y"}
     ... )
     >>> dml = DoubleMLRegressor(
     ...     causal_graph=dag,
@@ -232,8 +232,8 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 0.4: Validate single exposure and outcome.
-        exposure_vars = self.causal_graph.get_role("exposure")
-        outcome_vars = self.causal_graph.get_role("outcome")
+        exposure_vars = self.causal_graph.get_role("exposures")
+        outcome_vars = self.causal_graph.get_role("outcomes")
 
         if len(exposure_vars) != 1:
             raise ValueError(
