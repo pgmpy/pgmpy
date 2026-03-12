@@ -5,12 +5,13 @@ import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
 from pgmpy.estimators import (
-    BaseEstimator,
     BayesianEstimator,
+    ExpectationMaximization,
     MaximumLikelihoodEstimator,
 )
 from pgmpy.factors.discrete import (
@@ -218,16 +219,16 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 in [("a", "b"), ("c", "b"), ("d", "a"), ("d", "b"), ("d", "e")]
             )
 
-    def test_get_ancestors_of_success(self):
-        ancestors1 = self.G2._get_ancestors_of("g")
-        ancestors2 = self.G2._get_ancestors_of("d")
-        ancestors3 = self.G2._get_ancestors_of(["i", "l"])
+    def test_get_ancestors_success(self):
+        ancestors1 = self.G2.get_ancestors("g")
+        ancestors2 = self.G2.get_ancestors("d")
+        ancestors3 = self.G2.get_ancestors(["i", "l"])
         self.assertEqual(ancestors1, {"d", "i", "g"})
         self.assertEqual(ancestors2, {"d"})
         self.assertEqual(ancestors3, {"g", "i", "l", "d"})
 
-    def test_get_ancestors_of_failure(self):
-        self.assertRaises(ValueError, self.G2._get_ancestors_of, "h")
+    def test_get_ancestors_failure(self):
+        self.assertRaises(ValueError, self.G2.get_ancestors, "h")
 
     def test_get_cardinality(self):
         self.assertDictEqual(
@@ -587,7 +588,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         test_model_small = get_example_model("alarm")
         test_model_large = get_example_model("hailfinder")
         for model in {test_model_small, test_model_large}:
-            for filetype in {"bif", "xmlbif", "xdsl"}:
+            for filetype in {"bif", "xmlbif", "xdsl", "net"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)
 
@@ -611,6 +612,11 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 os.remove("model." + filetype)
                 os.remove("model.model")
 
+            with pytest.raises(ValueError):
+                model.save("model", filetype=".png")
+            with pytest.raises(ValueError):
+                model.load("model", filetype=".png")
+
         # Test for kwarg parameters
         test_model_int_states = DiscreteBayesianNetwork(
             [("A", "B"), ("B", "C"), ("C", "D")]
@@ -618,9 +624,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         test_model_int_states.get_random_cpds(inplace=True)
         test_model_int_states.save("model.bif")
         read_model1 = DiscreteBayesianNetwork.load("model.bif", state_name_type=int)
-        read_model2 = DiscreteBayesianNetwork.load(
-            "model.bif", n_jobs=1, state_name_type=int
-        )
+        read_model2 = DiscreteBayesianNetwork.load("model.bif", state_name_type=int)
         self.assertTrue(test_model_int_states.states == read_model1.states)
         self.assertTrue(test_model_int_states.states == read_model2.states)
 
@@ -1051,6 +1055,40 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             self.model2.get_cpds("B"), TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]])
         )
 
+    def test_dag_fit(self):
+        model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+        }
+
+        fitted_model_bayesian = model.fit(
+            data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+        )
+        self.assertEqual(
+            fitted_model_bayesian.get_cpds("B"),
+            TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
+        )
+
+        fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
+
+        self.assertEqual(
+            fitted_model_mle.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+
+        fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
+
+        self.assertEqual(
+            fitted_model_em.get_cpds("B"),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+        )
+
     def test_fit_update(self):
         model = get_example_model("asia")
         model_copy = model.copy()
@@ -1067,6 +1105,29 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
             self.assertTrue(
                 model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
             )
+
+    def test_dag_with_independent_node_fit(self):
+        edge_list = [("A", "C"), ("B", "C")]
+        model = DiscreteBayesianNetwork(edge_list)
+        model.add_node("D")
+        data = pd.DataFrame(
+            data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": [1, 1, 1]}
+        )
+        pseudo_counts = {
+            "A": [[9], [3]],
+            "B": [[9], [3]],
+            "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+            "D": [[9]],
+        }
+
+        fitted_model_bayesian = model.fit(
+            data,
+            estimator=BayesianEstimator,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+        )
+        self.assertTrue(fitted_model_bayesian.check_model())
+        self.assertEqual(sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"])
 
     def test_fit_missing_data(self):
         self.model2.fit(self.data2, state_names={"C": [0, 1]})
@@ -1801,6 +1862,50 @@ class TestSimulation(unittest.TestCase):
         )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_simulate_invalid_virtual_evidence_scope(self):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD(
+                "B",
+                2,
+                [[0.7, 0.2], [0.3, 0.8]],
+                evidence=["A"],
+                evidence_card=[2],
+            ),
+        )
+        bad_virtual_evidence = TabularCPD(
+            "B",
+            2,
+            [[0.6, 0.4], [0.4, 0.6]],
+            evidence=["A"],
+            evidence_card=[2],
+        )
+        with self.assertRaises(ValueError):
+            model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
+    def test_simulate_virtual_evidence_wrong_cardinality(self):
+        bad_virtual_evidence = TabularCPD("U", 3, [[0.2], [0.5], [0.3]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
+
+    def test_simulate_virtual_evidence_nonexistent_node(self):
+        bad_virtual_evidence = TabularCPD("NONEXISTENT", 2, [[0.5], [0.5]])
+        with self.assertRaises(ValueError):
+            self.con_model.simulate(
+                n_samples=1,
+                virtual_evidence=[bad_virtual_evidence],
+                show_progress=False,
+            )
 
     def test_simulate_virtual_intervention(self):
         # Use virtual intervention argument to simulate hard intervention and match values from inference

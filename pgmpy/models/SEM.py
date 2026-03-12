@@ -10,7 +10,7 @@ from pgmpy.global_vars import logger
 from pgmpy.utils.parser import parse_lavaan
 
 
-class SEMGraph(DAG):
+class SEMGraph:
     """
     Base class for graphical representation of Structural Equation Models(SEMs).
 
@@ -146,6 +146,15 @@ class SEMGraph(DAG):
             )
 
         self.full_graph_struct = self._get_full_graph_struct()
+
+    def _variable_name_contains_non_string(self):
+        """
+        Checks if the variable names contain any non-string values. Used only for CausalInference class.
+        """
+        for node in list(self.graph.nodes()):
+            if not isinstance(node, str):
+                return (node, type(node))
+        return False
 
     def _get_full_graph_struct(self):
         """
@@ -422,7 +431,7 @@ class SEMGraph(DAG):
             return None
 
     def to_lisrel(self):
-        """
+        r"""
         Converts the model from a graphical representation to an equivalent algebraic
         representation. This converts the model into a Reticular Action Model (RAM) model
         representation which is implemented by `pgmpy.models.SEMAlg` class.
@@ -487,7 +496,7 @@ class SEMGraph(DAG):
 
     @staticmethod
     def __standard_lisrel_masks(graph, err_graph, weight, var):
-        """
+        r"""
         This method is called by `get_fixed_masks` and `get_masks` methods.
 
         Parameters

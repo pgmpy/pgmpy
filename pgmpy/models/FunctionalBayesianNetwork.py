@@ -1,54 +1,121 @@
-from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import networkx as nx
+import numpy as np
 import pandas as pd
-import pyro
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
+pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     """
     Class for representing Functional Bayesian Network.
 
-    Functional Bayesian Networks allow for representation of any probability
-    distribution using CPDs in functional form (Functional CPD). Functional
-    CPDs return a pyro.distribution object allowing for flexible representation
-    of any distribution.
+    Functional Bayesian Networks allow for flexible representation of probability distribution using CPDs in functional
+    form (FunctionalCPD). As these CPDs are defined using functions that return pyro distributions, they can represent
+    any distribution supported by Pyro.
+
+    Parameters
+    ----------
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes, default=None
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=None
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. If None, exposures will be treated as an empty set.
+
+    outcomes : set, optional (default: None)
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. If None, defaults to an empty set.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+    Examples
+    --------
+    # Defining a Functional Bayesian Network
+
+    >>> from pgmpy.models import FunctionalBayesianNetwork
+    >>> from pgmpy.factors.hybrid import FunctionalCPD
+    >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+    >>> model.add_cpds(
+    ...     FunctionalCPD("x1", lambda _: dist.Normal(0, 1)),
+    ...     FunctionalCPD(
+    ...         "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
+    ...     ),
+    ...     FunctionalCPD(
+    ...         "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+
+    # Simulating data from the Functional Bayesian Network
+
+    >>> samples = model.simulate(n_samples=1000)
+
+    # Fitting the Functional Bayesian Network to the simulated data
+
+    >>> fitted_params = model.fit(samples, estimator="SVI", num_steps=1000)
     """
 
     def __init__(
         self,
-        ebunch: Optional[List[Tuple[Hashable, Hashable]]] = None,
-        latents: Set[Hashable] = set(),
-        lavaan_str: Optional[str] = None,
-        dagitty_str: Optional[str] = None,
-    ):
-        """
-        Initializes a FunctionalBayesianNetwork.
-
-        Parameters
-        ----------
-        ebunch: list
-            List of edges to build the Bayesian Network. Each edge should be a tuple (u, v)
-            where u, v are nodes representing the edge u -> v.
-
-        Examples
-        --------
-        >>> from pgmpy.models import FunctionalBayesianNetwork
-        >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        """
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
+    ) -> None:
         if config.get_backend() == "numpy":
-            logger.info("Functional BN requires pytorch backend. Switching.")
-            config.set_backend("torch")
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
+            )
+            logger.info(msg)
+            raise ValueError(msg)
+
+        _check_soft_dependencies("pyro-ppl", obj=self)
 
         super(FunctionalBayesianNetwork, self).__init__(
             ebunch=ebunch,
             latents=latents,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
 
     def add_cpds(self, *cpds: FunctionalCPD) -> None:
@@ -192,7 +259,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         return True
 
     def simulate(
-        self, n_samples: int = 1000, seed: Optional[int] = None
+        self,
+        n_samples: int = 1000,
+        do: Optional[Dict[Hashable, Any]] = None,
+        virtual_intervention: Optional[List[FunctionalCPD]] = None,
+        seed: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Simulate samples from the model.
@@ -204,6 +275,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         seed : int, optional
             The seed value for the random number generator.
+
+        do : dict, optional
+            Specifies hard interventions to the model. The dict should be of
+            the form {variable: value}. Incoming edges into each intervened
+            variable are severed and the variable is set to the given constant
+            for all rows.
+
+        virtual_intervention : list[FunctionalCPD], optional
+            A list of unconditional FunctionalCPD objects (no parents) that
+            replace the corresponding node’s CPD during simulation (i.e.,
+            stochastic interventions like do(X ~ Normal(...))).
 
         Returns
         -------
@@ -228,25 +310,77 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n_samples=1000)
         """
+        # Step 0: Set the seed if specified, check arguments and initialize data structures.
         if seed is not None:
             pyro.set_rng_seed(seed)
+
+        if do is None:
+            do = {}
+
+        if virtual_intervention is None:
+            virtual_intervention = []
+
+        # Check if all variables in do and virtual_intervention are valid
+        extra_do = set(do.keys()) - set(self.nodes())
+        if extra_do:
+            raise ValueError(
+                f"`do` contains nodes not in the model: {sorted(extra_do)}"
+            )
+
+        vi_map = {}
+        for cpd in virtual_intervention:
+            if not isinstance(cpd, FunctionalCPD):
+                raise ValueError(
+                    "`virtual_intervention` must be a list of FunctionalCPD objects. Got {type(cpd)}"
+                )
+            if cpd.variable not in set(self.nodes()):
+                raise ValueError(
+                    f"Virtual intervention CPD variable not in the model: {cpd.variable}"
+                )
+            if cpd.parents:
+                raise ValueError(
+                    f"Virtual intervention CPD for {cpd.variable} must be unconditional (no parents)."
+                )
+            vi_map[cpd.variable] = cpd
+
+        overlap = set(do.keys()) & set(vi_map.keys())
+        if overlap:
+            raise ValueError(
+                "Cannot specify both `do` and `virtual_intervention` for the same node(s): "
+                f"{sorted(overlap)}"
+            )
 
         nodes = list(nx.topological_sort(self))
         samples = pd.DataFrame(index=range(n_samples))
 
+        # Step 1: Simulate data
         for node in nodes:
+            # Step 1.1: Handle hard interventions
+            if node in do:
+                samples[node] = np.full(n_samples, do[node])
+                continue
+
+            # Step 1.2: Handle virtual interventions
+            if node in vi_map:
+                samples[node] = vi_map[node].sample(
+                    n_samples=n_samples, parent_sample=None
+                )
+                continue
+
+            # Step 1.3: Standard sampling from the node's CPD
             cpd = self.get_cpds(node)
             parent_samples = samples[cpd.parents] if cpd.parents else None
             samples[node] = cpd.sample(
                 n_samples=n_samples, parent_sample=parent_samples
             )
 
+        # Step 2: Return the simulated samples
         return samples
 
     def fit(
         self,
         data: pd.DataFrame,
-        method: str = "SVI",
+        estimator: str = "SVI",
         optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
         prior_fn: Optional[Callable] = None,
         num_steps: int = 1000,
@@ -262,14 +396,14 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         data: pandas.DataFrame
             DataFrame with observations of variables.
 
-        method: str (default: "SVI")
+        estimator: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
         optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
-            Only used if method is "SVI". The optimizer to use for optimization.
+            Only used if `estimator` is "SVI". The optimizer to use for optimization.
 
         prior_fn: function
-            Only used if method is "MCMC". A function that returns a dictionary of
+            Only used if `estimator` is "MCMC". A function that returns a dictionary of
             pyro distributions for each parameter in the model.
 
         num_steps: int (default: 100)
@@ -281,17 +415,17 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             Seed value for random number generator.
 
         nuts_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.NUTS.
 
         mcmc_kwargs: dict (default: None)
-            Only used if method is "MCMC". Additional arguments to pass to
+            Only used if `estimator` is "MCMC". Additional arguments to pass to
             pyro.infer.MCMC.
 
         Returns
         -------
-        dict: If method is "SVI", returns a dictionary of parameter values.
-              If method is "MCMC", returns a dictionary of posterior samples for each parameter.
+        dict: If `estimator` is "SVI", returns a dictionary of parameter values.
+              If `estimator` is "MCMC", returns a dictionary of posterior samples for each parameter.
 
         Examples
         --------
@@ -324,7 +458,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
         >>> cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
-        >>> params = model.fit(data, method="SVI", num_steps=100)
+        >>> params = model.fit(data, estimator="SVI", num_steps=100)
         >>> print(params)
 
         >>> def prior_fn():
@@ -350,7 +484,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
 
-        >>> params = model.fit(data, method="MCMC", prior_fn=prior_fn, num_steps=100)
+        >>> params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, num_steps=100)
         >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
         """
         # Step 0: Checks for specified arguments.
@@ -362,9 +496,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         if not isinstance(num_steps, int):
             raise ValueError(f"num_steps should be an integer. Got: {type(num_steps)}.")
 
-        if method.lower() not in ["svi", "mcmc"]:
+        if estimator.lower() not in ["svi", "mcmc"]:
             raise ValueError(
-                "Currently only SVI and MCMC methods are supported. method argument needs to be either 'SVI' or 'MCMC'."
+                f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}."
             )
 
         # Step 1: Preprocess the data and initialize data structures.
@@ -378,6 +512,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             if node not in data.columns:
                 raise ValueError(f"data doesn't contain column for the node: {node}.")
             else:
+                import torch
+
                 tensor_data[node] = torch.tensor(
                     data[node].values,
                     dtype=config.get_dtype(),
@@ -390,7 +526,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
 
         # Step 2: Fit the model using the specified method.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
 
             def guide(tensor_data):
                 pass
@@ -420,21 +556,22 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 if step % 50 == 0:
                     logger.info(f"Step {step} | Loss: {loss:.4f}")
 
-        # Step 3: Fit the model using specified method
-        elif method.lower() == "mcmc":
+        # Step 3: Fit the model using specified estimator
+        elif estimator.lower() == "mcmc":
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
-                priors = prior_fn()
+                priors_dists = prior_fn()
+                priors_vals = {
+                    name: pyro.sample(name, d) for name, d in priors_dists.items()
+                }
+
                 with pyro.plate("data", data.shape[0]):
                     for node in sort_nodes:
-                        pyro.sample(
-                            f"{node}",
-                            cpds_dict[node].fn(
-                                priors,
-                                {p: tensor_data[p] for p in cpds_dict[node].parents},
-                            ),
-                            obs=tensor_data[node],
+                        dist_node = cpds_dict[node].fn(
+                            priors_vals,
+                            {p: tensor_data[p] for p in cpds_dict[node].parents},
                         )
+                        pyro.sample(f"{node}", dist_node, obs=tensor_data[node])
 
             # Step 3.2: Fit the model using MCMC.
             nuts_kernel = pyro.infer.NUTS(combined_model_mcmc, **nuts_kwargs)
@@ -442,7 +579,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             mcmc.run(tensor_data)
 
         # Step 4: Return the fitted parameter values.
-        if method.lower() == "svi":
+        if estimator.lower() == "svi":
             return dict(pyro.get_param_store().items())
         else:
             return mcmc.get_samples()

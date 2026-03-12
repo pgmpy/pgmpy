@@ -6,12 +6,11 @@ from itertools import chain, combinations
 import networkx as nx
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import compat_fns
+from pgmpy.utils import compat_fns, to_timeseries_format
 
 
 @dataclass(eq=True, frozen=True)
@@ -1084,6 +1083,7 @@ class DynamicBayesianNetwork(DAG):
         include_latents=False,
         seed=None,
         show_progress=True,
+        return_format="wide",
     ):
         """
         Simulates time-series data from the specified model.
@@ -1123,9 +1123,29 @@ class DynamicBayesianNetwork(DAG):
         show_progress: bool
             If True, shows a progress bar when generating samples.
 
+        return_format: {"wide", "numpy3d", "pd-multiindex", "pd-list", "sorted"}
+            Controls the return representation
+
+            - "wide" : Default option : wide format, where on rows we have samples, and on columns we have (potentially
+                       unsorted)  ("variable", "timestep)
+
+            - 'numpy3d' : returns a 3D numpy array, where first dimension represents trace, second dimension
+                        represents variable, third dimension represent timestep
+
+            - 'pd-multiindex' : returns the pandas multindex DataFrame, with indexes of ("Variable name", "timestep")
+
+            - 'pd-list' : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
+                        contain timestep and columns represent variables
+
+            - 'sorted' : makes sure that the representation of [sample, ("variable", "timestep")] is sorted, which
+                       makes further processing easier
+
+
         Returns
         -------
-        pandas.DataFrame: A dataframe with the simulated data.
+        np.ndarray or pandas.DataFrame
+            Depends on `return_format` argument. `numpy3d` returns a numpy array (np.ndarray), while rest of the
+            representations return a pandas DataFrame.
 
         Examples
         --------
@@ -1223,11 +1243,16 @@ class DynamicBayesianNetwork(DAG):
            (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
         0       0       0       0       1       2       0       1       2       1       1       0       1
         1       0       1       1       1       2       0       1       2       1       1       0       0
-        """
-        from pgmpy.sampling import BayesianModelSampling
 
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=n_time_slices * len(self._nodes()))
+        Return format selection using `return_format` argument.
+        `return_format="wide"` returns the data in standard format.
+
+        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="wide")
+
+        `return_format="pd-multiindex"` returns pandas dataframe with indexes of ("Variable name", "timestep").
+
+        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="pd-multiindex")
+        """
 
         # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do
@@ -1281,38 +1306,44 @@ class DynamicBayesianNetwork(DAG):
         )
         if n_time_slices == 1:
             sampled = self._postprocess(sampled)
-            return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+            sampled = sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+
         elif n_time_slices == 2:
             sampled = self._postprocess(sampled)
-            return sampled
 
-        # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
-        for t_slice in range(1, n_time_slices - 1):
-            const_bn = self.get_constant_bn(t_slice=t_slice)
-            partial_colnames = [
-                str(node) + "_" + str(t_slice) for node in self._nodes()
-            ]
-            partial_df = sampled.loc[:, partial_colnames]
-            remaining_df = sampled.loc[:, ~sampled.columns.isin(partial_colnames)]
-            new_samples = const_bn.simulate(
-                n_samples=n_samples,
-                do={**do_dict[t_slice], **do_dict[t_slice + 1]},
-                evidence={**evidence_dict[t_slice], **evidence_dict[t_slice + 1]},
-                virtual_evidence=[
-                    *virtual_evi_dict[t_slice],
-                    *virtual_evi_dict[t_slice + 1],
-                ],
-                virtual_intervention=[
-                    *virtual_inter_dict[t_slice],
-                    *virtual_inter_dict[t_slice + 1],
-                ],
-                include_latents=True,
-                partial_samples=partial_df,
-                seed=seed,
-                show_progress=False,
-            )
-            sampled = pd.concat((remaining_df, new_samples), axis=1)
-        return self._postprocess(sampled)
+        else:
+            # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
+            for t_slice in range(1, n_time_slices - 1):
+                const_bn = self.get_constant_bn(t_slice=t_slice)
+                partial_colnames = [
+                    str(node) + "_" + str(t_slice) for node in self._nodes()
+                ]
+                partial_df = sampled.loc[:, partial_colnames]
+                remaining_df = sampled.loc[:, ~sampled.columns.isin(partial_colnames)]
+                new_samples = const_bn.simulate(
+                    n_samples=n_samples,
+                    do={**do_dict[t_slice], **do_dict[t_slice + 1]},
+                    evidence={**evidence_dict[t_slice], **evidence_dict[t_slice + 1]},
+                    virtual_evidence=[
+                        *virtual_evi_dict[t_slice],
+                        *virtual_evi_dict[t_slice + 1],
+                    ],
+                    virtual_intervention=[
+                        *virtual_inter_dict[t_slice],
+                        *virtual_inter_dict[t_slice + 1],
+                    ],
+                    include_latents=True,
+                    partial_samples=partial_df,
+                    seed=seed,
+                    show_progress=False,
+                )
+                sampled = pd.concat((remaining_df, new_samples), axis=1)
+
+            sampled = self._postprocess(sampled)
+
+        if return_format == "wide":
+            return sampled
+        return to_timeseries_format(df=sampled, return_format=return_format)
 
     @property
     def states(self):
