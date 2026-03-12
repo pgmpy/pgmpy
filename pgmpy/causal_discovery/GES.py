@@ -91,15 +91,21 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import GES
     >>> ges = GES(scoring_method="bic-d")
-    >>> _ = ges.fit(df)
-    >>> _ = ges.causal_graph_.edges()
-
+    >>> ges.fit(df)
+    GES(scoring_method='bic-d')
+    >>> ges.causal_graph_  # doctest: +ELLIPSIS
+    <pgmpy.base.PDAG.PDAG object at 0x...>
+    >>> ges.n_features_in_
+    37
+    
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.estimators import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> ges = GES(scoring_method="bic-d", expert_knowledge=expert)
-    >>> _ = ges.fit(df)
+    >>> ges.fit(df)  # doctest: +ELLIPSIS
+    GES(expert_knowledge=<pgmpy.estimators.ExpertKnowledge.ExpertKnowledge object at 0x...>,
+        scoring_method='bic-d')
 
     References
     ----------
