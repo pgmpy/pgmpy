@@ -97,7 +97,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     <pgmpy.base.PDAG.PDAG object at 0x...>
     >>> ges.n_features_in_
     37
-    
+
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.estimators import ExpertKnowledge
