@@ -112,7 +112,7 @@ def test_estimate_cpd(setup_data, backend):
     assert data["mle1"].estimate_cpd("C") == data["cpds"][2]
 
 
-def test_state_names1():
+def test_state_names1(backend):
     m = DiscreteBayesianNetwork([("A", "B")])
     d = pd.DataFrame(data={"A": [2, 3, 8, 8, 8], "B": ["X", "O", "X", "O", "X"]})
     cpd_b = TabularCPD(
@@ -127,7 +127,7 @@ def test_state_names1():
     assert mle2.estimate_cpd("B") == cpd_b
 
 
-def test_state_names2():
+def test_state_names2(backend):
     m = DiscreteBayesianNetwork([("Light?", "Color"), ("Fruit", "Color")])
     d = pd.DataFrame(
         data={
