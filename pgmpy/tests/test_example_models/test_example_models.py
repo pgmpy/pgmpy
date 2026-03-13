@@ -371,3 +371,13 @@ def test_load_model_invalid_name():
     msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available datasets."
     with pytest.raises(ValueError, match=re.escape(msg)):
         load_model("bnrep/soilead")
+
+
+def test_list_models_invalid_tag():
+    with pytest.raises(ValueError, match="Invalid filter tag"):
+        list_models(invalid_tag=True)
+```
+
+Commit message:
+```
+test: add test for invalid filter tag in list_models
