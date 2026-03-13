@@ -22,12 +22,13 @@ from pgmpy.utils import compat_fns, get_example_model
 @pytest.fixture(params=["numpy", "torch"], autouse=True)
 def backend(request):
     prev_backend = config.get_backend()
-    if request.param == "torch":
-        if not _check_soft_dependencies("torch", severity="none"):
-            pytest.skip("torch not installed")
-        config.set_backend("torch")
-    elif request.param == "numpy":
-        config.set_backend("numpy")
+
+    if request.param == "torch" and not _check_soft_dependencies(
+        "torch", severity="none"
+    ):
+        pytest.skip("torch not installed")
+
+    config.set_backend(request.param)
     yield request.param
     config.set_backend(prev_backend)
 
@@ -222,13 +223,13 @@ class TestFactorMethods:
         self.phi10 = DiscreteFactor([self.var3], [2], [3, 6])
 
     def test_scope(self):
-        assert self.phi.scope(), ["x1", "x2", "x3"]
-        assert self.phi_sn.scope(), ["x1", "x2", "x3"]
+        assert self.phi.scope() == ["x1", "x2", "x3"]
+        assert self.phi_sn.scope() == ["x1", "x2", "x3"]
 
-        assert self.phi1.scope(), ["x1", "x2", "x3"]
-        assert self.phi1_sn.scope(), ["x1", "x2", "x3"]
+        assert self.phi1.scope() == ["x1", "x2", "x3"]
+        assert self.phi1_sn.scope() == ["x1", "x2", "x3"]
 
-        assert self.phi4.scope(), [self.tup1, self.tup2, self.tup3]
+        assert self.phi4.scope() == [self.tup1, self.tup2, self.tup3]
 
     def test_assignment(self):
         assert self.phi.assignment([0]) == [[("x1", 0), ("x2", 0), ("x3", 0)]]
@@ -354,10 +355,8 @@ class TestFactorMethods:
         df = cpd.to_dataframe()
         assert df.shape == (27, 3)
         assert df.index.shape == (27,)
-        assert (
-            df.query('PKA=="AVG" and Raf =="HIGH" and PKC=="LOW"')["LOW"].values
-            == 0.8652899
-        )
+        value = df.query('PKA=="AVG" and Raf =="HIGH" and PKC=="LOW"')["LOW"].values[0]
+        np_test.assert_almost_equal(value, 0.8652899)
         np_test.assert_array_almost_equal(df.sum(axis=1).values, np.ones(27))
 
     def test_set_value(self):
@@ -629,7 +628,7 @@ class TestFactorMethods:
             [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9],
         )
         assert prod == expected_factor
-        assert sorted(prod.variables), ["x1", "x2", "x3" == "x4"]
+        assert sorted(prod.variables) == ["x1", "x2", "x3", "x4"]
 
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
@@ -638,7 +637,7 @@ class TestFactorMethods:
             ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
         )
         assert prod == expected_factor
-        assert sorted(prod.variables), ["x1", "x2" == "x3"]
+        assert sorted(prod.variables) == ["x1", "x2", "x3"]
 
         phi7_copy = self.phi7
         phi7_copy.product(self.phi8, inplace=True)
@@ -824,7 +823,7 @@ class TestFactorMethods:
             ],
         )
         assert phi1 == phi2
-        assert phi2.variables, ["x2", "x1" == "x3"]
+        assert phi2.variables == ["x2", "x1", "x3"]
 
         phi3 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 4, 3], range(24))
         phi4 = DiscreteFactor(
@@ -862,7 +861,7 @@ class TestFactorMethods:
     def test_sample(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
         samples = phi1.sample(int(1e5))
-        assert samples.shape, 1e5 == 2
+        assert samples.shape == (1e5, 2)
         np_test.assert_almost_equal(
             (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
             np.array([1, 2, 3, 4]) / 10,
@@ -876,7 +875,7 @@ class TestFactorMethods:
             state_names={"x1": ["a1", "a2"], "x2": ["b1", "b2"]},
         )
         samples = phi1.sample(int(1e5))
-        assert samples.shape, 1e5 == 2
+        assert samples.shape == (1e5, 2)
         np_test.assert_almost_equal(
             (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
             np.array([1, 2, 3, 4]) / 10,
@@ -1089,7 +1088,7 @@ class TestTabularCPDInit:
         assert cpd.variable == "grade"
         assert cpd.variable_card == 3
         np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
-        assert list(cpd.variables), ["grade" == "evi1"]
+        assert list(cpd.variables) == ["grade", "evi1"]
         np_test.assert_almost_equal(
             compat_fns.to_numpy(cpd.values),
             np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2),
@@ -1165,7 +1164,7 @@ class TestTabularCPDInit:
                 [5, 6],
             )
 
-    def test_too_wide_cdp_table(self):
+    def test_too_wide_cpd_table(self):
         terminal_width, terminal_height = get_terminal_size()
 
         grasp_cpd = TabularCPD(
@@ -2837,7 +2836,7 @@ class TestTabularCPDMethods:
         self.cpd.marginalize(["diff"])
         assert self.cpd.variable == "grade"
         assert self.cpd.variable_card == 3
-        assert list(self.cpd.variables), ["grade" == "intel"]
+        assert list(self.cpd.variables) == ["grade", "intel"]
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
         np_test.assert_array_equal(
             self.cpd.values.ravel(),
@@ -3084,7 +3083,7 @@ class TestTabularCPDMethods:
         )
         assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
-        assert cpd.values.shape, (2, 3, 4)
+        assert cpd.values.shape == (2, 3, 4)
 
         cpd_sn = TabularCPD.get_random(
             variable="A",
@@ -3320,9 +3319,9 @@ class TestJointProbabilityDistributionMethods:
 
     def test_minimal_imap(self):
         bm = self.jpd1.minimal_imap(order=["x1", "x2", "x3"])
-        assert sorted(bm.edges()), sorted([("x1", "x3"), ("x2", "x3")])
+        assert sorted(bm.edges()) == sorted([("x1", "x3"), ("x2", "x3")])
         bm = self.jpd1.minimal_imap(order=["x2", "x3", "x1"])
-        assert sorted(bm.edges()), sorted([("x2", "x1"), ("x3", "x1")])
+        assert sorted(bm.edges()) == sorted([("x2", "x1"), ("x3", "x1")])
         bm = self.jpd2.minimal_imap(order=["x1", "x2", "x3"])
         assert list(bm.edges()) == []
         bm = self.jpd2.minimal_imap(order=["x1", "x2"])
@@ -3557,7 +3556,7 @@ class TestJointProbabilityDistributionMethods:
 #                                  ('A_0', 'B_1', 'C_1'): 0.9,
 #                                  ('A_1', 'B_1', 'C_1'): 0.1})
 #         assert rule_cpd.variable == 'A'
-#         assert rule_cpd.rules, {('A_0' == 'B_0': 0.8,
+#         assert rule_cpd.rules == {('A_0', 'B_0'): 0.8,
 #                                           ('A_1', 'B_0'): 0.2,
 #                                           ('A_0', 'B_1', 'C_0'): 0.4,
 #                                           ('A_1', 'B_1', 'C_0'): 0.6,
