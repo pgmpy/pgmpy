@@ -1,10 +1,12 @@
 import unittest
+from unittest.mock import PropertyMock, patch
 
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.utils import get_example_model
 
@@ -187,6 +189,47 @@ class TestApproxInferenceDBN(unittest.TestCase):
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
+    def test_query_uses_model_states_issue_1941(self):
+        """Regression test for GitHub issue #1941.
+
+        When state_names is None, query() should read states from
+        self.model.states instead of inferring from samples, so that
+        all possible states are always represented.
+        """
+        result = self.infer.query([("Y", 0)], seed=42)
+        # Model states for ("Y", 0) are [0, 1]; both must be present and in canonical order.
+        self.assertEqual(result.state_names[("Y", 0)], [0, 1])
+        vals = result.values
+        self.assertAlmostEqual(sum(vals), 1.0, places=2)
+        self.assertTrue(all(v >= 0 for v in vals))
+
+    def test_query_dbn_higher_time_slice_fallback(self):
+        """Cover fallback when DBN variable at higher time slice is not in model.states."""
+        result = self.infer.query([("Y", 3)], seed=42)
+        vals = result.values
+        self.assertEqual(len(vals), 2)
+        self.assertAlmostEqual(sum(vals), 1.0, places=2)
+
+
+class TestApproxInferenceBNStateFallback(unittest.TestCase):
+    def test_query_bn_missing_state_var_fallback(self):
+        """Cover fallback when model.states exists but doesn't contain a queried variable."""
+        model = DiscreteBayesianNetwork([("X", "Y")])
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]])
+        cpd_y = TabularCPD(
+            "Y", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["X"], evidence_card=[2]
+        )
+        model.add_cpds(cpd_x, cpd_y)
+        model.check_model()
+        infer = ApproxInference(model)
+        # Patch states property to omit "Y" so the else fallback triggers
+        with patch.object(
+            type(model), "states", new_callable=PropertyMock, return_value={"X": [0, 1]}
+        ):
+            result = infer.query(["Y"], n_samples=1000, seed=42)
+        vals = result.values
+        self.assertAlmostEqual(sum(vals), 1.0, places=2)
 
 
 @unittest.skipUnless(
