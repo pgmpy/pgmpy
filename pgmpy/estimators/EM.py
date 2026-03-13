@@ -274,11 +274,13 @@ class ExpectationMaximization(ParameterEstimator):
         >>> estimator = EM(model, data)
         >>> params = estimator.get_parameters(latent_card={"B": 3})
         >>> # Sorting the CPDs by variable name to ensure consistent order for doctest comparison
-        >>> sorted(params, key=lambda cpd: cpd.variable)
+        >>> sorted(
+        ...     params, key=lambda cpd: cpd.variable
+        ... )  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<TabularCPD representing P(A:2) at 0x...>,
-         <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
-         <TabularCPD representing P(C:2) at 0x...>,
-         <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
+        <TabularCPD representing P(C:2) at 0x...>,
+        <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
         # Step 1: Parameter checks
         if latent_card is None:
