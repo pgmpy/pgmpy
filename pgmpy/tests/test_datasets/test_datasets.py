@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
 from pgmpy.estimators import ExpertKnowledge
@@ -58,8 +59,11 @@ def test_list_datasets():
     found_datasets = list_datasets()
     for dataset in ALL_DATASETS:
         assert dataset in found_datasets
+
     assert "abalone_continuous" not in list_datasets(has_ground_truth=True)
+
     cont_names = list_datasets(is_continuous=True)
+
     assert "abalone_continuous" in cont_names
     assert "sachs_discrete" not in cont_names
     assert "abalone_mixed" not in cont_names
@@ -75,14 +79,17 @@ def test_load_dataset():
         )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
+
         if dataset.tags["has_ground_truth"]:
             assert isinstance(dataset.ground_truth, DAG)
         else:
             assert dataset.ground_truth is None
+
         if dataset.tags["has_expert_knowledge"]:
             assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
         else:
             assert dataset.expert_knowledge is None
+
         if dataset.tags["has_missing_data"]:
             assert dataset.data.isna().any().any()
 
