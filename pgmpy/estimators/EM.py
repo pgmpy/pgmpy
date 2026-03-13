@@ -264,6 +264,7 @@ class ExpectationMaximization(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
+        >>> np.random.seed(42)
         >>> data = pd.DataFrame(
         ...     np.random.randint(low=0, high=2, size=(1000, 3)),
         ...     columns=["A", "C", "D"],
