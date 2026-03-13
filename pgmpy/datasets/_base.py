@@ -44,7 +44,6 @@ class _BaseDataset(BaseObject):
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
     """
 
-    # define tags
     _tags = {
         "name": None,
         "n_variables": None,
@@ -82,7 +81,6 @@ class _BaseDataset(BaseObject):
 
             lower = stripped.lower()
 
-            # Section headers
             if lower == "/knowledge":
                 section = None
                 continue
@@ -96,14 +94,11 @@ class _BaseDataset(BaseObject):
                 section = "requiredirect"
                 continue
 
-            # Content, depending on current section
             if section == "addtemporal":
-                # Treat lines that are just an integer as placeholders for empty lines
                 if stripped.isdigit():
                     temporal.append([])
                 else:
                     tokens = stripped.split()
-                    # Skip the first token; its the line number
                     temporal.append(tokens[1:])
 
             elif section == "forbiddirect":
@@ -209,8 +204,6 @@ class _CovarianceMixin:
         )
 
         lines = raw_data.strip().splitlines()
-        # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
-        # not uniform.
         names = re.split(r"\t|\ ", re.sub(r"\s+", " ", lines[1].strip()))
 
         mat = np.zeros((len(names), len(names)), dtype=float)
@@ -317,7 +310,9 @@ def list_datasets(**filter_tags) -> list[str]:
     valid_tags = set(_BaseDataset._tags.keys())
     invalid = set(filter_tags.keys()) - valid_tags
     if invalid:
-        raise ValueError(f"Invalid filter tag(s): {invalid}. Valid tags are: {valid_tags}")
+        raise ValueError(
+            f"Invalid filter tag(s): {invalid}. Valid tags are: {valid_tags}"
+        )
 
     all_datasets = all_objects(
         object_types=_BaseDataset,
