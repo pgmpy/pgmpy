@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import itertools
+import operator
 from functools import reduce
 from typing import Hashable, Optional
 
@@ -350,7 +351,7 @@ class VariableElimination(Inference):
             #           evidence.
             evidence_vars = set(evidence)
             reduce_indexes = []
-            reshape_indexes = []
+            # reshape_indexes = []
             for phi in factors:
                 indexes_to_reduce = [
                     phi.variables.index(var)
@@ -1318,13 +1319,13 @@ class BeliefPropagation(Inference):
 
 class BeliefPropagationWithMessagePassing(Inference):
     """
-    Class for performing efficient inference using Belief Propagation method on factor graphs with no loops.
+    Class for performing inference using the Belief Propagation algorithmon acyclic Factor Graphs and Dynamic Factor
+    Graphs. Recursion makes inference at least 10x faster than the BeliefPropagation class implementation.
 
-    The message-passing algorithm recursively parses the factor graph to propagate the
-    model's beliefs to infer the posterior distribution of the queried variable. The recursion
-    stops when reaching an observed variable or a unobserved root/leaf variable.
-
-    It does not work for loopy graphs.
+    The message-passing algorithm recursively parses the factor graph to propagate the model's beliefs to infer
+    the posterior marginals of the queried variables. The recursion stops when reaching an observed variable
+    or a unobserved root/leaf variable. Virtual evidence and precomputed messages extend efficient inference
+    capabilities to Dynamic Factor Graphs.
 
     Parameters
     ----------
@@ -1362,12 +1363,19 @@ class BeliefPropagationWithMessagePassing(Inference):
             evidence,
             virtual_evidence,
             get_messages,
+            precomp_messages,
         ):
             self.bp = belief_propagation
             self.variables = variables
             self.evidence = evidence
             self.virtual_evidence = virtual_evidence
-            self.all_messages = {} if get_messages else None
+            self.get_messages = get_messages
+            # If more than 1 variable we can prevent calculating two times the same message
+            self.all_messages = (
+                precomp_messages.copy()
+                if precomp_messages is not None
+                else {} if get_messages or len(variables) > 1 else None
+            )
 
         def run(self):
             agg_res = {}
@@ -1377,10 +1385,10 @@ class BeliefPropagationWithMessagePassing(Inference):
                     from_factor=None,
                 )
                 agg_res[variable] = DiscreteFactor([variable], [len(res)], res)
-            if self.all_messages is None:
-                return agg_res
-            else:
+            if self.get_messages:
                 return agg_res, self.all_messages
+            else:
+                return agg_res
 
         def schedule_variable_node_messages(
             self,
@@ -1426,22 +1434,30 @@ class BeliefPropagationWithMessagePassing(Inference):
 
             if len(incoming_factors) == 0:
                 # Is an unobserved leaf variable
+                message = self.bp.model.get_uniform_message(variable)
+
                 return self.bp.calc_variable_node_message(
-                    variable, [] + virtual_messages
+                    variable, [message] + virtual_messages
                 )
             else:
                 # Else, get the incoming messages from all incoming factors
                 incoming_messages = []
                 for factor in incoming_factors:
-                    incoming_message = self.schedule_factor_node_messages(
-                        factor, variable
-                    )
-
                     if self.all_messages is not None:
-                        # Store the message if it's not already stored
+                        # Check if the message is already stored
                         factor_node_key = f"{factor.variables} -> {variable}"
-                        if factor_node_key not in self.all_messages.keys():
+                        if factor_node_key in self.all_messages.keys():
+                            incoming_message = self.all_messages[factor_node_key]
+                        else:
+                            # If not compute it and store it
+                            incoming_message = self.schedule_factor_node_messages(
+                                factor, variable
+                            )
                             self.all_messages[factor_node_key] = incoming_message
+                    else:
+                        incoming_message = self.schedule_factor_node_messages(
+                            factor, variable
+                        )
 
                     incoming_messages.append(incoming_message)
                 return self.bp.calc_variable_node_message(
@@ -1461,8 +1477,6 @@ class BeliefPropagationWithMessagePassing(Inference):
             from_variable: str
                 The variable requesting the message, as part of the recursion.
             """
-            assert from_variable is not None, "from_var must be specified"
-
             incoming_vars = [var for var in factor.variables if var != from_variable]
             if len(incoming_vars) == 0:
                 # from_var is a root variable. The factor is its prior
@@ -1471,15 +1485,34 @@ class BeliefPropagationWithMessagePassing(Inference):
                 # Else, get the incoming messages from all incoming variables
                 incoming_messages = []
                 for var in incoming_vars:
-                    incoming_messages.append(
-                        self.schedule_variable_node_messages(var, factor)
-                    )
+                    if self.all_messages is not None:
+                        # Check if the message is already stored
+                        node_factor_key = f"{var} -> {factor.variables}"
+                        if node_factor_key in self.all_messages.keys():
+                            incoming_message = self.all_messages[node_factor_key]
+                        else:
+                            # If not compute it and store it
+                            incoming_message = self.schedule_variable_node_messages(
+                                var, factor
+                            )
+                            self.all_messages[node_factor_key] = incoming_message
+                    else:
+                        incoming_message = self.schedule_variable_node_messages(
+                            var, factor
+                        )
+
+                    incoming_messages.append(incoming_message)
                 return self.bp.calc_factor_node_message(
                     factor, incoming_messages, from_variable
                 )
 
     def query(
-        self, variables, evidence=None, virtual_evidence=None, get_messages=False
+        self,
+        variables,
+        evidence=None,
+        virtual_evidence=None,
+        get_messages=False,
+        precomp_messages=None,
     ):
         """
         Computes the posterior distributions for each of the queried variable,
@@ -1495,9 +1528,17 @@ class BeliefPropagationWithMessagePassing(Inference):
             None if no evidence.
         virtual_evidence: list or None (default: None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
-            evidences. Each virtual evidence becomes a virtual message that gets added to
-            the list of computed messages incoming to the variable node.
+            evidences. Each virtual evidence for a variable node becomes a virtual message
+            that gets added to the list of computed messages incoming to that variable node.
             None if no virtual evidence.
+        get_messages: bool (default: False)
+            If True, returns all the messages that have been computed during the query
+        precomp_messages: dict or None (default: None)
+            A dict of precomputed messages to use in the query. Precomputed messages act as predefined beliefs
+            associated to a variable. E.g., use them when running multiple queries on the same graph with the
+            same evidence. The dict should contain entries in the form:
+            {"{pgmpy.factors.discrete.DiscreteFactor.variables} -> variable": np.array},
+            or {"variable -> {pgmpy.factors.discrete.DiscreteFactor.variables}": np.array}.
 
         Returns
         -------
@@ -1506,8 +1547,9 @@ class BeliefPropagationWithMessagePassing(Inference):
         If `get_messages` is True, returns:
             1. A dict of the variables, posterior distributions pairs:
             {variable: pgmpy.factors.discrete.DiscreteFactor}
-            2. A dict of all messages sent from a factor to a node:
-            {"{pgmpy.factors.discrete.DiscreteFactor.variables} -> variable": np.array}.
+            2. A dict of all messages sent across the graph, in the form:
+            {"{pgmpy.factors.discrete.DiscreteFactor.variables} -> variable": np.array}, or
+            {"variable -> {pgmpy.factors.discrete.DiscreteFactor.variables}": np.array}.
 
         Examples
         --------
@@ -1565,7 +1607,12 @@ class BeliefPropagationWithMessagePassing(Inference):
                 )
 
         query = self._RecursiveMessageSchedulingQuery(
-            self, variables, evidence, virtual_evidence, get_messages
+            self,
+            variables,
+            evidence,
+            virtual_evidence,
+            get_messages,
+            precomp_messages,
         )
         return query.run()
 
@@ -1584,13 +1631,11 @@ class BeliefPropagationWithMessagePassing(Inference):
         incoming_messages: list
             list of messages coming to this variable node
         """
-        if len(incoming_messages) == 0:
-            return self.model.get_uniform_message(variable)
-        elif len(incoming_messages) == 1:
+        if len(incoming_messages) == 1:
             return incoming_messages[0]
         else:
             outgoing_message = reduce(np.multiply, incoming_messages)
-        return outgoing_message / np.sum(outgoing_message)
+        return outgoing_message / outgoing_message.sum()
 
     @staticmethod
     def calc_factor_node_message(factor, incoming_messages, target_var):
@@ -1631,8 +1676,6 @@ class BeliefPropagationWithMessagePassing(Inference):
         incoming_messages = list(reversed(incoming_messages))
 
         # Reduce the CPT with the inverted list of incoming messages
-        outgoing_message = reduce(
-            lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt
-        )
+        outgoing_message = reduce(operator.matmul, incoming_messages, cpt)
         # Normalise
-        return outgoing_message / sum(outgoing_message)
+        return outgoing_message / outgoing_message.sum()
