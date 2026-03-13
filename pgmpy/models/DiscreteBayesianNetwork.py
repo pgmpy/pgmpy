@@ -947,7 +947,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop("B", axis=1, inplace=True)
         >>> y_prob = model.predict_probability(predict_data)
@@ -987,17 +987,21 @@ class DiscreteBayesianNetwork(DAG):
 
         model_inference = VariableElimination(self)
         for _, data_point in data.iterrows():
+            data_point_wo_nan = data_point.dropna()
+            temp_missing_variables = set(self.nodes()) - set(data_point_wo_nan.index)
             full_distribution = model_inference.query(
-                variables=missing_variables,
-                evidence=data_point.to_dict(),
+                variables=temp_missing_variables,
+                evidence=data_point_wo_nan.to_dict(),
                 show_progress=False,
             )
             states_dict = {}
-            for var in missing_variables:
+            for var in temp_missing_variables:
                 states_dict[var] = full_distribution.marginalize(
-                    missing_variables - {var}, inplace=False
+                    temp_missing_variables - {var}, inplace=False
                 )
             for k, v in states_dict.items():
+                if k not in missing_variables:
+                    continue
                 for index in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][index]
                     pred_values[k + "_" + str(state)].append(v.values[index])
