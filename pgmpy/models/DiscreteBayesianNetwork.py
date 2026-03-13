@@ -1404,40 +1404,33 @@ class DiscreteBayesianNetwork(DAG):
             )
 
         model = self if inplace else self.copy()
+        model.check_model()
         adj_model = DAG.do(model, nodes, inplace=inplace)
+        for node in nodes:
 
-        if adj_model.cpds:
-            for node in nodes:
+            node_cpd = adj_model.get_cpds(node=node)
 
-                node_cpd = adj_model.get_cpds(node=node)
-                if node_cpd is not None:
-                    if len(node_cpd.variables) > 1:
-                        parents = node_cpd.variables[1:]
-                        node_cpd.marginalize(parents, inplace=True)
+            if len(node_cpd.variables) > 1:
+                parents = node_cpd.variables[1:]
+                node_cpd.marginalize(parents, inplace=True)
 
-                children = adj_model.get_children(node)
+            children = adj_model.get_children(node)
 
-                for child in children:
-                    cpd = adj_model.get_cpds(child)
+            for child in children:
+                cpd = adj_model.get_cpds(child)
+                new_cpd = cpd.reduce([(node, 0)], inplace=False)
+                new_cpd.normalize()
+                adj_model.remove_cpds(cpd)
+                adj_model.add_cpds(new_cpd)
 
-                    if cpd is None:
-                        continue
-
-                    if node in cpd.variables[1:]:
-                        new_cpd = cpd.reduce([(node, 0)], inplace=False)
-                        if new_cpd.variables[1:]:
-                            new_cpd.evidence = [v for v in new_cpd.variables[1:]]
-                        new_cpd.normalize()
-
-                        adj_model.remove_cpds(cpd)
-                        adj_model.add_cpds(new_cpd)
         """  At first glance, it checks whether adj_model has any CPDs.
         if it does, it iterates through each node in the `nodes` list and retrieves its children.
-        for each CPD of the children, it checks if the CPD is not None.This is safty check.
+        for each CPD of the children, it retrieves the CPD of the child node from the model.
+        Since check_model() is called earlier, every node is guaranteed to have a valid CPD.This is safty check.
           If the CPD exists, it retrieves the parents of the child node from the CPD's variables
           (excluding the first variable which is the child itself).
-          If there are parents, it creates a list of evidence by setting each parent variable to state 0.(do state
-              0 is needed because after do operation, the variable will only have one state left which is 0)
+          If there are parents, it creates a list of evidence by setting the intervened parent variable to state 0.
+          This is used to remove the dependency of the child CPD on the intervened variable after the do operation.
               Then it elimates the parent variables from the CPD by reducing it with the created evidence.
                 Finally, it removes the old CPD from the model and adds the new reduced CPD to the model.
           """
