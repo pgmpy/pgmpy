@@ -191,19 +191,12 @@ def sample_discrete_maps(
     if seed is not None:
         np.random.seed(seed)
 
-    # TODO: Remove this conversion and find a way to do this natively in torch.
-    states = np.array(states)
-    weight_indices = compat_fns.to_numpy(weight_indices)
-    index_to_weight = {
-        key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()
-    }
-    size = int(size)
-
-    samples = np.zeros(size, dtype=int)
-    unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
-
+    samples = compat_fns.zeros(size, dtype=int)
+    unique_weight_indices, counts = compat_fns.unique(
+        weight_indices, return_counts=True
+    )
     for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[(weight_indices == weight_index)] = np.random.choice(
+        samples[(weight_indices == weight_index)] = compat_fns.random_choice(
             states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
         )
     return samples

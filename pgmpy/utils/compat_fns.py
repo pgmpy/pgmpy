@@ -177,3 +177,55 @@ def allclose(arr1, arr2, atol):
             arr2,
             atol=atol,
         )
+
+
+def zeros(size, dtype=None):
+    if config.get_backend() == "numpy":
+        return np.zeros(size, dtype=dtype or config.get_dtype())
+    else:
+        return torch.zeros(
+            size, dtype=dtype or config.get_dtype(), device=config.get_device()
+        )
+
+
+def random_choice(values, size=1, p=None, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+        if torch.is_tensor(p) or torch.is_tensor(values):
+            torch.manual_seed(seed)
+
+    if isinstance(values, np.ndarray) or (
+        isinstance(p, np.ndarray) if p is not None else False
+    ):
+        if isinstance(values, torch.Tensor):
+            values = to_numpy(values)
+        if p is not None and isinstance(p, torch.Tensor):
+            p = to_numpy(p)
+        return np.random.choice(values, size=size, p=p)
+
+    elif isinstance(values, torch.Tensor) or (
+        isinstance(p, torch.Tensor) if p is not None else False
+    ):
+        if not isinstance(values, torch.Tensor):
+            values = torch.tensor(
+                values, dtype=config.get_dtype(), device=config.get_device()
+            )
+
+        if p is None:
+            idx = torch.randint(
+                low=0, high=len(values), size=(size,), device=values.device
+            )
+            return values[idx]
+        else:
+            if not isinstance(p, torch.Tensor):
+                p = torch.tensor(
+                    p, dtype=config.get_dtype(), device=config.get_device()
+                )
+
+            cumsum = torch.cumsum(p, dim=0)
+            rand_vals = torch.rand(size, device=p.device)
+            idx = torch.searchsorted(cumsum, rand_vals)
+            return values[idx]
+
+    else:
+        return np.random.choice(values, size=size, p=p)
