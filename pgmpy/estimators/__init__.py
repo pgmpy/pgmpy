@@ -18,6 +18,7 @@ from pgmpy.estimators.StructureScore import (
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
+from pgmpy.estimators.NOTEARS import NOTEARS
 from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
@@ -37,6 +38,7 @@ __all__ = [
     "ExpertKnowledge",
     "ExhaustiveSearch",
     "HillClimbSearch",
+    "NOTEARS",
     "TreeSearch",
     "StructureScore",
     "K2",

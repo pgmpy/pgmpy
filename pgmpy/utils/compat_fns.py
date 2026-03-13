@@ -3,6 +3,8 @@
 from copy import deepcopy
 
 import numpy as np
+import torch
+from scipy.linalg import expm
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
@@ -177,3 +179,17 @@ def allclose(arr1, arr2, atol):
             arr2,
             atol=atol,
         )
+
+
+def matrix_exp(arr):
+    if isinstance(arr, np.ndarray):
+        return expm(arr * arr)
+    else:
+        return torch.matrix_exp(arr * arr)
+
+
+def concatenate(arr1, arr2):
+    if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
+        return np.concatenate((arr1, arr2), axis=None)
+    else:
+        return torch.concatenate((arr1, arr2), dim=0)
