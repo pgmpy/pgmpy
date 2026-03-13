@@ -376,8 +376,3 @@ def test_load_model_invalid_name():
 def test_list_models_invalid_tag():
     with pytest.raises(ValueError, match="Invalid filter tag"):
         list_models(invalid_tag=True)
-```
-
-Commit message:
-```
-test: add test for invalid filter tag in list_models
