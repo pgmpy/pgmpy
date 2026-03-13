@@ -16,19 +16,15 @@ from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
-from pgmpy.utils import get_example_model
+from pgmpy.utils import compat_fns, get_example_model
 
 
 @pytest.fixture(params=["numpy", "torch"], autouse=True)
 def backend(request):
     if request.param == "torch":
-        if "no_torch" in request.node.keywords:
-            pytest.skip("Test not supported for torch backend")
-
         if not _check_soft_dependencies("torch", severity="none"):
             pytest.skip("torch not installed")
 
-        request.node.add_marker(pytest.mark.torch)
         config.set_backend("torch")
 
     yield request.param
@@ -1019,14 +1015,15 @@ class _TestHash:
 
 
 class TestTabularCPDInit:
-    @pytest.mark.no_torch
     def test_cpd_init(self):
         cpd = TabularCPD("grade", 3, [[0.1], [0.1], [0.1]])
         assert cpd.variable == "grade"
         assert cpd.variable_card == 3
         assert list(cpd.variables) == ["grade"]
         np_test.assert_array_equal(cpd.cardinality, np.array([3]))
-        np_test.assert_array_almost_equal(cpd.values, np.array([0.1, 0.1, 0.1]))
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(cpd.values), np.array([0.1, 0.1, 0.1])
+        )
 
         values = [
             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -1055,8 +1052,8 @@ class TestTabularCPDInit:
                     assert cpd.variable_card == 3
                     np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
                     assert list(cpd.variables) == ["grade", "intel", "diff"]
-                    np_test.assert_array_equal(
-                        cpd.values,
+                    np_test.assert_almost_equal(
+                        compat_fns.to_numpy(cpd.values),
                         np.array(
                             [
                                 0.1,
@@ -1092,8 +1089,9 @@ class TestTabularCPDInit:
         assert cpd.variable_card == 3
         np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
         assert list(cpd.variables), ["grade" == "evi1"]
-        np_test.assert_array_equal(
-            cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2)
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(cpd.values),
+            np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2),
         )
 
     def test_cpd_init_event_card_not_int(self):
@@ -2944,12 +2942,11 @@ class TestTabularCPDMethods:
         copy_cpd = self.cpd.copy()
         np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
 
-    @pytest.mark.no_torch
     def test_copy_original_safe(self):
         copy_cpd = self.cpd.copy()
         copy_cpd.reorder_parents(["diff", "intel"])
-        np_test.assert_array_equal(
-            self.cpd.get_values(),
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(self.cpd.get_values()),
             np.array(
                 [
                     [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -2993,10 +2990,9 @@ class TestTabularCPDMethods:
         self.cpd.reduce([("diff", "high")])
         np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
-    @pytest.mark.no_torch
     def test_get_values(self):
-        np_test.assert_array_equal(
-            self.cpd.get_values(),
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(self.cpd.get_values()),
             np.array(
                 [
                     [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -3006,11 +3002,10 @@ class TestTabularCPDMethods:
             ),
         )
 
-    @pytest.mark.no_torch
     def test_reorder_parents_inplace(self):
         new_vals = self.cpd2.reorder_parents(["B", "A", "C"])
-        np_test.assert_array_equal(
-            new_vals,
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(new_vals),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3018,8 +3013,8 @@ class TestTabularCPDMethods:
                 ]
             ),
         )
-        np_test.assert_array_equal(
-            self.cpd2.get_values(),
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(self.cpd2.get_values()),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3028,11 +3023,10 @@ class TestTabularCPDMethods:
             ),
         )
 
-    @pytest.mark.no_torch
     def test_reorder_parents(self):
         new_vals = self.cpd2.reorder_parents(["B", "A", "C"])
-        np_test.assert_array_equal(
-            new_vals,
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(new_vals),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3041,11 +3035,10 @@ class TestTabularCPDMethods:
             ),
         )
 
-    @pytest.mark.no_torch
     def test_reorder_parents_no_effect(self):
         self.cpd2.reorder_parents(["C", "A", "B"], inplace=False)
-        np_test.assert_array_equal(
-            self.cpd2.get_values(),
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(self.cpd2.get_values()),
             np.array(
                 [
                     [0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
@@ -3054,13 +3047,12 @@ class TestTabularCPDMethods:
             ),
         )
 
-    @pytest.mark.no_torch
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True):
+        with warnings.catch_warnings(record=True) as _:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
-            np_test.assert_array_equal(
-                self.cpd2.get_values(),
+            np_test.assert_almost_equal(
+                compat_fns.to_numpy(self.cpd2.get_values()),
                 np.array(
                     [
                         [0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
@@ -3205,12 +3197,11 @@ class TestTabularCPDMethods:
         del self.cpd
 
 
-@pytest.mark.no_torch
 class TestJointProbabilityDistributionInit:
     def test_jpd_init(self):
         jpd = JPD(["x1", "x2", "x3"], [2, 3, 2], np.ones(12) / 12)
         np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
-        np_test.assert_array_equal(jpd.values, np.ones(12).reshape(2, 3, 2) / 12)
+        np_test.assert_array_almost_equal(jpd.values, np.ones(12).reshape(2, 3, 2) / 12)
         assert jpd.get_cardinality(["x1", "x2", "x3"]) == {"x1": 2, "x2": 3, "x3": 2}
 
     def test_jpd_init_exception(self):
@@ -3218,7 +3209,6 @@ class TestJointProbabilityDistributionInit:
             JPD(["x1", "x2", "x3"], [2, 2, 2], np.ones(8))
 
 
-@pytest.mark.no_torch
 class TestJointProbabilityDistributionMethods:
     def setup_method(self):
         self.jpd = JPD(["x1", "x2", "x3"], [2, 3, 2], values=np.ones(12) / 12)
@@ -3271,7 +3261,7 @@ class TestJointProbabilityDistributionMethods:
         dic = {"x1": 2, "x2": 3}
         assert self.jpd.get_cardinality(["x1", "x2"]) == dic
         assert self.jpd.scope(), ["x1" == "x2"]
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        np_test.assert_almost_equal(np.sum(compat_fns.to_numpy(self.jpd.values)), 1)
         new_jpd = self.jpd1.marginal_distribution(["x1", "x2"], inplace=False)
         assert self.jpd1 != self.jpd
         assert new_jpd == self.jpd
@@ -3281,7 +3271,7 @@ class TestJointProbabilityDistributionMethods:
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
         assert self.jpd.scope() == ["x1"]
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        np_test.assert_almost_equal(np.sum(compat_fns.to_numpy(self.jpd.values)), 1)
         new_jpd = self.jpd1.marginal_distribution("x1", inplace=False)
         assert self.jpd1 != self.jpd
         assert self.jpd == new_jpd
@@ -3292,7 +3282,7 @@ class TestJointProbabilityDistributionMethods:
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
         assert self.jpd.scope() == ["x3"]
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        np_test.assert_almost_equal(np.sum(compat_fns.to_numpy(self.jpd.values)), 1)
         new_jpd = self.jpd1.conditional_distribution(
             [("x1", 1), ("x2", 0)], inplace=False
         )
