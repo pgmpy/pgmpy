@@ -3,7 +3,7 @@
 from collections import defaultdict
 from itertools import chain
 
-import numpy as np
+from skbase.base import BaseObject
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
@@ -16,7 +16,13 @@ from pgmpy.models import (
 from pgmpy.utils import compat_fns
 
 
-class Inference(object):
+class BaseInference(BaseObject):
+    """Base class for all inference algorithms in pgmpy."""
+
+    pass
+
+
+class Inference(BaseInference):
     """
     Base class for all inference algorithms.
 
