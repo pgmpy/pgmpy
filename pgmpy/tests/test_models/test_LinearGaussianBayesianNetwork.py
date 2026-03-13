@@ -162,7 +162,7 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(pd.DataFrame([evidence]))
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]
@@ -339,17 +339,75 @@ class TestLGBNMethods(unittest.TestCase):
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
-        df = df.drop("x2", axis=1)
-        variables, mu, cov = self.model.predict(df)
-        self.assertEqual(variables, ["x2"])
-        self.assertEqual(mu.shape, (10, 1))
+        df_missing = df.drop("x2", axis=1)
+        
+        # Test new predict method - returns DataFrame with MAP estimates
+        predictions = self.model.predict(df_missing)
+        self.assertEqual(predictions.shape, (10, 3))  # Should have all variables
+        self.assertTrue("x2" in predictions.columns)
         self.assertTrue(
             np.allclose(
-                mu.round(2).squeeze(),
+                predictions["x2"].round(2),
                 [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
             )
         )
-        self.assertEqual(cov.round(2).squeeze(), 5.76)
+
+    def test_predict_probability_simple(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df_missing = df.drop(["yceP", "yheI", "cspA"], axis=1)
+        
+        # Test new predict method - returns DataFrame with MAP estimates
+        predictions = model.predict(df_missing)
+        self.assertEqual(predictions.shape, (10, 46))  # Should have all 46 variables
+        self.assertTrue(all(var in predictions.columns for var in ["yceP", "yheI", "cspA"]))
+        
+        # calculated by saving df to csv and using R to predict
+        # model is loaded from bnlearn, impute function from bnlearn to generate true values
+        true_data = {
+            "yceP": [
+                0.9355,
+                -0.6,
+                0.9173,
+                1.377,
+                -0.0277,
+                0.9375,
+                0.3736,
+                3.2211,
+                1.335,
+                0.5562,
+            ],
+            "yheI": [
+                1.4243,
+                3.3746,
+                2.9019,
+                -0.2351,
+                0.4836,
+                3.5011,
+                -0.3094,
+                1.909,
+                0.7434,
+                1.4975,
+            ],
+            "cspA": [
+                1.7982,
+                0.1066,
+                -1.245,
+                -0.2534,
+                1.1994,
+                0.8585,
+                -0.2137,
+                0.9671,
+                0.0418,
+                1.6395,
+            ],
+        }
+        for var_name in ["yceP", "yheI", "cspA"]:
+            self.assertTrue(
+                np.allclose(
+                    predictions[var_name].round(1),
+                    np.array(true_data[var_name]).round(1),
+                )
+            )
 
     def test_predict_ecoli(self):
         model = get_example_model("ecoli70")
@@ -405,6 +463,122 @@ class TestLGBNMethods(unittest.TestCase):
                     np.array(true_data[var_name]).round(1),
                 )
             )
+
+        def test_predict_probability_ecoli(self):
+            model = get_example_model("ecoli70")
+            df = model.simulate(n_samples=int(10), seed=18)
+            df_missing = df.drop(["yceP", "yheI", "cspA"], axis=1)
+            
+            # Test predict_probability method - returns the old predict behavior
+            variables, mu, cov = model.predict_probability(df_missing)
+            self.assertEqual(set(variables), set(["yceP", "yheI", "cspA"]))
+            self.assertEqual(mu.shape, (10, 3))
+            
+            # calculated by saving df to csv and using R to predict
+            # model is loaded from bnlearn, impute function from bnlearn to generate true values
+            true_data = {
+                "yceP": [
+                    0.9355,
+                    -0.6,
+                    0.9173,
+                    1.377,
+                    -0.0277,
+                    0.9375,
+                    0.3736,
+                    3.2211,
+                    1.335,
+                    0.5562,
+                ],
+                "yheI": [
+                    1.4243,
+                    3.3746,
+                    2.9019,
+                    -0.2351,
+                    0.4836,
+                    3.5011,
+                    -0.3094,
+                    1.909,
+                    0.7434,
+                    1.4975,
+                ],
+                "cspA": [
+                    1.7982,
+                    0.1066,
+                    -1.245,
+                    -0.2534,
+                    1.1994,
+                    0.8585,
+                    -0.2137,
+                    0.9671,
+                    0.0418,
+                    1.6395,
+                ],
+            }
+            for idx, var_name in enumerate(variables):
+                self.assertTrue(
+                    np.allclose(
+                        mu.round(1)[:, idx].squeeze(),
+                        np.array(true_data[var_name]).round(1),
+                    )
+                )
+
+        def test_predict_consistency(self):
+            """Test that predict and predict_probability return consistent results."""
+            self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+            df = self.model.simulate(n_samples=int(5), seed=42)
+            df_missing = df.drop("x2", axis=1)
+            
+            # Get results from both methods
+            predictions = self.model.predict(df_missing)
+            variables, mu, cov = self.model.predict_probability(df_missing)
+            
+            # The means from predict_probability should match the values in predict DataFrame
+            self.assertTrue(
+                np.allclose(
+                    predictions["x2"].values,
+                    mu.squeeze()
+                )
+            )
+
+    def test_predict_errors(self):
+        """Test error handling for predict method."""
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(5), seed=42)
+        
+        # Test error when no variables are missing
+        with self.assertRaises(ValueError):
+            self.model.predict(df)
+            
+        # Test error when data has variables not in model
+        df_extra = df.copy()
+        df_extra["extra_var"] = [1, 2, 3, 4, 5]
+        with self.assertRaises(ValueError):
+            self.model.predict(df_extra.drop("x2", axis=1))
+
+    def test_predict_probability_errors(self):
+        """Test error handling for predict_probability method."""
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(5), seed=42)
+        
+        # Test error when no variables are missing
+        with self.assertRaises(ValueError):
+            self.model.predict_probability(df)
+
+    def test_predict_multiple_missing(self):
+        """Test predict with multiple missing variables."""
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(5), seed=42)
+        df_missing = df.drop(["x2", "x3"], axis=1)
+        
+        predictions = self.model.predict(df_missing)
+        self.assertEqual(predictions.shape, (5, 3))
+        self.assertTrue(all(var in predictions.columns for var in ["x1", "x2", "x3"]))
+        
+        # Test predict_probability for multiple missing variables
+        variables, mu, cov = self.model.predict_probability(df_missing)
+        self.assertEqual(set(variables), {"x2", "x3"})
+        self.assertEqual(mu.shape, (5, 2))
+        self.assertEqual(cov.shape, (2, 2))        
 
     def test_get_random_cpds(self):
         model = get_example_model("alarm")

@@ -694,7 +694,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df_evidence = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+            missing_vars, mean_cond, cov_cond = model.predict_probability(data=df_evidence)
 
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
@@ -877,14 +877,67 @@ class LinearGaussianBayesianNetwork(DAG):
         self.add_cpds(*cpds)
         return self
 
-    def predict(
-        self, data: pd.DataFrame, distribution: str = "joint"
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predicts states of all the missing variables using MAP estimation.
+
+        For LinearGaussianBayesianNetwork, MAP estimates are the conditional means.
+        Returns a DataFrame with the same structure as input but with missing
+        variables filled with their predicted values.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            DataFrame with a subset of model variables observed.
+            The dataframe with missing variables which to predict.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with missing variables filled with their MAP estimates
+            (conditional means for Gaussian variables).
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n_samples=5)
+        >>> df_missing = df.drop(columns=["folK"])
+        >>> predictions = model.predict(df_missing)
+        >>> predictions.shape
+        (5, 46)
+        """
+        # Validate input data
+        if set(data.columns) == set(self.nodes()):
+            raise ValueError("No missing variables in the data")
+
+        elif set(data.columns) - set(self.nodes()):
+            raise ValueError("Data has variables which are not in the model")
+        
+        # Use predict_probability internally to get the conditional distribution
+        missing_vars, mu_cond, _ = self.predict_probability(data)
+
+        # Create a copy of the input data
+        result = data.copy()
+
+        # Fill in the missing variables with their conditional means (MAP estimates)
+        for i, var in enumerate(missing_vars):
+            result[var] = mu_cond[:, i]
+
+        # Reorder columns to match the original node order if possible
+        all_nodes = list(self.nodes())
+        existing_cols = [col for col in all_nodes if col in result.columns]
+        result = result[existing_cols]
+
+        return result
+    
+    def predict_probability(
+        self, data: pd.DataFrame
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
-        Predicts the conditional distribution of missing variables
-
-        Predicts the distribution of the missing variable (i.e. missing
-        columns) in the given dataset and returns its mean and covariance.
+        Predicts the conditional probability distribution of missing variables.
+        Returns the full conditional Gaussian distribution over missing variables.
+        This method returns the mean and covariance of the conditional distribution.
 
         Parameters
         ----------
@@ -911,8 +964,13 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model = get_example_model("ecoli70")
         >>> df = model.simulate(n_samples=5)
         >>> df = df.drop(columns=["folK"], axis=1)
-        >>> model.predict(df)
-        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
+        >>> missing_vars, mu, cov = model.predict_probability(df)
+        >>> missing_vars
+        ['folK']
+        >>> mu.shape
+        (5, 1)
+        >>> cov.shape
+        (1, 1)
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -936,8 +994,7 @@ class LinearGaussianBayesianNetwork(DAG):
         cov_bb = cov[
             np.ix_(observed_indexes, observed_indexes)
         ]  # Full |b|×|b| submatrix
-        cov_ab = cov[
-            np.ix_(missing_indexes, observed_indexes)
+        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)
         ]  # Full |a|×|b| submatrix
 
         # Step 2: Compute the conditional distributions
