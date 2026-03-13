@@ -81,7 +81,7 @@ class DiscreteMixin:
 class BIFMixin:
     """
     Mixin class for loading discrete Bayesian networks from plain (non-gzipped) BIF files.
-    """
+        """
 
     @classmethod
     def load_model_object(cls):
@@ -208,6 +208,11 @@ def list_models(**filter_tags) -> list[str]:
     >>> list_models(is_parameterized=False)
     ['dagitty/acid_1996', ...., ]
     """
+    valid_tags = set(_BaseExampleModel._tags.keys())
+    invalid = set(filter_tags.keys()) - valid_tags
+    if invalid:
+        raise ValueError(f"Invalid filter tag(s): {invalid}. Valid tags are: {valid_tags}")
+
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
