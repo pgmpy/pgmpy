@@ -9,6 +9,7 @@ from pgmpy.estimators import ExpertKnowledge
 ALL_DATASETS = [
     "abalone_continuous",
     "abalone_mixed",
+    "acic_2016",
     "adult",
     "airfoil",
     "angrist_krueger_qob",
