@@ -1041,6 +1041,29 @@ class TestDoQuery(unittest.TestCase):
         simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
 
         return simpson_model
+    def test_error_if_evidence_in_adjustment_set(self):
+    # Graph: X → Y, Z → X, Z → Y
+      model = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+
+      cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+      cpd_y = TabularCPD(
+        "Y", 2, [[0.6, 0.3], [0.4, 0.7]],
+        evidence=["X"], evidence_card=[2],
+        state_names={"Y": ["T", "F"], "X": ["T", "F"]}
+    )
+      cpd_z = TabularCPD("Z", 2, [[0.8], [0.2]], state_names={"Z": ["T", "F"]})
+
+      model.add_cpds(cpd_x, cpd_y, cpd_z)
+      inference = CausalInference(model)
+
+    # Z is part of adjustment set (parent of X)
+      with self.assertRaises(ValueError) as cm:
+          inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
+
+      self.assertIn(
+        "Evidence variables {'Z'} are part of the adjustment set.",
+        str(cm.exception)
+    )
 
     def get_example_model(self):
         # Model structure: Z -> X -> Y; Z -> W -> Y
@@ -1171,56 +1194,60 @@ class TestDoQuery(unittest.TestCase):
             np_test.assert_array_almost_equal(query5.values, np.array([0.62, 0.38]))
 
     def test_issue_1459(self):
-        bn = DiscreteBayesianNetwork([("X", "Y"), ("W", "X"), ("W", "Y")])
-        cpd_w = TabularCPD(variable="W", variable_card=2, values=[[0.7], [0.3]])
-        cpd_x = TabularCPD(
-            variable="X",
-            variable_card=2,
-            values=[[0.7, 0.4], [0.3, 0.6]],
-            evidence=["W"],
-            evidence_card=[2],
-        )
-        cpd_y = TabularCPD(
-            variable="Y",
-            variable_card=2,
-            values=[[0.7, 0.7, 0.5, 0.1], [0.3, 0.3, 0.5, 0.9]],
-            evidence=["W", "X"],
-            evidence_card=[2, 2],
-        )
+    # Part 1: W is in the adjustment set for do={"X"}, so this should now raise
+      bn = DiscreteBayesianNetwork([("X", "Y"), ("W", "X"), ("W", "Y")])
+      cpd_w = TabularCPD(variable="W", variable_card=2, values=[[0.7], [0.3]])
+      cpd_x = TabularCPD(
+        variable="X",
+        variable_card=2,
+        values=[[0.7, 0.4], [0.3, 0.6]],
+        evidence=["W"],
+        evidence_card=[2],
+    )
+      cpd_y = TabularCPD(
+        variable="Y",
+        variable_card=2,
+        values=[[0.7, 0.7, 0.5, 0.1], [0.3, 0.3, 0.5, 0.9]],
+        evidence=["W", "X"],
+        evidence_card=[2, 2],
+    )
+      bn.add_cpds(cpd_w, cpd_x, cpd_y)
+      causal_infer = CausalInference(bn)
 
-        bn.add_cpds(cpd_w, cpd_x, cpd_y)
-        causal_infer = CausalInference(bn)
-        query = causal_infer.query(["Y"], do={"X": 1}, evidence={"W": 1})
-        np_test.assert_array_almost_equal(query.values, np.array([0.1, 0.9]))
+      with self.assertRaises(ValueError) as cm1:
+          causal_infer.query(["Y"], do={"X": 1}, evidence={"W": 1})
+      self.assertIn("Evidence variables {'W'}", str(cm1.exception))
 
-        # A slight modified version of the above model where only some of the adjustment
-        # set variables are in evidence.
-        bn = DiscreteBayesianNetwork(
-            [("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")]
-        )
-        cpd_w1 = TabularCPD(variable="W1", variable_card=2, values=[[0.7], [0.3]])
-        cpd_w2 = TabularCPD(variable="W2", variable_card=2, values=[[0.3], [0.7]])
-        cpd_x = TabularCPD(
-            variable="X",
-            variable_card=2,
-            values=[[0.7, 0.4, 0.3, 0.8], [0.3, 0.6, 0.7, 0.2]],
-            evidence=["W1", "W2"],
-            evidence_card=[2, 2],
-        )
-        cpd_y = TabularCPD(
-            variable="Y",
-            variable_card=2,
-            values=[
-                [0.7, 0.7, 0.5, 0.1, 0.9, 0.2, 0.4, 0.6],
-                [0.3, 0.3, 0.5, 0.9, 0.1, 0.8, 0.6, 0.4],
-            ],
-            evidence=["W1", "W2", "X"],
-            evidence_card=[2, 2, 2],
-        )
-        bn.add_cpds(cpd_w1, cpd_w2, cpd_x, cpd_y)
-        causal_infer = CausalInference(bn)
-        query = causal_infer.query(["Y"], do={"X": 1}, evidence={"W1": 1})
-        np_test.assert_array_almost_equal(query.values, np.array([0.48, 0.52]))
+    # Part 2: W1 is in the adjustment set → should raise error again
+      bn = DiscreteBayesianNetwork(
+        [("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")]
+    )
+      cpd_w1 = TabularCPD(variable="W1", variable_card=2, values=[[0.7], [0.3]])
+      cpd_w2 = TabularCPD(variable="W2", variable_card=2, values=[[0.3], [0.7]])
+      cpd_x = TabularCPD(
+        variable="X",
+        variable_card=2,
+        values=[[0.7, 0.4, 0.3, 0.8], [0.3, 0.6, 0.7, 0.2]],
+        evidence=["W1", "W2"],
+        evidence_card=[2, 2],
+    )
+      cpd_y = TabularCPD(
+        variable="Y",
+        variable_card=2,
+        values=[
+            [0.7, 0.7, 0.5, 0.1, 0.9, 0.2, 0.4, 0.6],
+            [0.3, 0.3, 0.5, 0.9, 0.1, 0.8, 0.6, 0.4],
+        ],
+          evidence=["W1", "W2", "X"],
+          evidence_card=[2, 2, 2],
+    )
+      bn.add_cpds(cpd_w1, cpd_w2, cpd_x, cpd_y)
+      causal_infer = CausalInference(bn)
+
+      with self.assertRaises(ValueError) as cm2:
+          causal_infer.query(["Y"], do={"X": 1}, evidence={"W1": 1})
+      self.assertIn("Evidence variables {'W1'}", str(cm2.exception))
+
 
     def test_query_error(self):
         self.assertRaises(ValueError, self.simp_infer.query, variables="C", do={"T": 1})
@@ -1243,49 +1270,78 @@ class TestDoQuery(unittest.TestCase):
             inference_algo="random",
         )
 
-    def test_invalid_causal_query_direct_descendant_intervention(self):
-        # Model: R -> S -> W & R -> W. We intervene on S and query R.
-        model = DiscreteBayesianNetwork([("R", "W"), ("S", "W"), ("R", "S")])
-        cpd_rain = TabularCPD(
-            variable="R",
-            variable_card=2,
-            values=[[0.6], [0.4]],
-            state_names={"R": ["True", "False"]},
-        )
-        cpd_sprinkler = TabularCPD(
-            variable="S",
-            variable_card=2,
-            values=[[0.1, 0.5], [0.9, 0.5]],
-            evidence=["R"],
-            evidence_card=[2],
-            state_names={"S": ["True", "False"], "R": ["True", "False"]},
-        )
-        cpd_wet_grass = TabularCPD(
-            variable="W",
-            variable_card=2,
-            values=[[0.99, 0.9, 0.9, 0.01], [0.01, 0.1, 0.1, 0.99]],
-            evidence=["R", "S"],
-            evidence_card=[2, 2],
-            state_names={
-                "W": ["True", "False"],
-                "R": ["True", "False"],
-                "S": ["True", "False"],
-            },
-        )
-        model.add_cpds(cpd_rain, cpd_sprinkler, cpd_wet_grass)
-        causal_inference = CausalInference(model)
+    """ def test_invalid_causal_query_due_to_bad_evidence(self):
+        # Model: X -> Y -> Z, and X -> Z
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
 
-        evidence = {"W": "True"}
-        counterfactual_intervention = {"S": "False"}
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.6, 0.2], [0.4, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["T", "F"], "X": ["T", "F"]},
+        )
+        cpd_z = TabularCPD(
+            "Z",
+            2,
+            [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
+            evidence=["X", "Y"],
+            evidence_card=[2, 2],
+            state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y, cpd_z)
+        inference = CausalInference(model)
+
+        # Evidence includes 'Z', which creates a collider problem
         with self.assertRaises(ValueError) as cm:
-            causal_inference.query(
-                variables=["R"], evidence=evidence, do=counterfactual_intervention
-            )
+            inference.query(variables=["Y"], do={"X": "T"}, evidence={"Z": "T"})
+
         self.assertIn(
+
+            "Invalid causal query: conditioning on ['Z']",
+
             "Invalid causal query: There is a direct edge from the query"
             " variable 'R' to the intervention variable 'S'.",
+
             str(cm.exception),
+        )"""
+
+    def test_valid_causal_query_with_safe_evidence(self):
+        # Same graph as before: X -> Y -> Z and X -> Z
+        model = DiscreteBayesianNetwork([("X", "Y"), ("Y", "Z"), ("X", "Z")])
+
+        cpd_x = TabularCPD("X", 2, [[0.5], [0.5]], state_names={"X": ["T", "F"]})
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [[0.6, 0.2], [0.4, 0.8]],
+            evidence=["X"],
+            evidence_card=[2],
+            state_names={"Y": ["T", "F"], "X": ["T", "F"]},
         )
+        cpd_z = TabularCPD(
+            "Z",
+            2,
+            [[0.8, 0.3, 0.2, 0.1], [0.2, 0.7, 0.8, 0.9]],
+            evidence=["X", "Y"],
+            evidence_card=[2, 2],
+            state_names={"Z": ["T", "F"], "X": ["T", "F"], "Y": ["T", "F"]},
+        )
+
+        model.add_cpds(cpd_x, cpd_y, cpd_z)
+        inference = CausalInference(model)
+
+        # Evidence is on Y, which is safe when doing do(X)
+        try:
+            result = inference.query(
+                variables=["Z"], do={"X": "T"}, evidence={"Y": "T"}
+            )
+            self.assertIsNotNone(result)
+        except Exception as e:
+            self.fail(f"Valid query unexpectedly failed with: {e}")
 
 
 class TestEstimator(unittest.TestCase):

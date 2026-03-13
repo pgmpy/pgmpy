@@ -1036,13 +1036,30 @@ class CausalInference(object):
             )
 
         if do:
-            for var, do_var in product(variables, do):
-                if do_var in nx.descendants(self.dag, var):
+            if do and evidence:
+                do_vars = set(do.keys())
+
+                if adjustment_set is None:
+                    adjustment_set = set(
+                        chain(*[self.model.predecessors(var) for var in do_vars])
+                    )
+                    if len(adjustment_set.intersection(self.model.latents)) != 0:
+                        raise ValueError(
+                            "Not all parents of do variables are observed. Please specify an adjustment set."
+                        )
+
+                overlap = set(evidence).intersection(adjustment_set)
+                if overlap:
                     raise ValueError(
+
+                        f"Evidence variables {overlap} are part of the adjustment set. "
+                        "Please remove them from evidence or specify a different adjustment set."
+
                         f"Invalid causal query: There is a direct edge from the query variable"
                         f" '{var}' to the intervention variable '{do_var}'. "
                         f"In causal inference, you can typically only query the effect on variables"
                         f" that are descendants of the intervention."
+
                     )
 
         from pgmpy.inference import Inference
@@ -1061,7 +1078,7 @@ class CausalInference(object):
                 f"instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
-        # Step 2: Check if adjustment set is provided, otherwise try calculating it.
+        # Checking if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
             adjustment_set = set(
@@ -1074,21 +1091,17 @@ class CausalInference(object):
 
         infer = inference_algo(self.model)
 
-        # Step 3.1: If no do variable specified, do a normal probabilistic inference.
+        # If no do variable specified, do a normal probabilistic inference.
         if do == {}:
             return infer.query(variables, evidence, show_progress=False)
-        # Step 3.2: If no adjustment is required, do a normal probabilistic
+        # If no adjustment is required, do a normal probabilistic
         #           inference with do variables as the evidence.
         elif len(adjustment_set) == 0:
             evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
-        # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
         values = []
 
-        # Step 4.1: Compute p_z and states of z to iterate over.
-        # For computing p_z, if evidence variables also in adjustment set,
-        # manually do reduce else inference will throw error.
         evidence_adj_inter = {
             var: state
             for var, state in evidence.items()
@@ -1123,7 +1136,7 @@ class CausalInference(object):
             else:
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
-        # Step 4.2: Iterate over states of adjustment set and compute values.
+        #  Iterate over states of adjustment set and compute values.
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
