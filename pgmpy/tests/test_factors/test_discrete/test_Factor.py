@@ -21,14 +21,15 @@ from pgmpy.utils import compat_fns, get_example_model
 
 @pytest.fixture(params=["numpy", "torch"], autouse=True)
 def backend(request):
+    prev_backend = config.get_backend()
     if request.param == "torch":
         if not _check_soft_dependencies("torch", severity="none"):
             pytest.skip("torch not installed")
-
         config.set_backend("torch")
-
+    elif request.param == "numpy":
+        config.set_backend("numpy")
     yield request.param
-    config.set_backend("numpy")
+    config.set_backend(prev_backend)
 
 
 class TestFactorInit:
