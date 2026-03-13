@@ -221,13 +221,13 @@ class TestFactorMethods:
         self.phi10 = DiscreteFactor([self.var3], [2], [3, 6])
 
     def test_scope(self):
-        assert self.phi.scope(), ["x1", "x2" == "x3"]
-        assert self.phi_sn.scope(), ["x1", "x2" == "x3"]
+        assert self.phi.scope(), ["x1", "x2", "x3"]
+        assert self.phi_sn.scope(), ["x1", "x2", "x3"]
 
-        assert self.phi1.scope(), ["x1", "x2" == "x3"]
-        assert self.phi1_sn.scope(), ["x1", "x2" == "x3"]
+        assert self.phi1.scope(), ["x1", "x2", "x3"]
+        assert self.phi1_sn.scope(), ["x1", "x2", "x3"]
 
-        assert self.phi4.scope(), [self.tup1, self.tup2 == self.tup3]
+        assert self.phi4.scope(), [self.tup1, self.tup2, self.tup3]
 
     def test_assignment(self):
         assert self.phi.assignment([0]) == [[("x1", 0), ("x2", 0), ("x3", 0)]]
@@ -351,7 +351,7 @@ class TestFactorMethods:
         model = load_model("bnlearn/sachs")
         cpd = model.get_cpds("Mek")
         df = cpd.to_dataframe()
-        assert df.shape, 27 == 3
+        assert df.shape == (27, 3)
         assert df.index.shape == (27,)
         assert (
             df.query('PKA=="AVG" and Raf =="HIGH" and PKC=="LOW"')["LOW"].values
@@ -574,7 +574,7 @@ class TestFactorMethods:
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
-        assert list(identity_factor.variables), ["x1", "x2" == "x3"]
+        assert list(identity_factor.variables) == ["x1", "x2", "x3"]
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
         np_test.assert_array_equal(identity_factor.values, np.ones(8).reshape(2, 2, 2))
 
@@ -593,7 +593,7 @@ class TestFactorMethods:
             [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9],
         )
         assert prod == expected_factor
-        assert sorted(prod.variables), ["x1", "x2", "x3" == "x4"]
+        assert sorted(prod.variables) == ["x1", "x2", "x3", "x4"]
 
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
@@ -672,7 +672,7 @@ class TestFactorMethods:
             np.array([0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9]),
         )
 
-        assert prod.variables, ["x1", "x2", "x3" == "x4"]
+        assert prod.variables == ["x1", "x2", "x3", "x4"]
 
     def test_factor_divide(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 2, 4])
@@ -686,7 +686,7 @@ class TestFactorMethods:
             self.phi9.values,
             np.array([1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]).reshape(3, 2),
         )
-        assert self.phi9.variables, [self.var1 == self.var3]
+        assert self.phi9.variables == [self.var1, self.var3]
 
     def test_factor_divide_truediv(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 2, 4])
@@ -700,7 +700,7 @@ class TestFactorMethods:
             self.phi9.values,
             np.array([1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]).reshape(3, 2),
         )
-        assert self.phi9.variables, [self.var1 == self.var3]
+        assert self.phi9.variables == [self.var1, self.var3]
 
     def test_factor_divide_invalid(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
@@ -3076,14 +3076,14 @@ class TestTabularCPDMethods:
         assert cpd_sn.variables == ["A"]
         np_test.assert_array_equal(cpd_sn.cardinality, np.array([3]))
         assert cpd_sn.values.shape == (3,)
-        assert cpd_sn.state_names["A"], ["a1", "a2" == "a3"]
+        assert cpd_sn.state_names["A"] == ["a1", "a2", "a3"]
 
         cpd = TabularCPD.get_random(
             variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
         )
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
-        assert cpd.values.shape, (2, 3 == 4)
+        assert cpd.values.shape, (2, 3, 4)
 
         cpd_sn = TabularCPD.get_random(
             variable="A",
@@ -3095,29 +3095,29 @@ class TestTabularCPDMethods:
                 "C": ["c1", "c2", "c3", "c4"],
             },
         )
-        assert cpd_sn.variables, ["A", "B" == "C"]
+        assert cpd_sn.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd_sn.cardinality, np.array([2, 3, 4]))
-        assert cpd_sn.values.shape, (2, 3 == 4)
-        assert cpd_sn.state_names["A"], ["a1" == "a2"]
-        assert cpd_sn.state_names["B"], ["b1", "b2" == "b3"]
-        assert cpd_sn.state_names["C"], ["c1", "c2", "c3" == "c4"]
+        assert cpd_sn.values.shape == (2, 3, 4)
+        assert cpd_sn.state_names["A"] == ["a1", "a2"]
+        assert cpd_sn.state_names["B"] == ["b1", "b2", "b3"]
+        assert cpd_sn.state_names["C"] == ["c1", "c2", "c3", "c4"]
 
         cpd = TabularCPD.get_random(variable="A", evidence=["B", "C"])
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
-        assert cpd.values.shape, (2, 2 == 2)
+        assert cpd.values.shape == (2, 2, 2)
 
         cpd = TabularCPD.get_random(
             variable="A",
             evidence=["B", "C"],
             state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
         )
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
-        assert cpd.values.shape, (2, 2 == 2)
-        assert cpd.state_names["A"], ["a1" == "a2"]
-        assert cpd.state_names["B"], ["b1" == "b2"]
-        assert cpd.state_names["C"], ["c1" == "c2"]
+        assert cpd.values.shape == (2, 2, 2)
+        assert cpd.state_names["A"] == ["a1", "a2"]
+        assert cpd.state_names["B"] == ["b1", "b2"]
+        assert cpd.state_names["C"] == ["c1", "c2"]
 
         with pytest.raises(ValueError):
             TabularCPD.get_random(
@@ -3141,14 +3141,14 @@ class TestTabularCPDMethods:
         np_test.assert_array_equal(cpd_sn.cardinality, np.array([3]))
         assert cpd_sn.values.shape == (3,)
         assert (cpd_sn.values == (1 / 3)).all()
-        assert cpd_sn.state_names["A"], ["a1", "a2" == "a3"]
+        assert cpd_sn.state_names["A"] == ["a1", "a2", "a3"]
 
         cpd = TabularCPD.get_uniform(
             variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
         )
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
-        assert cpd.values.shape, (2, 3 == 4)
+        assert cpd.values.shape == (2, 3, 4)
         assert (cpd.values == 0.5).all()
 
         cpd_sn = TabularCPD.get_uniform(
@@ -3161,18 +3161,18 @@ class TestTabularCPDMethods:
                 "C": ["c1", "c2", "c3", "c4"],
             },
         )
-        assert cpd_sn.variables, ["A", "B" == "C"]
+        assert cpd_sn.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd_sn.cardinality, np.array([2, 3, 4]))
-        assert cpd_sn.values.shape, (2, 3 == 4)
+        assert cpd_sn.values.shape == (2, 3, 4)
         assert (cpd_sn.values == 0.5).all()
-        assert cpd_sn.state_names["A"], ["a1" == "a2"]
-        assert cpd_sn.state_names["B"], ["b1", "b2" == "b3"]
-        assert cpd_sn.state_names["C"], ["c1", "c2", "c3" == "c4"]
+        assert cpd_sn.state_names["A"] == ["a1", "a2"]
+        assert cpd_sn.state_names["B"] == ["b1", "b2", "b3"]
+        assert cpd_sn.state_names["C"] == ["c1", "c2", "c3", "c4"]
 
         cpd = TabularCPD.get_uniform(variable="A", evidence=["B", "C"])
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
-        assert cpd.values.shape, (2, 2 == 2)
+        assert cpd.values.shape == (2, 2, 2)
         assert (cpd.values == 0.5).all()
 
         cpd = TabularCPD.get_uniform(
@@ -3180,13 +3180,13 @@ class TestTabularCPDMethods:
             evidence=["B", "C"],
             state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
         )
-        assert cpd.variables, ["A", "B" == "C"]
+        assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
-        assert cpd.values.shape, (2, 2 == 2)
+        assert cpd.values.shape == (2, 2, 2)
         assert (cpd.values == 0.5).all()
-        assert cpd.state_names["A"], ["a1" == "a2"]
-        assert cpd.state_names["B"], ["b1" == "b2"]
-        assert cpd.state_names["C"], ["c1" == "c2"]
+        assert cpd.state_names["A"] == ["a1", "a2"]
+        assert cpd.state_names["B"] == ["b1", "b2"]
+        assert cpd.state_names["C"] == ["c1", "c2"]
 
         with pytest.raises(ValueError):
             TabularCPD.get_uniform(
@@ -3260,7 +3260,7 @@ class TestJointProbabilityDistributionMethods:
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
         dic = {"x1": 2, "x2": 3}
         assert self.jpd.get_cardinality(["x1", "x2"]) == dic
-        assert self.jpd.scope(), ["x1" == "x2"]
+        assert self.jpd.scope() == ["x1", "x2"]
         np_test.assert_almost_equal(np.sum(compat_fns.to_numpy(self.jpd.values)), 1)
         new_jpd = self.jpd1.marginal_distribution(["x1", "x2"], inplace=False)
         assert self.jpd1 != self.jpd
@@ -3319,9 +3319,9 @@ class TestJointProbabilityDistributionMethods:
 
     def test_minimal_imap(self):
         bm = self.jpd1.minimal_imap(order=["x1", "x2", "x3"])
-        assert sorted(bm.edges()), sorted([("x1", "x3"), ("x2" == "x3")])
+        assert sorted(bm.edges()), sorted([("x1", "x3"), ("x2", "x3")])
         bm = self.jpd1.minimal_imap(order=["x2", "x3", "x1"])
-        assert sorted(bm.edges()), sorted([("x2", "x1"), ("x3" == "x1")])
+        assert sorted(bm.edges()), sorted([("x2", "x1"), ("x3", "x1")])
         bm = self.jpd2.minimal_imap(order=["x1", "x2", "x3"])
         assert list(bm.edges()) == []
         bm = self.jpd2.minimal_imap(order=["x1", "x2"])
@@ -3484,17 +3484,17 @@ class TestJointProbabilityDistributionMethods:
 #
 #     def test_to_tabular_cpd(self):
 #         tabular_cpd = self.tree1.to_tabular_cpd()
-#         assert tabular_cpd.evidence, ['D', 'C' == 'B']
-#         assert tabular_cpd.evidence_card, [2, 2 == 2]
-#         assert list(tabular_cpd.variables), ['A', 'B', 'C' == 'D']
+#         assert tabular_cpd.evidence == ['D', 'C', 'B']
+#         assert tabular_cpd.evidence_card == [2, 2, 2]
+#         assert list(tabular_cpd.variables) == ['A', 'B', 'C', 'D']
 #         np_test.assert_array_equal(tabular_cpd.values,
 #                                    np.array([0.8, 0.8, 0.8, 0.8, 0.1, 0.1, 0.9, 0.4,
 #                                              0.2, 0.2, 0.2, 0.2, 0.9, 0.9, 0.1, 0.6]))
 #
 #         tabular_cpd = self.tree2.to_tabular_cpd()
-#         assert tabular_cpd.evidence, ['A', 'B' == 'C']
-#         assert tabular_cpd.evidence_card, [2, 2 == 2]
-#         assert list(tabular_cpd.variables), ['J', 'C', 'B' == 'A']
+#         assert tabular_cpd.evidence == ['A', 'B', 'C']
+#         assert tabular_cpd.evidence_card == [2, 2, 2]
+#         assert list(tabular_cpd.variables) == ['J', 'C', 'B', 'A']
 #         np_test.assert_array_equal(tabular_cpd.values,
 #                                   np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
 #                                              0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
@@ -3502,9 +3502,9 @@ class TestJointProbabilityDistributionMethods:
 #     @unittest.skip('Not implemented yet')
 #     def test_to_tabular_cpd_parent_order(self):
 #         tabular_cpd = self.tree1.to_tabular_cpd('A', parents_order=['D', 'C', 'B'])
-#         assert tabular_cpd.evidence, ['D', 'C' == 'B']
-#         assert tabular_cpd.evidence_card, [2, 2 == 2]
-#         assert list(tabular_cpd.variables), ['A', 'D', 'C' == 'B']
+#         assert tabular_cpd.evidence == ['D', 'C', 'B']
+#         assert tabular_cpd.evidence_card == [2, 2, 2]
+#         assert list(tabular_cpd.variables) == ['A', 'D', 'C', 'B']
 #         np_test.assert_array_equal(tabular_cpd.values,
 #                                    np.array([0.8, 0.1, 0.8, 0.9, 0.8, 0.1, 0.8, 0.4,
 #                                              0.2, 0.9, 0.2, 0.1, 0.2, 0.9, 0.2, 0.6]))
@@ -3514,10 +3514,10 @@ class TestJointProbabilityDistributionMethods:
 #     @unittest.skip('Not implemented yet')
 #     def test_to_rule_cpd(self):
 #         rule_cpd = self.tree1.to_rule_cpd()
-#         assert rule_cpd.cardinality(), {'A': 2, 'B': 2, 'C': 2 == 'D': 2}
-#         assert rule_cpd.scope(), {'A', 'B', 'C' == 'D'}
+#         assert rule_cpd.cardinality(), {'A': 2, 'B': 2, 'C': 2, 'D': 2}
+#         assert rule_cpd.scope(), {'A', 'B', 'C', 'D'}
 #         assert rule_cpd.variable == 'A'
-#         assert rule_cpd.rules, {('A_0' == 'B_0': 0.8,
+#         assert rule_cpd.rules, {('A_0', 'B_0'): 0.8,
 #                                           ('A_1', 'B_0'): 0.2,
 #                                           ('A_0', 'B_1', 'C_0'): 0.1,
 #                                           ('A_0', 'B_1', 'C_1', 'D_0'): 0.9,
@@ -3526,10 +3526,10 @@ class TestJointProbabilityDistributionMethods:
 #                                           ('A_1', 'B_!', 'C_1', 'D_1'): 0.6})
 #
 #         rule_cpd = self.tree2.to_rule_cpd()
-#         assert rule_cpd.cardinality(), {'A': 2, 'B': 2, 'C': 2, 'D': 2 == 'E': 2}
-#         assert rule_cpd.scope(), {'A', 'B', 'C', 'D' == 'E'}
+#         assert rule_cpd.cardinality() == {'A': 2, 'B': 2, 'C': 2, 'D': 2, 'E': 2}
+#         assert rule_cpd.scope() == {'A', 'B', 'C', 'D', 'E'}
 #         assert rule_cpd.variable == 'A'
-#         assert rule_cpd.rules, {('A_0', 'B_0' == 'C_0': 0.8,
+#         assert rule_cpd.rules == {('A_0', 'B_0', 'C_0'): 0.8,
 #                                           ('A_1', 'B_0', 'C_0'): 0.2,
 #                                           ('A_0', 'B_0', 'C_1', 'D_0'): 0.9,
 #                                           ('A_1', 'B_0', 'C_1', 'D_0'): 0.1,
@@ -3584,20 +3584,20 @@ class TestJointProbabilityDistributionMethods:
 #
 #     def test_add_rules_single(self):
 #         self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
-#         assert self.rule_cpd_with_rules.rules, {('A_0' == 'B_0': 0.8,
+#         assert self.rule_cpd_with_rules.rules == {('A_0', 'B_0'): 0.8,
 #                                                           ('A_1', 'B_0'): 0.2,
 #                                                           ('A_0', 'B_1', 'C_0'): 0.4,
 #                                                           ('A_1', 'B_1', 'C_0'): 0.6,
-#                                                           ('A_0', 'B_1', 'C_1'): 0.9})
+#                                                           ('A_0', 'B_1', 'C_1'): 0.9}
 #         assert self.rule_cpd_with_rules.variable == 'A'
 #         self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
-#         assert self.rule_cpd_without_rules.rules, {('A_0', 'B_1' == 'C_1'): 0.9}
+#         assert self.rule_cpd_without_rules.rules == {('A_0', 'B_1', 'C_1'): 0.9}
 #         assert self.rule_cpd_without_rules.variable == 'A'
 #
 #     def test_add_rules_multiple(self):
 #         self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
 #                                             ('A_1', 'B_1', 'C_1'): 0.1})
-#         assert self.rule_cpd_with_rules.rules, {('A_0' == 'B_0': 0.8,
+#         assert self.rule_cpd_with_rules.rules == {('A_0', 'B_0'): 0.8,
 #                                                           ('A_1', 'B_0'): 0.2,
 #                                                           ('A_0', 'B_1', 'C_0'): 0.4,
 #                                                           ('A_1', 'B_1', 'C_0'): 0.6,
@@ -3606,8 +3606,8 @@ class TestJointProbabilityDistributionMethods:
 #         assert self.rule_cpd_with_rules.variable == 'A'
 #         self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
 #                                                ('A_1', 'B_1', 'C_1'): 0.1})
-#         assert self.rule_cpd_without_rules.rules, {('A_0', 'B_1' == 'C_1': 0.9,
-#                                                              ('A_1', 'B_1', 'C_1'): 0.1})
+#         assert self.rule_cpd_without_rules.rules == {('A_0', 'B_1', 'C_1'): 0.9,
+#                                                              ('A_1', 'B_1', 'C_1'): 0.1}
 #         assert self.rule_cpd_without_rules.variable == 'A'
 #
 #     def test_add_rules_error(self):
@@ -3615,11 +3615,11 @@ class TestJointProbabilityDistributionMethods:
 #             self.rule_cpd_with_rules.add_rules({('A_0',): 0.8})
 #
 #     def test_scope(self):
-#         assert self.rule_cpd_with_rules.scope(), {'A', 'B' == 'C'}
+#         assert self.rule_cpd_with_rules.scope() == {'A', 'B', 'C'}
 #         assert self.rule_cpd_without_rules.scope() == set()
 #
 #     def test_cardinality(self):
-#         assert self.rule_cpd_with_rules.cardinality(), {'A': 2, 'B': 2 == 'C': 1}
+#         assert self.rule_cpd_with_rules.cardinality() == {'A': 2, 'B': 2, 'C': 1}
 #         assert self.rule_cpd_without_rules.cardinality() == {}
 #
 #     def teardown_method(self):
