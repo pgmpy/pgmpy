@@ -91,7 +91,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
 
         Vertices of a specific role can be retrieved using ``get_role`` method.
 
-        >>> g.get_role("exposure")
+        >>> g.get_role("exposures")
         ["A"]
         >>> g.get_role("adjustment")
         ["L", "C"]
@@ -579,8 +579,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag3.add_edge("L", "X", "-", ">")
         >>> mag3.add_edge("X", "Y", "-", ">")
         >>> mag3.latents = {"L"}
-        >>> mag3 = mag3.with_role("exposure", "X")
-        >>> mag3 = mag3.with_role("outcome", "Y")
+        >>> mag3 = mag3.with_role("exposures", "X")
+        >>> mag3 = mag3.with_role("outcomes", "Y")
         >>> print(mag3.to_dagitty())
         mag {
         L -> X
@@ -686,18 +686,18 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag1 = MAG(
         ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
         ...     latents={"L"},
-        ...     roles={"exposure": "X"},
+        ...     roles={"exposures": "X"},
         ... )
         >>> mag2 = MAG(
         ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
         ...     latents={"L"},
-        ...     roles={"exposure": "X"},
+        ...     roles={"exposures": "X"},
         ... )
         >>> mag1 == mag2
         True
 
         >>> mag3 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposure": "X"}
+        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposures": "X"}
         ... )
         >>> mag1 == mag3
         False
