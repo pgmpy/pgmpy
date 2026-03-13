@@ -107,8 +107,3 @@ def test_invalid_input():
 def test_list_datasets_invalid_tag():
     with pytest.raises(ValueError, match="Invalid filter tag"):
         list_datasets(invalid_tag=True)
-```
-
-Commit message:
-```
-test: add test for invalid filter tag in list_datasets
