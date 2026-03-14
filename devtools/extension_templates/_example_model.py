@@ -1,7 +1,8 @@
 # This extension template provides instructions to add new example models to pgmpy.
 #
 # Please follow the following steps:
-# 1. Copy this file to the appropriate subdirectory in `pgmpy/example_models` (e.g., `pgmpy/example_models/bnlearn/my_model.py`).
+# 1. Copy this file to the appropriate subdirectory in `pgmpy/example_models`
+#    (e.g., `pgmpy/example_models/bnlearn/my_model.py`).
 #    If adding a new model source, create a new subdirectory in `pgmpy/example_models` and add an `__init__.py`
 #    file to that directory so it becomes a Python package; otherwise models in that source will not be
 #    discovered by `load_model()` / `list_models()`.
@@ -24,17 +25,20 @@ from .._base import DiscreteMixin, _BaseExampleModel
 # TODO: Rename the class to match your model name. PascalCase is recommended
 # (e.g., MyModel, AsiaNetwork), but note that some existing example models may
 # use different naming styles.
+# TODO: Inherit from the appropriate Mixin class alongside _BaseExampleModel.
+# For e.g., DiscreteMixin, BIFMixin, ContinuousMixin, DAGMixin.
 class YourModelName(DiscreteMixin, _BaseExampleModel):
-    """
-    [Optional: Short description of the model.]
+    """[Optional: Short description of the model.].
 
     [Note: Most existing models only include the References section below; add a description
     here only if it provides useful context for the model.]
+
     References
     ----------
     .. [1] Author, A., & Author, B. (Year). Title of the paper. Journal Name, Volume(Issue), Pages.
            URL or DOI if available.
     .. [2] Additional reference if needed.
+
     """
 
     # TODO: Fill in the metadata tags for your model.
@@ -57,7 +61,7 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
         "is_hybrid": False,  # TODO: Set appropriately
     }
 
-    # TODO: Set the URL or path to the model file, relative to the base URL.
+    # TODO: Set the path to the model file within the `example_models` repository.
     # For example:
     #   - "discrete/asia.bif.gz" for a gzipped BIF file
     #   - "bnrep/asia.bif" for a plain BIF file
@@ -69,14 +73,14 @@ class YourModelName(DiscreteMixin, _BaseExampleModel):
     # you can override the load_model_object method. Otherwise, remove this method.
     @classmethod
     def load_model_object(cls):
-        """
-        Custom method to load the model from the data file.
+        """Load the model from the data file.
 
         Returns
         -------
         model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork or
                pgmpy.models.LinearGaussianBayesianNetwork or pgmpy.models.FunctionalBayesianNetwork
             The loaded model object.
+
         """
         # By default, the mixin classes handle loading. Only override if you need custom logic.
         # Example custom loading:
