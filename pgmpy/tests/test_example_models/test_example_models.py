@@ -309,6 +309,31 @@ def test_list_models():
     assert "bnlearn/arth150" in set(list_models(is_continuous=True))
 
 
+def test_list_models_numeric_filtering():
+    """Backward compat, comparator, mixed, and edge cases for list_models."""
+    # Backward compat: exact match
+    exact_10 = list_models(n_nodes=10)
+    assert "bnrep/gonorrhoeae" in exact_10
+    assert "bnlearn/cancer" not in exact_10
+    assert "bnlearn/alarm" not in exact_10
+
+    # Comparator
+    gt_10 = list_models(n_nodes=">10")
+    assert "bnlearn/alarm" in gt_10
+    assert "bnlearn/cancer" not in gt_10
+    assert "bnlearn/asia" not in gt_10
+
+    # Mixed comparator + boolean
+    mixed = list_models(n_nodes=">10", is_discrete=True)
+    assert "bnlearn/alarm" in mixed
+    assert "bnlearn/arth150" not in mixed
+    assert "bnlearn/cancer" not in mixed
+
+    # Edge cases: unknown tag, invalid comparator
+    assert list_models(fake_tag=">10") == []
+    assert list_models(n_nodes=">>10") == []
+
+
 def test_tags():
     for model_name in ALL_MODELS:
         tags = all_objects(

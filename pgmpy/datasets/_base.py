@@ -17,6 +17,7 @@ from skbase.lookup import all_objects
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.global_vars import PGMPY_DATA_HOME
+from pgmpy.utils.filtering import apply_filter, split_filter_tags
 
 
 @dataclass
@@ -281,45 +282,54 @@ def load_dataset(name: str) -> Dataset:
 
 def list_datasets(**filter_tags) -> list[str]:
     """
-    Returns a list of all available datasets, optionally filtered by a query string.
+    Returns a list of all available datasets, optionally filtered by tag.
+
+    Numeric tags (n_variables, n_samples) support comparator strings: ">10", "<20",
+    ">=5", "<=50", "==10". Other tags use exact matching.
 
     Parameters
     ----------
-    **filter_tags : optional arguments
-        If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
-        Available tags:
-            - n_variables
-            - n_samples
-            - has_ground_truth
-            - has_expert_knowledge
-            - has_missing_data
-            - is_simulated
-            - is_interventional
-            - is_discrete
-            - is_continuous
-            - is_mixed
-            - is_ordinal
+    **filter_tags : optional
+        Tag filters. Numeric tags support comparators (">", "<", ">=", "<=", "==").
+        Available tags: n_variables, n_samples, has_ground_truth, has_expert_knowledge,
+        has_missing_data, is_simulated, is_interventional, is_discrete, is_continuous,
+        is_mixed, is_ordinal.
 
     Returns
     -------
     list of str
-        A sorted list of available dataset names.
+        A sorted list of matching dataset names.
 
     Examples
     --------
     >>> from pgmpy.datasets import list_datasets
     >>> list_datasets()
-    ['abalone_continuous', 'abalone_mixed', ..., 'sachs_continuous', ...]
-
+    ['abalone_continuous', 'abalone_mixed', ...]
+    >>> list_datasets(n_samples=506)
+    ['boston_housing']
+    >>> list_datasets(n_variables=">10")
+    ['boston_housing', 'dry_bean', ...]
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
     """
+    skbase_filters, custom_filters = split_filter_tags(filter_tags)
+
     all_datasets = all_objects(
         object_types=_BaseDataset,
         package_name="pgmpy.datasets",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=skbase_filters,
     )
+
+    if custom_filters:
+        all_datasets = [
+            cls
+            for cls in all_datasets
+            if all(
+                apply_filter(cls.get_class_tag(tag), cond)
+                for tag, cond in custom_filters.items()
+            )
+        ]
 
     dataset_names = [
         cls.get_class_tag("name")

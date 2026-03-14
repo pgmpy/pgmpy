@@ -69,6 +69,22 @@ def test_list_datasets():
     assert "abalone_mixed" not in cont_names
 
 
+def test_list_datasets_numeric_filtering():
+    """Backward compat, comparator, and mixed filters for list_datasets."""
+    # Backward compat: exact match
+    exact = list_datasets(n_samples=506)
+    assert "boston_housing" in exact
+
+    # Comparator
+    many_vars = list_datasets(n_variables=">10")
+    assert "boston_housing" in many_vars
+    assert "goldberg" not in many_vars
+
+    # Mixed comparator + boolean
+    combined = list_datasets(n_variables=">=8", is_continuous=True)
+    assert "abalone_continuous" in combined
+
+
 def test_load_dataset():
     for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
         dataset = load_dataset(dataset_name)

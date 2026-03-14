@@ -11,6 +11,7 @@ from skbase.lookup import all_objects
 from pgmpy.base import DAG
 from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.readwrite import BIFReader
+from pgmpy.utils.filtering import apply_filter, split_filter_tags
 
 
 class _BaseExampleModel(BaseObject):
@@ -183,37 +184,57 @@ def list_models(**filter_tags) -> list[str]:
     """
     Lists all available example models.
 
+    Filter by tags using keyword arguments. Numeric tags (n_nodes, n_edges) support
+    comparator strings for flexible filtering: ">10", "<20", ">=5", "<=50", "==10".
+    Other tags use exact matching.
 
-    The models can be filtered based on their tags by providing keyword arguments. The available tags are:
-    - name: str
-    - n_nodes: No. of nodes in the model.
-    - n_edges: No. of edges in the model.
-    - is_parameterized: Whether it is just the network structure or also has parameters (CPDs) defined.
-    - is_discrete: Whether the model has only discrete variables / parameterization.
-    - is_continuous: Whether the model has only continuous variables / parameterization.
-    - is_hybrid: Whether the model has both discrete and continuous variables / parameterization.
+    Parameters
+    ----------
+    **filter_tags : optional
+        Tag filters. Available tags:
+        - name: str (exact match)
+        - n_nodes: int or comparator string (">", "<", ">=", "<=", "==")
+        - n_edges: int or comparator string
+        - is_parameterized: bool
+        - is_discrete: bool
+        - is_continuous: bool
+        - is_hybrid: bool
 
     Returns
     -------
     list
-        List of names of all available example models.
+        List of names of matching example models.
 
     Examples
     --------
     >>> from pgmpy.example_models import list_models
     >>> list_models()
-    ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
-    >>> list_models(is_discrete=True)
-    ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
-    >>> list_models(is_parameterized=False)
-    ['dagitty/acid_1996', ...., ]
+    ['bnlearn/alarm', 'bnlearn/arth150', ...]
+    >>> list_models(n_nodes=10)
+    ['bnrep/gonorrhoeae', 'bnrep/greencredit', ...]
+    >>> list_models(n_nodes=">10")
+    ['bnlearn/alarm', 'bnlearn/arth150', ...]
+    >>> list_models(n_nodes=">=5", is_discrete=True)
+    ['bnlearn/alarm', 'bnlearn/asia', ...]
     """
+    skbase_filters, custom_filters = split_filter_tags(filter_tags)
+
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=skbase_filters,
     )
+
+    if custom_filters:
+        all_models = [
+            cls
+            for cls in all_models
+            if all(
+                apply_filter(cls.get_class_tag(tag), cond)
+                for tag, cond in custom_filters.items()
+            )
+        ]
 
     model_names = [
         cls.get_class_tag("name")
