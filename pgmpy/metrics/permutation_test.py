@@ -231,7 +231,7 @@ def permutation_test(
 
     Examples
     --------
-    >>> from pgmpy.models import DiscreteDiscreteBayesianNetwork
+    >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.metrics import permutation_test
     >>> from pgmpy.utils import get_example_model
 
@@ -239,14 +239,16 @@ def permutation_test(
     >>> model = get_example_model("cancer")
     >>> data = model.simulate(1000)
     >>> result = permutation_test(model, data)
-    >>> print(f"Falsifiable: {result['falsifiable']}, Falsified: {result['falsified']}")
+    >>> print(
+    ...     f"Falsifiable: {result['p_value_falsifiable']}, Falsified: {result['p_value_falsified']}"
+    ... )
 
     >>> # Test with wrong model (should be falsified)
-    >>> wrong_model = DiscreteDiscreteBayesianNetwork(
+    >>> wrong_model = DiscreteBayesianNetwork(
     ...     [("Cancer", "Smoker"), ("Smoker", "Pollution")]
     ... )
     >>> result_wrong = permutation_test(wrong_model, data)
-    >>> print(f"Wrong model falsified: {result_wrong['falsified']}")
+    >>> print(f"Wrong model falsified: {result_wrong['p_value_falsified']}")
     """
     # Step 0: Initialize variables and validate inputs.
     if not isinstance(data, pd.DataFrame):
