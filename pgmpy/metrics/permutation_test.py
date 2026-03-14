@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import math
 from typing import Callable, Optional
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 from statsmodels.stats.proportion import proportion_confint
@@ -9,8 +11,14 @@ from tqdm import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.metrics import implied_cis
+
+# from pgmpy.metrics import ImpliedCIs  # TODO to be removed with old design
 from pgmpy.models import DynamicBayesianNetwork
+
+try:
+    from networkx.algorithms.d_separation import is_d_separator as d_separated
+except ImportError:
+    from networkx.algorithms.d_separation import d_separated
 
 
 def _count_lmc_violations(
@@ -93,11 +101,57 @@ def _compare_CIs(cis1: pd.DataFrame, cis2: pd.DataFrame):
     return set1 == set2
 
 
+def _get_parental_triples(dag):
+    """
+    Returns a list of (node, non_descendant, parents) triples for LMC/TPA validation.
+    """
+    triples = []
+    for node in dag.nodes():
+        parents = list(dag.predecessors(node))
+        non_descendants = dag._get_non_descendants(node, exclude_parents=True)
+        for nd in non_descendants:
+            triples.append((node, nd, parents))
+    return triples
+
+
+def _lmc_violations(dag, data, ci_test, significance_level):
+    """Validate the local markov condition for a given directed graph. Return number of violations."""
+    triples = _get_parental_triples(dag)
+    n_violations = 0
+    for node, nd, parents in triples:
+        res = ci_test(
+            X=node,
+            Y=nd,
+            Z=parents,
+            data=data,
+            boolean=False,
+            significance_level=significance_level,
+        )
+        pval = res[1]
+        if pval <= significance_level:
+            n_violations += 1
+    return n_violations, len(triples)
+
+
+def _tpa_violations(permuted_dag, original_dag):
+    """
+    Evaluate which pairwise parental d-separations (parental triples) in `permuted_dag` are
+    violated assuming `original_dag` is the ground truth DAG.
+    """
+    triples = _get_parental_triples(permuted_dag)
+    n_violations = 0
+    for node, nd, parents in triples:
+        # Check d-separation in original DAG
+        if not d_separated(original_dag, {node}, {nd}, set(parents)):
+            n_violations += 1
+    return n_violations, len(triples)
+
+
 def permutation_test(
     dag: DAG,
     data: pd.DataFrame,
     significance_level: float = 0.05,
-    n_permutations: int = 100,
+    n_permutations: Optional[int] = None,
     ci_test: Optional[str] = None,
     return_summary: bool = True,
     show_progress: bool = True,
@@ -130,6 +184,7 @@ def permutation_test(
     n_permutations : int, optional
         Number of random node permutations to generate for the baseline.
         If None, uses max(20, int(1/significance_level)).
+        If -1, uses all possible permutations (factorial of number of nodes)
 
     ci_test : {"pillai_trace", "chi_square", "pearsonr", "gcm", "g_sq", "log_likelihood", "freeman_tuckey",
     "modified_log_likelihood", "neyman", "cressie_read"}
@@ -207,16 +262,23 @@ def permutation_test(
         missing_vars = set(nodes) - data_columns
         raise ValueError(f"Data missing variables present in model: {missing_vars}")
 
+    if n_permutations is None:
+        n_permutations = max(20, int(1 / significance_level))
+    elif n_permutations == -1:
+        n_permutations = math.factorial(len(nodes))
+
     ci_test = ci_registry.get_test(ci_test, data=data)
     permutation_violations = []
     n_within_mec = 0
 
     # Step 1: Compute LMC violations for the given DAG.
-    original_CIs = implied_cis(
-        model=dag, data=data, ci_test=ci_test, show_progress=False
-    )
-    valid_CIs = original_CIs[original_CIs["p-value"] > significance_level]
-    n_lmc_violations = original_CIs.shape[0] - valid_CIs.shape[0]
+
+    # implied_cis = ImpliedCIs(ci_test=ci_test, show_progress=False)
+    # original_CIs = implied_cis.evaluate(X=data, causal_graph=dag)
+    # valid_CIs = original_CIs[original_CIs["p-value"] > significance_level]
+    # n_lmc_violations = original_CIs.shape[0] - valid_CIs.shape[0]
+
+    n_lmc_violations, _ = _lmc_violations(dag, data, ci_test, significance_level)
 
     # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
     if show_progress and config.SHOW_PROGRESS:
@@ -225,16 +287,35 @@ def permutation_test(
         pbar = range(n_permutations)
 
     for _ in pbar:
-        permuted_CIs = _create_permuted_CIs(original_CIs, nodes)
-        n_violations_perm = _count_lmc_violations(
-            data, permuted_CIs, ci_test, significance_level
-        )
-        permutation_violations.append(n_violations_perm)
+        # Permute node labels to create a new DAG
+        permuted_nodes = np.random.permutation(nodes)
+        perm_mapping = dict(zip(nodes, permuted_nodes))
+        # Relabel nodes in the original DAG
+        nx_permuted_dag = nx.relabel_nodes(dag, perm_mapping, copy=True)
+        permuted_dag = DAG()
+        permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
+        permuted_dag.add_edges_from(nx_permuted_dag.edges())
 
-        # TODO: This is wrong - need to compare all implied CIs, not just valid ones. Maybe use is_iequivalent method
-        # from pgmpy.base.DAG?
-        if _compare_CIs(original_CIs, permuted_CIs):
+        n_perm_lmc_violations, _ = _lmc_violations(
+            permuted_dag, data, ci_test, significance_level
+        )
+        permutation_violations.append(n_perm_lmc_violations)
+        n_tpa_violations, _ = _tpa_violations(permuted_dag, dag)
+        if n_tpa_violations == 0:
             n_within_mec += 1
+
+        # Below is replaced by permutation of node
+
+        # Compute implied CIs for the permuted DAG
+        # implied_cis = ImpliedCIs(ci_test=ci_test, show_progress=False)
+        # permuted_CIs = implied_cis.evaluate(X=data, causal_graph=permuted_dag)
+        # valid_CIs_perm = permuted_CIs[permuted_CIs["p-value"] > significance_level]
+        # n_violations_perm = permuted_CIs.shape[0] - valid_CIs_perm.shape[0]
+        # permutation_violations.append(n_violations_perm)
+
+        # # MEC comparison
+        # if dag.is_iequivalent(permuted_dag):
+        #     n_within_mec += 1
 
     # Step 3: Compute test statistics and p-values.
 

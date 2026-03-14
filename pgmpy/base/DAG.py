@@ -205,12 +205,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
-    def _get_non_descendants(self, node) -> list:
+    def _get_non_descendants(self, node, exclude_parents=False) -> list:
         """
         Get all non-descendants of a node in the DAG.
 
         Non-descendants are all nodes that are not reachable from the given node
         by following directed edges.
+        If exclude_parents=True, parents are also excluded from the returned set.
         """
         descendants = set()
 
@@ -228,6 +229,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         # Non-descendants are all nodes except descendants and the node itself
         all_nodes = set(self.nodes())
         non_descendants = all_nodes - descendants - {node}
+
+        if exclude_parents:
+            parents = set(self.get_parents(node))
+            non_descendants -= parents
 
         return list(non_descendants)
 
