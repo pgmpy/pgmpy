@@ -162,7 +162,9 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(
+            pd.DataFrame([evidence])
+        )
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]

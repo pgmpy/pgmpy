@@ -694,7 +694,9 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df_evidence = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+            missing_vars, mean_cond, cov_cond = model.predict_probability(
+                data=df_evidence
+            )
 
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
@@ -716,7 +718,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
             df = df[variables]
 
-        # Step 5: Add do variables to the final dataframe
+        # Step 5: Add do variables to the final dataFrame
         for do_var, do_val in do.items():
             df[do_var] = do_val
 
@@ -948,13 +950,13 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Return values
         return (missing_vars, mu_cond, cov_cond)
 
-    def predict(self, data: pd.Dataframe) -> pd.DataFrame:
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Predicts the MAP estimates (posterior mean) of missing variables.
 
         Parameters
         ----------
-        data: pandas.Dataframe
+        data: pandas.DataFrame
             DataFrame with a subset of model variables observed.
 
         Returns
