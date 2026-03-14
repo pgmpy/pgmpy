@@ -109,7 +109,8 @@ class _GraphRolesMixin:
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
-        return new_graph
+        if not inplace:
+            return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
         """Return a new graph with the specified role removed.
@@ -146,7 +147,9 @@ class _GraphRolesMixin:
                         attr.pop("roles")
                     else:
                         attr["roles"] = roles
-        return new_graph
+
+        if not inplace:
+            return new_graph
 
     def is_valid_causal_structure(self) -> bool:
         """Validate that the causal structure makes sense."""
