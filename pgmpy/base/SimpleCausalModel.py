@@ -163,5 +163,6 @@ class SimpleCausalModel(DAG):
             if latent not in self.nodes():
                 raise ValueError(
                     f"Latent variable '{latent}' is not in the graph nodes."
+                    f"Available nodes: {list(self.nodes())}"
                 )
         self.latents = latents_set
