@@ -366,7 +366,7 @@ class LinearGaussianBayesianNetwork(DAG):
         """
         # We want a different seed for each CPD; increment an integer seed in the loop.
         # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
-        seed = seed if seed else 42
+        seed = 42 if seed is None else seed
 
         cpds = []
         for i, var in enumerate(self.nodes()):
