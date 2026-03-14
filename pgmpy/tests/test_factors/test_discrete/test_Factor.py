@@ -2951,6 +2951,33 @@ class TestTabularCPDMethods(unittest.TestCase):
             f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>",
         )
 
+    def test__str__tuple_variable_without_state_names(self):
+        cpd = TabularCPD(
+            variable=("A", 0),
+            variable_card=2,
+            values=[[0.2, 0.8], [0.8, 0.2]],
+            evidence=[("B", 0)],
+            evidence_card=[2],
+        )
+        cpd_str = str(cpd)
+        self.assertIsInstance(cpd_str, str)
+        self.assertIn("('A', 0)(0)", cpd_str)
+        self.assertIn("('B', 0)(1)", cpd_str)
+
+    def test__str__tuple_variable_with_state_names(self):
+        cpd = TabularCPD(
+            variable=("A", 0),
+            variable_card=2,
+            values=[[0.2, 0.8], [0.8, 0.2]],
+            evidence=[("B", 0)],
+            evidence_card=[2],
+            state_names={("A", 0): ["a0", "a1"], ("B", 0): ["b0", "b1"]},
+        )
+        cpd_str = str(cpd)
+        self.assertIsInstance(cpd_str, str)
+        self.assertIn("('A', 0)(a0)", cpd_str)
+        self.assertIn("('B', 0)(b1)", cpd_str)
+
     def test_copy(self):
         copy_cpd = self.cpd.copy()
         np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
