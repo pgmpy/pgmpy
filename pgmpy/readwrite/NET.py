@@ -385,7 +385,7 @@ class NETReader:
         self.include_properties = include_properties
 
         if "/*" in self.network or "//" in self.network:
-            self.network = cppStyleComment.suppress().transformString(
+            self.network = cppStyleComment.suppress().transform_string(
                 self.network
             )  # removing comments from the file
 
@@ -418,7 +418,7 @@ class NETReader:
         word_expr = Word(alphanums + "_" + "-")("nodename")
         name_expr = Suppress("node ") + word_expr + Optional(Suppress("{"))
 
-        word_expr2 = Word(initChars=printables, excludeChars=["(", ")", ",", " "])
+        word_expr2 = Word(init_chars=printables, exclude_chars=["(", ")", ",", " "])
         state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
         # Defining a variable state expression
         variable_state_expr = (
@@ -489,7 +489,7 @@ class NETReader:
             + Suppress('"')
             + Suppress(";")
         )
-        network_name = network_attribute.searchString(self.network[start:end])
+        network_name = network_attribute.search_string(self.network[start:end])
         if not network_name:
             return False
         return network_name[0][0]
@@ -509,7 +509,7 @@ class NETReader:
         """
         variable_names = []
 
-        for match in self.name_expr.scanString(self.network):
+        for match in self.name_expr.scan_string(self.network):
             result = match[0]
             name = result.nodename
             variable_names.append(name)
@@ -538,10 +538,10 @@ class NETReader:
         """
 
         variable_states = {}
-        for index, match in enumerate(self.name_expr.scanString(self.network)):
+        for index, match in enumerate(self.name_expr.scan_string(self.network)):
             result = match[0]
             name = result.nodename
-            allstates = list(self.state_expr.scanString(self.network))
+            allstates = list(self.state_expr.scan_string(self.network))
             states_unedited = list(
                 allstates[index][0].statenames
             )  # includes double quotation like ['"state1"', '"state2"']
@@ -571,7 +571,7 @@ class NETReader:
         """
 
         variable_properties = {}
-        for match in self.property_expr.scanString(self.network):
+        for match in self.property_expr.scan_string(self.network):
             var_name = match[0].varname
             prop_list = match[0].properties
             num_props = len(prop_list)
@@ -607,7 +607,7 @@ class NETReader:
 
         variable_parents = {}
 
-        for match in self.potential_expr.scanString(self.network):
+        for match in self.potential_expr.scan_string(self.network):
             vars_in_potential = match[0]
             variable_parents[vars_in_potential[0]] = vars_in_potential[1:]
         return variable_parents
@@ -646,7 +646,7 @@ class NETReader:
         variables = list(parents.keys())
         states = self.variable_states
 
-        cpds = self.cpd_expr.scanString(self.network)
+        cpds = self.cpd_expr.scan_string(self.network)
 
         for index, match in enumerate(cpds):
             var = variables[index]
