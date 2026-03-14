@@ -8,3 +8,5 @@ pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
 pgmpy/estimators/PC.py
 pgmpy/estimators/MLE.py
+pgmpy/estimators/BayesianEstimator.py
+pgmpy/estimators/MLE.py
