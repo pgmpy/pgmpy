@@ -1,7 +1,6 @@
-import inspect
 import itertools
 from os import PathLike
-from typing import Callable, Hashable, Iterable, Optional, Sequence
+from typing import Dict, Hashable, Iterable, Optional, Sequence, Set, Tuple
 
 import networkx as nx
 import numpy as np
@@ -111,7 +110,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     >>> G = DAG(
     ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
-    ...     roles={"exposure": "X", "outcome": "Y"},
+    ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
 
     Roles can also be assigned after creation using the ``with_role`` method.
@@ -120,7 +119,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     Vertices of a specific role can be retrieved using the ``get_role`` method.
 
-    >>> G.get_role("exposure")
+    >>> G.get_role("exposures")
     ['X']
     >>> G.get_role("adjustment")
     ['U', 'M']
@@ -164,19 +163,19 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
-        latents: set[Hashable] = set(),
-        exposures: set[Hashable] = set(),
-        outcomes: set[Hashable] = set(),
-        roles=None,
-    ):
+        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
+        latents: Optional[Set[Hashable]] = None,
+        exposures: Optional[Set[Hashable]] = None,
+        outcomes: Optional[Set[Hashable]] = None,
+        roles: Optional[Dict[str, Iterable]] = None,
+    ) -> None:
         super().__init__(ebunch)
 
         self._check_cycles()
 
-        self.latents = set(latents)
-        self.exposures = set(exposures)
-        self.outcomes = set(outcomes)
+        self.latents = set(latents) if latents is not None else set()
+        self.exposures = set(exposures) if exposures is not None else set()
+        self.outcomes = set(outcomes) if outcomes is not None else set()
 
         if roles is None:
             roles = {}
@@ -313,16 +312,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, latents=latents)
+            dag = cls(ebunch=ebunch, roles=roles)
             dag.add_nodes_from(nodes)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
             lgbn.add_nodes_from(nodes)
 
             std = 1
@@ -391,7 +390,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Adding edges with weight:
 
         >>> G.add_edge("Ankur", "Maria", weight=0.1)
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.1}
         """
         super().add_edge(u, v, weight=weight)
@@ -444,9 +443,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> G.add_edges_from(
         ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
         ... )
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.3}
-        >>> G.edge["Maria"]["Mason"]
+        >>> G.edges["Maria", "Mason"]
         {'weight': 0.5}
 
         or
@@ -502,8 +501,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> G = DAG(ebunch=[("diff", "grade"), ("intel", "grade")])
         >>> moral_graph = G.moralize()
-        >>> moral_graph.edges()
-        EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
+        >>> sorted(list(moral_graph.edges()))
+        [('diff', 'grade'), ('diff', 'intel'), ('grade', 'intel')]
         """
         from pgmpy.base import UndirectedGraph
 
@@ -728,8 +727,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...         ("grade", "letter"),
         ...     ]
         ... )
-        >>> student.get_immoralities()
-        {('diff', 'intel')}
+        >>> imm = student.get_immoralities()
+        >>> imm["grade"]
+        [('diff', 'intel')]
         """
         immoralities = dict()
         for node in self.nodes():
@@ -1137,11 +1137,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         from pgmpy.base import PDAG
 
-        return PDAG(
+        pdag = PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def do(
         self,
@@ -1282,18 +1284,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})
-        <daft.PGM at 0x7fc756e936d0>
-        >>> dag.to_daft(node_pos="circular")
-        <daft.PGM at 0x7f9bb48c5eb0>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
-        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(
+        ...     node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)}
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
+        >>> dag.to_daft(node_pos="circular")  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
+        >>> dag.to_daft(
+        ...     node_pos="circular", pgm_params={"observed_style": "inner"}
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
         >>> dag.to_daft(
         ...     node_pos="circular",
         ...     edge_params={("a", "b"): {"label": 2}},
         ...     node_params={"a": {"shape": "rectangle"}},
-        ... )
-        <daft.PGM at 0x7f9bb48b0bb0>
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
         """
         try:
             from daft import PGM
@@ -1474,8 +1480,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.to_graphviz()  # doctest: +ELLIPSIS
+        <AGraph <Swig Object of type 'Agraph_t *' at ...>>
         >>> model.draw("model.png", prog="neato")
         """
         if plot_edge_strength:
@@ -1720,12 +1726,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
+        >>> import numpy as np
+        >>> np.random.seed(42)
         >>> data = linear_model.simulate(n_samples=int(1e4))
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
         >>> strengths = dag.edge_strength(data)
-        {('X', 'Y'): np.float64(0.14587166611282304),
-         ('Z', 'Y'): np.float64(0.25683780900125613)}
+        >>> strengths[("X", "Y")]
+        np.float64(0.1454172599124535)
+        >>> strengths[("Z", "Y")]
+        np.float64(0.26003467856256834)
 
         References
         ----------
@@ -1791,150 +1801,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
 
         return strengths
-
-    def validate(
-        self,
-        data,
-        metrics: Optional[tuple[str | Callable]] = None,
-        significance_level=0.05,
-        **kwargs,
-    ):
-        """
-        Returns a table of the compiled results of the tests run on the DAG using the data provided. The
-        tests are available in pgmpy.metrics.metrics. This method includes support for:
-
-        - Correlation Score
-        - Log Likelihood Score
-        - AIC Score
-        - BIC Score
-        - Fisher-C p-value
-        - RMSEA based on the Fisher-C statistic
-        - Measure of failing vs. total CIs based on DAG and data fit
-
-        Parameters
-        ----------
-        data: pandas.Dataframe
-            Dataset to be used to run the scoring methods/tests
-
-        metrics: tuple (Callable or strings)
-            A list of the metrics that are to be run on the model and data. A comma separated set of either functions
-            defined in `pgmpy.metrics.metrics` or strings referencing those metrics can be passed.
-
-            Following are the supported strings and respective function that can be passed as elements of the tuple:
-
-                - "correlation" : correlation_score,
-                - "log-likelihood" : log_likelihood_score,
-                - "aic" : structure_score,
-                - "bic" : structure_score,
-                - "implied-cis" : implied_cis,
-                - "fisher-c" : fisher_c
-
-                For instance `("correlation", log_likelihood_score)` is a tuple that can be passed in metrics. This is
-                an example of `(string, Callable)` type and so on.
-
-                If no value is passed, all available metrics in `pgmpy.metrics.metrics` will be run.
-
-        significance_level: float (default: 0.05)
-            A hyperparameter to conditional independence test based metrics. A p-value greater than `significance_level`
-            indicates that the conditional independence holds.
-
-        **kwargs:
-            Any additional hyperparameter that needs to be passed to the metrics. Please refer to the documentation of
-            `pgmpy.metrics.metrics` for details on which arguments are supported.
-
-        Returns
-        ----------
-        results: pandas.Dataframe
-            A dataframe containing a summary of the tests run on the model using the data provided.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> from pgmpy.utils import get_example_model
-        >>> from pgmpy.metrics import fisher_c
-
-        >>> # Simulate data from the cancer model to test against.
-        >>> cancer = get_example_model("cancer")
-        >>> df_cancer = cancer.simulate(n_samples=1000)
-
-        >>> # Create a new DAG object, and run all the tests
-        >>> cancer_dag = DAG(cancer.edges())
-        >>> cancer_dag.validate(df_cancer)
-                                      RESULT
-        Correlation                     0.25
-        Log-likelihood          -2078.649707
-        AIC                     -2085.926617
-        BIC                     -2110.465393
-        Failing CIs / Total CIs        0 / 6
-        Fisher-C p-value            0.846715
-
-        >>> # Run selected tests
-        >>> dag.validate(df_cancer, metrics=("correlation", fisher_c))
-                                      RESULT
-        Correlation                     0.25
-        Fisher-C p-value            0.846715
-        """
-        # Step 0: Validate the inputs
-        if (data is None) or (not isinstance(data, pd.DataFrame)):
-            raise ValueError(
-                f"`data` must be a pandas.DataFrame instance. Got {type(data)}"
-            )
-        elif set(self.nodes) != set(data.columns):
-            raise ValueError(
-                "Missing columns in data. Can't find values for the following variables: "
-                f" {set(self.nodes()) - set(data.columns)}"
-            )
-
-        # Step 1: Get the metrics to be run
-        from pgmpy.estimators.CITests import ci_registry
-        from pgmpy.metrics.metrics import get_metrics
-        from pgmpy.utils import get_dataset_type
-
-        callable_metrics = get_metrics(metrics=metrics)
-        kwargs["ci_test"] = ci_registry.get_test(test=kwargs.get("ci_test"), data=data)
-
-        suffix = None
-        if "scoring_method" not in kwargs:
-            var_type = get_dataset_type(data)
-            if var_type == "continuous":
-                suffix = "g"
-            elif var_type == "discrete":
-                suffix = "d"
-            else:
-                suffix = "cg"
-
-        # Step 2: Run the metrics, compile the results, and return.
-        metric_vals = pd.Series()
-
-        for index, (name, metric_fn) in enumerate(callable_metrics.items()):
-            sig = inspect.signature(metric_fn)
-            valid_params = sig.parameters.keys()
-            filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
-
-            if suffix is not None and name.lower() in ["aic", "bic"]:
-                filtered_kwargs["scoring_method"] = f"{name.lower()}-" + suffix
-
-            result = metric_fn(model=self, data=data, **filtered_kwargs)
-
-            if name in ["correlation", "log-likelihood"]:
-                metric_vals[name.capitalize()] = result
-            elif name in ["aic", "bic"]:
-                metric_vals[name.upper()] = result
-            elif name == "fisher-c":
-                if isinstance(result, tuple):
-                    (p_val, rmsea) = result
-                    metric_vals["Fisher-C p-value"] = p_val
-                    metric_vals["RMSEA"] = rmsea
-                else:
-                    metric_vals["Fisher-C p-value"] = result
-
-            elif name == "implied-cis":
-                failing = (result["p-value"] < significance_level).sum()
-                total = len(result)
-                display_value = f"{failing} / {total}"
-                metric_vals["Failing CIs / Total CIs"] = display_value
-
-        return metric_vals
 
     def __hash__(self):
         """

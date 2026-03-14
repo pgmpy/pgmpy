@@ -69,7 +69,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     >>> # where Z is a confounder, X is exposure, Y is outcome
     >>> dag = DAG(
     ...     ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-    ...     roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+    ...     roles={"exposures": "X", "outcomes": "Y", "adjustment": ["Z"]},
     ... )
     >>>
     >>> # Generate some synthetic data
@@ -107,8 +107,8 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     >>> dag_with_pretreatment = DAG(
     ...     ebunch=[("P", "Y"), ("Z", "X"), ("Z", "Y"), ("X", "Y")],
     ...     roles={
-    ...         "exposure": "X",
-    ...         "outcome": "Y",
+    ...         "exposures": "X",
+    ...         "outcomes": "Y",
     ...         "adjustment": ["Z"],
     ...         "pretreatment": ["P"],
     ...     },
@@ -163,8 +163,8 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
         validate_data(self, X, y, accept_sparse=False, ensure_2d=True, dtype="numeric")
 
         # Step 2: Extract and validate causal graph roles
-        exposure_vars = self.causal_graph.get_role("exposure")
-        outcome_vars = self.causal_graph.get_role("outcome")
+        exposure_vars = self.causal_graph.get_role("exposures")
+        outcome_vars = self.causal_graph.get_role("outcomes")
         adjustment_vars = self.causal_graph.get_role("adjustment")
         pretreatment_vars = self.causal_graph.get_role("pretreatment")
 

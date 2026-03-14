@@ -1,9 +1,12 @@
+import io
+import os
 import unittest
 
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
+from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -327,6 +330,12 @@ class TestLGBNMethods(unittest.TestCase):
                     abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1
                 )
 
+    def test_fit_invalid_estimator(self):
+        new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
+        with self.assertRaises(ValueError):
+            new_model.fit(df, estimator="unbiased")
+
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
@@ -566,3 +575,60 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
         self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
         self.assertEqual(model_from_str.get_cpds("smoking").std, 1)
+
+
+class TestLGBNIO(unittest.TestCase):
+    def setUp(self):
+        self.model = load_model("bnlearn/ecoli70")
+        self.filename = "ecoli70.json"
+        self.model.save(self.filename)
+
+    def test_save_and_load(self):
+        """Test basic save and load functionality"""
+        loaded_model = LinearGaussianBayesianNetwork.load("ecoli70.json")
+        assert self.model == loaded_model
+
+    def test_load_from_file_object(self):
+        """Test loading from file-like object"""
+        with open(self.filename, "rb") as f:
+            file_obj = io.BytesIO(f.read())
+
+        loaded_model = LinearGaussianBayesianNetwork.load(file_obj)
+        assert self.model == loaded_model
+
+    def tearDown(self):
+        """Clean up the test file"""
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+
+    def test_simulate_missing_prob(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+
+        model.add_cpds(cpd1, cpd2)
+        df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
+        nan_ratio = df["X1"].isna().mean()
+
+        self.assertTrue(0.4 <= nan_ratio <= 0.6)
+
+    def test_simulate_missing_prob_invalid_node(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+        model.add_cpds(cpd1, cpd2)
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X3": 0.5})
+
+    def test_simulate_missing_prob_invalid_probability(self):
+        model = LinearGaussianBayesianNetwork([("X1", "X2")])
+        cpd1 = LinearGaussianCPD("X1", [0], 1)
+        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+        model.add_cpds(cpd1, cpd2)
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X1": -0.1})
+
+        with self.assertRaises(ValueError):
+            model.simulate(n_samples=10, missing_prob={"X1": 1.5})

@@ -1,9 +1,13 @@
-from itertools import chain, combinations
+from itertools import chain, combinations, permutations
 from typing import (
+    Any,
     Callable,
     Collection,
+    Deque,
     Dict,
+    Generator,
     Hashable,
+    List,
     Optional,
     Set,
     Tuple,
@@ -11,18 +15,20 @@ from typing import (
 )
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import validate_data
+from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import UndirectedGraph
+from pgmpy.base import DAG, UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
+from pgmpy.metrics import get_metrics
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -74,10 +80,109 @@ class _BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        self.n_features_in_ = len(X.columns)
         return X
 
+    def fit(self, X: pd.DataFrame, y=None):
+        """Fit data (`X`) to a causal graph. The method
+        calls the `_fit` method, which must be implemented separately in any causal
+        discovery algorithm inheriting from `BaseCausalDiscovery`.
+        """
+        X = self._check_fit_data(X)
+        return self._fit(X)
 
-class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
+    def score(
+        self,
+        X=None,
+        true_graph=None,
+        metric=None,
+    ):
+        """
+        Method to calculate the score of the fitted causal graph.
+
+        The score can be calculated either against a dataset (`X`) or against a ground truth model (`true_graph`).
+        Hence, only one of the two parameters should be provided. Depending on whether `X` is provided or
+        `true_graph`, the `metric` should be chosen accordingly.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame, optional
+            Test data used for scoring the learned causal model. If provided, `metric` should be a metric that
+            can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
+
+        true_graph : pgmpy.base.DAG, optional
+            The true model graph for scoring the learned causal model. If provided, `metric` should be a metric
+            that compares graphs. You can find all such metrics using:
+            `pgmpy.metrics.get_metrics(requires_true_graph=True)`
+
+        metric : str or pgmpy.metrics._Base.*Metric instance, optional
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
+            argument (`X` or `true_graph`) will be selected internally.
+
+        Returns
+        -------
+        score : float or other type
+            The calculated score of the learned causal graph according to the specified scoring method. The exact
+            return type depends on the chosen metric and may be a float, pandas.DataFrame, tuple, or another
+            metric-specific type.
+
+        Examples
+        --------
+        >>> from pgmpy.causal_discovery import PC
+        >>> from pgmpy.metrics import get_metrics
+        >>> from pgmpy.datasets import load_dataset
+        >>> data = load_dataset("lead")
+        >>> dag = PC(return_type="dag").fit(data)
+        >>> score = dag.score(X=data, metric="correlation_score")
+        """
+        check_is_fitted(self, "causal_graph_")
+
+        # Case 1: When data is provided.
+        if X is not None:
+            validate_data(
+                self,
+                X=X,
+                dtype=None,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=False,
+            )
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+
+            if metric is None:
+                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
+                metric = scoring_class()
+
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
+                if len(scoring_class) == 0:
+                    raise ValueError(f"No scoring method found with name: {metric}")
+
+                metric = scoring_class[0]()
+
+            return metric.evaluate(X, self.causal_graph_)
+
+        # Case 2: When true graph is provided.
+        elif true_graph is not None:
+            if metric is None:
+                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
+                metric = scoring_class[0]()
+            elif isinstance(metric, str):
+                scoring_class = get_metrics(name=metric)
+                if len(scoring_class) == 0:
+                    raise ValueError(f"No scoring method found with name: {metric}")
+
+                metric = scoring_class[0]()
+
+            return metric.evaluate(
+                true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
+            )
+        else:
+            raise ValueError("Either `X` or `true_graph` needs to be specified")
+
+
+class _ConstraintMixin:
     """
     Base class for all constraint-based causal discovery estimators.
     """
@@ -402,3 +507,90 @@ class _BaseConstraintCausalDiscovery(_BaseCausalDiscovery):
             combinations(separating_set_u, lim_neighbors),
             combinations(separating_set_v, lim_neighbors),
         )
+
+
+class _ScoreMixin:
+    """
+    Base class for all score-based causal discovery estimators.
+
+    Score-based causal discovery algorithms (e.g., HillClimbSearch, GES) work by
+    searching through the space of possible DAGs and scoring each candidate structure
+    using a scoring function (e.g., BIC, K2, BDeu).
+    """
+
+    def _legal_operations_dag(
+        self,
+        model: DAG,
+        score: Callable[[Any, List[Any]], float],
+        structure_score: Callable[[str], float],
+        tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]],
+        max_indegree: int,
+        forbidden_edges: List[Tuple[Hashable, Hashable]],
+        required_edges: List[Tuple[Hashable, Hashable]],
+    ) -> Generator[Tuple[Tuple[str, Tuple[Hashable, Hashable]], float], None, None]:
+        """Generates a list of legal (= not in tabu_list) graph modifications
+        for a given model, together with their score changes. Possible graph modifications:
+        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
+        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
+        If a number `max_indegree` is provided, only modifications that keep the number
+        of parents for each node below `max_indegree` are considered. A list of
+        edges can optionally be passed as `forbidden_edges` or `required_edges` to exclude those
+        edges or to force them to be present in the model, respectively.
+        """
+
+        tabu_list = set(tabu_list)
+
+        # Step 1: Get all legal operations for adding edges.
+        potential_new_edges = (
+            set(permutations(self.variables_, 2))
+            - set(model.edges())
+            - set([(Y, X) for (X, Y) in model.edges()])
+        )
+
+        for X, Y in potential_new_edges:
+            # Check if adding (X, Y) will create a cycle.
+            if not nx.has_path(model, Y, X):
+                operation = ("+", (X, Y))
+                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
+                    old_parents = model.get_parents(Y)
+                    new_parents = old_parents + [X]
+                    if len(new_parents) <= max_indegree:
+                        score_delta = score(Y, new_parents) - score(Y, old_parents)
+                        score_delta += structure_score("+")
+                        yield (operation, score_delta)
+
+        # Step 2: Get all legal operations for removing edges
+        for X, Y in model.edges():
+            operation = ("-", (X, Y))
+            if (operation not in tabu_list) and ((X, Y) not in required_edges):
+                old_parents = model.get_parents(Y)
+                new_parents = [var for var in old_parents if var != X]
+                score_delta = score(Y, new_parents) - score(Y, old_parents)
+                score_delta += structure_score("-")
+                yield (operation, score_delta)
+
+        # Step 3: Get all legal operations for flipping edges
+        for X, Y in model.edges():
+            # Check if flipping creates any cycles
+            if not any(
+                map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))
+            ):
+                operation = ("flip", (X, Y))
+                if (
+                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                    and ((X, Y) not in required_edges)
+                    and ((Y, X) not in forbidden_edges)
+                ):
+                    old_X_parents = model.get_parents(X)
+                    old_Y_parents = model.get_parents(Y)
+                    new_X_parents = old_X_parents + [Y]
+                    new_Y_parents = [var for var in old_Y_parents if var != X]
+                    if len(new_X_parents) <= max_indegree:
+                        score_delta = (
+                            score(X, new_X_parents)
+                            + score(Y, new_Y_parents)
+                            - score(X, old_X_parents)
+                            - score(Y, old_Y_parents)
+                        )
+                        score_delta += structure_score("flip")
+                        yield (operation, score_delta)

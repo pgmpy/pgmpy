@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -6,6 +8,8 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
+
+PGMPY_DATA_HOME = os.path.join(Path.home(), ".pgmpy")
 
 
 class DuplicateFilter(logging.Filter):
@@ -51,7 +55,7 @@ class Config:
         """
         if self.BACKEND == "numpy":
             raise ValueError(
-                f"Current backend is numpy. Device can only be set for torch backend"
+                "Current backend is numpy. Device can only be set for torch backend"
             )
 
         import torch

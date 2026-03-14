@@ -62,7 +62,11 @@ from pgmpy.estimators import PC
 dag = PC(data=alarm_df).estimate(ci_test="chi_square", return_type="dag")
 
 # Learn the parameters from the data.
-dag_fitted = dag.fit(alarm_df)
+from pgmpy.models import DiscreteBayesianNetwork
+
+discrete_bn = DiscreteBayesianNetwork(dag.edges())
+discrete_bn.add_nodes_from(dag.nodes())
+dag_fitted = discrete_bn.fit(alarm_df)
 dag_fitted.get_cpds()
 
 # Drop a column and predict using the learned model.
@@ -72,6 +76,8 @@ pred_FIO2 = dag_fitted.predict(evidence_df)
 
 #### Linear Gaussian Data
 ```python
+from pgmpy.utils import get_example_model
+
 # Load an example Gaussian Bayesian Network and simulate data
 gaussian_bn = get_example_model("ecoli70")
 ecoli_df = gaussian_bn.simulate(n_samples=100)
@@ -82,9 +88,9 @@ from pgmpy.estimators import PC
 dag = PC(data=ecoli_df).estimate(ci_test="pearsonr", return_type="dag")
 
 # Learn the parameters from the data.
-from pgmpy.models import LinearGausianBayesianNetwork
+from pgmpy.models import LinearGaussianBayesianNetwork
 
-gaussian_bn = LinearGausianBayesianNetwork(dag.edges())
+gaussian_bn = LinearGaussianBayesianNetwork(dag.edges())
 dag_fitted = gaussian_bn.fit(ecoli_df)
 dag_fitted.get_cpds()
 
@@ -95,6 +101,10 @@ pred_ftsJ = dag_fitted.predict(evidence_df)
 
 #### Mixture Data with Arbitrary Relationships
 ```python
+from pgmpy.global_vars import config
+
+config.set_backend("torch")
+
 import pyro.distributions as dist
 
 from pgmpy.models import FunctionalBayesianNetwork
