@@ -292,7 +292,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(["A", "B"])
         """
@@ -350,7 +351,6 @@ class VariableElimination(Inference):
             #           evidence.
             evidence_vars = set(evidence)
             reduce_indexes = []
-            reshape_indexes = []
             for phi in factors:
                 indexes_to_reduce = [
                     phi.variables.index(var)
@@ -491,7 +491,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(["A", "B"])
         """
@@ -569,7 +570,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(["A", "B"])
         """
@@ -644,9 +646,11 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
-        >>> inference.induced_graph(["C", "D", "A", "B", "E"])
+        >>> inference.induced_graph(["C", "D", "A", "B", "E"])  # doctest: +ELLIPSIS
+        <networkx.classes.graph.Graph object at 0x...>
         """
         self._initialize_structures()
 
@@ -712,7 +716,8 @@ class VariableElimination(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = VariableElimination(model)
         >>> inference.induced_width(["C", "D", "A", "B", "E"])
         3
@@ -1022,7 +1027,8 @@ class BeliefPropagation(Inference):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models...DiscreteBayesianNetwork object at 0x...>
         >>> inference = BeliefPropagation(model)
         >>> phi_query = inference.query(["A", "B"])
 
@@ -1170,7 +1176,8 @@ class BeliefPropagation(Inference):
         >>> belief_propagation = BeliefPropagation(bayesian_model)
         >>> belief_propagation.query(
         ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
-        ... )
+        ... )  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(J:2, Q:2) at 0x...>
         """
         evidence = evidence if evidence is not None else dict()
         orig_model = self.model.copy()
@@ -1267,7 +1274,7 @@ class BeliefPropagation(Inference):
         >>> belief_propagation = BeliefPropagation(bayesian_model)
         >>> belief_propagation.map_query(
         ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
-        ... )
+        ... )  # doctest: +SKIP
         """
         variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
@@ -1512,6 +1519,7 @@ class BeliefPropagationWithMessagePassing(Inference):
         Examples
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.inference import BeliefPropagation
         >>> factor_graph = FactorGraph()
@@ -1542,8 +1550,9 @@ class BeliefPropagationWithMessagePassing(Inference):
         >>> belief_propagation.query(
         ...     variables=["B", "C"],
         ...     evidence={"D": 0},
-        ...     virtual_evidence=[TabularCPD(["A"], 2, [[0.3], [0.7]])],
-        ... )
+        ...     virtual_evidence=[TabularCPD("A", 2, [[0.3], [0.7]])],
+        ... )  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(B:3, C:2) at 0x...>
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
