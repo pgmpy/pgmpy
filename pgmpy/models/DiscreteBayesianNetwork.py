@@ -863,10 +863,15 @@ class DiscreteBayesianNetwork(DAG):
         )
 
         if set(data.columns) == set(self.nodes()):
-            raise ValueError("No variable missing in data. Nothing to predict")
+            raise ValueError(
+                "No variables are missing in the input data. Prediction requires at least one variable to be missing."
+            )
 
         elif set(data.columns) - set(self.nodes()):
-            raise ValueError("Data has variables which are not in the model")
+            raise ValueError(
+                f"The input data contains variables not present in the model: "
+                f"{set(data.columns) - set(self.nodes())}"
+            )
 
         missing_variables = set(self.nodes()) - set(data.columns)
 
