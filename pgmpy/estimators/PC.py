@@ -230,9 +230,13 @@ class PC(BaseConstraintEstimator):
         >>> model_chi = est.estimate(ci_test="chi_square")
         >>> model_chi  # doctest: +ELLIPSIS
         <pgmpy.base.PDAG.PDAG object at 0x...>
+        >>> print(len(model_chi.edges()))
+        38
         >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
         >>> model_gsq  # doctest: +ELLIPSIS
         <networkx.classes.graph.Graph object at 0x...>
+        >>> print(len(model_gsq.edges()))
+        28
         """
         # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
@@ -334,23 +338,15 @@ class PC(BaseConstraintEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import PC
-        >>> np.random.seed(42)
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
+        >>> rng = np.random.default_rng(42)
+        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
         >>> c = PC(data)
         >>> skel, sep_sets = c.estimate(return_type="skeleton")
         >>> pdag = PC.orient_colliders(skel, sep_sets)
-        >>> expected = {
-        ...     ("A", "C"),
-        ...     ("B", "C"),
-        ...     ("A", "D"),
-        ...     ("D", "A"),
-        ... }  # edges: A->C, B->C, A--D (not directed)
-        >>> expected.issubset(set(pdag.edges()))
-        True
+        >>> sorted(pdag.edges())
+        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
         """
 
         pdag = skeleton.to_directed()
