@@ -181,12 +181,22 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
+        # Case where evidence has higher time slice than query variable (covers line 176)
+        res2 = self.infer.query([("Y", 0)], evidence={("Y", 1): 0})
+        self.assertIsNotNone(res2)
+
     def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
+        # Case where virtual evidence has higher time slice than query variable (covers line 179)
+        res2 = self.infer.query(
+            [("Y", 0)], virtual_evidence=[TabularCPD(("Y", 1), 2, [[0.2], [0.8]])]
+        )
+        self.assertIsNotNone(res2)
 
 
 @unittest.skipUnless(
@@ -376,12 +386,22 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
+        # Case where evidence has higher time slice than query variable (covers line 176)
+        res2 = self.infer.query([("Y", 0)], evidence={("Y", 1): 0})
+        self.assertIsNotNone(res2)
+
     def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
+        # Case where virtual evidence has higher time slice than query variable (covers line 179)
+        res2 = self.infer.query(
+            [("Y", 0)], virtual_evidence=[TabularCPD(("Y", 1), 2, [[0.2], [0.8]])]
+        )
+        self.assertIsNotNone(res2)
 
     def tearDown(self):
         config.set_backend("numpy")
