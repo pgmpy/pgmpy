@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import unittest
+import pytest
 
 import numpy as np
 from mock import call, patch
@@ -312,3 +313,19 @@ class TestMarkovChain(unittest.TestCase):
         self.assertGreaterEqual(state[1].state, 0)
         self.assertLessEqual(state[0].state, 1)
         self.assertLessEqual(state[1].state, 2)
+
+    def test_add_transition_model_invalid_variable(self):
+        model = MC()
+        model.add_variable("grade", 3)
+
+        tm = np.array(
+            [
+                [0.7, 0.2, 0.1],
+                [0.3, 0.4, 0.3],
+                [0.2, 0.3, 0.5],
+            ]
+        )
+
+        with pytest.raises(ValueError):
+            model.add_transition_model("invalid_variable", tm)
+            
