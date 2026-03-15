@@ -147,7 +147,10 @@ class ExhaustiveSearch(StructureEstimator):
         ... )
         >>> data["C"] = data["B"]
         >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
-        >>> for score, model in searcher.all_scores():
+        >>> for score, model in sorted(
+        ...     searcher.all_scores(),
+        ...     key=lambda x: (round(x[0], 6), sorted(x[1].edges())),
+        ... ):
         ...     print(
         ...         "{:.6f}\t{}".format(score, sorted(model.edges()))
         ...     )  # doctest: +NORMALIZE_WHITESPACE
@@ -161,8 +164,8 @@ class ExhaustiveSearch(StructureEstimator):
         -24207.206196     [('C', 'A')]
         -24174.384977     []
         -24143.645119     [('B', 'A'), ('C', 'A')]
-        -16601.326068     [('A', 'B'), ('A', 'C'), ('C', 'B')]
         -16601.326068     [('A', 'B'), ('A', 'C'), ('B', 'C')]
+        -16601.326068     [('A', 'B'), ('A', 'C'), ('C', 'B')]
         -16601.315544     [('A', 'B'), ('C', 'A'), ('C', 'B')]
         -16601.315544     [('A', 'C'), ('B', 'A'), ('B', 'C')]
         -16568.494325     [('A', 'B'), ('C', 'B')]
@@ -170,8 +173,8 @@ class ExhaustiveSearch(StructureEstimator):
         -16272.269478     [('A', 'B'), ('B', 'C')]
         -16272.269478     [('A', 'C'), ('C', 'B')]
         -16272.258953     [('B', 'A'), ('B', 'C')]
-        -16272.258953     [('B', 'C'), ('C', 'A')]
         -16272.258953     [('B', 'A'), ('C', 'B')]
+        -16272.258953     [('B', 'C'), ('C', 'A')]
         -16272.258953     [('C', 'A'), ('C', 'B')]
         -16239.437735     [('B', 'C')]
         -16239.437735     [('C', 'B')]
