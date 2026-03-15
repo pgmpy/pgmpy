@@ -73,11 +73,36 @@ class ExhaustiveSearch(StructureEstimator):
         ...     }
         ... )
         >>> est = ExhaustiveSearch(data)
-        >>> list(est.all_dags())
+        >>> list(est.all_dags())  # doctest: +ELLIPSIS
         [<networkx.classes.digraph.DiGraph object at 0x...>, <networkx.classes.digraph.DiGraph object at 0x...>, ...]
-        >>> [list(dag.edges()) for dag in est.all_dags()]
-        [[], [('Humidity', 'Temperature')], [('Humidity', 'Weather')], [('Temperature', 'Weather')], ...
-
+        >>> [
+        ...     list(dag.edges()) for dag in est.all_dags()
+        ... ]  # doctest: +NORMALIZE_WHITESPACE
+        [[],
+        [('Humidity', 'Temperature')],
+        [('Humidity', 'Weather')],
+        [('Temperature', 'Weather')],
+        [('Temperature', 'Humidity')],
+        [('Weather', 'Humidity')],
+        [('Weather', 'Temperature')],
+        [('Humidity', 'Temperature'), ('Humidity', 'Weather')],
+        [('Humidity', 'Temperature'), ('Temperature', 'Weather')],
+        [('Humidity', 'Temperature'), ('Weather', 'Humidity')],
+        [('Humidity', 'Temperature'), ('Weather', 'Temperature')],
+        [('Humidity', 'Weather'), ('Temperature', 'Weather')],
+        [('Humidity', 'Weather'), ('Temperature', 'Humidity')],
+        [('Humidity', 'Weather'), ('Weather', 'Temperature')],
+        [('Temperature', 'Weather'), ('Temperature', 'Humidity')],
+        [('Temperature', 'Weather'), ('Weather', 'Humidity')],
+        [('Temperature', 'Humidity'), ('Weather', 'Humidity')],
+        [('Temperature', 'Humidity'), ('Weather', 'Temperature')],
+        [('Weather', 'Humidity'), ('Weather', 'Temperature')],
+        [('Humidity', 'Temperature'), ('Humidity', 'Weather'), ('Temperature', 'Weather')],
+        [('Humidity', 'Temperature'), ('Humidity', 'Weather'), ('Weather', 'Temperature')],
+        [('Humidity', 'Temperature'), ('Weather', 'Humidity'), ('Weather', 'Temperature')],
+        [('Humidity', 'Weather'), ('Temperature', 'Weather'), ('Temperature', 'Humidity')],
+        [('Temperature', 'Weather'), ('Temperature', 'Humidity'), ('Weather', 'Humidity')],
+        [('Temperature', 'Humidity'), ('Weather', 'Humidity'), ('Weather', 'Temperature')]]
         """
         if nodes is None:
             nodes = sorted(self.state_names.keys())
@@ -123,7 +148,9 @@ class ExhaustiveSearch(StructureEstimator):
         >>> data["C"] = data["B"]
         >>> searcher = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> for score, model in searcher.all_scores():
-        ...     print("{0}\t{1}".format(score, model.edges()))
+        ...     print(
+        ...         "{0}\t{1}".format(score, model.edges())
+        ...     )  # doctest: +NORMALIZE_WHITESPACE
         ...
         -24240.048463058432        [('A', 'B'), ('A', 'C')]
         -24240.03793877268        [('A', 'B'), ('C', 'A')]
@@ -181,10 +208,10 @@ class ExhaustiveSearch(StructureEstimator):
         >>> data["C"] = data["B"]
         >>> est = ExhaustiveSearch(data, scoring_method=K2(data))
         >>> best_model = est.estimate()
-        >>> best_model
+        >>> best_model  # doctest: +ELLIPSIS
         <pgmpy.base.DAG.DAG object at 0x...>
-        >>> best_model.edges()
-        OutEdgeView([('B', 'A'), ('B', 'C'), ('C', 'A')])
+        >>> sorted(best_model.edges())
+        [('B', 'A'), ('B', 'C'), ('C', 'A')]
         """
 
         best_dag = max(self.all_dags(), key=self.scoring_method.score)
