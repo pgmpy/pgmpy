@@ -49,15 +49,15 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
     >>> pdag = PDAG(
     ...     directed_ebunch=[("A", "C"), ("D", "C")],
     ...     undirected_ebunch=[("B", "A"), ("B", "D")],
-    ...     latents=["E"],
+    ...     latents=["A"],
     ...     roles={"exposures": ["A"], "outcomes": ["C"]},
     ... )
-    >>> pdag.directed_edges
-    {('A', 'C'), ('D', 'C')}
-    >>> pdag.undirected_edges
-    {('B', 'A'), ('B', 'D')}
+    >>> sorted(pdag.directed_edges)
+    [('A', 'C'), ('D', 'C')]
+    >>> sorted(pdag.undirected_edges)
+    [('B', 'A'), ('B', 'D')]
     >>> pdag.latents
-    {'E'}
+    {'A'}
     >>> pdag.exposures
     {'A'}
     """
@@ -111,8 +111,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         ...     directed_ebunch=[("A", "C"), ("D", "C")],
         ...     undirected_ebunch=[("B", "A"), ("B", "D")],
         ... )
-        >>> pdag.all_neighbors("A")
-        {'B', 'C'}
+        >>> sorted(pdag.all_neighbors("A"))
+        ['B', 'C']
         """
         return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
 
@@ -291,11 +291,12 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import PDAG
         >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
+        ...     directed_ebunch=[("A", "B"), ("B", "C")],
+        ...     undirected_ebunch=[("A", "C")],
         ... )
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C')}
+        >>> cpdag = pdag.apply_meeks_rules()
+        >>> sorted(cpdag.directed_edges)
+        [('A', 'B'), ('A', 'C'), ('B', 'C')]
         """
         if inplace:
             pdag = self
@@ -395,8 +396,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         ...     undirected_ebunch=[("C", "D"), ("D", "A")],
         ... )
         >>> dag = pdag.to_dag()
-        >>> print(dag.edges())
-        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
+        >>> sorted(dag.edges())
+        [('A', 'B'), ('C', 'B'), ('D', 'A'), ('D', 'C')]
 
         References
         ----------
@@ -465,8 +466,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.to_graphviz()  # doctest: +SKIP
         """
         return nx.nx_agraph.to_agraph(self)
 
