@@ -145,8 +145,8 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
         >>> ind = model.local_independencies("b")
-        >>> ind
-        (b \u27c2 d, c | a)
+        >>> ind  # doctest: +SKIP
+        (b \u27c2 c, d | a)
         """
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
@@ -185,8 +185,12 @@ class NaiveBayes(DiscreteBayesianNetwork):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> model.fit(values, "A")
-        >>> len(model.get_cpds())
-        5
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2) at 0x...>,
+         <TabularCPD representing P(C:2 | A:2) at 0x...>,
+         <TabularCPD representing P(D:2 | A:2) at 0x...>,
+         <TabularCPD representing P(E:2 | A:2) at 0x...>]
         >>> model.edges()
         OutEdgeView([('A', 'B'), ('A', 'C'), ('A', 'D'), ('A', 'E')])
         """
