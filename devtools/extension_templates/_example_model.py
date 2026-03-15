@@ -23,8 +23,7 @@ from .._base import DiscreteMixin, _BaseExampleModel
 
 
 # TODO: Rename the class to match your model name. PascalCase is recommended
-# (e.g., MyModel, AsiaNetwork), but note that some existing example models may
-# use different naming styles.
+# (e.g., MyModel, AsiaNetwork).
 # TODO: Inherit from the appropriate Mixin class alongside _BaseExampleModel.
 # For e.g., DiscreteMixin, BIFMixin, ContinuousMixin, DAGMixin.
 class YourModelName(DiscreteMixin, _BaseExampleModel):
