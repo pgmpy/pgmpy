@@ -423,3 +423,14 @@ class TestADMGSeparation:
         connected = self.admg.is_mconnected("A", "B")
         separated = self.admg.is_mseparated("A", "B")
         assert connected != separated
+
+    def test_mconnected_nodes(self):
+        admg = ADMG(directed_ebunch=[("X", "Y"), ("Y", "Z")])
+        # base case - no nodes_v filter
+        result = admg.mconnected_nodes("X")
+        self.assertIsInstance(result, set)
+        self.assertIn("Y", result)
+        self.assertIn("Z", result)
+        # with nodes_v filter
+        self.assertEqual(admg.mconnected_nodes("X", nodes_v=["Y", "Z"]), {"Y", "Z"})
+        self.assertEqual(admg.mconnected_nodes("X", nodes_v=["Z"]), {"Z"})
