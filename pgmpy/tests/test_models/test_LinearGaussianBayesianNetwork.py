@@ -412,6 +412,13 @@ class TestLGBNMethods(unittest.TestCase):
         cpds = model_lin.get_random_cpds()
         self.assertEqual(len(cpds), len(model.nodes()))
 
+    def test_get_random_cpds_with_zero_seed(self):
+        m = get_example_model("alarm")
+        lgbn = LinearGaussianBayesianNetwork(m.edges())
+        c0 = lgbn.get_random_cpds(seed=0)
+        c42 = lgbn.get_random_cpds(seed=42)
+        self.assertNotEqual(c0[0].beta[0], c42[0].beta[0])
+
     def test_get_random(self):
         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
         model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
