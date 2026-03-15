@@ -176,7 +176,7 @@ class ApproxInference(object):
                         max_time_slices = var[1]
                 for cpd in virtual_evidence:
                     if cpd.variable[1] > max_time_slices:
-                        max_time_slices = cpd.variable[2]
+                        max_time_slices = cpd.variable[1]
                 samples = self.model.simulate(
                     n_samples=n_samples,
                     n_time_slices=max_time_slices + 1,

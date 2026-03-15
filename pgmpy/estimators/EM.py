@@ -150,7 +150,7 @@ class ExpectationMaximization(ParameterEstimator):
             ]
             cache.append(df)
 
-        return pd.concat(cache, copy=False)
+        return pd.concat(cache)
 
     def _compute_weights(
         self,
@@ -175,7 +175,7 @@ class ExpectationMaximization(ParameterEstimator):
             for i in range(0, data_unique.shape[0], batch_size)
         )
 
-        return pd.concat(cache, copy=False)
+        return pd.concat(cache)
 
     def _is_converged(
         self,
