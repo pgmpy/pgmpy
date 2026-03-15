@@ -154,7 +154,6 @@ class ExhaustiveSearch(StructureEstimator):
         ...     print(
         ...         "{:.6f}\t{}".format(score, sorted(model.edges()))
         ...     )  # doctest: +NORMALIZE_WHITESPACE
-        ...
         -24240.048463     [('A', 'B'), ('A', 'C')]
         -24240.037939     [('A', 'B'), ('C', 'A')]
         -24240.037939     [('A', 'C'), ('B', 'A')]
