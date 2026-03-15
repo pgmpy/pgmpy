@@ -1,3 +1,782 @@
+# import io
+# import os
+# import unittest
+
+# import numpy as np
+# import numpy.testing as np_test
+# import pandas as pd
+# import pytest
+
+# from pgmpy.example_models import load_model
+# from pgmpy.factors.continuous import LinearGaussianCPD
+# from pgmpy.factors.discrete import TabularCPD
+# from pgmpy.models import LinearGaussianBayesianNetwork
+# from pgmpy.utils import get_example_model
+
+
+# class TestLGBNMethods(unittest.TestCase):
+#     def setUp(self):
+#         self.model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+#         self.cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=4)
+#         self.cpd2 = LinearGaussianCPD(
+#             variable="x2", beta=[-5, 0.5], std=4, evidence=["x1"]
+#         )
+#         self.cpd3 = LinearGaussianCPD(
+#             variable="x3", beta=[4, -1], std=3, evidence=["x2"]
+#         )
+
+#     def test_cpds_simple(self):
+#         self.assertEqual("x1", self.cpd1.variable)
+#         self.assertEqual(4, self.cpd1.std)
+#         self.assertEqual([1], self.cpd1.beta)
+
+#         self.model.add_cpds(self.cpd1)
+#         cpd = self.model.get_cpds("x1")
+#         self.assertEqual(cpd.variable, self.cpd1.variable)
+#         self.assertEqual(cpd.std, self.cpd1.std)
+#         self.assertEqual(cpd.beta, self.cpd1.beta)
+
+#     def test_add_cpds(self):
+#         self.model.add_cpds(self.cpd1)
+#         cpd = self.model.get_cpds("x1")
+#         self.assertEqual(cpd.variable, self.cpd1.variable)
+#         self.assertEqual(cpd.std, self.cpd1.std)
+
+#         self.model.add_cpds(self.cpd2)
+#         cpd = self.model.get_cpds("x2")
+#         self.assertEqual(cpd.variable, self.cpd2.variable)
+#         self.assertEqual(cpd.std, self.cpd2.std)
+#         self.assertEqual(cpd.evidence, self.cpd2.evidence)
+
+#         self.model.add_cpds(self.cpd3)
+#         cpd = self.model.get_cpds("x3")
+#         self.assertEqual(cpd.variable, self.cpd3.variable)
+#         self.assertEqual(cpd.std, self.cpd3.std)
+#         self.assertEqual(cpd.evidence, self.cpd3.evidence)
+
+#         tab_cpd = TabularCPD(
+#             "grade",
+#             3,
+#             [
+#                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+#                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+#                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+#             ],
+#             evidence=["diff", "intel"],
+#             evidence_card=[2, 3],
+#         )
+#         self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
+#         self.assertRaises(ValueError, self.model.add_cpds, 1)
+#         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
+
+#     def test_remove_cpds(self):
+#         model = LinearGaussianBayesianNetwork([("X1", "X2"), ("X2", "X3")])
+
+#         cpd_X1 = LinearGaussianCPD("X1", beta=[1.0], std=2.0)
+#         cpd_X2 = LinearGaussianCPD("X2", beta=[-1.0, 0.5], std=1.5, evidence=["X1"])
+#         cpd_X3 = LinearGaussianCPD("X3", beta=[0.0, 1.0], std=1.0, evidence=["X2"])
+
+#         model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
+
+#         self.assertEqual(len(model.get_cpds()), 3)
+
+#         model.remove_cpds(cpd_X2, cpd_X3)
+
+#         remaining_cpds = model.get_cpds()
+#         self.assertEqual(len(remaining_cpds), 1)
+#         self.assertEqual(remaining_cpds[0], cpd_X1)
+
+#         self.assertNotIn(cpd_X2, remaining_cpds)
+#         self.assertNotIn(cpd_X3, remaining_cpds)
+
+#     def test_copy(self):
+#         model = LinearGaussianBayesianNetwork([("A", "B"), ("B", "C")])
+#         cpd_a = LinearGaussianCPD(variable="A", beta=[1], std=4)
+#         cpd_b = LinearGaussianCPD(variable="B", beta=[-5, 0.5], std=4, evidence=["A"])
+#         cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
+
+#         model.add_cpds(cpd_a, cpd_b, cpd_c)
+
+#         copy_model = model.copy()
+
+#         assert set(copy_model.nodes()) == set(model.nodes())
+#         assert set(copy_model.edges()) == set(model.edges())
+
+#         original_cpds = model.get_cpds()
+#         copied_cpds = copy_model.get_cpds()
+
+#         assert len(original_cpds) == len(copied_cpds)
+#         for orig_cpd, copied_cpd in zip(original_cpds, copied_cpds):
+#             assert orig_cpd.variable == copied_cpd.variable
+#             assert orig_cpd.evidence == copied_cpd.evidence
+#             np_test.assert_array_almost_equal(orig_cpd.beta, copied_cpd.beta)
+#             assert orig_cpd.std == copied_cpd.std
+
+#         model.remove_cpds(cpd_b)
+#         assert len(model.get_cpds()) == 2
+#         assert len(copy_model.get_cpds()) == 3
+
+#     def test_to_joint_gaussian(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         mean, cov = self.model.to_joint_gaussian()
+#         np_test.assert_array_almost_equal(mean, np.array([1.0, -4.5, 8.5]), decimal=3)
+#         np_test.assert_array_almost_equal(
+#             cov,
+#             np.array([[16.0, 8.0, -8.0], [8.0, 20.0, -20.0], [-8.0, -20.0, 29.0]]),
+#             decimal=3,
+#         )
+
+#     def test_check_model(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         self.assertEqual(self.model.check_model(), True)
+
+#         self.model.add_edge("x1", "x4")
+#         cpd4 = LinearGaussianCPD("x4", [4, -1], 3, ["x2"])
+#         self.model.add_cpds(cpd4)
+
+#         self.assertRaises(ValueError, self.model.check_model)
+
+#     def test_not_implemented_methods(self):
+#         self.assertRaises(ValueError, self.model.get_cardinality, "x1")
+#         self.assertRaises(NotImplementedError, self.model.to_markov_model)
+#         self.assertRaises(
+#             NotImplementedError, self.model.is_imap, [[1, 2, 3], [1, 5, 6]]
+#         )
+
+#     def test_simulate(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         df_cont = self.model.simulate(n_samples=1000000, seed=42)
+
+#         # Same model in terms of equations
+#         rng = np.random.default_rng(seed=42)
+#         x1 = 1 + rng.normal(0, 4, 1000000)
+#         x2 = -5 + 0.5 * x1 + rng.normal(0, 4, 1000000)
+#         x3 = 4 + -1 * x2 + rng.normal(0, 3, 1000000)
+#         df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+#         np_test.assert_array_almost_equal(df_cont.mean(), df_equ.mean(), decimal=1)
+#         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
+
+#     def test_simulate_with_evidence(self):
+
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         evidence = {"x1": 0}
+#         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
+
+#         missing_vars, mean_cond, cov_cond = self.model.predict_probability(
+#             pd.DataFrame([evidence])
+#         )
+#         sorted_indices = np.argsort(missing_vars)
+#         missing_vars = [missing_vars[i] for i in sorted_indices]
+#         mean_cond = mean_cond[:, sorted_indices]
+#         cov_cond = cov_cond[sorted_indices][:, sorted_indices]
+
+#         rng = np.random.default_rng(seed=42)
+#         samples = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=10000)
+#         df_equ = pd.DataFrame(samples, columns=missing_vars)
+
+#         np_test.assert_array_almost_equal(
+#             df.mean()[["x2", "x3"]], df_equ.mean(), decimal=5
+#         )
+#         np_test.assert_array_almost_equal(
+#             df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=5
+#         )
+
+#     def test_simulate_with_intervention(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         do = {"x2": 1.0}
+#         df = self.model.simulate(n_samples=1000_000, seed=42, do=do)
+
+#         rng = np.random.default_rng(seed=42)
+#         x1 = 1 + rng.normal(0, 4, 1000_000)
+#         x2 = np.full(1000_000, 1.0)
+#         x3 = 4 + -1 * x2 + rng.normal(0, 3, 1000_000)
+#         df_equ = pd.DataFrame({"x1": x1, "x3": x3, "x2": do["x2"]})
+
+#         np_test.assert_array_almost_equal(df.mean(), df_equ.mean(), decimal=1)
+#         np_test.assert_array_almost_equal(df.cov(), df_equ.cov(), decimal=1)
+
+#     def test_simulate_with_virtual_intervention(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+
+#         new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
+#         virtual_intervention = [new_cpd]
+
+#         df = self.model.simulate(
+#             n_samples=100_000, seed=42, virtual_intervention=virtual_intervention
+#         )
+
+#         rng = np.random.default_rng(seed=42)
+#         x1 = 1 + rng.normal(0, 4, 100_000)
+#         x2 = 1 + rng.normal(0, 2, 100_000)
+#         x3 = 4 + -1 * x2 + rng.normal(0, 3, 100_000)
+
+#         df_equiv = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+#         np_test.assert_array_almost_equal(df.mean(), df_equiv.mean(), decimal=1)
+#         np_test.assert_array_almost_equal(df.cov(), df_equiv.cov(), decimal=1)
+
+#     def test_simulate_latents(self):
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         self.model.latents.add("x2")
+
+#         df_with_latents = self.model.simulate(
+#             n_samples=1000, seed=42, include_latents=True
+#         )
+#         df_without_latents = self.model.simulate(
+#             n_samples=1000, seed=42, include_latents=False
+#         )
+
+#         for latent_var in self.model.latents:
+#             self.assertIn(latent_var, df_with_latents.columns)
+
+#         for latent_var in self.model.latents:
+#             self.assertNotIn(latent_var, df_without_latents.columns)
+
+#         non_latent_vars = [
+#             node for node in self.model.nodes() if node not in self.model.latents
+#         ]
+#         for var in non_latent_vars:
+#             self.assertIn(var, df_with_latents.columns)
+#             self.assertIn(var, df_without_latents.columns)
+
+#     def test_simulate_against_manual_results(self):
+#         model = LinearGaussianBayesianNetwork(
+#             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
+#         )
+
+#         cpd_X1 = LinearGaussianCPD("X1", beta=[0.0], std=1.0, evidence=[])
+#         cpd_X2 = LinearGaussianCPD("X2", beta=[0.0, 2.0], std=1.0, evidence=["X1"])
+#         cpd_X3 = LinearGaussianCPD(
+#             "X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"]
+#         )
+
+#         model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
+
+#         df = model.simulate(n_samples=100000, seed=42, do={"X1": 1.0})
+
+#         E_X1 = 1.0
+#         E_X2 = 2.0 * E_X1
+#         E_X3 = -E_X1 + 0.5 * E_X2
+
+#         expected_mean = np.array([E_X1, E_X2, E_X3])
+
+#         expected_cov = np.array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.5], [0.0, 0.5, 1.25]])
+
+#         sim_mean = df[["X1", "X2", "X3"]].mean().values
+#         sim_cov = df[["X1", "X2", "X3"]].cov().values
+
+#         np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
+#         np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
+
+#     def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
+#         model = LinearGaussianBayesianNetwork([("A", "B")])
+#         cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
+#         cpd_b = LinearGaussianCPD("B", beta=[0.5, 2.0], std=1.0, evidence=["A"])
+#         model.add_cpds(cpd_a, cpd_b)
+
+#         with self.assertRaisesRegex(ValueError, "do-nodes.*not present.*X"):
+#             model.simulate(n_samples=100, do={"X": 5.0})
+
+#         with self.assertRaisesRegex(ValueError, "evidence-nodes.*not present.*Y"):
+#             model.simulate(n_samples=100, evidence={"Y": 1.0})
+
+#         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
+#             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
+
+#     def test_fit(self):
+#         # Test fit on a simple model
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         df = self.model.simulate(n_samples=int(1e5), seed=42)
+#         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+#         # breakpoint()
+#         new_model.fit(
+#             df,
+#         )
+
+#         for node in self.model.nodes():
+#             cpd_orig = self.model.get_cpds(node)
+#             cpd_est = new_model.get_cpds(node)
+
+#             self.assertEqual(cpd_orig.variable, cpd_est.variable)
+#             self.assertEqual(round(cpd_orig.std, 1), round(cpd_est.std, 1))
+#             self.assertEqual(round(cpd_orig.beta[0], 1), round(cpd_est.beta[0], 1))
+
+#             for index, evid_var in enumerate(cpd_orig.evidence):
+#                 est_index = cpd_est.evidence.index(evid_var)
+#                 self.assertEqual(
+#                     round(cpd_orig.beta[index + 1], 1),
+#                     round(cpd_est.beta[est_index + 1], 1),
+#                 )
+
+#         # Test fit on the alarm model
+#         model = get_example_model("alarm")
+#         model_lin = LinearGaussianBayesianNetwork(model.edges())
+#         cpds = model_lin.get_random_cpds()
+#         model_lin.add_cpds(*cpds)
+#         df = model_lin.simulate(n_samples=int(1e6), seed=42)
+
+#         new_model_lin = LinearGaussianBayesianNetwork(model.edges())
+#         new_model_lin.fit(df)
+
+#         for node in model_lin.nodes():
+#             cpd_orig = model_lin.get_cpds(node)
+#             cpd_est = new_model_lin.get_cpds(node)
+
+#             self.assertEqual(cpd_orig.variable, cpd_est.variable)
+#             self.assertTrue(abs(cpd_orig.std - cpd_est.std) < 0.1)
+#             self.assertTrue(abs(cpd_orig.beta[0] - cpd_est.beta[0]) < 0.1)
+
+#             for index, evid_var in enumerate(cpd_orig.evidence):
+#                 est_index = cpd_est.evidence.index(evid_var)
+#                 self.assertTrue(
+#                     abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1
+#                 )
+
+#     def test_fit_invalid_estimator(self):
+#         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+#         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
+#         with self.assertRaises(ValueError):
+#             new_model.fit(df, estimator="unbiased")
+
+#     def test_predict_simple(self):
+#         # Setup
+#         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+#         df = self.model.simulate(n_samples=int(10), seed=42)
+#         df = df.drop("x2", axis=1)
+
+#         # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+#         predictions = self.model.predict(df)
+#         self.assertIsInstance(predictions, pd.DataFrame)
+#         self.assertEqual(set(predictions.columns), {"x2"})
+#         self.assertEqual(predictions.shape, (10, 1))
+#         self.assertTrue(
+#             np.allclose(
+#                 predictions["x2"].round(2).values,
+#                 [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+#             )
+#         )
+
+#         # Test predict_probability() — returns the full posterior (variables, mu, cov).
+#         variables, mu, cov = self.model.predict_probability(df)
+#         self.assertEqual(variables, ["x2"])
+#         self.assertEqual(mu.shape, (10, 1))
+#         self.assertTrue(
+#             np.allclose(
+#                 mu.round(2).squeeze(),
+#                 [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+#             )
+#         )
+#         self.assertEqual(cov.round(2).squeeze(), 5.76)
+
+#     def test_predict_ecoli(self):
+#         # Setup
+#         model = get_example_model("ecoli70")
+#         df = model.simulate(n_samples=int(10), seed=18)
+#         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
+
+#         # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+#         predictions = model.predict(df)
+#         self.assertIsInstance(predictions, pd.DataFrame)
+#         self.assertEqual(set(predictions.columns), {"yceP", "yheI", "cspA"})
+#         self.assertEqual(predictions.shape, (10, 3))
+
+#         # Test predict_probability() — returns the full posterior (variables, mu, cov).
+#         variables, mu, cov = model.predict_probability(df)
+#         self.assertEqual(set(variables), {"yceP", "yheI", "cspA"})
+#         self.assertEqual(mu.shape, (10, 3))
+#         self.assertEqual(cov.shape, (3, 3))
+
+#         # Verify predict() values match mu from predict_probability() —
+#         # both should equal the conditional means.
+#         for var_name in predictions.columns:
+#             np.testing.assert_array_almost_equal(
+#                 predictions[var_name].values,
+#                 mu[:, variables.index(var_name)],
+#             )
+
+#         # Verify numerical accuracy against R/bnlearn reference values.
+#         true_data = {
+#             "yceP": [
+#                 0.9355,
+#                 -0.6,
+#                 0.9173,
+#                 1.377,
+#                 -0.0277,
+#                 0.9375,
+#                 0.3736,
+#                 3.2211,
+#                 1.335,
+#                 0.5562,
+#             ],
+#             "yheI": [
+#                 1.4243,
+#                 3.3746,
+#                 2.9019,
+#                 -0.2351,
+#                 0.4836,
+#                 3.5011,
+#                 -0.3094,
+#                 1.909,
+#                 0.7434,
+#                 1.4975,
+#             ],
+#             "cspA": [
+#                 1.7982,
+#                 0.1066,
+#                 -1.245,
+#                 -0.2534,
+#                 1.1994,
+#                 0.8585,
+#                 -0.2137,
+#                 0.9671,
+#                 0.0418,
+#                 1.6395,
+#             ],
+#         }
+#         for idx, var_name in enumerate(variables):
+#             self.assertTrue(
+#                 np.allclose(
+#                     mu.round(1)[:, idx].squeeze(),
+#                     np.array(true_data[var_name]).round(1),
+#                 )
+#             )
+
+#     def test_get_random_cpds(self):
+#         model = get_example_model("alarm")
+#         model_lin = LinearGaussianBayesianNetwork(model.edges())
+#         cpds = model_lin.get_random_cpds()
+#         self.assertEqual(len(cpds), len(model.nodes()))
+
+#     def test_get_random(self):
+#         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
+#         model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
+#         self.assertNotEqual(model1.edges(), model2.edges())
+#         self.assertIsInstance(
+#             model1, LinearGaussianBayesianNetwork, "Incorrect instance"
+#         )
+#         self.assertIsInstance(
+#             model2, LinearGaussianBayesianNetwork, "Incorrect instance"
+#         )
+
+#         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
+#         model3 = LinearGaussianBayesianNetwork.get_random(
+#             n_nodes=5, edge_prob=0.5, node_names=node_names
+#         )
+#         self.assertEqual(len(model3.nodes()), 5)
+#         self.assertEqual(sorted(model3.nodes()), node_names)
+#         self.assertEqual(len(model3.cpds), 5)
+#         self.assertIsInstance(
+#             model3, LinearGaussianBayesianNetwork, "Incorrect instance"
+#         )
+
+#     def test_log_likelihood(self):
+#         # Test log likelihood with dataframes
+#         self.model.add_cpds(self.cpd1)
+#         self.model.add_cpds(self.cpd2)
+#         self.model.add_cpds(self.cpd3)
+#         np.random.seed(42)
+#         x1 = np.random.normal(0, 4, 100)
+#         x2 = -5 + 0.5 * x1 + np.random.normal(0, 4, 100)
+#         x3 = 4 - 1 * x2 + np.random.normal(0, 3, 100)
+#         good_fit = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+#         bad_fit = pd.DataFrame(
+#             np.random.normal(0, 10, (100, 3)), columns=["x1", "x2", "x3"]
+#         )
+#         ll_good = self.model.log_likelihood(good_fit)
+#         ll_bad = self.model.log_likelihood(bad_fit)
+#         self.assertIsInstance(
+#             ll_good, float, "Expected log_likelihood to return a float."
+#         )
+#         self.assertIsInstance(
+#             ll_bad, float, "Expected log_likelihood to return a float."
+#         )
+#         self.assertGreater(
+#             ll_good,
+#             ll_bad,
+#             "Expected higher log-likelihood for well-fitting data compared to random data.",
+#         )
+
+#         # Wrong column names should raise error
+#         data_wrong_names = pd.DataFrame(
+#             {
+#                 "a": np.random.normal(0, 1, 100),
+#                 "b": np.random.normal(0, 1, 100),
+#                 "c": np.random.normal(0, 1, 100),
+#             }
+#         )
+#         with self.assertRaises(ValueError):
+#             self.model.log_likelihood(data_wrong_names)
+
+#     def tearDown(self):
+#         del self.model, self.cpd1, self.cpd2, self.cpd3
+
+
+# class TestLGBNCreation(unittest.TestCase):
+#     def test_class_init_with_adj_matrix_dict_of_dict(self):
+#         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
+#         self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+#         self.assertEqual(self.graph.latents, set("a"))
+#         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+#         self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+
+#     def test_class_init_with_adj_matrix_dict_of_list(self):
+#         adj = {"a": ["b", "c"], "b": ["c"]}
+#         self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+#         self.assertEqual(self.graph.latents, set("a"))
+#         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+
+#     def test_class_init_with_pd_adj_df(self):
+#         df = pd.DataFrame([[0, 3], [0, 0]])
+#         self.graph = LinearGaussianBayesianNetwork(df, latents=set([0]))
+#         self.assertEqual(self.graph.latents, set([0]))
+#         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
+#         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+
+
+# class TestDAGParser(unittest.TestCase):
+#     def test_from_lavaan(self):
+#         model_str = "d ~ i"
+#         model_from_str = LinearGaussianBayesianNetwork.from_lavaan(string=model_str)
+#         expected_edges = set([("i", "d")])
+#         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+#     def test_from_dagitty(self):
+#         model_str = """dag{ smoking -> "carry matches" }"""
+#         model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
+#         expected_edges = set([("smoking", "carry matches")])
+#         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+#     def test_from_dagitty_DAG_ctor(self):
+#         from pgmpy.base import DAG
+
+#         # Adapted from https://www.dagitty.net/manual-3.x.pdf#page=4 section 3.1 with beta modified
+#         model_str = """dag{
+#         "carry matches" [latent]
+#         cancer [outcome]
+#         smoking -> "carry matches" [beta=0.2]
+#         smoking -> cancer [beta=0.5]
+#         "carry matches" -> cancer
+#         }"""
+#         model_from_str = DAG.from_dagitty(model_str)
+#         self.assertIsInstance(model_from_str, LinearGaussianBayesianNetwork)
+#         self.assertEqual(
+#             sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"]
+#         )
+#         expected_edges = set(
+#             [
+#                 ("smoking", "carry matches"),
+#                 ("smoking", "cancer"),
+#                 ("carry matches", "cancer"),
+#             ]
+#         )
+#         self.assertEqual(set(model_from_str.edges()), expected_edges)
+#         self.assertEqual(model_from_str.check_model(), True)
+
+#         # Test CPDs
+#         self.assertEqual(len(model_from_str.cpds), 3)
+
+#         # Check if all std dev are set
+#         self.assertIsNotNone(model_from_str.get_cpds("cancer").std)
+#         self.assertIsNotNone(model_from_str.get_cpds("carry matches").std)
+#         self.assertIsNotNone(model_from_str.get_cpds("smoking").std)
+
+#         # Check variable names
+#         self.assertEqual(model_from_str.get_cpds("cancer").variable, "cancer")
+#         self.assertEqual(
+#             model_from_str.get_cpds("carry matches").variable, "carry matches"
+#         )
+#         self.assertEqual(model_from_str.get_cpds("smoking").variable, "smoking")
+
+#         # Check evidences
+#         self.assertEqual(
+#             sorted(model_from_str.get_cpds("cancer").evidence),
+#             ["carry matches", "smoking"],
+#         )
+#         self.assertEqual(
+#             sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"]
+#         )
+#         self.assertEqual(sorted(model_from_str.get_cpds("smoking").evidence), [])
+
+#         # Check if the betas specified were correctly set
+#         self.assertEqual(model_from_str.get_cpds("cancer").beta[1], 0.5)
+#         self.assertEqual(model_from_str.get_cpds("carry matches").beta[1], 0.2)
+
+#         # Check if intercepts are 0
+#         self.assertEqual(model_from_str.get_cpds("cancer").beta[0], 0.0)
+#         self.assertEqual(model_from_str.get_cpds("carry matches").beta[0], 0.0)
+#         self.assertEqual(model_from_str.get_cpds("smoking").beta[0], 0.0)
+
+#         # Check if std devs are 1
+#         self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
+#         self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
+#         self.assertEqual(model_from_str.get_cpds("smoking").std, 1)
+
+
+# class TestLGBNIO(unittest.TestCase):
+#     def setUp(self):
+#         self.model = load_model("bnlearn/ecoli70")
+#         self.filename = "ecoli70.json"
+#         self.model.save(self.filename)
+
+#     def test_save_and_load(self):
+#         """Test basic save and load functionality"""
+#         loaded_model = LinearGaussianBayesianNetwork.load("ecoli70.json")
+#         assert self.model == loaded_model
+
+#     def test_load_from_file_object(self):
+#         """Test loading from file-like object"""
+#         with open(self.filename, "rb") as f:
+#             file_obj = io.BytesIO(f.read())
+
+#         loaded_model = LinearGaussianBayesianNetwork.load(file_obj)
+#         assert self.model == loaded_model
+
+#     def tearDown(self):
+#         """Clean up the test file"""
+#         if os.path.exists(self.filename):
+#             os.remove(self.filename)
+
+#     def test_simulate_missing_prob(self):
+#         model = LinearGaussianBayesianNetwork([("X1", "X2")])
+#         cpd1 = LinearGaussianCPD("X1", [0], 1)
+#         cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+
+#         model.add_cpds(cpd1, cpd2)
+#         df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
+#         nan_ratio = df["X1"].isna().mean()
+
+#         self.assertTrue(0.4 <= nan_ratio <= 0.6)
+
+#     def test_simulate_missing_prob_invalid_node(self):
+#         model = LinearGaussianBayesianNetwork([("X1", "X2")])
+#         cpd1 = LinearGaussianCPD("X1", [0], 1)
+#         cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+#         model.add_cpds(cpd1, cpd2)
+
+#         with self.assertRaises(ValueError):
+#             model.simulate(n_samples=10, missing_prob={"X3": 0.5})
+
+#     def test_simulate_missing_prob_invalid_probability(self):
+#         model = LinearGaussianBayesianNetwork([("X1", "X2")])
+#         cpd1 = LinearGaussianCPD("X1", [0], 1)
+#         cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
+#         model.add_cpds(cpd1, cpd2)
+
+#         with self.assertRaises(ValueError):
+#             model.simulate(n_samples=10, missing_prob={"X1": -0.1})
+
+#         with self.assertRaises(ValueError):
+#             model.simulate(n_samples=10, missing_prob={"X1": 1.5})
+
+
+# @pytest.fixture
+# def simple_model():
+#     model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+#     cpd1 = LinearGaussianCPD("x1", [1], 4)
+#     cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+#     cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+#     model.add_cpds(cpd1, cpd2, cpd3)
+#     return model
+
+
+# class TestPredict:
+#     def test_predict_returns_dataframe(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         result = simple_model.predict(df_obs)
+#         assert isinstance(result, pd.DataFrame)
+
+#     def test_predict_correct_columns(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         result = simple_model.predict(df_obs)
+#         assert list(result.columns) == ["x3"]
+
+#     def test_predict_correct_index(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         result = simple_model.predict(df_obs)
+#         assert list(result.index) == list(df_obs.index)
+
+#     def test_predict_multiple_missing(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x2", "x3"])
+#         result = simple_model.predict(df_obs)
+#         assert set(result.columns) == {"x2", "x3"}
+
+#     def test_predict_no_missing_raises(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         with pytest.raises(ValueError, match="No variable missing"):
+#             simple_model.predict(df)
+
+#     def test_predict_extra_column_raises(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df["extra"] = 0
+#         df_obs = df.drop(columns=["x3"])
+#         with pytest.raises(ValueError, match="not in the model"):
+#             simple_model.predict(df_obs)
+
+#     def test_predict_values_equal_conditional_mean(self, simple_model):
+#         # MAP for Gaussian == conditional mean from predict_probability
+#         df = simple_model.simulate(n_samples=10, seed=0)
+#         df_obs = df.drop(columns=["x3"])
+#         pred = simple_model.predict(df_obs)
+#         _, mu_cond, _ = simple_model.predict_probability(df_obs)
+#         np.testing.assert_array_almost_equal(pred.values, mu_cond)
+
+
+# class TestPredictProbability:
+#     def test_returns_tuple_of_three(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         result = simple_model.predict_probability(df_obs)
+#         assert len(result) == 3
+
+#     def test_missing_vars_list(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         missing_vars, _, _ = simple_model.predict_probability(df_obs)
+#         assert missing_vars == ["x3"]
+
+#     def test_mu_cond_shape(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         missing_vars, mu_cond, _ = simple_model.predict_probability(df_obs)
+#         assert mu_cond.shape == (5, len(missing_vars))
+
+#     def test_cov_cond_shape(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x3"])
+#         missing_vars, _, cov_cond = simple_model.predict_probability(df_obs)
+#         n = len(missing_vars)
+#         assert cov_cond.shape == (n, n)
+
+#     def test_cov_cond_is_symmetric(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x2", "x3"])
+#         _, _, cov_cond = simple_model.predict_probability(df_obs)
+#         np.testing.assert_array_almost_equal(cov_cond, cov_cond.T)
+
+#     def test_cov_cond_is_positive_semidefinite(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df_obs = df.drop(columns=["x2", "x3"])
+#         _, _, cov_cond = simple_model.predict_probability(df_obs)
+#         eigenvalues = np.linalg.eigvalsh(cov_cond)
+#         assert np.all(eigenvalues >= -1e-10)
+
+#     def test_no_missing_raises(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         with pytest.raises(ValueError, match="No variable missing"):
+#             simple_model.predict_probability(df)
+
+#     def test_extra_column_raises(self, simple_model):
+#         df = simple_model.simulate(n_samples=5, seed=42)
+#         df["extra"] = 0
+#         df_obs = df.drop(columns=["x3"])
+#         with pytest.raises(ValueError, match="not in the model"):
+#             simple_model.predict_probability(df_obs)
+
 import io
 import os
 import unittest
@@ -71,21 +850,15 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_remove_cpds(self):
         model = LinearGaussianBayesianNetwork([("X1", "X2"), ("X2", "X3")])
-
         cpd_X1 = LinearGaussianCPD("X1", beta=[1.0], std=2.0)
         cpd_X2 = LinearGaussianCPD("X2", beta=[-1.0, 0.5], std=1.5, evidence=["X1"])
         cpd_X3 = LinearGaussianCPD("X3", beta=[0.0, 1.0], std=1.0, evidence=["X2"])
-
         model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
 
-        self.assertEqual(len(model.get_cpds()), 3)
-
         model.remove_cpds(cpd_X2, cpd_X3)
-
         remaining_cpds = model.get_cpds()
         self.assertEqual(len(remaining_cpds), 1)
         self.assertEqual(remaining_cpds[0], cpd_X1)
-
         self.assertNotIn(cpd_X2, remaining_cpds)
         self.assertNotIn(cpd_X3, remaining_cpds)
 
@@ -94,24 +867,19 @@ class TestLGBNMethods(unittest.TestCase):
         cpd_a = LinearGaussianCPD(variable="A", beta=[1], std=4)
         cpd_b = LinearGaussianCPD(variable="B", beta=[-5, 0.5], std=4, evidence=["A"])
         cpd_c = LinearGaussianCPD(variable="C", beta=[4, -1], std=3, evidence=["B"])
-
         model.add_cpds(cpd_a, cpd_b, cpd_c)
 
         copy_model = model.copy()
-
         assert set(copy_model.nodes()) == set(model.nodes())
         assert set(copy_model.edges()) == set(model.edges())
 
-        original_cpds = model.get_cpds()
-        copied_cpds = copy_model.get_cpds()
-
-        assert len(original_cpds) == len(copied_cpds)
-        for orig_cpd, copied_cpd in zip(original_cpds, copied_cpds):
+        for orig_cpd, copied_cpd in zip(model.get_cpds(), copy_model.get_cpds()):
             assert orig_cpd.variable == copied_cpd.variable
             assert orig_cpd.evidence == copied_cpd.evidence
             np_test.assert_array_almost_equal(orig_cpd.beta, copied_cpd.beta)
             assert orig_cpd.std == copied_cpd.std
 
+        # Verify deep copy — modifying original does not affect copy.
         model.remove_cpds(cpd_b)
         assert len(model.get_cpds()) == 2
         assert len(copy_model.get_cpds()) == 3
@@ -133,7 +901,6 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_edge("x1", "x4")
         cpd4 = LinearGaussianCPD("x4", [4, -1], 3, ["x2"])
         self.model.add_cpds(cpd4)
-
         self.assertRaises(ValueError, self.model.check_model)
 
     def test_not_implemented_methods(self):
@@ -147,7 +914,6 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df_cont = self.model.simulate(n_samples=1000000, seed=42)
 
-        # Same model in terms of equations
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 4, 1000000)
         x2 = -5 + 0.5 * x1 + rng.normal(0, 4, 1000000)
@@ -158,7 +924,6 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
 
     def test_simulate_with_evidence(self):
-
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
@@ -198,19 +963,15 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_simulate_with_virtual_intervention(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-
         new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
-        virtual_intervention = [new_cpd]
-
         df = self.model.simulate(
-            n_samples=100_000, seed=42, virtual_intervention=virtual_intervention
+            n_samples=100_000, seed=42, virtual_intervention=[new_cpd]
         )
 
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 4, 100_000)
         x2 = 1 + rng.normal(0, 2, 100_000)
         x3 = 4 + -1 * x2 + rng.normal(0, 3, 100_000)
-
         df_equiv = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         np_test.assert_array_almost_equal(df.mean(), df_equiv.mean(), decimal=1)
@@ -220,88 +981,66 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         self.model.latents.add("x2")
 
-        df_with_latents = self.model.simulate(
-            n_samples=1000, seed=42, include_latents=True
-        )
-        df_without_latents = self.model.simulate(
-            n_samples=1000, seed=42, include_latents=False
-        )
+        df_with = self.model.simulate(n_samples=1000, seed=42, include_latents=True)
+        df_without = self.model.simulate(n_samples=1000, seed=42, include_latents=False)
 
-        for latent_var in self.model.latents:
-            self.assertIn(latent_var, df_with_latents.columns)
+        for var in self.model.latents:
+            self.assertIn(var, df_with.columns)
+            self.assertNotIn(var, df_without.columns)
 
-        for latent_var in self.model.latents:
-            self.assertNotIn(latent_var, df_without_latents.columns)
-
-        non_latent_vars = [
-            node for node in self.model.nodes() if node not in self.model.latents
-        ]
-        for var in non_latent_vars:
-            self.assertIn(var, df_with_latents.columns)
-            self.assertIn(var, df_without_latents.columns)
+        for var in [n for n in self.model.nodes() if n not in self.model.latents]:
+            self.assertIn(var, df_with.columns)
+            self.assertIn(var, df_without.columns)
 
     def test_simulate_against_manual_results(self):
         model = LinearGaussianBayesianNetwork(
             [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
         )
-
-        cpd_X1 = LinearGaussianCPD("X1", beta=[0.0], std=1.0, evidence=[])
-        cpd_X2 = LinearGaussianCPD("X2", beta=[0.0, 2.0], std=1.0, evidence=["X1"])
-        cpd_X3 = LinearGaussianCPD(
-            "X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"]
+        model.add_cpds(
+            LinearGaussianCPD("X1", beta=[0.0], std=1.0),
+            LinearGaussianCPD("X2", beta=[0.0, 2.0], std=1.0, evidence=["X1"]),
+            LinearGaussianCPD(
+                "X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"]
+            ),
         )
-
-        model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
-
         df = model.simulate(n_samples=100000, seed=42, do={"X1": 1.0})
 
-        E_X1 = 1.0
-        E_X2 = 2.0 * E_X1
-        E_X3 = -E_X1 + 0.5 * E_X2
-
-        expected_mean = np.array([E_X1, E_X2, E_X3])
-
+        E_X2 = 2.0
+        expected_mean = np.array([1.0, E_X2, -1.0 + 0.5 * E_X2])
         expected_cov = np.array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.5], [0.0, 0.5, 1.25]])
 
-        sim_mean = df[["X1", "X2", "X3"]].mean().values
-        sim_cov = df[["X1", "X2", "X3"]].cov().values
-
-        np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
-        np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
+        np_test.assert_array_almost_equal(
+            df[["X1", "X2", "X3"]].mean().values, expected_mean, decimal=1
+        )
+        np_test.assert_array_almost_equal(
+            df[["X1", "X2", "X3"]].cov().values, expected_cov, decimal=1
+        )
 
     def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
         model = LinearGaussianBayesianNetwork([("A", "B")])
-        cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
-        cpd_b = LinearGaussianCPD("B", beta=[0.5, 2.0], std=1.0, evidence=["A"])
-        model.add_cpds(cpd_a, cpd_b)
-
+        model.add_cpds(
+            LinearGaussianCPD("A", beta=[1], std=1.0),
+            LinearGaussianCPD("B", beta=[0.5, 2.0], std=1.0, evidence=["A"]),
+        )
         with self.assertRaisesRegex(ValueError, "do-nodes.*not present.*X"):
             model.simulate(n_samples=100, do={"X": 5.0})
-
         with self.assertRaisesRegex(ValueError, "evidence-nodes.*not present.*Y"):
             model.simulate(n_samples=100, evidence={"Y": 1.0})
-
         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
 
     def test_fit(self):
-        # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(1e5), seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        # breakpoint()
-        new_model.fit(
-            df,
-        )
+        new_model.fit(df)
 
         for node in self.model.nodes():
             cpd_orig = self.model.get_cpds(node)
             cpd_est = new_model.get_cpds(node)
-
             self.assertEqual(cpd_orig.variable, cpd_est.variable)
             self.assertEqual(round(cpd_orig.std, 1), round(cpd_est.std, 1))
             self.assertEqual(round(cpd_orig.beta[0], 1), round(cpd_est.beta[0], 1))
-
             for index, evid_var in enumerate(cpd_orig.evidence):
                 est_index = cpd_est.evidence.index(evid_var)
                 self.assertEqual(
@@ -312,21 +1051,16 @@ class TestLGBNMethods(unittest.TestCase):
         # Test fit on the alarm model
         model = get_example_model("alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds = model_lin.get_random_cpds()
-        model_lin.add_cpds(*cpds)
+        model_lin.add_cpds(*model_lin.get_random_cpds())
         df = model_lin.simulate(n_samples=int(1e6), seed=42)
-
         new_model_lin = LinearGaussianBayesianNetwork(model.edges())
         new_model_lin.fit(df)
 
         for node in model_lin.nodes():
             cpd_orig = model_lin.get_cpds(node)
             cpd_est = new_model_lin.get_cpds(node)
-
-            self.assertEqual(cpd_orig.variable, cpd_est.variable)
             self.assertTrue(abs(cpd_orig.std - cpd_est.std) < 0.1)
             self.assertTrue(abs(cpd_orig.beta[0] - cpd_est.beta[0]) < 0.1)
-
             for index, evid_var in enumerate(cpd_orig.evidence):
                 est_index = cpd_est.evidence.index(evid_var)
                 self.assertTrue(
@@ -340,12 +1074,11 @@ class TestLGBNMethods(unittest.TestCase):
             new_model.fit(df, estimator="unbiased")
 
     def test_predict_simple(self):
-        # Setup
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
         df = df.drop("x2", axis=1)
 
-        # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+        # predict() returns a DataFrame of MAP (conditional mean) estimates.
         predictions = self.model.predict(df)
         self.assertIsInstance(predictions, pd.DataFrame)
         self.assertEqual(set(predictions.columns), {"x2"})
@@ -357,7 +1090,7 @@ class TestLGBNMethods(unittest.TestCase):
             )
         )
 
-        # Test predict_probability() — returns the full posterior (variables, mu, cov).
+        # predict_probability() returns the full posterior (variables, mu, cov).
         variables, mu, cov = self.model.predict_probability(df)
         self.assertEqual(variables, ["x2"])
         self.assertEqual(mu.shape, (10, 1))
@@ -370,32 +1103,30 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(cov.round(2).squeeze(), 5.76)
 
     def test_predict_ecoli(self):
-        # Setup
         model = get_example_model("ecoli70")
         df = model.simulate(n_samples=int(10), seed=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
 
-        # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+        # predict() returns a DataFrame of MAP (conditional mean) estimates.
         predictions = model.predict(df)
         self.assertIsInstance(predictions, pd.DataFrame)
         self.assertEqual(set(predictions.columns), {"yceP", "yheI", "cspA"})
         self.assertEqual(predictions.shape, (10, 3))
 
-        # Test predict_probability() — returns the full posterior (variables, mu, cov).
+        # predict_probability() returns the full posterior (variables, mu, cov).
         variables, mu, cov = model.predict_probability(df)
         self.assertEqual(set(variables), {"yceP", "yheI", "cspA"})
         self.assertEqual(mu.shape, (10, 3))
         self.assertEqual(cov.shape, (3, 3))
 
-        # Verify predict() values match mu from predict_probability() —
-        # both should equal the conditional means.
+        # predict() values must equal mu from predict_probability().
         for var_name in predictions.columns:
             np.testing.assert_array_almost_equal(
                 predictions[var_name].values,
                 mu[:, variables.index(var_name)],
             )
 
-        # Verify numerical accuracy against R/bnlearn reference values.
+        # Numerical accuracy against R/bnlearn reference values.
         true_data = {
             "yceP": [
                 0.9355,
@@ -452,12 +1183,8 @@ class TestLGBNMethods(unittest.TestCase):
         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
         model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
         self.assertNotEqual(model1.edges(), model2.edges())
-        self.assertIsInstance(
-            model1, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
-        self.assertIsInstance(
-            model2, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
+        self.assertIsInstance(model1, LinearGaussianBayesianNetwork)
+        self.assertIsInstance(model2, LinearGaussianBayesianNetwork)
 
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
         model3 = LinearGaussianBayesianNetwork.get_random(
@@ -466,15 +1193,10 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(len(model3.nodes()), 5)
         self.assertEqual(sorted(model3.nodes()), node_names)
         self.assertEqual(len(model3.cpds), 5)
-        self.assertIsInstance(
-            model3, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
+        self.assertIsInstance(model3, LinearGaussianBayesianNetwork)
 
     def test_log_likelihood(self):
-        # Test log likelihood with dataframes
-        self.model.add_cpds(self.cpd1)
-        self.model.add_cpds(self.cpd2)
-        self.model.add_cpds(self.cpd3)
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         np.random.seed(42)
         x1 = np.random.normal(0, 4, 100)
         x2 = -5 + 0.5 * x1 + np.random.normal(0, 4, 100)
@@ -485,28 +1207,14 @@ class TestLGBNMethods(unittest.TestCase):
         )
         ll_good = self.model.log_likelihood(good_fit)
         ll_bad = self.model.log_likelihood(bad_fit)
-        self.assertIsInstance(
-            ll_good, float, "Expected log_likelihood to return a float."
-        )
-        self.assertIsInstance(
-            ll_bad, float, "Expected log_likelihood to return a float."
-        )
-        self.assertGreater(
-            ll_good,
-            ll_bad,
-            "Expected higher log-likelihood for well-fitting data compared to random data.",
-        )
+        self.assertIsInstance(ll_good, float)
+        self.assertIsInstance(ll_bad, float)
+        self.assertGreater(ll_good, ll_bad)
 
-        # Wrong column names should raise error
-        data_wrong_names = pd.DataFrame(
-            {
-                "a": np.random.normal(0, 1, 100),
-                "b": np.random.normal(0, 1, 100),
-                "c": np.random.normal(0, 1, 100),
-            }
-        )
         with self.assertRaises(ValueError):
-            self.model.log_likelihood(data_wrong_names)
+            self.model.log_likelihood(
+                pd.DataFrame(np.random.normal(0, 1, (100, 3)), columns=["a", "b", "c"])
+            )
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
@@ -538,19 +1246,16 @@ class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
         model_str = "d ~ i"
         model_from_str = LinearGaussianBayesianNetwork.from_lavaan(string=model_str)
-        expected_edges = set([("i", "d")])
-        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.edges()), {("i", "d")})
 
     def test_from_dagitty(self):
         model_str = """dag{ smoking -> "carry matches" }"""
         model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
-        expected_edges = set([("smoking", "carry matches")])
-        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.edges()), {("smoking", "carry matches")})
 
     def test_from_dagitty_DAG_ctor(self):
         from pgmpy.base import DAG
 
-        # Adapted from https://www.dagitty.net/manual-3.x.pdf#page=4 section 3.1 with beta modified
         model_str = """dag{
         "carry matches" [latent]
         cancer [outcome]
@@ -563,54 +1268,23 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(
             sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"]
         )
-        expected_edges = set(
-            [
+        self.assertEqual(
+            set(model_from_str.edges()),
+            {
                 ("smoking", "carry matches"),
                 ("smoking", "cancer"),
                 ("carry matches", "cancer"),
-            ]
+            },
         )
-        self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(model_from_str.check_model(), True)
-
-        # Test CPDs
         self.assertEqual(len(model_from_str.cpds), 3)
 
-        # Check if all std dev are set
-        self.assertIsNotNone(model_from_str.get_cpds("cancer").std)
-        self.assertIsNotNone(model_from_str.get_cpds("carry matches").std)
-        self.assertIsNotNone(model_from_str.get_cpds("smoking").std)
-
-        # Check variable names
-        self.assertEqual(model_from_str.get_cpds("cancer").variable, "cancer")
-        self.assertEqual(
-            model_from_str.get_cpds("carry matches").variable, "carry matches"
-        )
-        self.assertEqual(model_from_str.get_cpds("smoking").variable, "smoking")
-
-        # Check evidences
-        self.assertEqual(
-            sorted(model_from_str.get_cpds("cancer").evidence),
-            ["carry matches", "smoking"],
-        )
-        self.assertEqual(
-            sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"]
-        )
-        self.assertEqual(sorted(model_from_str.get_cpds("smoking").evidence), [])
-
-        # Check if the betas specified were correctly set
+        # Verify betas, intercepts, and std devs set correctly from dagitty.
         self.assertEqual(model_from_str.get_cpds("cancer").beta[1], 0.5)
         self.assertEqual(model_from_str.get_cpds("carry matches").beta[1], 0.2)
-
-        # Check if intercepts are 0
-        self.assertEqual(model_from_str.get_cpds("cancer").beta[0], 0.0)
-        self.assertEqual(model_from_str.get_cpds("carry matches").beta[0], 0.0)
-        self.assertEqual(model_from_str.get_cpds("smoking").beta[0], 0.0)
-
-        # Check if std devs are 1
-        self.assertEqual(model_from_str.get_cpds("cancer").std, 1)
-        self.assertEqual(model_from_str.get_cpds("carry matches").std, 1)
-        self.assertEqual(model_from_str.get_cpds("smoking").std, 1)
+        for var in ["cancer", "carry matches", "smoking"]:
+            self.assertEqual(model_from_str.get_cpds(var).beta[0], 0.0)
+            self.assertEqual(model_from_str.get_cpds(var).std, 1)
 
 
 class TestLGBNIO(unittest.TestCase):
@@ -620,52 +1294,45 @@ class TestLGBNIO(unittest.TestCase):
         self.model.save(self.filename)
 
     def test_save_and_load(self):
-        """Test basic save and load functionality"""
         loaded_model = LinearGaussianBayesianNetwork.load("ecoli70.json")
         assert self.model == loaded_model
 
     def test_load_from_file_object(self):
-        """Test loading from file-like object"""
         with open(self.filename, "rb") as f:
             file_obj = io.BytesIO(f.read())
-
         loaded_model = LinearGaussianBayesianNetwork.load(file_obj)
         assert self.model == loaded_model
 
     def tearDown(self):
-        """Clean up the test file"""
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
     def test_simulate_missing_prob(self):
         model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-
-        model.add_cpds(cpd1, cpd2)
+        model.add_cpds(
+            LinearGaussianCPD("X1", [0], 1),
+            LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"]),
+        )
         df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
-        nan_ratio = df["X1"].isna().mean()
-
-        self.assertTrue(0.4 <= nan_ratio <= 0.6)
+        self.assertTrue(0.4 <= df["X1"].isna().mean() <= 0.6)
 
     def test_simulate_missing_prob_invalid_node(self):
         model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-        model.add_cpds(cpd1, cpd2)
-
+        model.add_cpds(
+            LinearGaussianCPD("X1", [0], 1),
+            LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"]),
+        )
         with self.assertRaises(ValueError):
             model.simulate(n_samples=10, missing_prob={"X3": 0.5})
 
     def test_simulate_missing_prob_invalid_probability(self):
         model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-        model.add_cpds(cpd1, cpd2)
-
+        model.add_cpds(
+            LinearGaussianCPD("X1", [0], 1),
+            LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"]),
+        )
         with self.assertRaises(ValueError):
             model.simulate(n_samples=10, missing_prob={"X1": -0.1})
-
         with self.assertRaises(ValueError):
             model.simulate(n_samples=10, missing_prob={"X1": 1.5})
 
@@ -673,106 +1340,59 @@ class TestLGBNIO(unittest.TestCase):
 @pytest.fixture
 def simple_model():
     model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-    cpd1 = LinearGaussianCPD("x1", [1], 4)
-    cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
-    cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
-    model.add_cpds(cpd1, cpd2, cpd3)
+    model.add_cpds(
+        LinearGaussianCPD("x1", [1], 4),
+        LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"]),
+        LinearGaussianCPD("x3", [4, -1], 3, ["x2"]),
+    )
     return model
 
 
 class TestPredict:
-    def test_predict_returns_dataframe(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
+    def test_predict_interface(self, simple_model):
+        # Covers: return type, columns, index, shape, values == mu_cond.
+        df = simple_model.simulate(n_samples=10, seed=0)
         df_obs = df.drop(columns=["x3"])
         result = simple_model.predict(df_obs)
         assert isinstance(result, pd.DataFrame)
-
-    def test_predict_correct_columns(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        result = simple_model.predict(df_obs)
         assert list(result.columns) == ["x3"]
-
-    def test_predict_correct_index(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        result = simple_model.predict(df_obs)
         assert list(result.index) == list(df_obs.index)
+        assert result.shape == (10, 1)
+        _, mu_cond, _ = simple_model.predict_probability(df_obs)
+        np.testing.assert_array_almost_equal(result.values, mu_cond)
 
     def test_predict_multiple_missing(self, simple_model):
         df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x2", "x3"])
-        result = simple_model.predict(df_obs)
+        result = simple_model.predict(df.drop(columns=["x2", "x3"]))
         assert set(result.columns) == {"x2", "x3"}
 
-    def test_predict_no_missing_raises(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
+    def test_predict_errors(self, simple_model):
+        # Covers: no missing vars, extra columns not in model.
+        df = simple_model.simulate(n_samples=5, seed=0)
         with pytest.raises(ValueError, match="No variable missing"):
             simple_model.predict(df)
-
-    def test_predict_extra_column_raises(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
         df["extra"] = 0
-        df_obs = df.drop(columns=["x3"])
         with pytest.raises(ValueError, match="not in the model"):
-            simple_model.predict(df_obs)
-
-    def test_predict_values_equal_conditional_mean(self, simple_model):
-        # MAP for Gaussian == conditional mean from predict_probability
-        df = simple_model.simulate(n_samples=10, seed=0)
-        df_obs = df.drop(columns=["x3"])
-        pred = simple_model.predict(df_obs)
-        _, mu_cond, _ = simple_model.predict_probability(df_obs)
-        np.testing.assert_array_almost_equal(pred.values, mu_cond)
+            simple_model.predict(df.drop(columns=["x3"]))
 
 
 class TestPredictProbability:
-    def test_returns_tuple_of_three(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        result = simple_model.predict_probability(df_obs)
-        assert len(result) == 3
-
-    def test_missing_vars_list(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        missing_vars, _, _ = simple_model.predict_probability(df_obs)
-        assert missing_vars == ["x3"]
-
-    def test_mu_cond_shape(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        missing_vars, mu_cond, _ = simple_model.predict_probability(df_obs)
+    def test_predict_probability_output(self, simple_model):
+        # Covers: tuple structure, variable names, shapes, symmetry, PSD.
+        df = simple_model.simulate(n_samples=5, seed=0)
+        df_obs = df.drop(columns=["x2", "x3"])
+        missing_vars, mu_cond, cov_cond = simple_model.predict_probability(df_obs)
+        assert set(missing_vars) == {"x2", "x3"}
         assert mu_cond.shape == (5, len(missing_vars))
-
-    def test_cov_cond_shape(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x3"])
-        missing_vars, _, cov_cond = simple_model.predict_probability(df_obs)
-        n = len(missing_vars)
-        assert cov_cond.shape == (n, n)
-
-    def test_cov_cond_is_symmetric(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x2", "x3"])
-        _, _, cov_cond = simple_model.predict_probability(df_obs)
+        assert cov_cond.shape == (len(missing_vars), len(missing_vars))
         np.testing.assert_array_almost_equal(cov_cond, cov_cond.T)
+        assert np.all(np.linalg.eigvalsh(cov_cond) >= -1e-10)
 
-    def test_cov_cond_is_positive_semidefinite(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
-        df_obs = df.drop(columns=["x2", "x3"])
-        _, _, cov_cond = simple_model.predict_probability(df_obs)
-        eigenvalues = np.linalg.eigvalsh(cov_cond)
-        assert np.all(eigenvalues >= -1e-10)
-
-    def test_no_missing_raises(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
+    def test_predict_probability_errors(self, simple_model):
+        # Covers: no missing vars, extra columns not in model.
+        df = simple_model.simulate(n_samples=5, seed=0)
         with pytest.raises(ValueError, match="No variable missing"):
             simple_model.predict_probability(df)
-
-    def test_extra_column_raises(self, simple_model):
-        df = simple_model.simulate(n_samples=5, seed=42)
         df["extra"] = 0
-        df_obs = df.drop(columns=["x3"])
         with pytest.raises(ValueError, match="not in the model"):
-            simple_model.predict_probability(df_obs)
+            simple_model.predict_probability(df.drop(columns=["x3"]))
