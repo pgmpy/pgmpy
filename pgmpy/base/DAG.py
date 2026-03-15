@@ -1789,16 +1789,27 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         Returns
         -------
-        dict : A dictionary with the following keys:
-            - n_nodes: int - Number of nodes in the DAG.
-            - n_edges: int - Number of edges in the DAG.
-            - n_root_nodes: int - Number of root nodes (nodes with no parents).
-            - n_leaf_nodes: int - Number of leaf nodes (nodes with no children).
-            - edge_density: float - Ratio of edges to maximum possible edges.
-            - n_connected_components: int - Number of weakly connected components.
-            - n_v_structures: int - Number of v-structures (immoralities) in the DAG.
-            - avg_n_parents: float - Average number of parents per node.
-            - max_n_parents: int - Maximum number of parents of any single node (max in-degree).
+        dict
+            Dictionary containing summary statistics of the DAG.
+
+        n_nodes : int
+            Number of nodes in the DAG.
+        n_edges : int
+            Number of edges in the DAG.
+        n_root_nodes : int
+            Number of nodes with no parents.
+        n_leaf_nodes : int
+            Number of nodes with no children.
+        edge_density : float
+            Ratio of edges to maximum possible edges.
+        n_connected_components : int
+            Number of weakly connected components.
+        n_v_structures : int
+            Number of v-structures (immoralities).
+        avg_n_parents : float
+            Average number of parents per node.
+        max_n_parents : int
+            Maximum number of parents of any node.
 
         Examples
         --------
@@ -1810,23 +1821,26 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> stats["n_v_structures"]
         1
         """
-        n = self.number_of_nodes()
-        e = self.number_of_edges()
+        no_of_nodes = self.number_of_nodes()
+        no_of_edges = self.number_of_edges()
 
-        nodes = list(self.nodes())
-        in_degrees = [self.in_degree(node) for node in nodes]
-        out_degrees = [self.out_degree(node) for node in nodes]
+        in_degrees = dict(self.in_degree())
+        out_degrees = dict(self.out_degree())
 
         n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
 
         return {
-            "n_nodes": n,
-            "n_edges": e,
-            "n_root_nodes": sum(d == 0 for d in in_degrees),
-            "n_leaf_nodes": sum(d == 0 for d in out_degrees),
-            "edge_density": e / (n * (n - 1)) if n > 1 else 0,
+            "n_nodes": no_of_nodes,
+            "n_edges": no_of_edges,
+            "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
+            "n_leaf_nodes": sum(d == 0 for d in out_degrees.values()),
+            "edge_density": (
+                (no_of_edges) / (no_of_nodes * (no_of_nodes - 1) / 2)
+                if no_of_nodes > 1
+                else 0
+            ),
             "n_connected_components": nx.number_weakly_connected_components(self),
             "n_v_structures": n_v_structures,
-            "avg_n_parents": e / n if n else 0,
-            "max_n_parents": max(in_degrees) if in_degrees else 0,
+            "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
+            "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
         }
