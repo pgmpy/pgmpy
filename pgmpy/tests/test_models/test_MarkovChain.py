@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import unittest
-import pytest
 
 import numpy as np
+import pytest
 from mock import call, patch
 from pandas import DataFrame
 
