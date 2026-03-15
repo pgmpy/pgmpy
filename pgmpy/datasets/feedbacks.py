@@ -18,8 +18,8 @@ _FEEDBACKS_TAGS = {
     "n_samples": 1000,
 }
 
-_categorical_variables = []
-_ordinal_variables = dict()
+_categorical_variables = ()  # immutable — safe to share across all classes
+_ordinal_variables = {}
 
 
 class FeedbacksNetwork1Amp(_BaseDataset):

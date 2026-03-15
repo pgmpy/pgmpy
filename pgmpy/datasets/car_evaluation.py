@@ -30,6 +30,8 @@ class CarEvaluation(_BaseDataset):
 
     data_url = base_url + "data/car-evaluation.discrete.txt"
     ground_truth_url = None
+    # Note: "car-evalutation" (with the extra 't') is the actual filename in the
+    # upstream repository — preserving that spelling here intentionally.
     expert_knowledge_url = (
         base_url + "ground.truth/car-evalutation.knowledge.txt"
     )
