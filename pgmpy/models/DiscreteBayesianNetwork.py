@@ -1422,7 +1422,6 @@ class DiscreteBayesianNetwork(DAG):
                 new_cpd.normalize()
                 adj_model.remove_cpds(cpd)
                 adj_model.add_cpds(new_cpd)
-        
 
         """  At first glance, it checks whether adj_model has any CPDs.
         if it does, it iterates through each node in the `nodes` list and retrieves its children.

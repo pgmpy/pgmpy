@@ -30,6 +30,8 @@ def test_do_reduces_child_cpd():
     expected_values = np.array([0.8, 0.2])
 
     assert np.allclose(new_cpd_y.values, expected_values)
+
+
 """
 NUmpy is used to compare the values of the new CPD for Y after intervention with the expected values.
 The test checks if the do operator correctly reduces the CPD of Y to reflect the intervention on X.
