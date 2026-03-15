@@ -171,7 +171,7 @@ def load_model(name: str):
         return_names=False,
     )
 
-    if target_model is None:
+    if not target_model:
         raise ValueError(
             f"Model with name '{name}' not found. Please use list_models() to see available datasets."
         )
