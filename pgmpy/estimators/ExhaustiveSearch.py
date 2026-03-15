@@ -1,3 +1,11 @@
+import warnings
+warnings.warn(
+    "ExhaustiveSearch in pgmpy.estimators is deprecated and will be removed in a future release. "
+    "Please use pgmpy.causal_discovery.ExhaustiveSearch instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 #!/usr/bin/env python
 
 from itertools import combinations
