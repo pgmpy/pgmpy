@@ -1,5 +1,3 @@
-"""Acyclic Directed Mixed Graph (ADMG) representation for pgmpy."""
-
 import collections
 
 import networkx as nx
@@ -10,7 +8,8 @@ from pgmpy.base.DAG import DAG as pgmpy_DAG
 
 
 class ADMG(_GraphRolesMixin, MultiDiGraph):
-    """A class representing an Acyclic Directed Mixed Graph (ADMG).
+    """
+    A class representing an Acyclic Directed Mixed Graph (ADMG).
 
     An ADMG is a directed graph that allows for both directed and bidirected edges.
     This class extends the `networkx.MultiDiGraph` and provides additional functionality
@@ -40,7 +39,10 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
     ... )
     >>> sorted(admg.nodes())
     ['X', 'Y', 'Z']
-
+    >>> sorted(admg.edges())
+    [('X', 'Y'), ('X', 'Z'), ('Z', 'X'), ('Z', 'Y')]
+    >>> admg.latents
+    set()
     """
 
     def __init__(
@@ -50,7 +52,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         latents=None,
         roles=None,
     ):
-        """Initialize ADMG with optional directed edges, bidirected edges, latents, and roles."""
         super().__init__()
         # Using edge attributes to distinguish bidirected edges
 
@@ -71,7 +72,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             self.with_role(role=role, variables=vars, inplace=True)
 
     def add_directed_edges(self, ebunch):
-        """Add directed edges (u -> v) to the ADMG.
+        """
+        Add directed edges (u -> v) to the ADMG.
 
         Parameters
         ----------
@@ -85,7 +87,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         >>> admg.add_directed_edges([("X", "Y"), ("Y", "Z")])
         >>> sorted(admg.nodes())
         ['X', 'Y', 'Z']
-
+        >>> sorted(admg.edges())
+        [('X', 'Y'), ('Y', 'Z')]
         """
         for u, v in ebunch:
             if u is None or v is None:
@@ -97,7 +100,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
                 raise ValueError("Adding this edge would create a cycle in the graph.")
 
     def add_bidirected_edges(self, ebunch):
-        """Add bidirected edges (u <-> v) to the ADMG.
+        """
+        Add bidirected edges (u <-> v) to the ADMG.
 
         Parameters
         ----------
@@ -111,7 +115,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         >>> admg.add_bidirected_edges([("X", "Z")])
         >>> sorted(admg.nodes())
         ['X', 'Z']
-
+        >>> sorted(admg.edges())
+        [('X', 'Z'), ('Z', 'X')]
         """
         for u, v in ebunch:
             if u is None or v is None:
@@ -124,7 +129,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             super().add_edge(v, u, type="bidirected")
 
     def add_edge(self, u, v, **kwargs):
-        """Raise an error if trying to add a regular edge.
+        """
+        Raise an error if trying to add a regular edge.
 
         Examples
         --------
@@ -134,14 +140,14 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         Traceback (most recent call last):
             ...
         NotImplementedError: Use add_directed_edge or add_bidirected_edge to add edges.
-
         """
         raise NotImplementedError(
             "Use add_directed_edge or add_bidirected_edge to add edges."
         )
 
     def get_directed_parents(self, nodes):
-        """Get directed parents of given nodes.
+        """
+        Get directed parents of given nodes.
 
         Parameters
         ----------
@@ -161,7 +167,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['X', 'Z']
         >>> admg.get_directed_parents("X")
         set()
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         directed_parents = set()
@@ -177,7 +182,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return directed_parents
 
     def get_bidirected_parents(self, nodes):
-        """Get bidirected parents (nodes connected via bidirected edge) of the given nodes.
+        """
+        Get bidirected parents (nodes connected via bidirected edge) of the given nodes.
 
         Parameters
         ----------
@@ -197,7 +203,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['Z']
         >>> admg.get_bidirected_parents("Y")
         set()
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         bidirected_parents = set()
@@ -221,7 +226,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return bidirected_parents
 
     def get_children(self, nodes):
-        """Get children of given nodes (i.e., targets of outgoing directed edges).
+        """
+        Get children of given nodes (i.e., targets of outgoing directed edges).
 
         Parameters
         ----------
@@ -241,7 +247,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['Y', 'Z']
         >>> admg.get_children("Y")
         set()
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         children = set()
@@ -255,7 +260,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return children
 
     def get_spouses(self, nodes):
-        """Get spouses of given nodes (i.e., nodes connected via bidirected edges).
+        """
+        Get spouses of given nodes (i.e., nodes connected via bidirected edges).
 
         Parameters
         ----------
@@ -275,7 +281,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['Z']
         >>> admg.get_spouses("Y")
         set()
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         spouses = set()
@@ -297,7 +302,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return spouses
 
     def get_ancestors(self, nodes):
-        """Get ancestors of given nodes via directed paths.
+        """
+        Get ancestors of given nodes via directed paths.
 
         Parameters
         ----------
@@ -317,7 +323,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['X', 'Y', 'Z']
         >>> sorted(admg.get_ancestors("X"))
         ['X']
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         ancestors = set()
@@ -333,7 +338,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return ancestors
 
     def get_descendants(self, nodes):
-        """Get descendants of given nodes via directed paths.
+        """
+        Get descendants of given nodes via directed paths.
 
         Parameters
         ----------
@@ -353,7 +359,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['X', 'Y', 'Z']
         >>> sorted(admg.get_descendants("Z"))
         ['Z']
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         descendants = set()
@@ -369,7 +374,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return descendants
 
     def get_district(self, nodes):
-        """Return district of a node: maximal set connected via bidirected edges.
+        """
+        Return district of a node: maximal set connected via bidirected edges.
 
         Parameters
         ----------
@@ -389,7 +395,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ['X', 'Z']
         >>> admg.get_district("Y")
         {'Y'}
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
         all_districts = set()
@@ -437,7 +442,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return all_districts
 
     def get_ancestral_graph(self, nodes):
-        """Return the ancestral graph induced by the input nodes.
+        """
+        Return the ancestral graph induced by the input nodes.
 
         Parameters
         ----------
@@ -466,7 +472,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         >>> anc2 = admg.get_ancestral_graph(["X", "Y", "Z"])
         >>> sorted(anc2.nodes())
         ['X', 'Y', 'Z']
-
         """
         nodes_set = {nodes} if isinstance(nodes, str) else set(nodes)
 
@@ -482,7 +487,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             if data.get("type") == "directed" and u in nodes_set and v in nodes_set:
                 new_admg.add_directed_edges(
                     [(u, v)]
-                )  # Use add_directed)edges to maintain cycle check
+                )  # Use add_directed_edges to maintain cycle check
 
         # Add bidirected edges from the original graph that have both endpoints in nodes_set
         processed_bidirected_pairs = set()
@@ -503,7 +508,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return new_admg
 
     def get_markov_blanket(self, nodes):
-        """Compute the Markov blanket for the given node(s).
+        """
+        Compute the Markov blanket for the given node(s).
 
         Includes:
         - Parents
@@ -529,7 +535,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ... )
         >>> sorted(admg.get_markov_blanket("Y"))
         ['X', 'Z']
-
         """
         nodes_set = {nodes} if isinstance(nodes, set) else set(nodes)
         if not nodes_set.issubset(self.nodes):
@@ -552,7 +557,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return markov_blanket
 
     def to_dag(self):
-        """Project ADMG into a DAG by introducing latent variables for bidirected edges.
+        """
+        Project ADMG into a DAG by introducing latent variables for bidirected edges.
 
         Returns
         -------
@@ -568,7 +574,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         True
         >>> ("X", "Y") in dag.edges()
         True
-
         """
         dag_edges = []
 
@@ -603,7 +608,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         nodes_v,
         conditional_set=None,
     ):
-        """Test m-separation between two sets of nodes given a conditioning set.
+        """
+        Test m-separation between two sets of nodes given a conditioning set.
 
         Parameters
         ----------
@@ -629,7 +635,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         True
         >>> admg.is_mseparated("X", "Z", conditional_set={"Y"})
         False
-
         """
         if conditional_set is None:
             conditional_set = set()
@@ -652,7 +657,8 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         nodes_v,
         conditional_set=None,
     ):
-        """Test m-connectedness between two node sets given a conditioning set.
+        """
+        Test m-connectedness between two node sets given a conditioning set.
 
         Parameters
         ----------
@@ -678,12 +684,12 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         True
         >>> admg.is_mconnected("X", "Z")
         False
-
         """
         return not self.is_mseparated(nodes_u, nodes_v, conditional_set)
 
     def mconnected_nodes(self, nodes_u, nodes_v=None, conditional_set=None):
-        """Find all nodes m-connected to nodes in `nodes_u` given `conditional_set`.
+        """
+        Find all nodes m-connected to nodes in `nodes_u` given `conditional_set`.
 
         Parameters
         ----------
@@ -705,12 +711,10 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         --------
         >>> from pgmpy.base.ADMG import ADMG
         >>> admg = ADMG(directed_ebunch=[("X", "Y"), ("Y", "Z")])
-        >>> result = admg.mconnected_nodes("X")
-        >>> isinstance(result, set)
-        True
-        >>> admg.mconnected_nodes("X", nodes_v=["Y", "Z"]) <= {"Y", "Z"}
-        True
-
+        >>> sorted(admg.mconnected_nodes("X", nodes_v=["Y", "Z"]))
+        ['Y', 'Z']
+        >>> sorted(admg.mconnected_nodes("X", nodes_v=["Z"]))
+        ['Z']
         """
         if conditional_set is None:
             conditional_set = set()
@@ -722,9 +726,12 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         m_connected_set = set()
 
         for node in nodes_u:
-            active_nodes = dag.active_trail_nodes(node, observed=conditional_set)
-            active_nodes = {n for n in active_nodes if not str(n).startswith("L_")}
-            m_connected_set.update(active_nodes)
+            active_trail = dag.active_trail_nodes(node, observed=conditional_set)
+            # active_trail_nodes returns a dict {node: set_of_active_nodes}
+            for active_nodes in active_trail.values():
+                m_connected_set.update(
+                    {n for n in active_nodes if not str(n).startswith("L_")}
+                )
 
         if nodes_v is not None:
             nodes_v_set = {nodes_v} if isinstance(nodes_v, str) else set(nodes_v)
@@ -733,14 +740,15 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         return m_connected_set
 
     def __eq__(self, other):
-        """Check if two ADMGs are equal.
+        """
+        Check if two ADMGs are equal.
 
-        Two ADMGs are considered equal if they
-        have the same nodes, edges, latent variables, and variable roles.
+        Two ADMGs are considered equal if they have the same nodes, edges,
+        latent variables, and variable roles.
 
         Parameters
         ----------
-        other: ADMG object
+        other : ADMG
             The other ADMG to compare with.
 
         Returns
@@ -758,7 +766,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         >>> admg3 = ADMG(directed_ebunch=[("X", "Y")])
         >>> admg1 == admg3
         False
-
         """
         if not isinstance(other, ADMG):
             return False
