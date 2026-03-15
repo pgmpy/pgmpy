@@ -75,7 +75,7 @@ class Adjustment(_BaseIdentification):
 
         Parameters
         ----------
-        causal_graph: pgmpy.base.DAG
+        causal_graph: pgmpy.base.DAG, pgmpy.base.PDAG, pgmpy.base.ADMG, or pgmpy.base.MAG
             The causal graph for which the proper backdoor graph is to be computed.
 
         inplace: boolean
