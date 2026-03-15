@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-import numpy as np
+import numpy as np  # noqa: F401
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
@@ -183,8 +183,10 @@ class ClusterGraph(UndirectedGraph):
         >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
-        >>> G.get_factors()
-        >>> G.get_factors(node=("a", "b", "c"))
+        >>> len(G.get_factors())
+        3
+        >>> G.get_factors(node=("a", "b", "c"))  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(a:2, b:2, c:2) at 0x...>
         """
         if node is None:
             return self.factors
@@ -237,7 +239,9 @@ class ClusterGraph(UndirectedGraph):
         >>> phi1 = DiscreteFactor(["a", "b", "c"], [2, 2, 2], np.random.rand(8))
         >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
-        >>> G.clique_beliefs
+        >>> G.add_factors(phi1, phi2, phi3)
+        >>> len(G.clique_beliefs)
+        3
         """
         return FactorDict({clique: self.get_factors(clique) for clique in self.nodes()})
 
@@ -275,10 +279,10 @@ class ClusterGraph(UndirectedGraph):
         >>> student.add_node(("Alice", "Bob"))
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'Alice': 2, 'Bob': 2})
+        defaultdict(<class 'int'>, {'Alice': np.int64(2), 'Bob': np.int64(2)})
 
         >>> student.get_cardinality(node="Alice")
-        2
+        np.int64(2)
         """
         if node:
             for factor in self.factors:
@@ -317,7 +321,8 @@ class ClusterGraph(UndirectedGraph):
         >>> phi2 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         >>> phi3 = DiscreteFactor(["a", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
-        >>> G.get_partition_function()
+        >>> G.get_partition_function()  # doctest: +ELLIPSIS
+        np.float64(...)
         """
         if self.check_model():
             factor = self.factors[0]
@@ -382,13 +387,12 @@ class ClusterGraph(UndirectedGraph):
         >>> phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
         >>> graph_copy = G.copy()
-        >>> graph_copy.factors
-        [<DiscreteFactor representing phi(a:2, b:2) at 0xb71b19cc>,
-         <DiscreteFactor representing phi(b:2, c:2) at 0xb4eaf3ac>]
+        >>> len(graph_copy.factors)
+        2
         >>> graph_copy.edges()
-        [(('a', 'b'), ('b', 'c'))]
+        EdgeView([(('a', 'b'), ('b', 'c'))])
         >>> graph_copy.nodes()
-        [('a', 'b'), ('b', 'c')]
+        NodeView((('a', 'b'), ('b', 'c')))
         """
         copy = ClusterGraph(self.edges())
         if self.factors:
