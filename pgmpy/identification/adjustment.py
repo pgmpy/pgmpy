@@ -40,8 +40,11 @@ class Adjustment(_BaseIdentification):
     ...     roles={"exposures": "x1", "outcomes": "y1"},
     ... )
     >>> dag_with_adj, success = Adjustment(variant="minimal").identify(dag)
-    >>> dag_with_adj.get_role_dict()
-    {'exposures': ['x1'], 'outcomes': ['y1']}
+    >>> roles = dag_with_adj.get_role_dict()
+    >>> roles["exposures"]
+    ['x1']
+    >>> roles["outcomes"]
+    ['y1']
     >>> Adjustment(variant="minimal").validate(dag_with_adj)
     True
 
@@ -72,7 +75,7 @@ class Adjustment(_BaseIdentification):
 
         Parameters
         ----------
-        causal_graph: pgmpy.models.DAG
+        causal_graph: pgmpy.base.DAG
             The causal graph for which the proper backdoor graph is to be computed.
 
         inplace: boolean
