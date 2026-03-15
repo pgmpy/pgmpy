@@ -115,10 +115,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_nodes_from(["a", "b", "c", "d"])
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
-        >>> model.active_trail_nodes("a")
-        {'a', 'd', 'c', 'b'}
-        >>> model.active_trail_nodes("a", ["b", "c"])
-        {'a', 'd'}
+        >>> sorted(model.active_trail_nodes("a"))
+        ['a', 'b', 'c', 'd']
+        >>> sorted(model.active_trail_nodes("a", ["b", "c"]))
+        ['a', 'd']
         >>> model.active_trail_nodes("b", ["a"])
         {'b'}
         """
@@ -185,14 +185,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> model.fit(values, "A")
-        >>> model.get_cpds()
-        [<TabularCPD representing P(D:2 | A:2) at 0x4b72870>,
-         <TabularCPD representing P(E:2 | A:2) at 0x4bb2150>,
-         <TabularCPD representing P(A:2) at 0x4bb23d0>,
-         <TabularCPD representing P(B:2 | A:2) at 0x4bb24b0>,
-         <TabularCPD representing P(C:2 | A:2) at 0x4bb2750>]
+        >>> len(model.get_cpds())
+        5
         >>> model.edges()
-        [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
+        OutEdgeView([('A', 'B'), ('A', 'C'), ('A', 'D'), ('A', 'E')])
         """
         if not parent_node:
             if not self.dependent:
