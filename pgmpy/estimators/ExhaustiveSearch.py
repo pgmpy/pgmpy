@@ -1,12 +1,13 @@
+#!/usr/bin/env python
+
 import warnings
+
 warnings.warn(
-    "ExhaustiveSearch in pgmpy.estimators is deprecated and will be removed in a future release. "
-    "Please use pgmpy.causal_discovery.ExhaustiveSearch instead.",
+    "ExhaustiveSearch in pgmpy.estimators is deprecated and will be removed "
+    "in a future release. Please use pgmpy.causal_discovery.ExhaustiveSearch instead.",
     DeprecationWarning,
     stacklevel=2,
 )
-
-#!/usr/bin/env python
 
 from itertools import combinations
 
@@ -17,7 +18,6 @@ from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
-
 
 class ExhaustiveSearch(StructureEstimator):
     """

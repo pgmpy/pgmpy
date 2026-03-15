@@ -47,9 +47,7 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
     >>> import numpy as np
     >>> from pgmpy.causal_discovery import ExhaustiveSearch
     >>> np.random.seed(42)
-    >>> data = pd.DataFrame(
-    ...     np.random.randint(0, 3, size=(500, 3)), columns=list("ABC")
-    ... )
+    >>> data = pd.DataFrame(np.random.randint(0, 3, size=(500, 3)), columns=list("ABC"))
     >>> est = ExhaustiveSearch()
     >>> est.fit(data)
     >>> list(est.causal_graph_.edges())
@@ -129,14 +127,9 @@ class ExhaustiveSearch(_ScoreMixin, _BaseCausalDiscovery):
         """
         nodes = sorted(X.columns)
 
-        _, scoring_method = get_scoring_method(
-            self.scoring_method, X, self.use_cache
-        )
+        _, scoring_method = get_scoring_method(self.scoring_method, X, self.use_cache)
 
-        best_dag = max(
-            self._all_dags(nodes),
-            key=scoring_method.score
-        )
+        best_dag = max(self._all_dags(nodes), key=scoring_method.score)
 
         best_model = DAG()
         best_model.add_nodes_from(sorted(best_dag.nodes()))
