@@ -2,8 +2,6 @@
 
 from collections import defaultdict
 
-import numpy as np
-
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
 from pgmpy.utils import compat_fns

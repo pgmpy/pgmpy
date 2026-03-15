@@ -3,7 +3,6 @@ import sys
 import unittest
 import xml.etree.ElementTree as etree
 
-import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 
@@ -505,8 +504,6 @@ class TestXBNWriter(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        output = str(self.writer.__str__())
-        expected = str(etree.tostring(self.expected_xml))
         self.assertEqual(
             str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
         )
@@ -1005,8 +1002,6 @@ class TestXBNWriterTorch(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        output = str(self.writer.__str__())
-        expected = str(etree.tostring(self.expected_xml))
         self.assertEqual(
             str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
         )

@@ -187,7 +187,7 @@ class TestDBNInference(unittest.TestCase):
 
         bnet.add_cpds(*bnet_cpds)
 
-        ie = DBNInference(bnet)
+        DBNInference(bnet)
 
         # TODO: an assertion to test a complex network
 

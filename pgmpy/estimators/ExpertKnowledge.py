@@ -115,7 +115,7 @@ class ExpertKnowledge:
             raise TypeError(
                 f"Expected iterator type for edge information. Got {type(edge_list)} instead."
             )
-        elif type(edge_list) != set:
+        elif type(edge_list) is not set:
             return set(edge_list)
         else:
             return edge_list

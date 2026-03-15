@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 
-from itertools import combinations
-
-import networkx as nx
 import numpy as np
-import pandas as pd
-from joblib import Parallel, delayed
-from sklearn.metrics import (
-    adjusted_mutual_info_score,
-    mutual_info_score,
-    normalized_mutual_info_score,
-)
-from tqdm.auto import tqdm
 
-from pgmpy import config
-from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators._tree_search_utils import (
+    _create_tree_and_dag as _tree_search_create_tree_and_dag,
+)
+from pgmpy.estimators._tree_search_utils import (
+    _get_conditional_weights as _tree_search_get_conditional_weights,
+)
+from pgmpy.estimators._tree_search_utils import _get_weights as _tree_search_get_weights
+from pgmpy.global_vars import logger
 
 
 class TreeSearch(StructureEstimator):
@@ -52,6 +47,11 @@ class TreeSearch(StructureEstimator):
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
+        logger.warning(
+            "DeprecationWarning: This TreeSearch class will be removed in a future release. "
+            "Please use the new sklearn compatible TreeSearch class from the "
+            "pgmpy.causal_discovery module instead."
+        )
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 
@@ -139,7 +139,7 @@ class TreeSearch(StructureEstimator):
         # Step 1.2: If estimator_type=tan, class_node must be specified
         if estimator_type == "tan" and class_node is None:
             raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
+                "class_node argument must be specified for estimator_type='tan'"
             )
         if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")
@@ -236,34 +236,12 @@ class TreeSearch(StructureEstimator):
         >>> est = TreeSearch(values, root_node="B")
         >>> model = est.estimate(estimator_type="chow-liu")
         """
-        # Step 0: Check for edge weight computation method
-        if edge_weights_fn == "mutual_info":
-            edge_weights_fn = mutual_info_score
-        elif edge_weights_fn == "adjusted_mutual_info":
-            edge_weights_fn = adjusted_mutual_info_score
-        elif edge_weights_fn == "normalized_mutual_info":
-            edge_weights_fn = normalized_mutual_info_score
-        elif not callable(edge_weights_fn):
-            raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
-                f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
-            )
-
-        # Step 1: Compute edge weights for a fully connected graph.
-        n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
-
-        vals = Parallel(n_jobs=n_jobs)(
-            delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
+        return _tree_search_get_weights(
+            data,
+            edge_weights_fn=edge_weights_fn,
+            n_jobs=n_jobs,
+            show_progress=show_progress,
         )
-        weights = np.zeros((n_vars, n_vars))
-        indices = np.triu_indices(n_vars, k=1)
-        weights[indices] = vals
-        weights.T[indices] = vals
-
-        return weights
 
     @staticmethod
     def _get_conditional_weights(
@@ -313,47 +291,13 @@ class TreeSearch(StructureEstimator):
         >>> est = TreeSearch(values, root_node="B")
         >>> model = est.estimate(estimator_type="tan")
         """
-        # Step 0: Check for edge weight computation method
-        if edge_weights_fn == "mutual_info":
-            edge_weights_fn = mutual_info_score
-        elif edge_weights_fn == "adjusted_mutual_info":
-            edge_weights_fn = adjusted_mutual_info_score
-        elif edge_weights_fn == "normalized_mutual_info":
-            edge_weights_fn = normalized_mutual_info_score
-        elif not callable(edge_weights_fn):
-            raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
-                f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
-            )
-
-        # Step 1: Compute edge weights for a fully connected graph.
-        n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
-
-        def _conditional_edge_weights_fn(u, v):
-            """
-            Computes the conditional edge weight of variable index u and v conditioned on class_node
-            """
-            cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
-            cond_edge_weight = 0
-            for index, marg_prob in cond_marginal.items():
-                df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(
-                    df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
-                )
-            return cond_edge_weight
-
-        vals = Parallel(n_jobs=n_jobs)(
-            delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
+        return _tree_search_get_conditional_weights(
+            data,
+            class_node,
+            edge_weights_fn=edge_weights_fn,
+            n_jobs=n_jobs,
+            show_progress=show_progress,
         )
-        weights = np.zeros((n_vars, n_vars))
-        indices = np.triu_indices(n_vars, k=1)
-        weights[indices] = vals
-        weights.T[indices] = vals
-
-        return weights
 
     @staticmethod
     def _create_tree_and_dag(weights, columns, root_node):
@@ -389,14 +333,4 @@ class TreeSearch(StructureEstimator):
         >>> est = TreeSearch(values, root_node="B")
         >>> model = est.estimate(estimator_type="chow-liu")
         """
-        # Step 2: Compute the maximum spanning tree using the weights.
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
-        )
-
-        # Step 3: Create DAG by directing edges away from root node and return
-        D = nx.bfs_tree(T, root_node)
-        return DAG(D)
+        return _tree_search_create_tree_and_dag(weights, columns, root_node)

@@ -2801,7 +2801,7 @@ class TestTabularCPDInit(unittest.TestCase):
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
         terminal_width, terminal_height = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
-        table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
+        table_width = len(list_rows_str[0])
 
         # TODO: test table height
 
@@ -3064,7 +3064,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         )
 
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as _:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             np_test.assert_array_equal(

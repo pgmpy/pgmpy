@@ -31,6 +31,11 @@ import re
 from collections import namedtuple
 from platform import python_version_tuple
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 if python_version_tuple()[0] < "3":
     from functools import partial
     from itertools import izip_longest
@@ -288,7 +293,7 @@ def simple_separated_format(separator):
 
 def _isconvertible(conv, string):
     try:
-        n = conv(string)
+        conv(string)
         return True
     except ValueError:
         return False

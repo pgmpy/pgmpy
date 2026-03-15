@@ -19,7 +19,7 @@ Add a Minimal, Complete, and Verifiable example (for more details, see e.g. http
 If the code is too long, feel free to put it in a public gist and link it in the issue: https://gist.github.com
 -->
 
-```python
+```text
 <Paste your code here>
 <please include all imports>
 <if data is required, try to find a small dummy data set that triggers the problem>

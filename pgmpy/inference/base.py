@@ -3,8 +3,6 @@
 from collections import defaultdict
 from itertools import chain
 
-import numpy as np
-
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
     DiscreteBayesianNetwork,

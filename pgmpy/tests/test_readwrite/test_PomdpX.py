@@ -307,7 +307,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
         self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
-    def test_reward_function(self):
+    def test_reward_function_tbl(self):
         reward_function_expected = [
             {
                 "Var": "reward_rover",
@@ -441,7 +441,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_dd(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -2005,7 +2005,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
         self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
-    def test_reward_function(self):
+    def test_reward_function_tbl(self):
         reward_function_expected = [
             {
                 "Var": "reward_rover",
@@ -2139,7 +2139,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_dd(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

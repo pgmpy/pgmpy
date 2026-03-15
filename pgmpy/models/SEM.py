@@ -3,10 +3,7 @@ import itertools
 import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx.algorithms.dag import descendants
 
-from pgmpy.base import DAG
-from pgmpy.global_vars import logger
 from pgmpy.utils.parser import parse_lavaan
 
 
@@ -544,7 +541,7 @@ class SEMGraph:
         # xi
         y_vars, x_vars, eta_vars, xi_vars = var["y"], var["x"], var["eta"], var["xi"]
 
-        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
+        p, q, m, _ = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
 
         nodelist = y_vars + x_vars + eta_vars + xi_vars
         adj_matrix = nx.to_numpy_array(graph, nodelist=nodelist, weight=weight).T
@@ -620,8 +617,6 @@ class SEMGraph:
         """
         lisrel_err_graph = self.err_graph.copy()
         lisrel_latents = self.latents.copy()
-        lisrel_observed = self.observed.copy()
-
         # Add new latent nodes to convert it to LISREL format.
         mapping = {}
         for u, v in self.graph.edges:
@@ -913,17 +908,19 @@ class SEM(SEMGraph):
             )
 
         elif syntax.lower() == "lisrel":
-            model = SEMAlg(
-                var_names=var_names, params=params, fixed_masks=fixed_masks
-            ).to_SEMGraph()
+            sem_model = SEM.from_lisrel(
+                var_names=kwargs["var_names"],
+                params=kwargs["params"],
+                fixed_masks=kwargs.get("fixed_masks"),
+            )
             # Initialize an empty SEMGraph instance and set the properties.
             # TODO: Boilerplate code, find a better way to do this.
             super(SEM, self).__init__(ebunch=[], latents=[], err_corr=[], err_var={})
-            self.graph = model.graph
-            self.latents = model.latents
-            self.obseved = model.observed
-            self.err_graph = model.err_graph
-            self.full_graph_struct = model.full_graph_struct
+            self.graph = sem_model.graph
+            self.latents = sem_model.latents
+            self.observed = sem_model.observed
+            self.err_graph = sem_model.err_graph
+            self.full_graph_struct = sem_model.full_graph_struct
 
         elif syntax.lower() == "ram":
             model = SEMAlg(
@@ -931,8 +928,16 @@ class SEM(SEMGraph):
                 B=kwargs["B"],
                 zeta=kwargs["zeta"],
                 wedge_y=kwargs["wedge_y"],
-                fixed_values=fixed_masks,
-            )
+                fixed_values=kwargs.get("fixed_values"),
+            ).to_SEMGraph()
+            # Initialize an empty SEMGraph instance and set the properties.
+            # TODO: Boilerplate code, find a better way to do this.
+            super(SEM, self).__init__(ebunch=[], latents=[], err_corr=[], err_var={})
+            self.graph = model.graph
+            self.latents = model.latents
+            self.observed = model.observed
+            self.err_graph = model.err_graph
+            self.full_graph_struct = model.full_graph_struct
 
     @classmethod
     def from_lavaan(cls, string=None, filename=None):
@@ -1076,7 +1081,7 @@ class SEM(SEMGraph):
 
             If None `str_model` must be specified.
 
-        fixed_params: dict (default: None)
+        fixed_masks: dict (default: None)
             A dict of fixed values for parameters. The shape of the parameters should be same
             as params.
 
@@ -1115,23 +1120,25 @@ class SEM(SEMGraph):
                 [np.zeros((q, m + n + p)), params["phi"]],
             ]
         )
-
-        B = np.block(
-            [
-                [np.zeros((m, m + n)), fixed_params["wedge_y"], np.zeros((m, q))],
-                [np.zeros((n, m + n + p)), fixed_params["wedge_x"]],
-                [np.zeros((p, m + n)), fixed_params["B"], fixed_params["gamma"]],
-                [np.zeros((q, m + n + p + q))],
-            ]
-        )
-        zeta = np.block(
-            [
-                [fixed_params["theta_e"], np.zeros((m, n + p + q))],
-                [np.zeros((n, m)), fixed_params["theta_del"], np.zeros((n, p + q))],
-                [np.zeros((p, m + n)), fixed_params["psi"], np.zeros((p, q))],
-                [np.zeros((q, m + n + p)), fixed_params["phi"]],
-            ]
-        )
+        fixed_values = None
+        if fixed_masks is not None:
+            fixed_B = np.block(
+                [
+                    [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
+                    [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
+                    [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
+                    [np.zeros((q, m + n + p + q))],
+                ]
+            )
+            fixed_zeta = np.block(
+                [
+                    [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
+                    [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
+                    [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
+                    [np.zeros((q, m + n + p)), fixed_masks["phi"]],
+                ]
+            )
+            fixed_values = {"B": fixed_B, "zeta": fixed_zeta}
         observed = var_names["y"] + var_names["x"]
 
         return cls.from_RAM(
@@ -1139,7 +1146,7 @@ class SEM(SEMGraph):
             B=B,
             zeta=zeta,
             observed=observed,
-            fixed_values={"B": B, "zeta": zeta},
+            fixed_values=fixed_values,
         )
 
     @classmethod
