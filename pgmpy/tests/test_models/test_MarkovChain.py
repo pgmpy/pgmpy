@@ -328,4 +328,3 @@ class TestMarkovChain(unittest.TestCase):
 
         with pytest.raises(ValueError):
             model.add_transition_model("invalid_variable", tm)
-            
