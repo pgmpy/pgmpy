@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
 
 from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -162,7 +163,9 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(
+            pd.DataFrame([evidence])
+        )
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]
@@ -337,10 +340,25 @@ class TestLGBNMethods(unittest.TestCase):
             new_model.fit(df, estimator="unbiased")
 
     def test_predict_simple(self):
+        # Setup
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
         df = df.drop("x2", axis=1)
-        variables, mu, cov = self.model.predict(df)
+
+        # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+        predictions = self.model.predict(df)
+        self.assertIsInstance(predictions, pd.DataFrame)
+        self.assertEqual(set(predictions.columns), {"x2"})
+        self.assertEqual(predictions.shape, (10, 1))
+        self.assertTrue(
+            np.allclose(
+                predictions["x2"].round(2).values,
+                [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+            )
+        )
+
+        # Test predict_probability() — returns the full posterior (variables, mu, cov).
+        variables, mu, cov = self.model.predict_probability(df)
         self.assertEqual(variables, ["x2"])
         self.assertEqual(mu.shape, (10, 1))
         self.assertTrue(
@@ -352,14 +370,32 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(cov.round(2).squeeze(), 5.76)
 
     def test_predict_ecoli(self):
+        # Setup
         model = get_example_model("ecoli70")
         df = model.simulate(n_samples=int(10), seed=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
-        variables, mu, cov = model.predict(df)
-        self.assertEqual(set(variables), set(["yceP", "yheI", "cspA"]))
+
+        # Test predict() — returns a DataFrame of MAP (conditional mean) estimates.
+        predictions = model.predict(df)
+        self.assertIsInstance(predictions, pd.DataFrame)
+        self.assertEqual(set(predictions.columns), {"yceP", "yheI", "cspA"})
+        self.assertEqual(predictions.shape, (10, 3))
+
+        # Test predict_probability() — returns the full posterior (variables, mu, cov).
+        variables, mu, cov = model.predict_probability(df)
+        self.assertEqual(set(variables), {"yceP", "yheI", "cspA"})
         self.assertEqual(mu.shape, (10, 3))
-        # calculated by saving df to csv and using R to predict
-        # model is loaded from bnlearn, impute function from bnlearn to generate true values
+        self.assertEqual(cov.shape, (3, 3))
+
+        # Verify predict() values match mu from predict_probability() —
+        # both should equal the conditional means.
+        for var_name in predictions.columns:
+            np.testing.assert_array_almost_equal(
+                predictions[var_name].values,
+                mu[:, variables.index(var_name)],
+            )
+
+        # Verify numerical accuracy against R/bnlearn reference values.
         true_data = {
             "yceP": [
                 0.9355,
@@ -632,3 +668,111 @@ class TestLGBNIO(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             model.simulate(n_samples=10, missing_prob={"X1": 1.5})
+
+
+@pytest.fixture
+def simple_model():
+    model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+    cpd1 = LinearGaussianCPD("x1", [1], 4)
+    cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+    cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+    model.add_cpds(cpd1, cpd2, cpd3)
+    return model
+
+
+class TestPredict:
+    def test_predict_returns_dataframe(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        result = simple_model.predict(df_obs)
+        assert isinstance(result, pd.DataFrame)
+
+    def test_predict_correct_columns(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        result = simple_model.predict(df_obs)
+        assert list(result.columns) == ["x3"]
+
+    def test_predict_correct_index(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        result = simple_model.predict(df_obs)
+        assert list(result.index) == list(df_obs.index)
+
+    def test_predict_multiple_missing(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x2", "x3"])
+        result = simple_model.predict(df_obs)
+        assert set(result.columns) == {"x2", "x3"}
+
+    def test_predict_no_missing_raises(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        with pytest.raises(ValueError, match="No variable missing"):
+            simple_model.predict(df)
+
+    def test_predict_extra_column_raises(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df["extra"] = 0
+        df_obs = df.drop(columns=["x3"])
+        with pytest.raises(ValueError, match="not in the model"):
+            simple_model.predict(df_obs)
+
+    def test_predict_values_equal_conditional_mean(self, simple_model):
+        # MAP for Gaussian == conditional mean from predict_probability
+        df = simple_model.simulate(n_samples=10, seed=0)
+        df_obs = df.drop(columns=["x3"])
+        pred = simple_model.predict(df_obs)
+        _, mu_cond, _ = simple_model.predict_probability(df_obs)
+        np.testing.assert_array_almost_equal(pred.values, mu_cond)
+
+
+class TestPredictProbability:
+    def test_returns_tuple_of_three(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        result = simple_model.predict_probability(df_obs)
+        assert len(result) == 3
+
+    def test_missing_vars_list(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        missing_vars, _, _ = simple_model.predict_probability(df_obs)
+        assert missing_vars == ["x3"]
+
+    def test_mu_cond_shape(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        missing_vars, mu_cond, _ = simple_model.predict_probability(df_obs)
+        assert mu_cond.shape == (5, len(missing_vars))
+
+    def test_cov_cond_shape(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x3"])
+        missing_vars, _, cov_cond = simple_model.predict_probability(df_obs)
+        n = len(missing_vars)
+        assert cov_cond.shape == (n, n)
+
+    def test_cov_cond_is_symmetric(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x2", "x3"])
+        _, _, cov_cond = simple_model.predict_probability(df_obs)
+        np.testing.assert_array_almost_equal(cov_cond, cov_cond.T)
+
+    def test_cov_cond_is_positive_semidefinite(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df_obs = df.drop(columns=["x2", "x3"])
+        _, _, cov_cond = simple_model.predict_probability(df_obs)
+        eigenvalues = np.linalg.eigvalsh(cov_cond)
+        assert np.all(eigenvalues >= -1e-10)
+
+    def test_no_missing_raises(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        with pytest.raises(ValueError, match="No variable missing"):
+            simple_model.predict_probability(df)
+
+    def test_extra_column_raises(self, simple_model):
+        df = simple_model.simulate(n_samples=5, seed=42)
+        df["extra"] = 0
+        df_obs = df.drop(columns=["x3"])
+        with pytest.raises(ValueError, match="not in the model"):
+            simple_model.predict_probability(df_obs)
