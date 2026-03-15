@@ -18,6 +18,7 @@ warnings.warn(
     stacklevel=2,
 )
 
+
 class ExhaustiveSearch(StructureEstimator):
     """
     Search class for exhaustive searches over all DAGs with a given set of variables.
