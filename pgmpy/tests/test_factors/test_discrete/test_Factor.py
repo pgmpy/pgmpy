@@ -2799,9 +2799,9 @@ class TestTabularCPDInit(unittest.TestCase):
         )
 
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
-        terminal_width, terminal_height = get_terminal_size()
+        terminal_width, _ = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
-        table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
+        table_width = len(list_rows_str[0])
 
         # TODO: test table height
 
@@ -2951,6 +2951,35 @@ class TestTabularCPDMethods(unittest.TestCase):
             f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>",
         )
 
+    def test_str_with_tuple_variables(self):
+        c_cpd = TabularCPD(("C", 0), 3, [[0.0714286], [0.307143], [0.621429]])
+        a_cpd = TabularCPD(
+            ("A", 0),
+            2,
+            [
+                [0.5, 0.0, 1.0, 0.0, 0.456140350877, 0.5],
+                [0.5, 1.0, 0.0, 1.0, 0.543859649123, 0.5],
+            ],
+            evidence=[("C", 0), ("B", 0)],
+            evidence_card=[3, 2],
+        )
+        b_cpd = TabularCPD(
+            ("B", 0),
+            2,
+            [[0.0, 0.219512195122, 1.0], [1.0, 0.780487804878, 0.0]],
+            evidence=[("C", 0)],
+            evidence_card=[3],
+        )
+
+        c_str = str(c_cpd)
+        a_str = str(a_cpd)
+        b_str = str(b_cpd)
+
+        self.assertIn("('C', 0)(0)", c_str)
+        self.assertIn("('A', 0)(0)", a_str)
+        self.assertIn("('C', 0)(0)", a_str)
+        self.assertIn("('B', 0)(0)", b_str)
+
     def test_copy(self):
         copy_cpd = self.cpd.copy()
         np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
@@ -3064,7 +3093,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         )
 
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             np_test.assert_array_equal(
