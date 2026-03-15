@@ -415,7 +415,6 @@ class TestADMGSeparation:
         # Test with conditional set
         assert self.admg.is_mseparated("A", "D", conditional_set={"C"}) is True
         assert self.admg.is_mseparated("A", "D", conditional_set=set()) is False
-        # This depends on the specific graph structure and d-separation rules
 
     def test_is_m_connected(self):
         """Test m-connection check."""
@@ -425,12 +424,13 @@ class TestADMGSeparation:
         assert connected != separated
 
     def test_mconnected_nodes(self):
+        """Test mconnected_nodes returns correct reachable nodes."""
         admg = ADMG(directed_ebunch=[("X", "Y"), ("Y", "Z")])
         # base case - no nodes_v filter
         result = admg.mconnected_nodes("X")
-        self.assertIsInstance(result, set)
-        self.assertIn("Y", result)
-        self.assertIn("Z", result)
+        assert isinstance(result, set)
+        assert "Y" in result
+        assert "Z" in result
         # with nodes_v filter
-        self.assertEqual(admg.mconnected_nodes("X", nodes_v=["Y", "Z"]), {"Y", "Z"})
-        self.assertEqual(admg.mconnected_nodes("X", nodes_v=["Z"]), {"Z"})
+        assert admg.mconnected_nodes("X", nodes_v=["Y", "Z"]) == {"Y", "Z"}
+        assert admg.mconnected_nodes("X", nodes_v=["Z"]) == {"Z"}
