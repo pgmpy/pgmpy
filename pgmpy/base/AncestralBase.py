@@ -587,7 +587,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         X -> Y
         L [latents]
         Y [outcome]
-        X [exposure]
+        X [exposures]
         }
 
         References
