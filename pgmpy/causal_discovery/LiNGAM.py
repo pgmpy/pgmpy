@@ -1,0 +1,257 @@
+import networkx as nx
+import numpy as np
+import pandas as pd
+from scipy.optimize import linear_sum_assignment
+from sklearn.decomposition import FastICA
+
+from pgmpy.base import DAG
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.estimators import ExpertKnowledge
+
+
+class LiNGAM(_BaseCausalDiscovery):
+    """
+    LiNGAM (Linear Non-Gaussian Acyclic Model) finds the causal order under three assumptions:
+    1. The causal graph is acyclic.
+    2. The causal relationships are linear.
+    3. The noise terms are non-Gaussian.
+    A model with these three properties we call a Linear, Non-Gaussian, Acyclic Model, abbreviated
+    LiNGAM.
+
+    Parameters
+    ----------
+    random_state: int, default=42
+        Random seed for the ICA algorithm.
+
+    threshold: float, default=0.0
+        The threshold for filtering out small edge weights. Edge weights below this value are set to 0.
+
+    variation: str, default="original"
+        The variation of the algorithm to use. Currently only "original" (ICALiNGAM) is supported.
+
+    expert_knowledge: ExpertKnowledge
+        A pgmpy ExpertKnowledge instance specifying forbidden and required edges.
+
+    return_type: str, default="dag"
+        The type of graph to return. Currently only "dag" is supported.
+
+    Attributes
+    ----------
+    causal_graph_: pgmpy.base.DAG
+        The learned causal graph.
+
+    adjacency_matrix_: numpy.ndarray
+        The learned adjacency matrix of the graph. Elements correspond to coefficients in
+        the linear model.
+
+    n_features_in_: int
+        The number of features in the dataset used to learn the causal graph.
+
+    feature_names_in_: list
+        The feature names in the dataset used to learn the causal graph.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from pgmpy.causal_discovery import LiNGAM
+    >>> X = pd.DataFrame({"x1": [1, 2, 3], "x2": [2, 4, 6], "x3": [3, 6, 9]})
+    >>> algo = LiNGAM()
+    >>> algo.fit(X)
+
+    References
+    ----------
+    .. [1] S. Shimizu, P. O. Hoyer, A. Hyvärinen, and A. Kerminen. A linear non-gaussian
+        acyclic model for causal discovery. Journal of Machine Learning Research,
+        7: 2003--2030, 2006.
+    """
+
+    def __init__(
+        self,
+        random_state: int = 42,
+        threshold: float = 0.0,
+        variation: str = "original",
+        expert_knowledge: ExpertKnowledge | None = None,
+        return_type: str = "dag",
+    ):
+        self.random_state = random_state
+        self.threshold = threshold
+        self.variation = variation
+        self.expert_knowledge = expert_knowledge
+        self.return_type = return_type
+
+    def _fit(self, X: pd.DataFrame):
+
+        # Step 0: Validate inputs
+        if self.expert_knowledge is not None:
+            if not isinstance(self.expert_knowledge, ExpertKnowledge):
+                raise TypeError(
+                    "expert_knowledge must be an instance of ExpertKnowledge"
+                )
+
+        if self.variation != "original":
+            raise NotImplementedError(
+                f"Variation {self.variation} is not yet implemented. Use 'original'."
+            )
+
+        if self.return_type != "dag":
+            raise NotImplementedError(
+                f"Return type {self.return_type} is not yet implemented. Use 'dag'."
+            )
+
+        # Convert DataFrame to numpy array
+        X_vals = X.values
+        n_samples, n_features = X_vals.shape
+        self.n_features_in_ = n_features
+        self.feature_names_in_ = list(X.columns)
+
+        # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has the same
+        # size as X and contains in its rows the independent components. From here on, we will
+        # exclusively work with W = A^-1.
+        ica = FastICA(random_state=self.random_state, max_iter=1000)
+        ica.fit(X_vals)
+        W = ica.components_
+
+        # Step 2: Find the one and only permutation of rows of W which yields a matrix W_perm
+        # without any zeros on the main diagonal. In practice, small estimation errors will cause
+        # all elements of W to be non-zero, and hence the permutation is sought which minimizes
+        # sum_i 1/|W_perm_ii|.
+        cost_matrix = 1 / np.abs(W)
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        W_perm = np.zeros_like(W)
+        W_perm[col_ind] = W[row_ind]
+
+        # Step 3: Divide each row of W_perm by its corresponding diagonal element, to yield a new
+        # matrix W_scaled with ones on the diagonal.
+        # Then, compute an estimate B_hat of B using B_hat = I - W_scaled.
+        W_scaled = W_perm / np.diag(W_perm)[:, np.newaxis]
+        B_hat = np.eye(n_features) - W_scaled
+
+        # Step 4: Find a causal order
+        causal_order = self._causal_order(B_hat)
+
+        # Step 5: Construct the lower triangular causal matrix B_tilde
+        if causal_order is None:
+            raise ValueError(
+                "Could not find a valid causal order. Graph contains unresolvable cycles."
+            )
+
+        B_tilde = np.zeros_like(B_hat)
+        for i, target in enumerate(causal_order):
+            for source in causal_order[:i]:
+                if np.abs(B_hat[target, source]) > self.threshold:
+                    B_tilde[target, source] = B_hat[target, source]
+
+        self.adjacency_matrix_ = B_tilde
+
+        # Step 6: Construct graph
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from(self.feature_names_in_)
+
+        # Step 6.1: Check if required edges create a cycle
+        if self.expert_knowledge is not None:
+            self.causal_graph_.add_edges_from(self.expert_knowledge.required_edges)
+            if not nx.is_directed_acyclic_graph(self.causal_graph_):
+                raise ValueError(
+                    "required_edges create a cycle in the causal graph. Please modify expert_knowledge."
+                )
+            self.expert_knowledge._orient_temporal_forbidden_edges(
+                self.causal_graph_, only_edges=False
+            )
+
+        # Step 6.2: Add edges to the graph
+        for target_idx in range(n_features):
+            for source_idx in range(n_features):
+                if B_tilde[target_idx, source_idx] != 0:
+                    source_name = self.feature_names_in_[source_idx]
+                    target_name = self.feature_names_in_[target_idx]
+
+                    # Ensure the edge doesn't violate forbidden edges
+                    if self.expert_knowledge is not None:
+                        if (
+                            source_name,
+                            target_name,
+                        ) in self.expert_knowledge.forbidden_edges:
+                            continue
+
+                    self.causal_graph_.add_edge(source_name, target_name)
+
+        return self
+
+    def _search_causal_order(self, B_hat: np.ndarray) -> list | None:
+        """Helper function for _causal_order to find a causal order from the given matrix strictly.
+        Implements the Algorithm B from section 5.2 of the paper.
+
+        Parameters
+        ----------
+        B_hat : np.ndarray
+            Weight matrix obtained from ICA with in absolute value set to zero.
+
+        Returns
+        -------
+        causal_order : list | None
+            A causal order of the given matrix on success, None otherwise.
+        """
+        causal_order = []
+
+        row_num = B_hat.shape[0]
+        original_index = np.arange(row_num)
+
+        while 0 < len(B_hat):
+            # find a row i such that all of which elements are zero
+            row_index_list = np.where(np.sum(np.abs(B_hat), axis=1) == 0)[0]
+            if len(row_index_list) == 0:
+                break
+
+            target_index = row_index_list[0]
+
+            # append i to the end of the list
+            causal_order.append(original_index[target_index])
+            original_index = np.delete(original_index, target_index, axis=0)
+
+            # remove the i-th row and the i-th column from matrix
+            mask = np.delete(np.arange(len(B_hat)), target_index, axis=0)
+            B_hat = B_hat[mask][:, mask]
+
+        if len(causal_order) != row_num:
+            causal_order = None
+
+        return causal_order
+
+    def _causal_order(self, B_hat: np.ndarray) -> list | None:
+        """Helper function to obtain a causal order from the given matrix approximately.
+        Implements the Algorithm C from section 5.2 of the paper.
+
+        Parameters
+        ----------
+        B_hat : np.ndarray
+            Weight matrix obtained from ICA.
+
+        Returns
+        -------
+        causal_order : list | None
+            A causal order of the given matrix on success, None otherwise.
+        """
+        causal_order = None
+        B_hat = B_hat.copy()
+
+        # Step 1: Set the m(m + 1)/2 smallest(in absolute value) elements of B_hat to zero
+        pos_list = np.argsort(np.abs(B_hat), axis=None)
+        pos_list = np.vstack(np.unravel_index(pos_list, B_hat.shape)).T
+        initial_zero_num = int(B_hat.shape[0] * (B_hat.shape[0] + 1) / 2)
+
+        for i, j in pos_list[:initial_zero_num]:
+            B_hat[i, j] = 0
+
+        causal_order = self._search_causal_order(B_hat)
+        if causal_order is not None:
+            return causal_order
+
+        # Step 2: Test if B_hat can be permuted to a lower triangular matrix
+        for i, j in pos_list[initial_zero_num:]:
+            B_hat[i, j] = 0
+            causal_order = self._search_causal_order(B_hat)
+            if causal_order is not None:
+                break
+
+        return causal_order
