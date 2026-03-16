@@ -9,6 +9,7 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
+from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop
 from pgmpy.estimators import ExpertKnowledge
 
@@ -436,9 +437,6 @@ def test_empty_graph():
         dtype="category",
     )
 
-    def simple_orient(var1, var2, **kwargs):
-        return (var1, var2) if var1 < var2 else (var2, var1)
-
     # Use very high thresholds to ensure no edges are added
     estimator = ExpertInLoop(
         orientation_fn=simple_orient,
@@ -450,3 +448,201 @@ def test_empty_graph():
 
     # Should have nodes but no edges
     assert set(estimator.causal_graph_.nodes()) == {"A", "B"}
+
+
+# --- _break_cycle unit tests ---
+
+
+@pytest.fixture
+def fake_ci_estimator():
+    data = pd.DataFrame(
+        {
+            "A": [1, 2, 3, 4, 5],
+            "B": [2, 3, 4, 5, 6],
+            "C": [3, 4, 5, 6, 7],
+            "D": [4, 5, 6, 7, 8],
+        }
+    )
+    return ExpertInLoop(orientation_fn=simple_orient, show_progress=False), data
+
+
+@pytest.fixture
+def simple_dag():
+    dag = DAG()
+    dag.add_nodes_from(["A", "B", "C"])
+    dag.add_edges_from([("A", "B"), ("B", "C")])
+    return dag
+
+
+def make_weak_ci():
+    """Return a mock CI test that always reports a weak (non-significant) edge."""
+
+    def ci_test(X, Y, Z, data, boolean):
+        return (0.01, 0.9)  # low effect, high p-value
+
+    return ci_test
+
+
+def make_strong_ci():
+    """Return a mock CI test that always reports a strong (significant) edge."""
+
+    def ci_test(X, Y, Z, data, boolean):
+        return (0.5, 0.001)  # high effect, low p-value
+
+    return ci_test
+
+
+class TestBreakCycle:
+    def test_all_weak_edges_removed(self, fake_ci_estimator, simple_dag):
+        estimator, data = fake_ci_estimator
+        result = estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=make_weak_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert len(result) > 0
+        for edge in result:
+            assert edge in [("A", "B"), ("B", "C")]
+
+    def test_all_strong_edges_kept(self, fake_ci_estimator, simple_dag):
+        estimator, data = fake_ci_estimator
+        result = estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=make_strong_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert result == []
+
+    def test_selective_removal(self, fake_ci_estimator, simple_dag):
+        estimator, data = fake_ci_estimator
+
+        def mock_ci_test(X, Y, Z, data, boolean):
+            # A->B is weak, everything else is strong
+            if set([X, Y]) == {"A", "B"}:
+                return (0.01, 0.9)
+            return (0.5, 0.001)
+
+        result = estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=mock_ci_test,
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert ("B", "C") not in result
+        assert ("C", "A") not in result
+
+    def test_new_edge_never_in_result(self, fake_ci_estimator, simple_dag):
+        estimator, data = fake_ci_estimator
+        result = estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=make_weak_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert ("C", "A") not in result
+
+    def test_original_dag_not_modified(self, fake_ci_estimator, simple_dag):
+        estimator, data = fake_ci_estimator
+        original_edges = set(simple_dag.edges())
+        original_nodes = set(simple_dag.nodes())
+
+        estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=make_weak_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert set(simple_dag.edges()) == original_edges
+        assert set(simple_dag.nodes()) == original_nodes
+
+    def test_longer_cycle(self, fake_ci_estimator):
+        """Test with a 4-node cycle: A -> B -> C -> D, adding D -> A."""
+        estimator, data = fake_ci_estimator
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C", "D"])
+        dag.add_edges_from([("A", "B"), ("B", "C"), ("C", "D")])
+
+        result = estimator._break_cycle(
+            dag,
+            "D",
+            "A",
+            ci_test=make_weak_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert len(result) > 0
+        for edge in result:
+            assert edge in [("A", "B"), ("B", "C"), ("C", "D")]
+        assert ("D", "A") not in result
+
+    def test_multiple_cycles(self, fake_ci_estimator):
+        """A -> B -> D and A -> C -> D; adding D -> A creates two cycles."""
+        estimator, data = fake_ci_estimator
+        dag = DAG()
+        dag.add_nodes_from(["A", "B", "C", "D"])
+        dag.add_edges_from([("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")])
+
+        result = estimator._break_cycle(
+            dag,
+            "D",
+            "A",
+            ci_test=make_weak_ci(),
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert len(result) > 0
+        assert ("D", "A") not in result
+        existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
+        for edge in result:
+            assert edge in existing_edges
+
+    def test_conditioning_set(self, fake_ci_estimator, simple_dag):
+        """The CI test must be called with Z = cycle_nodes - {X, Y}."""
+        estimator, data = fake_ci_estimator
+        calls = []
+
+        def recording_ci_test(X, Y, Z, data, boolean):
+            calls.append((X, Y, set(Z)))
+            return (0.5, 0.001)  # strong – keeps all edges
+
+        estimator._break_cycle(
+            simple_dag,
+            "C",
+            "A",
+            ci_test=recording_ci_test,
+            data=data,
+            effect_size_threshold=0.05,
+            pval_threshold=0.05,
+        )
+
+        assert len(calls) > 0
+        for X, Y, Z in calls:
+            assert X not in Z
+            assert Y not in Z
+            assert Z.issubset({"A", "B", "C"})
