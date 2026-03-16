@@ -1739,9 +1739,14 @@ class AICCondGauss(LogLikelihoodCondGauss):
         return ll - k
 
 
-def _compute_kernel(X, Y=None, metric="rbf", gamma=None):
+def _compute_kernel(X, Y=None, metric="rbf", **kwds):
     """
     Compute kernel matrix using sklearn's pairwise_kernels.
+
+    Supports all kernels from sklearn: 'rbf', 'laplacian', 'poly',
+    'sigmoid', 'cosine', 'linear', 'chi2', 'additive_chi2', or a
+    callable. Additional keyword arguments are passed directly to
+    sklearn.metrics.pairwise.pairwise_kernels.
 
     Parameters
     ----------
@@ -1749,10 +1754,12 @@ def _compute_kernel(X, Y=None, metric="rbf", gamma=None):
         First set of observations.
     Y : np.ndarray or None
         If None, computes K(X, X). Otherwise K(X, Y).
-    metric : str
-        Kernel type passed to sklearn (e.g. 'rbf', 'laplacian').
-    gamma : float or None
-        Kernel parameter. For RBF: K(x,x') = exp(-gamma * ||x-x'||^2).
+    metric : str or callable
+        Kernel type passed to sklearn. If callable, it is called on
+        each pair of instances and should return a single number.
+    **kwds : dict
+        Additional keyword arguments passed to pairwise_kernels
+        (e.g., gamma, degree, coef0).
 
     Returns
     -------
@@ -1765,11 +1772,7 @@ def _compute_kernel(X, Y=None, metric="rbf", gamma=None):
     if Y is not None and Y.ndim == 1:
         Y = Y.reshape(-1, 1)
 
-    kwargs = {}
-    if gamma is not None:
-        kwargs["gamma"] = gamma
-
-    return pairwise_kernels(X, Y, metric=metric, **kwargs)
+    return pairwise_kernels(X, Y, metric=metric, **kwds)
 
 
 def _median_bandwidth(X, scale=2.0):
@@ -1853,15 +1856,27 @@ class RKHSCVLikelihood(StructureScore):
     ----------
     data : pd.DataFrame
         Dataset where each column represents a variable.
-    kernel : str (default: 'rbf')
+    kernel : str or callable (default: 'rbf')
         Kernel type, passed to sklearn.metrics.pairwise.pairwise_kernels.
-        Supports 'rbf', 'laplacian', 'poly', 'sigmoid', 'cosine', etc.
+        Supports 'rbf', 'laplacian', 'poly', 'sigmoid', 'cosine',
+        'linear', 'chi2', 'additive_chi2', or a callable.
     n_folds : int (default: 10)
         Number of cross-validation folds.
     lambda_reg : float (default: 0.01)
         Regularization parameter for kernel ridge regression.
     gamma_noise : float (default: 0.01)
         Noise variance parameter in the RKHS regression model.
+    bandwidth_scale : float (default: 2.0)
+        Multiplier for the median heuristic kernel bandwidth.
+        Paper uses 2.0 for univariate CV likelihood.
+    jitter : float (default: 1e-10)
+        Small constant added to the diagonal for numerical stability
+        in Cholesky decomposition.
+    kernel_params : dict or None (default: None)
+        Additional keyword arguments passed to the kernel function
+        via sklearn's pairwise_kernels (e.g., degree, coef0 for
+        polynomial kernel). If a 'gamma' key is provided here, it
+        overrides the median heuristic bandwidth for all variables.
 
     References
     ----------
@@ -1893,6 +1908,9 @@ class RKHSCVLikelihood(StructureScore):
         n_folds=10,
         lambda_reg=0.01,
         gamma_noise=0.01,
+        bandwidth_scale=2.0,
+        jitter=1e-10,
+        kernel_params=None,
         **kwargs,
     ):
         super(RKHSCVLikelihood, self).__init__(data, **kwargs)
@@ -1900,6 +1918,9 @@ class RKHSCVLikelihood(StructureScore):
         self.n_folds = n_folds
         self.lambda_reg = lambda_reg
         self.gamma_noise = gamma_noise
+        self.bandwidth_scale = bandwidth_scale
+        self.jitter = jitter
+        self.kernel_params = kernel_params if kernel_params is not None else {}
 
     def local_score(self, variable, parents):
         """
@@ -1926,7 +1947,7 @@ class RKHSCVLikelihood(StructureScore):
         X = self.data[[variable]].to_numpy(dtype=float)
 
         # Compute centered kernel matrix for X (full n x n)
-        gamma_x = _median_bandwidth(X, scale=2.0)
+        gamma_x = _median_bandwidth(X, scale=self.bandwidth_scale)
         Kx = _compute_kernel(X, metric=self.kernel, gamma=gamma_x)
         Kx = _center_kernel_matrix(Kx)
 
@@ -1937,7 +1958,7 @@ class RKHSCVLikelihood(StructureScore):
             Kpa = np.ones((n, n))
             for parent in parents:
                 pa_col = self.data[[parent]].to_numpy(dtype=float)
-                gamma_pa = _median_bandwidth(pa_col, scale=2.0)
+                gamma_pa = _median_bandwidth(pa_col, scale=self.bandwidth_scale)
                 K_parent = _compute_kernel(pa_col, metric=self.kernel, gamma=gamma_pa)
                 Kpa *= K_parent
             Kpa = _center_kernel_matrix(Kpa)
@@ -2020,12 +2041,8 @@ class RKHSCVLikelihood(StructureScore):
                 B = 1.0 / (gamma * n1) * Kx_tr + np.eye(n1)
 
             # Log-determinant via Cholesky
-            try:
-                L = np.linalg.cholesky(B + 1e-10 * np.eye(n1))
-                C = np.sum(np.log(np.diag(L)))
-            except np.linalg.LinAlgError:
-                eigvals = np.linalg.eigvalsh(B)
-                C = 0.5 * np.sum(np.log(np.maximum(eigvals, 1e-10)))
+            L = np.linalg.cholesky(B + self.jitter * np.eye(n1))
+            C = np.sum(np.log(np.diag(L)))
 
             # Accumulate fold cost
             fold_cost = (nv**2 * np.log(2 * np.pi) + nv * C + np.trace(A)) / 2.0
