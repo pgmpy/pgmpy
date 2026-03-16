@@ -1,13 +1,18 @@
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
-from .GES import GES
-from .HillClimbSearch import HillClimbSearch
-from .PC import PC
+from pgmpy.causal_discovery._base import _ConstraintMixin, _ScoreMixin
+from pgmpy.causal_discovery.GES import GES
+from pgmpy.causal_discovery.HillClimbSearch import HillClimbSearch
+from pgmpy.causal_discovery.MMHC import MMHC
+from pgmpy.causal_discovery.PC import PC
 
 __all__ = [
     "ExpertInLoop",
     "ExpertKnowledge",
+    "_ConstraintMixin",
+    "_ScoreMixin",
     "GES",
     "HillClimbSearch",
+    "MMHC",
     "PC",
 ]

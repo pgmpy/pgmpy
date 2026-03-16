@@ -4,6 +4,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
+from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
 
 
@@ -31,6 +32,13 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
+        super().__init__(data, **kwargs)
+
+        logger.warning(
+            "DeprecationWarning: MmhcEstimator will be removed in a future release. "
+            "Please use the new sklearn compatible MMHC class from the "
+            "pgmpy.causal_discovery module instead."
+        )
         super().__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
