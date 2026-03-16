@@ -309,6 +309,14 @@ def test_list_models():
     assert "bnlearn/arth150" in set(list_models(is_continuous=True))
 
 
+def test_invalid_tag():
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(is_paraterized=True)  # typo
+
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(num_nodes=10)  # wrong key name entirely
+
+
 def test_tags():
     for model_name in ALL_MODELS:
         tags = all_objects(

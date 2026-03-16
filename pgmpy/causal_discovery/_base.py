@@ -494,7 +494,7 @@ class _ConstraintMixin:
         separating_set_v.discard(u)
 
         if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[u])
+            max_order = min(temporal_ordering[u], temporal_ordering[v])
             for neigh in list(separating_set_u):
                 if temporal_ordering[neigh] > max_order:
                     separating_set_u.discard(neigh)
