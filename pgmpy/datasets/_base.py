@@ -305,7 +305,6 @@ def load_dataset(name: str) -> Dataset:
 
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
-            tags["n_variables"] = df.shape[1]
 
             return Dataset(
                 name=name,

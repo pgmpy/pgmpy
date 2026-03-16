@@ -9,7 +9,7 @@ class Tubingen(_TubingenBenchmarkMixin, _BaseDataset):
 
     _tags = {
         "name": "tubingen",
-        "n_variables": None,
+        "n_variables": 2,
         "n_samples": None,
         "has_ground_truth": True,
         "has_expert_knowledge": False,
