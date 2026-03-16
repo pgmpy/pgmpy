@@ -84,23 +84,18 @@ class LinearGaussianBayesianNetwork(DAG):
 
     >>> model.fit(df)
 
-    # Predicting missing variables.
+    # Predicting missing variables (MAP estimates as a DataFrame).
 
     >>> df_missing = df.drop(columns=["x3"])
-    >>> missing_vars, mu_cond, cov_cond = model.predict(df_missing)
+    >>> predictions = model.predict(df_missing)
+    >>> print(type(predictions))
+    <class 'pandas.core.frame.DataFrame'>
+
+    # Getting the full conditional distribution.
+
+    >>> missing_vars, mu_cond, cov_cond = model.predict_probability(df_missing)
     >>> print(missing_vars)
     ['x3']
-    >>> print(mu_cond)
-    [[ 0.13440001]
-     [-0.39458728]
-     [ 0.60606023]
-     [ 0.0732233 ]
-     [-0.07241039]
-     [ 0.43420811]
-     [ 0.23197845]
-     [ 0.35382335]
-     [ 0.11859155]
-     [ 0.18397848]]
     """
 
     def __init__(
@@ -694,7 +689,9 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df_evidence = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+            missing_vars, mean_cond, cov_cond = model.predict_probability(
+                data=df_evidence
+            )
 
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
@@ -877,48 +874,98 @@ class LinearGaussianBayesianNetwork(DAG):
         self.add_cpds(*cpds)
         return self
 
-    def predict(
-        self, data: pd.DataFrame, distribution: str = "joint"
-    ) -> Tuple[List[str], np.ndarray, np.ndarray]:
-        """
-        Predicts the conditional distribution of missing variables
+    def _validate_predict_input(self, data: pd.DataFrame) -> None:
+        """Validate input data for predict and predict_probability."""
+        if set(data.columns) == set(self.nodes()):
+            raise ValueError("No missing variables in the data")
 
-        Predicts the distribution of the missing variable (i.e. missing
-        columns) in the given dataset and returns its mean and covariance.
+        if set(data.columns) - set(self.nodes()):
+            raise ValueError("Data has variables which are not in the model")
+
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predicts the MAP estimates of missing variables given observed data.
+
+        For a Linear Gaussian model the MAP estimate equals the conditional
+        mean.  The return type mirrors ``DiscreteBayesianNetwork.predict``.
 
         Parameters
         ----------
-        data: pandas.DataFrame
-            DataFrame with a subset of model variables observed.
-            The dataframe with missing variable which to predict.
+        data : pandas.DataFrame
+            DataFrame whose columns are a strict subset of model variables.
 
         Returns
         -------
-        variables: list
-            Missing variables (order matches returned distribution).
-            The list of variables on which the returned conditional distribution is defined on.
-
-        mu: np.array
-            The mean array of the conditional joint distribution over
-              the missing variables corresponding to each row of data.
-
-        cov: np.array
-            The covariance of the conditional joint distribution over the missing variables.
+        pandas.DataFrame
+            DataFrame containing both the observed and predicted columns,
+            ordered to match the model's topological order.
 
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("ecoli70")
-        >>> df = model.simulate(n_samples=5)
-        >>> df = df.drop(columns=["folK"], axis=1)
-        >>> model.predict(df)
-        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
+        >>> df = model.simulate(n_samples=5, seed=42)
+        >>> df_obs = df.drop(columns=["folK"])
+        >>> model.predict(df_obs).shape
+        (5, 46)
         """
-        # Step 0: Check the inputs
-        missing_vars = list(set(self.nodes()) - set(data.columns))
+        self._validate_predict_input(data)
 
-        if len(missing_vars) == 0:
-            raise ValueError("No missing variables in the data")
+        missing_vars, mu_cond, _ = self.predict_probability(data)
+
+        result = data.copy()
+        for i, var in enumerate(missing_vars):
+            result[var] = mu_cond[:, i]
+
+        all_nodes = list(nx.topological_sort(self))
+        return result[[col for col in all_nodes if col in result.columns]]
+
+    def predict_probability(
+        self, data: pd.DataFrame
+    ) -> Tuple[List[str], np.ndarray, np.ndarray]:
+        """
+        Predicts the conditional distribution of missing variables.
+
+        Returns the conditional Gaussian distribution (mean vector and
+        covariance matrix) over every variable that is absent from
+        ``data``.  The return type mirrors
+        ``DiscreteBayesianNetwork.predict_probability`` in spirit — for a
+        continuous model the full distribution is characterised by its
+        mean and covariance rather than a probability table.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            DataFrame whose columns are a strict subset of model variables.
+
+        Returns
+        -------
+        variables : list
+            Missing variable names (order matches the returned arrays).
+
+        mu : np.ndarray, shape (n_samples, n_missing)
+            Conditional mean for each row of ``data``.
+
+        cov : np.ndarray, shape (n_missing, n_missing)
+            Conditional covariance (same for every row).
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n_samples=5, seed=42)
+        >>> df_obs = df.drop(columns=["folK"])
+        >>> missing_vars, mu, cov = model.predict_probability(df_obs)
+        >>> missing_vars
+        ['folK']
+        >>> mu.shape
+        (5, 1)
+        >>> cov.shape
+        (1, 1)
+        """
+        self._validate_predict_input(data)
+
+        missing_vars = list(set(self.nodes()) - set(data.columns))
 
         # Step 1: Create separate mean and cov matrices for missing and known variables.
         mu, cov = self.to_joint_gaussian()

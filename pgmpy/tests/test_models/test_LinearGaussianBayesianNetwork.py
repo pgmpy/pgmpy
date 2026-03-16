@@ -162,7 +162,9 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(
+            pd.DataFrame([evidence])
+        )
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]
@@ -339,8 +341,30 @@ class TestLGBNMethods(unittest.TestCase):
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
-        df = df.drop("x2", axis=1)
-        variables, mu, cov = self.model.predict(df)
+        df_obs = df.drop("x2", axis=1)
+        result = self.model.predict(df_obs)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (10, 3))
+        self.assertIn("x2", result.columns)
+        expected = [
+            -6.04,
+            -6.61,
+            -4.90,
+            -2.12,
+            -5.30,
+            -0.64,
+            -7.58,
+            -2.08,
+            -3.28,
+            -6.26,
+        ]
+        self.assertTrue(np.allclose(result["x2"].round(2).values, expected))
+
+    def test_predict_probability_simple(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(10), seed=42)
+        df_obs = df.drop("x2", axis=1)
+        variables, mu, cov = self.model.predict_probability(df_obs)
         self.assertEqual(variables, ["x2"])
         self.assertEqual(mu.shape, (10, 1))
         self.assertTrue(
@@ -354,8 +378,18 @@ class TestLGBNMethods(unittest.TestCase):
     def test_predict_ecoli(self):
         model = get_example_model("ecoli70")
         df = model.simulate(n_samples=int(10), seed=18)
-        df = df.drop(["yceP", "yheI", "cspA"], axis=1)
-        variables, mu, cov = model.predict(df)
+        df_obs = df.drop(["yceP", "yheI", "cspA"], axis=1)
+        result = model.predict(df_obs)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (10, 46))
+        for var in ["yceP", "yheI", "cspA"]:
+            self.assertIn(var, result.columns)
+
+    def test_predict_probability_ecoli(self):
+        model = get_example_model("ecoli70")
+        df = model.simulate(n_samples=int(10), seed=18)
+        df_obs = df.drop(["yceP", "yheI", "cspA"], axis=1)
+        variables, mu, cov = model.predict_probability(df_obs)
         self.assertEqual(set(variables), set(["yceP", "yheI", "cspA"]))
         self.assertEqual(mu.shape, (10, 3))
         # calculated by saving df to csv and using R to predict
@@ -405,6 +439,18 @@ class TestLGBNMethods(unittest.TestCase):
                     np.array(true_data[var_name]).round(1),
                 )
             )
+
+    def test_predict_errors(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(5), seed=42)
+        with self.assertRaises(ValueError):
+            self.model.predict(df)
+        with self.assertRaises(ValueError):
+            self.model.predict(df.rename(columns={"x1": "z1"}))
+        with self.assertRaises(ValueError):
+            self.model.predict_probability(df)
+        with self.assertRaises(ValueError):
+            self.model.predict_probability(df.rename(columns={"x1": "z1"}))
 
     def test_get_random_cpds(self):
         model = get_example_model("alarm")
