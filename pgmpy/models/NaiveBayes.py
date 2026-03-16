@@ -98,19 +98,6 @@ class NaiveBayes(DiscreteBayesianNetwork):
         for u, v in ebunch:
             self.add_edge(u, v)
 
-    def get_ancestors(self, obs_nodes_list):
-        """
-        Returns a list of all ancestors of all the observed nodes.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-        """
-        if not obs_nodes_list:
-            return set()
-        return set(obs_nodes_list) | set(self.dependent)
-
     def active_trail_nodes(self, start, observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
