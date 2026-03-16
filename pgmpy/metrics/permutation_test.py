@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import math
-from typing import Callable, Optional
+from typing import Optional
 
 import networkx as nx
 import numpy as np
@@ -11,94 +11,7 @@ from tqdm import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import ci_registry
-
-# from pgmpy.metrics import ImpliedCIs  # TODO to be removed with old design
 from pgmpy.models import DynamicBayesianNetwork
-
-try:
-    from networkx.algorithms.d_separation import is_d_separator as d_separated
-except ImportError:
-    from networkx.algorithms.d_separation import d_separated
-
-
-def _count_lmc_violations(
-    data: pd.DataFrame,
-    implied_CIs: pd.DataFrame,
-    ci_test: Callable,
-    significance_level: float = 0.05,
-):
-    """
-    Given `implied_CIs` and `data`, counts the number of CIs that fail when tested on `data`.
-    """
-    n_violations = 0
-    for _, row in implied_CIs.iterrows():
-        n_violations += not ci_test(
-            X=row["u"],
-            Y=row["v"],
-            Z=row["cond_vars"],
-            data=data,
-            boolean=True,
-            significance_level=significance_level,
-        )
-    return n_violations
-
-
-def _create_permuted_CIs(ci_df: pd.DataFrame, nodes: list):
-    """
-    Given the `ci_df`, creates a new dataframe of CIs with the nodes permuted randomly.
-
-    Parameters
-    ----------
-    ci_df: pd.DataFrame
-        A DataFrame containing the Conditional Independences with columns 'u', 'v', and 'cond_vars'.
-
-    nodes : list
-        List of all the nodes/variables in the graph/data.
-
-    Returns
-    -------
-    permuted_CIs : pd.DataFrame with columns 'u', 'v', and 'cond_vars'.
-        The implied Conditional Independences, changed according to node permutation.
-    """
-    permuted_nodes = np.random.permutation(nodes)
-    perm_mapping = dict(zip(nodes, permuted_nodes))
-
-    new_cis = pd.DataFrame(columns=["u", "v", "cond_vars"])
-    new_cis["u"] = ci_df["u"].apply(perm_mapping.get)
-    new_cis["v"] = ci_df["v"].apply(perm_mapping.get)
-    new_cis["cond_vars"] = ci_df["cond_vars"].apply(
-        lambda t: [perm_mapping[x] for x in t]
-    )
-
-    return new_cis
-
-
-def _compare_CIs(cis1: pd.DataFrame, cis2: pd.DataFrame):
-    """Compares two DataFrames of Conditional Independences for equality.
-
-    Parameters
-    ----------
-    cis1, cis2 : pd.DataFrame
-        First DataFrame of Conditional Independences with columns 'u', 'v', and 'cond_vars'.
-
-    Returns
-    -------
-    bool
-        True if both DataFrames represent the same set of Conditional Independences, False otherwise.
-    """
-
-    if len(cis1) != len(cis2):
-        return False
-
-    set1 = set()
-    for _, row in cis1.iterrows():
-        set1.add((row["u"], row["v"], frozenset(row["cond_vars"])))
-
-    set2 = set()
-    for _, row in cis2.iterrows():
-        set2.add((row["u"], row["v"], frozenset(row["cond_vars"])))
-
-    return set1 == set2
 
 
 def _get_parental_triples(dag):
@@ -142,7 +55,7 @@ def _tpa_violations(permuted_dag, original_dag):
     n_violations = 0
     for node, nd, parents in triples:
         # Check d-separation in original DAG
-        if not d_separated(original_dag, {node}, {nd}, set(parents)):
+        if original_dag.is_dconnected(node, nd, observed=parents):
             n_violations += 1
     return n_violations, len(triples)
 
@@ -275,11 +188,6 @@ def permutation_test(
 
     # Step 1: Compute LMC violations for the given DAG.
 
-    # implied_cis = ImpliedCIs(ci_test=ci_test, show_progress=False)
-    # original_CIs = implied_cis.evaluate(X=data, causal_graph=dag)
-    # valid_CIs = original_CIs[original_CIs["p-value"] > significance_level]
-    # n_lmc_violations = original_CIs.shape[0] - valid_CIs.shape[0]
-
     n_lmc_violations, _ = _lmc_violations(dag, data, ci_test, significance_level)
 
     # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
@@ -305,19 +213,6 @@ def permutation_test(
         n_tpa_violations, _ = _tpa_violations(permuted_dag, dag)
         if n_tpa_violations == 0:
             n_within_mec += 1
-
-        # Below is replaced by permutation of node
-
-        # Compute implied CIs for the permuted DAG
-        # implied_cis = ImpliedCIs(ci_test=ci_test, show_progress=False)
-        # permuted_CIs = implied_cis.evaluate(X=data, causal_graph=permuted_dag)
-        # valid_CIs_perm = permuted_CIs[permuted_CIs["p-value"] > significance_level]
-        # n_violations_perm = permuted_CIs.shape[0] - valid_CIs_perm.shape[0]
-        # permutation_violations.append(n_violations_perm)
-
-        # # MEC comparison
-        # if dag.is_iequivalent(permuted_dag):
-        #     n_within_mec += 1
 
     # Step 3: Compute test statistics and p-values.
 
