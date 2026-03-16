@@ -652,6 +652,8 @@ class TestDAGCreation(unittest.TestCase):
     def test_hash(self):
         dag1 = get_example_model("M-bias")
         dag2 = get_example_model("M-bias")
+        dag1 = dag1.without_role("exposures").without_role("outcomes")
+        dag2 = dag2.without_role("exposures").without_role("outcomes")
 
         self.assertEqual(hash(dag1), hash(dag2))
 

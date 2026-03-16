@@ -330,6 +330,12 @@ class TestLGBNMethods(unittest.TestCase):
                     abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1
                 )
 
+    def test_fit_invalid_estimator(self):
+        new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
+        with self.assertRaises(ValueError):
+            new_model.fit(df, estimator="unbiased")
+
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
