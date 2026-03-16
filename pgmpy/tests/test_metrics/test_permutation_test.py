@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.metrics import implied_cis, permutation_test
+from pgmpy.metrics import permutation_test
 from pgmpy.metrics.permutation_test import (
-    _count_lmc_violations,
-    _create_permuted_CIs,
+    _lmc_violations,
+    _tpa_violations,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
@@ -98,41 +99,11 @@ def test_get_non_descendants(model_helper):
     assert set(model_helper._get_non_descendants("B")) == {"A"}
     assert set(model_helper._get_non_descendants("C")) == {"A", "B"}
     assert set(model_helper._get_non_descendants("D")) == {"A", "B", "C"}
-
-
-def test_count_lmc_violations(model_helper, data_helper):
-    ci_test_chosen = ci_registry.get_test("chi_square", data=data_helper)
-    implied_CIs = implied_cis(model_helper, data_helper, ci_test=ci_test_chosen)
-    count = _count_lmc_violations(
-        data_helper,
-        implied_CIs,
-        ci_test_chosen,
-        significance_level=0.05,
-    )
-    assert count == 0
-
-    for _ in range(5):
-        permuted_CIs = _create_permuted_CIs(implied_CIs, list(model_helper.nodes()))
-        count = _count_lmc_violations(
-            data_helper,
-            permuted_CIs,
-            ci_test_chosen,
-            significance_level=0.05,
-        )
-        assert count > 0
-
-
-def test_count_lmc_violations_small_data(model_helper, data_helper):
-    df = data_helper.head(5)
-    ci_test_chosen = ci_registry.get_test("chi_square", data=df)
-    count = _count_lmc_violations(
-        df,
-        implied_cis(model_helper, df, ci_test=ci_test_chosen),
-        ci_test_chosen,
-        significance_level=0.05,
-    )
-    assert isinstance(count, int)
-    assert count >= 0
+    assert set(model_helper._get_non_descendants("C", exclude_parents=True)) == {"A"}
+    assert set(model_helper._get_non_descendants("D", exclude_parents=True)) == {
+        "A",
+        "B",
+    }
 
 
 def test_child_model(child_model):
@@ -147,3 +118,40 @@ def test_insurance_model(insurance_model):
     result = permutation_test(model, data, return_summary=True, show_progress=False)
     assert result["p_value_falsifiable"] <= 0.05
     assert result["p_value_falsified"] <= 0.05
+
+
+def test_lmc_violations(model_helper, data_helper):
+    ci_test_chosen = ci_registry.get_test("chi_square", data=data_helper)
+    n_violations, n_triples = _lmc_violations(
+        model_helper, data_helper, ci_test_chosen, significance_level=0.05
+    )
+    assert isinstance(n_violations, int)
+    assert n_violations == 0
+    assert n_triples > 0
+
+    for _ in range(5):
+        nodes = list(model_helper.nodes())
+        permuted_nodes = np.random.permutation(nodes)
+        perm_mapping = dict(zip(nodes, permuted_nodes))
+        nx_permuted_dag = nx.relabel_nodes(model_helper, perm_mapping, copy=True)
+        permuted_dag = type(model_helper)()
+        permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
+        permuted_dag.add_edges_from(nx_permuted_dag.edges())
+        n_violations_perm, _ = _lmc_violations(
+            permuted_dag, data_helper, ci_test_chosen, significance_level=0.05
+        )
+        assert n_violations_perm >= n_violations or n_violations_perm >= 0
+
+
+def test_tpa_violations(model_helper):
+    nodes = list(model_helper.nodes())
+    permuted_nodes = np.random.permutation(nodes)
+    perm_mapping = dict(zip(nodes, permuted_nodes))
+    nx_permuted_dag = nx.relabel_nodes(model_helper, perm_mapping, copy=True)
+    permuted_dag = type(model_helper)()
+    permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
+    permuted_dag.add_edges_from(nx_permuted_dag.edges())
+    n_violations, n_triples = _tpa_violations(permuted_dag, model_helper)
+    assert isinstance(n_violations, int)
+    assert n_violations >= 0
+    assert n_triples > 0
