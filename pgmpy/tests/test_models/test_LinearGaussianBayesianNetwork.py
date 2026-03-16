@@ -365,6 +365,10 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(set(result.columns), {"yceP", "yheI", "cspA"})
         self.assertEqual(result.shape, (10, 3))
+
+        # calculated by saving df to csv and using R to predict
+        # model is loaded from bnlearn, impute function from bnlearn to generate true values
+
         true_data = {
             "yceP": [
                 0.9355,

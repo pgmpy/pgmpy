@@ -880,7 +880,7 @@ class LinearGaussianBayesianNetwork(DAG):
         return self
 
     def predict_probability(
-        self, data: pd.DataFrame, distribution: str = "joint"
+        self, data: pd.DataFrame
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
         Predicts the conditional distribution of missing variables
