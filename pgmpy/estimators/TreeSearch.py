@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 from itertools import combinations
+from typing import Callable, Dict, Optional, Union
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from sklearn.base import BaseEstimator as SklearnBaseEstimator
 from sklearn.metrics import (
     adjusted_mutual_info_score,
     mutual_info_score,
@@ -18,246 +20,252 @@ from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 
 
-class TreeSearch(StructureEstimator):
+class TreeSearch(SklearnBaseEstimator, StructureEstimator):
     """
-    Search class for learning tree related graph structure. The algorithms
-    supported are Chow-Liu and Tree-augmented naive bayes (TAN).
+    sklearn-compatible Tree Structure Learning Algorithm.
 
-    Chow-Liu constructs the maximum-weight spanning tree with mutual information
-    score as edge weights.
+    Supports Chow-Liu and Tree-augmented Naive Bayes (TAN) algorithms
+    for learning tree-structured Bayesian networks from data.
 
-    TAN is an extension of Naive Bayes classifier to allow a tree structure over
-    the independent variables to account for interaction.
+    This class follows sklearn conventions for compatibility with sklearn's
+    model selection tools (e.g., GridSearchCV, Pipeline).
 
     Parameters
     ----------
-    data: pandas.DataFrame object
-        dataframe object where each column represents one variable.
+    estimator_type : str, default="chow-liu"
+        The algorithm to use. Options:
+        - "chow-liu": Constructs maximum-weight spanning tree
+        - "tan": Tree-augmented Naive Bayes
 
-    root_node: str, int, or any hashable python object, default is None.
-        The root node of the tree structure. If None then root node is auto-picked
-        as the node with the highest sum of edge weights.
+    root_node : str, int, or hashable, optional
+        Root node of the tree. If None, auto-selected based on edge weights.
 
-    n_jobs: int (default: -1)
-        Number of jobs to run in parallel. `-1` means use all processors.
+    class_node : str, int, or hashable, optional
+        Required for TAN estimator. Class node for conditional probabilities.
 
-    References
+    edge_weights_fn : str or callable, default="mutual_info"
+        Edge weight computation method:
+        - "mutual_info": Mutual Information Score
+        - "adjusted_mutual_info": Adjusted Mutual Information Score
+        - "normalized_mutual_info": Normalized Mutual Information Score
+        - callable: Custom function with signature f(array, array) -> float
+
+    n_jobs : int, default=-1
+        Number of parallel jobs. -1 uses all processors.
+
+    show_progress : bool, default=False
+        Whether to display progress bar during learning.
+
+    Attributes
     ----------
-    [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-        distributions with dependence trees", IEEE Transactions on Information
-        Theory, IT-14 (3): 462–467
+    model_ : pgmpy.base.DAG
+        The learned DAG structure (set after calling fit()).
 
-    [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
-        Machine Learning 29: 131–163
+    root_node_ : str, int, or hashable
+        The root node used in the learned structure.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from pgmpy.estimators import TreeSearch
+    >>>
+    >>> # Generate sample data
+    >>> data = pd.DataFrame(
+    ...     np.random.randint(0, 2, size=(1000, 5)), columns=["A", "B", "C", "D", "E"]
+    ... )
+    >>>
+    >>> # Chow-Liu learning
+    >>> ts = TreeSearch(estimator_type="chow-liu", root_node="A")
+    >>> ts.fit(data)
+    >>> dag = ts.model_
+    >>>
+    >>> # TAN learning
+    >>> ts_tan = TreeSearch(estimator_type="tan", root_node="B", class_node="A")
+    >>> ts_tan.fit(data)
+    >>> dag_tan = ts_tan.model_
+    >>>
+    >>> # sklearn integration
+    >>> from sklearn.model_selection import GridSearchCV
+    >>> param_grid = {
+    ...     "root_node": ["A", "B", None],
+    ...     "edge_weights_fn": ["mutual_info", "adjusted_mutual_info"],
+    ... }
+    >>> gs = GridSearchCV(TreeSearch(), param_grid)
+    >>> gs.fit(data)
     """
 
-    def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
-        if root_node is not None and root_node not in data.columns:
-            raise ValueError(f"Root node: {root_node} not found in data columns.")
-
-        self.data = data
-        self.root_node = root_node
-        self.n_jobs = n_jobs
-
-        super(TreeSearch, self).__init__(data, **kwargs)
-
-    def estimate(
+    def __init__(
         self,
-        estimator_type="chow-liu",
-        class_node=None,
-        edge_weights_fn="mutual_info",
-        show_progress=True,
+        estimator_type: str = "chow-liu",
+        root_node: Optional[Union[str, int]] = None,
+        class_node: Optional[Union[str, int]] = None,
+        edge_weights_fn: Union[str, Callable] = "mutual_info",
+        n_jobs: int = -1,
+        show_progress: bool = False,
     ):
+        self.estimator_type = estimator_type
+        self.root_node = root_node
+        self.class_node = class_node
+        self.edge_weights_fn = edge_weights_fn
+        self.n_jobs = n_jobs
+        self.show_progress = show_progress
+
+    def fit(self, X: pd.DataFrame, y=None) -> "TreeSearch":
         """
-        Estimate the `DAG` structure that fits best to the given data set without
-        parametrization.
+        Learn the tree structure from data.
+
+        sklearn-compatible fit method that learns the DAG structure
+        from the input data matrix.
 
         Parameters
         ----------
-        estimator_type: str (chow-liu | tan)
-            The algorithm to use for estimating the DAG.
+        X : pandas.DataFrame
+            Input data where each column represents a variable.
+            Shape: (n_samples, n_features)
 
-        class_node: string, int or any hashable python object. (optional)
-            Needed only if estimator_type = 'tan'. In the estimated DAG, there would be
-            edges from class_node to each of the feature variables.
-
-        edge_weights_fn: str or function (default: mutual info)
-            Method to use for computing edge weights. By default, Mutual Info Score is
-            used.
-
-        show_progress: boolean
-            If True, shows a progress bar for the running algorithm.
+        y : None
+            Ignored. Present for sklearn compatibility.
 
         Returns
         -------
-        Estimated Model: pgmpy.base.DAG
-            The estimated model structure.
+        self : TreeSearch
+            Returns self for method chaining compatibility.
 
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> import networkx as nx
-        >>> import matplotlib.pyplot as plt
-        >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...     columns=["A", "B", "C", "D", "E"],
-        ... )
-        >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="chow-liu")
-        >>> nx.draw_circular(
-        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
-        ... )
-        >>> plt.show()
-        >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type="chow-liu")
-        >>> nx.draw_circular(
-        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
-        ... )
-        >>> plt.show()
-        >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="tan", class_node="A")
-        >>> nx.draw_circular(
-        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
-        ... )
-        >>> plt.show()
-        >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type="tan")
-        >>> nx.draw_circular(
-        ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
-        ... )
-        >>> plt.show()
+        Raises
+        ------
+        ValueError
+            If estimator_type is invalid or class_node is required but not provided.
+        TypeError
+            If X is not a pandas DataFrame.
         """
-        # Step 1. Argument checks
-        # Step 1.1: Only chow-liu and tan allowed as estimator type.
-        if estimator_type not in {"chow-liu", "tan"}:
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("Input X must be a pandas DataFrame")
+
+        # Store data and update root_node_ if needed
+        self.data = X
+        self.root_node_ = self.root_node
+
+        # Validation
+        self._validate_parameters()
+
+        # Call the core estimation logic
+        self.model_ = self._estimate_structure()
+
+        return self
+
+    def _validate_parameters(self) -> None:
+        """Validate input parameters."""
+        if self.estimator_type not in {"chow-liu", "tan"}:
             raise ValueError(
-                f"Invalid estimator_type. Expected either chow-liu or tan. Got: {estimator_type}"
+                f"Invalid estimator_type. Expected 'chow-liu' or 'tan'. "
+                f"Got: {self.estimator_type}"
             )
 
-        # Step 1.2: If estimator_type=tan, class_node must be specified
-        if estimator_type == "tan" and class_node is None:
-            raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
-            )
-        if estimator_type == "tan" and class_node not in self.data.columns:
-            raise ValueError(f"Class node: {class_node} not found in data columns")
+        if self.estimator_type == "tan" and self.class_node is None:
+            raise ValueError("class_node must be specified when estimator_type='tan'")
 
-        # Step 1.3: If root_node isn't specified, get the node with the highest score.
-        weights_computed = False
-        if self.root_node is None:
-            weights = TreeSearch._get_weights(
-                self.data, edge_weights_fn, self.n_jobs, show_progress
+        if self.class_node is not None and self.class_node not in self.data.columns:
+            raise ValueError(
+                f"class_node '{self.class_node}' not found in data columns"
             )
-            weights_computed = True
+
+        if self.root_node is not None and self.root_node not in self.data.columns:
+            raise ValueError(f"root_node '{self.root_node}' not found in data columns")
+
+    def _estimate_structure(self) -> DAG:
+        """Core structure estimation logic."""
+        # Step 1: Select root_node if not specified
+        if self.root_node_ is None:
+            weights = self._get_weights(
+                self.data, self.edge_weights_fn, self.n_jobs, self.show_progress
+            )
             sum_weights = weights.sum(axis=0)
-            maxw_idx = np.argsort(sum_weights)[::-1]
-            self.root_node = self.data.columns[maxw_idx[0]]
+            max_idx = np.argsort(sum_weights)[::-1]
+            self.root_node_ = self.data.columns[max_idx[0]]
 
-        # Step 2. Compute all edge weights.
-        if estimator_type == "chow-liu":
-            if not weights_computed:
-                weights = TreeSearch._get_weights(
-                    self.data, edge_weights_fn, self.n_jobs, show_progress
-                )
-        else:
-            weights = TreeSearch._get_conditional_weights(
-                self.data, class_node, edge_weights_fn, self.n_jobs, show_progress
+        # Step 2: Compute edge weights
+        if self.estimator_type == "chow-liu":
+            weights = self._get_weights(
+                self.data, self.edge_weights_fn, self.n_jobs, self.show_progress
+            )
+            return self._create_tree_and_dag(
+                weights, self.data.columns, self.root_node_
             )
 
-        # Step 3: If estimator_type = "chow-liu", estimate the DAG and return.
-        if estimator_type == "chow-liu":
-            return TreeSearch._create_tree_and_dag(
-                weights, self.data.columns, self.root_node
-            )
-
-        # Step 4: If estimator_type = "tan":
-        elif estimator_type == "tan":
-            # Step 4.1: Checks root_node != class_node
-            if self.root_node == class_node:
+        elif self.estimator_type == "tan":
+            if self.root_node_ == self.class_node:
                 raise ValueError(
-                    f"Root node: {self.root_node} and class node: {class_node} are identical"
+                    f"root_node and class_node cannot be identical. "
+                    f"Got both as '{self.root_node_}'"
                 )
 
-            # Step 4.2: Construct chow-liu DAG on {data.columns - class_node}
-            class_node_idx = np.where(self.data.columns == class_node)[0][0]
-            weights = np.delete(weights, class_node_idx, axis=0)
-            weights = np.delete(weights, class_node_idx, axis=1)
-            reduced_columns = np.delete(self.data.columns, class_node_idx)
-            D = TreeSearch._create_tree_and_dag(
-                weights, reduced_columns, self.root_node
+            weights = self._get_conditional_weights(
+                self.data,
+                self.class_node,
+                self.edge_weights_fn,
+                self.n_jobs,
+                self.show_progress,
             )
 
-            # Step 4.3: Add edges from class_node to all other nodes.
-            D.add_edges_from([(class_node, node) for node in reduced_columns])
-            return D
+            # Remove class_node from weights matrix
+            class_idx = np.where(self.data.columns == self.class_node)[0][0]
+            weights = np.delete(weights, class_idx, axis=0)
+            weights = np.delete(weights, class_idx, axis=1)
+            reduced_columns = np.delete(self.data.columns, class_idx)
+
+            # Create tree on reduced columns
+            dag = self._create_tree_and_dag(weights, reduced_columns, self.root_node_)
+
+            # Add edges from class_node to all other nodes
+            dag.add_edges_from([(self.class_node, node) for node in reduced_columns])
+            return dag
 
     @staticmethod
     def _get_weights(
-        data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True
-    ):
+        data: pd.DataFrame,
+        edge_weights_fn: Union[str, Callable] = "mutual_info",
+        n_jobs: int = -1,
+        show_progress: bool = True,
+    ) -> np.ndarray:
         """
-        Helper function to Chow-Liu algorithm for estimating tree structure from given data. Refer to
-        pgmpy.estimators.TreeSearch for more details. This function returns the edge weights matrix.
+        Compute edge weights for fully connected graph (Chow-Liu).
 
         Parameters
         ----------
-        data: pandas.DataFrame object
-            dataframe object where each column represents one variable.
-
-        edge_weights_fn: str or function (default: mutual_info)
-            Method to use for computing edge weights. Options are:
-                1. 'mutual_info': Mutual Information Score.
-                2. 'adjusted_mutual_info': Adjusted Mutual Information Score.
-                3. 'normalized_mutual_info': Normalized Mutual Information Score.
-                4. function(array[n_samples,], array[n_samples,]): Custom function.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        show_progress: boolean
-            If True, shows a progress bar for the running algorithm.
+        data : pd.DataFrame
+            Input data
+        edge_weights_fn : str or callable
+            Edge weight computation method
+        n_jobs : int
+            Number of parallel jobs
+        show_progress : bool
+            Whether to show progress bar
 
         Returns
         -------
-        weights: numpy 2D array, shape = (n_columns, n_columns)
-            symmetric matrix where each element represents an edge weight.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...     columns=["A", "B", "C", "D", "E"],
-        ... )
-        >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="chow-liu")
+        weights : np.ndarray
+            Symmetric weight matrix of shape (n_vars, n_vars)
         """
-        # Step 0: Check for edge weight computation method
-        if edge_weights_fn == "mutual_info":
-            edge_weights_fn = mutual_info_score
-        elif edge_weights_fn == "adjusted_mutual_info":
-            edge_weights_fn = adjusted_mutual_info_score
-        elif edge_weights_fn == "normalized_mutual_info":
-            edge_weights_fn = normalized_mutual_info_score
-        elif not callable(edge_weights_fn):
-            raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
-                f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
-            )
+        # Resolve weight function
+        weight_func = TreeSearch._resolve_weight_function(edge_weights_fn)
 
-        # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
+        if show_progress and config.SHOW_PROGRESS:
+            pbar = tqdm(
+                pbar,
+                total=(n_vars * (n_vars - 1) / 2),
+                desc="Computing edge weights",
+            )
+
+        # Compute weights in parallel
         vals = Parallel(n_jobs=n_jobs)(
-            delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
+            delayed(weight_func)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
         )
+
+        # Build symmetric weight matrix
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -267,87 +275,60 @@ class TreeSearch(StructureEstimator):
 
     @staticmethod
     def _get_conditional_weights(
-        data, class_node, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True
-    ):
+        data: pd.DataFrame,
+        class_node: Union[str, int],
+        edge_weights_fn: Union[str, Callable] = "mutual_info",
+        n_jobs: int = -1,
+        show_progress: bool = True,
+    ) -> np.ndarray:
         """
-        Helper function to TAN (Tree Augmented Naive Bayes) algorithm for
-        estimating tree structure from given data. Refer to
-        pgmpy.estimators.TreeSearch for more details. This function returns the
-        edge weights matrix.
+        Compute conditional edge weights for TAN algorithm.
 
         Parameters
         ----------
-        data: pandas.DataFrame object
-            dataframe object where each column represents one variable.
-
-        class_node: str
-            The class node for TAN. The edge weight is computed as I(X, Y | class_node).
-
-        edge_weights_fn: str or function (default: mutual_info)
-            Method to use for computing edge weights. Options are:
-                1. 'mutual_info': Mutual Information Score.
-                2. 'adjusted_mutual_info': Adjusted Mutual Information Score.
-                3. 'normalized_mutual_info': Normalized Mutual Information Score.
-                4. function(array[n_samples,], array[n_samples,]): Custom function.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        show_progress: boolean
-            If True, shows a progress bar for the running algorithm.
+        data : pd.DataFrame
+            Input data
+        class_node : str or int
+            Class node for conditioning
+        edge_weights_fn : str or callable
+            Edge weight computation method
+        n_jobs : int
+            Number of parallel jobs
+        show_progress : bool
+            Whether to show progress bar
 
         Returns
         -------
-        weights: numpy 2D array, shape = (n_columns, n_columns)
-            symmetric matrix where each element represents an edge weight.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...     columns=["A", "B", "C", "D", "E"],
-        ... )
-        >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="tan")
+        weights : np.ndarray
+            Symmetric weight matrix of shape (n_vars, n_vars)
         """
-        # Step 0: Check for edge weight computation method
-        if edge_weights_fn == "mutual_info":
-            edge_weights_fn = mutual_info_score
-        elif edge_weights_fn == "adjusted_mutual_info":
-            edge_weights_fn = adjusted_mutual_info_score
-        elif edge_weights_fn == "normalized_mutual_info":
-            edge_weights_fn = normalized_mutual_info_score
-        elif not callable(edge_weights_fn):
-            raise ValueError(
-                f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
-                f"'normalized_mutual_info'or a function of form fun(array, array). Got: f{edge_weights_fn}"
-            )
+        weight_func = TreeSearch._resolve_weight_function(edge_weights_fn)
 
-        # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        def _conditional_edge_weights_fn(u, v):
-            """
-            Computes the conditional edge weight of variable index u and v conditioned on class_node
-            """
+        if show_progress and config.SHOW_PROGRESS:
+            pbar = tqdm(
+                pbar,
+                total=(n_vars * (n_vars - 1) / 2),
+                desc="Computing conditional edge weights",
+            )
+
+        def _conditional_weight(u, v):
+            """Compute conditional edge weight I(u, v | class_node)."""
             cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
-            cond_edge_weight = 0
-            for index, marg_prob in cond_marginal.items():
-                df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(
-                    df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
-                )
-            return cond_edge_weight
+            cond_weight = 0.0
+
+            for class_value, prob in cond_marginal.items():
+                subset = data[data.loc[:, class_node] == class_value]
+                cond_weight += prob * weight_func(subset.loc[:, u], subset.loc[:, v])
+
+            return cond_weight
 
         vals = Parallel(n_jobs=n_jobs)(
-            delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
+            delayed(_conditional_weight)(u, v) for u, v in pbar
         )
+
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -356,47 +337,140 @@ class TreeSearch(StructureEstimator):
         return weights
 
     @staticmethod
-    def _create_tree_and_dag(weights, columns, root_node):
+    def _create_tree_and_dag(
+        weights: np.ndarray,
+        columns,
+        root_node: Union[str, int],
+    ) -> DAG:
         """
-        Helper function to Chow-Liu algorithm for estimating tree structure from given data. Refer to
-        pgmpy.estimators.TreeSearch for more details. This function returns the DAG based on the edge weights matrix.
+        Create DAG from maximum spanning tree.
 
         Parameters
         ----------
-        weights: numpy 2D array, shape = (n_columns, n_columns)
-            symmetric matrix where each element represents an edge weight.
-
-        columns: list or array
-            Names of the columns (& rows) of the weights matrix.
-
-        root_node: str, int, or any hashable python object.
-            The root node of the tree structure.
+        weights : np.ndarray
+            Weight matrix of shape (n_vars, n_vars)
+        columns : list or array
+            Column names
+        root_node : str or int
+            Root node for DAG orientation
 
         Returns
         -------
-        model: pgmpy.base.DAG
-            The estimated model structure.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.estimators import TreeSearch
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...     columns=["A", "B", "C", "D", "E"],
-        ... )
-        >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="chow-liu")
+        dag : pgmpy.base.DAG
+            The learned DAG
         """
-        # Step 2: Compute the maximum spanning tree using the weights.
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
+        # Create maximum spanning tree
+        graph_df = pd.DataFrame(weights, index=columns, columns=columns)
+        undirected_tree = nx.maximum_spanning_tree(
+            nx.from_pandas_adjacency(graph_df, create_using=nx.Graph)
         )
 
-        # Step 3: Create DAG by directing edges away from root node and return
-        D = nx.bfs_tree(T, root_node)
-        return DAG(D)
+        # Direct tree from root using BFS
+        directed_tree = nx.bfs_tree(undirected_tree, root_node)
+        return DAG(directed_tree)
+
+    @staticmethod
+    def _resolve_weight_function(
+        edge_weights_fn: Union[str, Callable],
+    ) -> Callable:
+        """
+        Resolve edge weight function name to callable.
+
+        Parameters
+        ----------
+        edge_weights_fn : str or callable
+            Weight function name or callable
+
+        Returns
+        -------
+        callable
+            The weight function
+
+        Raises
+        ------
+        ValueError
+            If function name is not recognized
+        """
+        if callable(edge_weights_fn):
+            return edge_weights_fn
+
+        weight_functions = {
+            "mutual_info": mutual_info_score,
+            "adjusted_mutual_info": adjusted_mutual_info_score,
+            "normalized_mutual_info": normalized_mutual_info_score,
+        }
+
+        if edge_weights_fn not in weight_functions:
+            raise ValueError(
+                f"Invalid edge_weights_fn '{edge_weights_fn}'. "
+                f"Expected one of {list(weight_functions.keys())} or a callable."
+            )
+
+        return weight_functions[edge_weights_fn]
+
+    def get_params(self, deep: bool = True) -> Dict[str, any]:
+        """
+        Get parameters for this estimator.
+
+        sklearn-compatible method for hyperparameter retrieval.
+        Required for sklearn's GridSearchCV and Pipeline.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            If True, will return parameters for this estimator and
+            contained subobjects that are estimators.
+
+        Returns
+        -------
+        params : dict
+            Parameter names mapped to their values.
+        """
+        params = {
+            "estimator_type": self.estimator_type,
+            "root_node": self.root_node,
+            "class_node": self.class_node,
+            "edge_weights_fn": self.edge_weights_fn,
+            "n_jobs": self.n_jobs,
+            "show_progress": self.show_progress,
+        }
+        return params
+
+    def set_params(self, **params) -> "TreeSearch":
+        """
+        Set the parameters of this estimator.
+
+        sklearn-compatible method for hyperparameter setting.
+        Required for sklearn's GridSearchCV and Pipeline.
+
+        Parameters
+        ----------
+        **params : dict
+            Estimator parameters.
+
+        Returns
+        -------
+        self : TreeSearch
+            Returns self for method chaining.
+
+        Raises
+        ------
+        ValueError
+            If invalid parameters are provided.
+        """
+        if not params:
+            return self
+
+        valid_params = set(self.get_params().keys())
+        invalid_params = set(params.keys()) - valid_params
+
+        if invalid_params:
+            raise ValueError(
+                f"Invalid parameters: {invalid_params}. "
+                f"Valid parameters are: {valid_params}"
+            )
+
+        for key, value in params.items():
+            setattr(self, key, value)
+
+        return self
