@@ -7,5 +7,6 @@ pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
 pgmpy/estimators/MmhcEstimator.py
+pgmpy/estimators/EM.py
 pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/MLE.py
