@@ -2,8 +2,6 @@
 
 from collections import defaultdict
 
-import numpy as np  # noqa: F401
-
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
 from pgmpy.utils import compat_fns
@@ -144,6 +142,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
@@ -172,6 +171,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
@@ -205,6 +205,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
@@ -229,6 +230,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
@@ -270,6 +272,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
@@ -310,6 +313,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import ClusterGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
@@ -379,6 +383,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([("a", "b"), ("b", "c")])
