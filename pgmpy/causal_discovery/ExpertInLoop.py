@@ -131,16 +131,18 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
     Using LLM-based orientation (requires API key):
 
+    >>> from functools import partial
     >>> from pgmpy.utils import llm_pairwise_orient
     >>> variable_descriptions = {
     ...     "Smoker": "Whether a person smokes",
     ...     "Cancer": "Whether a person has cancer",
     ... }
-    >>> eil = ExpertInLoop(
-    ...     orientation_fn=llm_pairwise_orient,
+    >>> orientation_fn = partial(
+    ...     llm_pairwise_orient,
     ...     variable_descriptions=variable_descriptions,
     ...     llm_model="gemini/gemini-1.5-flash",
     ... )
+    >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
     >>> eil.fit(df)
 
     References
@@ -207,7 +209,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
             cond_set = list(set(u_parents).union(v_parents))
             result = ci_test(X=u, Y=v, Z=cond_set, data=data, boolean=False)
-            effect, p_value = result[0], result[1]
+
+            if len(result) == 3:
+                effect, p_value, _ = result
+            else:
+                effect, p_value = result
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
         return pd.DataFrame(
@@ -251,11 +257,15 @@ class ExpertInLoop(_BaseCausalDiscovery):
         edges_to_remove = []
         temp_dag = dag.copy()
         temp_dag.add_edges_from([(u, v)])
-        for cycle in nx.cycles(temp_dag):
+        for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
                 if not ((x == u) and (y == v)):
                     Z = set(cycle) - set([x, y])
-                    effect, pvalue = ci_test(x, y, Z=Z, data=data, boolean=False)
+                    result = ci_test(x, y, Z=Z, data=data, boolean=False)
+                    if len(result) == 3:
+                        effect, pvalue, _ = result
+                    else:
+                        effect, pvalue = result
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
                         logger.info(f"Removing edge: {x} -> {y} to fix cycle")
@@ -278,8 +288,9 @@ class ExpertInLoop(_BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        # Initialize orientation cache
-        self.orientation_cache_ = set()
+        # Initialize orientation cache (preserve if pre-populated)
+        if not hasattr(self, "orientation_cache_"):
+            self.orientation_cache_ = set()
 
         # Step 0: Create a new DAG on all the variables with no edge.
         dag = DAG()
@@ -344,6 +355,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
             if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
                 break
 
+            # If there are only removals and no candidate additions, continue
+            # to the next iteration after having applied removals.
+            if nonedge_effects.shape[0] == 0:
+                continue
+
             # Step 3.4: Find the pair of variables with the highest effect size
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             edge_direction = None
@@ -398,8 +414,8 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     and edge_direction is not None
                 ):
                     logger.info(
-                        "\rQueried for edge orientation between"
-                        f"{selected_edge.u} and {selected_edge.v}. Got:"
+                        "\rQueried for edge orientation between "
+                        f"{selected_edge.u} and {selected_edge.v}. Got: "
                         f"{edge_direction[0]} -> {edge_direction[1]}"
                     )
 
