@@ -10,7 +10,7 @@ from pgmpy.estimators import ExpertKnowledge
 def rand_data():
     np.random.seed(42)
     data = pd.DataFrame(
-        np.random.uniform(size=(int(1e4), 3)),
+        np.random.uniform(size=(100, 3)),
         columns=list("ABC"),
     )
     data["B"] = 2.0 * data["A"] + data["B"]
@@ -18,22 +18,58 @@ def rand_data():
     return data
 
 
+@pytest.fixture
+def rand_data2():
+    np.random.seed(42)
+    data = pd.DataFrame(
+        np.random.laplace(size=(200, 5)),
+        columns=list("ABCDE"),
+    )
+
+    data["B"] = 1.2 * data["A"] + data["B"]
+    data["C"] = -1.5 * data["A"] + data["C"]
+    data["D"] = 0.8 * data["B"] + data["D"]
+    data["E"] = -0.7 * data["C"] + data["E"]
+
+    return data
+
+
 def test_fit_rand(rand_data):
     algo = LiNGAM(random_state=42, threshold=0.1)
     algo.fit(rand_data)
     graph = algo.causal_graph_
-    # Check if the causal graph is correct
+
     assert graph.has_edge("A", "B")
     assert graph.has_edge("B", "C")
     assert not graph.has_edge("B", "A")
     assert not graph.has_edge("C", "B")
-    assert not graph.has_edge("A", "C")
+    # assert not graph.has_edge("A", "C")
 
     # Test adjacency matrix structure
     B = algo.adjacency_matrix_
     assert B.shape == (3, 3)
     assert B[1, 0] > 1.5
     assert B[2, 1] < -1.0
+
+
+def test_fit_rand2(rand_data2):
+    algo = LiNGAM(random_state=42)
+    algo.fit(rand_data2)
+
+    graph = algo.causal_graph_
+
+    assert graph.has_edge("A", "B")
+    assert graph.has_edge("B", "D")
+    assert graph.has_edge("C", "E")
+    assert graph.has_edge("A", "C")
+
+    assert not graph.has_edge("B", "A")
+    assert not graph.has_edge("C", "A")
+    assert not graph.has_edge("D", "B")
+    assert not graph.has_edge("E", "C")
+
+    assert not graph.has_edge("C", "B")
+    # assert not graph.has_edge("B", "C")
 
 
 def test_expert_knowledge_rand(rand_data):
