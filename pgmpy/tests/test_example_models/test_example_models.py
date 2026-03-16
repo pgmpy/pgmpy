@@ -334,6 +334,14 @@ def test_list_models_numeric_filtering():
     assert list_models(n_nodes=">>10") == []
 
 
+def test_invalid_tag():
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(is_paraterized=True)  # typo
+
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(num_nodes=10)  # wrong key name entirely
+
+
 def test_tags():
     for model_name in ALL_MODELS:
         tags = all_objects(

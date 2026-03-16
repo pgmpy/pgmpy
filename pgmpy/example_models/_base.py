@@ -217,6 +217,14 @@ def list_models(**filter_tags) -> list[str]:
     >>> list_models(n_nodes=">=5", is_discrete=True)
     ['bnlearn/alarm', 'bnlearn/asia', ...]
     """
+    valid_tags = set(_BaseExampleModel._tags.keys())
+
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
+        raise ValueError(
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. "
+            f"Valid filter tags are: {sorted(valid_tags)}."
+        )
+
     skbase_filters, custom_filters = split_filter_tags(filter_tags)
 
     all_models = all_objects(

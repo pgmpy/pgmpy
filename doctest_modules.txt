@@ -2,6 +2,12 @@
 # Add a module path here after fixing its doctests to have them checked in CI.
 # Example:
 # pgmpy/base/DAG.py
+pgmpy/base/ADMG.py
+pgmpy/inference/ExactInference.py
 pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
+pgmpy/estimators/EM.py
+pgmpy/estimators/BayesianEstimator.py
+pgmpy/estimators/MLE.py
+pgmpy/estimators/MLE.py
