@@ -2050,5 +2050,4 @@ class RKHSCVLikelihood(StructureScore):
 
         cv_cost /= self.n_folds
 
-        # Negate: MATLAB returns cost (lower=better), pgmpy wants higher=better
         return -cv_cost
