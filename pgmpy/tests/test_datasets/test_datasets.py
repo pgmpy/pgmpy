@@ -125,6 +125,8 @@ def test_tubingen_invalid_format():
         load_dataset("tubingen/")
     with pytest.raises(ValueError):
         load_dataset("tubingen/abc")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/999")
 
 
 def test_invalid_input():

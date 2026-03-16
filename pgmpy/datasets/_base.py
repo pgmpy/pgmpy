@@ -247,7 +247,7 @@ class _TubingenBenchmarkMixin:
     """
 
     @classmethod
-    def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
+    def load_dataframe(cls, pair_id: int) -> DAG:
         url = f"{cls.base_url}/pair{pair_id:04}.txt"
         cache_name = f"pair_{pair_id:04}_data"
         raw_data = cls._get_raw_data(cache_name, url)
@@ -280,49 +280,60 @@ def load_dataset(name: str) -> Dataset:
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
     """
-    pair_id = None
-    search_name = name
-    if name == "tubingen" and pair_id is None:
-        raise ValueError(
-            "Tubingen dataset requires a pair id. Use 'tubingen/<pair_id>'."
-        )
-    if name.startswith("tubingen/"):
-        search_name = "tubingen"
-        name_parts = name.split("/")
-        if len(name_parts) == 2 and name_parts[1].isdigit():
-            pair_id = int(name_parts[1])
-        else:
-            raise ValueError(
-                f"Invalid Tubingen pair name '{name}'. Expected format: 'tubingen/<pair_id>'."
-            )
-
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
     )
+    if name.startswith("tubingen"):
+        name_parts = name.split("/")
+        if len(name_parts) == 2 and name_parts[1].isdigit():
+            pair_id = int(name_parts[1])
+
+            if not (1 <= pair_id <= 108):
+                raise ValueError(
+                    f"Tubingen pair ID must be between 1 and 108. Got {pair_id}."
+                )
+            target_cls = next(
+                (
+                    cls
+                    for cls in all_datasets
+                    if cls.get_class_tag("name") == "tubingen"
+                ),
+                None,
+            )
+            df = target_cls.load_dataframe(pair_id)
+            gt = target_cls.load_ground_truth(pair_id)
+
+            tags = target_cls.get_class_tags()
+            tags["n_samples"] = df.shape[0]
+            tags["n_variables"] = df.shape[1]
+
+            return Dataset(
+                name=name,
+                data=df,
+                expert_knowledge=None,
+                ground_truth=gt,
+                tags=tags,
+            )
+        else:
+            raise ValueError(
+                f"Invalid dataset name format: '{name}'. For Tubingen datasets, use 'tubingen/<pair_id>'."
+            )
 
     target_cls = None
     for cls in all_datasets:
-        if cls.get_class_tag("name") == search_name:
+        if cls.get_class_tag("name") == name:
             target_cls = cls
             break
     if target_cls is None:
         raise ValueError(
-            f"Dataset with name '{search_name}' not found. Please use list_datasets() to see available datasets."
+            f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
         )
 
     return Dataset(
         name=name,
-        data=(
-            target_cls.load_dataframe(pair_id)
-            if pair_id is not None
-            else target_cls.load_dataframe()
-        ),
+        data=target_cls.load_dataframe(),
         expert_knowledge=target_cls.load_expert_knowledge(),
-        ground_truth=(
-            target_cls.load_ground_truth(pair_id)
-            if pair_id is not None
-            else target_cls.load_ground_truth()
-        ),
+        ground_truth=target_cls.load_ground_truth(),
         tags=target_cls.get_class_tags(),
     )
 
