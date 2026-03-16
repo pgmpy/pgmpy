@@ -23,6 +23,7 @@ def get_scoring_method(
             "bic-g": BICGauss,
             "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
+            "rkhs-cv": RKHSCVLikelihood,
         },
         "discrete": {
             "bic-d": BIC,
@@ -1736,3 +1737,301 @@ class AICCondGauss(LogLikelihoodCondGauss):
         k = self._get_num_parameters(variable=variable, parents=parents)
 
         return ll - k
+
+
+def _compute_kernel(X, Y=None, metric="rbf", gamma=None):
+    """
+    Compute kernel matrix using sklearn's pairwise_kernels.
+
+    Parameters
+    ----------
+    X : np.ndarray, shape (n, d) or (n,)
+        First set of observations.
+    Y : np.ndarray or None
+        If None, computes K(X, X). Otherwise K(X, Y).
+    metric : str
+        Kernel type passed to sklearn (e.g. 'rbf', 'laplacian').
+    gamma : float or None
+        Kernel parameter. For RBF: K(x,x') = exp(-gamma * ||x-x'||^2).
+
+    Returns
+    -------
+    K : np.ndarray, shape (n_X, n_Y)
+    """
+    from sklearn.metrics.pairwise import pairwise_kernels
+
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    if Y is not None and Y.ndim == 1:
+        Y = Y.reshape(-1, 1)
+
+    kwargs = {}
+    if gamma is not None:
+        kwargs["gamma"] = gamma
+
+    return pairwise_kernels(X, Y, metric=metric, **kwargs)
+
+
+def _median_bandwidth(X, scale=2.0):
+    """
+    Compute RBF kernel gamma parameter via the median heuristic.
+
+    Follows the MATLAB reference [1]: width = sqrt(0.5 * median_sq) * scale,
+    theta_matlab = 1/width^2, gamma_sklearn = theta_matlab / 2.
+
+    Parameters
+    ----------
+    X : np.ndarray, shape (n,) or (n, d)
+        Observations for one variable.
+    scale : float
+        Multiplier on the base width (default 2.0, matching CV likelihood).
+
+    Returns
+    -------
+    gamma : float
+        The gamma parameter for sklearn's RBF kernel.
+
+    References
+    ----------
+    [1] https://github.com/Biwei-Huang/Generalized-Score-Functions-for-Causal-Discovery
+    """
+    from scipy.spatial.distance import pdist
+
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+
+    n, d = X.shape
+    sq_dists = pdist(X, metric="sqeuclidean")
+    sq_dists = sq_dists[sq_dists > 0]
+
+    if len(sq_dists) == 0:
+        return 1e-10
+
+    median_sq = np.median(sq_dists)
+    width = np.sqrt(0.5 * median_sq) * scale
+    theta_matlab = 1.0 / (width**2)
+    gamma = theta_matlab / 2.0
+
+    if d > 1:
+        gamma = gamma / d
+
+    return max(gamma, 1e-10)
+
+
+def _center_kernel_matrix(K):
+    """
+    Center kernel matrix: K_tilde = H @ K @ H where H = I - (1/n)*11^T.
+
+    Parameters
+    ----------
+    K : np.ndarray, shape (n, n)
+
+    Returns
+    -------
+    K_centered : np.ndarray, shape (n, n)
+    """
+    row_mean = K.mean(axis=1, keepdims=True)
+    col_mean = K.mean(axis=0, keepdims=True)
+    grand_mean = K.mean()
+    return K - row_mean - col_mean + grand_mean
+
+
+class RKHSCVLikelihood(StructureScore):
+    """
+    Cross-Validated Likelihood score using regression in RKHS.
+
+    Evaluates the local score of a variable given its parents by
+    performing K-fold cross-validation with kernel ridge regression
+    in a Reproducing Kernel Hilbert Space. This score handles nonlinear
+    causal mechanisms, arbitrary data distributions, and mixed-type
+    data without parametric assumptions.
+
+    The score is locally consistent, meaning it recovers the true
+    causal structure asymptotically when used with GES or HillClimb.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Dataset where each column represents a variable.
+    kernel : str (default: 'rbf')
+        Kernel type, passed to sklearn.metrics.pairwise.pairwise_kernels.
+        Supports 'rbf', 'laplacian', 'poly', 'sigmoid', 'cosine', etc.
+    n_folds : int (default: 10)
+        Number of cross-validation folds.
+    lambda_reg : float (default: 0.01)
+        Regularization parameter for kernel ridge regression.
+    gamma_noise : float (default: 0.01)
+        Noise variance parameter in the RKHS regression model.
+
+    References
+    ----------
+    [1] Huang, B., Zhang, K., Lin, Y., Schölkopf, B., & Glymour, C. (2018).
+    Generalized Score Functions for Causal Discovery. KDD '18.
+    https://doi.org/10.1145/3219819.3220104
+    [2] https://github.com/Biwei-Huang/Generalized-Score-Functions-for-Causal-Discovery
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from pgmpy.estimators import RKHSCVLikelihood
+    >>> rng = np.random.default_rng(42)
+    >>> n = 200
+    >>> X1 = rng.standard_normal(n)
+    >>> X2 = np.sin(X1) + 0.2 * rng.standard_normal(n)
+    >>> data = pd.DataFrame({"X1": X1, "X2": X2})
+    >>> scorer = RKHSCVLikelihood(data)
+    >>> # Score with correct parent should be higher than without
+    >>> scorer.local_score("X2", ["X1"]) > scorer.local_score("X2", [])
+    True
+    """
+
+    def __init__(
+        self,
+        data,
+        kernel="rbf",
+        n_folds=10,
+        lambda_reg=0.01,
+        gamma_noise=0.01,
+        **kwargs,
+    ):
+        super(RKHSCVLikelihood, self).__init__(data, **kwargs)
+        self.kernel = kernel
+        self.n_folds = n_folds
+        self.lambda_reg = lambda_reg
+        self.gamma_noise = gamma_noise
+
+    def local_score(self, variable, parents):
+        """
+        Compute the cross-validated likelihood local score.
+
+        Parameters
+        ----------
+        variable : str
+            Target variable (child node).
+        parents : list of str
+            Parent variable names.
+
+        Returns
+        -------
+        score : float
+            Negative of the average cross-validated cost across folds.
+            Higher values indicate better fit.
+        """
+        parents = list(parents)
+        n = len(self.data)
+        lam = self.lambda_reg
+        gamma = self.gamma_noise
+
+        X = self.data[[variable]].to_numpy(dtype=float)
+
+        # Compute centered kernel matrix for X (full n x n)
+        gamma_x = _median_bandwidth(X, scale=2.0)
+        Kx = _compute_kernel(X, metric=self.kernel, gamma=gamma_x)
+        Kx = _center_kernel_matrix(Kx)
+
+        has_parents = len(parents) > 0
+
+        if has_parents:
+            # Per-parent kernels with individual bandwidths, Hadamard product
+            Kpa = np.ones((n, n))
+            for parent in parents:
+                pa_col = self.data[[parent]].to_numpy(dtype=float)
+                gamma_pa = _median_bandwidth(pa_col, scale=2.0)
+                K_parent = _compute_kernel(pa_col, metric=self.kernel, gamma=gamma_pa)
+                Kpa *= K_parent
+            Kpa = _center_kernel_matrix(Kpa)
+
+        # K-fold cross-validation
+        n0 = n // self.n_folds
+        cv_cost = 0.0
+
+        for kk in range(self.n_folds):
+            # Determine test and train indices (matching MATLAB logic)
+            if kk == 0:
+                test_idx = np.arange(0, n0)
+                train_idx = np.arange(n0, n)
+            elif kk == self.n_folds - 1:
+                test_idx = np.arange(kk * n0, n)
+                train_idx = np.arange(0, kk * n0)
+            else:
+                test_idx = np.arange(kk * n0, (kk + 1) * n0)
+                train_idx = np.concatenate(
+                    [np.arange(0, kk * n0), np.arange((kk + 1) * n0, n)]
+                )
+
+            nv = len(test_idx)  # test set size
+            n1 = len(train_idx)  # train set size
+
+            if n1 < 3 or nv < 1:
+                continue
+
+            # Extract submatrices from globally-centered kernels
+            Kx_te = Kx[np.ix_(test_idx, test_idx)]
+            Kx_tr = Kx[np.ix_(train_idx, train_idx)]
+            Kx_tr_te = Kx[np.ix_(train_idx, test_idx)]
+
+            if has_parents:
+                Kpa_tr = Kpa[np.ix_(train_idx, train_idx)]
+                Kpa_tr_te = Kpa[np.ix_(train_idx, test_idx)]
+
+                # tmp1 = inv(Kpa_tr + n1*lambda*I)
+                reg_mat = Kpa_tr + n1 * lam * np.eye(n1)
+                tmp1 = np.linalg.solve(reg_mat, np.eye(n1))
+
+                # tmp2 = tmp1 @ Kx_tr @ tmp1
+                tmp2 = tmp1 @ Kx_tr @ tmp1
+
+                # coeff = n1 * lambda^2 / gamma
+                coeff = n1 * lam**2 / gamma
+
+                # tmp3 = tmp1 @ inv(I + coeff * tmp2) @ tmp1
+                inner = np.eye(n1) + coeff * tmp2
+                tmp3 = tmp1 @ np.linalg.solve(inner, tmp1)
+
+                # A matrix (6 terms) / gamma
+                A = (
+                    Kx_te
+                    + Kpa_tr_te.T @ tmp2 @ Kpa_tr_te
+                    - 2 * Kx_tr_te.T @ tmp1 @ Kpa_tr_te
+                    - coeff * Kx_tr_te.T @ tmp3 @ Kx_tr_te
+                    - coeff
+                    * Kpa_tr_te.T
+                    @ tmp1
+                    @ Kx_tr
+                    @ tmp3
+                    @ Kx_tr
+                    @ tmp1
+                    @ Kpa_tr_te
+                    + 2 * coeff * Kx_tr_te.T @ tmp3 @ Kx_tr @ tmp1 @ Kpa_tr_te
+                ) / gamma
+
+                # B = coeff * tmp2 + I
+                B = coeff * tmp2 + np.eye(n1)
+
+            else:
+                # No-parent case
+                inner = np.eye(n1) + 1.0 / (gamma * n1) * Kx_tr
+                A = (
+                    Kx_te
+                    - 1.0 / (gamma * n1) * Kx_tr_te.T @ np.linalg.solve(inner, Kx_tr_te)
+                ) / gamma
+
+                B = 1.0 / (gamma * n1) * Kx_tr + np.eye(n1)
+
+            # Log-determinant via Cholesky
+            try:
+                L = np.linalg.cholesky(B + 1e-10 * np.eye(n1))
+                C = np.sum(np.log(np.diag(L)))
+            except np.linalg.LinAlgError:
+                eigvals = np.linalg.eigvalsh(B)
+                C = 0.5 * np.sum(np.log(np.maximum(eigvals, 1e-10)))
+
+            # Accumulate fold cost
+            fold_cost = (nv**2 * np.log(2 * np.pi) + nv * C + np.trace(A)) / 2.0
+            cv_cost += fold_cost
+
+        cv_cost /= self.n_folds
+
+        # Negate: MATLAB returns cost (lower=better), pgmpy wants higher=better
+        return -cv_cost

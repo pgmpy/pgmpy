@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import (
@@ -14,6 +15,7 @@ from pgmpy.estimators import (
     BICGauss,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
+    RKHSCVLikelihood,
 )
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -641,3 +643,190 @@ class TestBICCondGauss(unittest.TestCase):
             -372.5531,
             places=3,
         )
+
+
+class TestRKHSCVLikelihood(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        rng = np.random.default_rng(42)
+        n = 200
+
+        # Linear chain: X1 -> X2
+        X1_lin = rng.standard_normal(n)
+        X2_lin = 0.8 * X1_lin + 0.2 * rng.standard_normal(n)
+        cls.data_linear = pd.DataFrame({"X1": X1_lin, "X2": X2_lin})
+
+        # Nonlinear chain: X1 -> X2 -> X3
+        X1 = rng.standard_normal(n)
+        X2 = np.sin(X1) + 0.2 * rng.standard_normal(n)
+        X3 = 0.8 * X2 + 0.2 * rng.standard_normal(n)
+        cls.data_nonlinear = pd.DataFrame({"X1": X1, "X2": X2, "X3": X3})
+
+    def test_score_returns_float(self):
+        scorer = RKHSCVLikelihood(self.data_linear)
+        score = scorer.local_score("X2", ["X1"])
+        self.assertIsInstance(score, float)
+        self.assertFalse(np.isnan(score))
+        self.assertFalse(np.isinf(score))
+
+    def test_score_no_parents(self):
+        scorer = RKHSCVLikelihood(self.data_linear)
+        score = scorer.local_score("X1", [])
+        self.assertIsInstance(score, float)
+        self.assertFalse(np.isnan(score))
+
+    def test_dependent_beats_independent(self):
+        scorer = RKHSCVLikelihood(self.data_linear)
+        score_with = scorer.local_score("X2", ["X1"])
+        score_without = scorer.local_score("X2", [])
+        self.assertGreater(score_with, score_without)
+
+    def test_nonlinear_detection(self):
+        scorer = RKHSCVLikelihood(self.data_nonlinear)
+        score_with = scorer.local_score("X2", ["X1"])
+        score_without = scorer.local_score("X2", [])
+        self.assertGreater(score_with, score_without)
+
+    def test_multiple_parents(self):
+        scorer = RKHSCVLikelihood(self.data_nonlinear)
+        score = scorer.local_score("X3", ["X1", "X2"])
+        self.assertIsInstance(score, float)
+        self.assertFalse(np.isnan(score))
+
+    def test_string_key_registration(self):
+        from pgmpy.estimators.StructureScore import get_scoring_method
+
+        scorer, _ = get_scoring_method("rkhs-cv", self.data_linear, use_cache=False)
+        self.assertIsInstance(scorer, RKHSCVLikelihood)
+
+    def test_custom_hyperparameters(self):
+        scorer = RKHSCVLikelihood(
+            self.data_linear, n_folds=5, lambda_reg=0.1, gamma_noise=0.05
+        )
+        score = scorer.local_score("X2", ["X1"])
+        self.assertIsInstance(score, float)
+        self.assertFalse(np.isnan(score))
+
+    def test_small_dataset(self):
+        rng = np.random.default_rng(0)
+        small_data = pd.DataFrame(
+            {"A": rng.standard_normal(20), "B": rng.standard_normal(20)}
+        )
+        scorer = RKHSCVLikelihood(small_data, n_folds=5)
+        score = scorer.local_score("B", ["A"])
+        self.assertIsInstance(score, float)
+
+    def test_kernel_flexibility(self):
+        scorer = RKHSCVLikelihood(self.data_linear, kernel="laplacian")
+        score = scorer.local_score("X2", ["X1"])
+        self.assertIsInstance(score, float)
+        self.assertFalse(np.isnan(score))
+
+    def test_score_cache_compatible(self):
+        from pgmpy.estimators.StructureScore import get_scoring_method
+
+        _, scorer_cached = get_scoring_method(
+            "rkhs-cv", self.data_linear, use_cache=True
+        )
+        score1 = scorer_cached.local_score("X2", ["X1"])
+        score2 = scorer_cached.local_score("X2", ["X1"])
+        self.assertEqual(score1, score2)
+
+    def test_independent_variables_no_benefit(self):
+        """Adding an independent variable as parent should not improve the score.
+
+        For truly independent variables, CV likelihood penalizes the
+        unnecessary complexity. The score with an irrelevant parent should
+        be worse (lower) than without, because the model overfits noise
+        in the training folds and generalizes poorly on the test folds.
+        """
+        rng = np.random.default_rng(123)
+        n = 300
+        A = rng.standard_normal(n)
+        B = rng.standard_normal(n)  # independent of A
+        data = pd.DataFrame({"A": A, "B": B})
+        scorer = RKHSCVLikelihood(data)
+        score_no_parent = scorer.local_score("B", [])
+        score_with_parent = scorer.local_score("B", ["A"])
+        # CV penalizes overfitting: irrelevant parent should yield
+        # equal or worse score
+        self.assertGreaterEqual(score_no_parent, score_with_parent)
+
+    def test_quadratic_nonlinearity(self):
+        """Detect quadratic relationship: X2 = 0.8*(X1 + X1^2) + noise."""
+        rng = np.random.default_rng(42)
+        n = 300
+        X1 = rng.standard_normal(n)
+        X2 = 0.8 * (X1 + X1**2) + 0.2 * rng.standard_normal(n)
+        data = pd.DataFrame({"X1": X1, "X2": X2})
+        scorer = RKHSCVLikelihood(data)
+        score_with = scorer.local_score("X2", ["X1"])
+        score_without = scorer.local_score("X2", [])
+        self.assertGreater(score_with, score_without)
+
+    def test_nonlinear_chain_no_spurious_edge(self):
+        """
+        In a chain X1 -> X2 -> X3 with quadratic relationships,
+        the RKHS score should:
+        1. Prefer X2 as parent of X3 over X1 (direct vs indirect)
+        2. Not benefit from adding X1 beyond X2 (conditional independence)
+
+        This tests the scenario from the issue where BIC adds spurious X1->X3
+        because partial correlation != 0 for nonlinear mechanisms.
+        """
+        rng = np.random.default_rng(42)
+        n = 300
+        X1 = rng.standard_normal(n)
+        X2 = 0.8 * (X1 + X1**2) + 0.2 * rng.standard_normal(n)
+        X3 = 0.8 * (X2 + X2**2) + 0.2 * rng.standard_normal(n)
+        data = pd.DataFrame({"X1": X1, "X2": X2, "X3": X3})
+        scorer = RKHSCVLikelihood(data)
+
+        score_x3_given_x2 = scorer.local_score("X3", ["X2"])
+        score_x3_given_x1 = scorer.local_score("X3", ["X1"])
+        score_x3_given_x1x2 = scorer.local_score("X3", ["X1", "X2"])
+
+        # Direct parent X2 should beat indirect X1
+        self.assertGreater(score_x3_given_x2, score_x3_given_x1)
+
+        # Adding X1 beyond X2 should not help (X3 _|_ X1 | X2)
+        # CV penalizes overfitting, so score(X3|{X1,X2}) <= score(X3|X2)
+        self.assertGreaterEqual(score_x3_given_x2, score_x3_given_x1x2)
+
+    def test_global_score_with_model(self):
+        """Test that StructureScore.score(model) sums local scores correctly."""
+        scorer = RKHSCVLikelihood(self.data_nonlinear)
+        model = DiscreteBayesianNetwork([("X1", "X2"), ("X2", "X3")])
+        total = scorer.score(model)
+        expected = (
+            scorer.local_score("X1", [])
+            + scorer.local_score("X2", ["X1"])
+            + scorer.local_score("X3", ["X2"])
+        )
+        self.assertAlmostEqual(total, expected, places=10)
+
+    def test_works_with_hillclimb(self):
+        """Integration test: HillClimbSearch with rkhs-cv finds the edge."""
+        from pgmpy.estimators import HillClimbSearch
+
+        hc = HillClimbSearch(self.data_linear)
+        model = hc.estimate(scoring_method="rkhs-cv")
+        # Should find the X1-X2 relationship (direction may vary)
+        self.assertGreater(len(model.edges()), 0)
+
+    def test_works_with_ges(self):
+        """Integration test: GES with rkhs-cv finds the edge."""
+        from pgmpy.estimators import GES
+
+        ges = GES(self.data_linear)
+        model = ges.estimate(scoring_method="rkhs-cv")
+        # Should find the X1-X2 relationship
+        self.assertGreater(len(model.edges()), 0)
+
+    def test_deterministic(self):
+        """Same data and params must produce identical scores."""
+        scorer1 = RKHSCVLikelihood(self.data_linear)
+        scorer2 = RKHSCVLikelihood(self.data_linear)
+        s1 = scorer1.local_score("X2", ["X1"])
+        s2 = scorer2.local_score("X2", ["X1"])
+        self.assertEqual(s1, s2)
