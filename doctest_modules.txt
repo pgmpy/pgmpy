@@ -16,3 +16,4 @@ pgmpy/estimators/ExhaustiveSearch.py
 pgmpy/estimators/MLE.py
 pgmpy/estimators/MLE.py
 pgmpy/inference/ApproxInference.py
+pgmpy/models/DiscreteMarkovNetwork.py
