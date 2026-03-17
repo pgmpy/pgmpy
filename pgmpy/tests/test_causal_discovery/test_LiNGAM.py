@@ -35,7 +35,7 @@ def rand_data2():
 
 
 def test_fit_rand(rand_data):
-    algo = LiNGAM(random_state=42, threshold=0.1)
+    algo = LiNGAM(random_state=42)
     algo.fit(rand_data)
     graph = algo.causal_graph_
 
@@ -43,7 +43,7 @@ def test_fit_rand(rand_data):
     assert graph.has_edge("B", "C")
     assert not graph.has_edge("B", "A")
     assert not graph.has_edge("C", "B")
-    # assert not graph.has_edge("A", "C")
+    assert not graph.has_edge("A", "C")
 
     # Test adjacency matrix structure
     B = algo.adjacency_matrix_
@@ -69,7 +69,7 @@ def test_fit_rand2(rand_data2):
     assert not graph.has_edge("E", "C")
 
     assert not graph.has_edge("C", "B")
-    # assert not graph.has_edge("B", "C")
+    assert not graph.has_edge("B", "C")
 
 
 def test_expert_knowledge_rand(rand_data):

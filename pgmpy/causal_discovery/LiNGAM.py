@@ -2,7 +2,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
+from scipy.stats import chi2
 from sklearn.decomposition import FastICA
+from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
@@ -15,16 +17,16 @@ class LiNGAM(_BaseCausalDiscovery):
     1. The causal graph is acyclic.
     2. The causal relationships are linear.
     3. The noise terms are non-Gaussian.
-    A model with these three properties we call a Linear, Non-Gaussian, Acyclic Model, abbreviated
-    LiNGAM.
+    A model with these three properties we call a Linear, Non-Gaussian, Acyclic Model,
+    abbreviated LiNGAM.
 
     Parameters
     ----------
     random_state: int, default=42
         Random seed for the ICA algorithm.
 
-    threshold: float, default=0.0
-        The threshold for filtering out small edge weights. Edge weights below this value are set to 0.
+    alpha: float, default=0.01
+        Significance level for the Wald test used to prune edges.
 
     variation: str, default="original"
         The variation of the algorithm to use. Currently only "original" (ICALiNGAM) is supported.
@@ -41,8 +43,8 @@ class LiNGAM(_BaseCausalDiscovery):
         The learned causal graph.
 
     adjacency_matrix_: numpy.ndarray
-        The learned adjacency matrix of the graph. Elements correspond to coefficients in
-        the linear model.
+        The learned adjacency matrix of the graph. Elements correspond to coefficients
+        in the linear model.
 
     n_features_in_: int
         The number of features in the dataset used to learn the causal graph.
@@ -68,13 +70,13 @@ class LiNGAM(_BaseCausalDiscovery):
     def __init__(
         self,
         random_state: int = 42,
-        threshold: float = 0.0,
+        alpha: float = 0.05,
         variation: str = "original",
         expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "dag",
     ):
         self.random_state = random_state
-        self.threshold = threshold
+        self.alpha = alpha
         self.variation = variation
         self.expert_knowledge = expert_knowledge
         self.return_type = return_type
@@ -98,32 +100,31 @@ class LiNGAM(_BaseCausalDiscovery):
                 f"Return type {self.return_type} is not yet implemented. Use 'dag'."
             )
 
-        # Convert DataFrame to numpy array
         X_vals = X.values
         n_samples, n_features = X_vals.shape
         self.n_features_in_ = n_features
         self.feature_names_in_ = list(X.columns)
 
-        # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has the same
-        # size as X and contains in its rows the independent components. From here on, we will
-        # exclusively work with W = A^-1.
+        # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has
+        # the same size as X and contains in its rows the independent components.
+        # From here on, we will exclusively work with W = A^-1.
         ica = FastICA(random_state=self.random_state, max_iter=1000)
         ica.fit(X_vals)
         W = ica.components_
 
-        # Step 2: Find the one and only permutation of rows of W which yields a matrix W_perm
-        # without any zeros on the main diagonal. In practice, small estimation errors will cause
-        # all elements of W to be non-zero, and hence the permutation is sought which minimizes
-        # sum_i 1/|W_perm_ii|.
+        # Step 2: Find the one and only permutation of rows of W which yields a matrix
+        # W_perm without any zeros on the main diagonal. In practice, small estimation
+        # errors will cause all elements of W to be non-zero, and hence the permutation
+        # is sought which minimizes sum_i 1/|W_perm_ii|.
         cost_matrix = 1 / np.abs(W)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
         W_perm = np.zeros_like(W)
         W_perm[col_ind] = W[row_ind]
 
-        # Step 3: Divide each row of W_perm by its corresponding diagonal element, to yield a new
-        # matrix W_scaled with ones on the diagonal.
-        # Then, compute an estimate B_hat of B using B_hat = I - W_scaled.
+        # Step 3: Divide each row of W_perm by its corresponding diagonal element, to
+        # yield a new matrix W_scaled with ones on the diagonal. Then, compute an
+        # estimate B_hat of B using B_hat = I - W_scaled.
         W_scaled = W_perm / np.diag(W_perm)[:, np.newaxis]
         B_hat = np.eye(n_features) - W_scaled
 
@@ -136,11 +137,7 @@ class LiNGAM(_BaseCausalDiscovery):
                 "Could not find a valid causal order. Graph contains unresolvable cycles."
             )
 
-        B_tilde = np.zeros_like(B_hat)
-        for i, target in enumerate(causal_order):
-            for source in causal_order[:i]:
-                if np.abs(B_hat[target, source]) > self.threshold:
-                    B_tilde[target, source] = B_hat[target, source]
+        B_tilde = self._prune_edges(X_vals, B_hat, causal_order, alpha=self.alpha)
 
         self.adjacency_matrix_ = B_tilde
 
@@ -179,8 +176,8 @@ class LiNGAM(_BaseCausalDiscovery):
         return self
 
     def _search_causal_order(self, B_hat: np.ndarray) -> list | None:
-        """Helper function for _causal_order to find a causal order from the given matrix strictly.
-        Implements the Algorithm B from section 5.2 of the paper.
+        """Helper function for _causal_order to find a causal order from the given
+        matrix strictly. Implements the Algorithm B from section 5.2 of the paper.
 
         Parameters
         ----------
@@ -255,3 +252,82 @@ class LiNGAM(_BaseCausalDiscovery):
                 break
 
         return causal_order
+
+    def _prune_edges(
+        self, X: np.ndarray, B_hat: np.ndarray, causal_order: list, alpha: float = 0.01
+    ) -> np.ndarray:
+        """
+        Perform a Wald test to prune statistically insignificant edges from the
+        estimated LiNGAM connection matrix. This follows the straightforward pruning
+        approach outlined in Section 6.1 of the paper.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            The observed dataset array of shape (n_samples, n_features).
+        B_hat : np.ndarray
+            The fully connected, lower-triangular estimated connection matrix from ICA.
+        causal_order : list
+            The topological causal ordering of the variables. Nodes can only be caused
+            by nodes earlier in this list.
+        alpha : float
+            The significance level for the Wald test p-value. Edges with
+            p-values >= alpha are pruned (set to 0).
+
+        Returns
+        -------
+        B_pruned : np.ndarray
+            The pruned adjacency matrix with insignificant edges removed.
+        """
+
+        n_samples, n_features = X.shape
+        B_pruned = np.zeros_like(B_hat)
+
+        for i, target_node in enumerate(causal_order):
+            potential_parents = causal_order[:i]
+            if len(potential_parents) == 0:
+                continue
+
+            # Extract the target variable and the feature matrix of its potential parents
+            y_target = X[:, target_node]
+            X_parents = X[:, potential_parents]
+
+            # Fit OLS regression: y = X_parents * beta + error
+            reg = LinearRegression().fit(X_parents, y_target)
+            coefs = reg.coef_
+
+            # Regression residuals to estimate the error variance
+            y_pred = reg.predict(X_parents)
+            residuals = y_target - y_pred
+
+            # Estimate the variance of the residuals (sigma^2)
+            # Use degrees of freedom (ddof) correction if there are more samples than
+            # parent features
+            sigma_sq = (
+                np.var(residuals, ddof=len(potential_parents))
+                if len(residuals) > len(potential_parents)
+                else np.var(residuals)
+            )
+
+            # Covariance matrix of the regression coefficients
+            # var(beta) = sigma^2 * (X^T * X)^-1
+            XtX_inv = np.linalg.pinv(X_parents.T @ X_parents)
+            var_beta = sigma_sq * XtX_inv
+
+            standard_errors = np.sqrt(np.diag(var_beta))
+
+            # Perform the Wald test for each potential parent
+            for j, parent_node in enumerate(potential_parents):
+                if standard_errors[j] > 0:
+                    # The Wald statistic is (beta_hat / SE(beta_hat))^2
+                    # Under the null hypothesis (true beta = 0), this follows a
+                    # chi-square distribution with 1 DOF.
+                    wald_stat = (coefs[j] ** 2) / (standard_errors[j] ** 2)
+                    p_value = 1 - chi2.cdf(wald_stat, df=1)
+                else:
+                    p_value = 0
+
+                if p_value < alpha:
+                    B_pruned[target_node, parent_node] = coefs[j]
+
+        return B_pruned
