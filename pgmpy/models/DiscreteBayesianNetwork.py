@@ -439,7 +439,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> {k: int(v) for k, v in student.get_cardinality().items()}
         {'diff': 2, 'intel': 2, 'grade': 2}
 
-        >>> student.get_cardinality("intel")
+        >>> int(student.get_cardinality("intel"))
         2
         """
 
