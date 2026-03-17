@@ -59,4 +59,5 @@ __all__ = [
     "LogLikelihoodCondGauss",
     "AICCondGauss",
     "BICCondGauss",
+    "FCIPlus"
 ]
