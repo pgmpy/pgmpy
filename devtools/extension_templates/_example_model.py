@@ -11,22 +11,22 @@
 # 3. If you would like to contribute the model to pgmpy, please add the model name to the appropriate test list in
 #   `pgmpy/tests/test_example_models/test_example_models.py` file.
 
-# TODO: Import the appropriate mixin class for your model type:
+# TODO: Import the appropriate mixin class for your model type alongside _BaseExampleModel:
 #   - DiscreteMixin: For discrete Bayesian networks stored as gzipped BIF files
 #   - BIFMixin: For discrete Bayesian networks stored as plain BIF files
 #   - ContinuousMixin: For continuous Bayesian networks stored as JSON files
 #   - DAGMixin: For DAGs without parameters, stored in dagitty string format
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import _BaseExampleModel
 
-# TODO: If using a new mixin type, import it here:
-# from .._base import BIFMixin, ContinuousMixin, DAGMixin
+# Example:
+# from .._base import DiscreteMixin, _BaseExampleModel
 
 
 # TODO: Rename the class to match your model name. PascalCase is recommended
 # (e.g., MyModel, AsiaNetwork).
 # TODO: Inherit from the appropriate Mixin class alongside _BaseExampleModel.
 # For e.g., DiscreteMixin, BIFMixin, ContinuousMixin, DAGMixin.
-class YourModelName(DiscreteMixin, _BaseExampleModel):
+class YourModelName(YourMixinClassHere, _BaseExampleModel):
     """[Optional: Short description of the model.].
 
     [Note: Most existing models only include the References section below; add a description
