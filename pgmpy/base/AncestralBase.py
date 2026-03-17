@@ -92,7 +92,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         Vertices of a specific role can be retrieved using ``get_role`` method.
 
         >>> g.get_role("exposures")
-        ["A"]
+        ['A']
         >>> g.get_role("adjustment")
         ["L", "C"]
         """
@@ -587,7 +587,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         X -> Y
         L [latents]
         Y [outcome]
-        X [exposures]
+        X [exposure]
         }
 
         References

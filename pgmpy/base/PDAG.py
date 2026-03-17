@@ -50,7 +50,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
     ...     directed_ebunch=[("A", "C"), ("D", "C")],
     ...     undirected_ebunch=[("B", "A"), ("B", "D")],
     ...     latents=["E"],
-    ...     roles={"exposures": ["A"], "outcomes": ["C"]},
+    ...     roles={"exposure": ["A"], "outcome": ["C"]},
     ... )
     >>> pdag.directed_edges
     {('A', 'C'), ('D', 'C')}
@@ -293,8 +293,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         >>> pdag = PDAG(
         ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
         ... )
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
+        >>> result = pdag.apply_meeks_rules()
+        >>> result.directed_edges
         {('A', 'B'), ('B', 'C')}
         """
         if inplace:
