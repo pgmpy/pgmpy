@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
+from copy import deepcopy
 from os import PathLike
 
 import networkx as nx
@@ -1555,10 +1556,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     def copy(self):
         """Returns a copy of the DAG object."""
         dag = DAG(ebunch=self.edges())
-        dag.add_nodes_from(self.nodes())
-
-        for role, vars in self.get_role_dict().items():
-            dag.with_role(role=role, variables=vars, inplace=True)
+        dag.add_nodes_from((node, deepcopy(attrs)) for node, attrs in self.nodes(data=True))
 
         return dag
 

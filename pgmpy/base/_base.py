@@ -1,5 +1,6 @@
 from collections import deque
 from collections.abc import Hashable, Iterable
+from copy import deepcopy
 from typing import Any
 
 import networkx as nx
@@ -404,11 +405,9 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         ebunch = [(u, v, key, edge_type) for u, v, key, edge_type in self.edges(keys=True, data=True)]
 
         graph_copy = self.__class__()
-        graph_copy.add_nodes_from(self.nodes(data=True))
+        graph_copy.add_nodes_from((node, deepcopy(attrs)) for node, attrs in self.nodes(data=True))
         for u, v, key, edge_type in ebunch:
             graph_copy.add_edge(u, v, edge_type=edge_type, key=key)
-        for role, vars in self.get_role_dict().items():
-            graph_copy.with_role(role=role, variables=vars, inplace=True)
 
         return graph_copy
 

@@ -893,9 +893,32 @@ class TestDoOperator(unittest.TestCase):
         self.assertEqual(set(dag_do_x.nodes()), set(self.g1.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B"), ("A", "Y")])
 
+    def test_do_multiple(self):
         dag_do_x = self.g2.do(["A", "Y"])
         self.assertEqual(set(dag_do_x.nodes()), set(self.g2.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B")])
+
+
+class TestCopyWithRoles(unittest.TestCase):
+    def test_copy_roles_are_independent(self):
+        dag = DAG([("A", "B")], exposures={"A"}, outcomes={"B"}, roles={"test_role": ["A"]})
+
+        dag_copy = dag.copy()
+        dag_copy.with_role("new_role", ["A"], inplace=True)
+
+        self.assertEqual(
+            dag.get_role_dict(),
+            {"exposures": ["A"], "outcomes": ["B"], "test_role": ["A"]},
+        )
+        self.assertEqual(
+            dag_copy.get_role_dict(),
+            {
+                "exposures": ["A"],
+                "new_role": ["A"],
+                "outcomes": ["B"],
+                "test_role": ["A"],
+            },
+        )
 
 
 class TestDAGConversion(unittest.TestCase):
