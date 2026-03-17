@@ -1,0 +1,14 @@
+# List of example notebooks with passing execution.
+# Add a notebook path here after verifying it runs without errors to have it checked in CI.
+# Example:
+# examples/Monty_Hall.ipynb
+examples/Causal_Inference.ipynb
+examples/Defining_CPDs.ipynb
+examples/Extending_pgmpy.ipynb
+examples/Inference_Discrete_BN.ipynb
+examples/Junction_Tree_Inference.ipynb
+examples/Monty_Hall.ipynb
+examples/Parameter_Learning_Discrete_BN.ipynb
+examples/Structure_Learning.ipynb
+examples/Structure_Learning_Chow_Liu.ipynb
+examples/Structure_Learning_TAN.ipynb
