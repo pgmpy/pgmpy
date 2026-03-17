@@ -147,8 +147,9 @@ class ApproxInference(object):
         <DiscreteFactor representing phi(HISTORY:2) at 0x...>
         >>> infer.query(variables=["HISTORY", "CVP"], joint=True)  # doctest: +ELLIPSIS
         <DiscreteFactor representing phi(HISTORY:2, CVP:3) at 0x...>
-        >>> infer.query(variables=["HISTORY", "CVP"], joint=False)  # doctest: +ELLIPSIS
-        {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x...>, 'CVP': <DiscreteFactor representing phi(CVP:3) at 0x...>}
+        >>> infer.query(variables=["HISTORY", "CVP"], joint=False)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x...>,
+         'CVP': <DiscreteFactor representing phi(CVP:3) at 0x...>}
         """
         # Step 1: If samples are not provided, generate samples for the query
         if samples is None:
