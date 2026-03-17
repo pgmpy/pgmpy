@@ -392,12 +392,12 @@ class ClusterGraph(UndirectedGraph):
         >>> phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
         >>> graph_copy = G.copy()
-        >>> len(graph_copy.factors)
-        2
-        >>> graph_copy.edges()
-        EdgeView([(('a', 'b'), ('b', 'c'))])
-        >>> graph_copy.nodes()
-        NodeView((('a', 'b'), ('b', 'c')))
+        >>> graph_copy.factors  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<DiscreteFactor representing phi(a:2, b:2) at 0x...>, <DiscreteFactor representing phi(b:2, c:2) at 0x...>]
+        >>> sorted(graph_copy.edges())
+        [(('a', 'b'), ('b', 'c'))]
+        >>> sorted(graph_copy.nodes())
+        [('a', 'b'), ('b', 'c')]
         """
         copy = ClusterGraph(self.edges())
         if self.factors:
