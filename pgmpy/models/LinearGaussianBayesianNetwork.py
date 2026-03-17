@@ -566,12 +566,10 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Returns
         -------
-        pandas.DataFrame: generated samples
-            A pandas data frame with the generated samples.
+        pandas.DataFrame: A pandas data frame with the generated samples.
 
         Examples
         --------
-        >>> model.simulate(n_samples=3, seed=42)
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -581,18 +579,17 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+        >>> model.simulate(n_samples=3, seed=42)
 
         Sampling with intervention (do)
-        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
 
         Sampling with evidence
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
 
         Sampling with both intervention and evidence
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
 
-        Sampling with missing_prob
-        >>> model.simulate(n_samples=5, missing_prob={"x1": 0.5})
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
@@ -697,7 +694,9 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df_evidence = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+            missing_vars, mean_cond, cov_cond = model.predict_probability(
+                data=df_evidence
+            )
 
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
@@ -719,7 +718,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
             df = df[variables]
 
-        # Step 5: Add do variables to the final dataframe
+        # Step 5: Add do variables to the final dataFrame
         for do_var, do_val in do.items():
             df[do_var] = do_val
 
@@ -880,33 +879,30 @@ class LinearGaussianBayesianNetwork(DAG):
         self.add_cpds(*cpds)
         return self
 
-    def predict(
-        self, data: pd.DataFrame, distribution: str = "joint"
+    def predict_probability(
+        self, data: pd.DataFrame
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
         Predicts the conditional distribution of missing variables
 
-        Predicts the distribution of the missing variable (i.e. missing
-        columns) in the given dataset and returns its mean and covariance.
+        Returns the posterior mean and covariance of the missing variables
+        given the observed variables in each row of data.
 
         Parameters
         ----------
         data: pandas.DataFrame
             DataFrame with a subset of model variables observed.
-            The dataframe with missing variable which to predict.
 
         Returns
         -------
         variables: list
             Missing variables (order matches returned distribution).
-            The list of variables on which the returned conditional distribution is defined on.
 
         mu: np.array
-            The mean array of the conditional joint distribution over
-              the missing variables corresponding to each row of data.
+            Posterior mean for each row of data.
 
         cov: np.array
-            The covariance of the conditional joint distribution over the missing variables.
+            Posterior covariance (same for all rows, depends only on structure).
 
         Examples
         --------
@@ -953,6 +949,36 @@ class LinearGaussianBayesianNetwork(DAG):
 
         # Step 3: Return values
         return (missing_vars, mu_cond, cov_cond)
+
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predicts the MAP estimates (posterior mean) of missing variables.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            DataFrame with a subset of model variables observed.
+
+        Returns
+        -------
+        predictions: pandas.DataFrame
+            DataFrame with missing variables columns containing the posterior mean
+            (MAP estimate) for each row of data.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n_samples=5)
+        >>> df = df.drop(columns=["folK"], axis=1)
+        >>> model.predict(df)
+           folK
+        0  0.134
+        1  0.217
+        ...
+        """
+        missing_vars, mu_cond, _ = self.predict_probability(data)
+        return pd.DataFrame(mu_cond, columns=missing_vars, index=data.index)
 
     def to_markov_model(self) -> None:
         """
