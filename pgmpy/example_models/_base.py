@@ -114,6 +114,32 @@ class DAGMixin:
         return DAG.from_dagitty(string=cls._get_raw_data().decode("utf-8"))
 
 
+def _find_model_class(name: str):
+    """
+    Find a model class by its name tag.
+
+    Parameters
+    ----------
+    name : str
+        Name of the model.
+
+    Returns
+    -------
+    type or None
+        The model class if found, None otherwise.
+    """
+    target_models = all_objects(
+        object_types=_BaseExampleModel,
+        package_name="pgmpy.example_models",
+        filter_tags={"name": name},
+        return_names=False,
+    )
+
+    if target_models:
+        return target_models[0]
+    return None
+
+
 def load_model(name: str):
     """
     Loads an example model by name.
@@ -164,19 +190,14 @@ def load_model(name: str):
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
-    target_model = all_objects(
-        object_types=_BaseExampleModel,
-        package_name="pgmpy.example_models",
-        filter_tags={"name": name},
-        return_names=False,
-    )
+    target_cls = _find_model_class(name)
 
-    if not target_model:
+    if target_cls is None:
         raise ValueError(
-            f"Model with name '{name}' not found. Please use list_models() to see available datasets."
+            f"Model with name '{name}' not found. Please use list_models() to see available models."
         )
 
-    return target_model[0].load_model_object()
+    return target_cls.load_model_object()
 
 
 def list_models(**filter_tags) -> list[str]:

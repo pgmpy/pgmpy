@@ -376,6 +376,6 @@ def test_load_model():
 
 
 def test_load_model_invalid_name():
-    msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available datasets."
+    msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available models."
     with pytest.raises(ValueError, match=re.escape(msg)):
         load_model("bnrep/soilead")

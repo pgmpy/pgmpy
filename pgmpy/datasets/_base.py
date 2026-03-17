@@ -25,13 +25,15 @@ class Dataset:
     data: pd.DataFrame
     expert_knowledge: Optional[ExpertKnowledge] = None
     ground_truth: Optional[DAG] = None
+    description: str | None = None
 
     tags: Dict[str, Any] = None
 
     def __str__(self) -> str:
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n "
+            f"description={self.description}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -279,6 +281,7 @@ def load_dataset(name: str) -> Dataset:
     >>> dataset = load_dataset("sachs_mixed")
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
+    >>> description = dataset.description
     """
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
@@ -333,6 +336,7 @@ def load_dataset(name: str) -> Dataset:
         data=target_cls.load_dataframe(),
         expert_knowledge=target_cls.load_expert_knowledge(),
         ground_truth=target_cls.load_ground_truth(),
+        description=target_cls.__doc__,
         tags=target_cls.get_class_tags(),
     )
 
