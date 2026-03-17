@@ -14,8 +14,8 @@ def dag():
     return DAG(
         ebunch=[("Z1", "X"), ("X", "Y"), ("Z2", "X")],
         roles={
-            "exposure": ["X"],
-            "outcome": ["Y"],
+            "exposures": ["X"],
+            "outcomes": ["Y"],
             "instrument": ["Z1", "Z2"],
         },
     )
@@ -26,8 +26,8 @@ def make_estimator():
     G = DAG(
         [(0, 1), (1, 2), (3, 2)],
         roles={
-            "exposure": [1],
-            "outcome": [2],
+            "exposures": [1],
+            "outcomes": [2],
             "instrument": [0],
         },
     )
@@ -88,7 +88,7 @@ def test_numpy_array_input_with_integer_dag_variables():
     # Construct DAG with stringified integer names to match DataFrame conversion behavior
     dag = DAG(
         ebunch=[(1, 0), (0, 2)],
-        roles={"exposure": [0], "outcome": [2], "instrument": [1]},
+        roles={"exposures": [0], "outcomes": [2], "instrument": [1]},
     )
 
     model = NaiveIVRegressor(
@@ -153,7 +153,7 @@ def test_naiveiv_recovers_theta_with_LR():
 
     G = DAG(
         lgbn.edges(),
-        roles={"exposure": "X", "instrument": ("Z1", "Z2"), "outcome": "Y"},
+        roles={"exposures": "X", "instrument": ("Z1", "Z2"), "outcomes": "Y"},
     )
 
     model = NaiveIVRegressor(
@@ -177,8 +177,8 @@ def test_dag_roles_validation_and_pretreatment_support():
     G = DAG(
         ebunch=[("Z", "E"), ("E", "Y"), ("P", "Y")],
         roles={
-            "exposure": ["E"],
-            "outcome": ["Y"],
+            "exposures": ["E"],
+            "outcomes": ["Y"],
             "instrument": ["Z"],
             "pretreatment": ["P"],
         },
@@ -190,8 +190,8 @@ def test_dag_roles_validation_and_pretreatment_support():
         stage2_estimator=LinearRegression(),
     )
     # Before fit the roles are accessible via DAG; check that role lists are non-empty
-    exposure_vars = model.causal_graph.get_role("exposure")
-    outcome_vars = model.causal_graph.get_role("outcome")
+    exposure_vars = model.causal_graph.get_role("exposures")
+    outcome_vars = model.causal_graph.get_role("outcomes")
     instrument_vars_ = model.causal_graph.get_role("instrument")
     pretreatment_vars = model.causal_graph.get_role("pretreatment")
     assert exposure_vars and outcome_vars
@@ -214,7 +214,7 @@ def test_error_handling_missing_roles_():
     """Test various error conditions and validation."""
     # missing outcome role
     dag_no_outcome = DAG(
-        ebunch=[("X", "Y"), ("Z", "X")], roles={"exposure": "X", "instrument": "Z"}
+        ebunch=[("X", "Y"), ("Z", "X")], roles={"exposures": "X", "instrument": "Z"}
     )
     model1 = NaiveIVRegressor(
         causal_graph=dag_no_outcome,
@@ -226,7 +226,7 @@ def test_error_handling_missing_roles_():
 
     # missing instrument role
     dag_no_instrument = DAG(
-        ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y"}
+        ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y"}
     )
     model1 = NaiveIVRegressor(
         causal_graph=dag_no_instrument,
@@ -250,7 +250,7 @@ def test_multiple_instrument_variables_and_noise_columns():
 
     dag = DAG(
         ebunch=[("U1", "X"), ("U2", "X"), ("U3", "X"), ("U4", "X"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "instrument": ["U1", "U2"]},
+        roles={"exposures": "X", "outcomes": "Y", "instrument": ["U1", "U2"]},
     )
 
     model = NaiveIVRegressor(
@@ -300,9 +300,9 @@ def test_naiveiv_recovers_theta_high_dim():
     G = DAG(
         dag.edges(),
         roles={
-            "exposure": "D",
+            "exposures": "D",
             "instrument": [(f"Z{i}") for i in range(1, 11)],
-            "outcome": "Y",
+            "outcomes": "Y",
         },
     )
 
