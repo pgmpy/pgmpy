@@ -721,7 +721,7 @@ class TestDAGCreation(unittest.TestCase):
     def test_get_stats(self):
         from pgmpy.example_models import load_model
 
-        model = load_model("sachs")
+        model = load_model("bnlearn/sachs")
         stats = model.get_stats()
 
         self.assertEqual(stats["n_nodes"], 11)
