@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Hashable, Iterable, Optional
+from typing import Any, Hashable, Iterable, Optional
 
 import networkx as nx
 
@@ -166,9 +166,9 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         u: Hashable,
         v: Hashable,
         edge_type: str = "->",
-        key=None,
+        key: Any = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Add an edge between u and v.
 
@@ -229,7 +229,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
             | tuple[Hashable, Hashable, Hashable, Hashable]
         ],
         **kwargs,
-    ):
+    ) -> None:
         """
         Add all the edges in ebunch.
 
@@ -279,7 +279,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         u: Hashable,
         v: Hashable,
         edge_type: str = None,
-    ):
+    ) -> None:
         """
         Remove an edge between u and v.
 
@@ -343,7 +343,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
     def remove_edges_from(
         self,
         ebunch: Iterable[tuple[Hashable, Hashable, Hashable]],
-    ):
+    ) -> None:
         """
         Remove all the edges in ebunch.
 
@@ -419,7 +419,9 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
         return graph_copy
 
-    def get_neighbors(self, node, edge_type=None):
+    def get_neighbors(
+        self, node: Hashable, edge_type: Optional[str] = None
+    ) -> set[Hashable]:
         """
         Returns a set of neighbors nodes in the graph.
 
@@ -490,7 +492,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
         return filtered_neighbors
 
-    def get_parents(self, node):
+    def get_parents(self, node: Hashable) -> set[Hashable]:
         """
         Returns a set of parents nodes in the graph.
 
@@ -531,7 +533,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         """
         return self.get_neighbors(node=node, edge_type="<-")
 
-    def get_children(self, node):
+    def get_children(self, node: Hashable) -> set[Hashable]:
         """
         Returns a set of children nodes in the graph.
 
@@ -572,7 +574,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         """
         return self.get_neighbors(node=node, edge_type="->")
 
-    def get_spouses(self, node):
+    def get_spouses(self, node: Hashable) -> set[Hashable]:
         """
         Returns a set of spouses nodes in the graph.
 
@@ -613,7 +615,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         """
         return self.get_neighbors(node=node, edge_type="<>")
 
-    def get_ancestors(self, node):
+    def get_ancestors(self, node: Hashable) -> set[Hashable]:
         """
         Returns a set of ancestors nodes in the graph.
 
@@ -665,7 +667,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
                 queue.extend(self.get_parents(current))
         return ancestors
 
-    def get_descendants(self, node):
+    def get_descendants(self, node: Hashable) -> set[Hashable]:
         """
         Returns a set of descendants nodes in the graph.
 
@@ -717,7 +719,9 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
                 queue.extend(self.get_children(current))
         return descendants
 
-    def get_reachable_nodes(self, node, edge_type):
+    def get_reachable_nodes(
+        self, node: Hashable, edge_type: Optional[str] = None
+    ) -> set[Hashable]:
         """
         Returns a set of reachable nodes in the graph.
 
@@ -779,7 +783,9 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
                 queue.extend(self.get_neighbors(current, edge_type=edge_type))
         return reachable
 
-    def get_edges(self, keys=False, data=False):
+    def get_edges(
+        self, keys: bool = False, data: bool = False
+    ) -> list[tuple[Any, ...]]:
         """
         Retrieve edges with optional keys and API-formatted edge types.
 
@@ -822,7 +828,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
             for edge in networkx_ebunch
         ]
 
-    def get_edge_type(self):
+    def get_edge_type(self) -> set:
         """
         Retrieves the list of supported edge types for the instance.
 

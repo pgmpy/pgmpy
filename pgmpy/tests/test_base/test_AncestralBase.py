@@ -154,7 +154,7 @@ class TestAncestralBase:
         graph = graph.with_role("instrument", "A")
         assert "instrument" in graph.nodes["A"]["roles"]
 
-        graph = graph.with_role("adjustment", {"A", "B"}, inplace=True)
+        graph.with_role("adjustment", {"A", "B"}, inplace=True)
         assert "adjustment" in graph.nodes["A"]["roles"]
         assert "adjustment" in graph.nodes["B"]["roles"]
         assert "instrument" in graph.nodes["A"]["roles"]
