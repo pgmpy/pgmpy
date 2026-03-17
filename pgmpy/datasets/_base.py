@@ -240,6 +240,30 @@ class _CovarianceMixin:
         return data
 
 
+class _TubingenBenchmarkMixin:
+    """
+    Mixin for Tubingen datasets that consist of multiple independent pairs/files.
+    URL: https://webdav.tuebingen.mpg.de/cause-effect/
+    """
+
+    @classmethod
+    def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
+        url = f"{cls.base_url}/pair{pair_id:04}.txt"
+        cache_name = f"pair_{pair_id:04}_data"
+        raw_data = cls._get_raw_data(cache_name, url)
+        return pd.read_csv(
+            io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"]
+        )
+
+    @classmethod
+    def load_ground_truth(cls, pair_id: int) -> DAG:
+        url = f"{cls.base_url}/pair{pair_id:04}_graph.txt"
+        cache_name = f"pair_{pair_id:04}_graph"
+        raw_data = cls._get_raw_data(cache_name, url)
+        content = raw_data.decode("utf-8-sig", errors="ignore")
+        return DAG.from_dagitty(content)
+
+
 def load_dataset(name: str) -> Dataset:
     """
     Load a dataset by name.
@@ -259,6 +283,40 @@ def load_dataset(name: str) -> Dataset:
     all_datasets = all_objects(
         object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
     )
+    if name.startswith("tubingen"):
+        name_parts = name.split("/")
+        if len(name_parts) == 2 and name_parts[1].isdigit():
+            pair_id = int(name_parts[1])
+
+            if not (1 <= pair_id <= 108):
+                raise ValueError(
+                    f"Tubingen pair ID must be between 1 and 108. Got {pair_id}."
+                )
+            target_cls = next(
+                (
+                    cls
+                    for cls in all_datasets
+                    if cls.get_class_tag("name") == "tubingen"
+                ),
+                None,
+            )
+            df = target_cls.load_dataframe(pair_id)
+            gt = target_cls.load_ground_truth(pair_id)
+
+            tags = target_cls.get_class_tags()
+            tags["n_samples"] = df.shape[0]
+
+            return Dataset(
+                name=name,
+                data=df,
+                expert_knowledge=None,
+                ground_truth=gt,
+                tags=tags,
+            )
+        else:
+            raise ValueError(
+                f"Invalid dataset name format: '{name}'. For Tubingen datasets, use 'tubingen/<pair_id>'."
+            )
 
     target_cls = None
     for cls in all_datasets:

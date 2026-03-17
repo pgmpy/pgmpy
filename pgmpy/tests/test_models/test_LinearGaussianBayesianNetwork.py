@@ -162,7 +162,9 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict(pd.DataFrame([evidence]))
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(
+            pd.DataFrame([evidence])
+        )
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]
@@ -340,26 +342,33 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=int(10), seed=42)
         df = df.drop("x2", axis=1)
-        variables, mu, cov = self.model.predict(df)
-        self.assertEqual(variables, ["x2"])
-        self.assertEqual(mu.shape, (10, 1))
+
+        result = self.model.predict(df)
+
+        self.assertIsInstance(result, pd.DataFrame)
+
+        self.assertEqual(list(result.columns), ["x2"])
+        self.assertEqual(result.shape, (10, 1))
         self.assertTrue(
             np.allclose(
-                mu.round(2).squeeze(),
+                result["x2"].round(2).values,
                 [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
             )
         )
-        self.assertEqual(cov.round(2).squeeze(), 5.76)
 
     def test_predict_ecoli(self):
         model = get_example_model("ecoli70")
         df = model.simulate(n_samples=int(10), seed=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
-        variables, mu, cov = model.predict(df)
-        self.assertEqual(set(variables), set(["yceP", "yheI", "cspA"]))
-        self.assertEqual(mu.shape, (10, 3))
+        result = model.predict(df)
+
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(set(result.columns), {"yceP", "yheI", "cspA"})
+        self.assertEqual(result.shape, (10, 3))
+
         # calculated by saving df to csv and using R to predict
         # model is loaded from bnlearn, impute function from bnlearn to generate true values
+
         true_data = {
             "yceP": [
                 0.9355,
@@ -398,13 +407,35 @@ class TestLGBNMethods(unittest.TestCase):
                 1.6395,
             ],
         }
-        for idx, var_name in enumerate(variables):
+        for var_name, expected in true_data.items():
             self.assertTrue(
                 np.allclose(
-                    mu.round(1)[:, idx].squeeze(),
-                    np.array(true_data[var_name]).round(1),
+                    result[var_name].round(1).values,
+                    np.array(expected).round(1),
                 )
             )
+
+    def test_predict_probability_simple(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(10), seed=42)
+        df = df.drop("x2", axis=1)
+        variables, mu, cov = self.model.predict_probability(df)
+
+        # variables
+        self.assertEqual(variables, ["x2"])
+
+        # mu shape and values (same as the old test_predict_simple)
+        self.assertEqual(mu.shape, (10, 1))
+        self.assertTrue(
+            np.allclose(
+                mu.round(2).squeeze(),
+                [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+            )
+        )
+
+        # cov shape and value (carried over from old test_predict_simple)
+        self.assertEqual(cov.shape, (1, 1))
+        self.assertEqual(cov.round(2).squeeze(), 5.76)
 
     def test_get_random_cpds(self):
         model = get_example_model("alarm")

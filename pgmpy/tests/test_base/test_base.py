@@ -1848,7 +1848,7 @@ class TestCoreGraph:
 
         with pytest.raises(TypeError):
             graph.get_reachable_nodes()
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             graph.get_reachable_nodes("A")
 
         check_graph_status(graph, 0, 0, set(), set(), set(), {})
