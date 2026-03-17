@@ -26,7 +26,7 @@ class ExpectationMaximization(ParameterEstimator):
 
     EM is an iterative algorithm commonly used for
     estimation in the case when there are latent variables in the model.
-    The algorithm iteratively improves the parameter estimates maximizing
+    The algorithm iteratively improves the parameter estimates, maximizing
     the likelihood of the given data.
 
     Parameters
@@ -35,7 +35,7 @@ class ExpectationMaximization(ParameterEstimator):
 
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names
-        of the network.  (If some values in the data are missing the data
+        of the network.  (If some values in the data are missing, the data
         cells should be set to `numpy.nan`.  Note that pandas converts each
         column containing `numpy.nan`s to dtype `float`.)
 
@@ -107,7 +107,7 @@ class ExpectationMaximization(ParameterEstimator):
     def _get_log_likelihood(self, datapoint: Dict[str, Any]) -> float:
         """
         Computes the likelihood of a given datapoint. Goes through each
-        CPD matching the combination of states to get the value and multiplies
+        CPD matching the combination of states to get the value and multiplying
         them together.
         """
         likelihood = 0
@@ -161,7 +161,7 @@ class ExpectationMaximization(ParameterEstimator):
         batch_size: int,
     ) -> pd.DataFrame:
         """
-        For each data point, creates extra data points for each possible combination
+        For each data point, create extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
         """
 
@@ -185,7 +185,7 @@ class ExpectationMaximization(ParameterEstimator):
         atol: float = 1e-08,
     ) -> bool:
         """
-        Checks if the values of `new_cpds` is within tolerance limits of current
+        Checks if the values of `new_cpds` are within the tolerance limits of the current
         model cpds.
         """
         for cpd in new_cpds:
@@ -207,7 +207,7 @@ class ExpectationMaximization(ParameterEstimator):
         **kwargs,
     ) -> List[TabularCPD]:
         """
-        Method to estimate all model parameters (CPDs) using Expecation Maximization.
+        Method to estimate all model parameters (CPDs) using Expectation Maximization.
 
         Parameters
         ----------
@@ -238,7 +238,7 @@ class ExpectationMaximization(ParameterEstimator):
             Number of data used to compute weights in a batch.
 
         seed: int
-            The random seed to use for generating the intial values.
+            The random seed to use for generating the initial values.
 
         init_cpds: dict or str
             dict: A dictionary of the form {variable: instance of TabularCPD}
@@ -255,7 +255,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         Returns
         -------
-        Estimated paramters (CPDs): list
+        Estimated parameters (CPDs): list
             A list of estimated CPDs for the model.
 
         Examples
@@ -264,8 +264,9 @@ class ExpectationMaximization(ParameterEstimator):
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
+        >>> rng = np.random.default_rng(42)
         >>> data = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 3)),
+        ...     rng.integers(low=0, high=2, size=(1000, 3)),
         ...     columns=["A", "C", "D"],
         ... )
         >>> model = DiscreteBayesianNetwork(
@@ -274,11 +275,13 @@ class ExpectationMaximization(ParameterEstimator):
         >>> estimator = EM(model, data)
         >>> params = estimator.get_parameters(latent_card={"B": 3})
         >>> # Sorting the CPDs by variable name to ensure consistent order for doctest comparison
-        >>> sorted(params, key=lambda cpd: cpd.variable)
+        >>> sorted(
+        ...     params, key=lambda cpd: cpd.variable
+        ... )  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<TabularCPD representing P(A:2) at 0x...>,
-         <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
-         <TabularCPD representing P(C:2) at 0x...>,
-         <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        <TabularCPD representing P(B:3 | A:2, C:2) at 0x...>,
+        <TabularCPD representing P(C:2) at 0x...>,
+        <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
         # Step 1: Parameter checks
         if latent_card is None:

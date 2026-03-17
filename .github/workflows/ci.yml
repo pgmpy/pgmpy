@@ -1,4 +1,4 @@
-name: Test
+name: Test Suite
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
@@ -12,7 +12,7 @@ on:
 
 jobs:
   test-nosoftdeps:
-    name: only core deps - OS - (${{ matrix.os }}; Python - ${{ matrix.python-version}})
+    name: Core deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -60,7 +60,7 @@ jobs:
         run: pytest --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: with optional deps - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    name: Optional deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
