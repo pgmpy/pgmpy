@@ -116,7 +116,7 @@ def permutation_test(
         If None, uses max(20, int(1/significance_level)).
         If -1, uses all possible permutations (factorial of number of nodes)
 
-    ci_test : {"pillai_trace", "chi_square", "pearsonr", "gcm", "g_sq", "log_likelihood", "freeman_tuckey",
+    ci_test : {"pillai", "chi_square", "pearsonr", "gcm", "g_sq", "log_likelihood", "freeman_tuckey",
     "modified_log_likelihood", "neyman", "cressie_read"}
 
         The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
@@ -201,6 +201,7 @@ def permutation_test(
 
     ci_test = ci_registry.get_test(ci_test, data=data)
     permutation_violations = []
+    tpa_violations = []
     n_within_mec = 0
 
     # Step 1: Compute LMC violations for the given DAG.
@@ -228,6 +229,7 @@ def permutation_test(
         )
         permutation_violations.append(n_perm_lmc_violations)
         n_tpa_violations, _ = _tpa_violations(permuted_dag, dag)
+        tpa_violations.append(n_tpa_violations)
         if n_tpa_violations == 0:
             n_within_mec += 1
 
@@ -258,11 +260,15 @@ def permutation_test(
         "n_within_mec": n_within_mec,
         "ci_lower_falsified": ci_lower,
         "ci_upper_falsified": ci_upper,
+        "falsifiable": p_value_falsifiable <= significance_level,
+        "falsified": (p_value_falsifiable <= significance_level)
+        and (p_value_falsified >= significance_level),
     }
 
     if return_summary:
         result["summary"] = {
-            "permutation_violations": permutation_violations,
+            "lmc_permutation_violations": permutation_violations,
+            "tpa_permutation_violations": tpa_violations,
             "significance_level": significance_level,
             "ci_test": ci_test,
         }
