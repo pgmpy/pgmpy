@@ -155,3 +155,25 @@ def test_tpa_violations(model_helper):
     assert isinstance(n_violations, int)
     assert n_violations >= 0
     assert n_triples > 0
+
+
+def test_all_permuations(model_helper, data_helper):
+    results = permutation_test(
+        model_helper,
+        data_helper,
+        n_permutations=-1,
+        show_progress=False,
+        return_summary=False,
+    )
+    assert results["n_lmc_violations"] == 0
+    assert results["n_within_mec"] == 2
+
+    results_2 = permutation_test(
+        model_helper,
+        data_helper,
+        n_permutations=10_000,
+        show_progress=False,
+        return_summary=False,
+    )
+    assert results_2["n_lmc_violations"] == 0
+    assert results_2["n_within_mec"] == 2

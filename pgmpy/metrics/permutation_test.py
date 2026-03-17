@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import math
+from itertools import permutations
 from typing import Optional
 
 import networkx as nx
@@ -58,6 +59,22 @@ def _tpa_violations(permuted_dag, original_dag):
         if original_dag.is_dconnected(node, nd, observed=parents):
             n_violations += 1
     return n_violations, len(triples)
+
+
+def _get_permutation_list(nodes, n_permutations, exclude_original_order=False):
+    if n_permutations == -1 or n_permutations >= math.factorial(len(nodes)):
+        perms = list(permutations(nodes))
+        if exclude_original_order:
+            perms = [perm for perm in perms if list(perm) != list(nodes)]
+        return perms
+    else:
+        perms = set()
+        while len(perms) < n_permutations:
+            perm = tuple(np.random.permutation(nodes))
+            if exclude_original_order and perm == tuple(nodes):
+                continue
+            perms.add(perm)
+        return list(perms)
 
 
 def permutation_test(
@@ -191,14 +208,14 @@ def permutation_test(
     n_lmc_violations, _ = _lmc_violations(dag, data, ci_test, significance_level)
 
     # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
-    if show_progress and config.SHOW_PROGRESS:
-        pbar = tqdm(range(n_permutations), desc="Constructing Null Distribution")
-    else:
-        pbar = range(n_permutations)
 
-    for _ in pbar:
-        # Permute node labels to create a new DAG
-        permuted_nodes = np.random.permutation(nodes)
+    perm_list = _get_permutation_list(nodes, n_permutations)
+    if show_progress and config.SHOW_PROGRESS:
+        pbar = tqdm(perm_list, desc="Constructing Null Distribution")
+    else:
+        pbar = perm_list
+
+    for permuted_nodes in pbar:
         perm_mapping = dict(zip(nodes, permuted_nodes))
         # Relabel nodes in the original DAG
         nx_permuted_dag = nx.relabel_nodes(dag, perm_mapping, copy=True)
