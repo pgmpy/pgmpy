@@ -150,9 +150,9 @@ class _BaseDataset(BaseObject):
         Fetches/reads from cache the data associated with the dataset.
         Parameters:
         -----------
-        sep: str, default = `\t`
-            The delimiter. Defaults to tab (`\t`).
-        
+        sep: str, default = '\t'
+            The delimiter. Defaults to tab ('\t').
+
         Returns:
         --------
         A DataFrame with appropriate data types for each column.
