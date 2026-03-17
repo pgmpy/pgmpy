@@ -694,7 +694,9 @@ class LinearGaussianBayesianNetwork(DAG):
 
         else:
             df_evidence = pd.DataFrame([evidence])
-            missing_vars, mean_cond, cov_cond = model.predict(data=df_evidence)
+            missing_vars, mean_cond, cov_cond = model.predict_probability(
+                data=df_evidence
+            )
 
             sorted_indices = np.argsort(missing_vars)
             missing_vars = [missing_vars[i] for i in sorted_indices]
@@ -716,7 +718,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
             df = df[variables]
 
-        # Step 5: Add do variables to the final dataframe
+        # Step 5: Add do variables to the final dataFrame
         for do_var, do_val in do.items():
             df[do_var] = do_val
 
@@ -877,33 +879,30 @@ class LinearGaussianBayesianNetwork(DAG):
         self.add_cpds(*cpds)
         return self
 
-    def predict(
-        self, data: pd.DataFrame, distribution: str = "joint"
+    def predict_probability(
+        self, data: pd.DataFrame
     ) -> Tuple[List[str], np.ndarray, np.ndarray]:
         """
         Predicts the conditional distribution of missing variables
 
-        Predicts the distribution of the missing variable (i.e. missing
-        columns) in the given dataset and returns its mean and covariance.
+        Returns the posterior mean and covariance of the missing variables
+        given the observed variables in each row of data.
 
         Parameters
         ----------
         data: pandas.DataFrame
             DataFrame with a subset of model variables observed.
-            The dataframe with missing variable which to predict.
 
         Returns
         -------
         variables: list
             Missing variables (order matches returned distribution).
-            The list of variables on which the returned conditional distribution is defined on.
 
         mu: np.array
-            The mean array of the conditional joint distribution over
-              the missing variables corresponding to each row of data.
+            Posterior mean for each row of data.
 
         cov: np.array
-            The covariance of the conditional joint distribution over the missing variables.
+            Posterior covariance (same for all rows, depends only on structure).
 
         Examples
         --------
@@ -950,6 +949,36 @@ class LinearGaussianBayesianNetwork(DAG):
 
         # Step 3: Return values
         return (missing_vars, mu_cond, cov_cond)
+
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predicts the MAP estimates (posterior mean) of missing variables.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            DataFrame with a subset of model variables observed.
+
+        Returns
+        -------
+        predictions: pandas.DataFrame
+            DataFrame with missing variables columns containing the posterior mean
+            (MAP estimate) for each row of data.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("ecoli70")
+        >>> df = model.simulate(n_samples=5)
+        >>> df = df.drop(columns=["folK"], axis=1)
+        >>> model.predict(df)
+           folK
+        0  0.134
+        1  0.217
+        ...
+        """
+        missing_vars, mu_cond, _ = self.predict_probability(data)
+        return pd.DataFrame(mu_cond, columns=missing_vars, index=data.index)
 
     def to_markov_model(self) -> None:
         """
