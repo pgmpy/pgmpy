@@ -314,6 +314,14 @@ def list_datasets(**filter_tags) -> list[str]:
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
     """
+    valid_tags = set(_BaseDataset._tags.keys())
+
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
+        raise ValueError(
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. "
+            f"Valid filter tags are: {sorted(valid_tags)}."
+        )
+
     all_datasets = all_objects(
         object_types=_BaseDataset,
         package_name="pgmpy.datasets",
