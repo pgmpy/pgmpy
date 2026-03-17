@@ -106,6 +106,29 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
 
+def test_load_tubingen_dataset():
+
+    for i in [1, 47, 86, 88, 108]:
+        dataset = load_dataset(f"tubingen/{i}")
+
+        assert dataset.name == f"tubingen/{i}"
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert list(dataset.data.columns) == ["x", "y"]
+
+        assert isinstance(dataset.ground_truth, DAG)
+
+
+def test_tubingen_invalid_format():
+    with pytest.raises(ValueError):
+        load_dataset("tubingen")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/abc")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/999")
+
+
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
