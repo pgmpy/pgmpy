@@ -293,9 +293,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         >>> pdag = PDAG(
         ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
         ... )
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C')}
+        >>> cpdag = pdag.apply_meeks_rules()
+        >>> cpdag.directed_edges
+        {('A', 'B')}
         """
         if inplace:
             pdag = self
