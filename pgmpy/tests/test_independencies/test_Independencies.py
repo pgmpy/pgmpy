@@ -4,6 +4,11 @@ from pgmpy.independencies import IndependenceAssertion, Independencies
 
 
 @pytest.fixture
+def assertion():
+    return IndependenceAssertion()
+
+
+@pytest.fixture
 def eq_assertions():
     return {
         "i1": IndependenceAssertion("a", "b", "c"),
@@ -35,8 +40,7 @@ def independencies():
 
 
 class TestIndependenceAssertion:
-    def test_return_list_if_not_collection(self):
-        assertion = IndependenceAssertion()
+    def test_return_list_if_not_collection(self, assertion):
         assert assertion._return_list_if_not_collection("U") == ["U"]
         assert assertion._return_list_if_not_collection(["U", "V"]) == ["U", "V"]
 

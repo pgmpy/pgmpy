@@ -1,4 +1,4 @@
-name: Doctests
+name: Notebook Tests
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
@@ -11,7 +11,7 @@ on:
   merge_group:
 
 jobs:
-  doctest:
+  notebook-tests:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
@@ -28,16 +28,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install libgraphviz-dev -y
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install .[tests]
+          pip install .[all,tests,optional]
+          pip install nbmake
 
-      - name: Run doctests
+      - name: Run notebooks
         run: |
-          modules=$(grep -v '^\s*#' doctest_modules.txt | grep -v '^\s*$' | tr '\n' ' ')
-          if [ -n "$modules" ]; then
-            pytest --doctest-modules -o "addopts=" $modules -v
+          notebooks=$(grep -v '^\s*#' notebook_test_list.txt | grep -v '^\s*$' | tr '\n' ' ')
+          if [ -n "$notebooks" ]; then
+            pytest --nbmake $notebooks -v
           else
-            echo "No modules listed in doctest_modules.txt, skipping."
+            echo "No notebooks listed in notebook_test_list.txt, skipping."
           fi
