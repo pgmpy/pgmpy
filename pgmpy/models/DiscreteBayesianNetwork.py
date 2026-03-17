@@ -436,8 +436,8 @@ class DiscreteBayesianNetwork(DAG):
         ...     [2, 2],
         ... )
         >>> student.add_cpds(cpd_diff, cpd_intel, cpd_grade)
-        >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'diff': 2, 'intel': 2, 'grade': 2})
+        >>> {k: int(v) for k, v in student.get_cardinality().items()}
+        {'diff': 2, 'intel': 2, 'grade': 2}
 
         >>> student.get_cardinality("intel")
         2
@@ -998,8 +998,10 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
-        >>> model.get_state_probability(
-        ...     {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
+        >>> float(
+        ...     model.get_state_probability(
+        ...         {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
+        ...     )
         ... )
         0.02605122
         """
