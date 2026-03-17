@@ -227,8 +227,8 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> student.add_factors(factor)
         >>> int(student.get_cardinality(node="Alice"))
         2
-        >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'Alice': 2, 'Bob': 2})
+        >>> {k: int(v) for k, v in student.get_cardinality().items()}
+        {'Alice': 2, 'Bob': 2}
         """
         if node:
             for factor in self.factors:
