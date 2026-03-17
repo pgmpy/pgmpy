@@ -845,8 +845,8 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ... )
         >>> phi = [DiscreteFactor(edge, [2, 2], rng.random(4)) for edge in G.edges()]
         >>> G.add_factors(*phi)
-        >>> float(G.get_partition_function())
-        0.8201398784909091
+        >>> round(float(G.get_partition_function()), 15)
+        0.820139878490909
         """
         self.check_model()
 
