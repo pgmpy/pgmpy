@@ -145,10 +145,20 @@ class _BaseDataset(BaseObject):
         return raw_data
 
     @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        """Fetches/reads from cache the data associated with the dataset."""
+    def load_dataframe(cls, sep="\t") -> pd.DataFrame:
+        """
+        Fetches/reads from cache the data associated with the dataset.
+        Parameters:
+        -----------
+        sep: str, default = "\t"
+            The delimiter. Defaults to tab ("\t").
+        
+        Returns:
+        --------
+        A DataFrame with appropriate data types for each column.
+        """
         raw_data = cls._get_raw_data("data", cls.data_url)
-        df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
+        df = pd.read_csv(io.BytesIO(raw_data), sep=sep)
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
         if cls.get_class_tag("has_index_col"):
