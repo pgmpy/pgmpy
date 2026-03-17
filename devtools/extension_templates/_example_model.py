@@ -16,7 +16,7 @@
 #   - BIFMixin: For discrete Bayesian networks stored as plain BIF files
 #   - ContinuousMixin: For continuous Bayesian networks stored as JSON files
 #   - DAGMixin: For DAGs without parameters, stored in dagitty string format
-from .._base import _BaseExampleModel
+from .._base import YourMixinClass, _BaseExampleModel
 
 # Example:
 # from .._base import DiscreteMixin, _BaseExampleModel
@@ -26,7 +26,7 @@ from .._base import _BaseExampleModel
 # (e.g., MyModel, AsiaNetwork).
 # TODO: Inherit from the appropriate Mixin class alongside _BaseExampleModel.
 # For e.g., DiscreteMixin, BIFMixin, ContinuousMixin, DAGMixin.
-class YourModelName(YourMixinClassHere, _BaseExampleModel):
+class YourModelName(YourMixinClass, _BaseExampleModel):
     """[Optional: Short description of the model.]
 
     [Note: Most existing models only include the References section below; add a description
