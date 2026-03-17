@@ -27,7 +27,7 @@ from .._base import _BaseExampleModel
 # TODO: Inherit from the appropriate Mixin class alongside _BaseExampleModel.
 # For e.g., DiscreteMixin, BIFMixin, ContinuousMixin, DAGMixin.
 class YourModelName(YourMixinClassHere, _BaseExampleModel):
-    """[Optional: Short description of the model.].
+    """[Optional: Short description of the model.]
 
     [Note: Most existing models only include the References section below; add a description
     here only if it provides useful context for the model.]
