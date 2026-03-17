@@ -719,12 +719,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(self.dag1.get_role("latents")), set())
 
     def test_get_stats(self):
-        # D->G<-I (v-structure), G->L, I->S, isolated node J
-        from pgmpy.utils import get_example_model
+        from pgmpy.example_models import load_model
 
-        model = get_example_model("sachs")
-        dag = DAG(model.edges())
-        stats = dag.get_stats()
+        model = load_model("sachs")
+        stats = model.get_stats()
 
         self.assertEqual(stats["n_nodes"], 11)
         self.assertEqual(stats["n_edges"], 17)
@@ -732,9 +730,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(stats["n_leaf_nodes"], 4)
         self.assertEqual(stats["n_v_structures"], 0)
         self.assertEqual(stats["n_connected_components"], 2)
-        self.assertAlmostEqual(stats["edge_density"], 17 / (11 * 10 / 2))
-        self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11)
+        self.assertAlmostEqual(stats["edge_density"], 17 / (11 * 10 / 2), places=5)
+        self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
         self.assertEqual(stats["max_n_parents"], 3)
+        self.assertEqual(stats["n_latent_nodes"], 0)
 
 
 class TestDAGParser(unittest.TestCase):

@@ -1819,6 +1819,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             Average number of parents per node.
         max_n_parents : int
             Maximum number of parents of any node.
+        n_latent_nodes : int
+            Number of latent (unobserved) nodes in the DAG.
 
         Examples
         --------
@@ -1852,4 +1854,5 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "n_v_structures": n_v_structures,
             "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
             "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
+            "n_latent_nodes": len(getattr(self, "latents", [])),
         }
