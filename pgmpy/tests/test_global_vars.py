@@ -1,5 +1,4 @@
 import logging
-import unittest
 
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
@@ -10,22 +9,27 @@ from pgmpy.global_vars import DuplicateFilter
 torch = _safe_import("torch")
 
 
+@pytest.fixture(autouse=True)
+def reset_config():
+    """Reset pgmpy config to defaults after each test."""
+    yield
+    config.set_backend("numpy")
+    config.set_show_progress(show_progress=True)
+
+
 class TestConfig:
-    def assertEqual(self, x, y):
-        assert x == y
-
     def test_defaults(self):
-        self.assertEqual(config.BACKEND, "numpy")
-        self.assertEqual(config.get_backend(), "numpy")
+        assert config.BACKEND == "numpy"
+        assert config.get_backend() == "numpy"
 
-        self.assertEqual(config.DTYPE, "float64")
-        self.assertEqual(config.get_dtype(), "float64")
+        assert config.DTYPE == "float64"
+        assert config.get_dtype() == "float64"
 
-        self.assertEqual(config.DEVICE, None)
-        self.assertEqual(config.get_device(), None)
+        assert config.DEVICE is None
+        assert config.get_device() is None
 
-        self.assertEqual(config.SHOW_PROGRESS, True)
-        self.assertEqual(config.get_show_progress(), True)
+        assert config.SHOW_PROGRESS is True
+        assert config.get_show_progress() is True
 
     @pytest.mark.skipif(
         not _check_soft_dependencies("torch", severity="none"),
@@ -34,64 +38,55 @@ class TestConfig:
     def test_torch_cpu(self):
         config.set_backend(backend="torch", device="cpu", dtype=torch.float32)
 
-        self.assertEqual(config.BACKEND, "torch")
-        self.assertEqual(config.get_backend(), "torch")
+        assert config.BACKEND == "torch"
+        assert config.get_backend() == "torch"
 
-        self.assertEqual(config.DTYPE, torch.float32)
-        self.assertEqual(config.get_dtype(), torch.float32)
+        assert config.DTYPE == torch.float32
+        assert config.get_dtype() == torch.float32
 
-        self.assertEqual(config.DEVICE, torch.device("cpu"))
-        self.assertEqual(config.get_device(), torch.device("cpu"))
+        assert config.DEVICE == torch.device("cpu")
+        assert config.get_device() == torch.device("cpu")
 
-        self.assertEqual(config.SHOW_PROGRESS, True)
-        self.assertEqual(config.get_show_progress(), True)
+        assert config.SHOW_PROGRESS is True
+        assert config.get_show_progress() is True
 
     @pytest.mark.skipif(
         not _check_soft_dependencies("torch", severity="none")
         or not torch.cuda.is_available(),
         reason="test only if torch and torch.cuda are available",
     )
-    def test_torch_gpu(self):
+    def test_torch_gpu(self):  # pragma: no cover
         config.set_backend(backend="torch", device="cuda", dtype=torch.float32)
 
-        self.assertEqual(config.BACKEND, "torch")
-        self.assertEqual(config.get_backend(), "torch")
+        assert config.BACKEND == "torch"
+        assert config.get_backend() == "torch"
 
-        self.assertEqual(config.DTYPE, torch.float32)
-        self.assertEqual(config.get_dtype(), torch.float32)
+        assert config.DTYPE == torch.float32
+        assert config.get_dtype() == torch.float32
 
-        self.assertEqual(config.DEVICE, torch.device("cuda"))
-        self.assertEqual(config.get_device(), torch.device("cuda"))
+        assert config.DEVICE == torch.device("cuda")
+        assert config.get_device() == torch.device("cuda")
 
-        self.assertEqual(config.SHOW_PROGRESS, True)
-        self.assertEqual(config.get_show_progress(), True)
+        assert config.SHOW_PROGRESS is True
+        assert config.get_show_progress() is True
 
-    @pytest.mark.skipif(
-        not _check_soft_dependencies("torch", severity="none")
-        or not torch.cuda.is_available(),
-        reason="test only if torch and torch.cuda are available",
-    )
     def test_no_progress(self):
         config.set_show_progress(show_progress=False)
 
-        self.assertEqual(config.BACKEND, "numpy")
-        self.assertEqual(config.get_backend(), "numpy")
+        assert config.BACKEND == "numpy"
+        assert config.get_backend() == "numpy"
 
-        self.assertEqual(config.DTYPE, "float64")
-        self.assertEqual(config.get_dtype(), "float64")
+        assert config.DTYPE == "float64"
+        assert config.get_dtype() == "float64"
 
-        self.assertEqual(config.DEVICE, None)
-        self.assertEqual(config.get_device(), None)
+        assert config.DEVICE is None
+        assert config.get_device() is None
 
-        self.assertEqual(config.SHOW_PROGRESS, False)
-        self.assertEqual(config.get_show_progress(), False)
-
-    def tearDown(self):
-        config.set_backend("numpy")
-        config.set_show_progress(show_progress=True)
+        assert config.SHOW_PROGRESS is False
+        assert config.get_show_progress() is False
 
 
-class TestDuplicateFilter(unittest.TestCase):
+class TestDuplicateFilter:
     def test_duplicate_filter(self):
         test_logger = logging.getLogger("test_logger")
         test_logger.setLevel(logging.INFO)
@@ -130,4 +125,4 @@ class TestDuplicateFilter(unittest.TestCase):
             "Third message",
         ]
 
-        self.assertEqual(captured_logs, expected_logs)
+        assert captured_logs == expected_logs
