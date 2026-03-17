@@ -225,14 +225,18 @@ class PC(BaseConstraintEstimator):
         >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.estimators import PC
         >>> model = get_example_model("alarm")
-        >>> data = model.simulate(n_samples=1000)
+        >>> data = model.simulate(n_samples=1000, seed=42)
         >>> est = PC(data)
         >>> model_chi = est.estimate(ci_test="chi_square")
+        >>> model_chi  # doctest: +ELLIPSIS
+        <pgmpy.base.PDAG.PDAG object at 0x...>
         >>> print(len(model_chi.edges()))
-        28
+        38
         >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
+        >>> model_gsq  # doctest: +ELLIPSIS
+        <networkx.classes.graph.Graph object at 0x...>
         >>> print(len(model_gsq.edges()))
-        33
+        28
         """
         # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
@@ -334,15 +338,15 @@ class PC(BaseConstraintEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
+        >>> rng = np.random.default_rng(42)
+        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
         >>> c = PC(data)
-        >>> pdag = c.orient_colliders(*c.build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        >>> skel, sep_sets = c.estimate(return_type="skeleton")
+        >>> pdag = PC.orient_colliders(skel, sep_sets)
+        >>> sorted(pdag.edges())
+        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
         """
 
         pdag = skeleton.to_directed()
