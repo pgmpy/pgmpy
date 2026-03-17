@@ -13,6 +13,4 @@ pgmpy/estimators/MmhcEstimator.py
 pgmpy/estimators/EM.py
 pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/ExhaustiveSearch.py
-pgmpy/estimators/MLE.py
-pgmpy/estimators/MLE.py
 pgmpy/inference/ApproxInference.py
