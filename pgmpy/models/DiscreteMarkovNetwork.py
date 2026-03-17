@@ -225,7 +225,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
         ... )
         >>> student.add_factors(factor)
-        >>> student.get_cardinality(node="Alice")
+        >>> int(student.get_cardinality(node="Alice"))
         2
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Alice': 2, 'Bob': 2})
