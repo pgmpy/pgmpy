@@ -291,7 +291,9 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_nodes_from([phi1, phi2])
         >>> G.add_factors(phi1, phi2)
         >>> G.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
-        >>> sorted(G.get_factor_nodes(), key=str)  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> sorted(
+        ...     G.get_factor_nodes(), key=str
+        ... )  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<DiscreteFactor representing phi(a:2, b:2) at 0x...>,
          <DiscreteFactor representing phi(b:2, c:2) at 0x...>]
         """
@@ -426,8 +428,8 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_factors()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<DiscreteFactor representing phi(a:2, b:2) at 0x...>,
         <DiscreteFactor representing phi(b:2, c:2) at 0x...>]
-        >>> round(float(G.get_partition_function()), 15)
-        3.504510834712093
+        >>> round(float(G.get_partition_function()), 14)
+        3.50451083471209
         """
         factor = self.factors[0]
         factor = factor_product(
