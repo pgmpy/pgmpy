@@ -7,11 +7,8 @@ pgmpy/inference/ExactInference.py
 pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
-<<<<<<< doctest_Junction
 pgmpy/models/JunctionTree.py
-=======
 pgmpy/estimators/HillClimbSearch.py
->>>>>>> dev
 pgmpy/estimators/PC.py
 pgmpy/estimators/MLE.py
 pgmpy/estimators/MmhcEstimator.py
