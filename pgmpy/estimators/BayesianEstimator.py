@@ -109,7 +109,9 @@ class BayesianEstimator(ParameterEstimator):
         ... )
         >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = BayesianEstimator(model, values)
-        >>> estimator.get_parameters(prior_type="BDeu", equivalent_sample_size=5)
+        >>> estimator.get_parameters(
+        ...     prior_type="BDeu", equivalent_sample_size=5
+        ... )  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<TabularCPD representing P(A:2) at 0x...>,
          <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
          <TabularCPD representing P(C:2) at 0x...>,

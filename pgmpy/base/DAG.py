@@ -364,7 +364,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Adding edges with weight:
 
         >>> G.add_edge("Ankur", "Maria", weight=0.1)
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.1}
         """
         super().add_edge(u, v, weight=weight)
@@ -417,9 +417,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> G.add_edges_from(
         ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
         ... )
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.3}
-        >>> G.edge["Maria"]["Mason"]
+        >>> G.edges["Maria", "Mason"]
         {'weight': 0.5}
 
         or
@@ -475,8 +475,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> G = DAG(ebunch=[("diff", "grade"), ("intel", "grade")])
         >>> moral_graph = G.moralize()
-        >>> moral_graph.edges()
-        EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
+        >>> sorted(list(moral_graph.edges()))
+        [('diff', 'grade'), ('diff', 'intel'), ('grade', 'intel')]
         """
         from pgmpy.base import UndirectedGraph
 
@@ -701,8 +701,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...         ("grade", "letter"),
         ...     ]
         ... )
-        >>> student.get_immoralities()
-        {('diff', 'intel')}
+        >>> imm = student.get_immoralities()
+        >>> imm["grade"]
+        [('diff', 'intel')]
         """
         immoralities = dict()
         for node in self.nodes():
@@ -1257,18 +1258,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})
-        <daft.PGM at 0x7fc756e936d0>
-        >>> dag.to_daft(node_pos="circular")
-        <daft.PGM at 0x7f9bb48c5eb0>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
-        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(
+        ...     node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)}
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
+        >>> dag.to_daft(node_pos="circular")  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
+        >>> dag.to_daft(
+        ...     node_pos="circular", pgm_params={"observed_style": "inner"}
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
         >>> dag.to_daft(
         ...     node_pos="circular",
         ...     edge_params={("a", "b"): {"label": 2}},
         ...     node_params={"a": {"shape": "rectangle"}},
-        ... )
-        <daft.PGM at 0x7f9bb48b0bb0>
+        ... )  # doctest: +ELLIPSIS
+        <daft.PGM at ...>
         """
         try:
             from daft import PGM
@@ -1449,8 +1454,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.to_graphviz()  # doctest: +ELLIPSIS
+        <AGraph <Swig Object of type 'Agraph_t *' at ...>>
         >>> model.draw("model.png", prog="neato")
         """
         if plot_edge_strength:
@@ -1695,12 +1700,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
+        >>> import numpy as np
+        >>> np.random.seed(42)
         >>> data = linear_model.simulate(n_samples=int(1e4))
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
         >>> strengths = dag.edge_strength(data)
-        {('X', 'Y'): np.float64(0.14587166611282304),
-         ('Z', 'Y'): np.float64(0.25683780900125613)}
+        >>> strengths[("X", "Y")]
+        np.float64(0.1454172599124535)
+        >>> strengths[("Z", "Y")]
+        np.float64(0.26003467856256834)
 
         References
         ----------
@@ -1782,3 +1791,68 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 ),
             )
         )
+
+    def get_stats(self):
+        """
+        Returns a dictionary of summary statistics about the structure of the DAG.
+
+        Returns
+        -------
+        dict
+            Dictionary containing summary statistics of the DAG.
+
+        n_nodes : int
+            Number of nodes in the DAG.
+        n_edges : int
+            Number of edges in the DAG.
+        n_root_nodes : int
+            Number of nodes with no parents.
+        n_leaf_nodes : int
+            Number of nodes with no children.
+        edge_density : float
+            Ratio of edges to maximum possible edges.
+        n_connected_components : int
+            Number of weakly connected components.
+        n_v_structures : int
+            Number of v-structures (immoralities).
+        avg_n_parents : float
+            Average number of parents per node.
+        max_n_parents : int
+            Maximum number of parents of any node.
+        n_latent_nodes : int
+            Number of latent (unobserved) nodes in the DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
+        >>> stats = dag.get_stats()
+        >>> stats["n_nodes"]
+        5
+        >>> stats["n_v_structures"]
+        1
+        """
+        no_of_nodes = self.number_of_nodes()
+        no_of_edges = self.number_of_edges()
+
+        in_degrees = dict(self.in_degree())
+        out_degrees = dict(self.out_degree())
+
+        n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
+
+        return {
+            "n_nodes": no_of_nodes,
+            "n_edges": no_of_edges,
+            "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
+            "n_leaf_nodes": sum(d == 0 for d in out_degrees.values()),
+            "edge_density": (
+                (no_of_edges) / (no_of_nodes * (no_of_nodes - 1) / 2)
+                if no_of_nodes > 1
+                else 0
+            ),
+            "n_connected_components": nx.number_weakly_connected_components(self),
+            "n_v_structures": n_v_structures,
+            "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
+            "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
+            "n_latent_nodes": len(getattr(self, "latents", [])),
+        }
