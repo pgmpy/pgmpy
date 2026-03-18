@@ -43,6 +43,7 @@ class _BaseDataset(BaseObject):
     Base class for all datasets in pgmpy.
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
     """
+
     # define tags
     _tags = {
         "name": None,
@@ -147,7 +148,7 @@ class _BaseDataset(BaseObject):
         Fetches/reads from cache the data associated with the dataset.
         """
         raw_data = cls._get_raw_data("data", cls.data_url)
-        df = pd.read_csv(io.BytesIO(raw_data), sep=cls.getattr("sep", "\t"))
+        df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
         if cls.get_class_tag("has_index_col"):
