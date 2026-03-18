@@ -39,10 +39,8 @@ class ExhaustiveSearch(StructureEstimator):
     """
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
-        super(ExhaustiveSearch, self).__init__(data, **kwargs)
-        _, self.scoring_method = get_scoring_method(
-            scoring_method, self.data, use_cache
-        )
+        super().__init__(data, **kwargs)
+        _, self.scoring_method = get_scoring_method(scoring_method, self.data, use_cache)
 
     def all_dags(self, nodes=None):
         """
@@ -108,11 +106,7 @@ class ExhaustiveSearch(StructureEstimator):
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
             logger.info("Generating all DAGs of n nodes likely not feasible for n>6!")
-            logger.info(
-                "Attempting to search through {n} graphs".format(
-                    n=2 ** (len(nodes) * (len(nodes) - 1))
-                )
-            )
+            logger.info(f"Attempting to search through {2 ** (len(nodes) * (len(nodes) - 1))} graphs")
 
         edges = list(combinations(nodes, 2))  # n*(n-1) possible directed edges
         edges.extend([(y, x) for x, y in edges])

@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from urllib.request import urlopen
 
 import numpy as np
@@ -23,10 +23,10 @@ from pgmpy.global_vars import PGMPY_DATA_HOME
 class Dataset:
     name: str
     data: pd.DataFrame
-    expert_knowledge: Optional[ExpertKnowledge] = None
-    ground_truth: Optional[DAG] = None
+    expert_knowledge: ExpertKnowledge | None = None
+    ground_truth: DAG | None = None
 
-    tags: Dict[str, Any] = None
+    tags: dict[str, Any] = None
 
     def __str__(self) -> str:
         return (
@@ -68,9 +68,9 @@ class _BaseDataset(BaseObject):
         """
         text = raw_expert_knowledge.decode("utf-8-sig", errors="ignore")
 
-        temporal: List[List[str]] = []
-        forbids: List[Tuple[str, str]] = []
-        requires: List[Tuple[str, str]] = []
+        temporal: list[list[str]] = []
+        forbids: list[tuple[str, str]] = []
+        requires: list[tuple[str, str]] = []
 
         section = None
 
@@ -114,9 +114,7 @@ class _BaseDataset(BaseObject):
                 tokens = stripped.split()
                 requires.append((tokens[0], tokens[1]))
 
-        return ExpertKnowledge(
-            forbidden_edges=forbids, required_edges=requires, temporal_order=temporal
-        )
+        return ExpertKnowledge(forbidden_edges=forbids, required_edges=requires, temporal_order=temporal)
 
     @classmethod
     def _get_raw_data(cls, data_type, url) -> bytes:
@@ -178,9 +176,7 @@ class _BaseDataset(BaseObject):
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(raw_data)
 
     @staticmethod
@@ -204,9 +200,7 @@ class _CovarianceMixin:
         """
         Fetches the data and creates a covariance matrix DataFrame.
         """
-        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode("utf-8-sig", errors="ignore")
 
         lines = raw_data.strip().splitlines()
         # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
@@ -232,9 +226,7 @@ class _CovarianceMixin:
         cov_matrix = cls._load_covariance_matrix()
         mean = [0] * cls.get_class_tag("n_variables")
         data = pd.DataFrame(
-            np.random.multivariate_normal(
-                mean, cov_matrix.values, size=cls.get_class_tag("n_samples")
-            ),
+            np.random.multivariate_normal(mean, cov_matrix.values, size=cls.get_class_tag("n_samples")),
             columns=cov_matrix.columns,
         )
         return data
@@ -251,9 +243,7 @@ class _TubingenBenchmarkMixin:
         url = f"{cls.base_url}/pair{pair_id:04}.txt"
         cache_name = f"pair_{pair_id:04}_data"
         raw_data = cls._get_raw_data(cache_name, url)
-        return pd.read_csv(
-            io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"]
-        )
+        return pd.read_csv(io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"])
 
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> DAG:
@@ -280,24 +270,16 @@ def load_dataset(name: str) -> Dataset:
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
     """
-    all_datasets = all_objects(
-        object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False
-    )
+    all_datasets = all_objects(object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
         name_parts = name.split("/")
         if len(name_parts) == 2 and name_parts[1].isdigit():
             pair_id = int(name_parts[1])
 
             if not (1 <= pair_id <= 108):
-                raise ValueError(
-                    f"Tubingen pair ID must be between 1 and 108. Got {pair_id}."
-                )
+                raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
             target_cls = next(
-                (
-                    cls
-                    for cls in all_datasets
-                    if cls.get_class_tag("name") == "tubingen"
-                ),
+                (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
                 None,
             )
             df = target_cls.load_dataframe(pair_id)
@@ -314,9 +296,7 @@ def load_dataset(name: str) -> Dataset:
                 tags=tags,
             )
         else:
-            raise ValueError(
-                f"Invalid dataset name format: '{name}'. For Tubingen datasets, use 'tubingen/<pair_id>'."
-            )
+            raise ValueError(f"Invalid dataset name format: '{name}'. For Tubingen datasets, use 'tubingen/<pair_id>'.")
 
     target_cls = None
     for cls in all_datasets:
@@ -324,9 +304,7 @@ def load_dataset(name: str) -> Dataset:
             target_cls = cls
             break
     if target_cls is None:
-        raise ValueError(
-            f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets."
-        )
+        raise ValueError(f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets.")
 
     return Dataset(
         name=name,
@@ -376,8 +354,7 @@ def list_datasets(**filter_tags) -> list[str]:
 
     if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
-            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. "
-            f"Valid filter tags are: {sorted(valid_tags)}."
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
         )
 
     all_datasets = all_objects(
@@ -387,10 +364,6 @@ def list_datasets(**filter_tags) -> list[str]:
         filter_tags=filter_tags,
     )
 
-    dataset_names = [
-        cls.get_class_tag("name")
-        for cls in all_datasets
-        if cls.get_class_tag("name") is not None
-    ]
+    dataset_names = [cls.get_class_tag("name") for cls in all_datasets if cls.get_class_tag("name") is not None]
 
     return sorted(dataset_names)

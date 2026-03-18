@@ -72,9 +72,7 @@ class FisherC(_BaseUnsupervisedMetric):
 
     def _evaluate(self, X, causal_graph):
         if len(causal_graph.latents) > 0:
-            raise ValueError(
-                "This test can not be performed on models with latent variables."
-            )
+            raise ValueError("This test can not be performed on models with latent variables.")
 
         cis = []
         ci_test = ci_registry.get_test(test=self.ci_test, data=X)
@@ -89,9 +87,7 @@ class FisherC(_BaseUnsupervisedMetric):
 
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
-                Z = set(causal_graph.predecessors(u)).union(
-                    causal_graph.predecessors(v)
-                )
+                Z = set(causal_graph.predecessors(u)).union(causal_graph.predecessors(v))
                 test_results = ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
                 cis.append([u, v, Z, test_results[1]])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
@@ -103,9 +99,7 @@ class FisherC(_BaseUnsupervisedMetric):
 
         if self.compute_rmsea:
             if len(X) != 1 and len(cis) != 0:
-                rmsea = np.sqrt(
-                    max((C - 2 * len(cis)) / (2 * len(cis) * (len(X) - 1)), 0)
-                )
+                rmsea = np.sqrt(max((C - 2 * len(cis)) / (2 * len(cis) * (len(X) - 1)), 0))
             return (p_value, rmsea)
 
         else:

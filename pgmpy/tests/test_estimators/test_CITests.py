@@ -62,31 +62,21 @@ class TestPearsonr(unittest.TestCase):
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z"], data=self.df_cind, boolean=False
-        )
+        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind, boolean=False)
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2"], data=self.df_cind_mul, boolean=False
-        )
+        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1", "Z2"], data=self.df_cind_mul, boolean=False)
         self.assertTrue(coef < 0.1)
         self.assertTrue(p_value > 0.05)
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z"], data=self.df_vstruct, boolean=False
-        )
+        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_vstruct, boolean=False)
         self.assertTrue(abs(coef) > 0.9)
         self.assertTrue(p_value < 0.05)
 
         # Tests for when boolean=True
-        self.assertTrue(
-            pearsonr(X="X", Y="Y", Z=[], data=self.df_ind, significance_level=0.05)
-        )
-        self.assertTrue(
-            pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind, significance_level=0.05)
-        )
+        self.assertTrue(pearsonr(X="X", Y="Y", Z=[], data=self.df_ind, significance_level=0.05))
+        self.assertTrue(pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind, significance_level=0.05))
         self.assertTrue(
             pearsonr(
                 X="X",
@@ -96,11 +86,7 @@ class TestPearsonr(unittest.TestCase):
                 significance_level=0.05,
             )
         )
-        self.assertFalse(
-            pearsonr(
-                X="X", Y="Y", Z=["Z"], data=self.df_vstruct, significance_level=0.05
-            )
-        )
+        self.assertFalse(pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_vstruct, significance_level=0.05))
 
 
 class TestDiscreteTests(unittest.TestCase):
@@ -109,23 +95,17 @@ class TestDiscreteTests(unittest.TestCase):
 
     def test_chisquare_adult_dataset(self):
         # Comparison values taken from dagitty (DAGitty)
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
-        )
+        coef, p_value, dof = chi_square(X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False)
         np_test.assert_almost_equal(coef, 57.75, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
         self.assertEqual(dof, 4)
 
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
-        )
+        coef, p_value, dof = chi_square(X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False)
         np_test.assert_almost_equal(coef, 56.25, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
         self.assertEqual(dof, 4)
 
-        coef, p_value, dof = chi_square(
-            X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        )
+        coef, p_value, dof = chi_square(X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False)
         np_test.assert_almost_equal(coef, 289.62, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
         self.assertEqual(dof, 4)
@@ -141,9 +121,7 @@ class TestDiscreteTests(unittest.TestCase):
         np_test.assert_almost_equal(p_value, 0, decimal=1)
         self.assertEqual(dof, 316)
 
-        coef, p_value, dof = chi_square(
-            X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        )
+        coef, p_value, dof = chi_square(X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False)
         np_test.assert_almost_equal(coef, 0.2724, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
         self.assertEqual(dof, 1)
@@ -270,9 +248,7 @@ class TestDiscreteTests(unittest.TestCase):
             np_test.assert_almost_equal(p_value, 0, decimal=5)
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
+@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestResidualMethods(unittest.TestCase):
     def setUp(self):
         # Create a combination of mixed data types
@@ -292,12 +268,8 @@ class TestResidualMethods(unittest.TestCase):
         self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
         self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
         self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.cpd_y_indep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
-        )
-        self.model_indep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
-        )
+        self.cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
+        self.model_indep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep)
         self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
@@ -344,12 +316,8 @@ class TestResidualMethods(unittest.TestCase):
                 ("X", "Y"),
             ]
         )
-        self.cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
-        )
-        self.model_dep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
-        )
+        self.cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
+        self.model_dep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep)
         self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()
@@ -397,9 +365,7 @@ class TestResidualMethods(unittest.TestCase):
         self.assertTrue(abs(coef) <= 0.1)
         self.assertTrue(p_value >= 0.04)
 
-        coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
-        )
+        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42)
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
@@ -547,9 +513,7 @@ class TestResidualMethods(unittest.TestCase):
         self.assertEqual(round(p_value, 4), 0.9228)
 
         # Conditional tests
-        coef, p_value = gcm(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
-        )
+        coef, p_value = gcm(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42)
 
         self.assertAlmostEqual(round(coef, 3), 11.69)
         self.assertAlmostEqual(p_value, 0.0)
