@@ -140,3 +140,24 @@ def test_invalid_tag():
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
         list_datasets(num_samples=100)  # wrong key name entirely
+
+
+def test_list_datasets_advanced_filter():
+    # Test '>'
+    large_datasets = list_datasets(n_samples=">500000")
+    assert "cover_type" in large_datasets
+    assert "adult" not in large_datasets
+
+    # Test '<'
+    small_datasets = list_datasets(n_samples="<100")
+    assert "cystic_fibrosis" in small_datasets
+    assert "adult" not in small_datasets
+
+    # Test '!='
+    not_adult = list_datasets(n_samples="!=32561")
+    assert "adult" not in not_adult
+
+    # Test combination with boolean
+    comb = list_datasets(n_variables=">10", has_ground_truth=True)
+    assert "sachs_discrete" in comb
+    assert "cystic_fibrosis" not in comb

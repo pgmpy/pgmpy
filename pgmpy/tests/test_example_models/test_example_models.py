@@ -368,3 +368,32 @@ def test_load_model_invalid_name():
     msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available datasets."
     with pytest.raises(ValueError, match=re.escape(msg)):
         load_model("bnrep/soilead")
+
+
+def test_list_models_advanced_filter():
+    # Test '>'
+    large_models = list_models(n_nodes=">100")
+    assert "bnlearn/munin" in large_models
+    assert "bnlearn/alarm" not in large_models
+
+    # Test '<'
+    small_models = list_models(n_nodes="<8")
+    assert "bnlearn/cancer" in small_models
+    assert "bnlearn/asia" not in small_models
+
+    # Test '>='
+    models_ge = list_models(n_nodes=">=37")
+    assert "bnlearn/alarm" in models_ge
+
+    # Test '<='
+    models_le = list_models(n_nodes="<=37")
+    assert "bnlearn/alarm" in models_le
+
+    # Test '!='
+    models_ne = list_models(n_nodes="!=37")
+    assert "bnlearn/alarm" not in models_ne
+
+    # Test combination
+    models_comb = list_models(n_nodes=">10", is_discrete=True)
+    assert "bnlearn/alarm" in models_comb
+    assert "bnlearn/cancer" not in models_comb

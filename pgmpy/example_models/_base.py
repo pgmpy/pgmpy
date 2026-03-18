@@ -203,6 +203,8 @@ def list_models(**filter_tags) -> list[str]:
     ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
     >>> list_models(is_parameterized=False)
     ['dagitty/acid_1996', ...., ]
+    >>> list_models(n_nodes=">10")
+    ['bnlearn/alarm', 'bnlearn/andes', ...., ]
     """
     valid_tags = set(_BaseExampleModel._tags.keys())
 
@@ -211,12 +213,30 @@ def list_models(**filter_tags) -> list[str]:
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
         )
 
+    # Separate simple and advanced filters
+    simple_filters = {}
+    advanced_filters = {}
+    for tag, value in filter_tags.items():
+        if isinstance(value, str) and any(value.startswith(op) for op in [">=", "<=", ">", "<", "!="]):
+            advanced_filters[tag] = value
+        else:
+            simple_filters[tag] = value
+
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=simple_filters,
     )
+
+    if advanced_filters:
+        from pgmpy.utils.utils import _check_filter
+
+        all_models = [
+            cls
+            for cls in all_models
+            if all(_check_filter(cls.get_class_tag(tag), val) for tag, val in advanced_filters.items())
+        ]
 
     model_names = [cls.get_class_tag("name") for cls in all_models if cls.get_class_tag("name") is not None]
 

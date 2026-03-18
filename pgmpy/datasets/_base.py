@@ -351,6 +351,8 @@ def list_datasets(**filter_tags) -> list[str]:
 
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
+    >>> list_datasets(n_samples=">1000")
+    ['adult', 'cover_type', ..., ]
     """
     valid_tags = set(_BaseDataset._tags.keys())
 
@@ -359,12 +361,30 @@ def list_datasets(**filter_tags) -> list[str]:
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
         )
 
+    # Separate simple and advanced filters
+    simple_filters = {}
+    advanced_filters = {}
+    for tag, value in filter_tags.items():
+        if isinstance(value, str) and any(value.startswith(op) for op in [">=", "<=", ">", "<", "!="]):
+            advanced_filters[tag] = value
+        else:
+            simple_filters[tag] = value
+
     all_datasets = all_objects(
         object_types=_BaseDataset,
         package_name="pgmpy.datasets",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=simple_filters,
     )
+
+    if advanced_filters:
+        from pgmpy.utils.utils import _check_filter
+
+        all_datasets = [
+            cls
+            for cls in all_datasets
+            if all(_check_filter(cls.get_class_tag(tag), val) for tag, val in advanced_filters.items())
+        ]
 
     dataset_names = [cls.get_class_tag("name") for cls in all_datasets if cls.get_class_tag("name") is not None]
 

@@ -1,4 +1,5 @@
 import gzip
+from typing import Any
 
 import pandas as pd
 
@@ -580,3 +581,53 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         )
 
     return panel
+
+
+def _check_filter(tag_value: Any, filter_value: Any) -> bool:
+    """
+    Checks if a tag value matches a filter value, supporting advanced operators.
+    Operators: '>', '<', '>=', '<=', '!='.
+
+    Parameters
+    ----------
+    tag_value: Any
+        The value of the tag to check.
+    filter_value: Any
+        The filter criteria. Can be a value for exact match, a list for "in" check,
+        or a string with an operator for advanced filtering (e.g., ">10").
+
+    Returns
+    -------
+    bool: True if the tag_value matches the filter_value, False otherwise.
+    """
+    if isinstance(filter_value, str) and len(filter_value) > 0:
+        if filter_value.startswith((">=", "<=", "!=")):
+            op, val_str = filter_value[:2], filter_value[2:]
+        elif filter_value.startswith((">", "<")):
+            op, val_str = filter_value[:1], filter_value[1:]
+        else:
+            op, val_str = None, None
+
+        if op:
+            try:
+                val = type(tag_value)(val_str)
+                if op == ">=":
+                    res = tag_value >= val
+                elif op == "<=":
+                    res = tag_value <= val
+                elif op == ">":
+                    res = tag_value > val
+                elif op == "<":
+                    res = tag_value < val
+                elif op == "!=":
+                    res = tag_value != val
+                else:
+                    res = False
+                return res
+            except (ValueError, TypeError):
+                return False
+
+    if isinstance(filter_value, list):
+        return tag_value in filter_value
+
+    return tag_value == filter_value
