@@ -1791,3 +1791,68 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 ),
             )
         )
+
+    def get_stats(self):
+        """
+        Returns a dictionary of summary statistics about the structure of the DAG.
+
+        Returns
+        -------
+        dict
+            Dictionary containing summary statistics of the DAG.
+
+        n_nodes : int
+            Number of nodes in the DAG.
+        n_edges : int
+            Number of edges in the DAG.
+        n_root_nodes : int
+            Number of nodes with no parents.
+        n_leaf_nodes : int
+            Number of nodes with no children.
+        edge_density : float
+            Ratio of edges to maximum possible edges.
+        n_connected_components : int
+            Number of weakly connected components.
+        n_v_structures : int
+            Number of v-structures (immoralities).
+        avg_n_parents : float
+            Average number of parents per node.
+        max_n_parents : int
+            Maximum number of parents of any node.
+        n_latent_nodes : int
+            Number of latent (unobserved) nodes in the DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
+        >>> stats = dag.get_stats()
+        >>> stats["n_nodes"]
+        5
+        >>> stats["n_v_structures"]
+        1
+        """
+        no_of_nodes = self.number_of_nodes()
+        no_of_edges = self.number_of_edges()
+
+        in_degrees = dict(self.in_degree())
+        out_degrees = dict(self.out_degree())
+
+        n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
+
+        return {
+            "n_nodes": no_of_nodes,
+            "n_edges": no_of_edges,
+            "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
+            "n_leaf_nodes": sum(d == 0 for d in out_degrees.values()),
+            "edge_density": (
+                (no_of_edges) / (no_of_nodes * (no_of_nodes - 1) / 2)
+                if no_of_nodes > 1
+                else 0
+            ),
+            "n_connected_components": nx.number_weakly_connected_components(self),
+            "n_v_structures": n_v_structures,
+            "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
+            "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
+            "n_latent_nodes": len(getattr(self, "latents", [])),
+        }
