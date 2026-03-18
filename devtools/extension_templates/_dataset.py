@@ -42,9 +42,6 @@ class YourDatasetClass(_BaseDataset):
     # row containing the names of the columns.
     data_url = base_url + "<link_to_data_file>"
 
-    # TODO: If the delimiter of the dataset is not tab ("\t"), set a new delimiter.
-    sep = "\t"
-
     # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
     ground_truth_url = base_url + "<link_to_gt_file>"
 
@@ -54,6 +51,9 @@ class YourDatasetClass(_BaseDataset):
 
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
+
+    # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
+    # sep = "\t"
 
     # TODO: If the dataset has categorical variables, list them here.
     categorical_variables = []
