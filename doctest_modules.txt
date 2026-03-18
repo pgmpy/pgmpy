@@ -8,6 +8,8 @@ pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
 pgmpy/models/JunctionTree.py
+pgmpy/models/DiscreteBayesianNetwork.py
+pgmpy/models/MarkovChain.py
 pgmpy/estimators/HillClimbSearch.py
 pgmpy/estimators/PC.py
 pgmpy/estimators/MLE.py
@@ -16,3 +18,4 @@ pgmpy/estimators/EM.py
 pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/ExhaustiveSearch.py
 pgmpy/inference/ApproxInference.py
+pgmpy/models/FactorGraph.py
