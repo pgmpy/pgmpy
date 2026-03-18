@@ -1,5 +1,6 @@
 from collections import deque
-from typing import Any, Hashable, Iterable, Optional
+from collections.abc import Hashable, Iterable
+from typing import Any
 
 import networkx as nx
 
@@ -121,16 +122,14 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
     """
 
-    SUPPORTED_EDGE_TYPES = frozenset(
-        ["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"]
-    )
+    SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
 
     def __init__(
         self,
         ebunch: Iterable[tuple[Hashable, Hashable, Hashable]] = None,
-        exposures: Optional[set[Hashable]] = None,
-        outcomes: Optional[set[Hashable]] = None,
-        latents: Optional[set[Hashable]] = None,
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        latents: set[Hashable] | None = None,
         roles=None,
     ):
         super().__init__()
@@ -224,10 +223,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
     def add_edges_from(
         self,
-        ebunch: Iterable[
-            tuple[Hashable, Hashable, Hashable]
-            | tuple[Hashable, Hashable, Hashable, Hashable]
-        ],
+        ebunch: Iterable[tuple[Hashable, Hashable, Hashable] | tuple[Hashable, Hashable, Hashable, Hashable]],
         **kwargs,
     ) -> None:
         """
@@ -405,10 +401,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         <class 'pgmpy.base._base._CoreGraph'>
 
         """
-        ebunch = [
-            (u, v, key, edge_type)
-            for u, v, key, edge_type in self.edges(keys=True, data=True)
-        ]
+        ebunch = [(u, v, key, edge_type) for u, v, key, edge_type in self.edges(keys=True, data=True)]
 
         graph_copy = self.__class__()
         graph_copy.add_nodes_from(self.nodes(data=True))
@@ -419,9 +412,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
         return graph_copy
 
-    def get_neighbors(
-        self, node: Hashable, edge_type: Optional[str] = None
-    ) -> set[Hashable]:
+    def get_neighbors(self, node: Hashable, edge_type: str | None = None) -> set[Hashable]:
         """
         Returns a set of neighbors nodes in the graph.
 
@@ -483,10 +474,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
             edge_data = self.get_edge_data(node, neighbor)
             _markers_dict = self._from_api_edge_type(edge=[node, neighbor, edge_type])
             for _, data in edge_data.items():
-                if (
-                    data[node] == _markers_dict[node]
-                    and data[neighbor] == _markers_dict[neighbor]
-                ):
+                if data[node] == _markers_dict[node] and data[neighbor] == _markers_dict[neighbor]:
                     filtered_neighbors.add(neighbor)
                     break
 
@@ -719,9 +707,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
                 queue.extend(self.get_children(current))
         return descendants
 
-    def get_reachable_nodes(
-        self, node: Hashable, edge_type: Optional[str] = None
-    ) -> set[Hashable]:
+    def get_reachable_nodes(self, node: Hashable, edge_type: str | None = None) -> set[Hashable]:
         """
         Returns a set of reachable nodes in the graph.
 
@@ -783,9 +769,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
                 queue.extend(self.get_neighbors(current, edge_type=edge_type))
         return reachable
 
-    def get_edges(
-        self, keys: bool = False, data: bool = False
-    ) -> list[tuple[Any, ...]]:
+    def get_edges(self, keys: bool = False, data: bool = False) -> list[tuple[Any, ...]]:
         """
         Retrieve edges with optional keys and API-formatted edge types.
 
@@ -823,10 +807,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
             return list(networkx_ebunch)
 
         # (u, v, edge_type) or (u, v, key, edge_type)
-        return [
-            (*edge[:-1], self._to_api_edge_type(edge[0], edge[1], edge[-1]))
-            for edge in networkx_ebunch
-        ]
+        return [(*edge[:-1], self._to_api_edge_type(edge[0], edge[1], edge[-1])) for edge in networkx_ebunch]
 
     def get_edge_type(self) -> set:
         """
@@ -873,16 +854,12 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         """
         if not isinstance(other, self.__class__):
             return False
-        return (
-            nx.utils.graphs_equal(self, other)
-            and self.get_role_dict() == other.get_role_dict()
-        )
+        return nx.utils.graphs_equal(self, other) and self.get_role_dict() == other.get_role_dict()
 
     def _validate_edges(
         self,
         ebunch: (
-            Iterable[tuple[Hashable, Hashable, Hashable]]
-            | Iterable[tuple[Hashable, Hashable, Hashable, Hashable]]
+            Iterable[tuple[Hashable, Hashable, Hashable]] | Iterable[tuple[Hashable, Hashable, Hashable, Hashable]]
         ),
     ):
         """
@@ -911,9 +888,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
             elif len(edge) == 4:
                 u, v, _, edge_type = edge
             else:
-                raise ValueError(
-                    f"Edge tuple must have 3 or 4 elements. Got {len(edge)}."
-                )
+                raise ValueError(f"Edge tuple must have 3 or 4 elements. Got {len(edge)}.")
 
             if (u is None) or (v is None):
                 raise ValueError("Nodes cannot be None.")

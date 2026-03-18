@@ -110,9 +110,7 @@ def test_no_adjustment_variables():
     lgbn = DAG.from_dagitty("dag { D -> Y [beta=0.6] }")
     data = lgbn.simulate(n_samples=200, seed=42)
 
-    dag = DAG(
-        ebunch=[("D", "Y")], roles={"exposures": "D", "outcomes": "Y", "adjustment": []}
-    )
+    dag = DAG(ebunch=[("D", "Y")], roles={"exposures": "D", "outcomes": "Y", "adjustment": []})
     model = DoubleMLRegressor(
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),

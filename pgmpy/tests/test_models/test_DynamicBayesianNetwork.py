@@ -25,21 +25,15 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
 
     def test_add_single_edge_with_timeslice(self):
         self.network.add_edge(("a", 0), ("b", 0))
-        self.assertListEqual(
-            sorted(self.network.edges()), [(("a", 0), ("b", 0)), (("a", 1), ("b", 1))]
-        )
+        self.assertListEqual(sorted(self.network.edges()), [(("a", 0), ("b", 0)), (("a", 1), ("b", 1))])
         self.assertListEqual(sorted(self.network._nodes()), ["a", "b"])
 
     def test_add_edge_with_different_number_timeslice(self):
         self.network.add_edge(("a", 2), ("b", 2))
-        self.assertListEqual(
-            sorted(self.network.edges()), [(("a", 0), ("b", 0)), (("a", 1), ("b", 1))]
-        )
+        self.assertListEqual(sorted(self.network.edges()), [(("a", 0), ("b", 0)), (("a", 1), ("b", 1))])
 
     def test_add_edge_going_backward(self):
-        self.assertRaises(
-            NotImplementedError, self.network.add_edge, ("a", 1), ("b", 0)
-        )
+        self.assertRaises(NotImplementedError, self.network.add_edge, ("a", 1), ("b", 0))
 
     def test_add_edge_with_farther_timeslice(self):
         self.assertRaises(ValueError, self.network.add_edge, ("a", 2), ("b", 4))
@@ -65,9 +59,7 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
         self.assertRaises(ValueError, self.network.add_edge, ("a", "b"), ("b", "c"))
 
     def test_add_multiple_edges(self):
-        self.network.add_edges_from(
-            [(("a", 0), ("b", 0)), (("a", 0), ("a", 1)), (("b", 0), ("b", 1))]
-        )
+        self.network.add_edges_from([(("a", 0), ("b", 0)), (("a", 0), ("a", 1)), (("b", 0), ("b", 1))])
         self.assertListEqual(
             sorted(self.network.edges()),
             [
@@ -182,15 +174,9 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertTrue(bn.check_model())
 
     def test_get_intra_and_inter_edges(self):
-        self.network.add_edges_from(
-            [(("a", 0), ("b", 0)), (("a", 0), ("a", 1)), (("b", 0), ("b", 1))]
-        )
-        self.assertListEqual(
-            sorted(self.network.get_intra_edges()), [(("a", 0), ("b", 0))]
-        )
-        self.assertListEqual(
-            sorted(self.network.get_intra_edges(1)), [(("a", 1), ("b", 1))]
-        )
+        self.network.add_edges_from([(("a", 0), ("b", 0)), (("a", 0), ("a", 1)), (("b", 0), ("b", 1))])
+        self.assertListEqual(sorted(self.network.get_intra_edges()), [(("a", 0), ("b", 0))])
+        self.assertListEqual(sorted(self.network.get_intra_edges(1)), [(("a", 1), ("b", 1))])
         self.assertRaises(ValueError, self.network.get_intra_edges, -1)
         self.assertRaises(ValueError, self.network.get_intra_edges, "-")
         self.assertListEqual(
@@ -207,9 +193,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.assertListEqual(
-            sorted(self.network.get_interface_nodes()), [("D", 0), ("I", 0)]
-        )
+        self.assertListEqual(sorted(self.network.get_interface_nodes()), [("D", 0), ("I", 0)])
 
         self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
         self.assertRaises(ValueError, self.network.get_interface_nodes, "-")
@@ -249,12 +233,8 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.assertListEqual(
-            sorted(self.network.get_slice_nodes()), [("D", 0), ("G", 0), ("I", 0)]
-        )
-        self.assertListEqual(
-            sorted(self.network.get_slice_nodes(1)), [("D", 1), ("G", 1), ("I", 1)]
-        )
+        self.assertListEqual(sorted(self.network.get_slice_nodes()), [("D", 0), ("G", 0), ("I", 0)])
+        self.assertListEqual(sorted(self.network.get_slice_nodes(1)), [("D", 1), ("G", 1), ("I", 1)])
         self.assertRaises(ValueError, self.network.get_slice_nodes, -1)
         self.assertRaises(ValueError, self.network.get_slice_nodes, "-")
 
@@ -272,9 +252,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.network.add_cpds(
-            self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd
-        )
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
         self.network.initialize_initial_state()
         self.assertEqual(
             {cpd.variable for cpd in self.network.get_cpds()},
@@ -286,7 +264,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         )
         self.assertEqual(
             set(self.network.get_cpds(time_slice=0)),
-            set([self.diff_cpd, self.intel_cpd, self.grade_cpd]),
+            {self.diff_cpd, self.intel_cpd, self.grade_cpd},
         )
         self.assertEqual(
             {cpd.variable for cpd in self.network.get_cpds(time_slice=1)},
@@ -305,9 +283,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.network.add_cpds(
-            self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd
-        )
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
         self.assertEqual(self.network.get_cpds(("G", 0)).variable, ("G", 0))
         self.assertEqual(self.network.get_cpds(("D", 1)).variable, ("D", 1))
         self.assertEqual(self.network.get_cpds(("D", 0)).variable, ("D", 0))
@@ -324,15 +300,13 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.network.add_cpds(
-            self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd
-        )
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
         self.network.initialize_initial_state()
         self.assertEqual(len(self.network.cpds), 6)
         self.assertEqual(self.network.get_cpds(("G", 1)).variable, ("G", 1))
 
     def test_moralize(self):
-        self.network.add_edges_from(([(("D", 0), ("G", 0)), (("I", 0), ("G", 0))]))
+        self.network.add_edges_from([(("D", 0), ("G", 0)), (("I", 0), ("G", 0))])
         moral_graph = self.network.moralize()
         self.assertListEqual(
             hf.recursive_sorted(moral_graph.edges()),
@@ -368,19 +342,11 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertListEqual(sorted(self.network._nodes()), sorted(copy._nodes()))
         self.assertListEqual(sorted(self.network.edges()), sorted(copy.edges()))
         self.assertListEqual(self.network.get_cpds(), copy.get_cpds())
-        self.assertListEqual(
-            sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges())
-        )
-        self.assertListEqual(
-            sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges())
-        )
-        self.assertListEqual(
-            sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes())
-        )
+        self.assertListEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
+        self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
+        self.assertListEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
 
-        copy.cpds[0].values = np.array(
-            [[0.4, 0.05, 0.3, 0.5], [0.3, 0.25, 0.5, 0.3], [0.3, 0.7, 0.2, 0.2]]
-        )
+        copy.cpds[0].values = np.array([[0.4, 0.05, 0.3, 0.5], [0.3, 0.25, 0.5, 0.3], [0.3, 0.7, 0.2, 0.2]])
         self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
         self.network.add_cpds(self.i_i_cpd, self.d_i_cpd)
 
@@ -392,21 +358,13 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.network._nodes()), sorted(copy._nodes()))
         self.assertNotEqual(sorted(self.network.edges()), sorted(copy.edges()))
         self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
-        self.assertNotEqual(
-            sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges())
-        )
-        self.assertListEqual(
-            sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges())
-        )
-        self.assertNotEqual(
-            sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes())
-        )
+        self.assertNotEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
+        self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
+        self.assertNotEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
 
         self.network.add_edge(("A", 0), ("D", 1))
         copy.add_edge(("Z", 0), ("D", 1))
-        self.assertNotEqual(
-            sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges())
-        )
+        self.assertNotEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
 
     def test_fit(self):
         model = DBN(
@@ -438,16 +396,12 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertRaises(ValueError, model.fit, df.values)
         wrong_colnames = []
         for t in range(5):
-            wrong_colnames.extend(
-                [("A", t + 1), ("B", t + 1), ("C", t + 1), ("D", t + 1)]
-            )
+            wrong_colnames.extend([("A", t + 1), ("B", t + 1), ("C", t + 1), ("D", t + 1)])
         df.columns = wrong_colnames
         self.assertRaises(ValueError, model.fit, df)
 
     def test_get_markov_blanket(self):
-        self.network.add_edges_from(
-            [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
-        )
+        self.network.add_edges_from([(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))])
 
         markov_blanket = self.network.get_markov_blanket(("a", 1))
         self.assertListEqual(
@@ -462,19 +416,13 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         )
 
     def test_active_trail_nodes(self):
-        self.network.add_edges_from(
-            [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
-        )
+        self.network.add_edges_from([(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))])
 
         active_trail = self.network.active_trail_nodes(("a", 0))
-        self.assertListEqual(
-            sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 1)]
-        )
+        self.assertListEqual(sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 1)])
 
         active_trail = self.network.active_trail_nodes(("a", 0), observed=[("b", 1)])
-        self.assertListEqual(
-            sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 0)]
-        )
+        self.assertListEqual(sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 0)])
 
     def tearDown(self):
         del self.network
@@ -674,12 +622,8 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
         self.cancer_model = DBN()
 
         # Model 1
-        self.cpd_poll = TabularCPD(
-            variable=("Pollution", 0), variable_card=2, values=[[0.9], [0.1]]
-        )
-        self.cpd_smoke = TabularCPD(
-            variable=("Smoker", 0), variable_card=2, values=[[0.3], [0.7]]
-        )
+        self.cpd_poll = TabularCPD(variable=("Pollution", 0), variable_card=2, values=[[0.9], [0.1]])
+        self.cpd_smoke = TabularCPD(variable=("Smoker", 0), variable_card=2, values=[[0.3], [0.7]])
         self.cpd_cancer = TabularCPD(
             variable=("Cancer", 0),
             variable_card=2,
@@ -749,17 +693,13 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
             ]
         )
 
-        self.cancer_model.add_cpds(
-            self.cpd_poll, self.cpd_smoke, self.cpd_cancer, self.cpd_xray, self.cpd_dysp
-        )
+        self.cancer_model.add_cpds(self.cpd_poll, self.cpd_smoke, self.cpd_cancer, self.cpd_xray, self.cpd_dysp)
         self.cancer_model.initialize_initial_state()
 
         self.assertEqual(len(self.cancer_model.cpds), 10)
 
         self.cancer_inf = DBNInference(self.cancer_model)
-        self.cancer_query_result = self.cancer_inf.query(
-            [("Xray", 0)], {("Smoker", 0): 0}
-        )[("Xray", 0)].values
+        self.cancer_query_result = self.cancer_inf.query([("Xray", 0)], {("Smoker", 0): 0})[("Xray", 0)].values
 
         self.assertAlmostEqual(self.cancer_query_result[0], 0.2224, 4)
         self.assertAlmostEqual(self.cancer_query_result[1], 0.7776, 4)
@@ -797,9 +737,7 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
         self.assertEqual(len(self.cancer_model.cpds), 10)
 
         self.cancer_inf = DBNInference(self.cancer_model)
-        self.cancer_query_result = self.cancer_inf.query(
-            [("Xray", 1)], {("Smoker", 0): 0}
-        )[("Xray", 1)].values
+        self.cancer_query_result = self.cancer_inf.query([("Xray", 1)], {("Smoker", 0): 0})[("Xray", 1)].values
 
         self.assertAlmostEqual(self.cancer_query_result[0], 0.213307, 4)
         self.assertAlmostEqual(self.cancer_query_result[1], 0.786693, 4)
@@ -837,15 +775,13 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
         self.assertEqual(len(self.cancer_model.cpds), 10)
 
         self.cancer_inf = DBNInference(self.cancer_model)
-        self.cancer_query_result = self.cancer_inf.query(
-            [("Xray", 2)], {("Smoker", 0): 0}
-        )[("Xray", 2)].values
+        self.cancer_query_result = self.cancer_inf.query([("Xray", 2)], {("Smoker", 0): 0})[("Xray", 2)].values
 
         self.assertAlmostEqual(self.cancer_query_result[0], 0.2158, 4)
 
-        self.cancer_query_result = self.cancer_inf.query(
-            [("Dyspnoea", 3)], {("Pollution", 0): 0}
-        )[("Dyspnoea", 3)].values
+        self.cancer_query_result = self.cancer_inf.query([("Dyspnoea", 3)], {("Pollution", 0): 0})[
+            ("Dyspnoea", 3)
+        ].values
         self.assertAlmostEqual(self.cancer_query_result[0], 0.3070, 4)
 
     def tearDown(self):
@@ -921,12 +857,8 @@ class TestDBNSampling(unittest.TestCase):
             evidence=["I0", "D0"],
             evidence_card=[2, 2],
         )
-        d1_cpd = TabularCPD(
-            "D1", 2, [[0.6, 0.3], [0.4, 0.7]], evidence=["D0"], evidence_card=[2]
-        )
-        i1_cpd = TabularCPD(
-            "I1", 2, [[0.5, 0.4], [0.5, 0.6]], evidence=["I0"], evidence_card=[2]
-        )
+        d1_cpd = TabularCPD("D1", 2, [[0.6, 0.3], [0.4, 0.7]], evidence=["D0"], evidence_card=[2])
+        i1_cpd = TabularCPD("I1", 2, [[0.5, 0.4], [0.5, 0.6]], evidence=["I0"], evidence_card=[2])
         g1_cpd = TabularCPD(
             "G1",
             3,
@@ -934,12 +866,8 @@ class TestDBNSampling(unittest.TestCase):
             evidence=["I1", "D1"],
             evidence_card=[2, 2],
         )
-        d2_cpd = TabularCPD(
-            "D2", 2, [[0.6, 0.3], [0.4, 0.7]], evidence=["D1"], evidence_card=[2]
-        )
-        i2_cpd = TabularCPD(
-            "I2", 2, [[0.5, 0.4], [0.5, 0.6]], evidence=["I1"], evidence_card=[2]
-        )
+        d2_cpd = TabularCPD("D2", 2, [[0.6, 0.3], [0.4, 0.7]], evidence=["D1"], evidence_card=[2])
+        i2_cpd = TabularCPD("I2", 2, [[0.5, 0.4], [0.5, 0.6]], evidence=["I1"], evidence_card=[2])
         g2_cpd = TabularCPD(
             "G2",
             3,
@@ -947,9 +875,7 @@ class TestDBNSampling(unittest.TestCase):
             evidence=["I2", "D2"],
             evidence_card=[2, 2],
         )
-        self.equivalent_bn.add_cpds(
-            d0_cpd, i0_cpd, g0_cpd, d1_cpd, i1_cpd, g1_cpd, d2_cpd, i2_cpd, g2_cpd
-        )
+        self.equivalent_bn.add_cpds(d0_cpd, i0_cpd, g0_cpd, d1_cpd, i1_cpd, g1_cpd, d2_cpd, i2_cpd, g2_cpd)
         self.bn_infer = VariableElimination(self.equivalent_bn)
         self.bn_causal_infer = CausalInference(self.equivalent_bn)
 
@@ -964,9 +890,7 @@ class TestDBNSampling(unittest.TestCase):
         self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
         self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
 
-        samples = self.dbn.simulate(
-            n_samples=int(1e5), n_time_slices=2, show_progress=False
-        )
+        samples = self.dbn.simulate(n_samples=int(1e5), n_time_slices=2, show_progress=False)
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 6)
         for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
@@ -981,8 +905,7 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
@@ -1006,9 +929,7 @@ class TestDBNSampling(unittest.TestCase):
                 )
 
     def test_simulate_more_than_two_slices(self):
-        samples = self.dbn.simulate(
-            n_samples=int(1e5), n_time_slices=3, show_progress=False
-        )
+        samples = self.dbn.simulate(n_samples=int(1e5), n_time_slices=3, show_progress=False)
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
         for node in [
@@ -1036,8 +957,7 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
@@ -1082,8 +1002,7 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
@@ -1095,9 +1014,7 @@ class TestDBNSampling(unittest.TestCase):
             #     ]
             # Query can't have same node in variables and evidence
             if node != ("D", 0):
-                bn_infer_cpd = self.bn_infer.query(
-                    [str(node[0]) + str(node[1])], evidence={"D0": 1}
-                )
+                bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])], evidence={"D0": 1})
 
             for state in range(samples_cpd.shape[0]):
                 # TODO: DBN query with evidence values doesn't match with BN inference or sampling
@@ -1141,17 +1058,14 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             # Query can't have same node in variables and evidence
             if node not in [("D", 0), ("D", 1)]:
-                bn_infer_cpd = self.bn_infer.query(
-                    [str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0}
-                )
+                bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0})
 
             for state in range(samples_cpd.shape[0]):
                 if node not in [("D", 0), ("D", 1)]:
@@ -1201,17 +1115,14 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             # Query can't have same node in variables and evidence
             if node not in [("D", 0), ("D", 1)]:
-                bn_infer_cpd = self.bn_infer.query(
-                    [str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0}
-                )
+                bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0})
 
             for state in range(samples_cpd.shape[0]):
                 if node not in [("D", 0), ("D", 1)]:
@@ -1261,17 +1172,14 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             # Query can't have same node in variables and evidence
             if node not in [("D", 0), ("D", 1), ("D", 2)]:
-                bn_infer_cpd = self.bn_infer.query(
-                    [str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0, "D2": 1}
-                )
+                bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0, "D2": 1})
 
             for state in range(samples_cpd.shape[0]):
                 if node not in [("D", 0), ("D", 1), ("D", 2)]:
@@ -1325,15 +1233,12 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
-            bn_infer_cpd = self.bn_infer.query(
-                [str(node[0]) + str(node[1])], virtual_evidence=bn_virtual_evidence
-            )
+            bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])], virtual_evidence=bn_virtual_evidence)
 
             for state in range(samples_cpd.shape[0]):
                 self.assertTrue(
@@ -1378,16 +1283,13 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             if node not in [("D", 0), ("D", 1), ("D", 2)]:
-                bn_infer_cpd = self.bn_causal_infer.query(
-                    [str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0}
-                )
+                bn_infer_cpd = self.bn_causal_infer.query([str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0})
 
             for state in range(samples_cpd.shape[0]):
                 if node not in [("D", 0), ("D", 1), ("D", 2)]:
@@ -1439,16 +1341,13 @@ class TestDBNSampling(unittest.TestCase):
 
         # Test the asymptotic distribution of samples
         sample_marginals = {
-            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
-            for node in self.dbn.nodes()
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0] for node in self.dbn.nodes()
         }
 
         for node in sample_marginals.keys():
             samples_cpd = sample_marginals[node]
             if node not in [("D", 0), ("D", 1), ("D", 2)]:
-                bn_infer_cpd = self.bn_causal_infer.query(
-                    [str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0}
-                )
+                bn_infer_cpd = self.bn_causal_infer.query([str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0})
 
             for state in range(samples_cpd.shape[0]):
                 if node not in [("D", 0), ("D", 1), ("D", 2)]:
@@ -1476,9 +1375,7 @@ class TestDBNSampling(unittest.TestCase):
         # check the shapes
         # should return 3D numpy array, with shape of 10 x 3 x 1
         assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert samples.shape == (
             10,
             n_vars,
@@ -1505,9 +1402,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
         assert samples.shape == (
             n_samples,
@@ -1516,9 +1411,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
 
         # check the values
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)  # must match converter ordering
 
         vars = wide.columns.get_level_values("variable").unique().tolist()
@@ -1539,9 +1432,7 @@ class TestDBNSampling(unittest.TestCase):
         )
 
         # should return 3D numpy array, with shape of 10 x 3 x 2
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert len(samples.shape) == 3, "return from numpy3D should be 3"
         assert samples.shape == (
             10,
@@ -1569,9 +1460,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
         assert samples.shape == (
             n_samples,
@@ -1580,9 +1469,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
 
         # check the values
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)  # must match converter ordering
 
         vars = wide.columns.get_level_values("variable").unique().tolist()
@@ -1602,9 +1489,7 @@ class TestDBNSampling(unittest.TestCase):
         n_vars = len(np.unique([k for k, v in self.dbn.states]))
 
         # should return 3D numpy array, with shape of 10 x 3 x 10
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert len(samples.shape) == 3, "return from numpy3D should be 3"
         assert samples.shape == (
             10,
@@ -1632,9 +1517,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        assert isinstance(
-            samples, np.ndarray
-        ), "return from numpy3D should be numpy array"
+        assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
         assert len(samples.shape) == 3, "return from numpy3D should be 3 dimensional"
         assert samples.shape == (
             n_samples,
@@ -1643,9 +1526,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"return from numpy3D should be of size ({n_samples}, {n_vars}, {timeslices})"
 
         # check the values
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)  # must match converter ordering
 
         vars = wide.columns.get_level_values("variable").unique().tolist()
@@ -1680,9 +1561,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
 
         # it should be monotonically increasing ( instances and timewise)
-        assert (
-            panel.index.is_monotonic_increasing
-        ), "the indexes are not monotonic increasing"
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
 
         # fix seed for comparison
         seed = 42
@@ -1710,9 +1589,7 @@ class TestDBNSampling(unittest.TestCase):
             return_format="wide",
             seed=seed,
         )
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -1750,9 +1627,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
 
         # it should be monotonically increasing ( instances and timewise)
-        assert (
-            panel.index.is_monotonic_increasing
-        ), "the indexes are not monotonic increasing"
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
 
         # fix seed for comparison
         seed = 42
@@ -1779,9 +1654,7 @@ class TestDBNSampling(unittest.TestCase):
             return_format="wide",
             seed=seed,
         )
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -1819,9 +1692,7 @@ class TestDBNSampling(unittest.TestCase):
         ), f"the shape of the panel should be ({samples * timeslices}, {n_vars})"
 
         # it should be monotonically increasing ( instances and timewise)
-        assert (
-            panel.index.is_monotonic_increasing
-        ), "the indexes are not monotonic increasing"
+        assert panel.index.is_monotonic_increasing, "the indexes are not monotonic increasing"
 
         # fix seed for comparison
         seed = 42
@@ -1848,9 +1719,7 @@ class TestDBNSampling(unittest.TestCase):
             return_format="wide",
             seed=seed,
         )
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -1914,9 +1783,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -1980,9 +1847,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -2046,9 +1911,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=seed,
         )
 
-        wide.columns = pd.MultiIndex.from_tuples(
-            wide.columns, names=["variable", "time"]
-        )
+        wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
 
         vars = list(wide.columns.get_level_values("variable").unique())
@@ -2074,9 +1937,7 @@ class TestDBNSampling(unittest.TestCase):
         )
 
         # check the columns
-        assert sorted(panel.columns.copy()) == list(
-            panel.columns
-        ), "the columns has to be sorted !"
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
 
         # test columns and content
         panel = self.dbn.simulate(
@@ -2087,9 +1948,7 @@ class TestDBNSampling(unittest.TestCase):
             seed=None,
         )
 
-        assert sorted(panel.columns.copy()) == list(
-            panel.columns
-        ), "the columns has to be sorted !"
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
 
     def test_simulate_sorted_format_more_slices(self):
         # firstly try with single timeslice
@@ -2106,9 +1965,7 @@ class TestDBNSampling(unittest.TestCase):
         )
 
         # check the columns
-        assert sorted(panel.columns.copy()) == list(
-            panel.columns
-        ), "the columns has to be sorted !"
+        assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
 
 
 class TestDBNWithStateName(unittest.TestCase):
@@ -2138,12 +1995,8 @@ class TestDBNWithStateName(unittest.TestCase):
             evidence_card=[2],
             state_names=self.state_names,
         )
-        self.diff_cpd = TabularCPD(
-            ("D", 0), 2, values=[[0.6], [0.4]], state_names=self.state_names
-        )
-        self.intel_cpd = TabularCPD(
-            ("I", 0), 2, values=[[0.7], [0.3]], state_names=self.state_names
-        )
+        self.diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6], [0.4]], state_names=self.state_names)
+        self.intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7], [0.3]], state_names=self.state_names)
         self.i_i_cpd = TabularCPD(
             ("I", 1),
             2,
@@ -2170,9 +2023,7 @@ class TestDBNWithStateName(unittest.TestCase):
                 (("I", 0), ("I", 1)),
             ]
         )
-        self.network.add_cpds(
-            self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd
-        )
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
         self.network.initialize_initial_state()
         self.assertEqual(
             {cpd.variable for cpd in self.network.get_cpds()},
@@ -2184,7 +2035,7 @@ class TestDBNWithStateName(unittest.TestCase):
         )
         self.assertEqual(
             set(self.network.get_cpds(time_slice=0)),
-            set([self.diff_cpd, self.intel_cpd, self.grade_cpd]),
+            {self.diff_cpd, self.intel_cpd, self.grade_cpd},
         )
         self.assertEqual(
             {cpd.variable for cpd in self.network.get_cpds(time_slice=1)},
