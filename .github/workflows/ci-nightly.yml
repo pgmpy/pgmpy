@@ -45,7 +45,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pytest-split
           pip install .[tests]
 
       - name: Print installed packages
@@ -93,7 +92,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pytest-split
           pip install .[all,tests]
 
       - name: Print installed packages
