@@ -26,35 +26,31 @@ class TestDAGCreation(unittest.TestCase):
     def test_class_init_with_data_string(self):
         self.graph = DAG([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]])
         self.assertEqual(self.graph.latents, set())
 
         self.graph = DAG([("a", "b"), ("b", "c")], latents=["b"])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
-        )
-        self.assertEqual(self.graph.latents, set(["b"]))
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]])
+        self.assertEqual(self.graph.latents, {"b"})
 
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
-        self.graph = DAG(adj, latents=set(["a"]))
+        self.graph = DAG(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
         self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
 
     def test_class_init_with_adj_matrix_dict_of_list(self):
         adj = {"a": ["b", "c"], "b": ["c"]}
-        self.graph = DAG(adj, latents=set(["a"]))
+        self.graph = DAG(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
 
     def test_class_init_with_pd_adj_df(self):
         df = pd.DataFrame([[0, 3], [0, 0]])
-        self.graph = DAG(df, latents=set([0]))
-        self.assertEqual(self.graph.latents, set([0]))
+        self.graph = DAG(df, latents={0})
+        self.assertEqual(self.graph.latents, {0})
         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})  # None
 
@@ -104,9 +100,7 @@ class TestDAGCreation(unittest.TestCase):
         self.assertListEqual(list(self.graph.edges()), [("d", "e")])
         self.graph.add_nodes_from(["a", "b", "c"])
         self.graph.add_edge("a", "b")
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["d", "e"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["d", "e"]])
 
     def test_add_edge_nonstring(self):
         self.graph.add_edge(1, 2)
@@ -116,9 +110,7 @@ class TestDAGCreation(unittest.TestCase):
     def test_add_edges_from_string(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]])
         self.graph.add_nodes_from(["d", "e", "f"])
         self.graph.add_edges_from([("d", "e"), ("e", "f")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d", "e", "f"])
@@ -158,15 +150,11 @@ class TestDAGCreation(unittest.TestCase):
         self.assertListEqual(list(self.graph.predecessors("c")), ["b"])
 
     def test_get_leaves(self):
-        self.graph.add_edges_from(
-            [("A", "B"), ("B", "C"), ("B", "D"), ("D", "E"), ("D", "F"), ("A", "G")]
-        )
+        self.graph.add_edges_from([("A", "B"), ("B", "C"), ("B", "D"), ("D", "E"), ("D", "F"), ("A", "G")])
         self.assertEqual(sorted(self.graph.get_leaves()), sorted(["C", "G", "E", "F"]))
 
     def test_get_roots(self):
-        self.graph.add_edges_from(
-            [("A", "B"), ("B", "C"), ("B", "D"), ("D", "E"), ("D", "F"), ("A", "G")]
-        )
+        self.graph.add_edges_from([("A", "B"), ("B", "C"), ("B", "D"), ("D", "E"), ("D", "F"), ("A", "G")])
         self.assertEqual(["A"], self.graph.get_roots())
         self.graph.add_edge("H", "G")
         self.assertEqual(sorted(["A", "H"]), sorted(self.graph.get_roots()))
@@ -179,7 +167,7 @@ class TestDAGCreation(unittest.TestCase):
     def test_get_ancestral_graph(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         anc_dag = dag.get_ancestral_graph(["A", "B"])
-        self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
+        self.assertEqual(set(anc_dag.edges()), {("D", "A"), ("D", "B")})
         self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
 
     def test_to_pdag(self):
@@ -294,9 +282,7 @@ class TestDAGCreation(unittest.TestCase):
         dag2 = DAG([("A", "B"), ("B", "C"), ("C", "D"), ("A", "E"), ("E", "D")])
         self.assertEqual(dag2.minimal_dseparator(start="A", end="D"), {"C", "E"})
 
-        dag3 = DAG(
-            [("B", "A"), ("B", "C"), ("A", "D"), ("D", "C"), ("A", "E"), ("C", "E")]
-        )
+        dag3 = DAG([("B", "A"), ("B", "C"), ("A", "D"), ("D", "C"), ("A", "E"), ("C", "E")])
         self.assertEqual(dag3.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
         # With latent variables
@@ -313,9 +299,7 @@ class TestDAGCreation(unittest.TestCase):
         dag_lat4 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "C")], latents={"D"})
         self.assertIsNone(dag_lat4.minimal_dseparator(start="A", end="C"))
 
-        dag_lat5 = DAG(
-            [("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"}
-        )
+        dag_lat5 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"})
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
     @unittest.skipUnless(
@@ -367,9 +351,7 @@ class TestDAGCreation(unittest.TestCase):
                 "aaaaaaa",
                 "aaaaaaaa",
             ]
-            dag = DAG.get_random(
-                n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names
-            )
+            dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names)
             self.assertEqual(len(dag.nodes()), n_nodes)
             self.assertEqual(sorted(dag.nodes()), node_names)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
@@ -389,9 +371,7 @@ class TestDAGCreation(unittest.TestCase):
 
         # Create CPDs with specific beta values
         x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(
-            variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"]
-        )
+        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
         z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
 
         # Add CPDs to the model
@@ -427,9 +407,7 @@ class TestDAGCreation(unittest.TestCase):
 
         # Create CPDs with specific beta values
         x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(
-            variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"]
-        )
+        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
         z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
 
         # Add CPDs to the model
@@ -460,9 +438,7 @@ class TestDAGCreation(unittest.TestCase):
 
         # Create CPDs with specific beta values
         x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(
-            variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"]
-        )
+        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
         z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
 
         # Add CPDs to the model
@@ -496,9 +472,7 @@ class TestDAGCreation(unittest.TestCase):
 
         # Create CPDs with specific beta values
         x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(
-            variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"]
-        )
+        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
         z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
 
         # Add CPDs to the model
@@ -516,12 +490,8 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIn("strength", dag.edges[("Z", "Y")])
 
         # Verify stored values match computed values
-        self.assertAlmostEqual(
-            dag.edges[("X", "Y")]["strength"], strengths[("X", "Y")], places=2
-        )
-        self.assertAlmostEqual(
-            dag.edges[("Z", "Y")]["strength"], strengths[("Z", "Y")], places=2
-        )
+        self.assertAlmostEqual(dag.edges[("X", "Y")]["strength"], strengths[("X", "Y")], places=2)
+        self.assertAlmostEqual(dag.edges[("Z", "Y")]["strength"], strengths[("Z", "Y")], places=2)
 
         # Verify stored values match squared Pearson correlation
         xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
@@ -577,10 +547,8 @@ class TestDAGCreation(unittest.TestCase):
             {
                 "W": np.random.normal(0, 1, n_samples),
                 "L": np.random.normal(0, 1, n_samples),
-                "X": np.random.normal(0, 1, n_samples)
-                + 0.5 * np.random.normal(0, 1, n_samples),  # X depends on L
-                "Z": np.random.normal(0, 1, n_samples)
-                + 0.3 * np.random.normal(0, 1, n_samples),  # Z depends on W
+                "X": np.random.normal(0, 1, n_samples) + 0.5 * np.random.normal(0, 1, n_samples),  # X depends on L
+                "Z": np.random.normal(0, 1, n_samples) + 0.3 * np.random.normal(0, 1, n_samples),  # Z depends on W
                 "Y": np.random.normal(0, 1, n_samples)
                 + 0.4 * np.random.normal(0, 1, n_samples)
                 + 0.3 * np.random.normal(0, 1, n_samples),  # Y depends on X and Z
@@ -644,9 +612,7 @@ class TestDAGCreation(unittest.TestCase):
         dag = DAG([("A", "B")])
         dag.edges[("A", "B")]["strength"] = 0.789
 
-        daft_plot = dag.to_daft(
-            plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}}
-        )
+        daft_plot = dag.to_daft(plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}})
         self.assertIsNotNone(daft_plot)
 
     def test_hash(self):
@@ -687,9 +653,7 @@ class TestDAGCreation(unittest.TestCase):
         self.dag1 = self.dag1.with_role(role="latents", variables="F", inplace=False)
 
         self.assertEqual(self.dag1.latents, {"A", "B", "C", "D", "E", "F"})
-        self.assertEqual(
-            set(self.dag1.get_role("latents")), {"A", "B", "C", "D", "E", "F"}
-        )
+        self.assertEqual(set(self.dag1.get_role("latents")), {"A", "B", "C", "D", "E", "F"})
 
         with self.assertRaisesRegex(ValueError, "Variable 'G' not found in the graph."):
             self.dag1.with_role(role="latents", variables="G", inplace=True)
@@ -711,9 +675,7 @@ class TestDAGCreation(unittest.TestCase):
         self.dag1.without_role(role="latents", variables="A", inplace=True)
         self.dag1.without_role(role="latents", variables=["B", "C"], inplace=True)
         self.dag1 = self.dag1.without_role(role="latents", variables="D", inplace=False)
-        self.dag1 = self.dag1.without_role(
-            role="latents", variables=["E", "F"], inplace=False
-        )
+        self.dag1 = self.dag1.without_role(role="latents", variables=["E", "F"], inplace=False)
 
         self.assertEqual(self.dag1.latents, set())
         self.assertEqual(set(self.dag1.get_role("latents")), set())
@@ -754,26 +716,24 @@ class TestDAGParser(unittest.TestCase):
         model_from_file = DAG.from_lavaan(filename="test_model.lav")
         os.remove("test_model.lav")
 
-        expected_edges = set(
-            [
-                ("ind60", "x1"),
-                ("ind60", "x2"),
-                ("ind60", "x3"),
-                ("ind60", "dem60"),
-                ("ind60", "dem65"),
-                ("dem60", "dem65"),
-                ("dem60", "y1"),
-                ("dem60", "y2"),
-                ("dem60", "y3"),
-                ("dem60", "y4"),
-                ("dem65", "y5"),
-                ("dem65", "y6"),
-                ("dem65", "y7"),
-                ("dem65", "y8"),
-            ]
-        )
+        expected_edges = {
+            ("ind60", "x1"),
+            ("ind60", "x2"),
+            ("ind60", "x3"),
+            ("ind60", "dem60"),
+            ("ind60", "dem65"),
+            ("dem60", "dem65"),
+            ("dem60", "y1"),
+            ("dem60", "y2"),
+            ("dem60", "y3"),
+            ("dem60", "y4"),
+            ("dem65", "y5"),
+            ("dem65", "y6"),
+            ("dem65", "y7"),
+            ("dem65", "y8"),
+        }
 
-        expected_latents = set(["dem60", "dem65", "ind60"])
+        expected_latents = {"dem60", "dem65", "ind60"}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
@@ -790,16 +750,14 @@ class TestDAGParser(unittest.TestCase):
                        """
 
         model_from_str = DAG.from_lavaan(string=model_str)
-        expected_edges = set(
-            [
-                ("ind60", "x1"),
-                ("ind60", "x2"),
-                ("ind60", "x3"),
-                ("ind60", "dem60"),
-            ]
-        )
+        expected_edges = {
+            ("ind60", "x1"),
+            ("ind60", "x2"),
+            ("ind60", "x3"),
+            ("ind60", "dem60"),
+        }
 
-        expected_latents = set(["ind60"])
+        expected_latents = {"ind60"}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
 
@@ -816,17 +774,15 @@ class TestDAGParser(unittest.TestCase):
         model_from_file = DAG.from_dagitty(filename="test_model.dagitty")
         os.remove("test_model.dagitty")
 
-        expected_edges = set(
-            [
-                ("smoking", "cancer"),
-                ("smoking", "carry matches"),
-                ("carry matches", "cancer"),
-                ("u_coffee_smoking", "coffee"),
-                ("u_coffee_smoking", "smoking"),
-            ]
-        )
+        expected_edges = {
+            ("smoking", "cancer"),
+            ("smoking", "carry matches"),
+            ("carry matches", "cancer"),
+            ("u_coffee_smoking", "coffee"),
+            ("u_coffee_smoking", "smoking"),
+        }
 
-        expected_latents = set(["u_coffee_smoking"])
+        expected_latents = {"u_coffee_smoking"}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_file.edges()), expected_edges)
         self.assertEqual(set(model_from_str.latents), expected_latents)
@@ -835,28 +791,24 @@ class TestDAGParser(unittest.TestCase):
     def test_from_dagitty_isolated_nodes(self):
         dag1 = DAG.from_dagitty("dag { A -> B C D -> E F G H} ")
         dag2 = DAG.from_dagitty("dag { A }")
-        self.assertEqual(
-            set(dag1.nodes()), set(["A", "B", "C", "D", "E", "F", "G", "H"])
-        )
-        self.assertEqual(set(dag2.nodes()), set(["A"]))
+        self.assertEqual(set(dag1.nodes()), {"A", "B", "C", "D", "E", "F", "G", "H"})
+        self.assertEqual(set(dag2.nodes()), {"A"})
         self.assertEqual(
             set(dag1.edges()),
-            set([("A", "B"), ("D", "E")]),
+            {("A", "B"), ("D", "E")},
         )
         self.assertEqual(
             set(dag2.edges()),
-            set([]),
+            set(),
         )
 
     def test_from_daggitty_single_line_with_group_of_vars(self):
-        dag = DAG.from_dagitty(
-            'dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}'
-        )
+        dag = DAG.from_dagitty('dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}')
         self.assertEqual(
             set(dag.edges()),
-            set([("X", "Z"), ("X", "Y"), ("Z", "A"), ("A", "B"), ("C", "B")]),
+            {("X", "Z"), ("X", "Y"), ("Z", "A"), ("A", "B"), ("C", "B")},
         )
-        self.assertEqual(set(dag.latents), set(["X"]))
+        self.assertEqual(set(dag.latents), {"X"})
 
     def test_from_dagitty_multiline_with_display_info(self):
         dag = DAG.from_dagitty(
@@ -873,10 +825,8 @@ class TestDAGParser(unittest.TestCase):
                 }
         """
         )
-        self.assertEqual(
-            set(dag.edges()), set([("X.1", "Y"), ("X.1", "Z"), ("Z", "123")])
-        )
-        self.assertEqual(set(dag.latents), set(["Z"]))
+        self.assertEqual(set(dag.edges()), {("X.1", "Y"), ("X.1", "Z"), ("Z", "123")})
+        self.assertEqual(set(dag.latents), {"Z"})
 
     def test_from_dagitty_empty(self):
         dag1 = DAG.from_dagitty(
@@ -915,9 +865,7 @@ class TestDAGMoralization(unittest.TestCase):
             hf.recursive_sorted(moral_graph.edges()),
             [["diff", "grade"], ["diff", "intel"], ["grade", "intel"]],
         )
-        self.assertEqual(
-            sorted(moral_graph.nodes()), ["diff", "disconnected", "grade", "intel"]
-        )
+        self.assertEqual(sorted(moral_graph.nodes()), ["diff", "disconnected", "grade", "intel"])
 
     def test_get_children(self):
         self.assertListEqual(sorted(self.graph.get_children("diff")), ["grade"])
@@ -1313,9 +1261,7 @@ TGFBR3.8 -> TGFBR3.9
 
         # Test basic properties
         self.assertEqual(len(dag.nodes()), 36)  # All node variables
-        self.assertEqual(
-            len(dag.edges()), 60
-        )  # Exact number of edges in this complex model
+        self.assertEqual(len(dag.edges()), 60)  # Exact number of edges in this complex model
         result_dagitty = dag.to_dagitty()
 
         self.assertTrue(result_dagitty.startswith("dag {"))
@@ -1479,6 +1425,4 @@ TGFBR3.8 -> TGFBR3.9
 
         for parent, child in original_dag.edges():
             expected_edge_str = f"{parent} -> {child}"
-            self.assertIn(
-                expected_edge_str, dagitty_output, f"Missing edge: {expected_edge_str}"
-            )
+            self.assertIn(expected_edge_str, dagitty_output, f"Missing edge: {expected_edge_str}")

@@ -26,9 +26,7 @@ class _BaseIdentification:
     def _validate_causal_graph(self, causal_graph):
         # Check if the passed causal_graph is supported by the method.
         if not isinstance(causal_graph, self.supported_graph_types):
-            raise ValueError(
-                f"The `causal_graph` must be an instance of {self.supported_graph_types} for this method."
-            )
+            raise ValueError(f"The `causal_graph` must be an instance of {self.supported_graph_types} for this method.")
 
         # Check if causal_graph has `exposure` and `outcome` roles assigned.
         causal_graph.is_valid_causal_structure()

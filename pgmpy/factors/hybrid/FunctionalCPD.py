@@ -102,12 +102,8 @@ class FunctionalCPD(BaseFactor):
                 raise TypeError("`parent_sample` must be a pandas DataFrame.")
 
             if not all(parent in parent_sample.columns for parent in self.parents):
-                missing_parents = [
-                    p for p in self.parents if p not in parent_sample.columns
-                ]
-                raise ValueError(
-                    f"Missing values for parent variables: {missing_parents}"
-                )
+                missing_parents = [p for p in self.parents if p not in parent_sample.columns]
+                raise ValueError(f"Missing values for parent variables: {missing_parents}")
             if len(parent_sample) != n_samples:
                 raise ValueError("Length of `parent_sample` must match `n_samples`.")
 
@@ -119,14 +115,10 @@ class FunctionalCPD(BaseFactor):
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
                     parents_t = {
-                        p: torch.as_tensor(
-                            row[p], dtype=config.get_dtype(), device=config.get_device()
-                        )
+                        p: torch.as_tensor(row[p], dtype=config.get_dtype(), device=config.get_device())
                         for p in self.parents
                     }
-                    sampled_values.append(
-                        pyro.sample(f"{self.variable}", self.fn(parents_t)).item()
-                    )
+                    sampled_values.append(pyro.sample(f"{self.variable}", self.fn(parents_t)).item())
 
         else:
             if self.vectorized:
@@ -135,9 +127,7 @@ class FunctionalCPD(BaseFactor):
                 sampled_values = samples.detach().numpy()
             else:
                 for i in range(n_samples):
-                    sampled_values.append(
-                        pyro.sample(f"{self.variable}", self.fn(parent_sample)).item()
-                    )
+                    sampled_values.append(pyro.sample(f"{self.variable}", self.fn(parent_sample)).item())
 
         sampled_values = np.array(sampled_values)
 
