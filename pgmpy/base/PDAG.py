@@ -191,11 +191,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
             latents=self.latents,
+            roles=self.get_role_dict(),
         )
         pdag.add_nodes_from(self.nodes())
-
-        for role, vars in self.get_role_dict().items():
-            pdag.with_role(role=role, variables=vars, inplace=True)
         return pdag
 
     def _directed_graph(self):

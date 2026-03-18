@@ -57,6 +57,30 @@ class TestADMGInitialization:
         assert set(admg.get_roles()) == {"exposures", "outcomes"}
         assert admg.get_role_dict() == {"exposures": ["A", "B"], "outcomes": ["C"]}
 
+    def test_copy(self):
+        """Test ADMG copying."""
+        directed_edges = [("A", "B"), ("B", "C")]
+        bidirected_edges = [("X", "Y")]
+        latents = ["A"]
+        roles = {"exposures": "A", "outcomes": "C"}
+        admg = ADMG(
+            directed_ebunch=directed_edges,
+            bidirected_ebunch=bidirected_edges,
+            latents=latents,
+            roles=roles,
+        )
+        admg_copy = admg.copy()
+
+        assert set(admg_copy.nodes()) == set(admg.nodes())
+        assert sorted(admg_copy.edges(data=True)) == sorted(admg.edges(data=True))
+        assert admg_copy.latents == admg.latents
+        assert admg_copy.get_role_dict() == admg.get_role_dict()
+        assert isinstance(admg_copy, ADMG)
+
+        # Verify it's a deep copy of the graph structure
+        admg_copy.add_node("Z")
+        assert "Z" not in admg.nodes()
+
     def test_latents_with_role(self):
         admg = ADMG(
             directed_ebunch=[("X", "Y")],

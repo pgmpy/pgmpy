@@ -719,6 +719,38 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
 
         return m_connected_set
 
+    def copy(self):
+        """
+        Returns a copy of the ADMG object.
+
+        Returns
+        -------
+        ADMG
+            A copy of the ADMG object.
+        """
+        # Get directed and bidirected edges
+        directed_ebunch = []
+        bidirected_ebunch = []
+        processed_bidirected = set()
+
+        for u, v, data in self.edges(data=True):
+            if data.get("type") == "directed":
+                directed_ebunch.append((u, v))
+            elif data.get("type") == "bidirected":
+                pair = tuple(sorted((u, v)))
+                if pair not in processed_bidirected:
+                    bidirected_ebunch.append((u, v))
+                    processed_bidirected.add(pair)
+
+        admg_copy = ADMG(
+            directed_ebunch=directed_ebunch,
+            bidirected_ebunch=bidirected_ebunch,
+            latents=self.latents.copy(),
+            roles=self.get_role_dict(),
+        )
+        admg_copy.add_nodes_from(self.nodes())
+        return admg_copy
+
     def __eq__(self, other):
         """
         Check if two ADMGs are equal.

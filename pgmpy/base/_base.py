@@ -377,38 +377,23 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
     def copy(self):
         """
-        Returns a deep copy of the graph object.
-
-        Parameters
-        ----------
-        None
+        Returns a copy of the graph object.
 
         Returns
         -------
         graph: graph object
             A copy of the graph object.
-
-        Notes
-        -----
-        This method is expected to be usable without being implemented in a subclass of the graph class.
-
-        Examples
-        --------
-        >>> from pgmpy.base._base import _CoreGraph
-        >>> G1 = _CoreGraph()
-        >>> G2 = G1.copy()
-        >>> G2.__class__
-        <class 'pgmpy.base._base._CoreGraph'>
-
         """
-        ebunch = [(u, v, key, edge_type) for u, v, key, edge_type in self.edges(keys=True, data=True)]
+        ebunch = self.get_edges(keys=True, data=True)
 
-        graph_copy = self.__class__()
+        graph_copy = self.__class__(
+            ebunch=ebunch,
+            exposures=self.exposures.copy(),
+            outcomes=self.outcomes.copy(),
+            latents=self.latents.copy(),
+            roles=self.get_role_dict(),
+        )
         graph_copy.add_nodes_from(self.nodes(data=True))
-        for u, v, key, edge_type in ebunch:
-            graph_copy.add_edge(u, v, edge_type=edge_type, key=key)
-        for role, vars in self.get_role_dict().items():
-            graph_copy.with_role(role=role, variables=vars, inplace=True)
 
         return graph_copy
 
