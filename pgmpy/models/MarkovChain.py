@@ -383,9 +383,9 @@ class MarkovChain(object):
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1: 0.75}}
         >>> model.add_transition_model("diff", diff_tm)
         >>> gen = model.generate_sample([State("intel", 0), State("diff", 0)], 2)
-        >>> state = model.random_state()
-        >>> len(state)
-        2
+        >>> [sample for sample in gen] # doctest: +SKIP
+        [[State(var='intel', state=2), State(var='diff', state=1)],
+         [State(var='intel', state=2), State(var='diff', state=0)]]
         """
         if start_state is None:
             if self.state is None:
@@ -482,9 +482,8 @@ class MarkovChain(object):
         --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC(["intel", "diff"], [2, 3])
-        >>> state = model.random_state()
-        >>> len(state)
-        2
+        >>> model.random_state() # doctest: +SKIP
+        [State(var='diff', state=2), State(var='intel', state=1)]
         """
         return [
             State(var, np.random.randint(self.cardinalities[var]))
