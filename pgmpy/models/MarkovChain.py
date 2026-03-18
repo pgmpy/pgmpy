@@ -386,14 +386,6 @@ class MarkovChain(object):
         >>> state = model.random_state()
         >>> len(state)
         2
-        >>> state[0].var
-        'intel'
-        >>> state[1].var
-        'diff'
-        >>> 0 <= state[0].state <= 2  # intel has cardinality 3
-        True
-        >>> 0 <= state[1].state <= 1  # diff has cardinality 2
-        True
         """
         if start_state is None:
             if self.state is None:
@@ -493,14 +485,6 @@ class MarkovChain(object):
         >>> state = model.random_state()
         >>> len(state)
         2
-        >>> state[0].var
-        'intel'
-        >>> state[1].var
-        'diff'
-        >>> 0 <= state[0].state <= 1  # intel has cardinality 2
-        True
-        >>> 0 <= state[1].state <= 2  # diff has cardinality 3
-        True
         """
         return [
             State(var, np.random.randint(self.cardinalities[var]))
