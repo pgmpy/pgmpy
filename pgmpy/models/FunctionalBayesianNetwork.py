@@ -548,3 +548,67 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             return dict(pyro.get_param_store().items())
         else:
             return mcmc.get_samples()
+
+    def predict(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict missing values in the given DataFrame using Functional CPDs.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            Input data with possible missing values.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with predicted values.
+        """
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(
+                f"data should be a pandas.DataFrame object. Got: {type(data)}."
+            )
+
+        data = data.copy()
+        nodes = list(nx.topological_sort(self))
+
+        # Multiple passes to resolve dependencies
+        for _ in range(len(nodes)):
+            for index in data.index:
+                for node in nodes:
+
+                    if pd.isna(data.at[index, node]):
+
+                        cpd = self.get_cpds(node)
+
+                        if cpd is None:
+                            raise ValueError(f"No CPD associated with {node}")
+                        parents = cpd.parents
+
+                        # Get parent values
+                        if parents:
+                            parent_values = data.loc[index, parents]
+
+                            # Skip if parents are missing
+                            if parent_values.isnull().any():
+                                continue
+
+                            parent_dict = {p: parent_values[p] for p in parents}
+                        else:
+                            parent_dict = {}
+
+                        try:
+                            # Generate distribution
+                            dist = cpd.fn(parent_dict)
+
+                            # Prefer deterministic prediction (mean if available)
+                            value = dist.mean if hasattr(dist, "mean") else dist.sample()
+                            value = value.item() if hasattr(value, "item") else value
+
+                            # Fill missing value
+                            data.at[index, node] = value
+
+                        except Exception as e:
+                            logger.warning(f"Prediction failed for node {node}: {e}")
+                            continue
+
+        return data
