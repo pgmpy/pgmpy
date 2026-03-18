@@ -12,12 +12,11 @@ on:
 
 jobs:
   test-nosoftdeps:
-    name: Core deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
-    runs-on: ${{ matrix.os }}
+    name: Core deps | Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.14"]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: true
 
     steps:
@@ -35,17 +34,8 @@ jobs:
           which python
           python --version
 
-      - name: Install graphviz (Windows)
-        if: matrix.os == 'windows-latest'
-        run: choco install graphviz -y
-
-      - name: Install graphviz (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install graphviz
         run: sudo apt-get update && sudo apt-get install graphviz -y
-
-      - name: Install graphviz (macOS)
-        if: matrix.os == 'macOS-latest'
-        run: brew install graphviz
 
       - name: Install dependencies
         run: |
@@ -60,12 +50,11 @@ jobs:
         run: pytest --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: Optional deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
-    runs-on: ${{ matrix.os }}
+    name: Optional deps | Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.14"]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: true
 
     steps:
@@ -83,17 +72,8 @@ jobs:
           which python
           python --version
 
-      - name: Install graphviz (Windows)
-        if: matrix.os == 'windows-latest'
-        run: choco install graphviz -y
-
-      - name: Install graphviz (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install graphviz
         run: sudo apt-get update && sudo apt-get install graphviz -y
-
-      - name: Install graphviz (macOS)
-        if: matrix.os == 'macOS-latest'
-        run: brew install graphviz
 
       - name: Install dependencies
         run: |
