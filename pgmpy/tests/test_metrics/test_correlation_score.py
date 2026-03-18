@@ -26,16 +26,12 @@ def test_discrete_network(model_and_data):
         "modified_log_likelihood",
     }:
         for score in {f1_score, accuracy_score}:
-            corr_scorer = CorrelationScore(
-                ci_test=test, score=score, return_summary=False
-            )
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=False)
 
             metric = corr_scorer(X=alarm_data, causal_graph=alarm_model)
             assert isinstance(metric, float)
 
-            corr_scorer = CorrelationScore(
-                ci_test=test, score=score, return_summary=True
-            )
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=True)
             metric_summary = corr_scorer(X=alarm_data, causal_graph=alarm_model)
             assert isinstance(metric_summary, pd.DataFrame)
 

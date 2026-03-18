@@ -17,12 +17,8 @@ class TestLGBNMethods(unittest.TestCase):
     def setUp(self):
         self.model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         self.cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=4)
-        self.cpd2 = LinearGaussianCPD(
-            variable="x2", beta=[-5, 0.5], std=4, evidence=["x1"]
-        )
-        self.cpd3 = LinearGaussianCPD(
-            variable="x3", beta=[4, -1], std=3, evidence=["x2"]
-        )
+        self.cpd2 = LinearGaussianCPD(variable="x2", beta=[-5, 0.5], std=4, evidence=["x1"])
+        self.cpd3 = LinearGaussianCPD(variable="x3", beta=[4, -1], std=3, evidence=["x2"])
 
     def test_cpds_simple(self):
         self.assertEqual("x1", self.cpd1.variable)
@@ -138,9 +134,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_not_implemented_methods(self):
         self.assertRaises(ValueError, self.model.get_cardinality, "x1")
         self.assertRaises(NotImplementedError, self.model.to_markov_model)
-        self.assertRaises(
-            NotImplementedError, self.model.is_imap, [[1, 2, 3], [1, 5, 6]]
-        )
+        self.assertRaises(NotImplementedError, self.model.is_imap, [[1, 2, 3], [1, 5, 6]])
 
     def test_simulate(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
@@ -162,9 +156,7 @@ class TestLGBNMethods(unittest.TestCase):
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
 
-        missing_vars, mean_cond, cov_cond = self.model.predict_probability(
-            pd.DataFrame([evidence])
-        )
+        missing_vars, mean_cond, cov_cond = self.model.predict_probability(pd.DataFrame([evidence]))
         sorted_indices = np.argsort(missing_vars)
         missing_vars = [missing_vars[i] for i in sorted_indices]
         mean_cond = mean_cond[:, sorted_indices]
@@ -174,12 +166,8 @@ class TestLGBNMethods(unittest.TestCase):
         samples = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=10000)
         df_equ = pd.DataFrame(samples, columns=missing_vars)
 
-        np_test.assert_array_almost_equal(
-            df.mean()[["x2", "x3"]], df_equ.mean(), decimal=5
-        )
-        np_test.assert_array_almost_equal(
-            df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=5
-        )
+        np_test.assert_array_almost_equal(df.mean()[["x2", "x3"]], df_equ.mean(), decimal=5)
+        np_test.assert_array_almost_equal(df.cov()[["x2", "x3"]].loc[["x2", "x3"]], df_equ.cov(), decimal=5)
 
     def test_simulate_with_intervention(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
@@ -201,9 +189,7 @@ class TestLGBNMethods(unittest.TestCase):
         new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
         virtual_intervention = [new_cpd]
 
-        df = self.model.simulate(
-            n_samples=100_000, seed=42, virtual_intervention=virtual_intervention
-        )
+        df = self.model.simulate(n_samples=100_000, seed=42, virtual_intervention=virtual_intervention)
 
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 4, 100_000)
@@ -219,12 +205,8 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         self.model.latents.add("x2")
 
-        df_with_latents = self.model.simulate(
-            n_samples=1000, seed=42, include_latents=True
-        )
-        df_without_latents = self.model.simulate(
-            n_samples=1000, seed=42, include_latents=False
-        )
+        df_with_latents = self.model.simulate(n_samples=1000, seed=42, include_latents=True)
+        df_without_latents = self.model.simulate(n_samples=1000, seed=42, include_latents=False)
 
         for latent_var in self.model.latents:
             self.assertIn(latent_var, df_with_latents.columns)
@@ -232,23 +214,17 @@ class TestLGBNMethods(unittest.TestCase):
         for latent_var in self.model.latents:
             self.assertNotIn(latent_var, df_without_latents.columns)
 
-        non_latent_vars = [
-            node for node in self.model.nodes() if node not in self.model.latents
-        ]
+        non_latent_vars = [node for node in self.model.nodes() if node not in self.model.latents]
         for var in non_latent_vars:
             self.assertIn(var, df_with_latents.columns)
             self.assertIn(var, df_without_latents.columns)
 
     def test_simulate_against_manual_results(self):
-        model = LinearGaussianBayesianNetwork(
-            [("X1", "X2"), ("X1", "X3"), ("X2", "X3")]
-        )
+        model = LinearGaussianBayesianNetwork([("X1", "X2"), ("X1", "X3"), ("X2", "X3")])
 
         cpd_X1 = LinearGaussianCPD("X1", beta=[0.0], std=1.0, evidence=[])
         cpd_X2 = LinearGaussianCPD("X2", beta=[0.0, 2.0], std=1.0, evidence=["X1"])
-        cpd_X3 = LinearGaussianCPD(
-            "X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"]
-        )
+        cpd_X3 = LinearGaussianCPD("X3", beta=[0.0, -1.0, 0.5], std=1.0, evidence=["X1", "X2"])
 
         model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
 
@@ -328,9 +304,7 @@ class TestLGBNMethods(unittest.TestCase):
 
             for index, evid_var in enumerate(cpd_orig.evidence):
                 est_index = cpd_est.evidence.index(evid_var)
-                self.assertTrue(
-                    abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1
-                )
+                self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1)
 
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -340,7 +314,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=int(10), seed=42)
+        df = self.model.simulate(n_samples=10, seed=42)
         df = df.drop("x2", axis=1)
 
         result = self.model.predict(df)
@@ -358,7 +332,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_ecoli(self):
         model = get_example_model("ecoli70")
-        df = model.simulate(n_samples=int(10), seed=18)
+        df = model.simulate(n_samples=10, seed=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
         result = model.predict(df)
 
@@ -417,7 +391,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_probability_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=int(10), seed=42)
+        df = self.model.simulate(n_samples=10, seed=42)
         df = df.drop("x2", axis=1)
         variables, mu, cov = self.model.predict_probability(df)
 
@@ -447,23 +421,15 @@ class TestLGBNMethods(unittest.TestCase):
         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
         model2 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.1)
         self.assertNotEqual(model1.edges(), model2.edges())
-        self.assertIsInstance(
-            model1, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
-        self.assertIsInstance(
-            model2, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
+        self.assertIsInstance(model1, LinearGaussianBayesianNetwork, "Incorrect instance")
+        self.assertIsInstance(model2, LinearGaussianBayesianNetwork, "Incorrect instance")
 
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
-        model3 = LinearGaussianBayesianNetwork.get_random(
-            n_nodes=5, edge_prob=0.5, node_names=node_names
-        )
+        model3 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, node_names=node_names)
         self.assertEqual(len(model3.nodes()), 5)
         self.assertEqual(sorted(model3.nodes()), node_names)
         self.assertEqual(len(model3.cpds), 5)
-        self.assertIsInstance(
-            model3, LinearGaussianBayesianNetwork, "Incorrect instance"
-        )
+        self.assertIsInstance(model3, LinearGaussianBayesianNetwork, "Incorrect instance")
 
     def test_log_likelihood(self):
         # Test log likelihood with dataframes
@@ -475,17 +441,11 @@ class TestLGBNMethods(unittest.TestCase):
         x2 = -5 + 0.5 * x1 + np.random.normal(0, 4, 100)
         x3 = 4 - 1 * x2 + np.random.normal(0, 3, 100)
         good_fit = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
-        bad_fit = pd.DataFrame(
-            np.random.normal(0, 10, (100, 3)), columns=["x1", "x2", "x3"]
-        )
+        bad_fit = pd.DataFrame(np.random.normal(0, 10, (100, 3)), columns=["x1", "x2", "x3"])
         ll_good = self.model.log_likelihood(good_fit)
         ll_bad = self.model.log_likelihood(bad_fit)
-        self.assertIsInstance(
-            ll_good, float, "Expected log_likelihood to return a float."
-        )
-        self.assertIsInstance(
-            ll_bad, float, "Expected log_likelihood to return a float."
-        )
+        self.assertIsInstance(ll_good, float, "Expected log_likelihood to return a float.")
+        self.assertIsInstance(ll_bad, float, "Expected log_likelihood to return a float.")
         self.assertGreater(
             ll_good,
             ll_bad,
@@ -510,21 +470,21 @@ class TestLGBNMethods(unittest.TestCase):
 class TestLGBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
-        self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+        self.graph = LinearGaussianBayesianNetwork(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
         self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
 
     def test_class_init_with_adj_matrix_dict_of_list(self):
         adj = {"a": ["b", "c"], "b": ["c"]}
-        self.graph = LinearGaussianBayesianNetwork(adj, latents=set(["a"]))
+        self.graph = LinearGaussianBayesianNetwork(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
 
     def test_class_init_with_pd_adj_df(self):
         df = pd.DataFrame([[0, 3], [0, 0]])
-        self.graph = LinearGaussianBayesianNetwork(df, latents=set([0]))
-        self.assertEqual(self.graph.latents, set([0]))
+        self.graph = LinearGaussianBayesianNetwork(df, latents={0})
+        self.assertEqual(self.graph.latents, {0})
         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
 
@@ -533,13 +493,13 @@ class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
         model_str = "d ~ i"
         model_from_str = LinearGaussianBayesianNetwork.from_lavaan(string=model_str)
-        expected_edges = set([("i", "d")])
+        expected_edges = {("i", "d")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
 
     def test_from_dagitty(self):
         model_str = """dag{ smoking -> "carry matches" }"""
         model_from_str = LinearGaussianBayesianNetwork.from_dagitty(string=model_str)
-        expected_edges = set([("smoking", "carry matches")])
+        expected_edges = {("smoking", "carry matches")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
 
     def test_from_dagitty_DAG_ctor(self):
@@ -555,16 +515,12 @@ class TestDAGParser(unittest.TestCase):
         }"""
         model_from_str = DAG.from_dagitty(model_str)
         self.assertIsInstance(model_from_str, LinearGaussianBayesianNetwork)
-        self.assertEqual(
-            sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"]
-        )
-        expected_edges = set(
-            [
-                ("smoking", "carry matches"),
-                ("smoking", "cancer"),
-                ("carry matches", "cancer"),
-            ]
-        )
+        self.assertEqual(sorted(model_from_str.nodes()), ["cancer", "carry matches", "smoking"])
+        expected_edges = {
+            ("smoking", "carry matches"),
+            ("smoking", "cancer"),
+            ("carry matches", "cancer"),
+        }
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(model_from_str.check_model(), True)
 
@@ -578,9 +534,7 @@ class TestDAGParser(unittest.TestCase):
 
         # Check variable names
         self.assertEqual(model_from_str.get_cpds("cancer").variable, "cancer")
-        self.assertEqual(
-            model_from_str.get_cpds("carry matches").variable, "carry matches"
-        )
+        self.assertEqual(model_from_str.get_cpds("carry matches").variable, "carry matches")
         self.assertEqual(model_from_str.get_cpds("smoking").variable, "smoking")
 
         # Check evidences
@@ -588,9 +542,7 @@ class TestDAGParser(unittest.TestCase):
             sorted(model_from_str.get_cpds("cancer").evidence),
             ["carry matches", "smoking"],
         )
-        self.assertEqual(
-            sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"]
-        )
+        self.assertEqual(sorted(model_from_str.get_cpds("carry matches").evidence), ["smoking"])
         self.assertEqual(sorted(model_from_str.get_cpds("smoking").evidence), [])
 
         # Check if the betas specified were correctly set

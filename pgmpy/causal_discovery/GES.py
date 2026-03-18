@@ -1,5 +1,5 @@
+from collections.abc import Hashable
 from itertools import combinations
-from typing import Hashable, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -116,8 +116,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        scoring_method: str | StructureScore | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
         use_cache: bool = True,
@@ -130,7 +130,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def _legal_edge_additions(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be added to the graph such that
         it remains a DAG.
@@ -138,19 +138,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
             if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u) and (
-                    (u, v) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, v, u) and ((u, v) not in expert_knowledge.forbidden_edges):
                     edges.append((u, v))
-                if not nx.has_path(current_model, u, v) and (
-                    (v, u) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, u, v) and ((v, u) not in expert_knowledge.forbidden_edges):
                     edges.append((v, u))
         return edges
 
     def _legal_edge_removals(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be removed from the graph.
         """
@@ -162,7 +158,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def _legal_edge_flips(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be flipped such that the model
         remains a DAG.
@@ -170,9 +166,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
-            if ((u, v) not in expert_knowledge.required_edges) and (
-                (v, u) not in expert_knowledge.forbidden_edges
-            ):
+            if ((u, v) not in expert_knowledge.required_edges) and ((v, u) not in expert_knowledge.forbidden_edges):
                 current_model.remove_edge(u, v)
                 if not nx.has_path(current_model, u, v):
                     potential_flips.append((v, u))
@@ -209,21 +203,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(X.columns)
 
-        expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, only_edges=False
-        )
+        expert_knowledge._orient_temporal_forbidden_edges(current_model, only_edges=False)
 
         while True:
-            potential_edges = self._legal_edge_additions(
-                current_model, expert_knowledge
-            )
+            potential_edges = self._legal_edge_additions(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_edges))
 
             for index, (u, v) in enumerate(potential_edges):
                 current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, current_parents + [u]) - score_fn(
-                    v, current_parents
-                )
+                score_deltas[index] = score_fn(v, current_parents + [u]) - score_fn(v, current_parents)
 
             if len(potential_edges) == 0 or np.all(score_deltas < self.min_improvement):
                 break
@@ -232,20 +220,16 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             current_model.add_edge(edge_to_add[0], edge_to_add[1])
 
         while True:
-            potential_removals = self._legal_edge_removals(
-                current_model, expert_knowledge
-            )
+            potential_removals = self._legal_edge_removals(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
                 current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(
-                    v, [node for node in current_parents if node != u]
-                ) - score_fn(v, current_parents)
+                score_deltas[index] = score_fn(v, [node for node in current_parents if node != u]) - score_fn(
+                    v, current_parents
+                )
 
-            if len(potential_removals) == 0 or np.all(
-                score_deltas < self.min_improvement
-            ):
+            if len(potential_removals) == 0 or np.all(score_deltas < self.min_improvement):
                 break
 
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
@@ -258,11 +242,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             for index, (u, v) in enumerate(potential_flips):
                 v_parents = current_model.get_parents(v)
                 u_parents = current_model.get_parents(u)
-                score_deltas[index] = (
-                    score_fn(v, v_parents + [u]) - score_fn(v, v_parents)
-                ) + (
-                    score_fn(u, [node for node in u_parents if node != v])
-                    - score_fn(u, u_parents)
+                score_deltas[index] = (score_fn(v, v_parents + [u]) - score_fn(v, v_parents)) + (
+                    score_fn(u, [node for node in u_parents if node != v]) - score_fn(u, u_parents)
                 )
 
             if len(potential_flips) == 0 or np.all(score_deltas < self.min_improvement):
@@ -277,12 +258,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         elif self.return_type.lower() == "pdag":
             self.causal_graph_ = current_model.to_pdag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self

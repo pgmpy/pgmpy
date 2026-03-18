@@ -61,46 +61,30 @@ class TestFactorSet:
         factor_set = FactorSet(phi1, phi2, phi3, phi4)
         factor_set.marginalize(["x1", "x5"], inplace=True)
 
-        phi1_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x2", "x3"}, factor_set.factors)
-        )[0]
+        phi1_equiv = list(filter(lambda x: set(x.scope()) == {"x2", "x3"}, factor_set.factors))[0]
         assert phi1.marginalize(["x1"], inplace=False) == phi1_equiv
 
-        phi2_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x4", "x3"}, factor_set.factors)
-        )[0]
+        phi2_equiv = list(filter(lambda x: set(x.scope()) == {"x4", "x3"}, factor_set.factors))[0]
         assert phi2.marginalize(["x1"], inplace=False) == phi2_equiv
 
-        phi3_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x6", "x7"}, factor_set.factors)
-        )[0]
+        phi3_equiv = list(filter(lambda x: set(x.scope()) == {"x6", "x7"}, factor_set.factors))[0]
         assert phi3.marginalize(["x5"], inplace=False) == phi3_equiv
 
-        phi4_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x8", "x7"}, factor_set.factors)
-        )[0]
+        phi4_equiv = list(filter(lambda x: set(x.scope()) == {"x8", "x7"}, factor_set.factors))[0]
         assert phi4.marginalize(["x5"], inplace=False) == phi4_equiv
 
     def test_factorset_marginalize_not_inplace(self, phi1, phi2, phi3, phi4):
         factor_set = FactorSet(phi1, phi2, phi3, phi4)
         new_factor_set = factor_set.marginalize(["x1", "x5"], inplace=False)
 
-        phi1_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x2", "x3"}, new_factor_set.factors)
-        )[0]
+        phi1_equiv = list(filter(lambda x: set(x.scope()) == {"x2", "x3"}, new_factor_set.factors))[0]
         assert phi1.marginalize(["x1"], inplace=False) == phi1_equiv
 
-        phi2_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x4", "x3"}, new_factor_set.factors)
-        )[0]
+        phi2_equiv = list(filter(lambda x: set(x.scope()) == {"x4", "x3"}, new_factor_set.factors))[0]
         assert phi2.marginalize(["x1"], inplace=False) == phi2_equiv
 
-        phi3_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x6", "x7"}, new_factor_set.factors)
-        )[0]
+        phi3_equiv = list(filter(lambda x: set(x.scope()) == {"x6", "x7"}, new_factor_set.factors))[0]
         assert phi3.marginalize(["x5"], inplace=False) == phi3_equiv
 
-        phi4_equiv = list(
-            filter(lambda x: set(x.scope()) == {"x8", "x7"}, new_factor_set.factors)
-        )[0]
+        phi4_equiv = list(filter(lambda x: set(x.scope()) == {"x8", "x7"}, new_factor_set.factors))[0]
         assert phi4.marginalize(["x5"], inplace=False) == phi4_equiv
