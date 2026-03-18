@@ -187,14 +187,13 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         Copy of PDAG: pgmpy.dag.PDAG
             Returns a copy of self.
         """
-        pdag = PDAG(
-            directed_ebunch=list(self.directed_edges.copy()),
-            undirected_ebunch=list(self.undirected_edges.copy()),
-            latents=self.latents,
-            roles=self.get_role_dict(),
-        )
-        pdag.add_nodes_from(self.nodes())
-        return pdag
+        new_pdag = super().copy()
+        for node in new_pdag.nodes:
+            if "roles" in new_pdag.nodes[node]:
+                new_pdag.nodes[node]["roles"] = new_pdag.nodes[node]["roles"].copy()
+        new_pdag.directed_edges = self.directed_edges.copy()
+        new_pdag.undirected_edges = self.undirected_edges.copy()
+        return new_pdag
 
     def _directed_graph(self):
         """

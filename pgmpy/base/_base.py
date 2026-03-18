@@ -384,18 +384,16 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
         graph: graph object
             A copy of the graph object.
         """
-        ebunch = self.get_edges(keys=True, data=True)
+        new_graph = self.__class__()
+        new_graph.add_nodes_from(self.nodes(data=True))
+        for u, v, key, data in self.edges(keys=True, data=True):
+            nx.MultiGraph.add_edge(new_graph, u, v, key=key, **data)
 
-        graph_copy = self.__class__(
-            ebunch=ebunch,
-            exposures=self.exposures.copy(),
-            outcomes=self.outcomes.copy(),
-            latents=self.latents.copy(),
-            roles=self.get_role_dict(),
-        )
-        graph_copy.add_nodes_from(self.nodes(data=True))
+        for node in new_graph.nodes:
+            if "roles" in new_graph.nodes[node]:
+                new_graph.nodes[node]["roles"] = new_graph.nodes[node]["roles"].copy()
 
-        return graph_copy
+        return new_graph
 
     def get_neighbors(self, node: Hashable, edge_type: str | None = None) -> set[Hashable]:
         """

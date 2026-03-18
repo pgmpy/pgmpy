@@ -728,28 +728,16 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ADMG
             A copy of the ADMG object.
         """
-        # Get directed and bidirected edges
-        directed_ebunch = []
-        bidirected_ebunch = []
-        processed_bidirected = set()
+        new_admg = self.__class__()
+        new_admg.add_nodes_from(self.nodes(data=True))
+        for u, v, key, data in self.edges(keys=True, data=True):
+            nx.MultiDiGraph.add_edge(new_admg, u, v, key=key, **data)
 
-        for u, v, data in self.edges(data=True):
-            if data.get("type") == "directed":
-                directed_ebunch.append((u, v))
-            elif data.get("type") == "bidirected":
-                pair = tuple(sorted((u, v)))
-                if pair not in processed_bidirected:
-                    bidirected_ebunch.append((u, v))
-                    processed_bidirected.add(pair)
+        for node in new_admg.nodes:
+            if "roles" in new_admg.nodes[node]:
+                new_admg.nodes[node]["roles"] = new_admg.nodes[node]["roles"].copy()
 
-        admg_copy = ADMG(
-            directed_ebunch=directed_ebunch,
-            bidirected_ebunch=bidirected_ebunch,
-            latents=self.latents.copy(),
-            roles=self.get_role_dict(),
-        )
-        admg_copy.add_nodes_from(self.nodes())
-        return admg_copy
+        return new_admg
 
     def __eq__(self, other):
         """

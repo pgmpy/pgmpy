@@ -1551,16 +1551,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     def copy(self):
         """Returns a copy of the DAG object."""
-        dag = DAG(
-            ebunch=self.edges(),
-            latents=self.latents,
-            exposures=self.exposures,
-            outcomes=self.outcomes,
-            roles=self.get_role_dict(),
-        )
-        dag.add_nodes_from(self.nodes())
-
-        return dag
+        new_dag = super().copy()
+        for node in new_dag.nodes:
+            if "roles" in new_dag.nodes[node]:
+                new_dag.nodes[node]["roles"] = new_dag.nodes[node]["roles"].copy()
+        return new_dag
 
     def __eq__(self, other):
         """
