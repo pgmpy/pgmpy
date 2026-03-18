@@ -13,9 +13,7 @@ def m1():
 
 @pytest.fixture
 def d1():
-    return DataFrame(
-        data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
-    )
+    return DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]})
 
 
 @pytest.fixture

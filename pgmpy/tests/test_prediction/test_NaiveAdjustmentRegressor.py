@@ -37,9 +37,7 @@ def test_sklearn_compatibility(estimator, check):
 def test_basic_functionality_with_adjustment():
     """Test basic fit and predict functionality with synthetic causal data."""
 
-    lgbn = DAG.from_dagitty(
-        "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
-    )
+    lgbn = DAG.from_dagitty("dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }")
 
     data = lgbn.simulate(1000, seed=42)
 
@@ -174,9 +172,7 @@ def test_multiple_adjustment_variables():
     assert set(regressor.adjustment_vars_) == {"U1", "U2"}
     assert set(regressor.get_feature_names_out()) == {"X", "U1", "U2"}
 
-    assert (
-        regressor.n_features_in_ == 5
-    )  # Input has 5 columns: X, U1, U2, noise1, noise2
+    assert regressor.n_features_in_ == 5  # Input has 5 columns: X, U1, U2, noise1, noise2
     assert len(regressor.get_feature_names_out()) == 3  # Only X, U1, U2 are used
 
 
@@ -187,9 +183,7 @@ def test_error_handling():
     dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposures": "X"})
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_no_outcome)
 
-    with pytest.raises(
-        ValueError, match="Exactly one outcome variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one outcome variable must be defined"):
         regressor.fit(pd.DataFrame({"X": [1, 2], "Y": [3, 4]}), [5, 6])
 
     # Test multiple exposure variables (should fail)
@@ -199,9 +193,7 @@ def test_error_handling():
     )
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_multi_exposure)
 
-    with pytest.raises(
-        ValueError, match="Exactly one exposure variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one exposure variable must be defined"):
         regressor.fit(pd.DataFrame({"X1": [1, 2], "X2": [3, 4], "Y": [5, 6]}), [7, 8])
 
     # Test missing required columns in data
@@ -234,9 +226,7 @@ def test_numpy_array_input():
 
     np.random.seed(42)
     n_samples = 50
-    X_array = np.random.normal(
-        0, 1, (n_samples, 2)
-    )  # Columns 0 and 1 (exposure and adjustment)
+    X_array = np.random.normal(0, 1, (n_samples, 2))  # Columns 0 and 1 (exposure and adjustment)
     y_array = np.random.normal(0, 1, n_samples)  # Target (outcome column 2)
 
     regressor.fit(X_array, y_array)
@@ -272,9 +262,7 @@ def test_sample_weight_support():
 
 def test_dag_roles_validation():
     """Test that DAG roles are properly validated during fit."""
-    dag_valid = DAG(
-        ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y", "adjustment": []}
-    )
+    dag_valid = DAG(ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y", "adjustment": []})
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
     exposure_vars = regressor.causal_graph.get_role("exposures")
@@ -302,9 +290,7 @@ def test_dag_roles_validation():
     assert len(exposure_vars_invalid) == 0
     assert len(outcome_vars_invalid) == 0
 
-    with pytest.raises(
-        ValueError, match="Exactly one exposure variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one exposure variable must be defined"):
         test_data = pd.DataFrame({"X": [1, 2], "Y": [3, 4]})
         regressor_invalid.fit(test_data[["X"]], test_data["Y"])
 
@@ -386,9 +372,7 @@ def test_pretreatment_variables():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    data = pd.DataFrame(
-        {"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8], "Z": [0, 1, 0, 1], "P": [1, 1, 0, 0]}
-    )
+    data = pd.DataFrame({"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8], "Z": [0, 1, 0, 1], "P": [1, 1, 0, 0]})
 
     regressor.fit(data[["X", "Z", "P"]], data["Y"])
 

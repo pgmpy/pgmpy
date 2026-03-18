@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pgmpy documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 30 18:17:42 2016.
@@ -253,9 +252,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, "pgmpy.tex", "pgmpy Documentation", "Ankur Ankan", "manual")
-]
+latex_documents = [(master_doc, "pgmpy.tex", "pgmpy Documentation", "Ankur Ankan", "manual")]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
