@@ -1,4 +1,4 @@
-from ._base import load_dataset, list_datasets, _BaseDataset
+from ._base import _BaseDataset, list_datasets, load_dataset
 
 __all__ = [
     "_BaseDataset",

@@ -1,14 +1,6 @@
+from collections.abc import Callable, Hashable, Iterable
 from typing import (
     Any,
-    Callable,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
 )
 
 import networkx as nx
@@ -93,11 +85,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
-        latents: Optional[Set[Hashable]] = None,
-        exposures: Optional[Set[Hashable]] = None,
-        outcomes: Optional[Set[Hashable]] = None,
-        roles: Optional[Dict[str, Iterable]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
+        latents: set[Hashable] | None = None,
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        roles: dict[str, Iterable] | None = None,
     ) -> None:
         if config.get_backend() == "numpy":
             msg = (
@@ -110,7 +102,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         _check_soft_dependencies("pyro-ppl", obj=self)
 
-        super(FunctionalBayesianNetwork, self).__init__(
+        super().__init__(
             ebunch=ebunch,
             latents=latents,
             exposures=exposures,
@@ -147,9 +139,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         """
         for cpd in cpds:
             if not isinstance(cpd, FunctionalCPD):
-                raise ValueError(
-                    "Only FunctionalCPD can be added to Functional Bayesian Network."
-                )
+                raise ValueError("Only FunctionalCPD can be added to Functional Bayesian Network.")
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(self.nodes())):
                 raise ValueError(f"CPD defined on variable not in the model: {cpd}")
@@ -162,9 +152,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             else:
                 self.cpds.append(cpd)
 
-    def get_cpds(
-        self, node: Optional[Any] = None
-    ) -> Union[List[FunctionalCPD], FunctionalCPD]:
+    def get_cpds(self, node: Any | None = None) -> list[FunctionalCPD] | FunctionalCPD:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
@@ -197,7 +185,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
-        return super(FunctionalBayesianNetwork, self).get_cpds(node)
+        return super().get_cpds(node)
 
     def remove_cpds(self, *cpds: FunctionalCPD) -> None:
         """
@@ -233,7 +221,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     print(cpd)
         ...
         """
-        return super(FunctionalBayesianNetwork, self).remove_cpds(*cpds)
+        return super().remove_cpds(*cpds)
 
     def check_model(self) -> bool:
         """
@@ -253,17 +241,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
             if isinstance(cpd, FunctionalCPD):
                 if set(cpd.parents) != set(self.get_parents(node)):
-                    raise ValueError(
-                        f"CPD associated with {node} doesn't have proper parents associated with it."
-                    )
+                    raise ValueError(f"CPD associated with {node} doesn't have proper parents associated with it.")
         return True
 
     def simulate(
         self,
         n_samples: int = 1000,
-        do: Optional[Dict[Hashable, Any]] = None,
-        virtual_intervention: Optional[List[FunctionalCPD]] = None,
-        seed: Optional[int] = None,
+        do: dict[Hashable, Any] | None = None,
+        virtual_intervention: list[FunctionalCPD] | None = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Simulate samples from the model.
@@ -323,31 +309,22 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         # Check if all variables in do and virtual_intervention are valid
         extra_do = set(do.keys()) - set(self.nodes())
         if extra_do:
-            raise ValueError(
-                f"`do` contains nodes not in the model: {sorted(extra_do)}"
-            )
+            raise ValueError(f"`do` contains nodes not in the model: {sorted(extra_do)}")
 
         vi_map = {}
         for cpd in virtual_intervention:
             if not isinstance(cpd, FunctionalCPD):
-                raise ValueError(
-                    "`virtual_intervention` must be a list of FunctionalCPD objects. Got {type(cpd)}"
-                )
+                raise ValueError("`virtual_intervention` must be a list of FunctionalCPD objects. Got {type(cpd)}")
             if cpd.variable not in set(self.nodes()):
-                raise ValueError(
-                    f"Virtual intervention CPD variable not in the model: {cpd.variable}"
-                )
+                raise ValueError(f"Virtual intervention CPD variable not in the model: {cpd.variable}")
             if cpd.parents:
-                raise ValueError(
-                    f"Virtual intervention CPD for {cpd.variable} must be unconditional (no parents)."
-                )
+                raise ValueError(f"Virtual intervention CPD for {cpd.variable} must be unconditional (no parents).")
             vi_map[cpd.variable] = cpd
 
         overlap = set(do.keys()) & set(vi_map.keys())
         if overlap:
             raise ValueError(
-                "Cannot specify both `do` and `virtual_intervention` for the same node(s): "
-                f"{sorted(overlap)}"
+                f"Cannot specify both `do` and `virtual_intervention` for the same node(s): {sorted(overlap)}"
             )
 
         nodes = list(nx.topological_sort(self))
@@ -362,17 +339,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
             # Step 1.2: Handle virtual interventions
             if node in vi_map:
-                samples[node] = vi_map[node].sample(
-                    n_samples=n_samples, parent_sample=None
-                )
+                samples[node] = vi_map[node].sample(n_samples=n_samples, parent_sample=None)
                 continue
 
             # Step 1.3: Standard sampling from the node's CPD
             cpd = self.get_cpds(node)
             parent_samples = samples[cpd.parents] if cpd.parents else None
-            samples[node] = cpd.sample(
-                n_samples=n_samples, parent_sample=parent_samples
-            )
+            samples[node] = cpd.sample(n_samples=n_samples, parent_sample=parent_samples)
 
         # Step 2: Return the simulated samples
         return samples
@@ -382,12 +355,12 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         data: pd.DataFrame,
         estimator: str = "SVI",
         optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
-        prior_fn: Optional[Callable] = None,
+        prior_fn: Callable | None = None,
         num_steps: int = 1000,
-        seed: Optional[int] = None,
-        nuts_kwargs: Optional[Dict] = None,
-        mcmc_kwargs: Optional[Dict] = None,
-    ) -> Dict[str, Any]:
+        seed: int | None = None,
+        nuts_kwargs: dict | None = None,
+        mcmc_kwargs: dict | None = None,
+    ) -> dict[str, Any]:
         """
         Fit the Bayesian network to data using Pyro's stochastic variational inference.
 
@@ -489,17 +462,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         """
         # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
-            raise ValueError(
-                f"data should be a pandas.DataFrame object. Got: {type(data)}."
-            )
+            raise ValueError(f"data should be a pandas.DataFrame object. Got: {type(data)}.")
 
         if not isinstance(num_steps, int):
             raise ValueError(f"num_steps should be an integer. Got: {type(num_steps)}.")
 
         if estimator.lower() not in ["svi", "mcmc"]:
-            raise ValueError(
-                f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}."
-            )
+            raise ValueError(f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}.")
 
         # Step 1: Preprocess the data and initialize data structures.
         if seed is not None:
@@ -537,9 +506,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                     for node in sort_nodes:
                         pyro.sample(
                             f"{node}",
-                            cpds_dict[node].fn(
-                                {p: tensor_data[p] for p in cpds_dict[node].parents}
-                            ),
+                            cpds_dict[node].fn({p: tensor_data[p] for p in cpds_dict[node].parents}),
                             obs=tensor_data[node],
                         )
 
@@ -561,9 +528,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             # Step 3.1: Define the combined model for MCMC.
             def combined_model_mcmc(tensor_data):
                 priors_dists = prior_fn()
-                priors_vals = {
-                    name: pyro.sample(name, d) for name, d in priors_dists.items()
-                }
+                priors_vals = {name: pyro.sample(name, d) for name, d in priors_dists.items()}
 
                 with pyro.plate("data", data.shape[0]):
                     for node in sort_nodes:

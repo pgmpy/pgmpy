@@ -13,6 +13,9 @@ Please answer the following questions:
 - Did you use an LLM for any assistance with this PR? Please describe in **detail** (around a paragraph) how and what you used it for?  
 [Please Answer Here]
 
+- Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
+[Please Answer Here]
+
 - What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered? Other than running tests, what else have you verified?  
 [Please Answer Here]
 
