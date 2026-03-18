@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import math
 from itertools import permutations
-from typing import Optional
 
 import networkx as nx
 import numpy as np
@@ -179,9 +178,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
                 n_violations += 1
         return n_violations, len(triples)
 
-    def _get_permutation_list(
-        self, nodes, n_permutations, exclude_original_order=False
-    ):
+    def _get_permutation_list(self, nodes, n_permutations, exclude_original_order=False):
         if n_permutations == -1 or n_permutations >= math.factorial(len(nodes)):
             perms = list(permutations(nodes))
             if exclude_original_order:
@@ -200,9 +197,9 @@ class PermutationTest(_BaseUnsupervisedMetric):
         self,
         causal_graph: DAG,
         X: pd.DataFrame,
-        n_permutations: Optional[int] = None,
+        n_permutations: int | None = None,
         significance_level: float = 0.05,
-        ci_test: Optional[str] = None,
+        ci_test: str | None = None,
         return_summary: bool = True,
         show_progress: bool = True,
     ):
@@ -211,12 +208,8 @@ class PermutationTest(_BaseUnsupervisedMetric):
         if not isinstance(X, pd.DataFrame):
             raise TypeError(f"Data should be a pandas DataFrame. Got: {type(X)}")
 
-        if not isinstance(causal_graph, DAG) or isinstance(
-            causal_graph, DynamicBayesianNetwork
-        ):
-            raise TypeError(
-                f"DAG must be a `pgmpy.base.DAG` object. Got: {type(causal_graph)}"
-            )
+        if not isinstance(causal_graph, DAG) or isinstance(causal_graph, DynamicBayesianNetwork):
+            raise TypeError(f"DAG must be a `pgmpy.base.DAG` object. Got: {type(causal_graph)}")
 
         nodes = list(causal_graph.nodes())
         data_columns = set(X.columns)
@@ -237,9 +230,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
         # Step 1: Compute LMC violations for the given DAG.
 
-        n_lmc_violations, _ = self._lmc_violations(
-            causal_graph, X, ci_test, significance_level
-        )
+        n_lmc_violations, _ = self._lmc_violations(causal_graph, X, ci_test, significance_level)
 
         # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
 
@@ -257,9 +248,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
             permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
             permuted_dag.add_edges_from(nx_permuted_dag.edges())
 
-            n_perm_lmc_violations, _ = self._lmc_violations(
-                permuted_dag, X, ci_test, significance_level
-            )
+            n_perm_lmc_violations, _ = self._lmc_violations(permuted_dag, X, ci_test, significance_level)
             permutation_violations.append(n_perm_lmc_violations)
             n_tpa_violations, _ = self._tpa_violations(permuted_dag, causal_graph)
             tpa_violations.append(n_tpa_violations)
@@ -272,9 +261,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
         p_value_falsifiable = n_within_mec / n_permutations
 
         # Step 3.2: Falsification test
-        count_less_violations = sum(
-            1 for v in permutation_violations if v <= n_lmc_violations
-        )
+        count_less_violations = sum(1 for v in permutation_violations if v <= n_lmc_violations)
         p_value_falsified = count_less_violations / n_permutations
 
         # Step 3.3: Confidence intervals for the falsification p-value
@@ -294,8 +281,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
             "ci_lower_falsified": ci_lower,
             "ci_upper_falsified": ci_upper,
             "falsifiable": p_value_falsifiable <= significance_level,
-            "falsified": (p_value_falsifiable <= significance_level)
-            and (p_value_falsified >= significance_level),
+            "falsified": (p_value_falsifiable <= significance_level) and (p_value_falsified >= significance_level),
         }
 
         if return_summary:
