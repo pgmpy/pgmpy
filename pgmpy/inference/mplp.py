@@ -408,37 +408,52 @@ class Mplp(Inference):
 
     def _get_triplet_scores(self, triangles_list):
         """
-        Returns the score of each of the triplets found in the current model
+        Returns the score of each of the triplets found in the current model.
 
         Parameters
         ---------
         triangles_list: list
-                        The list of variables forming the triangles to be updated. It is of the form of
-                        [['var_5', 'var_8', 'var_7'], ['var_4', 'var_5', 'var_7']]
+            The list of variables forming the triangles to be updated.
+            It is of the form [['var_5', 'var_8', 'var_7'], ['var_4', 'var_5', 'var_7']]
 
-        Return: {frozenset({'var_8', 'var_5', 'var_7'}): 5.024, frozenset({'var_5', 'var_4', 'var_7'}): 10.23}
+        Return:
+            {frozenset({'var_8', 'var_5', 'var_7'}): 5.024, frozenset({'var_5', 'var_4', 'var_7'}): 10.23}
         """
         triplet_scores = {}
         for triplet in triangles_list:
-            # Find the intersection sets of the current triplet
-            triplet_intersections = [
-                intersect for intersect in it.combinations(triplet, 2)
-            ]
+            triplet_intersections = list(it.combinations(triplet, 2))
+
+            # Collect only those pairs that exist in the objective
+            valid_intersects = []
+            missing_pairs = []
+
+            for pair in triplet_intersections:
+                fz = frozenset(pair)
+                if fz in self.objective:
+                    valid_intersects.append(fz)
+                else:
+                    missing_pairs.append(fz)
+
+            if len(valid_intersects) < len(triplet_intersections):
+                print(
+                    f"Skipping triplet {triplet} due to missing objective keys: {missing_pairs}"
+                )
+                continue
 
             # Independent maximization
             ind_max = sum(
                 [
-                    np.amax(self.objective[frozenset(intersect)].values)
-                    for intersect in triplet_intersections
+                    np.amax(self.objective[intersect].values)
+                    for intersect in valid_intersects
                 ]
             )
 
             # Joint maximization
-            joint_max = self.objective[frozenset(triplet_intersections[0])]
-            for intersect in triplet_intersections[1:]:
-                joint_max += self.objective[frozenset(intersect)]
+            joint_max = self.objective[valid_intersects[0]]
+            for intersect in valid_intersects[1:]:
+                joint_max += self.objective[intersect]
             joint_max = np.amax(joint_max.values)
-            # score = Independent maximization solution - Joint maximization solution
+
             score = ind_max - joint_max
             triplet_scores[frozenset(triplet)] = score
 
