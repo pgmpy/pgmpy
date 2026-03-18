@@ -76,7 +76,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     >>> y = data["Y"]
     >>> G = DAG(
     ...     lgbn.edges(),
-    ...     roles={"exposure": "X", "instrument": ("Z1", "Z2"), "outcome": "Y"},
+    ...     roles={"exposures": "X", "instrument": ("Z1", "Z2"), "outcomes": "Y"},
     ... )
     >>>
     >>> model = NaiveIVRegressor(
@@ -114,9 +114,9 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     ...         ("P", "Y"),
     ...     ],
     ...     roles={
-    ...         "exposure": "X",
+    ...         "exposures": "X",
     ...         "instrument": ("U1", "U2", "U3"),
-    ...         "outcome": "Y",
+    ...         "outcomes": "Y",
     ...         "pretreatment": ["P"],
     ...     },
     ... )
@@ -140,7 +140,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     >>>
     >>> dag = DAG(
     ...     ebunch=[(1, 0), (0, 2)],
-    ...     roles={"exposure": [0], "outcome": [2], "instrument": [1]},
+    ...     roles={"exposures": [0], "outcomes": [2], "instrument": [1]},
     ... )
     >>> model = NaiveIVRegressor(
     ...     causal_graph=dag,
@@ -221,8 +221,8 @@ class NaiveIVRegressor(_BaseCausalPrediction):
         stage2_estimator = clone(self.stage2_estimator)
 
         # Step 1.1: Get roles from the causal graph and assign to attributes.
-        exposure_vars = self.causal_graph.get_role("exposure")
-        outcome_vars = self.causal_graph.get_role("outcome")
+        exposure_vars = self.causal_graph.get_role("exposures")
+        outcome_vars = self.causal_graph.get_role("outcomes")
         instrument_vars = self.causal_graph.get_role("instrument")
 
         # Step 1.2: Validate that exactly one exposure, one outcome and atleast one instrument are specified.
