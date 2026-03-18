@@ -185,13 +185,28 @@ class BaseConstraintEstimator(StructureEstimator):
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        # graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
+        # Step 1: Initialize the graph
+        if expert_knowledge.search_space:
+            # If search_space is provided, start only with those edges
+            print(
+                "DEBUG: Successfully initialized graph from search_space!"
+            )  # Add this
+            graph = nx.Graph()
+            graph.add_nodes_from(self.variables)
+            graph.add_edges_from(expert_knowledge.search_space)
+        else:
+            # Default: Start with a fully connected undirected graph
+            graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
         temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
+            print("All graph edges:", list(graph.edges()))
+            print("Removing edges:", expert_knowledge.forbidden_edges)
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
+        print(graph.edges())
         while not all(
             [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
         ):
@@ -207,7 +222,7 @@ class BaseConstraintEstimator(StructureEstimator):
                         ):
                             # If a conditioning set exists remove the edge, store the separating set
                             # and move on to finding conditioning set for next edge.
-                            if ci_test(
+                            """if ci_test(
                                 u,
                                 v,
                                 separating_set,
@@ -216,6 +231,30 @@ class BaseConstraintEstimator(StructureEstimator):
                                 significance_level=significance_level,
                                 **kwargs,
                             ):
+                                separating_sets[frozenset((u, v))] = separating_set
+                                graph.remove_edge(u, v)
+                                break"""
+                            # --- ADD THESE PRINTS HERE ---
+                            is_independent = ci_test(
+                                u,
+                                v,
+                                separating_set,
+                                data=self.data,
+                                independencies=self.independencies,
+                                significance_level=significance_level,
+                                **kwargs,
+                            )
+
+                            if is_independent:
+                                print(
+                                    f"REMOVING EDGE: {u} - {v} | Separated by: {separating_set}"
+                                )
+                            else:
+                                print(
+                                    f"KEEPING EDGE: {u} - {v} | Not independent given: {separating_set}"
+                                )
+
+                            if is_independent:
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
                                 break
