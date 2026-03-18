@@ -140,9 +140,7 @@ def test_sample_weight_support_and_shapes(dag):
 def test_naiveiv_recovers_theta_with_LR():
     """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery."""
 
-    lgbn = DAG.from_dagitty(
-        "dag { Z1 -> X [beta=0.2] Z2 -> X [beta=0.2] X -> Y [beta=0.3]}"
-    )
+    lgbn = DAG.from_dagitty("dag { Z1 -> X [beta=0.2] Z2 -> X [beta=0.2] X -> Y [beta=0.3]}")
 
     data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
 
@@ -213,9 +211,7 @@ def test_dag_roles_validation_and_pretreatment_support():
 def test_error_handling_missing_roles_():
     """Test various error conditions and validation."""
     # missing outcome role
-    dag_no_outcome = DAG(
-        ebunch=[("X", "Y"), ("Z", "X")], roles={"exposures": "X", "instrument": "Z"}
-    )
+    dag_no_outcome = DAG(ebunch=[("X", "Y"), ("Z", "X")], roles={"exposures": "X", "instrument": "Z"})
     model1 = NaiveIVRegressor(
         causal_graph=dag_no_outcome,
         stage1_estimator=LinearRegression(),
@@ -225,9 +221,7 @@ def test_error_handling_missing_roles_():
         model1.fit(pd.DataFrame({"X": [1, 2], "Y": [3, 4], "Z": [5, 6]}), [7, 8])
 
     # missing instrument role
-    dag_no_instrument = DAG(
-        ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y"}
-    )
+    dag_no_instrument = DAG(ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y"})
     model1 = NaiveIVRegressor(
         causal_graph=dag_no_instrument,
         stage1_estimator=LinearRegression(),

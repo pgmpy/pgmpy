@@ -18,10 +18,7 @@ class SeoulBike(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
-        "refs/heads/main/real/seoul-bike/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/seoul-bike/"
 
     data_url = base_url + "data/seoul-bike.mixed.maximum.4.txt"
     ground_truth_url = None

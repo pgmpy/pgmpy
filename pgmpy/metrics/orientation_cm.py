@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import networkx as nx
 import pandas as pd
 
@@ -78,7 +76,7 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
         "supported_graph_types": (DAG,),
     }
 
-    def __init__(self, metrics: Optional[List[str]] = None):
+    def __init__(self, metrics: list[str] | None = None):
         self.metrics = metrics or [
             "cm",
             "precision",
@@ -94,12 +92,8 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
 
         # Step 1: Get adjacency matrices for both graphs.
         nodes_list = sorted(true_causal_graph.nodes())
-        true_adj = nx.adjacency_matrix(
-            true_causal_graph, nodelist=nodes_list, weight=None
-        ).todense()
-        est_adj = nx.adjacency_matrix(
-            est_causal_graph, nodelist=nodes_list, weight=None
-        ).todense()
+        true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
+        est_adj = nx.adjacency_matrix(est_causal_graph, nodelist=nodes_list, weight=None).todense()
 
         true_skel = true_adj + true_adj.T
         est_skel = est_adj + est_adj.T

@@ -228,9 +228,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
             evidence_card=[2],
         )
 
-        self.dummy_model.add_cpds(
-            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
-        )  # testing without state names
+        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
         self.model_with_whitespaces = DiscreteBayesianNetwork()
@@ -254,16 +252,14 @@ class TestXDSLWriterMethods(unittest.TestCase):
     def assert_models_equivalent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
-            self.assertListEqual(
-                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
-            )
+            self.assertListEqual(sorted(expected.get_parents(node)), sorted(got.get_parents(node)))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
             self.assertEqual(cpds_expected, cpds_got)
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
-        with open("dummy_model.xdsl", "r") as f:
+        with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivalent(self.dummy_model, model)
@@ -272,7 +268,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
     def test_alarm_model(self):
         XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
 
-        with open("alarm_model.xdsl", "r") as f:
+        with open("alarm_model.xdsl") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
@@ -410,9 +406,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
             evidence_card=[2],
         )
 
-        self.dummy_model.add_cpds(
-            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
-        )  # testing without state names
+        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
         self.model_with_whitespaces = DiscreteBayesianNetwork()
@@ -436,16 +430,14 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
     def assert_models_equivalent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
-            self.assertListEqual(
-                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
-            )
+            self.assertListEqual(sorted(expected.get_parents(node)), sorted(got.get_parents(node)))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
             self.assertEqual(cpds_expected, cpds_got)
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
-        with open("dummy_model.xdsl", "r") as f:
+        with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivalent(self.dummy_model, model)
@@ -453,7 +445,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
 
     def test_alarm_model(self):
         XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
-        with open("alarm_model.xdsl", "r") as f:
+        with open("alarm_model.xdsl") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
@@ -507,12 +499,8 @@ class TestXDSLCommaWarning(unittest.TestCase):
             loaded_model = reader.get_model()
 
             # Check that the state names were preserved
-            self.assertEqual(
-                loaded_model.get_cpds("A").state_names["A"], ["state,1", "state,2"]
-            )
-            self.assertEqual(
-                loaded_model.get_cpds("B").state_names["A"], ["state,1", "state,2"]
-            )
+            self.assertEqual(loaded_model.get_cpds("A").state_names["A"], ["state,1", "state,2"])
+            self.assertEqual(loaded_model.get_cpds("B").state_names["A"], ["state,1", "state,2"])
             self.assertEqual(loaded_model.get_cpds("B").state_names["B"], ["yes", "no"])
         finally:
             if os.path.exists(tmp_path):
