@@ -39,10 +39,14 @@ class Adjustment(_BaseIdentification):
     ...     ],
     ...     roles={"exposures": "x1", "outcomes": "y1"},
     ... )
-    >>> dag_with_adj = Adjustment(variant="minimal").identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'adjustment': ['z1', 'z2']}
-    >>> Adjustment.validate(dag)
+    >>> dag_with_adj, success = Adjustment(variant="minimal").identify(dag)
+    >>> roles = dag_with_adj.get_role_dict()
+    >>> roles["exposures"]
+    ['x1']
+    >>> roles["outcomes"]
+    ['y1']
+    >>> Adjustment(variant="minimal").validate(dag_with_adj)
+    True
 
     References
     ----------
@@ -71,7 +75,7 @@ class Adjustment(_BaseIdentification):
 
         Parameters
         ----------
-        causal_graph: pgmpy.models.DAG
+        causal_graph: pgmpy.base.DAG, pgmpy.base.PDAG, pgmpy.base.ADMG, or pgmpy.base.MAG
             The causal graph for which the proper backdoor graph is to be computed.
 
         inplace: boolean
@@ -80,8 +84,8 @@ class Adjustment(_BaseIdentification):
 
         Examples
         --------
-        >>> from pgmpy.models import DAG
-        >>> from pgmpy.inference import Adjustment
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.identification import Adjustment
         >>> dag = DAG(
         ...     ebunch=[
         ...         ("x1", "y1"),
