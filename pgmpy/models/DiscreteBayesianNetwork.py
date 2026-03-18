@@ -86,7 +86,7 @@ class DiscreteBayesianNetwork(DAG):
     ...     evidence_card=[2, 2],
     ... )
     >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
-    >>> model.get_cpds("C")
+    >>> model.get_cpds("C")  # doctest: +ELLIPSIS
     <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>
 
     # Simulating data from the defined Discrete Bayesian Network.
@@ -100,8 +100,10 @@ class DiscreteBayesianNetwork(DAG):
     # Predicting missing values in the data.
 
     >>> test_data = df.copy()
-    >>> test_data.loc[0:10, "C"] = np.nan
+    >>> test_data = test_data.drop(columns=["C"])
     >>> predicted_data = fitted_model.predict(test_data)
+    >>> predicted_data.shape
+    (1000, 3)
     """
 
     def __init__(
@@ -179,17 +181,18 @@ class DiscreteBayesianNetwork(DAG):
         ...     np.random.randint(low=0, high=2, size=(1000, 4)),
         ...     columns=["A", "B", "C", "D"],
         ... )
-        >>> model.fit(values)
-        >>> model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
-         <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
-         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
-         <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2) at 0x...>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x...>,
+         <TabularCPD representing P(D:2 | A:2) at 0x...>]
         >>> model.remove_node("A")
-        >>> model.get_cpds()
-        [<TabularCPD representing P(B:2) at 0x7f28248e23c8>,
-         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
-         <TabularCPD representing P(D:2) at 0x7f28248e26a0>]
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(B:2) at 0x...>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x...>,
+         <TabularCPD representing P(D:2) at 0x...>]
         """
         affected_nodes = [v for u, v in self.edges() if u == node]
 
@@ -233,16 +236,17 @@ class DiscreteBayesianNetwork(DAG):
         ...     np.random.randint(low=0, high=2, size=(1000, 4)),
         ...     columns=["A", "B", "C", "D"],
         ... )
-        >>> model.fit(values)
-        >>> model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
-         <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
-         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
-         <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2) at 0x...>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x...>,
+         <TabularCPD representing P(D:2 | A:2) at 0x...>]
         >>> model.remove_nodes_from(["A", "B"])
-        >>> model.get_cpds()
-        [<TabularCPD representing P(C:2 | D:2) at 0x7f28248e2a58>,
-         <TabularCPD representing P(D:2) at 0x7f28248e26d8>]
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(C:2 | D:2) at 0x...>,
+         <TabularCPD representing P(D:2) at 0x...>]
         """
         for node in nodes:
             self.remove_node(node)
@@ -335,18 +339,18 @@ class DiscreteBayesianNetwork(DAG):
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
         >>> cpds = model.get_cpds()
-        >>> cpds
-        [<TabularCPD representing P(asia:2) at 0x7dbbd9bdbb80>,
-        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>,
-        <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x7dbbd9bd8550>,
-        <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x7dbbd9bda800>,
-        <TabularCPD representing P(lung:2 | smoke:2) at 0x7dbbd9bd89d0>,
-        <TabularCPD representing P(smoke:2) at 0x7dbbd9bd8f70>,
-        <TabularCPD representing P(tub:2 | asia:2) at 0x7dbbd9bda860>,
-        <TabularCPD representing P(xray:2 | either:2) at 0x7dbbd9bd9a80>]
+        >>> cpds  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(asia:2) at 0x...>,
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x...>,
+        <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x...>,
+        <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x...>,
+        <TabularCPD representing P(lung:2 | smoke:2) at 0x...>,
+        <TabularCPD representing P(smoke:2) at 0x...>,
+        <TabularCPD representing P(tub:2 | asia:2) at 0x...>,
+        <TabularCPD representing P(xray:2 | either:2) at 0x...>]
         >>> cpd = model.get_cpds("bronc")
-        >>> cpd
-        <TabularCPD representing P(bronc:2 | smoke:2) at 0x7dbbd9bda3e0>
+        >>> cpd  # doctest: +ELLIPSIS
+        <TabularCPD representing P(bronc:2 | smoke:2) at 0x...>
         """
         if node is not None:
             if node not in self.nodes():
@@ -421,10 +425,10 @@ class DiscreteBayesianNetwork(DAG):
         ...     [2, 2],
         ... )
         >>> student.add_cpds(cpd_diff, cpd_intel, cpd_grade)
-        >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'diff': 2, 'intel': 2, 'grade': 2})
+        >>> {k: int(v) for k, v in student.get_cardinality().items()}
+        {'diff': 2, 'intel': 2, 'grade': 2}
 
-        >>> student.get_cardinality("intel")
+        >>> int(student.get_cardinality("intel"))
         2
         """
 
@@ -626,12 +630,14 @@ class DiscreteBayesianNetwork(DAG):
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.base import DAG
         >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DAG([("A", "C"), ("B", "C")])
+        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
         >>> fitted_model = model.fit(data)
-        >>> fitted_model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x17945372c30>,
-        <TabularCPD representing P(B:2) at 0x17945a19760>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
+        >>> len(fitted_model.get_cpds())
+        3
+        >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+        <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
+        <TabularCPD representing P(B:2) at 0x...>]
         """
         from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
         from pgmpy.models import DiscreteBayesianNetwork
@@ -807,26 +813,16 @@ class DiscreteBayesianNetwork(DAG):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(train_data)
+        >>> model.fit(train_data)  # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop("E", axis=1, inplace=True)
         >>> approx_inf_parameters = {"n_samples": int(1e3), "seed": 42}
         >>> y_pred = model.predict(
         ...     predict_data, algo=ApproxInference, **approx_inf_parameters
         ... )
-        >>> y_pred["E"]
-            E
-        800 1
-        801 0
-        802 1
-        803 1
-        804 1
-        ... ...
-        995 1
-        996 1
-        997 1
-        998 1
-        999 0
+        >>> y_pred["E"].shape
+        (200,)
         """
         from pgmpy.inference import (
             ApproxInference,
@@ -905,32 +901,13 @@ class DiscreteBayesianNetwork(DAG):
         >>> model = DiscreteBayesianNetwork(
         ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         ... )
-        >>> model.fit(values)
+        >>> model.fit(values)  # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop("B", axis=1, inplace=True)
         >>> y_prob = model.predict_probability(predict_data)
-        >>> y_prob
-            B_0         B_1
-        80  0.439178    0.560822
-        81  0.581970    0.418030
-        82  0.488275    0.511725
-        83  0.581970    0.418030
-        84  0.510794    0.489206
-        85  0.439178    0.560822
-        86  0.439178    0.560822
-        87  0.417124    0.582876
-        88  0.407978    0.592022
-        89  0.429905    0.570095
-        90  0.581970    0.418030
-        91  0.407978    0.592022
-        92  0.429905    0.570095
-        93  0.429905    0.570095
-        94  0.439178    0.560822
-        95  0.407978    0.592022
-        96  0.559904    0.440096
-        97  0.417124    0.582876
-        98  0.488275    0.511725
-        99  0.407978    0.592022
+        >>> y_prob.shape
+        (20, 2)
         """
         from pgmpy.inference import VariableElimination
 
@@ -977,8 +954,10 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> model = get_example_model("asia")
-        >>> model.get_state_probability(
-        ...     {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
+        >>> float(
+        ...     model.get_state_probability(
+        ...         {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
+        ...     )
         ... )
         0.02605122
         """
@@ -1156,8 +1135,8 @@ class DiscreteBayesianNetwork(DAG):
         ...         ("v", "q"),
         ...     ]
         ... )
-        >>> G.get_markov_blanket("y")
-        ['s', 'u', 'w', 'v', 'z', 'x']
+        >>> sorted(G.get_markov_blanket("y"))
+        ['s', 'u', 'v', 'w', 'x', 'z']
         """
         children = self.get_children(node)
         parents = self.get_parents(node)
@@ -1215,16 +1194,13 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> model = DiscreteBayesianNetwork.get_random(n_nodes=5)
-        >>> model.nodes()
-        NodeView((0, 1, 3, 4, 2))
-        >>> model.edges()
-        OutEdgeView([(0, 1), (0, 3), (1, 3), (1, 4), (3, 4), (2, 3)])
-        >>> model.cpds
-        [<TabularCPD representing P(0:0) at 0x7f97e16eabe0>,
-         <TabularCPD representing P(1:1 | 0:0) at 0x7f97e16ea670>,
-         <TabularCPD representing P(3:3 | 0:0, 1:1, 2:2) at 0x7f97e16820d0>,
-         <TabularCPD representing P(4:4 | 1:1, 3:3) at 0x7f97e16eae80>,
-         <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
+        >>> sorted(model.nodes())
+        ['X_0', 'X_1', 'X_2', 'X_3', 'X_4']
+        >>> sorted([cpd.variable for cpd in model.cpds])
+        ['X_0', 'X_1', 'X_2', 'X_3', 'X_4']
+        >>> len(model.cpds)
+        5
+
         """
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
@@ -1334,12 +1310,10 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> from pgmpy.utils import get_example_model
         >>> asia = get_example_model("asia")
-        >>> asia.edges()
+        >>> asia.edges()  # doctest: +NORMALIZE_WHITESPACE
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         >>> do_bronc = asia.do(["bronc"])
-        OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
-                     ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         """
         if isinstance(nodes, (str, int)):
             nodes = [nodes]
@@ -1441,15 +1415,21 @@ class DiscreteBayesianNetwork(DAG):
         Simulation without any evidence or intervention:
 
         >>> model = get_example_model("alarm")
-        >>> model.simulate(n_samples=10)
+        >>> model.simulate(n_samples=10).shape
+        (10, 37)
+
 
         Simulation with the hard evidence: MINVOLSET = HIGH:
 
-        >>> model.simulate(n_samples=10, evidence={"MINVOLSET": "HIGH"})
+        >>> model.simulate(n_samples=10, evidence={"MINVOLSET": "HIGH"}).shape
+        (10, 37)
+
 
         Simulation with hard intervention: CVP = LOW:
 
-        >>> model.simulate(n_samples=10, do={"CVP": "LOW"})
+        >>> model.simulate(n_samples=10, do={"CVP": "LOW"}).shape
+        (10, 37)
+
 
         Simulation with virtual/soft evidence: p(MINVOLSET=LOW) = 0.8, p(MINVOLSET=HIGH) = 0.2,
         p(MINVOLSET=NORMAL) = 0:
@@ -1462,7 +1442,9 @@ class DiscreteBayesianNetwork(DAG):
         ...         state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]},
         ...     )
         ... ]
-        >>> model.simulate(n_samples, virtual_evidence=virt_evidence)
+        >>> model.simulate(n_samples=10, virtual_evidence=virt_evidence).shape
+        (10, 38)
+
 
         Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3:
 
@@ -1474,13 +1456,15 @@ class DiscreteBayesianNetwork(DAG):
         ...         state_names={"CVP": ["LOW", "NORMAL", "HIGH"]},
         ...     )
         ... ]
-        >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
+        >>> model.simulate(n_samples=10, virtual_intervention=virt_intervention).shape
+        (10, 38)
+
 
         Simulation with missing values:
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
-        >>> model.simulate(n_samples, missing_prob=cpd)
-
+        >>> model.simulate(n_samples=10, missing_prob=cpd).shape
+        (10, 37)
         >>> cpd = TabularCPD(
         ...     "HISTORY*",
         ...     2,
@@ -1489,8 +1473,8 @@ class DiscreteBayesianNetwork(DAG):
         ...     [2],
         ...     state_names={"HISTORY*": [0, 1], "HISTORY": ["TRUE", "FALSE"]},
         ... )
-        >>> model.simulate(n_samples, missing_prob=cpd)
-
+        >>> model.simulate(n_samples=10, missing_prob=cpd).shape
+        (10, 37)
         >>> cpd = TabularCPD(
         ...     "HISTORY*",
         ...     2,
@@ -1503,7 +1487,8 @@ class DiscreteBayesianNetwork(DAG):
         ...         "LVEDVOLUME": ["LOW", "NORMAL", "HIGH"],
         ...     },
         ... )
-        >>> model.simulate(n_samples=10, missing_prob=cpd)
+        >>> model.simulate(n_samples=10, missing_prob=cpd).shape
+        (10, 37)
         """
         from pgmpy.sampling import BayesianModelSampling
 

@@ -49,13 +49,11 @@ class MarkovChain:
 
     Sample from it
 
-    >>> model.sample(size=5)
-       intel  diff
-    0      0     2
-    1      1     0
-    2      0     1
-    3      1     0
-    4      0     2
+    >>> df = model.sample(size=5)
+    >>> df.shape
+    (5, 2)
+    >>> list(df.columns)
+    ['intel', 'diff']
     """
 
     def __init__(self, variables=None, card=None, start_state=None):
@@ -273,13 +271,11 @@ class MarkovChain:
         ...     2: {0: 0.7, 1: 0.15, 2: 0.15},
         ... }
         >>> model.add_transition_model("diff", diff_tm)
-        >>> model.sample(size=5)
-           intel  diff
-        0      0     2
-        1      1     0
-        2      0     1
-        3      1     0
-        4      0     2
+        >>> df = model.sample(size=5)
+        >>> df.shape
+        (5, 2)
+        >>> list(df.columns)
+        ['intel', 'diff']
         """
         if start_state is None:
             if self.state is None:
@@ -329,8 +325,9 @@ class MarkovChain:
         >>> model.add_transition_model("intel", intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1: 0.75}}
         >>> model.add_transition_model("diff", diff_tm)
-        >>> model.prob_from_sample([State("diff", 0)])
-        array([ 0.27,  0.4 ,  0.18,  0.23, ..., 0.29])
+        >>> probs = model.prob_from_sample([State("diff", 0)])
+        >>> len(probs)
+        100
         """
         if sample is None:
             # generate sample of size 10000
@@ -372,7 +369,7 @@ class MarkovChain:
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1: 0.75}}
         >>> model.add_transition_model("diff", diff_tm)
         >>> gen = model.generate_sample([State("intel", 0), State("diff", 0)], 2)
-        >>> [sample for sample in gen]
+        >>> [sample for sample in gen] # doctest: +SKIP
         [[State(var='intel', state=2), State(var='diff', state=1)],
          [State(var='intel', state=2), State(var='diff', state=0)]]
         """
@@ -464,7 +461,7 @@ class MarkovChain:
         --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC(["intel", "diff"], [2, 3])
-        >>> model.random_state()
+        >>> model.random_state() # doctest: +SKIP
         [State(var='diff', state=2), State(var='intel', state=1)]
         """
         return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]
@@ -493,15 +490,15 @@ class MarkovChain:
         >>> model.add_transition_model("diff", diff_tm)
         >>> model.set_start_state([State("intel", 0), State("diff", 1)])
         >>> model_copy = model.copy()
-        >>> model_copy.transition_models
-        >>> {
-        ...     "diff": {
-        ...         0: {0: 0.1, 1: 0.5, 2: 0.4},
-        ...         1: {0: 0.2, 1: 0.2, 2: 0.6},
-        ...         2: {0: 0.7, 1: 0.15, 2: 0.15},
+        >>> model_copy.transition_models == {
+        ...     "intel": {
+        ...         0: {0: 0.2, 1: 0.4, 2: 0.4},
+        ...         1: {0: 0, 1: 0.5, 2: 0.5},
+        ...         2: {0: 0.3, 1: 0.3, 2: 0.4},
         ...     },
-        ...     "intel": {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}},
+        ...     "diff": {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1: 0.75}},
         ... }
+        True
         """
         markovchain_copy = MarkovChain(
             variables=list(self.cardinalities.keys()),
