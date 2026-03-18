@@ -47,7 +47,7 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm least_duration --verbose --junitxml=test-results.xml
+        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm duration_based_chunks --verbose --junitxml=test-results.xml
 
   test-fulldep:
     name: Optional deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/3)
@@ -85,7 +85,7 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm least_duration --cov=pgmpy --cov-report term --verbose --junitxml=test-results.xml
+        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm duration_based_chunks --cov=pgmpy --cov-report term --verbose --junitxml=test-results.xml
 
       - name: Rename coverage file
         run: mv .coverage .coverage.${{ matrix.group }}
