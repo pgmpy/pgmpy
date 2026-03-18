@@ -42,9 +42,7 @@ def test_with_role_raises_for_missing_variable(basic_dag):
 
 
 def test_with_role_inplace_false_returns_new_graph(basic_dag):
-    new_graph = basic_dag.with_role(
-        role="exposures", variables={"X", "Z"}, inplace=False
-    )
+    new_graph = basic_dag.with_role(role="exposures", variables={"X", "Z"}, inplace=False)
 
     for _, attr in basic_dag.nodes(data=True):
         assert "roles" not in attr

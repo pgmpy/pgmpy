@@ -1,13 +1,5 @@
+from collections.abc import Callable, Hashable
 from itertools import permutations
-from typing import (
-    Callable,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Union,
-)
 
 import networkx as nx
 import pandas as pd
@@ -166,7 +158,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import PC
     >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
     >>> pc.fit(df)
-    >>> pc.causal_graph_.edges()
+    PC(ci_test='chi_square')
+    >>> pc.causal_graph_  # doctest: +ELLIPSIS
+    <pgmpy.base.PDAG.PDAG object at 0x...>
+    >>> pc.n_features_in_
+    37
 
     Specify expert knowledge:
 
@@ -189,11 +185,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     def __init__(
         self,
         variant: str = "parallel",
-        ci_test: Optional[Union[str, Callable]] = None,
+        ci_test: str | Callable | None = None,
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
@@ -250,9 +246,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         )
 
         # Step 2: Use separating sets to orient colliders
-        pdag = self._orient_colliders(
-            self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering
-        )
+        pdag = self._orient_colliders(self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering)
 
         # Step 3: apply orientation rules and expert knowledge
         if expert_knowledge.temporal_order != [[]]:
@@ -272,21 +266,17 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         elif self.return_type == "dag":
             self.causal_graph_ = pdag.to_dag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
 
     @staticmethod
     def _orient_colliders(
         skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton based on
@@ -323,16 +313,16 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
+        >>> from pgmpy.causal_discovery import PC
+        >>> rng = np.random.default_rng(42)
+        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
-        >>> c = PC(data)
-        >>> pdag = c._orient_colliders(*c._build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        >>> c = PC()
+        >>> _ = c.fit(data)
+        >>> pdag = c._orient_colliders(c.skeleton_, c.separating_sets_)
+        >>> sorted(pdag.edges())  # edges: A->C, B->C, A--D (not directed)
+        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
         """
 
         pdag = skeleton.to_directed()
@@ -358,9 +348,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
+        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

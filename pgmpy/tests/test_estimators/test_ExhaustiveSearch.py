@@ -42,38 +42,34 @@ def test_all_dags(setup_data):
     assert len(list(data["est_rand"].all_dags(["A", "B", "C", "D"]))) == 543
     # self.assertEqual(len(list(self.est_rand.all_dags(nodes=range(5)))), 29281)  # takes ~30s
 
-    abc_dags = set(
-        map(tuple, [sorted(dag.edges()) for dag in data["est_rand"].all_dags()])
-    )
-    abc_dags_ref = set(
-        [
-            (("A", "B"), ("C", "A"), ("C", "B")),
-            (("A", "C"), ("B", "C")),
-            (("B", "A"), ("B", "C")),
-            (("C", "B"),),
-            (("A", "C"), ("B", "A")),
-            (("B", "C"), ("C", "A")),
-            (("A", "B"), ("B", "C")),
-            (("A", "C"), ("B", "A"), ("B", "C")),
-            (("A", "B"),),
-            (("A", "B"), ("C", "A")),
-            (("B", "A"), ("C", "A"), ("C", "B")),
-            (("A", "C"), ("C", "B")),
-            (("A", "B"), ("A", "C"), ("C", "B")),
-            (("B", "A"), ("C", "B")),
-            (("A", "B"), ("A", "C")),
-            (("C", "A"), ("C", "B")),
-            (("A", "B"), ("A", "C"), ("B", "C")),
-            (("C", "A"),),
-            (("B", "A"), ("B", "C"), ("C", "A")),
-            (("B", "A"),),
-            (("A", "B"), ("C", "B")),
-            (),
-            (("B", "A"), ("C", "A")),
-            (("A", "C"),),
-            (("B", "C"),),
-        ]
-    )
+    abc_dags = set(map(tuple, [sorted(dag.edges()) for dag in data["est_rand"].all_dags()]))
+    abc_dags_ref = {
+        (("A", "B"), ("C", "A"), ("C", "B")),
+        (("A", "C"), ("B", "C")),
+        (("B", "A"), ("B", "C")),
+        (("C", "B"),),
+        (("A", "C"), ("B", "A")),
+        (("B", "C"), ("C", "A")),
+        (("A", "B"), ("B", "C")),
+        (("A", "C"), ("B", "A"), ("B", "C")),
+        (("A", "B"),),
+        (("A", "B"), ("C", "A")),
+        (("B", "A"), ("C", "A"), ("C", "B")),
+        (("A", "C"), ("C", "B")),
+        (("A", "B"), ("A", "C"), ("C", "B")),
+        (("B", "A"), ("C", "B")),
+        (("A", "B"), ("A", "C")),
+        (("C", "A"), ("C", "B")),
+        (("A", "B"), ("A", "C"), ("B", "C")),
+        (("C", "A"),),
+        (("B", "A"), ("B", "C"), ("C", "A")),
+        (("B", "A"),),
+        (("A", "B"), ("C", "B")),
+        (),
+        (("B", "A"), ("C", "A")),
+        (("A", "C"),),
+        (("B", "C"),),
+    }
     assert abc_dags == abc_dags_ref
 
 
@@ -93,9 +89,7 @@ def test_estimate_rand(setup_data):
 
 def test_estimate_titanic(setup_data):
     data = setup_data
-    est_k2 = ExhaustiveSearch(
-        data["titanic_data2"], scoring_method=K2(data["titanic_data2"])
-    )
+    est_k2 = ExhaustiveSearch(data["titanic_data2"], scoring_method=K2(data["titanic_data2"]))
     e1 = est_k2.estimate()
     assert set(e1.edges()) == {
         ("Survived", "Pclass"),
@@ -106,9 +100,7 @@ def test_estimate_titanic(setup_data):
 
 def test_all_scores(setup_data):
     data = setup_data
-    est_k2 = ExhaustiveSearch(
-        data["titanic_data2"], scoring_method=K2(data["titanic_data2"])
-    )
+    est_k2 = ExhaustiveSearch(data["titanic_data2"], scoring_method=K2(data["titanic_data2"]))
     scores = est_k2.all_scores()
     scores_ref = [
         (-2072.9132364404695, []),
@@ -156,9 +148,7 @@ def test_all_scores(setup_data):
         ),
     ]
 
-    assert [sorted(model.edges()) for score, model in scores] == [
-        edges for score, edges in scores_ref
-    ]
+    assert [sorted(model.edges()) for score, model in scores] == [edges for score, edges in scores_ref]
 
     # use assertAlmostEqual point wise to avoid rounding issues
     for (score, _), (ref_score, _) in zip(scores, scores_ref):
