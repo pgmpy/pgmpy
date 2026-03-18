@@ -92,30 +92,18 @@ class ExpertKnowledge:
         search_space=None,
         **kwargs,
     ):
-        self.forbidden_edges = (
-            self._validate_edges(forbidden_edges)
-            if forbidden_edges is not None
-            else set()
-        )
-        self.required_edges = (
-            self._validate_edges(required_edges)
-            if required_edges is not None
-            else set()
-        )
+        self.forbidden_edges = self._validate_edges(forbidden_edges) if forbidden_edges is not None else set()
+        self.required_edges = self._validate_edges(required_edges) if required_edges is not None else set()
 
-        self.search_space = (
-            self._validate_edges(search_space) if search_space is not None else set()
-        )
+        self.search_space = self._validate_edges(search_space) if search_space is not None else set()
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
-            raise TypeError(
-                f"Expected iterator type for edge information. Got {type(edge_list)} instead."
-            )
-        elif type(edge_list) != set:
+            raise TypeError(f"Expected iterator type for edge information. Got {type(edge_list)} instead.")
+        elif not isinstance(edge_list, set):
             return set(edge_list)
         else:
             return edge_list
@@ -142,9 +130,7 @@ class ExpertKnowledge:
 
         # Check if all nodes are present in the temporal order
         if set(chain(*self.temporal_order)) != set(nodes):
-            raise ValueError(
-                f"Missing nodes in temporal order - {set(nodes) - set(chain(*self.temporal_order))}"
-            )
+            raise ValueError(f"Missing nodes in temporal order - {set(nodes) - set(chain(*self.temporal_order))}")
 
     def _get_temporal_ordering(self, temporal_order):
         """
@@ -165,17 +151,13 @@ class ExpertKnowledge:
             Dictionary with the tier (0, 1, 2, 3 etc.) for each node.
         """
         if not hasattr(temporal_order, "__iter__"):
-            raise TypeError(
-                f"Expected iterator type for temporal order. Got {type(temporal_order)} instead."
-            )
+            raise TypeError(f"Expected iterator type for temporal order. Got {type(temporal_order)} instead.")
 
         temporal_ordering = dict()
         for order, tier in enumerate(self.temporal_order):
             for node in tier:
                 if node in temporal_ordering:
-                    raise ValueError(
-                        f"Variable {node} present in multiple tiers. Aborting"
-                    )
+                    raise ValueError(f"Variable {node} present in multiple tiers. Aborting")
                 temporal_ordering[node] = order
 
         return temporal_ordering
