@@ -63,7 +63,7 @@ class FactorGraph(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(FactorGraph, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -92,7 +92,7 @@ class FactorGraph(UndirectedGraph):
         if "weight" not in kwargs:
             kwargs["weight"] = 0  # Fix for compatibility with NetworkX draw()
 
-        super(FactorGraph, self).add_edge(u, v, **kwargs)
+        super().add_edge(u, v, **kwargs)
 
     def add_factors(self, *factors, replace=False):
         """
@@ -117,12 +117,8 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         """
         for factor in factors:
-            if set(factor.variables) - set(factor.variables).intersection(
-                set(self.nodes())
-            ):
-                raise ValueError(
-                    "Factors defined on variable not in the model", factor.__repr__()
-                )
+            if set(factor.variables) - set(factor.variables).intersection(set(self.nodes())):
+                raise ValueError("Factors defined on variable not in the model", factor.__repr__())
 
             if replace:
                 for fa in self.factors:
@@ -216,12 +212,10 @@ class FactorGraph(UndirectedGraph):
         * Check if cardinality of random variable remains same across all the
           factors.
         """
-        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
+        variable_nodes = {x for factor in self.factors for x in factor.scope()}
         factor_nodes = set(self.nodes()) - variable_nodes
 
-        if not all(
-            isinstance(factor_node, DiscreteFactor) for factor_node in factor_nodes
-        ):
+        if not all(isinstance(factor_node, DiscreteFactor) for factor_node in factor_nodes):
             raise ValueError("Factors not associated for all the random variables")
 
         if not (bipartite.is_bipartite(self)) or not (
@@ -240,9 +234,7 @@ class FactorGraph(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
-                    raise ValueError(
-                        f"Cardinality of variable {variable} not matching among factors"
-                    )
+                    raise ValueError(f"Cardinality of variable {variable} not matching among factors")
 
         return True
 
@@ -269,7 +261,7 @@ class FactorGraph(UndirectedGraph):
         """
         self.check_model()
 
-        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
+        variable_nodes = {x for factor in self.factors for x in factor.scope()}
         return list(variable_nodes)
 
     def get_factor_nodes(self):
@@ -386,14 +378,8 @@ class FactorGraph(UndirectedGraph):
         else:
             factor_nodes = self.get_factor_nodes()
             if node not in factor_nodes:
-                raise ValueError(
-                    "Factors are not associated with the " "corresponding node."
-                )
-            factors = list(
-                filter(
-                    lambda x: set(x.scope()) == set(self.neighbors(node)), self.factors
-                )
-            )
+                raise ValueError("Factors are not associated with the corresponding node.")
+            factors = list(filter(lambda x: set(x.scope()) == set(self.neighbors(node)), self.factors))
             return factors[0]
 
     def get_partition_function(self):
@@ -422,9 +408,7 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_partition_function()
         """
         factor = self.factors[0]
-        factor = factor_product(
-            factor, *[self.factors[i] for i in range(1, len(self.factors))]
-        )
+        factor = factor_product(factor, *[self.factors[i] for i in range(1, len(self.factors))])
         if set(factor.scope()) != set(self.get_variable_nodes()):
             raise ValueError("DiscreteFactor for all the random variables not defined.")
 

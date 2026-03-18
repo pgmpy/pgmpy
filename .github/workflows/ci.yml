@@ -12,20 +12,20 @@ on:
 
 jobs:
   test-nosoftdeps:
-    name: Core deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
-    runs-on: ${{ matrix.os }}
+    name: Core deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/3)
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.14"]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        group: [1, 2, 3]
       fail-fast: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -35,45 +35,35 @@ jobs:
           which python
           python --version
 
-      - name: Install graphviz (Windows)
-        if: matrix.os == 'windows-latest'
-        run: choco install graphviz -y
-
-      - name: Install graphviz (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install graphviz
         run: sudo apt-get update && sudo apt-get install graphviz -y
-
-      - name: Install graphviz (macOS)
-        if: matrix.os == 'macOS-latest'
-        run: brew install graphviz
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pytest-split
           pip install .[tests]
 
       - name: Print installed packages
         run: pip freeze
 
       - name: Run tests
-        run: pytest --verbose --junitxml=test-results.xml
+        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm duration_based_chunks --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: Optional deps | OS ${{ matrix.os }} | Python ${{ matrix.python-version}}
-    runs-on: ${{ matrix.os }}
+    name: Optional deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/3)
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.14"]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        group: [1, 2, 3]
       fail-fast: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -83,36 +73,63 @@ jobs:
           which python
           python --version
 
-      - name: Install graphviz (Windows)
-        if: matrix.os == 'windows-latest'
-        run: choco install graphviz -y
-
-      - name: Install graphviz (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install graphviz
         run: sudo apt-get update && sudo apt-get install graphviz -y
-
-      - name: Install graphviz (macOS)
-        if: matrix.os == 'macOS-latest'
-        run: brew install graphviz
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pytest-split
           pip install .[all,tests]
 
       - name: Print installed packages
         run: pip freeze
 
       - name: Run tests
-        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose --junitxml=test-results.xml
+        run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm duration_based_chunks --cov=pgmpy --cov-report term --verbose --junitxml=test-results.xml
+
+      - name: Rename coverage file
+        run: mv .coverage .coverage.${{ matrix.group }}
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}-${{ matrix.group }}
+          path: .coverage.${{ matrix.group }}
+          include-hidden-files: true
+
+  merge-coverage:
+    name: Merge coverage | Python ${{ matrix.python-version }}
+    needs: test-fulldep
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install coverage
+        run: pip install coverage
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-${{ matrix.python-version }}-*
+          merge-multiple: true
+
+      - name: Combine coverage
+        run: |
+          coverage combine
+          coverage report
+          coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload test results
-        uses: codecov/test-results-action@v1
-        with:
-          files: test-results.xml
