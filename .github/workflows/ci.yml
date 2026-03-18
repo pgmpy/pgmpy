@@ -12,7 +12,7 @@ on:
 
 jobs:
   test-nosoftdeps:
-    name: Core deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/${{ strategy.job-total }})
+    name: Core deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/3)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -51,7 +51,7 @@ jobs:
         run: pytest --splits 3 --group ${{ matrix.group }} --splitting-algorithm least_duration --verbose --junitxml=test-results.xml
 
   test-fulldep:
-    name: Optional deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/${{ strategy.job-total }})
+    name: Optional deps | Python ${{ matrix.python-version }} (split ${{ matrix.group }}/3)
     runs-on: ubuntu-latest
     strategy:
       matrix:
