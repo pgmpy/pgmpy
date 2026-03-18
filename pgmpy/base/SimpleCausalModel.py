@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
 
 from pgmpy.base import DAG
 
@@ -63,7 +63,7 @@ class SimpleCausalModel(DAG):
     instruments: str, int, iterable, or None (default: None)
         If str or iterable, those would be used as the names of the instrumental variables,
         If an int, `instruments` number of variables will be generated with role-based prefixes: `I_0, I_1, ..., I_n`.
-        
+
     latents: iterable or None (default: None)
         List of latent variables.
 
@@ -74,8 +74,8 @@ class SimpleCausalModel(DAG):
     >>> model = SimpleCausalModel(
     ...     exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
     ... )
-    >>> model.edges()
-    OutEdgeView([('Z', 'X'), ('Z', 'Y'), ('I', 'X'), ('X', 'M'), ('M', 'Y')])
+    >>> sorted(model.edges())
+    [('I', 'X'), ('M', 'Y'), ('X', 'M'), ('Z', 'X'), ('Z', 'Y')]
 
     >>> model2 = SimpleCausalModel(
     ...     exposures=1, outcomes=2, confounders=2, mediators=None, instruments=1
@@ -117,12 +117,12 @@ class SimpleCausalModel(DAG):
 
     def __init__(
         self,
-        exposures: Union[str, int, Iterable[Union[str, int]]],
-        outcomes: Union[str, int, Iterable[Union[str, int]]],
-        confounders: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        mediators: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        instruments: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        latents: Optional[Iterable[str]] = None,
+        exposures: str | int | Iterable[str | int],
+        outcomes: str | int | Iterable[str | int],
+        confounders: str | int | Iterable[str | int] | None = None,
+        mediators: str | int | Iterable[str | int] | None = None,
+        instruments: str | int | Iterable[str | int] | None = None,
+        latents: Iterable[str] | None = None,
     ):
         exposures = self._to_list(exposures, "exposures")
         outcomes = self._to_list(outcomes, "outcomes")
@@ -161,7 +161,5 @@ class SimpleCausalModel(DAG):
         latents_set = set(latents) if latents else set()
         for latent in latents_set:
             if latent not in self.nodes():
-                raise ValueError(
-                    f"Latent variable '{latent}' is not in the graph nodes."
-                )
+                raise ValueError(f"Latent variable '{latent}' is not in the graph nodes.")
         self.latents = latents_set

@@ -1,0 +1,22 @@
+# List of modules with passing doctests.
+# Add a module path here after fixing its doctests to have them checked in CI.
+# Example:
+# pgmpy/base/DAG.py
+pgmpy/base/ADMG.py
+pgmpy/inference/ExactInference.py
+pgmpy/causal_discovery/GES.py
+pgmpy/base/SimpleCausalModel.py
+pgmpy/base/UndirectedGraph.py
+pgmpy/causal_discovery/PC.py
+pgmpy/models/JunctionTree.py
+pgmpy/models/DiscreteBayesianNetwork.py
+pgmpy/models/MarkovChain.py
+pgmpy/estimators/HillClimbSearch.py
+pgmpy/estimators/PC.py
+pgmpy/estimators/MLE.py
+pgmpy/estimators/MmhcEstimator.py
+pgmpy/estimators/EM.py
+pgmpy/estimators/BayesianEstimator.py
+pgmpy/estimators/ExhaustiveSearch.py
+pgmpy/inference/ApproxInference.py
+pgmpy/models/FactorGraph.py

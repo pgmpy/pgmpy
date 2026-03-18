@@ -1,6 +1,4 @@
 import gzip
-import json
-import math
 
 import pandas as pd
 
@@ -39,7 +37,7 @@ def get_example_model(model: str):
 
     Example
     -------
-    >>> from pgmpy.data import get_example_model
+    >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model(model="asia")
     >>> model
 
@@ -156,10 +154,7 @@ def get_example_model(model: str):
     }
 
     if model not in filenames:
-        raise ValueError(
-            f"Unknown model name: {model}. Please refer"
-            " documentation for valid model names."
-        )
+        raise ValueError(f"Unknown model name: {model}. Please refer documentation for valid model names.")
 
     path = filenames[model]
 
@@ -175,45 +170,10 @@ def get_example_model(model: str):
             return reader.get_model()
 
     elif model in cont_models:
-        from pgmpy.factors.continuous import LinearGaussianCPD
         from pgmpy.models import LinearGaussianBayesianNetwork
 
-        with open(files("pgmpy") / path, "r") as f:
-            data = json.load(f)
-
-        # Extract nodes, arcs, and CPDs from the JSON file
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
-
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
-
-        # Create CPDs and add them to the model
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
-
-            # Extract the intercept
-            intercept = coefficients["(Intercept)"][0]
-
-            # Extract the parent coefficients
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            # Create LinearGaussianCPD for the node
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        # Add CPDs to the model
-        model.add_cpds(*cpds)
-        return model
+        full_path = str(files("pgmpy") / path)
+        return LinearGaussianBayesianNetwork.load(full_path)
 
     elif model in dag_models:
         from pgmpy.base import DAG
@@ -291,9 +251,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             )
     elif method == "quantile":
         for column in data.columns:
-            df_copy[column] = pd.qcut(
-                df_copy[column], q=cardinality[column], labels=labels.get(column)
-            )
+            df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
 
@@ -362,9 +320,7 @@ def llm_pairwise_orient(
         Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
         Do not add any formatting in the answer.
         """
-    response = completion(
-        model=llm_model, messages=[{"role": "user", "content": prompt}]
-    )
+    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
     response = response.choices[0].message.content
     response_txt = response.strip().lower().replace("*", "")
     if response_txt in ("a", "1"):
@@ -372,9 +328,7 @@ def llm_pairwise_orient(
     elif response_txt in ("b", "2"):
         return (y, x)
     else:
-        raise ValueError(
-            "Results from the LLM are unclear. Try calling the function again."
-        )
+        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):
@@ -432,9 +386,7 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(
-            df[col]
-        ):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
@@ -449,8 +401,7 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
-        f"inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
 

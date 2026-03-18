@@ -1,20 +1,32 @@
+# The following checklist is mandatory.
+
+Your PR will be closed if you remove the checklist or do not answer the questions to a satisfactory level. Use of LLMs is **strictly forbidden** for any part of this checklist (including for improving language), and will result in a **ban** if we find any use of LLMs.
+
 ### Your checklist for this pull request
- **New Contributors**: **Do not** remove this checklist. Your PR **won't** get reviewed if this checklist is not present in the PR.
 
-Please complete the following checklist after creating the PR.
+- [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)?
+- [ ] Does the PR fully address the linked issue and is within its defined scope? If you are still working on the PR, mark it as draft.
+- [ ] Are all the GitHub Actions checks passing? If not, mark your PR as draft while you fix it.
 
-- [ ] Make sure you are requesting to **pull a topic/feature/bugfix branch** (right side) against our **dev branch** (left side). Please do not request your **dev branch**.
-- [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md) ?
-- [ ] Are all the GitHub Actions checks passing? If not, they will need to be fixed before review. You can reference actions logs for the failing check to identify the issue.
+Please answer the following questions:
 
-Did you use a Large language model (LLM) to generate the PR (or parts of it)? If yes, please go through this checklist as well: 
-- [ ] Please include a short description of the changes you have made. This doesn't need to be a polished description, but it **must** be written manually (**not by an AI model**) by you.
-- [ ] Have you **manually** verified that the changes are doing exactly what is expected?
-- [ ] Has the LLM added a bunch of try-except blocks? They will need to be removed; any error handling should be explicit.
-- [ ] If you used LLM for generating tests, they usually need to be compressed into a smaller set of tests. Please **manually** describe what scenarios the tests are testing for.
+- Did you use an LLM for any assistance with this PR? Please describe in **detail** (around a paragraph) how and what you used it for?  
+[Please Answer Here]
+
+- Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
+[Please Answer Here]
+
+- What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered? Other than running tests, what else have you verified?  
+[Please Answer Here]
+
+- Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.  
+[Please Answer Here]
+
+- Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.  
+[Please Answer Here]
 
 ### Issue number(s) that this pull request fixes
 - Fixes #
 
 ### List of changes to the codebase in this pull request
-- 
+-
