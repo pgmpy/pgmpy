@@ -1,17 +1,16 @@
 from collections import namedtuple
 from itertools import chain, combinations
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
-from pgmpy import config
 from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 
 State = namedtuple("State", ["var", "state"])
 
 
-def cartesian(arrays: list[Any], out: Optional[np.ndarray] = None) -> np.ndarray:
+def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
     """Generate a cartesian product of input arrays.
 
     Parameters
@@ -46,10 +45,10 @@ def cartesian(arrays: list[Any], out: Optional[np.ndarray] = None) -> np.ndarray
 
     """
     arrays = [np.asarray(x) for x in arrays]
-    shape = list(len(x) for x in arrays)
+    shape = [len(x) for x in arrays]
     dtype = arrays[0].dtype
 
-    ix = np.indices((shape))
+    ix = np.indices(shape)
     ix = ix.reshape(len(arrays), -1).T
 
     result: np.ndarray
@@ -86,17 +85,13 @@ def _adjusted_weights(weights: np.ndarray):
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
-        logger.warning(
-            f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
-        )
+        logger.warning(f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values.")
         weights[compat_fns.argmax(weights)] += error
 
     return weights
 
 
-def sample_discrete(
-    values, weights: np.ndarray | list[np.ndarray], size=1, seed: Optional[int] = None
-):
+def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed: int | None = None):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -132,9 +127,7 @@ def sample_discrete(
         np.random.seed(seed)
     weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
-        return np.random.choice(
-            compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights)
-        )
+        return np.random.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
     else:
         samples = np.zeros(size, dtype=int)
         unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
@@ -152,7 +145,7 @@ def sample_discrete_maps(
     weight_indices: np.ndarray,
     index_to_weight: np.ndarray,
     size=1,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ):
     """
     Generate a sample of given size, given a probability mass function.
@@ -194,9 +187,7 @@ def sample_discrete_maps(
     # TODO: Remove this conversion and find a way to do this natively in torch.
     states = np.array(states)
     weight_indices = compat_fns.to_numpy(weight_indices)
-    index_to_weight = {
-        key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()
-    }
+    index_to_weight = {key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()}
     size = int(size)
 
     samples = np.zeros(size, dtype=int)
@@ -219,6 +210,4 @@ def powerset(l_input: list):
     >>> list(powerset([1, 2, 3]))
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
-    return chain.from_iterable(
-        combinations(l_input, r) for r in range(len(l_input) + 1)
-    )
+    return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))

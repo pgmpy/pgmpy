@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import io
 import sys
@@ -210,9 +209,7 @@ class TestPomdpXReaderString(unittest.TestCase):
             ],
             "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
             "RewardVar": [{"vname": "reward_rover"}],
-            "ActionVar": [
-                {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-            ],
+            "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
         }
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_variables(), var_expected)
@@ -323,12 +320,8 @@ class TestPomdpXReaderString(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), reward_function_expected
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), reward_function_expected
-        )
+        self.assertEqual(self.reader_string.get_reward_function(), reward_function_expected)
+        self.assertEqual(self.reader_file.get_reward_function(), reward_function_expected)
 
     def test_get_parameter_dd(self):
         string = """
@@ -383,9 +376,7 @@ class TestPomdpXReaderString(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            expected_dd_parameter, self.reader_string.get_initial_beliefs()
-        )
+        self.assertEqual(expected_dd_parameter, self.reader_string.get_initial_beliefs())
         self.assertEqual(expected_dd_parameter, self.reader_file.get_initial_beliefs())
 
     def test_initial_belief_dd(self):
@@ -441,7 +432,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_dd(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -538,12 +529,8 @@ class TestPomdpXReaderString(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), expected_reward_function_dd
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), expected_reward_function_dd
-        )
+        self.assertEqual(self.reader_string.get_reward_function(), expected_reward_function_dd)
+        self.assertEqual(self.reader_file.get_reward_function(), expected_reward_function_dd)
 
     def test_state_transition_function(self):
         string = """
@@ -910,18 +897,14 @@ class TestPomdpXWriter(unittest.TestCase):
                 ],
                 "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
                 "RewardVar": [{"vname": "reward_rover"}],
-                "ActionVar": [
-                    {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-                ],
+                "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
             },
             "initial_state_belief": [
                 {
                     "Var": "rover_0",
                     "Parent": ["null"],
                     "Type": "TBL",
-                    "Parameter": [
-                        {"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}
-                    ],
+                    "Parameter": [{"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}],
                 },
                 {
                     "Var": "rock_0",
@@ -1038,9 +1021,7 @@ class TestPomdpXWriter(unittest.TestCase):
 </Variable>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.get_variables(), etree.tostring(expected_variables)
-        )
+        self.assertEqual(self.writer.get_variables(), etree.tostring(expected_variables))
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -1191,9 +1172,7 @@ class TestPomdpXWriter(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_obs_function(), etree.tostring(expected_obs_xml)
-        )
+        self.assertEqual(self.writer.add_obs_function(), etree.tostring(expected_obs_xml))
 
     def test_add_reward_function(self):
         expected_reward_xml = etree.XML(
@@ -1228,9 +1207,7 @@ class TestPomdpXWriter(unittest.TestCase):
 </RewardFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_reward_xml)
-        )
+        self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_reward_xml))
 
     def test_initial_state_belief_dd(self):
         self.model_data = {
@@ -1473,9 +1450,7 @@ class TestPomdpXWriter(unittest.TestCase):
             str(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(
-        sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8"
-    )
+    @unittest.skipIf(sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8")
     def test_obs_function_dd(self):
         self.model_data = {
             "obs_function": [
@@ -1603,9 +1578,7 @@ class TestPomdpXWriter(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
-        )
+        self.assertEqual(str(self.writer.add_obs_function()), str(etree.tostring(expected_xml)))
 
     def test_reward_function_dd(self):
         self.model_data = {
@@ -1616,12 +1589,8 @@ class TestPomdpXWriter(unittest.TestCase):
                     "Type": "DD",
                     "Parameter": {
                         "action_rover": {
-                            "amw": {
-                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
-                            },
-                            "ame": {
-                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
-                            },
+                            "amw": {"rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}},
+                            "ame": {"rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}},
                             "ac": "0.0",
                             "as": {
                                 "rover_0": {
@@ -1702,9 +1671,7 @@ class TestPomdpXWriter(unittest.TestCase):
 </RewardFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_xml)
-        )
+        self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_xml))
 
 
 class TestPomdpXReaderStringTorch(unittest.TestCase):
@@ -1908,9 +1875,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
             ],
             "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
             "RewardVar": [{"vname": "reward_rover"}],
-            "ActionVar": [
-                {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-            ],
+            "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
         }
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_variables(), var_expected)
@@ -2021,12 +1986,8 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), reward_function_expected
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), reward_function_expected
-        )
+        self.assertEqual(self.reader_string.get_reward_function(), reward_function_expected)
+        self.assertEqual(self.reader_file.get_reward_function(), reward_function_expected)
 
     def test_get_parameter_dd(self):
         string = """
@@ -2081,9 +2042,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            expected_dd_parameter, self.reader_string.get_initial_beliefs()
-        )
+        self.assertEqual(expected_dd_parameter, self.reader_string.get_initial_beliefs())
         self.assertEqual(expected_dd_parameter, self.reader_file.get_initial_beliefs())
 
     def test_initial_belief_dd(self):
@@ -2139,7 +2098,7 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
         self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
         self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
-    def test_reward_function(self):
+    def test_reward_function_dd(self):
         string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -2236,12 +2195,8 @@ class TestPomdpXReaderStringTorch(unittest.TestCase):
             }
         ]
         self.maxDiff = None
-        self.assertEqual(
-            self.reader_string.get_reward_function(), expected_reward_function_dd
-        )
-        self.assertEqual(
-            self.reader_file.get_reward_function(), expected_reward_function_dd
-        )
+        self.assertEqual(self.reader_string.get_reward_function(), expected_reward_function_dd)
+        self.assertEqual(self.reader_file.get_reward_function(), expected_reward_function_dd)
 
     def test_state_transition_function(self):
         string = """
@@ -2608,18 +2563,14 @@ class TestPomdpXWriterTorch(unittest.TestCase):
                 ],
                 "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
                 "RewardVar": [{"vname": "reward_rover"}],
-                "ActionVar": [
-                    {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-                ],
+                "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
             },
             "initial_state_belief": [
                 {
                     "Var": "rover_0",
                     "Parent": ["null"],
                     "Type": "TBL",
-                    "Parameter": [
-                        {"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}
-                    ],
+                    "Parameter": [{"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}],
                 },
                 {
                     "Var": "rock_0",
@@ -2736,9 +2687,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </Variable>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.get_variables(), etree.tostring(expected_variables)
-        )
+        self.assertEqual(self.writer.get_variables(), etree.tostring(expected_variables))
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -2889,9 +2838,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_obs_function(), etree.tostring(expected_obs_xml)
-        )
+        self.assertEqual(self.writer.add_obs_function(), etree.tostring(expected_obs_xml))
 
     def test_add_reward_function(self):
         expected_reward_xml = etree.XML(
@@ -2926,9 +2873,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </RewardFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_reward_xml)
-        )
+        self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_reward_xml))
 
     def test_initial_state_belief_dd(self):
         self.model_data = {
@@ -3171,9 +3116,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             str(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(
-        sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8"
-    )
+    @unittest.skipIf(sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8")
     def test_obs_function_dd(self):
         self.model_data = {
             "obs_function": [
@@ -3301,9 +3244,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
-        )
+        self.assertEqual(str(self.writer.add_obs_function()), str(etree.tostring(expected_xml)))
 
     def test_reward_function_dd(self):
         self.model_data = {
@@ -3314,12 +3255,8 @@ class TestPomdpXWriterTorch(unittest.TestCase):
                     "Type": "DD",
                     "Parameter": {
                         "action_rover": {
-                            "amw": {
-                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
-                            },
-                            "ame": {
-                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
-                            },
+                            "amw": {"rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}},
+                            "ame": {"rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}},
                             "ac": "0.0",
                             "as": {
                                 "rover_0": {
@@ -3400,6 +3337,4 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </RewardFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(
-            self.writer.add_reward_function(), etree.tostring(expected_xml)
-        )
+        self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_xml))

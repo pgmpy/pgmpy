@@ -25,10 +25,7 @@ class Cities(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-        "real/cites/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/cites/"
 
     data_url = base_url + "data/cites.cov.txt"
     ground_truth_url = None

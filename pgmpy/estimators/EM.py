@@ -1,6 +1,6 @@
 from itertools import chain, product
 from math import log
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -62,14 +62,12 @@ class ExpectationMaximization(ParameterEstimator):
 
     def __init__(
         self,
-        model: Union[DAG, DiscreteBayesianNetwork],
+        model: DAG | DiscreteBayesianNetwork,
         data: pd.DataFrame,
         **kwargs,
     ):
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
-            raise NotImplementedError(
-                "Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork"
-            )
+            raise NotImplementedError("Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork")
 
         if isinstance(model, DAG):
             model_bn = DiscreteBayesianNetwork(model.edges())
@@ -101,10 +99,10 @@ class ExpectationMaximization(ParameterEstimator):
                 "missing columns were dropped from the dataset."
             )
 
-        super(ExpectationMaximization, self).__init__(model, data, **kwargs)
+        super().__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
-    def _get_log_likelihood(self, datapoint: Dict[str, Any]) -> float:
+    def _get_log_likelihood(self, datapoint: dict[str, Any]) -> float:
         """
         Computes the likelihood of a given datapoint. Goes through each
         CPD matching the combination of states to get the value and multiplying
@@ -115,13 +113,7 @@ class ExpectationMaximization(ParameterEstimator):
             scope = set(cpd.scope())
             likelihood += log(
                 max(
-                    cpd.get_value(
-                        **{
-                            key: value
-                            for key, value in datapoint.items()
-                            if key in scope
-                        }
-                    ),
+                    cpd.get_value(**{key: value for key, value in datapoint.items() if key in scope}),
                     1e-10,
                 )
             )
@@ -130,26 +122,20 @@ class ExpectationMaximization(ParameterEstimator):
     def _parallel_compute_weights(
         self,
         data_unique: pd.DataFrame,
-        latent_card: Dict[str, int],
-        n_counts: Dict[Tuple, int],
+        latent_card: dict[str, int],
+        n_counts: dict[tuple, int],
         offset: int,
         batch_size: int,
     ) -> pd.DataFrame:
-        cache: List[pd.DataFrame] = []
+        cache: list[pd.DataFrame] = []
         for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
-            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
-                drop=True
-            )
+            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(drop=True)
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-            weights = np.e ** (
-                df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
-            )
-            df["_weight"] = (weights / weights.sum()) * n_counts[
-                tuple(data_unique.iloc[i])
-            ]
+            weights = np.e ** (df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1))
+            df["_weight"] = (weights / weights.sum()) * n_counts[tuple(data_unique.iloc[i])]
             cache.append(df)
 
         return pd.concat(cache)
@@ -157,7 +143,7 @@ class ExpectationMaximization(ParameterEstimator):
     def _compute_weights(
         self,
         n_jobs: int,
-        latent_card: Dict[str, int],
+        latent_card: dict[str, int],
         batch_size: int,
     ) -> pd.DataFrame:
         """
@@ -166,14 +152,10 @@ class ExpectationMaximization(ParameterEstimator):
         """
 
         data_unique = self.data.drop_duplicates()
-        n_counts = (
-            self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
-        )
+        n_counts = self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
 
         cache = Parallel(n_jobs=n_jobs)(
-            delayed(self._parallel_compute_weights)(
-                data_unique, latent_card, n_counts, i, batch_size
-            )
+            delayed(self._parallel_compute_weights)(data_unique, latent_card, n_counts, i, batch_size)
             for i in range(0, data_unique.shape[0], batch_size)
         )
 
@@ -181,7 +163,7 @@ class ExpectationMaximization(ParameterEstimator):
 
     def _is_converged(
         self,
-        new_cpds: List[TabularCPD],
+        new_cpds: list[TabularCPD],
         atol: float = 1e-08,
     ) -> bool:
         """
@@ -195,17 +177,17 @@ class ExpectationMaximization(ParameterEstimator):
 
     def get_parameters(
         self,
-        latent_card: Optional[Dict[str, int]] = None,
+        latent_card: dict[str, int] | None = None,
         apply_smoothing: bool = False,
         max_iter: int = 100,
         atol: float = 1e-08,
         n_jobs: int = 1,
         batch_size: int = 1000,
-        seed: Optional[int] = None,
-        init_cpds: Union[Dict[str, TabularCPD], str] = {},
+        seed: int | None = None,
+        init_cpds: dict[str, TabularCPD] | str = {},
         show_progress: bool = True,
         **kwargs,
-    ) -> List[TabularCPD]:
+    ) -> list[TabularCPD]:
         """
         Method to estimate all model parameters (CPDs) using Expectation Maximization.
 
@@ -285,7 +267,7 @@ class ExpectationMaximization(ParameterEstimator):
         """
         # Step 1: Parameter checks
         if latent_card is None:
-            latent_card = {var: 2 for var in self.model_copy.latents}
+            latent_card = dict.fromkeys(self.model_copy.latents, 2)
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
@@ -296,20 +278,14 @@ class ExpectationMaximization(ParameterEstimator):
         # Step 3: Initialize CPDs.
         # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
         if isinstance(init_cpds, str):
-            parents_dict = {
-                var: self.model.get_parents(var) for var in self.model.nodes()
-            }
+            parents_dict = {var: self.model.get_parents(var) for var in self.model.nodes()}
             if init_cpds == "random":
                 init_cpds = {
                     var: TabularCPD.get_random(
                         variable=var,
                         evidence=parents_dict[var],
-                        cardinality={
-                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
-                        },
-                        state_names={
-                            v: self.state_names[v] for v in ([var] + parents_dict[var])
-                        },
+                        cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
+                        state_names={v: self.state_names[v] for v in ([var] + parents_dict[var])},
                         seed=seed,
                     )
                     for var in self.model.nodes()
@@ -319,12 +295,8 @@ class ExpectationMaximization(ParameterEstimator):
                     var: TabularCPD.get_uniform(
                         variable=var,
                         evidence=parents_dict[var],
-                        cardinality={
-                            v: n_states_dict[v] for v in ([var] + parents_dict[var])
-                        },
-                        state_names={
-                            v: self.state_names[v] for v in ([var] + parents_dict[var])
-                        },
+                        cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
+                        state_names={v: self.state_names[v] for v in ([var] + parents_dict[var])},
                         seed=seed,
                     )
                     for var in self.model.nodes()
@@ -361,28 +333,20 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Step 3.2: Randomly initialize the CPDs involving latent variables if init_cpds is not specified.
         latent_cpds = []
-        vars_with_latents = (
-            set(self.model_copy.nodes()) - fixed_cpd_vars - set(init_cpds.keys())
-        )
+        vars_with_latents = set(self.model_copy.nodes()) - fixed_cpd_vars - set(init_cpds.keys())
         for node in vars_with_latents:
             parents = list(self.model_copy.predecessors(node))
             latent_cpds.append(
                 TabularCPD.get_random(
                     variable=node,
                     evidence=parents,
-                    cardinality={
-                        var: n_states_dict[var] for var in chain([node], parents)
-                    },
-                    state_names={
-                        var: self.state_names[var] for var in chain([node], parents)
-                    },
+                    cardinality={var: n_states_dict[var] for var in chain([node], parents)},
+                    state_names={var: self.state_names[var] for var in chain([node], parents)},
                     seed=seed,
                 )
             )
 
-        self.model_copy.add_cpds(
-            *list(chain(fixed_cpds, latent_cpds, list(init_cpds.values())))
-        )
+        self.model_copy.add_cpds(*list(chain(fixed_cpds, latent_cpds, list(init_cpds.values()))))
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)

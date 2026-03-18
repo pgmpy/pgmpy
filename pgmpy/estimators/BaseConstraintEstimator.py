@@ -1,14 +1,5 @@
+from collections.abc import Callable, Collection, Hashable
 from itertools import chain, combinations
-from typing import (
-    Callable,
-    Collection,
-    Dict,
-    Hashable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
 
 import networkx as nx
 from joblib import Parallel, delayed
@@ -57,15 +48,15 @@ class BaseConstraintEstimator(StructureEstimator):
     def build_skeleton(
         self,
         variant: str = "stable",
-        ci_test: Union[str, Callable, None] = None,
+        ci_test: str | Callable | None = None,
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
-    ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
+    ) -> tuple[UndirectedGraph, dict[tuple[str, str], set[str]]]:
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
@@ -192,16 +183,12 @@ class BaseConstraintEstimator(StructureEstimator):
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while not all(
-            [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
-        ):
+        while not all([len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]):
             # Step 2: Iterate over the edges and find a conditioning set of
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -223,9 +210,7 @@ class BaseConstraintEstimator(StructureEstimator):
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -247,9 +232,7 @@ class BaseConstraintEstimator(StructureEstimator):
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
-                    for separating_set in self._get_potential_sepsets(
-                        u, v, temporal_ordering, graph, lim_neighbors
-                    ):
+                    for separating_set in self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
                         if ci_test(
                             u,
                             v,
@@ -264,8 +247,7 @@ class BaseConstraintEstimator(StructureEstimator):
                 results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False)
-                    or ((u, v) not in expert_knowledge.required_edges)
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:
                     if result is not None:
@@ -274,24 +256,18 @@ class BaseConstraintEstimator(StructureEstimator):
                         separating_sets[frozenset((u, v))] = sep_set
 
             else:
-                raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
-                )
+                raise ValueError(f"variant must be one of (orig, stable, parallel). Got: {variant}")
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logger.info(
-                    "Reached maximum number of allowed conditional variables. Exiting"
-                )
+                logger.info("Reached maximum number of allowed conditional variables. Exiting")
                 break
             lim_neighbors += 1
 
             if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
-                pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
-                )
+                pbar.set_description(f"Working for n conditional variables: {lim_neighbors}")
 
         if show_progress and config.SHOW_PROGRESS:
             pbar.update(max_cond_vars - lim_neighbors)
@@ -302,10 +278,10 @@ class BaseConstraintEstimator(StructureEstimator):
     def _get_potential_sepsets(
         u: Hashable,
         v: Hashable,
-        temporal_ordering: Dict[Hashable, int],
+        temporal_ordering: dict[Hashable, int],
         graph: UndirectedGraph,
         lim_neighbors: int,
-    ) -> Collection[Tuple]:
+    ) -> Collection[tuple]:
         """
         Return the temporally consistent superset of separating set of u, v.
 

@@ -57,9 +57,7 @@ def test_estimate_discrete(random_data_estimator, titanic_estimators):
     est_rand.estimate()
     est_titanic1.estimate()
 
-    temporal_knowledge = ExpertKnowledge(
-        temporal_order=[["Pclass", "Sex"], ["Survived"]]
-    )
+    temporal_knowledge = ExpertKnowledge(temporal_order=[["Pclass", "Sex"], ["Survived"]])
 
     dag2 = est_titanic2.estimate(
         expert_knowledge=temporal_knowledge,

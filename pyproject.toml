@@ -128,14 +128,13 @@ skip = [
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "examples/*", "docs/source/conf.py", "old"]
+exclude = [".git", "examples/*", "docs/source/conf.py", "pgmpy/estimators/__init__.py", "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py", "pgmpy/extern/*"]
 target-version = "py311"
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = [
   # https://pypi.org/project/pycodestyle
-  "D",
   "E",
   "W",
   # https://pypi.org/project/pyflakes
@@ -152,9 +151,6 @@ select = [
   "PT006",   # Checks for the type of parameter names passed to pytest.mark.parametrize.
   "PT007",   # Checks for the type of parameter values passed to pytest.mark.parametrize.
   "PT018",   # Checks for assertions that combine multiple independent condition
-  "RUF001", # Checks for non unicode string literals
-  "RUF002", # Checks for non unicode string literals
-  "RUF003", # Checks for non unicode string literals
 ]
 
 extend-select = [
@@ -200,5 +196,10 @@ ignore=[
   "C419", # Unnecessary list comprehension, some are flagged yet are not
   "C409", # Unnecessary `list` literal passed to `tuple()` (rewrite as a `tuple` literal)
   "S113", # Probable use of httpx call without timeout
+  "S110", # try-except-pass detected.
+  "S311", # Standard pseudo-random generators not suitable for crypto.
+  "S314", # Using xml to parse untrusted data.
+  "S318", # Using xml minidom to parse untrusted data.
+  "UP026", # Replace mock with unittest.mock (external mock has different behavior).
 ]
 allowed-confusables=["σ"]
