@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -170,7 +170,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         nuisance_estimators=None,
         effect_estimator=None,
         n_folds: int = 5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
 
         self.causal_graph = causal_graph
@@ -179,7 +179,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         self.n_folds = n_folds
         self.seed = seed
 
-    def fit(self, X, y, sample_weight: Optional[Any] = None):
+    def fit(self, X, y, sample_weight: Any | None = None):
         """
         Fit the DoubleML model using the provided data.
 
@@ -209,9 +209,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
 
         elif isinstance(self.nuisance_estimators, tuple):
             if len(self.nuisance_estimators) != 2:
-                raise ValueError(
-                    "If nuisance_estimators is a tuple, it must have exactly two elements."
-                )
+                raise ValueError("If nuisance_estimators is a tuple, it must have exactly two elements.")
             treatment_est = clone(self.nuisance_estimators[0])
             outcome_est = clone(self.nuisance_estimators[1])
         else:
@@ -236,20 +234,14 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         outcome_vars = self.causal_graph.get_role("outcomes")
 
         if len(exposure_vars) != 1:
-            raise ValueError(
-                f"DoubleMLRegressor only supports a single exposure variable. Got: {len(exposure_vars)}"
-            )
+            raise ValueError(f"DoubleMLRegressor only supports a single exposure variable. Got: {len(exposure_vars)}")
 
         if len(outcome_vars) != 1:
-            raise ValueError(
-                f"DoubleMLRegressor only supports a single outcome variable. Got: {len(outcome_vars)}"
-            )
+            raise ValueError(f"DoubleMLRegressor only supports a single outcome variable. Got: {len(outcome_vars)}")
 
         # Step 0.5: Check if n_folds is greater than n_samples.
         if self.n_folds_ > np.asarray(X).shape[0]:
-            raise ValueError(
-                "The number of folds specified is greater than the number of samples."
-            )
+            raise ValueError("The number of folds specified is greater than the number of samples.")
 
         # Step 1: Initialize data structures and read roles from DAG.
 
@@ -258,9 +250,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         self.outcome_var_ = outcome_vars[0]
         self.adjustment_vars_ = self.causal_graph.get_role("adjustment")
         self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
-        self.feature_columns_fit_ = (
-            [self.exposure_var_] + self.adjustment_vars_ + self.pretreatment_vars_
-        )
+        self.feature_columns_fit_ = [self.exposure_var_] + self.adjustment_vars_ + self.pretreatment_vars_
 
         # Step 1.2: Prepare feature dataframe and sample weights.
         df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
@@ -277,9 +267,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
         #         variables, use intercept only.
         if len(self.adjustment_vars_ + self.pretreatment_vars_) == 0:
-            covariates_df = pd.DataFrame(
-                {"_intercept": np.ones(self.n_samples_)}, index=df.index
-            )
+            covariates_df = pd.DataFrame({"_intercept": np.ones(self.n_samples_)}, index=df.index)
         else:
             covariates_df = df[self.adjustment_vars_ + self.pretreatment_vars_]
 
@@ -300,9 +288,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
 
         # Step 3.2: If n_folds > 1, perform cross-fitting and compute out-of-sample predictions.
         else:
-            splitter = KFold(
-                n_splits=self.n_folds, shuffle=True, random_state=self.seed
-            )
+            splitter = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
 
             outcome_pred = pd.Series(0.0, index=df.index)
             treatment_pred = pd.Series(0.0, index=df.index)
@@ -314,9 +300,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
                     outcome_df.iloc[train_idx],
                     sample_weight=sample_weight[train_idx],
                 )
-                outcome_pred.iloc[test_idx] = outcome_est_kfold.predict(
-                    covariates_df.iloc[test_idx]
-                )
+                outcome_pred.iloc[test_idx] = outcome_est_kfold.predict(covariates_df.iloc[test_idx])
                 self.outcome_est_.append(outcome_est_kfold)
 
                 treatment_est_kfold = clone(treatment_est)
@@ -326,9 +310,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
                     sample_weight=sample_weight[train_idx],
                 )
 
-                treatment_pred.iloc[test_idx] = treatment_est_kfold.predict(
-                    covariates_df.iloc[test_idx]
-                )
+                treatment_pred.iloc[test_idx] = treatment_est_kfold.predict(covariates_df.iloc[test_idx])
                 self.treatment_est_.append(treatment_est_kfold)
 
         # Step 4: Compute the residuals.
@@ -336,9 +318,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         treatment_res = exposure_df - treatment_pred
 
         # Step 5: Fit the final effect estimator on the residuals.
-        effect_est.fit(
-            treatment_res.to_frame(), outcome_res, sample_weight=sample_weight
-        )
+        effect_est.fit(treatment_res.to_frame(), outcome_res, sample_weight=sample_weight)
         self.effect_est_ = effect_est
 
         return self
@@ -363,25 +343,19 @@ class DoubleMLRegressor(_BaseCausalPrediction):
         check_is_fitted(self, "outcome_est_")
         check_is_fitted(self, "treatment_est_")
 
-        validate_data(
-            self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False
-        )
+        validate_data(self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False)
 
         # Step 1: Prepare feature DataFrame
         X_df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
         X_intervention = X_df.loc[:, [self.exposure_var_]]
         if len(self.adjustment_vars_ + self.pretreatment_vars_) == 0:
-            X_new_covariates = pd.DataFrame(
-                {"_intercept": np.ones(X_df.shape[0])}, index=X_df.index
-            )
+            X_new_covariates = pd.DataFrame({"_intercept": np.ones(X_df.shape[0])}, index=X_df.index)
         else:
             X_new_covariates = X_df[self.adjustment_vars_ + self.pretreatment_vars_]
 
         # Step 2: Compute and return predictions. Average the predictions from
         #         each fold's nuisance model to compute the outcome prediction.
-        outcome_preds = np.column_stack(
-            [est.predict(X_new_covariates) for est in self.outcome_est_]
-        )
+        outcome_preds = np.column_stack([est.predict(X_new_covariates) for est in self.outcome_est_])
         outcome_pred_mean = np.mean(outcome_preds, axis=1)
 
         outcome_pred = self.effect_est_.predict(X_intervention) + outcome_pred_mean

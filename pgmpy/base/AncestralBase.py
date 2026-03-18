@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Hashable, Iterable, Optional
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 import numpy as np
@@ -11,7 +11,7 @@ from pgmpy.utils.parser import parse_dagitty
 class AncestralBase(nx.Graph, _GraphRolesMixin):
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),
@@ -313,15 +313,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             return set()
         neighbors = set()
         for neighbor in nx.all_neighbors(self, node):
-
             node_mark, neighbor_mark = (
                 self.edges[node, neighbor]["marks"][node],
                 self.edges[node, neighbor]["marks"][neighbor],
             )
 
-            if (u_type is None or node_mark == u_type) and (
-                v_type is None or neighbor_mark == v_type
-            ):
+            if (u_type is None or node_mark == u_type) and (v_type is None or neighbor_mark == v_type):
                 neighbors.add(neighbor)
 
         return neighbors
@@ -655,7 +652,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag = MAG.from_dagitty(dag_str)
         """
         if filename:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 dagitty_lines = [line.strip() for line in f.readlines()]
         elif string:
             dagitty_lines = [line.strip() for line in string.split("\n")]
@@ -705,14 +702,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         if not isinstance(other, AncestralBase):
             return False
 
-        self_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in self.edges(data=True)
-        }
-        other_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in other.edges(data=True)
-        }
+        self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
+        other_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in other.edges(data=True)}
 
         return (
             set(self.nodes()) == set(other.nodes())
@@ -730,10 +721,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         AncestralBase
             A new instance of the same class as self with all properties copied.
         """
-        ebunch = [
-            (u, v, data["marks"][u], data["marks"][v])
-            for u, v, data in self.edges(data=True)
-        ]
+        ebunch = [(u, v, data["marks"][u], data["marks"][v]) for u, v, data in self.edges(data=True)]
         ancestral_base = self.__class__(
             ebunch=ebunch,
             latents=self.latents.copy(),
