@@ -1,11 +1,5 @@
 from collections import deque
-from typing import (
-    Deque,
-    Hashable,
-    Optional,
-    Tuple,
-    Union,
-)
+from collections.abc import Hashable
 
 import networkx as nx
 import pandas as pd
@@ -141,11 +135,11 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        start_dag: Optional[DAG] = None,
+        scoring_method: str | StructureScore | None = None,
+        start_dag: DAG | None = None,
         tabu_length: int = 100,
-        max_indegree: Optional[int] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        max_indegree: int | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         epsilon: float = 1e-4,
         max_iter: int = int(1e6),
@@ -189,12 +183,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         if self.start_dag is None:
             start_dag = DAG()
             start_dag.add_nodes_from(self.variables_)
-        elif not isinstance(self.start_dag, DAG) or not set(
-            self.start_dag.nodes()
-        ) == set(self.variables_):
-            raise ValueError(
-                "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
-            )
+        elif not isinstance(self.start_dag, DAG) or not set(self.start_dag.nodes()) == set(self.variables_):
+            raise ValueError("'start_dag' should be a DAG with the same variables as the data set, or 'None'.")
         else:
             start_dag = self.start_dag.copy()
 
@@ -222,9 +212,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         if max_indegree is None:
             max_indegree = float("inf")
 
-        tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]] = deque(
-            maxlen=self.tabu_length
-        )
+        tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]] = deque(maxlen=self.tabu_length)
         current_model = start_dag
 
         if self.show_progress and config.SHOW_PROGRESS:
@@ -270,12 +258,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         elif self.return_type.lower() == "pdag":
             self.causal_graph_ = current_model.to_pdag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
