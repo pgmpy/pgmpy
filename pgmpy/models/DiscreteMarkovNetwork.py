@@ -75,7 +75,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None, latents=[]):
-        super(DiscreteMarkovNetwork, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -102,7 +102,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         """
         # check that there is no self loop.
         if u != v:
-            super(DiscreteMarkovNetwork, self).add_edge(u, v, **kwargs)
+            super().add_edge(u, v, **kwargs)
         else:
             raise ValueError("Self loops are not allowed")
 
@@ -139,9 +139,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> student.add_factors(factor)
         """
         for factor in factors:
-            if set(factor.variables) - set(factor.variables).intersection(
-                set(self.nodes())
-            ):
+            if set(factor.variables) - set(factor.variables).intersection(set(self.nodes())):
                 raise ValueError("Factors defined on variable not in the model", factor)
 
             self.factors.append(factor)
@@ -253,9 +251,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             Dictionary of nodes to possible states
         """
         state_names_list = [phi.state_names for phi in self.factors]
-        state_dict = {
-            node: states for d in state_names_list for node, states in d.items()
-        }
+        state_dict = {node: states for d in state_names_list for node, states in d.items()}
         return state_dict
 
     def check_model(self):
@@ -275,9 +271,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
-                    raise ValueError(
-                        f"Cardinality of variable {variable} not matching among factors"
-                    )
+                    raise ValueError(f"Cardinality of variable {variable} not matching among factors")
                 if len(self.nodes()) != len(cardinalities):
                     raise ValueError("Factors for all the variables not defined")
             for var1, var2 in itertools.combinations(factor.variables, 2):
@@ -400,9 +394,9 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             Finds the common cliques among the given set of cliques for
             corresponding node.
             """
-            common = set([tuple(x) for x in cliques_list[0]])
+            common = {tuple(x) for x in cliques_list[0]}
             for i in range(1, len(cliques_list)):
-                common = common & set([tuple(x) for x in cliques_list[i]])
+                common = common & {tuple(x) for x in cliques_list[i]}
             return list(common)
 
         def _find_size_of_clique(clique, cardinalities):
@@ -412,9 +406,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             Size of a clique is defined as product of cardinalities of all the
             nodes present in the clique.
             """
-            return list(
-                map(lambda x: np.prod([cardinalities[node] for node in x]), clique)
-            )
+            return list(map(lambda x: np.prod([cardinalities[node] for node in x]), clique))
 
         def _get_cliques_dict(node):
             """
@@ -583,9 +575,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
                 complete_graph.add_edge(*edge, weight=-weight)
 
             # Create clique trees by minimum (or maximum) spanning tree method
-            clique_trees = JunctionTree(
-                nx.minimum_spanning_tree(complete_graph).edges()
-            )
+            clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
 
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
@@ -595,7 +585,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         # Dictionary stating whether the factor is used to create clique
         # potential or not
         # If false, then it is not used to create any clique potential
-        is_used = {factor: False for factor in self.factors}
+        is_used = dict.fromkeys(self.factors, False)
 
         for node in clique_trees.nodes():
             clique_factors = []
@@ -613,12 +603,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
                 node,
                 var_card,
                 np.ones(np.prod(var_card)),
-                state_names={
-                    var: all_state_names.get(
-                        var, list(range(self.get_cardinality()[var]))
-                    )
-                    for var in node
-                },
+                state_names={var: all_state_names.get(var, list(range(self.get_cardinality()[var]))) for var in node},
             )
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
@@ -629,10 +614,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             clique_trees.add_factors(clique_potential)
 
         if not all(is_used.values()):
-            raise ValueError(
-                "All the factors were not used to create Junction Tree."
-                "Extra factors are defined."
-            )
+            raise ValueError("All the factors were not used to create Junction Tree.Extra factors are defined.")
 
         return clique_trees
 
@@ -701,11 +683,9 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         all_vars = set(self.nodes())
         for node in self.nodes():
             markov_blanket = set(self.markov_blanket(node))
-            rest = all_vars - set([node]) - markov_blanket
+            rest = all_vars - {node} - markov_blanket
             try:
-                local_independencies.add_assertions(
-                    [node, list(rest), list(markov_blanket)]
-                )
+                local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
             except ValueError:
                 pass
 
@@ -783,9 +763,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             # par(x_i) = (var(c_k) - x_i) \cap {x_1, ..., x_{i-1}}
             for node_index in range(len(var_order)):
                 node = var_order[node_index]
-                node_parents = (set(var_clique_dict[node]) - set([node])).intersection(
-                    set(var_order[:node_index])
-                )
+                node_parents = (set(var_clique_dict[node]) - {node}).intersection(set(var_order[:node_index]))
                 bm.add_edges_from([(parent, node) for parent in node_parents])
                 # TODO : Convert factor into CPDs
             bms.append(bm)
@@ -835,9 +813,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         self.check_model()
 
         factor = self.factors[0]
-        factor = factor_product(
-            factor, *[self.factors[i] for i in range(1, len(self.factors))]
-        )
+        factor = factor_product(factor, *[self.factors[i] for i in range(1, len(self.factors))])
         if set(factor.scope()) != set(self.nodes()):
             raise ValueError("DiscreteFactor for all the random variables not defined.")
 

@@ -100,10 +100,15 @@ class CorrelationScore(_BaseUnsupervisedMetric):
 
     def _evaluate(self, X, causal_graph):
         # Step 1: Validate inputs
-        if not callable(self.score):
+        num_nodes = causal_graph.number_of_nodes()
+        if num_nodes < 2:
             raise ValueError(
-                f"score should be scikit-learn classification metric. Got {self.score}"
+                "The causal graph must have at least 2 nodes to compute the"
+                f" correlation score. Got {num_nodes} node(s)."
             )
+
+        if not callable(self.score):
+            raise ValueError(f"score should be scikit-learn classification metric. Got {self.score}")
 
         ci_test = ci_registry.get_test(test=self.ci_test, data=X)
 
@@ -135,6 +140,4 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         if self.return_summary:
             return results
         else:
-            return self.score(
-                y_true=results["stat_test"].values, y_pred=results["d_connected"].values
-            )
+            return self.score(y_true=results["stat_test"].values, y_pred=results["d_connected"].values)

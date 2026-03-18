@@ -23,20 +23,12 @@ class DummyIdentification(_BaseIdentification):
     def _identify(self, causal_graph):
         if self.variant == "first":
             adjustment_node = sorted(
-                set(causal_graph.nodes())
-                - set(
-                    causal_graph.get_role("exposures")
-                    + causal_graph.get_role("outcomes")
-                )
+                set(causal_graph.nodes()) - set(causal_graph.get_role("exposures") + causal_graph.get_role("outcomes"))
             )[0]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
         elif self.variant == "last":
             adjustment_node = sorted(
-                set(causal_graph.nodes())
-                - set(
-                    causal_graph.get_role("exposures")
-                    + causal_graph.get_role("outcomes")
-                )
+                set(causal_graph.nodes()) - set(causal_graph.get_role("exposures") + causal_graph.get_role("outcomes"))
             )[-1]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
         else:
