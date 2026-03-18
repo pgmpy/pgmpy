@@ -1,7 +1,5 @@
-# coding:utf-8
-
+from collections.abc import Hashable
 from itertools import chain
-from typing import Hashable, List, Union
 
 import numpy as np
 import pandas as pd
@@ -50,7 +48,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
     def __init__(
         self,
-        model: Union[DiscreteBayesianNetwork, JunctionTree, DAG],
+        model: DiscreteBayesianNetwork | JunctionTree | DAG,
         data: pd.DataFrame,
         **kwargs,
     ) -> None:
@@ -81,11 +79,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
                         "Refine the model to ensure all parameters can be estimated."
                     )
 
-        super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
+        super().__init__(model, data, **kwargs)
 
-    def get_parameters(
-        self, n_jobs: int = 1, weighted: bool = False
-    ) -> Union[List[TabularCPD], FactorDict]:
+    def get_parameters(self, n_jobs: int = 1, weighted: bool = False) -> list[TabularCPD] | FactorDict:
         """
         Method to estimate the model parameters using Maximum Likelihood Estimation.
 
@@ -129,9 +125,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         if isinstance(self.model, JunctionTree):
             return self.estimate_potentials()
 
-        parameters = Parallel(n_jobs=n_jobs)(
-            delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
-        )
+        parameters = Parallel(n_jobs=n_jobs)(delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes())
         # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
         parameters = [p.copy() for p in parameters]
 
@@ -197,10 +191,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         state_names = {node: list(state_counts.index)}
         if parents:
             state_names.update(
-                {
-                    state_counts.columns.names[i]: list(state_counts.columns.levels[i])
-                    for i in range(len(parents))
-                }
+                {state_counts.columns.names[i]: list(state_counts.columns.levels[i]) for i in range(len(parents))}
             )
 
         cpd = TabularCPD(
@@ -276,21 +267,15 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         +------+------+------------+
         """
         if not isinstance(self.model, JunctionTree):
-            raise NotImplementedError(
-                "Iterative Proportional Fitting is only implemented for Junction Trees."
-            )
+            raise NotImplementedError("Iterative Proportional Fitting is only implemented for Junction Trees.")
 
         if not hasattr(self.model, "clique_beliefs"):
-            raise NotImplementedError(
-                "A model containing clique beliefs is required to estimate parameters."
-            )
+            raise NotImplementedError("A model containing clique beliefs is required to estimate parameters.")
 
         clique_beliefs = self.model.clique_beliefs
 
         if not isinstance(clique_beliefs, FactorDict):
-            raise TypeError(
-                "`UndirectedMaximumLikelihoodEstimator.model.clique_beliefs` must be a `FactorDict`."
-            )
+            raise TypeError("`UndirectedMaximumLikelihoodEstimator.model.clique_beliefs` must be a `FactorDict`.")
 
         # These are the variables as represented by the `JunctionTree`.
         cliques = list(clique_beliefs.keys())
@@ -314,8 +299,6 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
             # Divide out the sepset.
             if variables:
-                marginalized = empirical_marginals[clique].marginalize(
-                    variables=variables, inplace=False
-                )
+                marginalized = empirical_marginals[clique].marginalize(variables=variables, inplace=False)
                 potentials[clique] = potentials[clique] / marginalized
         return potentials

@@ -2,8 +2,6 @@
 
 from collections import defaultdict
 
-import numpy as np
-
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
 from pgmpy.utils import compat_fns
@@ -55,7 +53,7 @@ class ClusterGraph(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(ClusterGraph, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -77,12 +75,10 @@ class ClusterGraph(UndirectedGraph):
         >>> G.add_node(("a", "b", "c"))
         """
         if not isinstance(node, (list, set, tuple)):
-            raise TypeError(
-                "Node can only be a list, set or tuple of nodes forming a clique"
-            )
+            raise TypeError("Node can only be a list, set or tuple of nodes forming a clique")
 
         node = tuple(node)
-        super(ClusterGraph, self).add_node(node, **kwargs)
+        super().add_node(node, **kwargs)
 
     def add_nodes_from(self, nodes, **kwargs):
         """
@@ -125,7 +121,7 @@ class ClusterGraph(UndirectedGraph):
         if set_u.isdisjoint(set_v):
             raise ValueError("No sepset found between these two edges.")
 
-        super(ClusterGraph, self).add_edge(u, v)
+        super().add_edge(u, v)
 
     def add_factors(self, *factors):
         """
@@ -157,9 +153,7 @@ class ClusterGraph(UndirectedGraph):
             factor_scope = set(factor.scope())
             nodes = [set(node) for node in self.nodes()]
             if factor_scope not in nodes:
-                raise ValueError(
-                    "Factors defined on clusters of variable not" "present in model"
-                )
+                raise ValueError("Factors defined on clusters of variable notpresent in model")
 
             self.factors.append(factor)
 
@@ -321,9 +315,7 @@ class ClusterGraph(UndirectedGraph):
         """
         if self.check_model():
             factor = self.factors[0]
-            factor = factor_product(
-                factor, *[self.factors[i] for i in range(1, len(self.factors))]
-            )
+            factor = factor_product(factor, *[self.factors[i] for i in range(1, len(self.factors))])
             return compat_fns.sum(factor.values)
 
     def check_model(self):
@@ -350,17 +342,13 @@ class ClusterGraph(UndirectedGraph):
                 raise ValueError("Factors for all the cliques or clusters not defined.")
 
         cardinalities = self.get_cardinality()
-        if len(set((x for clique in self.nodes() for x in clique))) != len(
-            cardinalities
-        ):
+        if len({x for clique in self.nodes() for x in clique}) != len(cardinalities):
             raise ValueError("Factors for all the variables not defined.")
 
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
-                    raise ValueError(
-                        f"Cardinality of variable {variable} not matching among factors"
-                    )
+                    raise ValueError(f"Cardinality of variable {variable} not matching among factors")
 
         return True
 

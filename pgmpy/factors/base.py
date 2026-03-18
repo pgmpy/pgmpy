@@ -4,7 +4,7 @@ from functools import reduce
 from opt_einsum import contract
 
 
-class BaseFactor(object):
+class BaseFactor:
     """
     Base class for Factors. Any Factor implementation should inherit this class.
     """
@@ -56,9 +56,7 @@ def factor_product(*args):
         raise TypeError("Arguments must be factors")
     # Check if all of the arguments are of the same type
     elif len(set(map(type, args))) != 1:
-        raise NotImplementedError(
-            "All the args are expected to be instances of the same factor class."
-        )
+        raise NotImplementedError("All the args are expected to be instances of the same factor class.")
 
     if len(args) == 1:
         return args[0].copy()
@@ -156,8 +154,6 @@ def factor_divide(phi1, phi2):
 
     # Check if all of the arguments are of the same type
     elif not isinstance(phi2, type(phi1)):
-        raise NotImplementedError(
-            "All the args are expected to be instances of the same factor class."
-        )
+        raise NotImplementedError("All the args are expected to be instances of the same factor class.")
 
     return phi1.divide(phi2, inplace=False)

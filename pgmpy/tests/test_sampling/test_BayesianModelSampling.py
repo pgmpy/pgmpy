@@ -9,18 +9,12 @@ from pgmpy.sampling.base import BayesianModelInference
 
 @pytest.fixture
 def bayesian_model():
-    model = DiscreteBayesianNetwork(
-        [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
-    )
+    model = DiscreteBayesianNetwork([("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")])
     cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
     cpd_r = TabularCPD("R", 2, [[0.4], [0.6]])
-    cpd_j = TabularCPD(
-        "J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2]
-    )
+    cpd_j = TabularCPD("J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2])
     cpd_q = TabularCPD("Q", 2, [[0.9, 0.2], [0.1, 0.8]], ["J"], [2])
-    cpd_l = TabularCPD(
-        "L", 2, [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]], ["G", "J"], [2, 2]
-    )
+    cpd_l = TabularCPD("L", 2, [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]], ["G", "J"], [2, 2])
     cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
     model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
     return model
@@ -34,13 +28,9 @@ def bayesian_model_lat():
     )
     cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
     cpd_r = TabularCPD("R", 2, [[0.4], [0.6]])
-    cpd_j = TabularCPD(
-        "J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2]
-    )
+    cpd_j = TabularCPD("J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2])
     cpd_q = TabularCPD("Q", 2, [[0.9, 0.2], [0.1, 0.8]], ["J"], [2])
-    cpd_l = TabularCPD(
-        "L", 2, [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]], ["G", "J"], [2, 2]
-    )
+    cpd_l = TabularCPD("L", 2, [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]], ["G", "J"], [2, 2])
     cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
     model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
     return model
@@ -48,9 +38,7 @@ def bayesian_model_lat():
 
 @pytest.fixture
 def bayesian_model_names():
-    model = DiscreteBayesianNetwork(
-        [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
-    )
+    model = DiscreteBayesianNetwork([("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")])
     cpd_a = TabularCPD("A", 2, [[0.2], [0.8]], state_names={"A": ["a0", "a1"]})
     cpd_r = TabularCPD("R", 2, [[0.4], [0.6]], state_names={"R": ["r0", "r1"]})
     cpd_j = TabularCPD(
@@ -162,9 +150,7 @@ def sampling_inference_int(bayesian_model_int):
 
 @pytest.fixture
 def forward_marginals(bayesian_model):
-    return VariableElimination(bayesian_model).query(
-        bayesian_model.nodes(), joint=False, show_progress=False
-    )
+    return VariableElimination(bayesian_model).query(bayesian_model.nodes(), joint=False, show_progress=False)
 
 
 @pytest.fixture
@@ -179,18 +165,14 @@ def test_init(markov_model):
 
 def test_pre_compute_reduce_maps(bayesian_model):
     base_infer = BayesianModelInference(bayesian_model)
-    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-        "J", ["A", "R"], [(1, 1), (1, 0)]
-    )
+    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["A", "R"], [(1, 1), (1, 0)])
     assert state_to_index[(1, 1)] == 0
     assert state_to_index[(1, 0)] == 1
     assert list(index_to_weight[0]) == [0.1, 0.9]
     assert list(index_to_weight[1]) == [0.6, 0.4]
 
     # Make sure the order of the evidence variables doesn't matter
-    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-        "J", ["R", "A"], [(1, 1), (1, 0)]
-    )
+    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["R", "A"], [(1, 1), (1, 0)])
     assert state_to_index[(1, 1)] == 0
     assert state_to_index[(1, 0)] == 1
     assert list(index_to_weight[0]) == [0.1, 0.9]
@@ -199,18 +181,14 @@ def test_pre_compute_reduce_maps(bayesian_model):
 
 def test_pre_compute_reduce_maps_partial_evidence(bayesian_model):
     base_infer = BayesianModelInference(bayesian_model)
-    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-        "J", ["A"], [(1,), (0,)]
-    )
+    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["A"], [(1,), (0,)])
     assert state_to_index[(1,)] == 0
     assert state_to_index[(0,)] == 1
     assert list(index_to_weight[0].round(2)) == [0.35, 0.65]
     assert list(index_to_weight[1].round(2)) == [0.8, 0.2]
 
     # Make sure the order of the evidence variables doesn't matter
-    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-        "J", ["R"], [(1,), (0,)]
-    )
+    state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["R"], [(1,), (0,)])
     assert state_to_index[(1,)] == 0
     assert state_to_index[(0,)] == 1
     assert list(index_to_weight[0].round(2)) == [0.4, 0.6]
@@ -243,15 +221,12 @@ def test_forward_sample(
     assert set(sample.L).issubset({0, 1})
 
     # Test that the marginal distribution of samples is same as the model
-    sample_marginals = {
-        node: sample[node].value_counts() / sample.shape[0]
-        for node in bayesian_model.nodes()
-    }
+    sample_marginals = {node: sample[node].value_counts() / sample.shape[0] for node in bayesian_model.nodes()}
     for node in bayesian_model.nodes():
         for state in [0, 1]:
-            assert round(
-                forward_marginals[node].get_value(**{node: state}), 1
-            ) == round(sample_marginals[node].loc[state], 1)
+            assert round(forward_marginals[node].get_value(**{node: state}), 1) == round(
+                sample_marginals[node].loc[state], 1
+            )
 
     # Test without state names and with latents
     sample = sampling_inference_lat.forward_sample(25, include_latents=True)
@@ -316,9 +291,7 @@ def test_rejection_sample_basic(
 ):
     # Test without state names
     sampling_inference.rejection_sample()
-    sample = sampling_inference.rejection_sample(
-        [State("A", 1), State("J", 1), State("R", 1)], int(1e5)
-    )
+    sample = sampling_inference.rejection_sample([State("A", 1), State("J", 1), State("R", 1)], int(1e5))
     assert len(sample) == int(1e5)
     assert len(sample.columns) == 6
     assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
@@ -336,14 +309,12 @@ def test_rejection_sample_basic(
         joint=False,
         show_progress=False,
     )
-    sample_marginals = {
-        node: sample[node].value_counts() / sample.shape[0] for node in ["Q", "G", "L"]
-    }
+    sample_marginals = {node: sample[node].value_counts() / sample.shape[0] for node in ["Q", "G", "L"]}
     for node in ["Q", "G", "L"]:
         for state in [0, 1]:
-            assert round(
-                rejection_marginals[node].get_value(**{node: state}), 1
-            ) == round(sample_marginals[node].loc[state], 1)
+            assert round(rejection_marginals[node].get_value(**{node: state}), 1) == round(
+                sample_marginals[node].loc[state], 1
+            )
 
     # Test without state names with latent variables
     sample = sampling_inference_lat.rejection_sample(
@@ -370,9 +341,7 @@ def test_rejection_sample_basic(
 
     # Test with state names
     sampling_inference_names.rejection_sample()
-    sample = sampling_inference_names.rejection_sample(
-        [State("A", "a1"), State("J", "j1"), State("R", "r1")], 25
-    )
+    sample = sampling_inference_names.rejection_sample([State("A", "a1"), State("J", "j1"), State("R", "r1")], 25)
     assert len(sample) == 25
     assert len(sample.columns) == 6
     assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L"}
@@ -421,9 +390,7 @@ def test_likelihood_weighted_sample(
 ):
     # Test without state names
     sampling_inference.likelihood_weighted_sample()
-    sample = sampling_inference.likelihood_weighted_sample(
-        [State("A", 0), State("J", 1), State("R", 0)], 25
-    )
+    sample = sampling_inference.likelihood_weighted_sample([State("A", 0), State("J", 1), State("R", 0)], 25)
     assert len(sample) == 25
     assert len(sample.columns) == 7
     assert set(sample.columns) == {"A", "J", "R", "Q", "G", "L", "_weight"}
@@ -505,7 +472,5 @@ def test_likelihood_weighted_sample(
 
 
 def test_rejection_sample_integer_state_names(sampling_inference_int):
-    sampled_y = sampling_inference_int.rejection_sample(
-        evidence=[State("X", 2)], size=1
-    )["Y"][0]
+    sampled_y = sampling_inference_int.rejection_sample(evidence=[State("X", 2)], size=1)["Y"][0]
     assert sampled_y == 2
