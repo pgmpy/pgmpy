@@ -158,6 +158,14 @@ extend-select = [
   "C4", # https://pypi.org/project/flake8-comprehensions
 ]
 ignore=[
+  "D200", # One-line docstring should fit on one line.
+  "D203", # Incorrect blank line before class docstring (incompatible with D211).
+  "D205", # 1 blank line required between summary line and description.
+  "D213", # Multi-line docstring summary should start at the second line (incompatible with D212).
+  "D400", # First line should end with a period.
+  "D401", # First line of docstring should be in imperative mood.
+  "D404", # First word of the docstring should not be "This".
+  "D415", # First line should end with a period, question mark, or exclamation point.
   "E203", # Whitespace-before-punctuation.
   "E221", # Multiple spaces before operator.
   "E222", # Multiple spaces after operator.
