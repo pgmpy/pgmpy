@@ -74,8 +74,8 @@ class SimpleCausalModel(DAG):
     >>> model = SimpleCausalModel(
     ...     exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
     ... )
-    >>> model.edges()
-    OutEdgeView([('Z', 'X'), ('Z', 'Y'), ('I', 'X'), ('X', 'M'), ('M', 'Y')])
+    >>> sorted(model.edges())
+    [('I', 'X'), ('M', 'Y'), ('X', 'M'), ('Z', 'X'), ('Z', 'Y')]
 
     >>> model2 = SimpleCausalModel(
     ...     exposures=1, outcomes=2, confounders=2, mediators=None, instruments=1
