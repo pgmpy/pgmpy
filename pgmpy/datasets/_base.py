@@ -44,6 +44,8 @@ class _BaseDataset(BaseObject):
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
     """
 
+    sep = "\t"
+
     # define tags
     _tags = {
         "name": None,
