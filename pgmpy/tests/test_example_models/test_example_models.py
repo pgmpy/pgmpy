@@ -1,4 +1,7 @@
+import re
+
 import numpy as np
+import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
@@ -306,6 +309,14 @@ def test_list_models():
     assert "bnlearn/arth150" in set(list_models(is_continuous=True))
 
 
+def test_invalid_tag():
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(is_paraterized=True)  # typo
+
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(num_nodes=10)  # wrong key name entirely
+
+
 def test_tags():
     for model_name in ALL_MODELS:
         tags = all_objects(
@@ -362,3 +373,9 @@ def test_load_model():
             )
         else:
             assert isinstance(model, DAG)
+
+
+def test_load_model_invalid_name():
+    msg = "Model with name 'bnrep/soilead' not found. Please use list_models() to see available datasets."
+    with pytest.raises(ValueError, match=re.escape(msg)):
+        load_model("bnrep/soilead")
