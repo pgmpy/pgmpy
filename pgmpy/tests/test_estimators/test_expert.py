@@ -37,9 +37,7 @@ def adult_df():
         ],
         ordered=True,
     )
-    df.HoursPerWeek = pd.Categorical(
-        df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True
-    )
+    df.HoursPerWeek = pd.Categorical(df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True)
     df.Workclass = pd.Categorical(df.Workclass, ordered=False)
     df.MaritalStatus = pd.Categorical(df.MaritalStatus, ordered=False)
     df.Occupation = pd.Categorical(df.Occupation, ordered=False)
@@ -241,9 +239,7 @@ class TestExpertInLoop:
     )
     def test_edge_orientation_priority(self, estimator):
         """Test that edge orientation follows the correct priority order."""
-        expert_knowledge = ExpertKnowledge(
-            temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]]
-        )
+        expert_knowledge = ExpertKnowledge(temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]])
 
         # Define orientations that should take precedence over temporal order
         orientations = {("Income", "Education")}  # Opposite of temporal order
@@ -330,7 +326,7 @@ class TestFakeCI:
     def test_selective_removal(self, fake_ci_estimator, simple_dag):
         def mock_ci_test(X, Y, Z, data, boolean):
             # A->B is weak, everything else is strong
-            if set([X, Y]) == {"A", "B"}:
+            if {X, Y} == {"A", "B"}:
                 return (0.01, 0.9)
             return (0.5, 0.001)
 

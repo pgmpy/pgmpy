@@ -106,15 +106,11 @@ class TestFactorDict:
         assert {phi1 * 2} == (factor_dict * 2).get_factors()
 
     def test_factor_dict_from_pandas_numeric(self):
-        data = pd.DataFrame(
-            data={"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "C": [1, 1, 0, 1]}
-        )
+        data = pd.DataFrame(data={"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "C": [1, 1, 0, 1]})
         marginal = ("A", "B")
         factor_dict = FactorDict.from_dataframe(df=data, marginals=[marginal])
         factor = factor_dict[marginal]
-        frequencies = data.value_counts(
-            subset=list(marginal), sort=False, dropna=False
-        ).values
+        frequencies = data.value_counts(subset=list(marginal), sort=False, dropna=False).values
         assert np.all(factor.values.flatten() == frequencies)
 
     def test_factor_dict_from_pandas_nans(self, data_with_nans):
@@ -132,15 +128,11 @@ class TestFactorDict:
         marginal = ("A", "C")
         factor_dict = FactorDict.from_dataframe(df=data, marginals=[marginal])
         factor = factor_dict[marginal]
-        frequencies = data.value_counts(
-            subset=list(marginal), sort=False, dropna=False
-        ).values
+        frequencies = data.value_counts(subset=list(marginal), sort=False, dropna=False).values
         assert np.all(factor.values.flatten() == frequencies)
 
     def test_factor_dict_from_pandas_wrong_column(self):
-        data = pd.DataFrame(
-            data={"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "C": [1, 1, 0, 1]}
-        )
+        data = pd.DataFrame(data={"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "C": [1, 1, 0, 1]})
         with pytest.raises(KeyError):
             FactorDict.from_dataframe(data, ["cheeseburger"])
 
@@ -148,16 +140,7 @@ class TestFactorDict:
         marginal1 = ("Race", "Sex", "Income")
         marginal2 = ("Race", "Sex")
         marginal3 = ("Age", "HoursPerWeek")
-        factor_dict = FactorDict.from_dataframe(
-            df=titanic_data, marginals=[marginal1, marginal2, marginal3]
-        )
-        assert np.all(
-            factor_dict[marginal1].values == np.array([[[1.0], [1.0]], [[0.0], [3.0]]])
-        )
-        assert np.all(
-            factor_dict[marginal2].values == np.array([[1.0, 1.0], [0.0, 3.0]])
-        )
-        assert np.all(
-            factor_dict[marginal3].values
-            == np.array([[1.0, 0.0], [2.0, 0.0], [1.0, 1.0]])
-        )
+        factor_dict = FactorDict.from_dataframe(df=titanic_data, marginals=[marginal1, marginal2, marginal3])
+        assert np.all(factor_dict[marginal1].values == np.array([[[1.0], [1.0]], [[0.0], [3.0]]]))
+        assert np.all(factor_dict[marginal2].values == np.array([[1.0, 1.0], [0.0, 3.0]]))
+        assert np.all(factor_dict[marginal3].values == np.array([[1.0, 0.0], [2.0, 0.0], [1.0, 1.0]]))
