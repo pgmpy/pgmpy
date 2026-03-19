@@ -68,9 +68,9 @@ class MAG(AncestralBase):
     Vertices of a specific role can be retrieved using ``get_role`` method.
 
     >>> mag.get_role("exposures")
-    ["A"]
+    ['A']
     >>> mag.get_role("adjustment")
-    ["L", "C"]
+    ['L', 'C']
 
     References
     ----------
@@ -318,8 +318,13 @@ class MAG(AncestralBase):
         >>> mag.add_edge("C", "B", "-", ">")
         >>> mag.add_edge("B", "C", ">", ">")
         >>> new_mag = mag.lower_manipulation({"A"})
-        >>> list(new_mag.edges(data=True))
-        [('B', 'C', {'marks': {'B': '>', 'C': '>'}})]
+        >>> edges = list(new_mag.edges(data=True))
+        >>> len(edges)
+        1
+        >>> edges[0][0], edges[0][1]
+        ('B', 'C')
+        >>> edges[0][2]['marks']['B'], edges[0][2]['marks']['C']
+        ('>', '>')
         """
         if not inplace:
             new_mag = self.copy()
