@@ -29,7 +29,7 @@ class BaseEliminationTest(TestCase):
 
 class TestBaseElimination(BaseEliminationTest):
     def setUp(self):
-        super(TestBaseElimination, self).setUp()
+        super().setUp()
         self.elimination_order = BaseEliminationOrder(self.model)
 
     def test_cost(self):
@@ -43,7 +43,7 @@ class TestBaseElimination(BaseEliminationTest):
 
 class TestWeightedMinFill(BaseEliminationTest):
     def setUp(self):
-        super(TestWeightedMinFill, self).setUp()
+        super().setUp()
         self.elimination_order = WeightedMinFill(self.model)
 
     def test_cost(self):
@@ -52,9 +52,7 @@ class TestWeightedMinFill(BaseEliminationTest):
             self.assertEqual(self.elimination_order.cost(var), expected_cost)
 
     def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            show_progress=False
-        )
+        elimination_order = self.elimination_order.get_elimination_order(show_progress=False)
         self.assertEqual(set(elimination_order[:2]), {"sat", "reco"})
         self.assertEqual(set(elimination_order[2:]), {"grade", "intel", "diff"})
 
@@ -67,7 +65,7 @@ class TestWeightedMinFill(BaseEliminationTest):
 
 class TestMinNeighbors(BaseEliminationTest):
     def setUp(self):
-        super(TestMinNeighbors, self).setUp()
+        super().setUp()
         self.elimination_order = MinNeighbors(self.model)
 
     def test_cost(self):
@@ -76,9 +74,7 @@ class TestMinNeighbors(BaseEliminationTest):
         self.assertEqual(self.elimination_order.cost("intel"), 3)
 
     def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            show_progress=False
-        )
+        elimination_order = self.elimination_order.get_elimination_order(show_progress=False)
         self.assertEqual(set(elimination_order[:2]), {"sat", "reco"})
         self.assertEqual(set(elimination_order[2:]), {"diff", "grade", "intel"})
 
@@ -91,7 +87,7 @@ class TestMinNeighbors(BaseEliminationTest):
 
 class TestMinWeight(BaseEliminationTest):
     def setUp(self):
-        super(TestMinWeight, self).setUp()
+        super().setUp()
         self.elimination_order = MinWeight(self.model)
 
     def test_cost(self):
@@ -100,9 +96,7 @@ class TestMinWeight(BaseEliminationTest):
         self.assertEqual(self.elimination_order.cost("reco"), 2)
 
     def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            show_progress=False
-        )
+        elimination_order = self.elimination_order.get_elimination_order(show_progress=False)
         self.assertTrue(elimination_order[0] in ["sat", "reco"])
         self.assertTrue(elimination_order[1] in ["sat", "reco"])
         self.assertEqual(set(elimination_order[2:]), {"diff", "intel", "grade"})
@@ -116,7 +110,7 @@ class TestMinWeight(BaseEliminationTest):
 
 class TestMinFill(BaseEliminationTest):
     def setUp(self):
-        super(TestMinFill, self).setUp()
+        super().setUp()
         self.elimination_order = MinFill(self.model)
 
     def test_cost(self):
@@ -125,12 +119,8 @@ class TestMinFill(BaseEliminationTest):
         self.assertEqual(self.elimination_order.cost("sat"), 0)
 
     def test_elimination_order(self):
-        elimination_order = self.elimination_order.get_elimination_order(
-            show_progress=False
-        )
-        self.assertEqual(
-            set(elimination_order), {"diff", "grade", "sat", "reco", "intel"}
-        )
+        elimination_order = self.elimination_order.get_elimination_order(show_progress=False)
+        self.assertEqual(set(elimination_order), {"diff", "grade", "sat", "reco", "intel"})
 
     def test_elimination_order_given_nodes(self):
         elimination_order = self.elimination_order.get_elimination_order(

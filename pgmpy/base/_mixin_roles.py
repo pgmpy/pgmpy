@@ -166,8 +166,7 @@ class _GraphRolesMixin:
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposures' and one 'outcomes' "
-                f"role defined, but {problem_str}."
+                f"{type(self)} must have at least one 'exposures' and one 'outcomes' role defined, but {problem_str}."
             )
         return True
 
@@ -210,9 +209,7 @@ class _GraphRolesMixin:
             other latent structures.
         """
         if self.has_role("latents"):
-            self.without_role(
-                role="latents", variables=self.get_role("latents"), inplace=True
-            )
+            self.without_role(role="latents", variables=self.get_role("latents"), inplace=True)
         self.with_role(role="latents", variables=variables, inplace=True)
 
     @property
@@ -279,9 +276,7 @@ class _GraphRolesMixin:
             intervention being studied in a causal analysis.
         """
         if self.has_role("exposures"):
-            self.without_role(
-                role="exposures", variables=self.get_role("exposures"), inplace=True
-            )
+            self.without_role(role="exposures", variables=self.get_role("exposures"), inplace=True)
         self.with_role(role="exposures", variables=variables, inplace=True)
 
     @property
@@ -323,7 +318,5 @@ class _GraphRolesMixin:
             in a causal analysis.
         """
         if self.has_role("outcomes"):
-            self.without_role(
-                role="outcomes", variables=self.get_role("outcomes"), inplace=True
-            )
+            self.without_role(role="outcomes", variables=self.get_role("outcomes"), inplace=True)
         self.with_role(role="outcomes", variables=variables, inplace=True)

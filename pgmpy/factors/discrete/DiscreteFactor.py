@@ -97,14 +97,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         else:
             import torch
 
-            values = (
-                torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
-            )
+            values = torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
 
         if len(cardinality) != len(variables):
-            raise ValueError(
-                "Number of elements in cardinality must be equal to number of variables"
-            )
+            raise ValueError("Number of elements in cardinality must be equal to number of variables")
 
         if compat_fns.size(values) != np.prod(cardinality):
             raise ValueError(f"Values array must be of size: {np.prod(cardinality)}")
@@ -113,18 +109,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             raise ValueError("Variable names cannot be same")
 
         if not isinstance(state_names, dict):
-            raise ValueError(
-                f"state_names must be of type dict. Got {type(state_names)}."
-            )
+            raise ValueError(f"state_names must be of type dict. Got {type(state_names)}.")
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
         self.values = values.reshape(tuple(self.cardinality))
 
         # Set the state names
-        super(DiscreteFactor, self).store_state_names(
-            variables, cardinality, state_names
-        )
+        super().store_state_names(variables, cardinality, state_names)
 
     def scope(self):
         """
@@ -301,9 +293,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not all(i <= max_possible_index for i in index):
             raise IndexError("Index greater than max possible index")
 
-        assignments = compat_fns.get_compute_backend().zeros(
-            (len(index), len(self.scope())), dtype=int
-        )
+        assignments = compat_fns.get_compute_backend().zeros((len(index), len(self.scope())), dtype=int)
         rev_card = self.cardinality[::-1]
         for i, card in enumerate(rev_card):
             assignments[:, i] = index % card
@@ -312,10 +302,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         assignments = compat_fns.flip(assignments, axis=(1,))
 
         return [
-            [
-                (key, self.get_state_names(key, int(val)))
-                for key, val in zip(self.variables, values)
-            ]
+            [(key, self.get_state_names(key, int(val))) for key, val in zip(self.variables, values)]
             for values in assignments
         ]
 
@@ -573,9 +560,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             raise TypeError("values: Expected type list or array-like, got type str")
 
         if not all([isinstance(state_tuple, tuple) for state_tuple in values]):
-            raise TypeError(
-                "values: Expected type list of tuples, get type {type}", type(values[0])
-            )
+            raise TypeError("values: Expected type list of tuples, get type {type}", type(values[0]))
 
         # Check if all variables in values are in the factor
         for var, _ in values:
@@ -587,14 +572,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # Convert the state names to state number. If state name not found treat them as
         # state numbers.
         try:
-            values = [
-                (var, self.get_state_no(var, state_name)) for var, state_name in values
-            ]
+            values = [(var, self.get_state_no(var, state_name)) for var, state_name in values]
         except KeyError:
             if show_warnings:
-                logger.warning(
-                    "Found unknown state name. Trying to switch to using all state names as state numbers"
-                )
+                logger.warning("Found unknown state name. Trying to switch to using all state names as state numbers")
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)
@@ -603,9 +584,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             slice_[var_index] = state
             var_index_to_del.append(var_index)
 
-        var_index_to_keep = sorted(
-            set(range(len(phi.variables))) - set(var_index_to_del)
-        )
+        var_index_to_keep = sorted(set(range(len(phi.variables))) - set(var_index_to_del))
         # set difference is not guaranteed to maintain ordering
         phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
@@ -685,9 +664,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 phi.variables.extend(extra_vars)
 
                 new_var_card = phi1.get_cardinality(extra_vars)
-                phi.cardinality = np.append(
-                    phi.cardinality, [new_var_card[var] for var in extra_vars]
-                )
+                phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
                 phi.add_state_names(phi1)
 
             # modifying phi1 to add new variables
@@ -778,9 +755,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
             # Compute the new cardinality array
             phi_card = {var: card for var, card in zip(phi.variables, phi.cardinality)}
-            phi1_card = {
-                var: card for var, card in zip(phi1.variables, phi1.cardinality)
-            }
+            phi1_card = {var: card for var, card in zip(phi1.variables, phi1.cardinality)}
             phi_card.update(phi1_card)
             phi.cardinality = np.array([phi_card[var] for var in new_variables])
 
@@ -957,9 +932,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Checks if the factor's values can be used for a valid CPD.
         """
         return config.get_compute_backend().allclose(
-            self.to_factor()
-            .marginalize(self.scope()[:1], inplace=False)
-            .values.flatten(),
+            self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten(),
             compat_fns.ones(np.prod(self.cardinality[:0:-1])),
             atol=0.01,
         )
@@ -987,30 +960,20 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         for prob in product(*[range(card) for card in self.cardinality]):
             if self.state_names and print_state_names:
                 prob_list = [
-                    "{var}({state})".format(
-                        var=list(self.variables)[i],
-                        state=self.state_names[list(self.variables)[i]][prob[i]],
-                    )
+                    f"{list(self.variables)[i]}({self.state_names[list(self.variables)[i]][prob[i]]})"
                     for i in range(len(self.variables))
                 ]
             else:
-                prob_list = [
-                    f"{list(self.variables)[i]}_{prob[i]}"
-                    for i in range(len(self.variables))
-                ]
+                prob_list = [f"{list(self.variables)[i]}_{prob[i]}" for i in range(len(self.variables))]
 
             prob_list.append(self.values.ravel()[value_index])
             factor_table.append(prob_list)
             value_index += 1
 
-        return tabulate(
-            factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f"
-        )
+        return tabulate(factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f")
 
     def __repr__(self):
-        var_card = ", ".join(
-            [f"{var}:{card}" for var, card in zip(self.variables, self.cardinality)]
-        )
+        var_card = ", ".join([f"{var}:{card}" for var, card in zip(self.variables, self.cardinality)])
         return f"<DiscreteFactor representing phi({var_card}) at {hex(id(self))}>"
 
     def __mul__(self, other):

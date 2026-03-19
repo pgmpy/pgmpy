@@ -29,6 +29,9 @@ jobs:
           days-before-issue-stale: 30
           stale-issue-label: 'status: stale'
 
+          exempt-issue-labels: 'status: stale'
+          exempt-pr-labels: 'status: stale'
+
           # Set to -1 to never close stale issues/PRs
           days-before-close: -1
 

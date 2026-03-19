@@ -20,10 +20,7 @@ class SachsMixed(_BaseDataset):
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
-    data_url = (
-        base_url
-        + "data/sachs.2005.continuous.discrete.experimental.mixed.maximum.2.txt"
-    )
+    data_url = base_url + "data/sachs.2005.continuous.discrete.experimental.mixed.maximum.2.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
 
@@ -153,9 +150,7 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
 
     base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/sachs/"
 
-    data_url = (
-        base_url + "data/sachs.2005.logxplus10.jittered.eperimental.continuous.txt"
-    )
+    data_url = base_url + "data/sachs.2005.logxplus10.jittered.eperimental.continuous.txt"
     ground_truth_url = base_url + "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = base_url + "ground.truth/sachs.2005.knowledge.txt"
 
