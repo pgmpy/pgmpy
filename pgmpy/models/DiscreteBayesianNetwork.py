@@ -486,6 +486,10 @@ class DiscreteBayesianNetwork(DAG):
                 if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
                     raise ValueError(f"CPD for {node} doesn't have state names defined for all the variables.")
 
+                # Check if the CPD contains negative values.
+                if (cpd.get_values() < 0).any():
+                    raise ValueError(f"CPD for {node} contains negative probability values.")
+
                 # Check if the values of the CPD sum to 1.
                 if not cpd.is_valid_cpd():
                     raise ValueError(f"Sum or integral of conditional probabilities for node {node} is not equal to 1.")
