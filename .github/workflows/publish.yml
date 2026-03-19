@@ -118,7 +118,7 @@ jobs:
     needs: [build, test-installed-package]
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
+      name: pypi
       url: https://test.pypi.org/project/pgmpy/
     permissions:
       id-token: write
