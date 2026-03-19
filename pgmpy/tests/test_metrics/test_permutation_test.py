@@ -40,20 +40,14 @@ def test_input_validation(model_simple, data_simple, perm_test):
         perm_test.evaluate(bad_data, model_simple, show_progress=False)
 
     with pytest.raises(ValueError):
-        perm_test.evaluate(
-            data_simple, model_simple, ci_test="unsupported_test", show_progress=False
-        )
+        perm_test.evaluate(data_simple, model_simple, ci_test="unsupported_test", show_progress=False)
 
 
 def test_wrong_model_detection(model_simple, data_simple, perm_test):
     wrong_model = DiscreteBayesianNetwork([("Y", "Z"), ("X", "Z")])
 
-    correct = perm_test.evaluate(
-        data_simple, model_simple, n_permutations=10, show_progress=False
-    )
-    wrong = perm_test.evaluate(
-        data_simple, wrong_model, n_permutations=10, show_progress=False
-    )
+    correct = perm_test.evaluate(data_simple, model_simple, n_permutations=10, show_progress=False)
+    wrong = perm_test.evaluate(data_simple, wrong_model, n_permutations=10, show_progress=False)
 
     assert wrong["p_value_falsified"] > correct["p_value_falsified"]
 
