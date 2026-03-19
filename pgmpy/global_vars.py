@@ -1,7 +1,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
@@ -54,23 +53,18 @@ class Config:
             If None, sets to cuda if GPU is available else uses CPU.
         """
         if self.BACKEND == "numpy":
-            raise ValueError(
-                "Current backend is numpy. Device can only be set for torch backend"
-            )
+            raise ValueError("Current backend is numpy. Device can only be set for torch backend")
 
         import torch
 
         if device is None:
-
             if torch.cuda.is_available():
                 self.DEVICE = torch.device("cuda:0")
             else:
                 self.DEVICE = torch.device("cpu")
         else:
             if not device.startswith(("cuda", "cpu")):
-                raise ValueError(
-                    f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}"
-                )
+                raise ValueError(f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}")
             elif device.startswith("cuda"):
                 if torch.cuda.is_available():
                     self.DEVICE = torch.device(device)
@@ -86,7 +80,7 @@ class Config:
     def set_backend(
         self,
         backend: str,
-        device: Optional[str] = None,
+        device: str | None = None,
         dtype=None,
     ):
         """
@@ -106,9 +100,7 @@ class Config:
             torch.float64 depending on the backend.
         """
         if backend not in ["numpy", "torch"]:
-            raise ValueError(
-                f"backend can either be `numpy` or `torch`. Got: {backend}"
-            )
+            raise ValueError(f"backend can either be `numpy` or `torch`. Got: {backend}")
 
         if backend == "numpy":
             self.BACKEND = "numpy"
