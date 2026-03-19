@@ -731,6 +731,15 @@ class TestBayesianNetworkCPD(unittest.TestCase):
 
         self.assertTrue(self.G.check_model())
 
+    def test_check_model_negative_cpd(self):
+        model = DiscreteBayesianNetwork()
+        model.add_node("A")
+
+        cpd_a = TabularCPD("A", 2, values=[[-0.5], [1.5]])
+        model.add_cpds(cpd_a)
+
+        self.assertRaises(ValueError, model.check_model)
+
     def test_check_model1(self):
         cpd_g = TabularCPD(
             "g",
