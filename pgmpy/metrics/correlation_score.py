@@ -108,9 +108,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
             )
 
         if not callable(self.score):
-            raise ValueError(
-                f"score should be scikit-learn classification metric. Got {self.score}"
-            )
+            raise ValueError(f"score should be scikit-learn classification metric. Got {self.score}")
 
         ci_test = ci_registry.get_test(test=self.ci_test, data=X)
 
@@ -142,6 +140,4 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         if self.return_summary:
             return results
         else:
-            return self.score(
-                y_true=results["stat_test"].values, y_pred=results["d_connected"].values
-            )
+            return self.score(y_true=results["stat_test"].values, y_pred=results["d_connected"].values)

@@ -1,5 +1,5 @@
 import itertools
-from typing import Hashable, Iterable
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
@@ -74,10 +74,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
-        super(PDAG, self).__init__(
-            self.directed_edges.union(self.undirected_edges).union(
-                set([(Y, X) for (X, Y) in self.undirected_edges])
-            )
+        super().__init__(
+            self.directed_edges.union(self.undirected_edges).union({(Y, X) for (X, Y) in self.undirected_edges})
         )
         self.latents = set(latents)
         self.exposures = set(exposures)
@@ -322,9 +320,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                             pdag.orient_undirected_edge(y, z, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(
-                                    f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
-                                )
+                                logger.info(f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}")
 
             # Rule 2: If X -> Z -> Y  and X - Y =>  X → Y
             for z in pdag.nodes():
@@ -337,9 +333,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                             pdag.orient_undirected_edge(x, y, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(
-                                    f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
-                                )
+                                logger.info(f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}")
 
             # Rule 3: If X - {Y, Z, W} and {Z, Y} -> W => X -> W
             for x in pdag.nodes():
@@ -353,10 +347,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                         pdag.orient_undirected_edge(x, w, inplace=True)
                         changed = True
                         if debug:
-                            logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w} "
-                                f"{y}, {z} -> {w} => {x} -> {w}"
-                            )
+                            logger.info(f"Applying Rule 3: {x} - {y}, {z}, {w} {y}, {z} -> {w} => {x} -> {w}")
                         break
 
             # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
@@ -423,17 +414,13 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             for X in sorted(pdag.nodes()):
                 undirected_neighbors = pdag.undirected_neighbors(X)
                 neighbors_are_adjacent = all(
-                    (
-                        pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
-                        for Z in pdag.all_neighbors(X)
-                        for Y in undirected_neighbors
-                        if not Y == Z
-                    )
+                    pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
+                    for Z in pdag.all_neighbors(X)
+                    for Y in undirected_neighbors
+                    if not Y == Z
                 )
 
-                if not pdag.directed_children(X) and (
-                    not undirected_neighbors or neighbors_are_adjacent
-                ):
+                if not pdag.directed_children(X) and (not undirected_neighbors or neighbors_are_adjacent):
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.undirected_neighbors(X):

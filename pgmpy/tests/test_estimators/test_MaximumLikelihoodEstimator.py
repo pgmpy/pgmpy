@@ -154,9 +154,7 @@ def test_state_names2(backend):
 
 def test_class_init(setup_data, backend):
     data = setup_data
-    mle = MaximumLikelihoodEstimator(
-        data["m1"], data["d1"], state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]}
-    )
+    mle = MaximumLikelihoodEstimator(data["m1"], data["d1"], state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]})
     assert mle.estimate_cpd("A") == data["cpds"][0]
     assert mle.estimate_cpd("B") == data["cpds"][1]
     assert mle.estimate_cpd("C") == data["cpds"][2]
@@ -215,12 +213,8 @@ def test_missing_data(setup_data, backend):
 def test_estimate_potentials_smoke_test(setup_data, backend):
     data = setup_data
     joint = data["mle3"].estimate_potentials().product()
-    assert joint.marginalize(variables=["B"], inplace=False) == data["potentials2"][
-        ("A", "C")
-    ].normalize(inplace=False)
-    assert joint.marginalize(variables=["A"], inplace=False) == data["potentials2"][
-        ("B", "C")
-    ].normalize(inplace=False)
+    assert joint.marginalize(variables=["B"], inplace=False) == data["potentials2"][("A", "C")].normalize(inplace=False)
+    assert joint.marginalize(variables=["A"], inplace=False) == data["potentials2"][("B", "C")].normalize(inplace=False)
 
 
 def test_partition_function(setup_data, backend):
@@ -232,6 +226,4 @@ def test_partition_function(setup_data, backend):
 
 def test_estimate_potentials(setup_data, backend):
     data = setup_data
-    assert data["mle2"].estimate_potentials()[("A", "B")] == data["potentials1"][
-        ("A", "B")
-    ].normalize(inplace=False)
+    assert data["mle2"].estimate_potentials()[("A", "B")] == data["potentials1"][("A", "B")].normalize(inplace=False)
