@@ -17,7 +17,6 @@ from pgmpy.estimators import ExpertKnowledge
 # TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
 # class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
 class YourDatasetClass(_BaseDataset):
-
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
     _tags = {
@@ -53,6 +52,9 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
 
+    # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
+    # sep = "\t"
+
     # TODO: If the dataset has categorical variables, list them here.
     categorical_variables = []
 
@@ -65,9 +67,7 @@ class YourDatasetClass(_BaseDataset):
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        _ = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        _ = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         # TODO: Add logic for parsing the data from the line above into a `pgmpy.base.DAG` object.
         dag = None
         return dag

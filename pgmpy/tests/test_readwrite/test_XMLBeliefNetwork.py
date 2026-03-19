@@ -3,7 +3,6 @@ import sys
 import unittest
 import xml.etree.ElementTree as etree
 
-import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 
@@ -131,16 +130,12 @@ class TestXBNReader(unittest.TestCase):
             self.reader_string.get_analysisnotebook_values()["NAME"],
             "Notebook.Cancer Example From Neapolitan",
         )
-        self.assertEqual(
-            self.reader_string.get_analysisnotebook_values()["ROOT"], "Cancer"
-        )
+        self.assertEqual(self.reader_string.get_analysisnotebook_values()["ROOT"], "Cancer")
         self.assertEqual(
             self.reader_file.get_analysisnotebook_values()["NAME"],
             "Notebook.Cancer Example From Neapolitan",
         )
-        self.assertEqual(
-            self.reader_file.get_analysisnotebook_values()["ROOT"], "Cancer"
-        )
+        self.assertEqual(self.reader_file.get_analysisnotebook_values()["ROOT"], "Cancer")
 
     def test_get_bnmodel_name(self):
         self.assertEqual(self.reader_string.get_bnmodel_name(), "Cancer")
@@ -172,9 +167,7 @@ class TestXBNReader(unittest.TestCase):
             self.reader_string.get_variables()["a"]["DESCRIPTION"],
             "(a) Metastatic Cancer",
         )
-        self.assertListEqual(
-            self.reader_string.get_variables()["a"]["STATES"], ["Present", "Absent"]
-        )
+        self.assertListEqual(self.reader_string.get_variables()["a"]["STATES"], ["Present", "Absent"])
         self.assertEqual(self.reader_file.get_variables()["a"]["TYPE"], "discrete")
         self.assertEqual(self.reader_file.get_variables()["a"]["XPOS"], "13495")
         self.assertEqual(self.reader_file.get_variables()["a"]["YPOS"], "10465")
@@ -182,9 +175,7 @@ class TestXBNReader(unittest.TestCase):
             self.reader_file.get_variables()["a"]["DESCRIPTION"],
             "(a) Metastatic Cancer",
         )
-        self.assertListEqual(
-            self.reader_file.get_variables()["a"]["STATES"], ["Present", "Absent"]
-        )
+        self.assertListEqual(self.reader_file.get_variables()["a"]["STATES"], ["Present", "Absent"])
 
     def test_get_edges(self):
         self.assertListEqual(
@@ -202,42 +193,30 @@ class TestXBNReader(unittest.TestCase):
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
         self.assertEqual(distribution["a"]["TYPE"], "discrete")
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
     def test_get_model(self):
@@ -351,9 +330,7 @@ class TestXBNWriter(unittest.TestCase):
         }
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
-        model.add_edges_from(
-            [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
-        )
+        model.add_edges_from([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")])
         cpd_distribution = {
             "a": {"TYPE": "discrete", "DPIS": np.array([[0.2], [0.8]])},
             "e": {
@@ -389,9 +366,7 @@ class TestXBNWriter(unittest.TestCase):
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
-            cpd = TabularCPD(
-                var, len(states), cpd, evidence=evidence, evidence_card=evidence_card
-            )
+            cpd = TabularCPD(var, len(states), cpd, evidence=evidence, evidence_card=evidence_card)
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
@@ -505,11 +480,7 @@ class TestXBNWriter(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        output = str(self.writer.__str__())
-        expected = str(etree.tostring(self.expected_xml))
-        self.assertEqual(
-            str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
-        )
+        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
 
 
 class TestXBNReaderTorch(unittest.TestCase):
@@ -631,16 +602,12 @@ class TestXBNReaderTorch(unittest.TestCase):
             self.reader_string.get_analysisnotebook_values()["NAME"],
             "Notebook.Cancer Example From Neapolitan",
         )
-        self.assertEqual(
-            self.reader_string.get_analysisnotebook_values()["ROOT"], "Cancer"
-        )
+        self.assertEqual(self.reader_string.get_analysisnotebook_values()["ROOT"], "Cancer")
         self.assertEqual(
             self.reader_file.get_analysisnotebook_values()["NAME"],
             "Notebook.Cancer Example From Neapolitan",
         )
-        self.assertEqual(
-            self.reader_file.get_analysisnotebook_values()["ROOT"], "Cancer"
-        )
+        self.assertEqual(self.reader_file.get_analysisnotebook_values()["ROOT"], "Cancer")
 
     def test_get_bnmodel_name(self):
         self.assertEqual(self.reader_string.get_bnmodel_name(), "Cancer")
@@ -672,9 +639,7 @@ class TestXBNReaderTorch(unittest.TestCase):
             self.reader_string.get_variables()["a"]["DESCRIPTION"],
             "(a) Metastatic Cancer",
         )
-        self.assertListEqual(
-            self.reader_string.get_variables()["a"]["STATES"], ["Present", "Absent"]
-        )
+        self.assertListEqual(self.reader_string.get_variables()["a"]["STATES"], ["Present", "Absent"])
         self.assertEqual(self.reader_file.get_variables()["a"]["TYPE"], "discrete")
         self.assertEqual(self.reader_file.get_variables()["a"]["XPOS"], "13495")
         self.assertEqual(self.reader_file.get_variables()["a"]["YPOS"], "10465")
@@ -682,9 +647,7 @@ class TestXBNReaderTorch(unittest.TestCase):
             self.reader_file.get_variables()["a"]["DESCRIPTION"],
             "(a) Metastatic Cancer",
         )
-        self.assertListEqual(
-            self.reader_file.get_variables()["a"]["STATES"], ["Present", "Absent"]
-        )
+        self.assertListEqual(self.reader_file.get_variables()["a"]["STATES"], ["Present", "Absent"])
 
     def test_get_edges(self):
         self.assertListEqual(
@@ -702,42 +665,30 @@ class TestXBNReaderTorch(unittest.TestCase):
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
         self.assertEqual(distribution["a"]["TYPE"], "discrete")
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
     def test_get_model(self):
@@ -851,9 +802,7 @@ class TestXBNWriterTorch(unittest.TestCase):
         }
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
-        model.add_edges_from(
-            [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
-        )
+        model.add_edges_from([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")])
         cpd_distribution = {
             "a": {"TYPE": "discrete", "DPIS": np.array([[0.2], [0.8]])},
             "e": {
@@ -889,9 +838,7 @@ class TestXBNWriterTorch(unittest.TestCase):
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
-            cpd = TabularCPD(
-                var, len(states), cpd, evidence=evidence, evidence_card=evidence_card
-            )
+            cpd = TabularCPD(var, len(states), cpd, evidence=evidence, evidence_card=evidence_card)
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
@@ -1005,8 +952,4 @@ class TestXBNWriterTorch(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        output = str(self.writer.__str__())
-        expected = str(etree.tostring(self.expected_xml))
-        self.assertEqual(
-            str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
-        )
+        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
