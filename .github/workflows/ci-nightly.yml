@@ -170,7 +170,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   notify:
-    needs: [test-nosoftdeps, test-fulldep]
+    needs: [test-nosoftdeps, test-fulldep, update-test-durations]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
