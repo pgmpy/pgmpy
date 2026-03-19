@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload test durations
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-durations
           path: .test_durations
@@ -129,7 +129,7 @@ jobs:
           ref: dev
 
       - name: Download test durations
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-durations
           path: new_durations
