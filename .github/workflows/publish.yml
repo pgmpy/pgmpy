@@ -72,7 +72,7 @@ jobs:
 
       - name: Install package from wheel
         run: |
-          pip install pytest mock
+          pip install pytest mock jsonschema
           pip install --upgrade pip
           pip install dist/*.whl
 
