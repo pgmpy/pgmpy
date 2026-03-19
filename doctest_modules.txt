@@ -21,3 +21,4 @@ pgmpy/estimators/ExhaustiveSearch.py
 pgmpy/inference/ApproxInference.py
 pgmpy/models/FactorGraph.py
 pgmpy/base/MAG.py
+pgmpy/factors/FactorSet.py
