@@ -1,14 +1,5 @@
+from collections.abc import Callable, Hashable
 from itertools import permutations
-from typing import (
-    Callable,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
 
 import networkx as nx
 import pandas as pd
@@ -86,29 +77,29 @@ class PC(BaseConstraintEstimator):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        independencies: Optional[Independencies] = None,
+        data: pd.DataFrame | None = None,
+        independencies: Independencies | None = None,
         **kwargs,
     ) -> None:
         logger.warning(
             "DeprecationWarning: This PC class will be removed in a future release. Please use the new sklearn"
             " compatible PC class from the pgmpy.causal_discovery module instead."
         )
-        super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
+        super().__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
         variant: str = "parallel",
-        ci_test: Optional[Union[str, Callable]] = None,
+        ci_test: str | Callable | None = None,
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
-    ) -> Union[DAG, PDAG, Tuple[nx.Graph, Dict[Tuple[str, str], Set[str]]]]:
+    ) -> DAG | PDAG | tuple[nx.Graph, dict[tuple[str, str], set[str]]]:
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
@@ -240,9 +231,7 @@ class PC(BaseConstraintEstimator):
         """
         # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
-            raise ValueError(
-                f"variant must be one of: orig, stable, or parallel. Got: {variant}"
-            )
+            raise ValueError(f"variant must be one of: orig, stable, or parallel. Got: {variant}")
 
         ci_test = ci_registry.get_test(ci_test, data=self.data)
 
@@ -269,9 +258,7 @@ class PC(BaseConstraintEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on collider structures.
-        pdag = self.orient_colliders(
-            skel, separating_sets, expert_knowledge.temporal_ordering
-        )
+        pdag = self.orient_colliders(skel, separating_sets, expert_knowledge.temporal_ordering)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
@@ -294,15 +281,13 @@ class PC(BaseConstraintEstimator):
         elif return_type.lower() == "dag":
             return pdag.to_dag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}")
 
     @staticmethod
     def orient_colliders(
         skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton
@@ -372,9 +357,7 @@ class PC(BaseConstraintEstimator):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
+        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

@@ -45,9 +45,7 @@ requires_torch = pytest.mark.skipif(
 
 
 def test_class_init():
-    marginal_estimator = MarginalEstimator(
-        DiscreteMarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame()
-    )
+    marginal_estimator = MarginalEstimator(DiscreteMarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame())
     assert marginal_estimator
 
 
@@ -69,13 +67,7 @@ def test_marginal_loss(models):
 def test_clique_to_marginal():
     marginals = FactorDict(
         {
-            variable: FactorDict(
-                {
-                    variable: DiscreteFactor(
-                        [variable], cardinality=[1], values=np.ones(1)
-                    )
-                }
-            )
+            variable: FactorDict({variable: DiscreteFactor([variable], cardinality=[1], values=np.ones(1))})
             for variable in {"A", "B", "C"}
         }
     )
@@ -87,21 +79,13 @@ def test_clique_to_marginal():
     assert len(clique_to_marginal[("A",)]) == 0
     assert len(clique_to_marginal[("B",)]) == 0
     assert len(clique_to_marginal[("C",)]) == 0
-    assert clique_to_marginal[("A", "B", "C")] == [
-        {k: v[k]} for k, v in marginals.items()
-    ]
+    assert clique_to_marginal[("A", "B", "C")] == [{k: v[k]} for k, v in marginals.items()]
 
 
 def test_clique_to_marginal_no_matching_cliques():
     marginals = FactorDict(
         {
-            variable: FactorDict(
-                {
-                    variable: DiscreteFactor(
-                        [variable], cardinality=[1], values=np.ones(1)
-                    )
-                }
-            )
+            variable: FactorDict({variable: DiscreteFactor([variable], cardinality=[1], values=np.ones(1))})
             for variable in {"A", "B", "C"}
         }
     )
@@ -111,9 +95,7 @@ def test_clique_to_marginal_no_matching_cliques():
 
 @requires_torch
 def test_torch_class_init():
-    marginal_estimator = MarginalEstimator(
-        DiscreteMarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame()
-    )
+    marginal_estimator = MarginalEstimator(DiscreteMarkovNetwork([("A", "B"), ("B", "C")]), pd.DataFrame())
     assert marginal_estimator
 
 
@@ -137,13 +119,7 @@ def test_torch_marginal_loss(torch_models):
 def test_torch_clique_to_marginal():
     marginals = FactorDict(
         {
-            variable: FactorDict(
-                {
-                    variable: DiscreteFactor(
-                        [variable], cardinality=[1], values=np.ones(1)
-                    )
-                }
-            )
+            variable: FactorDict({variable: DiscreteFactor([variable], cardinality=[1], values=np.ones(1))})
             for variable in {"A", "B", "C"}
         }
     )
@@ -155,22 +131,14 @@ def test_torch_clique_to_marginal():
     assert len(clique_to_marginal[("A",)]) == 0
     assert len(clique_to_marginal[("B",)]) == 0
     assert len(clique_to_marginal[("C",)]) == 0
-    assert clique_to_marginal[("A", "B", "C")] == [
-        {k: v[k]} for k, v in marginals.items()
-    ]
+    assert clique_to_marginal[("A", "B", "C")] == [{k: v[k]} for k, v in marginals.items()]
 
 
 @requires_torch
 def test_torch_clique_to_marginal_no_matching_cliques():
     marginals = FactorDict(
         {
-            variable: FactorDict(
-                {
-                    variable: DiscreteFactor(
-                        [variable], cardinality=[1], values=np.ones(1)
-                    )
-                }
-            )
+            variable: FactorDict({variable: DiscreteFactor([variable], cardinality=[1], values=np.ones(1))})
             for variable in {"A", "B", "C"}
         }
     )

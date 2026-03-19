@@ -51,8 +51,7 @@ class TestConfig:
         assert config.get_show_progress() is True
 
     @pytest.mark.skipif(
-        not _check_soft_dependencies("torch", severity="none")
-        or not torch.cuda.is_available(),
+        not _check_soft_dependencies("torch", severity="none") or not torch.cuda.is_available(),
         reason="test only if torch and torch.cuda are available",
     )
     def test_torch_gpu(self):  # pragma: no cover

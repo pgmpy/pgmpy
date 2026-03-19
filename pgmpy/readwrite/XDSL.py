@@ -11,7 +11,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
-class XDSLReader(object):
+class XDSLReader:
     """
     Initializes the reader object for XDSL file formats[1] created through GeNIe[2].
     Note that XDSLReader only supports cpt blocks from the XDSL file format; elements like
@@ -120,11 +120,7 @@ class XDSLReader(object):
         ['either', 'dysp'],
         ['bronc', 'dysp']]
         """
-        edge_list = [
-            [value, key]
-            for key in self.variable_parents
-            for value in self.variable_parents[key]
-        ]
+        edge_list = [[value, key] for key in self.variable_parents for value in self.variable_parents[key]]
         return edge_list
 
     def get_states(self):
@@ -148,9 +144,7 @@ class XDSLReader(object):
         """
         variable_states = {}
         for cpt in self.cpt_elements:
-            variable_states[cpt.attrib["id"]] = [
-                state.attrib["id"] for state in cpt.findall("state")
-            ]
+            variable_states[cpt.attrib["id"]] = [state.attrib["id"] for state in cpt.findall("state")]
         return variable_states
 
     def get_values(self):
@@ -211,10 +205,7 @@ class XDSLReader(object):
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
-            evidence_card = [
-                len(self.variable_states[evidence_var])
-                for evidence_var in self.variable_parents[var]
-            ]
+            evidence_card = [len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]]
             cpd = TabularCPD(
                 var,
                 len(self.variable_states[var]),
@@ -233,7 +224,7 @@ class XDSLReader(object):
         return model
 
 
-class XDSLWriter(object):
+class XDSLWriter:
     """
     Initialise a XDSL writer object to export pgmpy models to XDSL file format[1] used by GeNIe[2].
 
@@ -321,9 +312,7 @@ class XDSLWriter(object):
 
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
-                logger.warning(
-                    f" Node '{var}' contains whitespaces. This can create issues when loading the model. "
-                )
+                logger.warning(f" Node '{var}' contains whitespaces. This can create issues when loading the model. ")
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
         return variable_tag
@@ -382,7 +371,7 @@ class XDSLWriter(object):
             # Flatten in column-major order so that for each parent
             #  configuration the probabilities for all states are listed.
             flat_values = compat_fns.ravel_f(values)
-            probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
+            probs_elem.text = " ".join(f"{float(x):.16f}" for x in flat_values)
 
             outcome_tag[var] = cpd
 
@@ -416,9 +405,7 @@ class XDSLWriter(object):
             # Appearance details (colors, font).
             etree.SubElement(node_elem, "interior", {"color": "e5f6f7"})
             etree.SubElement(node_elem, "outline", {"color": "000080"})
-            etree.SubElement(
-                node_elem, "font", {"color": "000000", "name": "Arial", "size": "8"}
-            )
+            etree.SubElement(node_elem, "font", {"color": "000000", "name": "Arial", "size": "8"})
 
             # Set node position (x1, y1, x2, y2).
             # Provide random position to each node.
@@ -457,7 +444,5 @@ class XDSLWriter(object):
                 f.write(pretty_xml_str)
 
     def write_xdsl(self, filename):
-        logger.warning(
-            "The `XDSLWriter.write_xdsl` has been deprecated. Please use `XDSLWriter.write` instead."
-        )
+        logger.warning("The `XDSLWriter.write_xdsl` has been deprecated. Please use `XDSLWriter.write` instead.")
         self.write(filename)
