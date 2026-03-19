@@ -1347,8 +1347,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3, seed=42)
         >>> sorted(random_dag.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
-        >>> sorted(random_dag.edges())
-        [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'), ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'), ('X_4', 'X_5'), ('X_7', 'X_9')]
+        >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
+        [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'),
+         ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'),
+         ('X_4', 'X_5'), ('X_7', 'X_9')]
         """
         # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
         gen = np.random.default_rng(seed=seed)
