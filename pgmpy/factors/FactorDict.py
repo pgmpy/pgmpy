@@ -43,9 +43,7 @@ class FactorDict(dict):
                 variables=marginal,
                 cardinality=cardinality,
                 values=np.histogramdd(sample=encoded, bins=cardinality)[0].flatten(),
-                state_names={
-                    column: sorted(_df[column].unique().tolist()) for column in marginal
-                },
+                state_names={column: sorted(_df[column].unique().tolist()) for column in marginal},
             )
         return factor_dict
 

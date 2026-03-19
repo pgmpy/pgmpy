@@ -1,5 +1,5 @@
+from collections.abc import Callable, Hashable
 from itertools import combinations
-from typing import Callable, Hashable, Optional, Set, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -13,9 +13,9 @@ from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
-    def __init__(self, data: Optional[pd.DataFrame] = None, **kwargs):
-        super(ExpertInLoop, self).__init__(data=data, **kwargs)
-        self.orientation_cache = set([])
+    def __init__(self, data: pd.DataFrame | None = None, **kwargs):
+        super().__init__(data=data, **kwargs)
+        self.orientation_cache = set()
 
     def test_all(self, ci_test, dag: DAG) -> pd.DataFrame:
         """
@@ -36,10 +36,10 @@ class ExpertInLoop(StructureEstimator):
             v_parents = set(dag.get_parents(v))
 
             if v in u_parents:
-                u_parents -= set([v])
+                u_parents -= {v}
                 edge_present = True
             elif u in v_parents:
-                v_parents -= set([u])
+                v_parents -= {u}
                 edge_present = True
             else:
                 edge_present = False
@@ -53,20 +53,16 @@ class ExpertInLoop(StructureEstimator):
                 effect, p_value = result
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
-        return pd.DataFrame(
-            cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"]
-        )
+        return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
 
     def estimate(
         self,
         pval_threshold: float = 0.05,
         effect_size_threshold: float = 0.05,
-        ci_test: Optional[str] = None,
-        orientation_fn: Callable[
-            ..., Optional[Tuple[Hashable, Hashable]]
-        ] = llm_pairwise_orient,
-        orientations: Set[Tuple[str, str]] = set(),
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        ci_test: str | None = None,
+        orientation_fn: Callable[..., tuple[Hashable, Hashable] | None] = llm_pairwise_orient,
+        orientations: set[tuple[str, str]] = set(),
+        expert_knowledge: ExpertKnowledge | None = None,
         use_cache: bool = True,
         show_progress: bool = True,
         **kwargs,
@@ -230,8 +226,7 @@ class ExpertInLoop(StructureEstimator):
             # Step 2: Remove any edges between variables that are not sufficiently associated.
             edge_effects = all_effects[all_effects.edge_present]
             edge_effects = edge_effects[
-                (edge_effects.effect < effect_size_threshold)
-                & (edge_effects.p_val > pval_threshold)
+                (edge_effects.effect < effect_size_threshold) & (edge_effects.p_val > pval_threshold)
             ]
             remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
             for edge in remove_edges:
@@ -241,8 +236,7 @@ class ExpertInLoop(StructureEstimator):
             # Step 3.1: Find edges that are not present in the DAG but have significant association.
             nonedge_effects = all_effects[all_effects.edge_present == False]
             nonedge_effects = nonedge_effects[
-                (nonedge_effects.effect >= effect_size_threshold)
-                & (nonedge_effects.p_val <= pval_threshold)
+                (nonedge_effects.effect >= effect_size_threshold) & (nonedge_effects.p_val <= pval_threshold)
             ]
 
             # Step 3.2: Remove any pair of variables that are blacklisted.
@@ -251,14 +245,8 @@ class ExpertInLoop(StructureEstimator):
                 blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
                 nonedge_effects = nonedge_effects.loc[
                     ~(
-                        (
-                            nonedge_effects.u.isin(blacklisted_edges_us)
-                            & nonedge_effects.v.isin(blacklisted_edges_vs)
-                        )
-                        | (
-                            nonedge_effects.u.isin(blacklisted_edges_vs)
-                            & nonedge_effects.v.isin(blacklisted_edges_us)
-                        )
+                        (nonedge_effects.u.isin(blacklisted_edges_us) & nonedge_effects.v.isin(blacklisted_edges_vs))
+                        | (nonedge_effects.u.isin(blacklisted_edges_vs) & nonedge_effects.v.isin(blacklisted_edges_us))
                     ),
                     :,
                 ]
@@ -292,28 +280,16 @@ class ExpertInLoop(StructureEstimator):
                         edge_direction = (selected_edge.u, selected_edge.v)
                     elif v_order < u_order:
                         edge_direction = (selected_edge.v, selected_edge.u)
-            elif (
-                use_cache
-                and (selected_edge.u, selected_edge.v) in self.orientation_cache
-            ):
+            elif use_cache and (selected_edge.u, selected_edge.v) in self.orientation_cache:
                 edge_direction = (selected_edge.u, selected_edge.v)
-            elif (
-                use_cache
-                and (selected_edge.v, selected_edge.u) in self.orientation_cache
-            ):
+            elif use_cache and (selected_edge.v, selected_edge.u) in self.orientation_cache:
                 edge_direction = (selected_edge.v, selected_edge.u)
             else:
-                edge_direction = orientation_fn(
-                    selected_edge.u, selected_edge.v, **kwargs
-                )
+                edge_direction = orientation_fn(selected_edge.u, selected_edge.v, **kwargs)
                 if use_cache is True and edge_direction is not None:
                     self.orientation_cache.add(edge_direction)
 
-                if (
-                    config.SHOW_PROGRESS
-                    and show_progress
-                    and edge_direction is not None
-                ):
+                if config.SHOW_PROGRESS and show_progress and edge_direction is not None:
                     logger.info(
                         "\rQueried for edge orientation between"
                         f"{selected_edge.u} and {selected_edge.v}. Got:"
@@ -362,16 +338,14 @@ class ExpertInLoop(StructureEstimator):
         ci_test: Callable
             The Conditional Independence test to use.
         """
-        logger.info(
-            "Returned edge orientation creates a cycle. Trying to identify the incorrect edge."
-        )
+        logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
         edges_to_remove = []
         temp_dag = dag.copy()
         temp_dag.add_edges_from([(u, v)])
         for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
                 if not ((x == u) and (y == v)):
-                    Z = set(cycle) - set([x, y])
+                    Z = set(cycle) - {x, y}
                     effect, pvalue = ci_test(x, y, Z=Z, data=self.data, boolean=False)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))

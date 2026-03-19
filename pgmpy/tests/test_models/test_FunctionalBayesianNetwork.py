@@ -30,12 +30,8 @@ class TestFBNMethods(unittest.TestCase):
             "x1",
             lambda _: dist.Normal(0, 1),
         )
-        self.cpd2 = FunctionalCPD(
-            "x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"]
-        )
-        self.cpd3 = FunctionalCPD(
-            "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
-        )
+        self.cpd2 = FunctionalCPD("x2", lambda parent: dist.Normal(parent["x1"] + 2.0, 1), parents=["x1"])
+        self.cpd3 = FunctionalCPD("x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"])
 
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
@@ -84,9 +80,7 @@ class TestFBNMethods(unittest.TestCase):
         self.assertEqual(self.model.check_model(), True)
 
         self.model.add_edge("x1", "x4")
-        cpd4 = FunctionalCPD(
-            "x4", lambda parent: dist.Normal(parent["x2"] * -1 + 4, 3), ["x2"]
-        )
+        cpd4 = FunctionalCPD("x4", lambda parent: dist.Normal(parent["x2"] * -1 + 4, 3), ["x2"])
         self.model.add_cpds(cpd4)
 
         self.assertRaises(ValueError, self.model.check_model)
@@ -109,23 +103,17 @@ class TestFBNMethods(unittest.TestCase):
             return dist.Normal(mu, sigma)
 
         def x2_fn(parent):
-            intercept = pyro.param(
-                "x2_inter", torch.tensor(1.0, device=config.get_device())
-            )
+            intercept = pyro.param("x2_inter", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
                 "x2_sigma",
                 torch.tensor(1.0, device=config.get_device()),
                 constraint=torch.distributions.constraints.positive,
             )
-            alpha = pyro.param(
-                "x2_alpha", torch.tensor(1.0, device=config.get_device())
-            )
+            alpha = pyro.param("x2_alpha", torch.tensor(1.0, device=config.get_device()))
             return dist.Normal(intercept + (parent["x1"] * alpha), sigma)
 
         def x3_fn(parent):
-            intercept = pyro.param(
-                "x3_inter", torch.tensor(1.0, device=config.get_device())
-            )
+            intercept = pyro.param("x3_inter", torch.tensor(1.0, device=config.get_device()))
             sigma = pyro.param(
                 "x3_sigma",
                 torch.tensor(1.0, device=config.get_device()),
@@ -174,12 +162,8 @@ class TestFBNMethods(unittest.TestCase):
         data = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
 
         def x1_prior(parents):
-            concen1 = pyro.param(
-                "x1_concen1", torch.tensor(1.0, device=config.get_device())
-            )
-            concen0 = pyro.param(
-                "x1_concen0", torch.tensor(1.0, device=config.get_device())
-            )
+            concen1 = pyro.param("x1_concen1", torch.tensor(1.0, device=config.get_device()))
+            concen0 = pyro.param("x1_concen0", torch.tensor(1.0, device=config.get_device()))
             return dist.Beta(concen1, concen0)
 
         def x2_prior(parents):
@@ -327,9 +311,7 @@ class TestFBNMethods(unittest.TestCase):
         model.add_cpds(cpd1, cpd2, cpd3)
 
         pyro.clear_param_store()
-        params = model.fit(
-            data, estimator="MCMC", prior_fn=prior_fn, seed=42, num_steps=100
-        )
+        params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, seed=42, num_steps=100)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
@@ -379,10 +361,7 @@ class TestFBNMethods(unittest.TestCase):
         def fn_fixC_param(parents):
             mu = (
                 pyro.param("fixC_inter", torch.tensor(1.0, device=config.get_device()))
-                + pyro.param(
-                    "fixC_alpha", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["b1191"]
+                + pyro.param("fixC_alpha", torch.tensor(1.0, device=config.get_device())) * parents["b1191"]
             )
             sigma = pyro.param(
                 "fixC_sigma",
@@ -394,10 +373,7 @@ class TestFBNMethods(unittest.TestCase):
         def fn_ygbD_param(parents):
             mu = (
                 pyro.param("ygbD_inter", torch.tensor(1.0, device=config.get_device()))
-                + pyro.param(
-                    "ygbD_alpha", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["fixC"]
+                + pyro.param("ygbD_alpha", torch.tensor(1.0, device=config.get_device())) * parents["fixC"]
             )
             sigma = pyro.param(
                 "ygbD_sigma",
@@ -410,10 +386,7 @@ class TestFBNMethods(unittest.TestCase):
         def fn_yjbO_param(parents):
             mu = (
                 pyro.param("ygbO_inter", torch.tensor(1.0, device=config.get_device()))
-                + pyro.param(
-                    "ygbO_alpha", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["fixC"]
+                + pyro.param("ygbO_alpha", torch.tensor(1.0, device=config.get_device())) * parents["fixC"]
             )
             sigma = pyro.param(
                 "ygbO_sigma",
@@ -426,14 +399,8 @@ class TestFBNMethods(unittest.TestCase):
         def fn_yceP_param(parents):
             mu = (
                 pyro.param("yceP_inter", torch.tensor(1.0, device=config.get_device()))
-                + pyro.param(
-                    "yceP_alpha0", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["eutG"]
-                + pyro.param(
-                    "yceP_alpha1", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["fixC"]
+                + pyro.param("yceP_alpha0", torch.tensor(1.0, device=config.get_device())) * parents["eutG"]
+                + pyro.param("yceP_alpha1", torch.tensor(1.0, device=config.get_device())) * parents["fixC"]
             )
             sigma = pyro.param(
                 "yceP_sigma",
@@ -446,14 +413,8 @@ class TestFBNMethods(unittest.TestCase):
         def fn_ibpB_param(parents):
             mu = (
                 pyro.param("ibpB_inter", torch.tensor(1.0, device=config.get_device()))
-                + pyro.param(
-                    "ibpB_alpha0", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["eutG"]
-                + pyro.param(
-                    "ibpB_alpha1", torch.tensor(1.0, device=config.get_device())
-                )
-                * parents["yceP"]
+                + pyro.param("ibpB_alpha0", torch.tensor(1.0, device=config.get_device())) * parents["eutG"]
+                + pyro.param("ibpB_alpha1", torch.tensor(1.0, device=config.get_device())) * parents["yceP"]
             )
             sigma = pyro.param(
                 "ibpB_sigma",
@@ -471,9 +432,7 @@ class TestFBNMethods(unittest.TestCase):
         yceP_cpd = FunctionalCPD("yceP", fn=fn_yceP_param, parents=["eutG", "fixC"])
         ibpB_cpd = FunctionalCPD("ibpB", fn=fn_ibpB_param, parents=["eutG", "yceP"])
 
-        model.add_cpds(
-            b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd
-        )
+        model.add_cpds(b1191_cpd, eutG_cpd, fixC_cpd, ygbD_cpd, yjbO_cpd, yceP_cpd, ibpB_cpd)
 
         params = model.fit(
             df,
@@ -599,17 +558,13 @@ class TestFBNMethods(unittest.TestCase):
 
         def fn_yceP(priors, parents):
             mu = (
-                priors["yceP_inter"]
-                + priors["yceP_alpha0"] * parents["eutG"]
-                + priors["yceP_alpha1"] * parents["fixC"]
+                priors["yceP_inter"] + priors["yceP_alpha0"] * parents["eutG"] + priors["yceP_alpha1"] * parents["fixC"]
             )
             return dist.Normal(mu, priors["yceP_sigma"])
 
         def fn_ibpB(priors, parents):
             mu = (
-                priors["ibpB_inter"]
-                + priors["ibpB_alpha0"] * parents["eutG"]
-                + priors["ibpB_alpha1"] * parents["yceP"]
+                priors["ibpB_inter"] + priors["ibpB_alpha0"] * parents["eutG"] + priors["ibpB_alpha1"] * parents["yceP"]
             )
             return dist.Normal(mu, priors["ibpB_sigma"])
 
@@ -703,9 +658,7 @@ class TestFBNSimulation(unittest.TestCase):
     def test_simulate_linear_gaussian(self):
         lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         lg_cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=1)
-        lg_cpd2 = LinearGaussianCPD(
-            variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"]
-        )
+        lg_cpd2 = LinearGaussianCPD(variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"])
         lg_cpd3 = LinearGaussianCPD(variable="x3", beta=[4, -1], std=1, evidence=["x2"])
         lg_model.add_cpds(lg_cpd1, lg_cpd2, lg_cpd3)
 
@@ -755,9 +708,7 @@ class TestFBNSimulation(unittest.TestCase):
 
         cpd2 = FunctionalCPD(
             "uniform",
-            lambda parent: dist.Uniform(
-                parent["exponential"], parent["exponential"] + 2
-            ),
+            lambda parent: dist.Uniform(parent["exponential"], parent["exponential"] + 2),
             parents=["exponential"],
         )
 
@@ -778,9 +729,7 @@ class TestFBNSimulation(unittest.TestCase):
         samples = model.simulate(n_samples=n_samples, seed=42)
 
         self.assertEqual(len(samples), n_samples)
-        self.assertEqual(
-            set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"}
-        )
+        self.assertEqual(set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"})
 
         self.assertTrue(np.all(samples["exponential"] >= 0))
         self.assertAlmostEqual(samples["exponential"].mean(), 2.0, delta=0.2)
@@ -794,9 +743,7 @@ class TestFBNSimulation(unittest.TestCase):
     def test_simulate_with_do_scalar(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         cpd_x1 = FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0))
-        cpd_x2 = FunctionalCPD(
-            "x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]
-        )
+        cpd_x2 = FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"])
         model.add_cpds(cpd_x1, cpd_x2)
 
         df = model.simulate(n_samples=10, seed=42, do={"x1": 3.0})
@@ -808,9 +755,7 @@ class TestFBNSimulation(unittest.TestCase):
         model = FunctionalBayesianNetwork([("x1", "x2")])
         model.add_cpds(
             FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
-            FunctionalCPD(
-                "x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]
-            ),
+            FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]),
         )
 
         with self.assertRaises(ValueError):
@@ -843,9 +788,7 @@ class TestFBNSimulation(unittest.TestCase):
             FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"]),
         )
 
-        bad_vi = FunctionalCPD(
-            "x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"]
-        )
+        bad_vi = FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"])
         with self.assertRaises(ValueError):
             model.simulate(n_samples=5, seed=0, virtual_intervention=[bad_vi])
 
@@ -878,21 +821,21 @@ class TestFBNSimulation(unittest.TestCase):
 class TestFBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
-        self.graph = FunctionalBayesianNetwork(adj, latents=set(["a"]))
+        self.graph = FunctionalBayesianNetwork(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
         self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
 
     def test_class_init_with_adj_matrix_dict_of_list(self):
         adj = {"a": ["b", "c"], "b": ["c"]}
-        self.graph = FunctionalBayesianNetwork(adj, latents=set(["a"]))
+        self.graph = FunctionalBayesianNetwork(adj, latents={"a"})
         self.assertEqual(self.graph.latents, set("a"))
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
 
     def test_class_init_with_pd_adj_df(self):
         df = pd.DataFrame([[0, 3], [0, 0]])
-        self.graph = FunctionalBayesianNetwork(df, latents=set([0]))
-        self.assertEqual(self.graph.latents, set([0]))
+        self.graph = FunctionalBayesianNetwork(df, latents={0})
+        self.assertEqual(self.graph.latents, {0})
         self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
         self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
 
@@ -905,11 +848,11 @@ class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):
         model_str = "ind60 =~ x1"
         model_from_str = FunctionalBayesianNetwork.from_lavaan(string=model_str)
-        expected_edges = set([("ind60", "x1")])
+        expected_edges = {("ind60", "x1")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
 
     def test_from_dagitty(self):
         model_str = """dag{X -> Y}"""
         model_from_str = FunctionalBayesianNetwork.from_dagitty(string=model_str)
-        expected_edges = set([("X", "Y")])
+        expected_edges = {("X", "Y")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)

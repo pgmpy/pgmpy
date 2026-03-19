@@ -43,9 +43,7 @@ def models():
     )
 
     est1 = BayesianEstimator(m1, d1)
-    est2 = BayesianEstimator(
-        m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
-    )
+    est2 = BayesianEstimator(m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]})
     est3 = BayesianEstimator(m1, d2)
     return {
         "model_latent": model_latent,
@@ -102,9 +100,7 @@ def test_estimate_cpd_dirichlet(models):
 
 
 def test_estimate_cpd_improper_prior(models):
-    cpd_C = models["est1"].estimate_cpd(
-        "C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]]
-    )
+    cpd_C = models["est1"].estimate_cpd("C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]])
     cpd_C_correct = TabularCPD(
         "C",
         2,
@@ -114,10 +110,7 @@ def test_estimate_cpd_improper_prior(models):
         state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
     )
 
-    assert (
-        (cpd_C.values == cpd_C_correct.values)
-        | np.isnan(cpd_C.values) & np.isnan(cpd_C_correct.values)
-    ).all()
+    assert ((cpd_C.values == cpd_C_correct.values) | np.isnan(cpd_C.values) & np.isnan(cpd_C_correct.values)).all()
 
 
 def test_estimate_cpd_shortcuts(models):
@@ -156,13 +149,11 @@ def test_estimate_cpd_shortcuts(models):
 
 def test_get_parameters(models):
     est3 = models["est3"]
-    cpds = set(
-        [
-            est3.estimate_cpd("A"),
-            est3.estimate_cpd("B"),
-            est3.estimate_cpd("C"),
-        ]
-    )
+    cpds = {
+        est3.estimate_cpd("A"),
+        est3.estimate_cpd("B"),
+        est3.estimate_cpd("C"),
+    }
 
     assert set(est3.get_parameters(n_jobs=1)) == cpds
 
@@ -176,25 +167,12 @@ def test_get_parameters2(models):
     }
 
     cpds = {
-        est3.estimate_cpd(
-            "A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]
-        ),
-        est3.estimate_cpd(
-            "B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]
-        ),
-        est3.estimate_cpd(
-            "C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]
-        ),
+        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]),
+        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]),
+        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]),
     }
 
-    assert (
-        set(
-            est3.get_parameters(
-                prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-            )
-        )
-        == cpds
-    )
+    assert set(est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)) == cpds
 
 
 def test_get_parameters3(models):
@@ -205,22 +183,13 @@ def test_get_parameters3(models):
         est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts),
         est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts),
     }
-    assert (
-        set(
-            est3.get_parameters(
-                prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-            )
-        )
-        == cpds
-    )
+    assert set(est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)) == cpds
 
 
 def test_node_specific_equivalent_sample_size(models):
     est3 = models["est3"]
     ess_dict = {"A": 10, "B": 20, "C": 15}
-    cpds_dict = est3.get_parameters(
-        prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
-    )
+    cpds_dict = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1)
     cpds_manual = {
         est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=10),
         est3.estimate_cpd("B", prior_type="bdeu", equivalent_sample_size=20),
@@ -233,15 +202,9 @@ def test_node_specific_ess_partial_dict(models):
     est3 = models["est3"]
     """Test that unspecified nodes default to 0 (or equivalent behavior) when dict is partial."""
     ess_dict = {"A": 10, "C": 15}
-    cpd_A_dict = est3.estimate_cpd(
-        "A", prior_type="bdeu", equivalent_sample_size=ess_dict
-    )
-    cpd_B_dict = est3.estimate_cpd(
-        "B", prior_type="bdeu", equivalent_sample_size=ess_dict
-    )
-    cpd_C_dict = est3.estimate_cpd(
-        "C", prior_type="bdeu", equivalent_sample_size=ess_dict
-    )
+    cpd_A_dict = est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=ess_dict)
+    cpd_B_dict = est3.estimate_cpd("B", prior_type="bdeu", equivalent_sample_size=ess_dict)
+    cpd_C_dict = est3.estimate_cpd("C", prior_type="bdeu", equivalent_sample_size=ess_dict)
 
     cpd_A_manual = est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=10)
     cpd_C_manual = est3.estimate_cpd("C", prior_type="bdeu", equivalent_sample_size=15)
@@ -257,12 +220,8 @@ def test_node_specific_ess_matches_uniform_ess(models):
     """Test that uniform ESS dict matches scalar ESS."""
     ess_value = 12
     ess_dict = {"A": ess_value, "B": ess_value, "C": ess_value}
-    cpds_scalar = est3.get_parameters(
-        prior_type="bdeu", equivalent_sample_size=ess_value, n_jobs=1
-    )
-    cpds_dict = est3.get_parameters(
-        prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1
-    )
+    cpds_scalar = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_value, n_jobs=1)
+    cpds_dict = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1)
     assert set(cpds_scalar) == set(cpds_dict)
 
 
@@ -280,9 +239,7 @@ def torch_models():
         }
     )
     est1 = BayesianEstimator(m1, d1)
-    est2 = BayesianEstimator(
-        m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
-    )
+    est2 = BayesianEstimator(m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]})
     est3 = BayesianEstimator(m1, d2)
     yield {
         "model_latent": model_latent,
@@ -340,9 +297,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
 
 @requires_torch
 def test_estimate_cpd_improper_prior_torch(torch_models):
-    cpd_C = torch_models["est1"].estimate_cpd(
-        "C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]]
-    )
+    cpd_C = torch_models["est1"].estimate_cpd("C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]])
     cpd_C_correct = TabularCPD(
         "C",
         2,
@@ -354,8 +309,7 @@ def test_estimate_cpd_improper_prior_torch(torch_models):
     backend = config.get_compute_backend()
     # manual comparison because np.nan != np.nan
     assert (
-        (cpd_C.values == cpd_C_correct.values)
-        | backend.isnan(cpd_C.values) & backend.isnan(cpd_C_correct.values)
+        (cpd_C.values == cpd_C_correct.values) | backend.isnan(cpd_C.values) & backend.isnan(cpd_C_correct.values)
     ).all()
 
 
@@ -403,9 +357,7 @@ def test_get_parameters_torch(torch_models):
         est3.estimate_cpd("C"),
     ]
     all_cpds = est3.get_parameters(n_jobs=1)
-    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
-        all_cpds, key=lambda t: t.variables[0]
-    )
+    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])
 
 
 @requires_daft
@@ -418,22 +370,12 @@ def test_get_parameters2_torch(torch_models):
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
     cpds = {
-        est3.estimate_cpd(
-            "A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]
-        ),
-        est3.estimate_cpd(
-            "B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]
-        ),
-        est3.estimate_cpd(
-            "C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]
-        ),
+        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]),
+        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]),
+        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]),
     }
-    all_cpds = est3.get_parameters(
-        prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-    )
-    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
-        all_cpds, key=lambda t: t.variables[0]
-    )
+    all_cpds = est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)
+    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])
 
 
 @requires_daft
@@ -446,10 +388,6 @@ def test_get_parameters3_torch(torch_models):
         est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts),
         est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts),
     }
-    all_cpds = est3.get_parameters(
-        prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
-    )
+    all_cpds = est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)
 
-    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(
-        all_cpds, key=lambda t: t.variables[0]
-    )
+    assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])
