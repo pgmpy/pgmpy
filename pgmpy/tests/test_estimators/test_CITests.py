@@ -4,26 +4,64 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as np_test
+from skbase.lookup import all_objects
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.estimators.CITests import (
-    chi_square,
-    ci_registry,
-    g_sq,
-    gcm,
-    log_likelihood,
-    modified_log_likelihood,
-    pearsonr,
-    pearsonr_equivalence,
-    pillai_trace,
+from pgmpy.ci_tests import (
+    GCM,
+    ChiSquare,
+    GSq,
+    LogLikelihood,
+    ModifiedLogLikelihood,
+    Pearsonr,
+    PearsonrEquivalence,
+    PillaiTrace,
+    _BaseCITest,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
+def _ci_test_adapter(ci_test_class, init_kwarg_names=()):
+    def _run_test(X, Y, Z, data, boolean=True, **kwargs):
+        init_kwargs = {}
+        for kwarg_name in init_kwarg_names:
+            if kwarg_name in kwargs:
+                init_kwargs[kwarg_name] = kwargs.pop(kwarg_name)
+
+        return ci_test_class(data=data, **init_kwargs)(
+            X=X,
+            Y=Y,
+            Z=Z,
+            boolean=boolean,
+            **kwargs,
+        )
+
+    return _run_test
+
+
+chi_square = _ci_test_adapter(ChiSquare)
+g_sq = _ci_test_adapter(GSq)
+gcm = _ci_test_adapter(GCM)
+log_likelihood = _ci_test_adapter(LogLikelihood)
+modified_log_likelihood = _ci_test_adapter(ModifiedLogLikelihood)
+pearsonr = _ci_test_adapter(Pearsonr)
+pearsonr_equivalence = _ci_test_adapter(
+    PearsonrEquivalence, init_kwarg_names=("delta_threshold",)
+)
+pillai_trace = _ci_test_adapter(PillaiTrace, init_kwarg_names=("seed",))
+
+
 class TestCIRegistry(unittest.TestCase):
     def test_ci_registry(self):
-        all_tests = ci_registry.list_all()
+        all_tests = [
+            ci_test.get_class_tag("name")
+            for ci_test in all_objects(
+                object_types=_BaseCITest,
+                package_name="pgmpy.ci_tests",
+                return_names=False,
+            )
+        ]
 
         self.assertIn("chi_square", all_tests)
         self.assertIn("g_sq", all_tests)
