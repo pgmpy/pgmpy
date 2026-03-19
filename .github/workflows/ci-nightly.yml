@@ -51,7 +51,7 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --verbose --junitxml=test-results.xml
+        run: pytest --verbose
 
   test-fulldep:
     name: Optional deps | ${{ matrix.os }} | Python ${{ matrix.python-version }}
@@ -98,22 +98,15 @@ jobs:
         run: pip freeze
 
       - name: Run tests
-        run: pytest --store-durations --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose --junitxml=test-results.xml
-
-      - uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - uses: codecov/test-results-action@v1
-        with:
-          files: test-results.xml
+        run: pytest --store-durations --verbose
 
       - name: Upload test durations
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
         uses: actions/upload-artifact@v7
         with:
           name: test-durations
           path: .test_durations
+          if-no-files-found: error
 
   update-test-durations:
     name: Update .test_durations
