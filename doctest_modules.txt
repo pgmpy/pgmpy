@@ -20,3 +20,4 @@ pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/ExhaustiveSearch.py
 pgmpy/inference/ApproxInference.py
 pgmpy/models/FactorGraph.py
+pgmpy/utils/mathext.py

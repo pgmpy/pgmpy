@@ -77,9 +77,11 @@ def _adjusted_weights(weights: np.ndarray):
     Example
     -------
     >>> a = np.array([0.1111111] * 9)
-    >>> _adjusted_weights(a)
-    array([0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111,
-           0.1111111, 0.1111111, 0.1111112])
+    >>> result = _adjusted_weights(a)
+    >>> bool(np.isclose(result.sum(), 1.0))
+    True
+    >>> int(np.sum(result != 0.1111111))  # Exactly one element was adjusted
+    1
     """
     error = 1 - weights.sum()
     if abs(error) > 1e-3:
