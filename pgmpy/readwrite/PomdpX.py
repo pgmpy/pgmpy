@@ -4,7 +4,7 @@ import xml.etree.ElementTree as etree
 from collections import defaultdict
 
 
-class PomdpXReader(object):
+class PomdpXReader:
     """
     Initialize an instance of PomdpX reader class
 
@@ -322,9 +322,7 @@ class PomdpXReader(object):
                     edges[edge.get("val")] = edge.find("Terminal").text
                 elif edge.find("Node") is not None:
                     node_cpd = defaultdict(list)
-                    node_cpd[edge.find("Node").get("var")] = get_param(
-                        edge.find("Node")
-                    )
+                    node_cpd[edge.find("Node").get("var")] = get_param(edge.find("Node"))
                     edges[edge.get("val")] = node_cpd
                 elif edge.find("SubDAG") is not None:
                     subdag_attribute = defaultdict(list)
@@ -350,7 +348,7 @@ class PomdpXReader(object):
         return dag
 
 
-class PomdpXWriter(object):
+class PomdpXWriter:
     """
     Initialise a PomdpXWriter Object
 
@@ -453,16 +451,12 @@ class PomdpXWriter(object):
 
         obs_variables = self.model["variables"]["ObsVar"]
         for var in obs_variables:
-            obs_var_tag = etree.SubElement(
-                self.variable, "ObsVar", attrib={"vname": var["vname"]}
-            )
+            obs_var_tag = etree.SubElement(self.variable, "ObsVar", attrib={"vname": var["vname"]})
             self._add_value_enum(var, obs_var_tag)
 
         action_variables = self.model["variables"]["ActionVar"]
         for var in action_variables:
-            action_var_tag = etree.SubElement(
-                self.variable, "ActionVar", attrib={"vname": var["vname"]}
-            )
+            action_var_tag = etree.SubElement(self.variable, "ActionVar", attrib={"vname": var["vname"]})
             self._add_value_enum(var, action_var_tag)
 
         reward_var = self.model["variables"]["RewardVar"]
@@ -487,9 +481,7 @@ class PomdpXWriter(object):
         None
         """
         if isinstance(node_dict, defaultdict) or isinstance(node_dict, dict):
-            node_tag = etree.SubElement(
-                dag_tag, "Node", attrib={"var": next(iter(node_dict.keys()))}
-            )
+            node_tag = etree.SubElement(dag_tag, "Node", attrib={"var": next(iter(node_dict.keys()))})
             edge_dict = next(iter(node_dict.values()))
             for edge in sorted(edge_dict.keys(), key=tuple):
                 edge_tag = etree.SubElement(node_tag, "Edge", attrib={"val": edge})
@@ -549,17 +541,13 @@ class PomdpXWriter(object):
         parameter_tag = etree.SubElement(
             condprob,
             "Parameter",
-            attrib={
-                "type": condition["Type"] if condition["Type"] is not None else "TBL"
-            },
+            attrib={"type": condition["Type"] if condition["Type"] is not None else "TBL"},
         )
         if condition["Type"] == "DD":
             dag_tag = etree.SubElement(parameter_tag, "DAG")
             parameter_dict = condition["Parameter"]
             if "SubDAGTemplate" in parameter_dict:
-                subdag_tag = etree.SubElement(
-                    parameter_tag, "SubDAGTemplate", attrib={"id": parameter_dict["id"]}
-                )
+                subdag_tag = etree.SubElement(parameter_tag, "SubDAGTemplate", attrib={"id": parameter_dict["id"]})
                 self.add_parameter_dd(subdag_tag, parameter_dict["SubDAGTemplate"])
                 del parameter_dict["SubDAGTemplate"]
                 del parameter_dict["id"]

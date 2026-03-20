@@ -18,17 +18,13 @@ from pgmpy.utils import get_example_model
 
 class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
-        phi = DiscreteFactor(
-            variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
-        )
+        phi = DiscreteFactor(variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8))
         self.assertEqual(phi.variables, ["x1", "x2", "x3"])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
 
     def test_class_init_int_var(self):
-        phi = DiscreteFactor(
-            variables=[1, 2, 3], cardinality=[2, 3, 2], values=np.arange(12)
-        )
+        phi = DiscreteFactor(variables=[1, 2, 3], cardinality=[2, 3, 2], values=np.arange(12))
         self.assertEqual(phi.variables, [1, 2, 3])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
@@ -69,15 +65,11 @@ class TestFactorInit(unittest.TestCase):
         )
 
     def test_class_init_sizeerror(self):
-        self.assertRaises(
-            ValueError, DiscreteFactor, ["x1", "x2", "x3"], [2, 2, 2], np.ones(9)
-        )
+        self.assertRaises(ValueError, DiscreteFactor, ["x1", "x2", "x3"], [2, 2, 2], np.ones(9))
 
     def test_class_init_typeerror(self):
         self.assertRaises(TypeError, DiscreteFactor, "x1", [3], [1, 2, 3])
-        self.assertRaises(
-            ValueError, DiscreteFactor, ["x1", "x1", "x3"], [2, 3, 2], range(12)
-        )
+        self.assertRaises(ValueError, DiscreteFactor, ["x1", "x1", "x3"], [2, 3, 2], range(12))
 
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, DiscreteFactor, ["x1", "x2"], [2], np.ones(2))
@@ -138,9 +130,7 @@ class TestFactorMethods(unittest.TestCase):
             },
         )
 
-        self.phi1 = DiscreteFactor(
-            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
-        )
+        self.phi1 = DiscreteFactor(variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12))
         self.phi1_sn = DiscreteFactor(
             variables=["x1", "x2", "x3"],
             cardinality=[2, 3, 2],
@@ -185,9 +175,7 @@ class TestFactorMethods(unittest.TestCase):
             [2, 3, 4],
             np.random.uniform(3, 10, size=24),
         )
-        self.phi5 = DiscreteFactor(
-            [self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24)
-        )
+        self.phi5 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24))
 
         self.card6 = [4, 2, 1, 3, 5, 6]
         self.phi6 = DiscreteFactor(
@@ -221,12 +209,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertListEqual(self.phi4.scope(), [self.tup1, self.tup2, self.tup3])
 
     def test_assignment(self):
-        self.assertListEqual(
-            self.phi.assignment([0]), [[("x1", 0), ("x2", 0), ("x3", 0)]]
-        )
-        self.assertListEqual(
-            self.phi_sn.assignment([0]), [[("x1", "sn0"), ("x2", "sn0"), ("x3", "sn0")]]
-        )
+        self.assertListEqual(self.phi.assignment([0]), [[("x1", 0), ("x2", 0), ("x3", 0)]])
+        self.assertListEqual(self.phi_sn.assignment([0]), [[("x1", "sn0"), ("x2", "sn0"), ("x3", "sn0")]])
 
         self.assertListEqual(
             self.phi.assignment([4, 5, 6]),
@@ -300,12 +284,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi.get_cardinality(["x1", "x3"]), {"x1": 2, "x3": 2})
         self.assertEqual(self.phi_sn.get_cardinality(["x1", "x3"]), {"x1": 2, "x3": 2})
 
-        self.assertEqual(
-            self.phi.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2}
-        )
-        self.assertEqual(
-            self.phi_sn.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2}
-        )
+        self.assertEqual(self.phi.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2})
 
         self.assertEqual(
             self.phi4.get_cardinality([self.tup1, self.tup3]),
@@ -332,9 +312,7 @@ class TestFactorMethods(unittest.TestCase):
             self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 1.0)
             self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 1.0)
             self.assertRaises(ValueError, phi.get_value, lung="yes", either="yes")
-            self.assertRaises(
-                ValueError, phi.get_value, lung="yes", tub="no", boo="yes"
-            )
+            self.assertRaises(ValueError, phi.get_value, lung="yes", tub="no", boo="yes")
             self.assertEqual(phi, phi_copy)
 
     def test_to_dataframe(self):
@@ -367,15 +345,9 @@ class TestFactorMethods(unittest.TestCase):
             phi.set_value(value=5, lung="yes", tub=1, either="yes")
             self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 5)
 
-            self.assertRaises(
-                ValueError, phi.set_value, value=0.1, lung="yes", either="yes"
-            )
-            self.assertRaises(
-                ValueError, phi.set_value, value=0.1, lung="yes", tub="no", boo="yes"
-            )
-            self.assertRaises(
-                ValueError, phi.set_value, value="a", lung="yes", tub="no", either="yes"
-            )
+            self.assertRaises(ValueError, phi.set_value, value=0.1, lung="yes", either="yes")
+            self.assertRaises(ValueError, phi.set_value, value=0.1, lung="yes", tub="no", boo="yes")
+            self.assertRaises(ValueError, phi.set_value, value="a", lung="yes", tub="no", either="yes")
             self.assertRaises(
                 ValueError,
                 phi.set_value,
@@ -389,13 +361,9 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])
-        np_test.assert_array_equal(
-            self.phi1.values, np.array([[6, 8], [10, 12], [14, 16]])
-        )
+        np_test.assert_array_equal(self.phi1.values, np.array([[6, 8], [10, 12], [14, 16]]))
         self.phi1_sn.marginalize(["x1"])
-        np_test.assert_array_equal(
-            self.phi1_sn.values, np.array([[6, 8], [10, 12], [14, 16]])
-        )
+        np_test.assert_array_equal(self.phi1_sn.values, np.array([[6, 8], [10, 12], [14, 16]]))
 
         self.phi1.marginalize(["x2"])
         np_test.assert_array_equal(self.phi1.values, np.array([30, 36]))
@@ -571,13 +539,9 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(identity_factor.values, np.ones(8).reshape(2, 2, 2))
 
         identity_factor1 = self.phi5.identity_factor()
-        self.assertEqual(
-            list(identity_factor1.variables), [self.tup1, self.tup2, self.tup3]
-        )
+        self.assertEqual(list(identity_factor1.variables), [self.tup1, self.tup2, self.tup3])
         np_test.assert_array_equal(identity_factor1.cardinality, [2, 3, 4])
-        np_test.assert_array_equal(
-            identity_factor1.values, np.ones(24).reshape(2, 3, 4)
-        )
+        np_test.assert_array_equal(identity_factor1.values, np.ones(24).reshape(2, 3, 4))
 
     def test_factor_product(self):
         phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
@@ -594,9 +558,7 @@ class TestFactorMethods(unittest.TestCase):
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        expected_factor = DiscreteFactor(
-            ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
-        )
+        expected_factor = DiscreteFactor(["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(set(prod.variables), set(expected_factor.variables))
 
@@ -629,9 +591,7 @@ class TestFactorMethods(unittest.TestCase):
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        expected_factor = DiscreteFactor(
-            ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
-        )
+        expected_factor = DiscreteFactor(["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ["x1", "x2", "x3"])
 
@@ -643,9 +603,7 @@ class TestFactorMethods(unittest.TestCase):
             [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48],
         )
         self.assertEqual(expected_factor, phi7_copy)
-        self.assertEqual(
-            set(phi7_copy.variables), set([self.var1, self.var2, self.var3])
-        )
+        self.assertEqual(set(phi7_copy.variables), {self.var1, self.var2, self.var3})
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
@@ -681,9 +639,7 @@ class TestFactorMethods(unittest.TestCase):
         self.phi9.divide(self.phi10, inplace=True)
         np_test.assert_array_almost_equal(
             self.phi9.values,
-            np.array(
-                [1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]
-            ).reshape(3, 2),
+            np.array([1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]).reshape(3, 2),
         )
         self.assertEqual(self.phi9.variables, [self.var1, self.var3])
 
@@ -697,9 +653,7 @@ class TestFactorMethods(unittest.TestCase):
         self.phi9 = self.phi9 / self.phi10
         np_test.assert_array_almost_equal(
             self.phi9.values,
-            np.array(
-                [1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]
-            ).reshape(3, 2),
+            np.array([1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]).reshape(3, 2),
         )
         self.assertEqual(self.phi9.variables, [self.var1, self.var3])
 
@@ -707,9 +661,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
         phi2 = DiscreteFactor(["x1"], [2], [0, 2])
         div = phi1.divide(phi2, inplace=False)
-        np_test.assert_array_equal(
-            div.values.ravel(), np.array([np.inf, np.inf, 1.5, 2])
-        )
+        np_test.assert_array_equal(div.values.ravel(), np.array([np.inf, np.inf, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
@@ -735,9 +687,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1.sum(phi2, inplace=True)
 
         self.assertEqual(sorted(phi1.variables), ["x1", "x2", "x3", "x4"])
-        self.assertEqual(
-            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2, "x4": 2}
-        )
+        self.assertEqual(phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2, "x4": 2})
         np_test.assert_almost_equal(
             phi1.values,
             np.array(
@@ -759,9 +709,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
         phi1.sum(2, inplace=True)
         self.assertEqual(phi1.variables, ["x1", "x2", "x3"])
-        self.assertEqual(
-            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2}
-        )
+        self.assertEqual(phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2})
         np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
 
     def test_eq(self):
@@ -927,16 +875,12 @@ class TestFactorMethods(unittest.TestCase):
         var1 = _TestHash(2, 3)
         var2 = _TestHash("x2", 1)
         phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], range(8))
-        phi4 = DiscreteFactor(
-            [self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7]
-        )
+        phi4 = DiscreteFactor([self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi3), hash(phi4))
 
     def test_maximize_single(self):
         self.phi1.maximize(["x1"])
-        self.assertEqual(
-            self.phi1, DiscreteFactor(["x2", "x3"], [3, 2], [6, 7, 8, 9, 10, 11])
-        )
+        self.assertEqual(self.phi1, DiscreteFactor(["x2", "x3"], [3, 2], [6, 7, 8, 9, 10, 11]))
         self.phi1.maximize(["x2"])
         self.assertEqual(self.phi1, DiscreteFactor(["x3"], [2], [10, 11]))
         self.phi2 = DiscreteFactor(
@@ -960,18 +904,14 @@ class TestFactorMethods(unittest.TestCase):
             ),
         )
         self.phi5.maximize([("x2", "x3")])
-        self.assertEqual(
-            self.phi5, DiscreteFactor([("x3", (1, "x4"))], [4], [20, 21, 22, 23])
-        )
+        self.assertEqual(self.phi5, DiscreteFactor([("x3", (1, "x4"))], [4], [20, 21, 22, 23]))
 
     def test_maximize_list(self):
         self.phi1.maximize(["x1", "x2"])
         self.assertEqual(self.phi1, DiscreteFactor(["x3"], [2], [10, 11]))
 
         self.phi5.maximize([("x1", "x2"), ("x2", "x3")])
-        self.assertEqual(
-            self.phi5, DiscreteFactor([("x3", (1, "x4"))], [4], [20, 21, 22, 23])
-        )
+        self.assertEqual(self.phi5, DiscreteFactor([("x3", (1, "x4"))], [4], [20, 21, 22, 23]))
 
     def test_maximize_shape(self):
         values = ["A", "D", "F", "H"]
@@ -1018,11 +958,7 @@ class _TestHash:
         return hash(str(self.x) + str(self.y))
 
     def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self.x == other.x
-            and self.y == other.y
-        )
+        return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
 
 
 class TestTabularCPDInit(unittest.TestCase):
@@ -1060,9 +996,7 @@ class TestTabularCPDInit(unittest.TestCase):
                     self.assertEqual(cpd.variable, "grade")
                     self.assertEqual(cpd.variable_card, 3)
                     np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
-                    self.assertListEqual(
-                        list(cpd.variables), ["grade", "intel", "diff"]
-                    )
+                    self.assertListEqual(list(cpd.variables), ["grade", "intel", "diff"])
                     np_test.assert_array_equal(
                         cpd.values,
                         np.array(
@@ -1100,9 +1034,7 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertEqual(cpd.variable_card, 3)
         np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
         self.assertListEqual(list(cpd.variables), ["grade", "evi1"])
-        np_test.assert_array_equal(
-            cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2)
-        )
+        np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2))
 
     def test_cpd_init_event_card_not_int(self):
         self.assertRaises(TypeError, TabularCPD, "event", "2", [[0.1, 0.9]])
@@ -2801,7 +2733,7 @@ class TestTabularCPDInit(unittest.TestCase):
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
         terminal_width, terminal_height = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
-        table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
+        table_width, _table_length = len(list_rows_str[0]), len(list_rows_str)
 
         # TODO: test table height
 
@@ -2986,15 +2918,11 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_reduce_2(self):
         self.cpd.reduce([("intel", "low")])
-        np_test.assert_array_equal(
-            self.cpd.get_values(), np.array([[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]])
-        )
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]]))
 
     def test_reduce_3(self):
         self.cpd.reduce([("intel", "low"), ("diff", "low")])
-        np_test.assert_array_equal(
-            self.cpd.get_values(), np.array([[0.1], [0.1], [0.8]])
-        )
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1], [0.1], [0.8]]))
 
     def test_reduce_4(self):
         self.assertRaises(ValueError, self.cpd.reduce, [("grade", "grade(0)")])
@@ -3064,7 +2992,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         )
 
     def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as _w:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             np_test.assert_array_equal(
@@ -3094,9 +3022,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(cpd_sn.values.shape, (3,))
         self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2", "a3"])
 
-        cpd = TabularCPD.get_random(
-            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
-        )
+        cpd = TabularCPD.get_random(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4})
         self.assertEqual(cpd.variables, ["A", "B", "C"])
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
         self.assertEqual(cpd.values.shape, (2, 3, 4))
@@ -3162,9 +3088,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertTrue((cpd_sn.values == (1 / 3)).all())
         self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2", "a3"])
 
-        cpd = TabularCPD.get_uniform(
-            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
-        )
+        cpd = TabularCPD.get_uniform(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4})
         self.assertEqual(cpd.variables, ["A", "B", "C"])
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
         self.assertEqual(cpd.values.shape, (2, 3, 4))
@@ -3224,9 +3148,7 @@ class TestJointProbabilityDistributionInit(unittest.TestCase):
         jpd = JPD(["x1", "x2", "x3"], [2, 3, 2], np.ones(12) / 12)
         np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(jpd.values, np.ones(12).reshape(2, 3, 2) / 12)
-        self.assertEqual(
-            jpd.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 3, "x3": 2}
-        )
+        self.assertEqual(jpd.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 3, "x3": 2})
 
     def test_jpd_init_exception(self):
         self.assertRaises(ValueError, JPD, ["x1", "x2", "x3"], [2, 2, 2], np.ones(8))
@@ -3306,9 +3228,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
         self.assertEqual(self.jpd.scope(), ["x3"])
         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-        new_jpd = self.jpd1.conditional_distribution(
-            [("x1", 1), ("x2", 0)], inplace=False
-        )
+        new_jpd = self.jpd1.conditional_distribution([("x1", 1), ("x2", 0)], inplace=False)
         self.assertTrue(self.jpd1 != self.jpd)
         self.assertTrue(self.jpd == new_jpd)
 
@@ -3317,23 +3237,11 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.jpd2.check_independence, "x1", ["x2"])
         self.assertRaises(TypeError, self.jpd2.check_independence, ["x1"], "x2")
         self.assertRaises(TypeError, self.jpd2.check_independence, ["x1"], ["x2"], "x3")
-        self.assertFalse(
-            self.jpd2.check_independence(
-                ["x1"], ["x2"], ("x3",), condition_random_variable=True
-            )
-        )
+        self.assertFalse(self.jpd2.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True))
         self.assertFalse(self.jpd2.check_independence(["x1"], ["x2"], [("x3", 0)]))
-        self.assertTrue(
-            self.jpd1.check_independence(
-                ["x1"], ["x2"], ("x3",), condition_random_variable=True
-            )
-        )
+        self.assertTrue(self.jpd1.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True))
         self.assertTrue(self.jpd1.check_independence(["x1"], ["x2"], [("x3", 1)]))
-        self.assertTrue(
-            self.jpd3.check_independence(
-                ["x1"], ["x2"], ("x3",), condition_random_variable=True
-            )
-        )
+        self.assertTrue(self.jpd3.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True))
 
     def test_get_independencies(self):
         independencies = Independencies(["x1", "x2"], ["x2", "x3"], ["x3", "x1"])
