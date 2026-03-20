@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Hashable
 from itertools import combinations
 
@@ -5,15 +6,15 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
+from pgmpy import logger
 from pgmpy.base import DAG, PDAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 
 
 class GES(StructureEstimator):
@@ -44,10 +45,10 @@ class GES(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This GES class will be removed in a future release. "
-            "Please use the new sklearn compatible GES class from the "
-            "pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.use_cache = use_cache
 
@@ -135,9 +136,9 @@ class GES(StructureEstimator):
         --------
         >>> import numpy as np
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> np.random.seed(42)
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 

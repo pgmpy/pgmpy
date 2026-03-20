@@ -83,8 +83,10 @@ jobs:
         run: |
           rm -rf /tmp/pgmpy-installed-tests
           mkdir -p /tmp/pgmpy-installed-tests/pgmpy
+          mkdir -p /tmp/pgmpy-installed-tests/devtools
           cp pyproject.toml /tmp/pgmpy-installed-tests/pyproject.toml
           cp -r pgmpy/tests /tmp/pgmpy-installed-tests/pgmpy/tests
+          cp -r devtools/schema /tmp/pgmpy-installed-tests/devtools/schema
 
       - name: Run tests against installed package
         working-directory: /tmp/pgmpy-installed-tests
