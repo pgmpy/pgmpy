@@ -39,8 +39,9 @@ class GCM(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, estimator=None):
         self.data = data
+        self.estimator = estimator
         super().__init__()
 
     def run_test(
@@ -59,11 +60,27 @@ class GCM(_BaseCITest):
         Z_aug = list(Z) + ["intercept"]
         data_aug = data.assign(intercept=np.ones(data.shape[0]))
 
-        # Step 2: Compute the linear regression and the residuals
-        X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
-        Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
-        res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
-        res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
+        # Step 2: Compute the regression and the residuals
+        if self.estimator is None:
+            X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
+            Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
+            res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
+            res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
+        else:
+            from sklearn.base import clone
+
+            est_x = clone(self.estimator)
+            est_y = clone(self.estimator)
+
+            Z_data = data_aug.loc[:, Z_aug].values
+            X_data = data_aug.loc[:, X].values
+            Y_data = data_aug.loc[:, Y].values
+
+            est_x.fit(Z_data, X_data)
+            est_y.fit(Z_data, Y_data)
+
+            res_x = X_data - est_x.predict(Z_data)
+            res_y = Y_data - est_y.predict(Z_data)
 
         # Step 3: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
