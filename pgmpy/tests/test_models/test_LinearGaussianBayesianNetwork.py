@@ -343,15 +343,11 @@ class TestLGBNMethods(unittest.TestCase):
             cpd_mle = model_mle.get_cpds(node)
 
             # (1) Bayesian recovers true values
-            np_test.assert_array_almost_equal(
-                np.asarray(cpd_bayes.beta), np.asarray(cpd_true.beta), decimal=1
-            )
+            np_test.assert_array_almost_equal(np.asarray(cpd_bayes.beta), np.asarray(cpd_true.beta), decimal=1)
             self.assertTrue(abs(cpd_bayes.std - cpd_true.std) < 0.1)
 
             # (2) Bayesian and MLE agree
-            np_test.assert_array_almost_equal(
-                np.asarray(cpd_bayes.beta), np.asarray(cpd_mle.beta), decimal=1
-            )
+            np_test.assert_array_almost_equal(np.asarray(cpd_bayes.beta), np.asarray(cpd_mle.beta), decimal=1)
 
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)

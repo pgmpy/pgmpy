@@ -1,5 +1,3 @@
-from typing import Dict, List, Optional, Union
-
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -53,23 +51,19 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
 
     """
 
-    def __init__(
-        self, model: LinearGaussianBayesianNetwork, data: pd.DataFrame, **kwargs
-    ):
+    def __init__(self, model: LinearGaussianBayesianNetwork, data: pd.DataFrame, **kwargs):
         if not isinstance(model, LinearGaussianBayesianNetwork):
-            raise NotImplementedError(
-                "Only implemented for LinearGaussianBayesianNetwork"
-            )
-        super(LinearGaussianBayesianEstimator, self).__init__(model, data, **kwargs)
+            raise NotImplementedError("Only implemented for LinearGaussianBayesianNetwork")
+        super().__init__(model, data, **kwargs)
 
     def get_parameters(
         self,
-        B0: Optional[Union[np.ndarray, Dict]] = None,
-        V0: Optional[Union[np.ndarray, Dict]] = None,
-        alpha_0: Union[float, Dict] = 2.0,
-        beta_0: Union[float, Dict] = 1.0,
+        B0: np.ndarray | dict | None = None,
+        V0: np.ndarray | dict | None = None,
+        alpha_0: float | dict = 2.0,
+        beta_0: float | dict = 1.0,
         n_jobs: int = 1,
-    ) -> List[LinearGaussianCPD]:
+    ) -> list[LinearGaussianCPD]:
         """
         Estimates the LinearGaussianCPD for every node in the model.
 
@@ -127,14 +121,16 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
 
         Default flat priors:
         >>> estimator.get_parameters()  # doctest: +ELLIPSIS
-        [<LinearGaussianCPD: P(X) = N(-0.041; 0.929) at 0x..., <LinearGaussianCPD: P(Y | X) = N(3.049*X + 0.045; 0.502) at 0x...] # noqa: E501
+        [<LinearGaussianCPD: P(X) = N(-0.041; 0.929) at 0x...,
+        <LinearGaussianCPD: P(Y | X) = N(3.049*X + 0.045; 0.502) at 0x...] # noqa: E501
 
         Per-node dict priors:
         >>> estimator.get_parameters(
         ...     B0={"X": np.array([0.0]), "Y": np.array([0.0, 0.0])},
         ...     V0={"X": np.eye(1) * 10, "Y": np.eye(2) * 10},
         ... )  # doctest: +ELLIPSIS
-        [<LinearGaussianCPD: P(X) = N(-0.041; 0.929) at 0x..., <LinearGaussianCPD: P(Y | X) = N(3.049*X + 0.045; 0.502) at 0x...] # noqa: E501
+        [<LinearGaussianCPD: P(X) = N(-0.041; 0.929) at 0x...,
+        <LinearGaussianCPD: P(Y | X) = N(3.049*X + 0.045; 0.502) at 0x...] # noqa: E501
 
         """
 
@@ -162,8 +158,7 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
                 )
             if np.asarray(_V0).shape != (k, k):
                 raise ValueError(
-                    f"V0 for node '{node}' has wrong shape. "
-                    f"Expected ({k},{k}), got {np.asarray(_V0).shape}."
+                    f"V0 for node '{node}' has wrong shape. Expected ({k},{k}), got {np.asarray(_V0).shape}."
                 )
 
             return self.estimate_cpd(
@@ -174,17 +169,15 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
                 beta_0=_beta_0,
             )
 
-        parameters = Parallel(n_jobs=n_jobs)(
-            delayed(_get_node_param)(node) for node in self.model.nodes()
-        )
+        parameters = Parallel(n_jobs=n_jobs)(delayed(_get_node_param)(node) for node in self.model.nodes())
 
         return parameters
 
     def estimate_cpd(
         self,
         node: str,
-        B0: Optional[np.ndarray] = None,
-        V0: Optional[np.ndarray] = None,
+        B0: np.ndarray | None = None,
+        V0: np.ndarray | None = None,
         alpha_0: float = 2.0,
         beta_0: float = 1.0,
     ) -> LinearGaussianCPD:
@@ -266,10 +259,7 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
                 f"Expected {k} (intercept + {len(parents)} parents), got {len(B0)}."
             )
         if np.asarray(V0).shape != (k, k):
-            raise ValueError(
-                f"V0 for node '{node}' has wrong shape. "
-                f"Expected ({k},{k}), got {np.asarray(V0).shape}."
-            )
+            raise ValueError(f"V0 for node '{node}' has wrong shape. Expected ({k},{k}), got {np.asarray(V0).shape}.")
 
         y = self.data[node].values
         n = len(y)
@@ -312,6 +302,4 @@ class LinearGaussianBayesianEstimator(ParameterEstimator):
 
         beta = Bn
 
-        return LinearGaussianCPD(
-            variable=node, beta=beta, std=np.sqrt(sigma_sq), evidence=parents
-        )
+        return LinearGaussianCPD(variable=node, beta=beta, std=np.sqrt(sigma_sq), evidence=parents)
