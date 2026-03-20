@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable, Hashable
 from itertools import permutations
 
@@ -5,10 +6,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 
 
@@ -81,9 +81,10 @@ class PC(BaseConstraintEstimator):
         independencies: Independencies | None = None,
         **kwargs,
     ) -> None:
-        logger.warning(
-            "DeprecationWarning: This PC class will be removed in a future release. Please use the new sklearn"
-            " compatible PC class from the pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "PC is deprecated. Please use pgmpy.causal_discovery.PC instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         super().__init__(data=data, independencies=independencies, **kwargs)
 
@@ -213,9 +214,9 @@ class PC(BaseConstraintEstimator):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.estimators import PC
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> data = model.simulate(n_samples=1000, seed=42)
         >>> est = PC(data)
         >>> model_chi = est.estimate(ci_test="chi_square")
