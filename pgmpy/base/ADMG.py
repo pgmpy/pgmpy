@@ -433,7 +433,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
 
         Returns
         -------
-        list of set
+        list of sets
             List of unique c-components, where each component is represented as a set
             of nodes connected via bidirected edges.
 
