@@ -486,9 +486,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
                     node_to_delete = min(S_by_M, key=S_by_M.get)
 
                 else:
-                    S_by_C = {
-                        key: (S[key] / C[key] if C[key] != 0 else np.inf) for key in S
-                    }
+                    S_by_C = {key: S[key] / C[key] for key in S}
                     node_to_delete = min(S_by_C, key=S_by_C.get)
 
                 order.append(node_to_delete)
@@ -681,18 +679,21 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ... )
         >>> independencies = mm.get_local_independencies()
         >>> assertions = independencies.get_assertions()
-
         >>> len(assertions)
         7
-
-
-        >>> any(
-        ...     set(stmt.event1) == {"x1"}
-        ...     and set(stmt.event2) == {"x2", "x5", "x6", "x7"}
-        ...     and set(stmt.event3) == {"x3", "x4"}
-        ...     for stmt in assertions
-        ... )
-        True
+        >>> sorted(
+        ...     (tuple(sorted(s.event1)),
+        ...      tuple(sorted(s.event2)),
+        ...      tuple(sorted(s.event3)))
+        ...     for s in mm.get_local_independencies().get_assertions()
+        ... )  # doctest: +NORMALIZE_WHITESPACE
+        [(('x1',), ('x2', 'x5', 'x6', 'x7'), ('x3', 'x4')), 
+        (('x2',), ('x1', 'x3', 'x6', 'x7'), ('x4', 'x5')), 
+        (('x3',), ('x2', 'x4', 'x5', 'x7'), ('x1', 'x6')), 
+        (('x4',), ('x3', 'x5'), ('x1', 'x2', 'x6', 'x7')), 
+        (('x5',), ('x1', 'x3', 'x4', 'x6'), ('x2', 'x7')), 
+        (('x6',), ('x1', 'x2', 'x5', 'x7'), ('x3', 'x4')), 
+        (('x7',), ('x1', 'x2', 'x3', 'x6'), ('x4', 'x5'))]
         """
         local_independencies = Independencies()
 
