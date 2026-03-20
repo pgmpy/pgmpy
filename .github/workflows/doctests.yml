@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install .[optional]
+          pip install .[tests,optional]
 
       - name: Run doctests
         run: |
