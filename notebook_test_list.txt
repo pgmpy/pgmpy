@@ -2,6 +2,7 @@
 # Add a notebook path here after verifying it runs without errors to have it checked in CI.
 # Example:
 # examples/Monty_Hall.ipynb
+examples/Basic_Operations_on_BN.ipynb
 examples/Causal_Inference.ipynb
 examples/Defining_CPDs.ipynb
 examples/Extending_pgmpy.ipynb

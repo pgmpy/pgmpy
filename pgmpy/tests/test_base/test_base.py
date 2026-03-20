@@ -878,9 +878,7 @@ class TestCoreGraph:
         outcomes = ["C"]
         latents = ["D"]
 
-        graph = _CoreGraph(
-            ebunch=edges, exposures=exposures, outcomes=outcomes, latents=latents
-        )
+        graph = _CoreGraph(ebunch=edges, exposures=exposures, outcomes=outcomes, latents=latents)
         graph_copy = graph.copy()
 
         assert graph.__eq__(graph_copy) == True
@@ -1968,7 +1966,4 @@ class TestCoreGraph:
 
     def test_get_edge_type(self):
         graph = _CoreGraph()
-        assert (
-            set(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
-            == graph.get_edge_type()
-        )
+        assert {"--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"} == graph.get_edge_type()
