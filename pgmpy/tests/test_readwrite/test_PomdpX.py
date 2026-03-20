@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import io
-import sys
 import unittest
 import xml.etree.ElementTree as etree
 
@@ -1000,7 +999,6 @@ class TestPomdpXWriter(unittest.TestCase):
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_variables(self):
         expected_variables = etree.XML(
             """
@@ -1021,7 +1019,10 @@ class TestPomdpXWriter(unittest.TestCase):
 </Variable>"""
         )
         self.maxDiff = None
-        self.assertEqual(self.writer.get_variables(), etree.tostring(expected_variables))
+        self.assertEqual(
+            etree.canonicalize(self.writer.get_variables()),
+            etree.canonicalize(etree.tostring(expected_variables)),
+        )
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -1257,7 +1258,6 @@ class TestPomdpXWriter(unittest.TestCase):
             etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_state_transition_function_dd(self):
         self.model_data = {
             "state_transition_function": [
@@ -1446,11 +1446,10 @@ class TestPomdpXWriter(unittest.TestCase):
         )
         self.maxDiff = None
         self.assertEqual(
-            str(self.writer.add_state_transition_function()),
-            str(etree.tostring(expected_xml)),
+            etree.canonicalize(self.writer.add_state_transition_function()),
+            etree.canonicalize(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8")
     def test_obs_function_dd(self):
         self.model_data = {
             "obs_function": [
@@ -1578,7 +1577,10 @@ class TestPomdpXWriter(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(str(self.writer.add_obs_function()), str(etree.tostring(expected_xml)))
+        self.assertEqual(
+            etree.canonicalize(self.writer.add_obs_function()),
+            etree.canonicalize(etree.tostring(expected_xml)),
+        )
 
     def test_reward_function_dd(self):
         self.model_data = {
@@ -2666,7 +2668,6 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_variables(self):
         expected_variables = etree.XML(
             """
@@ -2687,7 +2688,10 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </Variable>"""
         )
         self.maxDiff = None
-        self.assertEqual(self.writer.get_variables(), etree.tostring(expected_variables))
+        self.assertEqual(
+            etree.canonicalize(self.writer.get_variables()),
+            etree.canonicalize(etree.tostring(expected_variables)),
+        )
 
     def test_add_initial_belief(self):
         expected_belief_xml = etree.XML(
@@ -2923,7 +2927,6 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_state_transition_function_dd(self):
         self.model_data = {
             "state_transition_function": [
@@ -3112,11 +3115,10 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         )
         self.maxDiff = None
         self.assertEqual(
-            str(self.writer.add_state_transition_function()),
-            str(etree.tostring(expected_xml)),
+            etree.canonicalize(self.writer.add_state_transition_function()),
+            etree.canonicalize(etree.tostring(expected_xml)),
         )
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8")
     def test_obs_function_dd(self):
         self.model_data = {
             "obs_function": [
@@ -3244,7 +3246,10 @@ class TestPomdpXWriterTorch(unittest.TestCase):
 </ObsFunction>"""
         )
         self.maxDiff = None
-        self.assertEqual(str(self.writer.add_obs_function()), str(etree.tostring(expected_xml)))
+        self.assertEqual(
+            etree.canonicalize(self.writer.add_obs_function()),
+            etree.canonicalize(etree.tostring(expected_xml)),
+        )
 
     def test_reward_function_dd(self):
         self.model_data = {
