@@ -306,11 +306,48 @@ class TestLGBNMethods(unittest.TestCase):
                 est_index = cpd_est.evidence.index(evid_var)
                 self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1)
 
-    def test_fit_invalid_estimator(self):
+    def test_fit_bayesian_raises_for_non_mle_std_estimator(self):
+        """std_estimator="unbiased" is only applicable with estimator='mle'.
+        The guard must reject the combination explicitly so users are not
+        misled into thinking std_estimator has any effect on the Bayesian fit."""
+
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=1000, seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
-        with self.assertRaises(ValueError):
-            new_model.fit(df, estimator="unbiased")
+        self.assertRaisesRegex(
+            ValueError,
+            "std_estimator is only applicable",
+            new_model.fit,
+            df,
+            estimator="bayesian",
+            std_estimator="unbiased",
+        )
+
+    def test_fit_bayesian_accuracy_and_mle_agreement(self):
+        """With 100k samples:
+        (1) posterior means must recover the true CPD values, and
+        (2) Bayesian and MLE estimates must agree — proving the prior
+            becomes negligible at large n and both paths produce consistent results."""
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(n_samples=int(1e5), seed=42)
+
+        model_bayes = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model_bayes.fit(df, estimator="bayesian")
+
+        model_mle = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model_mle.fit(df, estimator="mle")
+
+        for node in self.model.nodes():
+            cpd_true = self.model.get_cpds(node)
+            cpd_bayes = model_bayes.get_cpds(node)
+            cpd_mle = model_mle.get_cpds(node)
+
+            # (1) Bayesian recovers true values
+            np_test.assert_array_almost_equal(np.asarray(cpd_bayes.beta), np.asarray(cpd_true.beta), decimal=1)
+            self.assertTrue(abs(cpd_bayes.std - cpd_true.std) < 0.1)
+
+            # (2) Bayesian and MLE agree
+            np_test.assert_array_almost_equal(np.asarray(cpd_bayes.beta), np.asarray(cpd_mle.beta), decimal=1)
 
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
