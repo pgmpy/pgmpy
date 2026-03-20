@@ -27,9 +27,7 @@ def data12():
 def data13():
     np.random.seed(0)
     # test data for chow-liu
-    model = DiscreteBayesianNetwork(
-        [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")]
-    )
+    model = DiscreteBayesianNetwork([("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")])
     cpd_a = TabularCPD("A", 2, [[0.4], [0.6]])
     cpd_b = TabularCPD(
         "B",
@@ -38,9 +36,7 @@ def data13():
         evidence=["A"],
         evidence_card=[2],
     )
-    cpd_c = TabularCPD(
-        "C", 2, [[0.3, 0.4], [0.7, 0.6]], evidence=["A"], evidence_card=[2]
-    )
+    cpd_c = TabularCPD("C", 2, [[0.3, 0.4], [0.7, 0.6]], evidence=["A"], evidence_card=[2])
     cpd_d = TabularCPD(
         "D",
         3,
@@ -139,9 +135,7 @@ def alarm_df():
     return get_example_model("alarm").simulate(int(1e4), seed=42)
 
 
-@pytest.mark.parametrize(
-    "weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"]
-)
+@pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
 def test_estimate_chow_liu(data12, data13, weight_fn, n_jobs):
     est = TreeSearch(data12, root_node="A", n_jobs=n_jobs)
@@ -181,9 +175,7 @@ def test_estimate_chow_liu(data12, data13, weight_fn, n_jobs):
     assert dag.has_edge("C", "F")
 
 
-@pytest.mark.parametrize(
-    "weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"]
-)
+@pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
 def test_estimate_tan(data22, weight_fn, n_jobs):
     # learn graph structure
@@ -320,9 +312,7 @@ def test_tan_real_dataset(alarm_df):
     ]
     target = "CVP"
     est = TreeSearch(alarm_df[features + [target]], root_node=features[0])
-    edges = est.estimate(
-        estimator_type="tan", class_node=target, show_progress=False
-    ).edges()
+    edges = est.estimate(estimator_type="tan", class_node=target, show_progress=False).edges()
     assert set(expected_edges) == set(edges)
 
 

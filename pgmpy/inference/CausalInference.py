@@ -20,7 +20,7 @@ from pgmpy.models import (
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
-class CausalInference(object):
+class CausalInference:
     """
     This is an inference class for performing Causal Inference over Bayesian
     Networks or Structural Equation Models.
@@ -60,9 +60,7 @@ class CausalInference(object):
                 DAG,
             ),
         ):
-            raise NotImplementedError(
-                "Causal Inference is only implemented for DAGs, BayesianNetworks, and SEMGraphs."
-            )
+            raise NotImplementedError("Causal Inference is only implemented for DAGs, BayesianNetworks, and SEMGraphs.")
 
         # Check if the variable names are strings. If not, raise an error.
         bad_variable = model._variable_name_contains_non_string()
@@ -82,15 +80,7 @@ class CausalInference(object):
             self.latent_variables = model.latents
             self.dag = DAG(
                 model.full_graph_struct,
-                latents=model.latents.union(
-                    set(
-                        [
-                            var
-                            for var in model.full_graph_struct.nodes()
-                            if var.startswith(".")
-                        ]
-                    )
-                ),
+                latents=model.latents.union({var for var in model.full_graph_struct.nodes() if var.startswith(".")}),
             )
 
         elif isinstance(model, (DiscreteBayesianNetwork, DAG)):
@@ -188,9 +178,7 @@ class CausalInference(object):
         if self.is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
             return frozenset()
 
-        possible_adjustment_variables = (
-            set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
-        )
+        possible_adjustment_variables = set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
 
         valid_adjustment_sets = []
         for s in _powerset(possible_adjustment_variables):
@@ -241,17 +229,13 @@ class CausalInference(object):
             return False
 
         # 1. Z intercepts all directed paths from X to Y
-        unblocked_directed_paths = [
-            path for path in directed_paths if not any(zz in path for zz in Z)
-        ]
+        unblocked_directed_paths = [path for path in directed_paths if not any(zz in path for zz in Z)]
 
         if unblocked_directed_paths:
             return False
 
         # 2. there is no backdoor path from X to Z
-        unblocked_backdoor_paths_X_Z = [
-            zz for zz in Z if not self.is_valid_backdoor_adjustment_set(X, zz)
-        ]
+        unblocked_backdoor_paths_X_Z = [zz for zz in Z if not self.is_valid_backdoor_adjustment_set(X, zz)]
 
         if unblocked_backdoor_paths_X_Z:
             return False
@@ -381,7 +365,7 @@ class CausalInference(object):
         """
         full_graph = self.dag.copy()
 
-        if not (X, Y) in full_graph.edges():
+        if (X, Y) not in full_graph.edges():
             raise ValueError(f"The edge from {X} -> {Y} doesn't exist in the graph")
 
         if (X in self.observed_variables) and (Y in self.observed_variables):
@@ -395,9 +379,7 @@ class CausalInference(object):
             dependent_var = Y
 
         # This check is to not remove edges from error terms to the variable. Specifically for SEMs.
-        variable_parents = [
-            var for var in self.dag.predecessors(Y) if not var.startswith(".")
-        ]
+        variable_parents = [var for var in self.dag.predecessors(Y) if not var.startswith(".")]
 
         for parent_y in variable_parents:
             full_graph.remove_edge(parent_y, Y)
@@ -442,31 +424,21 @@ class CausalInference(object):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warning(
-                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
-            )
+            logger.warning(f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`")
 
-        transformed_graph, dependent_var = self._iv_transformations(
-            X, Y, scaling_indicators=scaling_indicators
-        )
+        transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
 
         if X in self.latent_variables:
             explanatory_var = scaling_indicators[X]
         else:
             explanatory_var = X
 
-        d_connected_x = transformed_graph.active_trail_nodes([explanatory_var])[
-            explanatory_var
-        ]
+        d_connected_x = transformed_graph.active_trail_nodes([explanatory_var])[explanatory_var]
 
         # Compute the d-connected nodes to Y except any variable connected through X.
         transformed_graph_copy = transformed_graph.copy()
-        transformed_graph_copy.remove_edges_from(
-            list(transformed_graph_copy.in_edges(explanatory_var))
-        )
-        d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[
-            dependent_var
-        ]
+        transformed_graph_copy.remove_edges_from(list(transformed_graph_copy.in_edges(explanatory_var)))
+        d_connected_y = transformed_graph_copy.active_trail_nodes([dependent_var])[dependent_var]
 
         # Remove {X, Y} because they can't be IV for X -> Y
         return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
@@ -514,13 +486,9 @@ class CausalInference(object):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warning(
-                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
-            )
+            logger.warning(f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`")
 
-        transformed_graph, dependent_var = self._iv_transformations(
-            X, Y, scaling_indicators=scaling_indicators
-        )
+        transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
             G_c = transformed_graph.remove_edge(X, Y)
         else:
@@ -542,12 +510,10 @@ class CausalInference(object):
 
     def get_total_conditional_ivs(self, X, Y, scaling_indicators={}):
         all_paths = list(nx.all_simple_paths(self.dag, X, Y))
-        nodes_on_paths = set([node for path in all_paths for node in path])
+        nodes_on_paths = {node for path in all_paths for node in path}
         nodes_on_paths = nodes_on_paths - {X, Y}
 
-        transformed_graph, dependent_var = self._iv_transformations(
-            X, Y, scaling_indicators=scaling_indicators
-        )
+        transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
 
         if (X, Y) in transformed_graph.edges():
             transformed_graph.remove_edge(X, Y)
@@ -562,11 +528,7 @@ class CausalInference(object):
                 continue
 
             # Regular conditions from get_conditional_ivs
-            if (
-                (not W)
-                or (W.intersection(descendants(transformed_graph, Y)))
-                or (X in W)
-            ):
+            if (not W) or (W.intersection(descendants(transformed_graph, Y))) or (X in W):
                 continue
             elif X in self.model.active_trail_nodes([Z], observed=W)[Z]:
                 instruments.append((Z, W))
@@ -597,37 +559,35 @@ class CausalInference(object):
             backdoor_sets = self.get_all_backdoor_adjustment_sets(X, Y)
             if len(backdoor_sets) > 0:
                 result["backdoor set"] = backdoor_sets
-        except:
+        except Exception:
             pass
 
         try:
             frontdoor_sets = self.get_all_frontdoor_adjustment_sets(X, Y)
             if len(frontdoor_sets) > 0:
                 result["frontdoor set"] = frontdoor_sets
-        except:
+        except Exception:
             pass
 
         try:
             instruments = self.get_ivs(X, Y)
             if len(instruments) > 0:
                 result["instrumental variables"] = instruments
-        except:
+        except Exception:
             pass
 
         try:
             conditional_ivs = self.get_conditional_ivs(X, Y)
             if len(conditional_ivs) > 0:
                 result["conditional instrumental variables"] = conditional_ivs
-        except:
+        except Exception:
             pass
 
         try:
             total_conditional_ivs = self.get_total_conditional_ivs(X, Y)
             if len(total_conditional_ivs) > 0:
-                result["total conditional instrumental variables"] = (
-                    total_conditional_ivs
-                )
-        except:
+                result["total conditional instrumental variables"] = total_conditional_ivs
+        except Exception:
             pass
 
         return result
@@ -652,22 +612,20 @@ class CausalInference(object):
         set or None: If there is a nearest separator returns the set of separators else returns None.
         """
         W = set()
-        ancestral_G = G.subgraph(
-            nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})
-        ).copy()
+        ancestral_G = G.subgraph(nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})).copy()
 
         if isinstance(self.model, SEMGraph):
             # Optimization: Remove all error nodes which don't have
             #  any correlation as it doesn't add any new path.
             #  If not removed it can create a lot of
             # extra paths resulting in a much higher runtime.
-            err_nodes_to_remove = set(self.model.err_graph.nodes()) - set(
-                [node for edge in self.model.err_graph.edges() for node in edge]
-            )
+            err_nodes_to_remove = set(self.model.err_graph.nodes()) - {
+                node for edge in self.model.err_graph.edges() for node in edge
+            }
             ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
 
         M = ancestral_G.moralize()
-        visited = set([Y])
+        visited = {Y}
         to_visit = list(M.neighbors(Y))
 
         # Another optimization over the original algo. Rather than going through all the paths does
@@ -681,9 +639,7 @@ class CausalInference(object):
             if node in self.observed_variables:
                 W.add(node)
             else:
-                to_visit.extend(
-                    [node for node in M.neighbors(node) if node not in visited]
-                )
+                to_visit.extend([node for node in M.neighbors(node) if node not in visited])
         # for path in nx.all_simple_paths(M, Y, Z):
         #     path_set = set(path)
         #     if (len(path) >= 3) and not (W & path_set):
@@ -777,9 +733,7 @@ class CausalInference(object):
         try:
             assert estimator_type in valid_estimators
         except AssertionError:
-            print(
-                f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}"
-            )
+            print(f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}")
         all_simple_paths = nx.all_simple_paths(self.model, X, Y)
         all_path_effects = []
         for path in all_simple_paths:
@@ -787,23 +741,16 @@ class CausalInference(object):
             for x1, x2 in zip(path, path[1:]):
                 if isinstance(estimand_strategy, frozenset):
                     adjustment_set = frozenset({estimand_strategy})
-                    assert self.is_valid_backdoor_adjustment_set(
-                        x1, x2, Z=adjustment_set
-                    )
+                    assert self.is_valid_backdoor_adjustment_set(x1, x2, Z=adjustment_set)
                 elif estimand_strategy in ["smallest", "all"]:
                     adjustment_sets = self.get_all_backdoor_adjustment_sets(x1, x2)
                     if estimand_strategy == "smallest":
-                        adjustment_sets = frozenset(
-                            {self._simple_decision(adjustment_sets)}
-                        )
+                        adjustment_sets = frozenset({self._simple_decision(adjustment_sets)})
 
                 if estimator_type == "linear":
                     self.estimator = LinearEstimator(self.model)
 
-                ate = [
-                    self.estimator.fit(X=x1, Y=x2, Z=s, data=data, **kwargs)._get_ate()
-                    for s in adjustment_sets
-                ]
+                ate = [self.estimator.fit(X=x1, Y=x2, Z=s, data=data, **kwargs)._get_ate() for s in adjustment_sets]
                 causal_effect.append(np.mean(ate))
             all_path_effects.append(np.prod(causal_effect))
         return np.sum(all_path_effects)
@@ -1012,28 +959,20 @@ class CausalInference(object):
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.
         if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):
-            raise ValueError(
-                f"variables much be a list (array-like). Got type: {type(variables)}."
-            )
+            raise ValueError(f"variables much be a list (array-like). Got type: {type(variables)}.")
         elif not all([node in self.model.nodes() for node in variables]):
-            raise ValueError(
-                "Some of the variables in `variables` are not in the model."
-            )
+            raise ValueError("Some of the variables in `variables` are not in the model.")
         else:
             variables = list(variables)
 
         if do is None:
             do = {}
         elif not isinstance(do, dict):
-            raise ValueError(
-                "`do` must be a dict of the form: {variable_name: variable_state}"
-            )
+            raise ValueError("`do` must be a dict of the form: {variable_name: variable_state}")
         if evidence is None:
             evidence = {}
         elif not isinstance(evidence, dict):
-            raise ValueError(
-                "`evidence` must be a dict of the form: {variable_name: variable_state}"
-            )
+            raise ValueError("`evidence` must be a dict of the form: {variable_name: variable_state}")
 
         if do:
             for var, do_var in product(variables, do):
@@ -1064,13 +1003,9 @@ class CausalInference(object):
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
-            adjustment_set = set(
-                chain(*[self.model.predecessors(var) for var in do_vars])
-            )
+            adjustment_set = set(chain(*[self.model.predecessors(var) for var in do_vars]))
             if len(adjustment_set.intersection(self.model.latents)) != 0:
-                raise ValueError(
-                    "Not all parents of do variables are observed. Please specify an adjustment set."
-                )
+                raise ValueError("Not all parents of do variables are observed. Please specify an adjustment set.")
 
         infer = inference_algo(self.model)
 
@@ -1090,9 +1025,7 @@ class CausalInference(object):
         # For computing p_z, if evidence variables also in adjustment set,
         # manually do reduce else inference will throw error.
         evidence_adj_inter = {
-            var: state
-            for var, state in evidence.items()
-            if var in adjustment_set.intersection(evidence.keys())
+            var: state for var, state in evidence.items() if var in adjustment_set.intersection(evidence.keys())
         }
         if len(evidence_adj_inter) != 0:
             p_z = infer.query(adjustment_set, show_progress=False).reduce(
@@ -1128,13 +1061,10 @@ class CausalInference(object):
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
         for state_comb in product(*adj_states):
-            adj_evidence = {
-                var: state for var, state in zip(adjustment_set, state_comb)
-            }
+            adj_evidence = {var: state for var, state in zip(adjustment_set, state_comb)}
             evidence = {**do, **adj_evidence}
             values.append(
-                infer.query(variables, evidence=evidence, show_progress=False)
-                * p_z.get_value(**adj_evidence)
+                infer.query(variables, evidence=evidence, show_progress=False) * p_z.get_value(**adj_evidence)
             )
 
             if show_progress and config.SHOW_PROGRESS:
