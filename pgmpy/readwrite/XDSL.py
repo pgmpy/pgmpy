@@ -249,8 +249,8 @@ class XDSLWriter:
     Examples
     ---------
     >>> from pgmpy.readwrite import XDSLWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = XDSLWriter(asia)
     >>> writer.write("asia.xdsl")
 
@@ -431,8 +431,8 @@ class XDSLWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import XDSLWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
         >>> writer.write("asia.xdsl")
         """

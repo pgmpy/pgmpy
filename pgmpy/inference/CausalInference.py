@@ -953,8 +953,8 @@ class CausalInference:
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> infer = CausalInference(model)
         >>> infer.query(["HISTORY"], do={"CVP": "LOW"}, evidence={"HR": "LOW"})
         <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
