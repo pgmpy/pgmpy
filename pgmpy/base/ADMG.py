@@ -452,13 +452,17 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         ... }
         True
         """
-        c_components = set()
+        c_components = []
+        visited = set()
 
         for node in self.nodes():
-            district = self.get_district(node)
-            c_components.add(frozenset(district))
+            if node in visited:
+                continue
+            district = set(self.get_district(node))
+            c_components.append(district)
+            visited.update(district)
 
-        return [set(component) for component in c_components]
+        return c_components
 
     def get_ancestral_graph(self, nodes):
         """
