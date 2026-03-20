@@ -730,6 +730,6 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         )
 
         for role, vars in self.get_role_dict().items():
-            ancestral_base.with_role(role=role, variables=vars, inplace=True)
+            ancestral_base.with_role(role=role, variables=vars, inplace=False)
 
         return ancestral_base

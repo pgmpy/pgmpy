@@ -195,7 +195,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         pdag.add_nodes_from(self.nodes())
 
         for role, vars in self.get_role_dict().items():
-            pdag.with_role(role=role, variables=vars, inplace=True)
+            pdag.with_role(role=role, variables=vars, inplace=False)
         return pdag
 
     def _directed_graph(self):

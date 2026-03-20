@@ -1555,7 +1555,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         dag.add_nodes_from(self.nodes())
 
         for role, vars in self.get_role_dict().items():
-            dag.with_role(role=role, variables=vars, inplace=True)
+            dag.with_role(role=role, variables=vars, inplace=False)
 
         return dag
 
