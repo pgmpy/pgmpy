@@ -264,6 +264,22 @@ class TestADMGRelationships:
         assert "A" in district_a
         assert "D" in district_a
 
+    def test_get_c_components(self):
+        """Test partitioning ADMG into unique c-components."""
+        c_components = self.admg.get_c_components()
+
+        assert {frozenset(component) for component in c_components} == {
+            frozenset({"A", "D"}),
+            frozenset({"B", "E"}),
+            frozenset({"C"}),
+        }
+
+    def test_get_c_components_empty_graph(self):
+        """Test c-components for an empty ADMG."""
+        empty_admg = ADMG()
+
+        assert empty_admg.get_c_components() == []
+
     def test_nonexistent_node_error(self):
         """Test that operations on nonexistent nodes raise errors."""
         with pytest.raises(ValueError, match="Node .* is not in the graph"):

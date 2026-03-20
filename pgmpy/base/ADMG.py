@@ -427,6 +427,39 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             all_districts.update(district_components)
         return all_districts
 
+    def get_c_components(self):
+        """
+        Return all unique c-components (districts) in the ADMG.
+
+        Returns
+        -------
+        list of set
+            List of unique c-components, where each component is represented as a set
+            of nodes connected via bidirected edges.
+
+        Examples
+        --------
+        >>> from pgmpy.base.ADMG import ADMG
+        >>> admg = ADMG(
+        ...     directed_ebunch=[("X", "Y"), ("Y", "Z")],
+        ...     bidirected_ebunch=[("X", "W"), ("Y", "V")],
+        ... )
+        >>> c_components = admg.get_c_components()
+        >>> {frozenset(component) for component in c_components} == {
+        ...     frozenset({"X", "W"}),
+        ...     frozenset({"Y", "V"}),
+        ...     frozenset({"Z"}),
+        ... }
+        True
+        """
+        c_components = set()
+
+        for node in self.nodes():
+            district = self.get_district(node)
+            c_components.add(frozenset(district))
+
+        return [set(component) for component in c_components]
+
     def get_ancestral_graph(self, nodes):
         """
         Return the ancestral graph induced by the input nodes.
