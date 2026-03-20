@@ -47,10 +47,7 @@ optional = [
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
   "litellm==1.61.15",
-  "pyparsing>=3.0",
   "pygraphviz",
-  "torch>=2.5",
-  "pyro-ppl>=1.9.1",
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -75,22 +72,7 @@ docs = [
   "sphinx_sitemap",
 ]
 all = [
-  "networkx>=3.0",
-  "numpy>=2.0",
-  "scipy>=1.10",
-  "scikit-learn>=1.2",
-  "pandas>=1.5",
-  "torch>=2.5",
-  "statsmodels>=0.13",
-  "tqdm>=4.64",
-  "joblib>=1.2",
-  "opt_einsum>=3.3",
-  "pyro-ppl>=1.9.1",
-  "daft-pgm>=0.1.4",
-  "xgboost>=2.0.3",
-  "litellm==1.61.15",
-  "pyparsing>=3.0",
-  "requests>=2.0",
+  "pgmpy[torch,optional,tests,docs]",
 ]
 
 [project.urls]
