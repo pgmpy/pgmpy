@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike

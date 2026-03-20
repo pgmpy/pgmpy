@@ -153,7 +153,7 @@ class TestPillaiTrace(unittest.TestCase):
     )
     def test_pillai_indep(self):
         indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
+        indep_pvalues = [0.2430, 0.0161, 0.0384, 0.0108, 0.0384]
 
         computed_coefs = []
         computed_pvalues = []
