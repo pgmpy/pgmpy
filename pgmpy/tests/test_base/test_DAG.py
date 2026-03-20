@@ -11,9 +11,9 @@ from skbase.utils.dependencies import _check_soft_dependencies
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import pearsonr
+from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
-from pgmpy.utils import get_example_model
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -616,8 +616,8 @@ class TestDAGCreation(unittest.TestCase):
         self.assertIsNotNone(daft_plot)
 
     def test_hash(self):
-        dag1 = get_example_model("M-bias")
-        dag2 = get_example_model("M-bias")
+        dag1 = load_model("dagitty/m_bias")
+        dag2 = load_model("dagitty/m_bias")
         dag1 = dag1.without_role("exposures").without_role("outcomes")
         dag2 = dag2.without_role("exposures").without_role("outcomes")
 
