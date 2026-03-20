@@ -1,0 +1,40 @@
+name: "Community Management: Stale Issues & PRs"
+
+on:
+  schedule:
+    # Runs at 00:30 UTC every day
+    - cron: '30 0 * * *'
+  # Allows manual triggering
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  stale:
+    if: github.repository_owner == 'pgmpy'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Handle Stale Content
+        uses: actions/stale@v10.2.0
+        with:
+          stale-pr-message: 'This PR has had no activity for 5 days and is now marked as stale.'
+          days-before-pr-stale: 5
+          stale-pr-label: 'status: stale'
+
+          stale-issue-message: 'This issue has been open for 1 month with no activity and is now marked as stale.'
+          days-before-issue-stale: 30
+          stale-issue-label: 'status: stale'
+
+          exempt-issue-labels: 'status: stale'
+          exempt-pr-labels: 'status: stale'
+
+          # Set to -1 to never close stale issues/PRs
+          days-before-close: -1
+
+          operations-per-run: 2500
+
+          ascending: true

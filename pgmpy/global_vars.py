@@ -1,36 +1,14 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
+logger.addHandler(logging.NullHandler())
 
 PGMPY_DATA_HOME = os.path.join(Path.home(), ".pgmpy")
-
-
-class DuplicateFilter(logging.Filter):
-    """
-    A logging filter that prevents duplicate consecutive log messages.
-    This filter only allows a message to pass through if it differs from the previous message.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.last_msg = None
-
-    def filter(self, record):
-        msg = record.getMessage()
-        is_new = msg != self.last_msg
-        if is_new:
-            self.last_msg = msg
-        return is_new
-
-
-logger.addFilter(DuplicateFilter())
 
 
 class Config:
@@ -54,23 +32,18 @@ class Config:
             If None, sets to cuda if GPU is available else uses CPU.
         """
         if self.BACKEND == "numpy":
-            raise ValueError(
-                "Current backend is numpy. Device can only be set for torch backend"
-            )
+            raise ValueError("Current backend is numpy. Device can only be set for torch backend")
 
         import torch
 
         if device is None:
-
             if torch.cuda.is_available():
                 self.DEVICE = torch.device("cuda:0")
             else:
                 self.DEVICE = torch.device("cpu")
         else:
             if not device.startswith(("cuda", "cpu")):
-                raise ValueError(
-                    f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}"
-                )
+                raise ValueError(f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}")
             elif device.startswith("cuda"):
                 if torch.cuda.is_available():
                     self.DEVICE = torch.device(device)
@@ -86,7 +59,7 @@ class Config:
     def set_backend(
         self,
         backend: str,
-        device: Optional[str] = None,
+        device: str | None = None,
         dtype=None,
     ):
         """
@@ -106,9 +79,7 @@ class Config:
             torch.float64 depending on the backend.
         """
         if backend not in ["numpy", "torch"]:
-            raise ValueError(
-                f"backend can either be `numpy` or `torch`. Got: {backend}"
-            )
+            raise ValueError(f"backend can either be `numpy` or `torch`. Got: {backend}")
 
         if backend == "numpy":
             self.BACKEND = "numpy"
