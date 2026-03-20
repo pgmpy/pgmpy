@@ -72,7 +72,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     return_type : str, default='pdag'
         The type of graph to return. Options are:
         - 'dag': Returns a directed acyclic graph (DAG).
-        - 'pdag': Returns a partially directed acyclic graph (PDAG) where
+        - 'pdag': Returns a partially directed acyclic graph (PDAG) where edges that
+          could not be oriented are left undirected.
 
     epsilon : float, default=1e-4
         Defines the exit condition. If the improvement in score is less

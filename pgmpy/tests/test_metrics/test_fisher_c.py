@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import FisherC
 from pgmpy.utils import get_example_model
 
@@ -53,7 +52,7 @@ def models_and_data(rng):
 )
 def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
     bundle = models_and_data[model_name]
-    p_value = FisherC(ci_test=chi_square).evaluate(X=bundle["data"], causal_graph=bundle[graph_key])
+    p_value = FisherC(ci_test="chi_square").evaluate(X=bundle["data"], causal_graph=bundle[graph_key])
     assert round(p_value, ndigits) == expected
 
 
@@ -68,7 +67,7 @@ def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
 )
 def test_rmsea(models_and_data, model_name, graph_key, ndigits, expected_pval, expected_rmsea):
     bundle = models_and_data[model_name]
-    p_value, rmsea = FisherC(ci_test=chi_square, compute_rmsea=True).evaluate(
+    p_value, rmsea = FisherC(ci_test="chi_square", compute_rmsea=True).evaluate(
         X=bundle["data"], causal_graph=bundle[graph_key]
     )
     assert round(p_value, ndigits) == expected_pval
