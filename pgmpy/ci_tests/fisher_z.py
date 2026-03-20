@@ -28,9 +28,6 @@ class FisherZ(_BaseCITest):
     ----------
     statistic_ : float
         The Fisher Z test statistic. Set after calling the test.
-    transformed_statistic_ : float
-        The Fisher-transformed Pearson or partial correlation coefficient.
-        Set after calling the test.
     p_value_ : float
         The two-sided p-value for the test. Set after calling the test.
 
@@ -40,14 +37,14 @@ class FisherZ(_BaseCITest):
     >>> import pandas as pd
     >>> from pgmpy.ci_tests import FisherZ
     >>> rng = np.random.default_rng(seed=42)
-    >>> data = pd.DataFrame(rng.standard_normal((200, 3)), columns=["X", "Y", "Z"])
+    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=["X", "Y", "Z"])
     >>> test = FisherZ(data=data)
     >>> test("X", "Y", ["Z"], significance_level=0.05)
     np.True_
-    >>> isinstance(test.statistic_, float)
-    True
+    >>> round(test.statistic_, 2)
+    np.float64(0.17)
     >>> isinstance(test.p_value_, float)
-    True
+    np.float64(0.87)
     """
 
     _tags = {
