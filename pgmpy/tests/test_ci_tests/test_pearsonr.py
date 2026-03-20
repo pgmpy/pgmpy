@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -49,7 +48,7 @@ class TestPearsonr(unittest.TestCase):
 
         test = Pearsonr(data=self.df_vstruct)
         test("X", "Y", ["Z"])
-        self.assertTrue(abs(test.statistic_) > 0.1)
+        self.assertTrue(abs(test.statistic_) > 0.7)
         self.assertTrue(test.p_value_ < 0.05)
 
         self.assertTrue(Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05))
@@ -58,11 +57,8 @@ class TestPearsonr(unittest.TestCase):
         self.assertFalse(Pearsonr(data=self.df_vstruct)("X", "Y", ["Z"], significance_level=0.05))
 
 
-@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestPearsonrResidual(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
-
         model_indep = LinearGaussianBayesianNetwork(
             [
                 ("Z1", "X"),
@@ -100,9 +96,9 @@ class TestPearsonrResidual(unittest.TestCase):
         test = Pearsonr(data=self.df_indep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         self.assertTrue(abs(test.statistic_) <= 0.1)
-        self.assertTrue(test.p_value_ >= 0.04)
+        self.assertTrue(test.p_value_ >= 0.05)
 
         test = Pearsonr(data=self.df_dep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         self.assertTrue(test.statistic_ >= 0.1)
-        self.assertTrue(np.isclose(test.p_value_, 0, atol=1e-1))
+        self.assertTrue(test.p_value_ <= 0.05)
