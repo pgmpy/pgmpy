@@ -15,8 +15,8 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
-from pgmpy.estimators import ExpertKnowledge
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 

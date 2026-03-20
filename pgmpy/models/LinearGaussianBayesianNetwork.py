@@ -886,8 +886,8 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("ecoli70")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/ecoli70")
         >>> df = model.simulate(n_samples=5)
         >>> df = df.drop(columns=["folK"], axis=1)
         >>> model.predict(df)
@@ -941,8 +941,8 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("ecoli70")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/ecoli70")
         >>> df = model.simulate(n_samples=5)
         >>> df = df.drop(columns=["folK"], axis=1)
         >>> model.predict(df)

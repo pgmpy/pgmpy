@@ -336,8 +336,8 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> cpds = model.get_cpds()
         >>> cpds  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<TabularCPD representing P(asia:2) at 0x...>,
@@ -690,9 +690,9 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
@@ -955,8 +955,8 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> float(
         ...     model.get_state_probability(
         ...         {"either": "no", "tub": "no", "xray": "yes", "bronc": "no"}
@@ -1311,8 +1311,8 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> asia = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
         >>> asia.edges()  # doctest: +NORMALIZE_WHITESPACE
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
@@ -1413,11 +1413,11 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
 
         Simulation without any evidence or intervention:
 
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> model.simulate(n_samples=10).shape
         (10, 37)
 
@@ -1650,8 +1650,8 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> alarm = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> alarm = load_model("bnlearn/alarm")
         >>> alarm.save("alarm.bif", filetype="bif")
         """
         from pgmpy.readwrite import (
@@ -1699,8 +1699,8 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> alarm = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> alarm = load_model("bnlearn/alarm")
         >>> alarm.save("alarm.bif", filetype="bif")
         >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
         """

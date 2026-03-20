@@ -189,8 +189,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> phi = model.get_cpds(node="either").to_factor()
         >>> float(phi.get_value(lung="yes", tub="no", either="yes"))
         1.0
@@ -230,8 +230,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> phi = model.get_cpds(node="either").to_factor()
         >>> phi.set_value(value=0.1, lung="yes", tub="no", either="yes")
         >>> float(phi.get_value(lung="yes", tub="no", either="yes"))
