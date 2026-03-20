@@ -5,9 +5,7 @@ from pgmpy.base import SimpleCausalModel
 
 
 def test_simple_string_variables():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I")
     assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
     expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
     assert set(model.edges()) == expected_edges
@@ -100,9 +98,7 @@ def test_missing_optional_args():
 
 
 def test_empty_confounders_mediators_instruments():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders=None, mediators=None, instruments=[]
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders=None, mediators=None, instruments=[])
     assert set(model.edges()) == {("X", "Y")}
     assert set(model.get_role("exposures")) == {"X"}
     assert set(model.get_role("outcomes")) == {"Y"}
@@ -123,15 +119,11 @@ def test_latents():
     with pytest.raises(ValueError):
         SimpleCausalModel(exposures="X", outcomes="Y", latents=["L"])
 
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", latents=["Z"]
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", latents=["Z"])
     assert set(model.nodes()) == {"X", "Y", "Z"}
     assert set(model.latents) == {"Z"}
 
 
 def test_is_dag():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I")
     assert nx.is_directed_acyclic_graph(model)

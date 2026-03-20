@@ -32,7 +32,7 @@ class NaiveBayes(DiscreteBayesianNetwork):
         else:
             ebunch = []
 
-        super(NaiveBayes, self).__init__(ebunch=ebunch)
+        super().__init__(ebunch=ebunch)
 
     def add_edge(self, u, v, *kwargs):
         """
@@ -62,12 +62,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         OutEdgeView([('a', 'b'), ('a', 'c')])
         """
         if self.dependent and u != self.dependent:
-            raise ValueError(
-                f"Model can only have edges outgoing from: {self.dependent}"
-            )
+            raise ValueError(f"Model can only have edges outgoing from: {self.dependent}")
         self.dependent = u
         self.features.add(v)
-        super(NaiveBayes, self).add_edge(u, v, *kwargs)
+        super().add_edge(u, v, *kwargs)
 
     def add_edges_from(self, ebunch):
         """
@@ -151,9 +149,7 @@ class NaiveBayes(DiscreteBayesianNetwork):
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.dependent:
-                independencies.add_assertions(
-                    [variable, list(set(self.features) - set(variable)), self.dependent]
-                )
+                independencies.add_assertions([variable, list(set(self.features) - set(variable)), self.dependent])
         return independencies
 
     def fit(self, data, parent_node=None, estimator=None):
@@ -200,10 +196,8 @@ class NaiveBayes(DiscreteBayesianNetwork):
             else:
                 parent_node = self.dependent
         if parent_node not in data.columns:
-            raise ValueError(
-                f"Dependent variable: {parent_node} is not present in the data"
-            )
+            raise ValueError(f"Dependent variable: {parent_node} is not present in the data")
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
-        super(NaiveBayes, self).fit(data, estimator)
+        super().fit(data, estimator)

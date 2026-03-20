@@ -288,12 +288,7 @@ BNREP_CONTINUOUS_MODELS = [
 ]
 
 ALL_MODELS = (
-    DISCRETE_MODELS
-    + CONTINUOUS_MODELS
-    + HYBRID_MODELS
-    + DAGS
-    + BNREP_DISCRETE_MODELS
-    + BNREP_CONTINUOUS_MODELS
+    DISCRETE_MODELS + CONTINUOUS_MODELS + HYBRID_MODELS + DAGS + BNREP_DISCRETE_MODELS + BNREP_CONTINUOUS_MODELS
 )
 
 
@@ -307,6 +302,14 @@ def test_list_models():
 
     assert "bnlearn/alarm" in set(list_models(is_discrete=True))
     assert "bnlearn/arth150" in set(list_models(is_continuous=True))
+
+
+def test_invalid_tag():
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(is_paraterized=True)  # typo
+
+    with pytest.raises(ValueError, match="Unrecognized filter argument"):
+        list_models(num_nodes=10)  # wrong key name entirely
 
 
 def test_tags():
@@ -354,15 +357,9 @@ def test_load_model():
         assert model_tags["n_edges"] == len(model.edges())
         if model_tags["is_parameterized"]:
             assert hasattr(model, "cpds")
-            assert model_tags["is_discrete"] == isinstance(
-                model, DiscreteBayesianNetwork
-            )
-            assert model_tags["is_continuous"] == isinstance(
-                model, LinearGaussianBayesianNetwork
-            )
-            assert model_tags["is_hybrid"] == isinstance(
-                model, FunctionalBayesianNetwork
-            )
+            assert model_tags["is_discrete"] == isinstance(model, DiscreteBayesianNetwork)
+            assert model_tags["is_continuous"] == isinstance(model, LinearGaussianBayesianNetwork)
+            assert model_tags["is_hybrid"] == isinstance(model, FunctionalBayesianNetwork)
         else:
             assert isinstance(model, DAG)
 

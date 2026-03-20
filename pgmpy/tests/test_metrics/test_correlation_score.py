@@ -3,13 +3,13 @@ import pytest
 from sklearn.metrics import accuracy_score, f1_score
 
 from pgmpy.base import DAG
+from pgmpy.example_models import load_model
 from pgmpy.metrics import CorrelationScore
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture
 def model_and_data():
-    alarm_model = get_example_model("alarm")
+    alarm_model = load_model("bnlearn/alarm")
     alarm_data = alarm_model.simulate(int(1e4), show_progress=False)
 
     return alarm_model, alarm_data
@@ -26,16 +26,12 @@ def test_discrete_network(model_and_data):
         "modified_log_likelihood",
     }:
         for score in {f1_score, accuracy_score}:
-            corr_scorer = CorrelationScore(
-                ci_test=test, score=score, return_summary=False
-            )
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=False)
 
             metric = corr_scorer(X=alarm_data, causal_graph=alarm_model)
             assert isinstance(metric, float)
 
-            corr_scorer = CorrelationScore(
-                ci_test=test, score=score, return_summary=True
-            )
+            corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=True)
             metric_summary = corr_scorer(X=alarm_data, causal_graph=alarm_model)
             assert isinstance(metric_summary, pd.DataFrame)
 

@@ -35,9 +35,7 @@ class _BaseSupervisedMetric(BaseObject):
             )
 
         if not set(true_causal_graph.nodes()) == set(est_causal_graph.nodes()):
-            raise ValueError(
-                "The `true_causal_graph` and `est_causal_graph` must be on the same nodes."
-            )
+            raise ValueError("The `true_causal_graph` and `est_causal_graph` must be on the same nodes.")
 
         return self._evaluate(
             true_causal_graph=true_causal_graph,
@@ -78,10 +76,7 @@ class _BaseUnsupervisedMetric(BaseObject):
             )
 
         if not isinstance(X, pd.DataFrame):
-            raise ValueError(
-                f"The data must be a pandas.DataFrame instance, "
-                f"but got {type(X)} instead."
-            )
+            raise ValueError(f"The data must be a pandas.DataFrame instance, but got {type(X)} instead.")
         elif len(set(causal_graph.nodes()) - set(X.columns)) > 0:
             raise ValueError(
                 "Missing columns in data. Can't find values for the following variables: "

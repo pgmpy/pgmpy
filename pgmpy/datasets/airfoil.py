@@ -2,7 +2,6 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class Airfoil(_BaseDataset):
-
     _tags = {
         "name": "airfoil",
         "n_variables": 6,
@@ -19,10 +18,7 @@ class Airfoil(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/"
-        "heads/main/real/airfoil-self-noise/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/airfoil-self-noise/"
 
     data_url = base_url + "data/airfoil-self-noise.continuous.txt"
     ground_truth_url = None

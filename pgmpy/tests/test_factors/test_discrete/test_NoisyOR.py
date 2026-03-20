@@ -8,9 +8,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 
 
 def test_class_init():
-    cpd = NoisyORCPD(
-        variable="Y", prob_values=[0.7, 0.6, 0.8], evidence=["X1", "X2", "X3"]
-    )
+    cpd = NoisyORCPD(variable="Y", prob_values=[0.7, 0.6, 0.8], evidence=["X1", "X2", "X3"])
     assert cpd.variables == ["Y", "X1", "X2", "X3"]
     np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2, 2]))
     np_test.assert_array_equal(
@@ -44,9 +42,5 @@ def test_inference():
     np.testing.assert_allclose(infer.query(["C"]).values, [0.1, 0.9])
     np.testing.assert_allclose(infer.query(["B"]).values, [0.1076, 0.8924])
 
-    np.testing.assert_allclose(
-        infer.query(["D"], evidence={"B": "True"}).values, [0.8, 0.2]
-    )
-    np.testing.assert_allclose(
-        infer.query(["D"], evidence={"B": "False"}).values, [0, 1.0]
-    )
+    np.testing.assert_allclose(infer.query(["D"], evidence={"B": "True"}).values, [0.8, 0.2])
+    np.testing.assert_allclose(infer.query(["D"], evidence={"B": "False"}).values, [0, 1.0])

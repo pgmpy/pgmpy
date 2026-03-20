@@ -27,9 +27,9 @@ class StructureScore(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import StructureScore
-    >>> model = get_example_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> data = model.simulate(int(1e4), seed=42)
     >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)
@@ -49,7 +49,5 @@ class StructureScore(_BaseUnsupervisedMetric):
         self.scoring_method = scoring_method
 
     def _evaluate(self, X, causal_graph, **kwargs):
-        scoring_method = get_scoring_method(
-            self.scoring_method, data=X, use_cache=False, **kwargs
-        )[0]
+        scoring_method = get_scoring_method(self.scoring_method, data=X, use_cache=False, **kwargs)[0]
         return scoring_method.score(causal_graph)

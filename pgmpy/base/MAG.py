@@ -1,4 +1,4 @@
-from typing import Hashable, Iterable, Optional
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
@@ -79,7 +79,7 @@ class MAG(AncestralBase):
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),

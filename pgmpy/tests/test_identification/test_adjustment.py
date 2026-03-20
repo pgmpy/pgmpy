@@ -22,12 +22,8 @@ def dag_single_exposure_outcome():
     )
 
 
-def test_proper_backdoor_graph(
-    dag_single_exposure_outcome, dag_multiple_exposure_outcome
-):
-    backdoor_dag = Adjustment(variant="minimal")._get_proper_backdoor_graph(
-        dag_single_exposure_outcome
-    )
+def test_proper_backdoor_graph(dag_single_exposure_outcome, dag_multiple_exposure_outcome):
+    backdoor_dag = Adjustment(variant="minimal")._get_proper_backdoor_graph(dag_single_exposure_outcome)
 
     assert ("x1", "y1") not in backdoor_dag.edges()
     assert set(backdoor_dag.edges()) == {
@@ -37,9 +33,7 @@ def test_proper_backdoor_graph(
         ("y2", "z2"),
     }
 
-    backdoor_dag = Adjustment(variant="minimal")._get_proper_backdoor_graph(
-        dag_multiple_exposure_outcome
-    )
+    backdoor_dag = Adjustment(variant="minimal")._get_proper_backdoor_graph(dag_multiple_exposure_outcome)
 
     assert set(backdoor_dag.edges()) == {
         ("x1", "z1"),
@@ -91,9 +85,7 @@ def test_is_valid_adjustment_set():
 
 def test_get_minimal_adjustment_set():
     # Without latent variables
-    dag1 = DAG(
-        [("X", "Y"), ("Z", "X"), ("Z", "Y")], roles={"exposures": "X", "outcomes": "Y"}
-    )
+    dag1 = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")], roles={"exposures": "X", "outcomes": "Y"})
     dag1_iden, success = Adjustment(variant="minimal").identify(dag1)
     assert success
     assert dag1_iden.get_role("adjustment") == ["Z"]
@@ -201,9 +193,7 @@ class TestBackdoorPaths:
         )
         game5_adj, success = Adjustment(variant="minimal").identify(game5)
         assert success
-        assert game5_adj.get_role("adjustment") == ["C"] or set(
-            game5_adj.get_role("adjustment")
-        ) == {"A", "B"}
+        assert game5_adj.get_role("adjustment") == ["C"] or set(game5_adj.get_role("adjustment")) == {"A", "B"}
 
         game5_adj_all, success = Adjustment(variant="all").identify(game5)
         assert success
@@ -238,9 +228,4 @@ class TestBackdoorPaths:
         assert success
         adjustment_vars = game6_adj.get_role("adjustment")
         assert "D" in adjustment_vars
-        assert (
-            "C" in adjustment_vars
-            or "A" in adjustment_vars
-            or "B" in adjustment_vars
-            or "E" in adjustment_vars
-        )
+        assert "C" in adjustment_vars or "A" in adjustment_vars or "B" in adjustment_vars or "E" in adjustment_vars

@@ -12,7 +12,7 @@ on:
 
 jobs:
   doctest:
-    name: Doctests (Python ${{ matrix.python-version }})
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -1,22 +1,13 @@
+from collections.abc import Callable, Hashable
 from itertools import permutations
-from typing import (
-    Callable,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Union,
-)
 
 import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery import _ConstraintMixin
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
+from pgmpy.ci_tests import get_ci_test
 
 
 class PC(_ConstraintMixin, _BaseCausalDiscovery):
@@ -83,7 +74,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     ci_test : str or callable, default=None
         The conditional independence (CI) test to use for finding (conditional) independences in the data. This can be
-        any of the CI test implemented in :mod:`pgmpy.estimators.CITests` or a custom function that follows the
+        any of the CI test implemented in :mod:`pgmpy.ci_tests` or a custom function that follows the
         signature of the built-in CI tests.
 
         If None, the appropriate CI test will be chosen based on the data type.
@@ -157,8 +148,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the PC algorithm to learn the causal structure from data:
@@ -166,7 +157,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import PC
     >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
     >>> pc.fit(df)
-    >>> pc.causal_graph_.edges()
+    PC(ci_test='chi_square')
+    >>> pc.causal_graph_  # doctest: +ELLIPSIS
+    <pgmpy.base.PDAG.PDAG object at 0x...>
+    >>> pc.n_features_in_
+    37
 
     Specify expert knowledge:
 
@@ -189,11 +184,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     def __init__(
         self,
         variant: str = "parallel",
-        ci_test: Optional[Union[str, Callable]] = None,
+        ci_test: str | Callable | None = None,
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
@@ -225,7 +220,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         """
 
         # CI test
-        ci_test = ci_registry.get_test(self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -250,9 +245,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         )
 
         # Step 2: Use separating sets to orient colliders
-        pdag = self._orient_colliders(
-            self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering
-        )
+        pdag = self._orient_colliders(self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering)
 
         # Step 3: apply orientation rules and expert knowledge
         if expert_knowledge.temporal_order != [[]]:
@@ -272,21 +265,17 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         elif self.return_type == "dag":
             self.causal_graph_ = pdag.to_dag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
 
     @staticmethod
     def _orient_colliders(
         skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton based on
@@ -323,16 +312,13 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC(data)
-        >>> pdag = c._orient_colliders(*c._build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        >>> from pgmpy.causal_discovery import PC
+        >>> from pgmpy.example_models import load_model
+        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
+        >>> est = PC(ci_test='chi_square').fit(df)
+        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> sorted(pdag.edges())
+        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         pdag = skeleton.to_directed()
@@ -358,9 +344,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
+        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

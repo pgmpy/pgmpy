@@ -41,12 +41,8 @@ def test_estimate_example_smoke_test(backend):
     phi1 = DiscreteFactor(["a", "b"], [2, 2], np.zeros(4))
     model.add_factors(phi1)
     model.add_edges_from([("a", phi1), ("b", phi1)])
-    tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
-        marginals=[("a", "b")]
-    )
-    np.testing.assert_array_almost_equal(
-        tree1.factors[0].values, [[1.0, 1.0], [1.0, 2.0]]
-    )
+    tree1 = MirrorDescentEstimator(model=model, data=data).estimate(marginals=[("a", "b")])
+    np.testing.assert_array_almost_equal(tree1.factors[0].values, [[1.0, 1.0], [1.0, 2.0]])
     tree2 = MirrorDescentEstimator(model=model, data=data).estimate(marginals=[("a",)])
     assert tree2.factors[0].get_value(a=0, b=0) == tree2.factors[0].get_value(a=0, b=1)
 
@@ -59,9 +55,7 @@ def test_estimate_example_smoke_test(backend):
 def test_mirror_descent_estimator_l2(backend, simple_factor_graph):
     df, m2 = simple_factor_graph
     mirror_descent_estimator = MirrorDescentEstimator(m2, data=df)
-    tree = mirror_descent_estimator.estimate(
-        marginals=[("A",)], metric="L2", iterations=2, stepsize=1
-    )
+    tree = mirror_descent_estimator.estimate(marginals=[("A",)], metric="L2", iterations=2, stepsize=1)
     marginal = FactorDict.from_dataframe(df=df, marginals=[("A",)])[("A",)]
     diff = tree.factors[0].values.flatten() - marginal.values.flatten()
     assert pytest.approx(diff.sum()) == 0.0
@@ -70,9 +64,7 @@ def test_mirror_descent_estimator_l2(backend, simple_factor_graph):
 def test_mirror_descent_estimator_l1(backend, simple_factor_graph):
     df, m2 = simple_factor_graph
     mirror_descent_estimator = MirrorDescentEstimator(m2, data=df)
-    tree = mirror_descent_estimator.estimate(
-        marginals=[("A",)], metric="L1", iterations=2, stepsize=1
-    )
+    tree = mirror_descent_estimator.estimate(marginals=[("A",)], metric="L1", iterations=2, stepsize=1)
     marginal = FactorDict.from_dataframe(df=df, marginals=[("A",)])[("A",)]
     diff = tree.factors[0].values.flatten() - marginal.values.flatten()
     assert pytest.approx(diff.sum()) == 0.0
@@ -82,9 +74,7 @@ def test_mirror_descent_warm_start(backend):
     df = pd.DataFrame({"A": np.repeat([0, 1], 50), "B": np.repeat([1, 0], 50)})
     model = JunctionTree()
     model.add_node(node=["A", "B"])
-    model.add_factors(
-        DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.zeros(4))
-    )
+    model.add_factors(DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.zeros(4)))
     mirror_descent_estimator = MirrorDescentEstimator(model, data=df)
     clique_to_marginal = mirror_descent_estimator._clique_to_marginal(
         marginals=FactorDict.from_dataframe(
