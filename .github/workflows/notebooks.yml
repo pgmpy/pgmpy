@@ -29,7 +29,7 @@ jobs:
           cache: pip
 
       - name: Install graphviz
-        run: sudo apt-get update && sudo apt-get install graphviz graphviz-dev -y
+        run: sudo apt-get update && sudo apt-get install graphviz -y
 
       - name: Install dependencies
         run: |
