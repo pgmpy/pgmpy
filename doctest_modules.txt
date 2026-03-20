@@ -3,7 +3,9 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/base/ADMG.py
+pgmpy/base/DAG.py
 pgmpy/inference/ExactInference.py
+pgmpy/factors/FactorSet.py
 pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
@@ -23,4 +25,5 @@ pgmpy/models/DiscreteBayesianNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
+pgmpy/base/MAG.py
 pgmpy/utils/mathext.py
