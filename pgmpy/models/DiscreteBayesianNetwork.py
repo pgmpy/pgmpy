@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 import itertools
+import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
 from operator import mul
 from typing import (
     Any,
-    Optional,
-    Union,
 )
 
 import networkx as nx
@@ -17,13 +17,13 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,
     TabularCPD,
 )
-from pgmpy.global_vars import logger
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
@@ -589,7 +589,7 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> DAG:
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -716,10 +716,13 @@ class DiscreteBayesianNetwork(DAG):
         _est = BayesianEstimator(self, data, state_names=state_names)
         cpds = _est.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs)
 
-        # Temporarily disable logger to stop giving warning about replacing CPDs.
-        logger.disabled = True
-        self.add_cpds(*cpds)
-        logger.disabled = False
+        # Temporarily suppress logger to stop giving warning about replacing CPDs.
+        _prev_level = logger.level
+        logger.setLevel(logging.CRITICAL)
+        try:
+            self.add_cpds(*cpds)
+        finally:
+            logger.setLevel(_prev_level)
 
     def predict(
         self,
@@ -1063,7 +1066,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return False
 
-    def copy(self) -> "DiscreteBayesianNetwork":
+    def copy(self) -> DiscreteBayesianNetwork:
         """
         Returns a copy of the model.
 
@@ -1155,7 +1158,7 @@ class DiscreteBayesianNetwork(DAG):
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
         seed: int | None = None,
-    ) -> "DiscreteBayesianNetwork":
+    ) -> DiscreteBayesianNetwork:
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
@@ -1247,7 +1250,7 @@ class DiscreteBayesianNetwork(DAG):
         n_states: int | dict[Hashable, int] | None = None,
         inplace: bool = False,
         seed: int | None = None,
-    ) -> Union[list[TabularCPD], "DiscreteBayesianNetwork"] | None:
+    ) -> list[TabularCPD] | DiscreteBayesianNetwork | None:
         """
         Given a `model`, generates and adds random `TabularCPD`
           for each node resulting in a fully parameterized network.
@@ -1285,7 +1288,7 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes: Hashable | list[Hashable], inplace: bool = False) -> Optional["DiscreteBayesianNetwork"]:
+    def do(self, nodes: Hashable | list[Hashable], inplace: bool = False) -> DiscreteBayesianNetwork | None:
         """
         Applies the do operation. The do operation removes all incoming edges
         to variables in `nodes` and marginalizes their CPDs to only contain the
@@ -1677,7 +1680,7 @@ class DiscreteBayesianNetwork(DAG):
         writer_class(self).write(filename=filename)
 
     @staticmethod
-    def load(filename: str, filetype: str = "bif", **kwargs: Any) -> "DiscreteBayesianNetwork":
+    def load(filename: str, filetype: str = "bif", **kwargs: Any) -> DiscreteBayesianNetwork:
         """
         Read the model from a file.
 

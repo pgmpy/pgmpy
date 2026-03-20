@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike
@@ -6,8 +8,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
+from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -210,7 +212,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         cls,
         string: str | None = None,
         filename: str | PathLike | None = None,
-    ) -> "DAG":
+    ) -> DAG:
         """
         Initializes a `DAG` instance using lavaan syntax.
 
@@ -239,7 +241,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None) -> "DAG":
+    def from_dagitty(cls, string=None, filename=None) -> DAG:
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -619,7 +621,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 independencies.add_assertions([variable, non_descendents - parents, parents])
         return independencies
 
-    def is_iequivalent(self, model: "DAG"):
+    def is_iequivalent(self, model: DAG):
         """
         Checks whether the given model is I-equivalent
 
@@ -1312,7 +1314,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         node_names: list[Hashable] | None = None,
         latents=False,
         seed: int | None = None,
-    ) -> "DAG":
+    ) -> DAG:
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.

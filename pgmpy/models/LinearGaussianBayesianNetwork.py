@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import json
 import math
@@ -11,9 +13,9 @@ import pandas as pd
 from scipy.stats import multivariate_normal
 from sklearn.linear_model import LinearRegression
 
+from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.global_vars import logger
 
 
 class LinearGaussianBayesianNetwork(DAG):
@@ -125,7 +127,7 @@ class LinearGaussianBayesianNetwork(DAG):
     def load(
         cls,
         filename: str | os.PathLike | io.IOBase,
-    ) -> "LinearGaussianBayesianNetwork":
+    ) -> LinearGaussianBayesianNetwork:
         """
         Read the model from a JSON file or a file-like object of a JSON file.
 
@@ -768,7 +770,7 @@ class LinearGaussianBayesianNetwork(DAG):
         data: pd.DataFrame,
         estimator: str = "mle",
         std_estimator: str = "unbiased",
-    ) -> "LinearGaussianBayesianNetwork":
+    ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
 
@@ -973,7 +975,7 @@ class LinearGaussianBayesianNetwork(DAG):
         loc: float = 0,
         scale: float = 1,
         seed: int | None = None,
-    ) -> "LinearGaussianBayesianNetwork":
+    ) -> LinearGaussianBayesianNetwork:
         """
         Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes`
         Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 from ._base import _BaseCITest
 

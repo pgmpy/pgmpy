@@ -1,3 +1,5 @@
+import logging
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -503,8 +505,13 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    with caplog.at_level("WARNING"):
-        est.fit(X=data)
+    pgmpy_logger = logging.getLogger("pgmpy")
+    pgmpy_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level("WARNING", logger="pgmpy"):
+            est.fit(X=data)
+    finally:
+        pgmpy_logger.removeHandler(caplog.handler)
     expected_warning = (
         "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
     )

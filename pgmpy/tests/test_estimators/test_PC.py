@@ -452,14 +452,19 @@ def test_pc_asia(caplog):
     asia_model = get_example_model("asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(data)
-    with caplog.at_level(logging.WARNING, logger="pgmpy"):
-        est.estimate(
-            variant="stable",
-            max_cond_vars=4,
-            expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
-            n_jobs=2,
-            show_progress=False,
-        )
+    pgmpy_logger = logging.getLogger("pgmpy")
+    pgmpy_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.WARNING, logger="pgmpy"):
+            est.estimate(
+                variant="stable",
+                max_cond_vars=4,
+                expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
+                n_jobs=2,
+                show_progress=False,
+            )
+    finally:
+        pgmpy_logger.removeHandler(caplog.handler)
     assert (
         "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
     ) in caplog.text

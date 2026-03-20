@@ -3,8 +3,8 @@ from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
+from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.global_vars import logger
 
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
