@@ -16,7 +16,7 @@ from pgmpy.estimators.StructureScore import (
     StructureScore,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
-from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import IVEstimator, SEMEstimator

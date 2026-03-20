@@ -1,4 +1,5 @@
 import gzip
+import warnings
 
 import pandas as pd
 
@@ -8,7 +9,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 
 def get_example_model(model: str):
@@ -47,9 +48,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    logger.warning(
-        "Deprecation Warning: `get_example_model` is deprecated and will be removed in a future release. "
-        "Please use `pgmpy.example_models.load_model` instead."
+    warnings.warn(
+        "`get_example_model` is deprecated. Please use `pgmpy.example_models.load_model` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     cat_models = {
         "asia",

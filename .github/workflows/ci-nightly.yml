@@ -106,6 +106,8 @@ jobs:
         with:
           name: test-durations
           path: .test_durations
+          include-hidden-files: true
+          if-no-files-found: error
 
   update-test-durations:
     name: Update .test_durations
