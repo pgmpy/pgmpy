@@ -1110,6 +1110,15 @@ class TestTabularCPDInit(unittest.TestCase):
             [5, 6],
         )
 
+    def test_cpd_init_negative_values(self):
+        self.assertRaises(
+            ValueError,
+            TabularCPD,
+            "A",
+            2,
+            [[-0.5], [1.5]],
+        )
+
     def test_too_wide_cdp_table(self):
         terminal_width, terminal_height = get_terminal_size()
 

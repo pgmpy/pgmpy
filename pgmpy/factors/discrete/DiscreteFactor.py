@@ -931,9 +931,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         Checks if the factor's values can be used for a valid CPD.
         """
-        if not config.get_compute_backend().all(self.values >= 0):
-            return False
-        return config.get_compute_backend().allclose(
+        return compat_fns.allclose(
             self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten(),
             compat_fns.ones(np.prod(self.cardinality[:0:-1])),
             atol=0.01,

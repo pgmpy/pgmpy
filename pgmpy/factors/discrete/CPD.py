@@ -47,6 +47,11 @@ class TabularCPD(DiscreteFactor):
         match the order in the values array. If state_names is not specified,
         auto-assigns state names starting from 0.
 
+    Raises
+    ------
+    ValueError
+        If any value in ``values`` is negative.
+
     Examples
     --------
     For a distribution of P(grade|diff, intel)
@@ -164,6 +169,9 @@ class TabularCPD(DiscreteFactor):
             expected_cpd_shape = (variable_card, np.prod(evidence_card))
         if values_casted.shape != expected_cpd_shape:
             raise ValueError(f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}")
+
+        if not (values_casted >= 0).all():
+            raise ValueError("CPD values must be non-negative.")
 
         if not isinstance(state_names, dict):
             raise ValueError(f"state_names must be of type dict. Got {type(state_names)}")
