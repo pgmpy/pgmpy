@@ -386,7 +386,7 @@ class XBNWriter:
                 attrib={"DESCRIPTION": data[var].get("DESCRIPTION", "")},
             )
             for state in self.model.states[var]:
-                etree.SubElement(variable, "STATENAME").text = state
+                etree.SubElement(variable, "STATENAME").text = str(state)
 
     def set_edges(self, edge_list):
         """
