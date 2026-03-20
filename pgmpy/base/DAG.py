@@ -1393,7 +1393,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/alarm")
         >>> model.to_graphviz()  # doctest: +ELLIPSIS
-        <AGraph <Swig Object of type 'Agraph_t *' at ...>>
+        <AGraph b'unknown' <Swig Object of type 'Agraph_t *' at 0x...>
         """
         if plot_edge_strength:
             missing_strengths = []
