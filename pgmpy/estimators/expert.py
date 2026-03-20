@@ -6,9 +6,74 @@ import pandas as pd
 
 from pgmpy import config, logger
 from pgmpy.base import DAG
-from pgmpy.estimators import ExpertKnowledge, StructureEstimator
+from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.utils import llm_pairwise_orient
+
+
+class ExpertKnowledge:
+    """
+    Class to represent expert knowledge for causal discovery.
+
+    Parameters
+    ----------
+    required_edges: list or set of tuples, optional
+        Edges that must be present in the final model (can be removed during pruning).
+        Each edge is a tuple (source, target).
+
+    forbidden_edges: list or set of tuples, optional
+        Edges that should not be present in the final model.
+
+    temporal_ordering: dict, optional
+        Dictionary mapping variable names to their temporal order (int).
+        Variables with lower values are assumed to come before variables
+        with higher values in time. Used to determine edge orientations
+        when temporal information is available.
+    """
+
+    def __init__(self, required_edges=None, forbidden_edges=None, temporal_ordering=None):
+        self.required_edges = set(required_edges) if required_edges else set()
+        self.forbidden_edges = set(forbidden_edges) if forbidden_edges else set()
+        self.temporal_ordering = temporal_ordering or {}
+
+    def __repr__(self):
+        """
+        Short summary of expert knowledge.
+        """
+        return (f"ExpertKnowledge(required_edges={len(self.required_edges)}, "
+                f"forbidden_edges={len(self.forbidden_edges)}, "
+                f"temporal_ordering={len(self.temporal_ordering)})")
+
+    def __str__(self):
+        """
+        Full information about expert knowledge.
+        """
+        lines = ["ExpertKnowledge("]
+
+        # Required edges
+        if self.required_edges:
+            edges_str = ", ".join([f"({u}, {v})" for u, v in sorted(self.required_edges)])
+            lines.append(f"    required_edges={{{edges_str}}},")
+        else:
+            lines.append("    required_edges=set(),")
+
+        # Forbidden edges
+        if self.forbidden_edges:
+            edges_str = ", ".join([f"({u}, {v})" for u, v in sorted(self.forbidden_edges)])
+            lines.append(f"    forbidden_edges={{{edges_str}}},")
+        else:
+            lines.append("    forbidden_edges=set(),")
+
+        # Temporal ordering
+        if self.temporal_ordering:
+            sorted_order = sorted(self.temporal_ordering.items(), key=lambda x: x[1])
+            order_str = ", ".join([f"{k!r}: {v}" for k, v in sorted_order])
+            lines.append(f"    temporal_ordering={{{order_str}}}")
+        else:
+            lines.append("    temporal_ordering={}")
+
+        lines.append(")")
+        return "\n".join(lines)
 
 
 class ExpertInLoop(StructureEstimator):
