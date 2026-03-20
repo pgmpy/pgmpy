@@ -287,7 +287,7 @@ class TestLGBNMethods(unittest.TestCase):
         # Test fit on the alarm model
         model = get_example_model("alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds = model_lin.get_random_cpds()
+        cpds = model_lin.get_random_cpds(seed=42)
         model_lin.add_cpds(*cpds)
         df = model_lin.simulate(n_samples=int(1e6), seed=42)
 
@@ -305,6 +305,15 @@ class TestLGBNMethods(unittest.TestCase):
             for index, evid_var in enumerate(cpd_orig.evidence):
                 est_index = cpd_est.evidence.index(evid_var)
                 self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1)
+
+    def test_get_random_cpds_None(self):
+        model = get_example_model("alarm")
+        model_lin = LinearGaussianBayesianNetwork(model.edges())
+        cpds1 = model_lin.get_random_cpds(seed=None)
+        cpds2 = model_lin.get_random_cpds(seed=None)
+        betas1 = [cpd.beta[0] for cpd in cpds1]
+        betas2 = [cpd.beta[0] for cpd in cpds2]
+        self.assertFalse(betas1 == betas2)
 
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
