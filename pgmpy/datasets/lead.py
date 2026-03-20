@@ -18,10 +18,7 @@ class Lead(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-        "real/lead/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/lead/"
 
     data_url = base_url + "data/lead.cov.txt"
 

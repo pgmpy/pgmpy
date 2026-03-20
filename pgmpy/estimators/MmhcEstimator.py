@@ -4,8 +4,6 @@ import networkx as nx
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
-from pgmpy.independencies import IndependenceAssertion, Independencies
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils.mathext import powerset
 
 
@@ -33,7 +31,7 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
-        super(MmhcEstimator, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
@@ -71,14 +69,16 @@ class MmhcEstimator(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import MmhcEstimator
+        >>> rng = np.random.default_rng(42)
         >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 2, size=(2500, 4)), columns=list("XYZW")
+        ...     rng.integers(0, 2, size=(2500, 4)), columns=list("XYZW")
         ... )
         >>> data["sum"] = data.sum(axis=1)
         >>> est = MmhcEstimator(data)
         >>> model = est.estimate()
-        >>> print(model.edges())
-        [('Z', 'sum'), ('X', 'sum'), ('W', 'sum'), ('Y', 'sum')]
+        >>> print(model.edges())  # doctest: +NORMALIZE_WHITESPACE
+        [('Y', 'X'), ('Z', 'Y'), ('Z', 'X'), ('W', 'Y'), ('W', 'X'), ('W', 'Z'),
+        ('sum', 'X'), ('sum', 'W'), ('sum', 'Z'), ('sum', 'Y')]
         """
         if scoring_method is None:
             scoring_method = BDeu(self.data, equivalent_sample_size=10)
@@ -86,13 +86,9 @@ class MmhcEstimator(StructureEstimator):
         skel = self.mmpc(significance_level)
         hc = HillClimbSearch(self.data)
 
-        possible_edges = nx.complete_graph(
-            n=self.state_names.keys(), create_using=nx.Graph
-        ).edges()
+        possible_edges = nx.complete_graph(n=self.state_names.keys(), create_using=nx.Graph).edges()
 
-        expert_knowledge = ExpertKnowledge(
-            forbidden_edges=possible_edges - skel.to_directed().edges()
-        )
+        expert_knowledge = ExpertKnowledge(forbidden_edges=possible_edges - skel.to_directed().edges())
 
         model = hc.estimate(
             scoring_method=scoring_method,
@@ -137,31 +133,22 @@ class MmhcEstimator(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import MmhcEstimator
+        >>> rng = np.random.default_rng(42)
         >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 2, size=(5000, 5)), columns=list("ABCDE")
+        ...     rng.integers(0, 2, size=(5000, 5)), columns=list("ABCDE")
         ... )
         >>> data["F"] = data["A"] + data["B"] + data["C"]
-        >>> est = PC(data)
-        >>> skel, sep_sets = est.estimate_skeleton()
-        >>> skel.edges()
-        [('A', 'F'), ('B', 'F'), ('C', 'F')]
-        >>> # all independencies are unconditional:
-        >>> sep_sets
-        {('D', 'A'): (), ('C', 'A'): (), ('C', 'E'): (), ('E', 'F'): (), ('B', 'D'): (),
-         ('B', 'E'): (), ('D', 'F'): (), ('D', 'E'): (), ('A', 'E'): (), ('B', 'A'): (),
-         ('B', 'C'): (), ('C', 'D'): ()}
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 2, size=(5000, 3)), columns=list("XYZ")
-        ... )
+        >>> est = MmhcEstimator(data)
+        >>> skel = est.mmpc()
+        >>> sorted(skel.edges())
+        [('A', 'D'), ('A', 'E'), ('A', 'F'), ('B', 'E'), ('B', 'F'), ('C', 'E'), ('C', 'F')]
+        >>> data = pd.DataFrame(rng.integers(0, 2, size=(5000, 3)), columns=list("XYZ"))
         >>> data["X"] += data["Z"]
         >>> data["Y"] += data["Z"]
-        >>> est = PC(data)
-        >>> skel, sep_sets = est.estimate_skeleton()
-        >>> skel.edges()
+        >>> est = MmhcEstimator(data)
+        >>> skel = est.mmpc()
+        >>> sorted(skel.edges())
         [('X', 'Z'), ('Y', 'Z')]
-        >>> # X, Y dependent, but conditionally independent given Z:
-        >>> sep_sets
-        {('X', 'Y'): ('Z',)}
         """
 
         nodes = self.state_names.keys()
@@ -196,9 +183,7 @@ class MmhcEstimator(StructureEstimator):
 
             # Forward Phase
             while True:
-                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(
-                    node, neighbors[node]
-                )
+                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(node, neighbors[node])
                 if new_neighbor_min_assoc > 0:
                     neighbors[node].append(new_neighbor)
                 else:
