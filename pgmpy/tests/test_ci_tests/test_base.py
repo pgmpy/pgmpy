@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.ci_tests import ChiSquare, IndependenceMatch, Pearsonr, _BaseCITest, get_ci_test
+from pgmpy.ci_tests import ChiSquare, FisherZ, IndependenceMatch, Pearsonr, _BaseCITest, get_ci_test
 
 
 def test_ci_registry():
@@ -21,6 +21,7 @@ def test_ci_registry():
     assert "log_likelihood" in all_tests
     assert "modified_log_likelihood" in all_tests
     assert "pearsonr" in all_tests
+    assert "fisher_z" in all_tests
     assert "pillai" in all_tests
     assert "gcm" in all_tests
 
@@ -55,6 +56,10 @@ def test_by_name(disc_data):
 
 def test_by_name_case_insensitive(disc_data):
     assert isinstance(get_ci_test(test="Chi_Square", data=disc_data), ChiSquare)
+
+
+def test_by_name_fisher_z(cont_data):
+    assert isinstance(get_ci_test(test="fisher_z", data=cont_data), FisherZ)
 
 
 def test_auto_detect_continuous(cont_data):

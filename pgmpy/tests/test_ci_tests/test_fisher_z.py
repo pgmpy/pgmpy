@@ -3,13 +3,14 @@ import unittest
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
-from pgmpy.ci_tests import Pearsonr
+from pgmpy.ci_tests import FisherZ, Pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
-class TestPearsonr(unittest.TestCase):
+class TestFisherZ(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(seed=42)
 
@@ -31,35 +32,53 @@ class TestPearsonr(unittest.TestCase):
         Z = 0.2 * X + 0.2 * Y + rng.normal(loc=0, scale=0.1, size=10000)
         self.df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-    def test_pearsonr(self):
-        test = Pearsonr(data=self.df_ind)
+    def test_fisher_z(self):
+        test = FisherZ(data=self.df_ind)
         test("X", "Y", [])
-        self.assertTrue(test.statistic_ < 0.1)
         self.assertTrue(test.p_value_ > 0.05)
 
-        test = Pearsonr(data=self.df_cind)
+        test = FisherZ(data=self.df_cind)
         test("X", "Y", ["Z"])
-        self.assertTrue(test.statistic_ < 0.1)
         self.assertTrue(test.p_value_ > 0.05)
 
-        test = Pearsonr(data=self.df_cind_mul)
+        test = FisherZ(data=self.df_cind_mul)
         test("X", "Y", ["Z1", "Z2"])
-        self.assertTrue(test.statistic_ < 0.1)
         self.assertTrue(test.p_value_ > 0.05)
 
-        test = Pearsonr(data=self.df_vstruct)
+        test = FisherZ(data=self.df_vstruct)
         test("X", "Y", ["Z"])
-        self.assertTrue(abs(test.statistic_) > 0.7)
         self.assertTrue(test.p_value_ < 0.05)
 
-        self.assertTrue(Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05))
-        self.assertTrue(Pearsonr(data=self.df_cind)("X", "Y", ["Z"], significance_level=0.05))
-        self.assertTrue(Pearsonr(data=self.df_cind_mul)("X", "Y", ["Z1", "Z2"], significance_level=0.05))
-        self.assertFalse(Pearsonr(data=self.df_vstruct)("X", "Y", ["Z"], significance_level=0.05))
+        self.assertTrue(FisherZ(data=self.df_ind)("X", "Y", [], significance_level=0.05))
+        self.assertTrue(FisherZ(data=self.df_cind)("X", "Y", ["Z"], significance_level=0.05))
+        self.assertTrue(FisherZ(data=self.df_cind_mul)("X", "Y", ["Z1", "Z2"], significance_level=0.05))
+        self.assertFalse(FisherZ(data=self.df_vstruct)("X", "Y", ["Z"], significance_level=0.05))
+
+    def test_fisher_z_uses_pearsonr_partial_correlation(self):
+        rng = np.random.default_rng(seed=7)
+        n_samples = 40
+        z_columns = [f"Z{i}" for i in range(5)]
+        data = pd.DataFrame(rng.standard_normal((n_samples, len(z_columns))), columns=z_columns)
+        data["X"] = data[z_columns].sum(axis=1) + rng.normal(scale=1.0, size=n_samples)
+        data["Y"] = 0.35 * data["X"] + data[z_columns].sum(axis=1) + rng.normal(scale=1.2, size=n_samples)
+
+        pearson_test = Pearsonr(data=data)
+        pearson_test("X", "Y", z_columns)
+
+        fisher_test = FisherZ(data=data)
+        is_independent = fisher_test("X", "Y", z_columns, significance_level=0.05)
+
+        expected_coeff = np.arctanh(np.clip(pearson_test.statistic_, -0.999999, 0.999999))
+        expected_statistic = np.sqrt(n_samples - len(z_columns) - 3) * expected_coeff
+        expected_p_value = 2 * stats.norm.sf(np.abs(expected_statistic))
+
+        self.assertEqual(is_independent, expected_p_value >= 0.05)
+        self.assertAlmostEqual(fisher_test.statistic_, expected_statistic)
+        self.assertAlmostEqual(fisher_test.p_value_, expected_p_value)
 
 
 @unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
-class TestPearsonrResidual(unittest.TestCase):
+class TestFisherZResidual(unittest.TestCase):
     def setUp(self):
         model_indep = LinearGaussianBayesianNetwork(
             [
@@ -94,13 +113,11 @@ class TestPearsonrResidual(unittest.TestCase):
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
         self.df_dep = model_dep.simulate(n_samples=1000, seed=42)
 
-    def test_pearsonr(self):
-        test = Pearsonr(data=self.df_indep)
+    def test_fisher_z(self):
+        test = FisherZ(data=self.df_indep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertTrue(abs(test.statistic_) <= 0.1)
         self.assertTrue(test.p_value_ >= 0.05)
 
-        test = Pearsonr(data=self.df_dep)
+        test = FisherZ(data=self.df_dep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertTrue(test.statistic_ >= 0.1)
         self.assertTrue(test.p_value_ <= 0.05)
