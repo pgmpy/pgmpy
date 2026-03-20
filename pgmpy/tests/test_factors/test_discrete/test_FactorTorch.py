@@ -8,11 +8,12 @@ import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors import factor_divide, factor_product, factor_sum_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.inference import VariableElimination
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
 
 
 @unittest.skipUnless(
@@ -281,7 +282,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         self.assertRaises(TypeError, self.phi_sn.get_cardinality, "x1")
 
     def test_get_value(self):
-        model = get_example_model("asia")
+        model = load_model("bnlearn/asia")
         cpd = model.get_cpds("either")
 
         for phi in [cpd, cpd.to_factor()]:
@@ -294,7 +295,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
             self.assertEqual(phi, phi_copy)
 
     def test_set_value(self):
-        model = get_example_model("asia")
+        model = load_model("bnlearn/asia")
         cpd = model.get_cpds("either")
         for phi in [cpd, cpd.to_factor()]:
             phi_copy = phi.copy()
@@ -639,7 +640,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         self.assertRaises(TypeError, factor_divide, 1, 1)
 
     def test_factor_sum_product(self):
-        model = get_example_model("alarm")
+        model = load_model("bnlearn/alarm")
         infer = VariableElimination(model)
         phi = [cpd.to_factor() for cpd in model.cpds]
         phi_history = factor_sum_product(output_vars=["HISTORY"], factors=phi)
