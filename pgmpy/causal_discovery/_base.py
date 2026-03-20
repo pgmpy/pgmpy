@@ -15,8 +15,8 @@ from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG, UndirectedGraph
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
 from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
@@ -309,7 +309,10 @@ class _ConstraintMixin:
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = ci_registry.get_test(ci_test, data=data)
+        if independencies is not None:
+            ci_test = IndependenceMatch(independencies=independencies)
+        else:
+            ci_test = get_ci_test(test=ci_test, data=data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -346,10 +349,7 @@ class _ConstraintMixin:
                                 u,
                                 v,
                                 separating_set,
-                                data=data,
-                                independencies=independencies,
                                 significance_level=significance_level,
-                                **kwargs,
                             ):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
@@ -368,10 +368,7 @@ class _ConstraintMixin:
                                 u,
                                 v,
                                 separating_set,
-                                data=data,
-                                independencies=independencies,
                                 significance_level=significance_level,
-                                **kwargs,
                             ):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
@@ -385,10 +382,7 @@ class _ConstraintMixin:
                             u,
                             v,
                             separating_set,
-                            data=data,
-                            independencies=independencies,
                             significance_level=significance_level,
-                            **kwargs,
                         ):
                             return (u, v), separating_set
 
