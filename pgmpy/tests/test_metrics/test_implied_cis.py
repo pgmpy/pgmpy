@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import chi_square
 from pgmpy.metrics import ImpliedCIs
 from pgmpy.utils import get_example_model
 
@@ -31,7 +30,7 @@ def random_dag_from_nodes(nodes, rng, edge_prob=EDGE_PROB):
     return dag
 
 
-def implied_ci_tests(X, causal_graph, ci_test=chi_square):
+def implied_ci_tests(X, causal_graph, ci_test="chi_square"):
     return ImpliedCIs(ci_test=ci_test)(X=X, causal_graph=causal_graph)
 
 
