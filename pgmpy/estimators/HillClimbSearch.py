@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import permutations
@@ -12,13 +13,12 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 
 
 class HillClimbSearch(StructureEstimator):
@@ -50,10 +50,10 @@ class HillClimbSearch(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This HillClimbSearch class will be removed in a future release. "
-            "Please use the new sklearn compatible HillClimbSearch class from the "
-            "pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "HillClimbSearch is deprecated. Please use pgmpy.causal_discovery.HillClimbSearch instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.use_cache = use_cache
 
@@ -68,7 +68,7 @@ class HillClimbSearch(StructureEstimator):
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
         required_edges: list[tuple[Hashable, Hashable]],
-    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float], None, None]:
+    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -192,8 +192,8 @@ class HillClimbSearch(StructureEstimator):
         Examples
         --------
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> df = model.simulate(int(1e3), seed=42)
 
         >>> # Learn the model structure using HillClimbSearch algorithm from `df`

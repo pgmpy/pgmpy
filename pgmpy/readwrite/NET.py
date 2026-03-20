@@ -1,10 +1,11 @@
 import collections
+import warnings
 from math import prod
 from string import Template
 
 import numpy as np
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 try:
     from pyparsing import (
@@ -42,8 +43,8 @@ class NETWriter:
     Examples
     ----------
     >>> from pgmpy.readwrite import NETWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = NETWriter(asia)
     >>> writer
     <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
@@ -155,9 +156,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_variables()
         ['asia', 'tub', 'smoke', 'lung', 'bronc', 'either', 'xray', 'dysp']
@@ -175,9 +176,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_cpds()
         {'asia': array([0.01, 0.99]),
@@ -217,9 +218,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_properties()
         """
@@ -244,9 +245,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_states()
         {'asia': ['yes', 'no'],
@@ -284,9 +285,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_parents()
         {'asia': [],
@@ -314,9 +315,9 @@ class NETWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.write(filename="asia.net")
         """
@@ -325,7 +326,9 @@ class NETWriter:
             fout.write(writer)
 
     def write_net(self, filename):
-        logger.warning("The `NETWriter.write_net` has been deprecated. Please use `NETWriter.write` instead.")
+        warnings.warn(
+            "`NETWriter.write_net` is deprecated. Please use `NETWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)
 
 

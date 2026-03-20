@@ -1,5 +1,4 @@
 import io
-import sys
 import unittest
 import xml.etree.ElementTree as etree
 
@@ -366,7 +365,17 @@ class TestXBNWriter(unittest.TestCase):
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
-            cpd = TabularCPD(var, len(states), cpd, evidence=evidence, evidence_card=evidence_card)
+            state_names = {var: states}
+            for ev in evidence:
+                state_names[ev] = nodes[ev]["STATES"]
+            cpd = TabularCPD(
+                var,
+                len(states),
+                cpd,
+                evidence=evidence,
+                evidence_card=evidence_card,
+                state_names=state_names,
+            )
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
@@ -376,7 +385,6 @@ class TestXBNWriter(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_file(self):
         self.expected_xml = etree.XML(
             """<ANALYSISNOTEBOOK>
@@ -480,7 +488,10 @@ class TestXBNWriter(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+        self.assertEqual(
+            etree.canonicalize(self.writer.__str__()[:-1]),
+            etree.canonicalize(etree.tostring(self.expected_xml)),
+        )
 
 
 class TestXBNReaderTorch(unittest.TestCase):
@@ -838,7 +849,17 @@ class TestXBNWriterTorch(unittest.TestCase):
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
-            cpd = TabularCPD(var, len(states), cpd, evidence=evidence, evidence_card=evidence_card)
+            state_names = {var: states}
+            for ev in evidence:
+                state_names[ev] = nodes[ev]["STATES"]
+            cpd = TabularCPD(
+                var,
+                len(states),
+                cpd,
+                evidence=evidence,
+                evidence_card=evidence_card,
+                state_names=state_names,
+            )
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
@@ -848,7 +869,6 @@ class TestXBNWriterTorch(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
-    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_file(self):
         self.expected_xml = etree.XML(
             """<ANALYSISNOTEBOOK>
@@ -952,4 +972,7 @@ class TestXBNWriterTorch(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
-        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+        self.assertEqual(
+            etree.canonicalize(self.writer.__str__()[:-1]),
+            etree.canonicalize(etree.tostring(self.expected_xml)),
+        )

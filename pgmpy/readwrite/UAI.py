@@ -1,3 +1,4 @@
+import warnings
 from itertools import combinations
 
 import numpy as np
@@ -10,7 +11,6 @@ except ImportError as e:
     ) from None
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
@@ -291,8 +291,8 @@ class UAIWriter:
     Examples
     --------
     >>> from pgmpy.readwrite import UAIWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
     >>> writer = UAIWriter(asia)
     >>> writer.write("asia.uai")
     """
@@ -454,8 +454,8 @@ class UAIWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import UAIWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(asia)
         >>> writer.write("asia.uai")
         """
@@ -464,5 +464,7 @@ class UAIWriter:
             fout.write(writer)
 
     def write_uai(self, filename):
-        logger.warning("The `UAIWriter.write_uai` has been deprecated. Please use `UAIWriter.write` instead.")
+        warnings.warn(
+            "`UAIWriter.write_uai` is deprecated. Please use `UAIWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)

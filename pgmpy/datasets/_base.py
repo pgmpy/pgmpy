@@ -15,7 +15,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.global_vars import PGMPY_DATA_HOME
 
 

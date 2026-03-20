@@ -1,4 +1,5 @@
 import re
+import warnings
 from itertools import product
 from string import Template
 
@@ -22,8 +23,8 @@ except ImportError as e:
         f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -311,8 +312,8 @@ class BIFWriter:
     Examples
     ---------
     >>> from pgmpy.readwrite import BIFWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
     >>> writer
     <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
@@ -587,9 +588,9 @@ $values
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.write(filename="asia.bif")
         """
@@ -598,5 +599,7 @@ $values
             fout.write(writer)
 
     def write_bif(self, filename):
-        logger.warning("The `BIFWriter.write_bif` has been deprecated. Please use `BIFWriter.write` instead.")
+        warnings.warn(
+            "`BIFWriter.write_bif` is deprecated. Please use `BIFWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)

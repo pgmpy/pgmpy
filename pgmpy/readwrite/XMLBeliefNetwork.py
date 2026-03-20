@@ -1,10 +1,10 @@
 import itertools
+import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -386,7 +386,7 @@ class XBNWriter:
                 attrib={"DESCRIPTION": data[var].get("DESCRIPTION", "")},
             )
             for state in self.model.states[var]:
-                etree.SubElement(variable, "STATENAME").text = state
+                etree.SubElement(variable, "STATENAME").text = str(state)
 
     def set_edges(self, edge_list):
         """
@@ -458,9 +458,9 @@ class XBNWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import XBNReader, XBNWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = XBNWriter(asia)
         >>> writer.write(filename="asia.xbn")
         """
@@ -469,5 +469,7 @@ class XBNWriter:
             fout.write(writer)
 
     def write_xbn(self, filename):
-        logger.warning("The `XBNWriter.write_xbn` has been deprecated. Please use `XBNWriter.write` instead.")
+        warnings.warn(
+            "`XBNWriter.write_xbn` is deprecated. Please use `XBNWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)

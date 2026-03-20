@@ -50,10 +50,10 @@ conda install conda-forge::pgmpy
 ### Examples
 #### Discrete Data
 ```python
-from pgmpy.utils import get_example_model
+from pgmpy.example_models import load_model
 
 # Load a Discrete Bayesian Network and simulate data.
-discrete_bn = get_example_model("alarm")
+discrete_bn = load_model("bnlearn/alarm")
 alarm_df = discrete_bn.simulate(n_samples=100)
 
 # Learn a network from simulated data.
@@ -76,10 +76,10 @@ pred_FIO2 = dag_fitted.predict(evidence_df)
 
 #### Linear Gaussian Data
 ```python
-from pgmpy.utils import get_example_model
+from pgmpy.example_models import load_model
 
 # Load an example Gaussian Bayesian Network and simulate data
-gaussian_bn = get_example_model("ecoli70")
+gaussian_bn = load_model("bnlearn/ecoli70")
 ecoli_df = gaussian_bn.simulate(n_samples=100)
 
 # Learn the network from simulated data.

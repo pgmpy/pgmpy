@@ -1,12 +1,13 @@
 import random
+import warnings
 import xml.dom.minidom as md
 import xml.etree.ElementTree as etree
 from itertools import chain
 
 import networkx as nx
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -248,8 +249,8 @@ class XDSLWriter:
     Examples
     ---------
     >>> from pgmpy.readwrite import XDSLWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = XDSLWriter(asia)
     >>> writer.write("asia.xdsl")
 
@@ -430,8 +431,8 @@ class XDSLWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import XDSLWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
         >>> writer.write("asia.xdsl")
         """
@@ -444,5 +445,7 @@ class XDSLWriter:
                 f.write(pretty_xml_str)
 
     def write_xdsl(self, filename):
-        logger.warning("The `XDSLWriter.write_xdsl` has been deprecated. Please use `XDSLWriter.write` instead.")
+        warnings.warn(
+            "`XDSLWriter.write_xdsl` is deprecated. Please use `XDSLWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)

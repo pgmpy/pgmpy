@@ -3,15 +3,15 @@ import unittest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
 from pgmpy.models import DynamicBayesianNetwork as DBN
-from pgmpy.utils import get_example_model
 
 
 class TestApproxInferenceBN(unittest.TestCase):
     def setUp(self):
-        self.alarm_model = get_example_model("alarm")
+        self.alarm_model = load_model("bnlearn/alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
         self.samples = self.alarm_model.simulate(int(1e4))
@@ -173,7 +173,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.alarm_model = get_example_model("alarm")
+        self.alarm_model = load_model("bnlearn/alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
         self.samples = self.alarm_model.simulate(int(1e4))

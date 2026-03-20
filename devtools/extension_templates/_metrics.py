@@ -146,10 +146,10 @@ class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import MyUnsupervisedMetric
     >>> # TODO: Provide a complete working example
-    >>> model = get_example_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> data = model.simulate(int(1e4))
     >>> metric = MyUnsupervisedMetric()
     >>> metric(X=data, causal_graph=model)

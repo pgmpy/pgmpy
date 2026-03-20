@@ -8,10 +8,10 @@ import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XDSLReader, XDSLWriter
-from pgmpy.utils import get_example_model
 
 TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
@@ -203,7 +203,7 @@ DUMMY_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 
 class TestXDSLWriterMethods(unittest.TestCase):
     def setUp(self):
-        self.alarm_model_bn = get_example_model(model="alarm")
+        self.alarm_model_bn = load_model("bnlearn/alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
         self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])
@@ -381,7 +381,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        self.alarm_model_bn = get_example_model(model="alarm")
+        self.alarm_model_bn = load_model("bnlearn/alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
         self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])

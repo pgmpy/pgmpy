@@ -7,9 +7,8 @@ import numpy as np
 import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 

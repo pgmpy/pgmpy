@@ -6,6 +6,7 @@ from shutil import get_terminal_size
 import numpy as np
 import numpy.testing as np_test
 
+from pgmpy.example_models import load_model
 from pgmpy.factors import factor_divide, factor_product, factor_sum_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
@@ -13,7 +14,6 @@ from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
-from pgmpy.utils import get_example_model
 
 
 class TestFactorInit(unittest.TestCase):
@@ -303,7 +303,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.phi_sn.get_cardinality, "x1")
 
     def test_get_value(self):
-        model = get_example_model("asia")
+        model = load_model("bnlearn/asia")
         cpd = model.get_cpds("either")
 
         for phi in [cpd, cpd.to_factor()]:
@@ -316,7 +316,7 @@ class TestFactorMethods(unittest.TestCase):
             self.assertEqual(phi, phi_copy)
 
     def test_to_dataframe(self):
-        model = get_example_model("sachs")
+        model = load_model("bnlearn/sachs")
         cpd = model.get_cpds("Mek")
         df = cpd.to_dataframe()
         self.assertEqual(df.shape, (27, 3))
@@ -328,7 +328,7 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df.sum(axis=1).values, np.ones(27))
 
     def test_set_value(self):
-        model = get_example_model("asia")
+        model = load_model("bnlearn/asia")
         cpd = model.get_cpds("either")
         for phi in [cpd, cpd.to_factor()]:
             phi_copy = phi.copy()
@@ -675,7 +675,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, factor_divide, 1, 1)
 
     def test_factor_sum_product(self):
-        model = get_example_model("alarm")
+        model = load_model("bnlearn/alarm")
         infer = VariableElimination(model)
         phi = [cpd.to_factor() for cpd in model.cpds]
         phi_history = factor_sum_product(output_vars=["HISTORY"], factors=phi)

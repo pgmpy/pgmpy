@@ -14,6 +14,7 @@ from pgmpy.estimators import (
     ExpectationMaximization,
     MaximumLikelihoodEstimator,
 )
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,
@@ -23,7 +24,6 @@ from pgmpy.independencies import Independencies
 from pgmpy.inference import ApproxInference, BeliefPropagation
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -510,25 +510,25 @@ class TestBayesianNetworkMethods(unittest.TestCase):
             )
 
     def test_simulate(self):
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         n_samples = int(1e3)
         samples = asia.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
         # The probability values don't sum to 1 in this case.
-        barley = get_example_model("barley")
+        barley = load_model("bnlearn/barley")
         samples = barley.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
     def test_simulate_with_partial_samples(self):
-        alarm = get_example_model("alarm")
+        alarm = load_model("bnlearn/alarm")
         partial_cvp = pd.DataFrame(np.random.choice(["LOW", "NORMAL", "HIGH"], int(1e1)), columns=["CVP"])
         samples = alarm.simulate(n_samples=int(1e1), partial_samples=partial_cvp, show_progress=False)
         self.assertEqual(samples.CVP.tolist(), partial_cvp["CVP"].tolist())
 
     def test_load_save(self):
-        test_model_small = get_example_model("alarm")
-        test_model_large = get_example_model("hailfinder")
+        test_model_small = load_model("bnlearn/alarm")
+        test_model_large = load_model("bnlearn/hailfinder")
         for model in {test_model_small, test_model_large}:
             for filetype in {"bif", "xmlbif", "xdsl", "net"}:
                 model.save("model." + filetype)
@@ -868,7 +868,7 @@ class TestBayesianNetworkCPD(unittest.TestCase):
 
 class TestBayesianNetworkSampleProb(unittest.TestCase):
     def setUp(self):
-        self.model = get_example_model("asia")
+        self.model = load_model("bnlearn/asia")
         self.samples = self.model.simulate(int(1e5), seed=42)
         self.evidence1 = self.samples.iloc[0, :].to_dict()
 
@@ -994,7 +994,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         )
 
     def test_fit_update(self):
-        model = get_example_model("asia")
+        model = load_model("bnlearn/asia")
         model_copy = model.copy()
         data = BayesianModelSampling(model).forward_sample(int(1e3))
         model.fit_update(data, n_prev_samples=int(1e3))
@@ -1562,7 +1562,7 @@ class TestSimulation(unittest.TestCase):
     def setUp(self):
         from pgmpy.inference import CausalInference, VariableElimination
 
-        self.alarm = get_example_model("alarm")
+        self.alarm = load_model("bnlearn/alarm")
         self.infer_alarm = VariableElimination(self.alarm)
         self.causal_infer_alarm = CausalInference(self.alarm)
 

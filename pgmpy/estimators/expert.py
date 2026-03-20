@@ -4,11 +4,11 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG
-from pgmpy.estimators import ExpertKnowledge, StructureEstimator
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient
 
 
@@ -148,13 +148,13 @@ class ExpertInLoop(StructureEstimator):
 
         Examples
         --------
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.utils import (
-        ...     get_example_model,
         ...     llm_pairwise_orient,
         ...     manual_pairwise_orient,
         ... )
         >>> from pgmpy.estimators import ExpertInLoop
-        >>> model = get_example_model("cancer")
+        >>> model = load_model("bnlearn/cancer")
         >>> df = model.simulate(int(1e3))
 
         >>> # Using manual orientation

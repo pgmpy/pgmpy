@@ -5,11 +5,11 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.hybrid.FunctionalCPD import FunctionalCPD
 from pgmpy.models import FunctionalBayesianNetwork, LinearGaussianBayesianNetwork
-from pgmpy.utils import get_example_model
 
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
@@ -324,7 +324,7 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["x3_rate"].mean().item(), 0.5, delta=0.1)
 
     def test_fit_complex_svi(self):
-        sim_model = get_example_model("ecoli70")
+        sim_model = load_model("bnlearn/ecoli70")
         df = sim_model.simulate(n_samples=int(1e3), seed=42)
 
         model = FunctionalBayesianNetwork(
@@ -487,7 +487,7 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
 
     def test_fit_complex_mcmc(self):
-        sim_model = get_example_model("ecoli70")
+        sim_model = load_model("bnlearn/ecoli70")
         df = sim_model.simulate(n_samples=int(1e3), seed=42)
 
         model = FunctionalBayesianNetwork(
