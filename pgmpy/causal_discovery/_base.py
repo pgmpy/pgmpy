@@ -13,11 +13,10 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.global_vars import logger
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 
@@ -493,7 +492,7 @@ class _ScoreMixin:
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
         required_edges: list[tuple[Hashable, Hashable]],
-    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float], None, None]:
+    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring

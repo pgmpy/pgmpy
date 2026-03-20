@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 from pgmpy.utils import compat_fns
 
 State = namedtuple("State", ["var", "state"])

@@ -4,10 +4,9 @@ from itertools import product
 import numpy as np
 import pandas as pd
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
-from pgmpy.global_vars import logger
 from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])

@@ -5,8 +5,8 @@ import numpy as np
 from pandas import DataFrame
 from scipy.linalg import eig
 
+from pgmpy import logger
 from pgmpy.factors.discrete import State
-from pgmpy.global_vars import logger
 from pgmpy.utils import sample_discrete
 
 

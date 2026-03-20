@@ -5,8 +5,12 @@ from pathlib import Path
 import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
+logger.setLevel(logging.INFO)
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+logger.addHandler(_handler)
+logger.propagate = False
 
 PGMPY_DATA_HOME = os.path.join(Path.home(), ".pgmpy")
 

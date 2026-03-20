@@ -5,11 +5,10 @@ import networkx as nx
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 
 
 class BaseConstraintEstimator(StructureEstimator):

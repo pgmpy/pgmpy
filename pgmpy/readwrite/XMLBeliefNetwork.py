@@ -1,10 +1,10 @@
 import itertools
+import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -469,5 +469,7 @@ class XBNWriter:
             fout.write(writer)
 
     def write_xbn(self, filename):
-        logger.warning("The `XBNWriter.write_xbn` has been deprecated. Please use `XBNWriter.write` instead.")
+        warnings.warn(
+            "`XBNWriter.write_xbn` is deprecated. Please use `XBNWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)

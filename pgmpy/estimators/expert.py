@@ -4,11 +4,10 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG
 from pgmpy.estimators import ExpertKnowledge, StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient
 
 

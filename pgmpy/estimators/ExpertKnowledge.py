@@ -1,6 +1,6 @@
 from itertools import chain, permutations
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 
 class ExpertKnowledge:

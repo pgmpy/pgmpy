@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Iterable
 from itertools import chain, product
 
@@ -6,11 +7,10 @@ import numpy as np
 from networkx.algorithms.dag import descendants
 from tqdm.auto import tqdm
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import logger
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -120,9 +120,10 @@ class CausalInference:
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Adjustment class instead."
+        warnings.warn(
+            "`is_valid_backdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            FutureWarning,
+            stacklevel=2,
         )
 
         Z_ = _variable_or_iterable_to_set(Z)
@@ -164,9 +165,10 @@ class CausalInference:
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Adjustment class instead."
+        warnings.warn(
+            "`get_all_backdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            FutureWarning,
+            stacklevel=2,
         )
 
         try:
@@ -216,9 +218,10 @@ class CausalInference:
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Frontdoor class instead."
+        warnings.warn(
+            "`is_valid_frontdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         Z = _variable_or_iterable_to_set(Z)
 
@@ -270,9 +273,10 @@ class CausalInference:
         -------
         frozenset: a frozenset of frozensets
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Frontdoor class instead."
+        warnings.warn(
+            "`get_all_frontdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         assert X in self.observed_variables
         assert Y in self.observed_variables
@@ -730,10 +734,8 @@ class CausalInference:
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         """
         valid_estimators = ["linear"]
-        try:
-            assert estimator_type in valid_estimators
-        except AssertionError:
-            print(f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}")
+        if estimator_type not in valid_estimators:
+            raise ValueError(f"{estimator_type} is not a valid estimator_type. Please select from {valid_estimators}")
         all_simple_paths = nx.all_simple_paths(self.model, X, Y)
         all_path_effects = []
         for path in all_simple_paths:

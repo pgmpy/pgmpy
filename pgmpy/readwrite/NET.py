@@ -1,10 +1,11 @@
 import collections
+import warnings
 from math import prod
 from string import Template
 
 import numpy as np
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 try:
     from pyparsing import (
@@ -325,7 +326,9 @@ class NETWriter:
             fout.write(writer)
 
     def write_net(self, filename):
-        logger.warning("The `NETWriter.write_net` has been deprecated. Please use `NETWriter.write` instead.")
+        warnings.warn(
+            "`NETWriter.write_net` is deprecated. Please use `NETWriter.write` instead.", FutureWarning, stacklevel=2
+        )
         self.write(filename)
 
 

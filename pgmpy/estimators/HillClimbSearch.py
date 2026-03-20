@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import permutations
@@ -18,7 +19,6 @@ from pgmpy.estimators import (
     StructureScore,
 )
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 
 
 class HillClimbSearch(StructureEstimator):
@@ -50,10 +50,10 @@ class HillClimbSearch(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This HillClimbSearch class will be removed in a future release. "
-            "Please use the new sklearn compatible HillClimbSearch class from the "
-            "pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "HillClimbSearch is deprecated. Please use pgmpy.causal_discovery.HillClimbSearch instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.use_cache = use_cache
 
@@ -68,7 +68,7 @@ class HillClimbSearch(StructureEstimator):
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
         required_edges: list[tuple[Hashable, Hashable]],
-    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float], None, None]:
+    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring

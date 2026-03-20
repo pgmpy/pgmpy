@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
+import warnings
 import xml.etree.ElementTree as etree
 from io import BytesIO
 from itertools import chain
 
 import numpy as np
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -507,5 +508,9 @@ class XMLBIFWriter:
             fout.write(self.__str__())
 
     def write_xmlbif(self, filename):
-        logger.warning("The `XMLBIFWriter.write_xmlbif` has been deprecated. Please use `XMLBIFWriter.write` instead.")
+        warnings.warn(
+            "`XMLBIFWriter.write_xmlbif` is deprecated. Please use `XMLBIFWriter.write` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.write(filename)
