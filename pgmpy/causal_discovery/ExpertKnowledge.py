@@ -41,11 +41,11 @@ class ExpertKnowledge:
     --------
     Import an example model from pgmpy.utils
 
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.estimators import ExpertKnowledge, PC
     >>> from pgmpy.sampling import BayesianModelSampling
-    >>> asia_model = get_example_model("asia")
-    >>> cancer_model = get_example_model("cancer")
+    >>> asia_model = load_model("bnlearn/asia")
+    >>> cancer_model = load_model("bnlearn/cancer")
 
     **Required and forbidden edges**
 

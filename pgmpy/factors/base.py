@@ -86,8 +86,8 @@ def factor_sum_product(output_vars, factors):
     Examples
     --------
     >>> from pgmpy.factors import factor_sum_product
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
     >>> factors = [cpd.to_factor() for cpd in model.cpds]
     >>> factor_sum_product(output_vars=["lung"], factors=factors)
     <DiscreteFactor representing phi(lung:2) at 0x...>

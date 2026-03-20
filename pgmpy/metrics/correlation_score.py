@@ -55,9 +55,9 @@ class CorrelationScore(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import CorrelationScore
-    >>> alarm = get_example_model("alarm")
+    >>> alarm = load_model("bnlearn/alarm")
     >>> data = alarm.simulate(int(1e4))
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=False

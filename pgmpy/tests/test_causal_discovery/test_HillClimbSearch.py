@@ -10,9 +10,9 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import HillClimbSearch
 from pgmpy.estimators import K2, ExpertKnowledge
+from pgmpy.example_models import load_model
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.utils import get_example_model
 
 
 def expected_failed_checks(estimator):
@@ -362,7 +362,7 @@ def test_estimate_mixed_data():
 
 
 def test_score():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e4), seed=42)
     est = HillClimbSearch(
         return_type="dag",

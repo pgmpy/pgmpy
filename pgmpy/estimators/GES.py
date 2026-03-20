@@ -136,9 +136,9 @@ class GES(StructureEstimator):
         --------
         >>> import numpy as np
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> np.random.seed(42)
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 

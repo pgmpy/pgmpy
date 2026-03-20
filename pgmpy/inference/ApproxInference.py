@@ -15,8 +15,8 @@ class ApproxInference:
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> infer = ApproxInference(model)
     """
 
@@ -139,9 +139,9 @@ class ApproxInference:
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.inference import ApproxInference
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> infer = ApproxInference(model)
         >>> infer.query(variables=["HISTORY"])  # doctest: +ELLIPSIS
         <DiscreteFactor representing phi(HISTORY:2) at 0x...>
@@ -251,10 +251,10 @@ class ApproxInference:
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.inference import ApproxInference
         >>> from pgmpy.factors.discrete import State, TabularCPD
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> infer = ApproxInference(model)
         >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
         {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}

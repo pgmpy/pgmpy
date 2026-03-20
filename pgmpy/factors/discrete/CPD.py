@@ -290,8 +290,8 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> cpd = model.get_cpds(node="SAO2")
         >>> cpd.to_csv(filename="sao2.csv")
         """
@@ -305,8 +305,8 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="insurance")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/insurance")
         >>> cpd = model.get_cpds(node="ThisCarCost")
         >>> df = cpd.to_dataframe()
         >>> df.query(

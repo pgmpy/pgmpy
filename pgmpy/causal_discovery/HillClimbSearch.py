@@ -110,8 +110,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the HillClimbSearch algorithm to learn the causal structure from data:

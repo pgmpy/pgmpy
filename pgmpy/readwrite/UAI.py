@@ -291,8 +291,8 @@ class UAIWriter:
     Examples
     --------
     >>> from pgmpy.readwrite import UAIWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
     >>> writer = UAIWriter(asia)
     >>> writer.write("asia.uai")
     """
@@ -454,8 +454,8 @@ class UAIWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import UAIWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(asia)
         >>> writer.write("asia.uai")
         """

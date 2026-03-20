@@ -192,8 +192,8 @@ class HillClimbSearch(StructureEstimator):
         Examples
         --------
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> df = model.simulate(int(1e3), seed=42)
 
         >>> # Learn the model structure using HillClimbSearch algorithm from `df`

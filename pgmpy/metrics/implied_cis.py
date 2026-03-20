@@ -35,9 +35,9 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import ImpliedCIs
-    >>> model = get_example_model("cancer")
+    >>> model = load_model("bnlearn/cancer")
     >>> df = model.simulate(int(1e3))
     >>> implied_cis = ImpliedCIs(ci_test="chi_square", show_progress=False)
     >>> implied_cis.evaluate(X=df, causal_graph=model)

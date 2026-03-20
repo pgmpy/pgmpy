@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 
 from pgmpy.base import DAG
+from pgmpy.example_models import load_model
 from pgmpy.metrics import FisherC
-from pgmpy.utils import get_example_model
 
 SEED = 42
 N_SAMPLES = 1_000
@@ -32,7 +32,7 @@ def rng():
 def models_and_data(rng):
     out = {}
     for name in ("cancer", "alarm"):
-        model = get_example_model(name)
+        model = load_model(f"bnlearn/{name}")
         out[name] = {
             "true": model,
             "random": _random_dag_with_same_nodes(model, rng),

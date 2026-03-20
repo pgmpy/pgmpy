@@ -5,10 +5,10 @@ import pytest
 from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.estimators import TreeSearch
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture
@@ -132,7 +132,7 @@ def data22():
 
 @pytest.fixture
 def alarm_df():
-    return get_example_model("alarm").simulate(int(1e4), seed=42)
+    return load_model("bnlearn/alarm").simulate(int(1e4), seed=42)
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])

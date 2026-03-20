@@ -312,8 +312,8 @@ class BIFWriter:
     Examples
     ---------
     >>> from pgmpy.readwrite import BIFWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
     >>> writer
     <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
@@ -588,9 +588,9 @@ $values
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.write(filename="asia.bif")
         """

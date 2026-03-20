@@ -82,9 +82,9 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     Simulate some data to use for causal discovery:
 
     >>> import numpy as np
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> np.random.seed(42)
-    >>> model = get_example_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the GES algorithm to learn the causal structure from data:

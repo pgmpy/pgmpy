@@ -256,8 +256,8 @@ class XMLBIFWriter:
     Examples
     --------
     >>> from pgmpy.readwrite import XMLBIFWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
     >>> writer = XMLBIFWriter(model)
     >>> writer.write("asia.xml")
 
@@ -499,8 +499,8 @@ class XMLBIFWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import XMLBIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XMLBIFWriter(model)
         >>> writer.write("asia.xml")
         """

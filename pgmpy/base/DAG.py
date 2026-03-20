@@ -1388,8 +1388,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> model.to_graphviz()  # doctest: +ELLIPSIS
         <AGraph <Swig Object of type 'Agraph_t *' at ...>>
         >>> model.draw("model.png", prog="neato")

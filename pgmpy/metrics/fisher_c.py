@@ -47,8 +47,8 @@ class FisherC(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("cancer")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/cancer")
     >>> df = model.simulate(int(1e3))
     >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False)
     >>> fisher_c(X=df, causal_graph=model)

@@ -214,9 +214,9 @@ class PC(BaseConstraintEstimator):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.estimators import PC
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> data = model.simulate(n_samples=1000, seed=42)
         >>> est = PC(data)
         >>> model_chi = est.estimate(ci_test="chi_square")

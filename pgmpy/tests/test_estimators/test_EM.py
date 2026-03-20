@@ -8,14 +8,15 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.estimators import ExpectationMaximization as EM
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
 
 
 class TestEM(unittest.TestCase):
     def setUp(self):
-        self.model1 = get_example_model("cancer")
+        self.model1 = load_model("bnlearn/cancer")
         self.data1 = self.model1.simulate(int(1e4), seed=42)
 
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
@@ -284,7 +285,7 @@ class TestEMTorch(TestEM):
     def setUp(self):
         config.set_backend("torch")
 
-        self.model1 = get_example_model("cancer")
+        self.model1 = load_model("bnlearn/cancer")
         self.data1 = self.model1.simulate(int(1e4), seed=42)
 
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
