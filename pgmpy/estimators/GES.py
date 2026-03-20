@@ -8,8 +8,8 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base import DAG, PDAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )

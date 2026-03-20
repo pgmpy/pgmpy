@@ -13,8 +13,8 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )

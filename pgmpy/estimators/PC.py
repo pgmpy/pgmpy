@@ -6,7 +6,7 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.independencies import Independencies
