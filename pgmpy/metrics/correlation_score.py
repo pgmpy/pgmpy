@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.metrics import f1_score
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.metrics import _BaseUnsupervisedMetric
 
 
@@ -110,7 +110,7 @@ class CorrelationScore(_BaseUnsupervisedMetric):
         if not callable(self.score):
             raise ValueError(f"score should be scikit-learn classification metric. Got {self.score}")
 
-        ci_test = ci_registry.get_test(test=self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         # Step 2: Create a dataframe of every 2 combination of variables
         results = []
@@ -119,8 +119,6 @@ class CorrelationScore(_BaseUnsupervisedMetric):
                 X=i,
                 Y=j,
                 Z=[],
-                data=X,
-                boolean=True,
                 significance_level=self.significance_level,
             )
             d_connected = not causal_graph.is_dconnected(start=i, end=j)

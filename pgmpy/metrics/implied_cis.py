@@ -5,7 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
 from pgmpy.metrics import _BaseUnsupervisedMetric
 
@@ -20,9 +20,9 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
 
     Parameters
     ----------
-    ci_test: fun or str
-        The function for statistical test. Can be either any of the tests in
-        pgmpy.estimators.CITests or any custom function of the same form.
+    ci_test: str or callable
+        The CI test to use for statistical testing. Can be a string name of any test
+        in :mod:`pgmpy.ci_tests` (e.g. ``"chi_square"``, ``"pearsonr"``) or a callable.
 
     show_progress: bool (default: True)
         Whether to show the progress of testing.
@@ -36,8 +36,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
-    >>> from pgmpy.metrics import implied_cis
-    >>> from pgmpy.estimators.CITests import chi_square
+    >>> from pgmpy.metrics import ImpliedCIs
     >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
     >>> implied_cis = ImpliedCIs(ci_test="chi_square", show_progress=False)
@@ -66,7 +65,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
 
     def _evaluate(self, X, causal_graph):
         cis = []
-        ci_test = ci_registry.get_test(test=self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.show_progress and config.SHOW_PROGRESS:
             comb_iter = tqdm(
@@ -79,7 +78,7 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
                 Z = list(causal_graph.minimal_dseparator(u, v))
-                test_results = ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
-                cis.append([u, v, Z, test_results[1]])
+                ci_test(X=u, Y=v, Z=Z)
+                cis.append([u, v, Z, ci_test.p_value_])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
         return cis

@@ -7,7 +7,7 @@ from scipy import stats
 from tqdm import tqdm
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
 from pgmpy.metrics import _BaseUnsupervisedMetric
 
@@ -24,9 +24,9 @@ class FisherC(_BaseUnsupervisedMetric):
 
     Parameters
     ----------
-    ci_test: function
-        The function for statistical test. Can be either any of the tests in
-        pgmpy.estimators.CITests or any custom function of the same form.
+    ci_test: str or callable
+        The CI test to use for statistical testing. Can be a string name of any test
+        in :mod:`pgmpy.ci_tests` (e.g. ``"chi_square"``, ``"pearsonr"``) or a callable.
 
     compute_rmsea: bool (default: False)
         While calculating Fisher C statistic if RMSEA value required should be
@@ -48,10 +48,9 @@ class FisherC(_BaseUnsupervisedMetric):
     Examples
     --------
     >>> from pgmpy.utils import get_example_model
-    >>> from pgmpy.estimators.CITests import chi_square
     >>> model = get_example_model("cancer")
     >>> df = model.simulate(int(1e3))
-    >>> fisher_c = FisherC(ci_test=chi_square, compute_rmsea=False)
+    >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False)
     >>> fisher_c(X=df, causal_graph=model)
     0.7504
     """
@@ -75,7 +74,7 @@ class FisherC(_BaseUnsupervisedMetric):
             raise ValueError("This test can not be performed on models with latent variables.")
 
         cis = []
-        ci_test = ci_registry.get_test(test=self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.show_progress and config.SHOW_PROGRESS:
             comb_iter = tqdm(
@@ -88,8 +87,8 @@ class FisherC(_BaseUnsupervisedMetric):
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
                 Z = set(causal_graph.predecessors(u)).union(causal_graph.predecessors(v))
-                test_results = ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
-                cis.append([u, v, Z, test_results[1]])
+                ci_test.is_independent(X=u, Y=v, Z=list(Z))
+                cis.append([u, v, Z, ci_test.p_value_])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
         cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
 

@@ -7,8 +7,8 @@ import pandas as pd
 from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.causal_discovery import _ConstraintMixin
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
 
 
 class PC(_ConstraintMixin, _BaseCausalDiscovery):
@@ -75,7 +75,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     ci_test : str or callable, default=None
         The conditional independence (CI) test to use for finding (conditional) independences in the data. This can be
-        any of the CI test implemented in :mod:`pgmpy.estimators.CITests` or a custom function that follows the
+        any of the CI test implemented in :mod:`pgmpy.ci_tests` or a custom function that follows the
         signature of the built-in CI tests.
 
         If None, the appropriate CI test will be chosen based on the data type.
@@ -221,7 +221,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         """
 
         # CI test
-        ci_test = ci_registry.get_test(self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
