@@ -430,3 +430,69 @@ class TestADMGSeparation:
         # with nodes_v filter
         assert admg.mconnected_nodes("X", nodes_v=["Y", "Z"]) == {"Y", "Z"}
         assert admg.mconnected_nodes("X", nodes_v=["Z"]) == {"Z"}
+
+
+class TestADMGCComponents:
+    """Test c-component (confounded component) extraction."""
+
+    def test_c_components_mixed_edges(self):
+        """Test c-components with both directed and bidirected edges."""
+        admg = ADMG(directed_ebunch=[("X", "Y")], bidirected_ebunch=[("X", "Z")])
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["X", "Z"], ["Y"]]
+
+    def test_c_components_no_bidirected_edges(self):
+        """Test c-components when there are no bidirected edges (each node is its own component)."""
+        admg = ADMG(directed_ebunch=[("A", "B"), ("B", "C")])
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["A"], ["B"], ["C"]]
+
+    def test_c_components_all_connected(self):
+        """Test c-components when all nodes are connected via bidirected edges."""
+        admg = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C")],
+            bidirected_ebunch=[("A", "B"), ("B", "C")],
+        )
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["A", "B", "C"]]
+
+    def test_c_components_empty_graph(self):
+        """Test c-components on an empty graph."""
+        admg = ADMG()
+        c_components = admg.get_c_components()
+
+        assert c_components == []
+
+    def test_c_components_bidirected_chain(self):
+        """Test c-components with a chain of bidirected edges."""
+        admg = ADMG(bidirected_ebunch=[("A", "B"), ("B", "C"), ("D", "E")])
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["A", "B", "C"], ["D", "E"]]
+
+    def test_c_components_isolated_nodes(self):
+        """Test c-components with isolated nodes."""
+        admg = ADMG(bidirected_ebunch=[("A", "B")])
+        admg.add_node("C")
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["A", "B"], ["C"]]
+
+    def test_c_components_multiple_separate_groups(self):
+        """Test c-components with multiple separate bidirected groups and directed edges."""
+        admg = ADMG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
+            bidirected_ebunch=[("A", "D"), ("B", "E")],
+        )
+        c_components = admg.get_c_components()
+        c_components_sorted = sorted([sorted(c) for c in c_components])
+
+        assert c_components_sorted == [["A", "D"], ["B", "E"], ["C"]]
