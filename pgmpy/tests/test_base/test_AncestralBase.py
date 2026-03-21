@@ -239,10 +239,7 @@ class TestAncestralBase:
         graph.exposures = {"B", "C"}
 
         assert graph.exposures == {"B", "C"}
-        assert (
-            "role" not in graph.nodes.get("A", {})
-            or graph.nodes["A"].get("role") != "exposures"
-        )
+        assert "role" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("role") != "exposures"
         assert "exposures" in graph.nodes["B"]["roles"]
         assert "exposures" in graph.nodes["C"]["roles"]
 
@@ -252,10 +249,7 @@ class TestAncestralBase:
         graph.outcomes = {"B", "C"}
 
         assert graph.outcomes == {"B", "C"}
-        assert (
-            "roles" not in graph.nodes.get("A", {})
-            or graph.nodes["A"].get("roles") != "outcomes"
-        )
+        assert "roles" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("roles") != "outcomes"
         assert "outcomes" in graph.nodes["B"]["roles"]
         assert "outcomes" in graph.nodes["C"]["roles"]
 

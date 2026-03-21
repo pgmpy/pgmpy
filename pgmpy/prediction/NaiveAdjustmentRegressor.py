@@ -2,8 +2,6 @@
 Naive Adjustment Regressor in sklearn Compatible Design.
 """
 
-from typing import Optional
-
 import numpy as np
 from sklearn.base import BaseEstimator, clone
 from sklearn.linear_model import LinearRegression
@@ -127,7 +125,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
     def __init__(
         self,
         causal_graph,
-        estimator: Optional[BaseEstimator] = None,
+        estimator: BaseEstimator | None = None,
     ):
         self.causal_graph = causal_graph
         self.estimator = estimator
@@ -136,7 +134,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
         self,
         X,
         y,
-        sample_weight: Optional[np.ndarray] = None,
+        sample_weight: np.ndarray | None = None,
     ):
         """
         Fit the Naive Adjustment Regressor.
@@ -175,37 +173,27 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
             )
 
         if len(outcome_vars) != 1:
-            raise ValueError(
-                f"Exactly one outcome variable must be defined. Found {len(outcome_vars)}: {outcome_vars}"
-            )
+            raise ValueError(f"Exactly one outcome variable must be defined. Found {len(outcome_vars)}: {outcome_vars}")
 
         # Step 3: Store role variables as instance attributes
         self.exposure_var_ = exposure_vars[0]
         self.outcome_var_ = outcome_vars[0]
         self.adjustment_vars_ = adjustment_vars
         self.pretreatment_vars_ = pretreatment_vars
-        self.feature_columns_fit_ = (
-            [self.exposure_var_] + adjustment_vars + pretreatment_vars
-        )
+        self.feature_columns_fit_ = [self.exposure_var_] + adjustment_vars + pretreatment_vars
 
         # Step 4: Prepare feature DataFrame
-        X_features = self._prepare_feature_df(
-            X, required_features=self.feature_columns_fit_
-        )
+        X_features = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
 
         # Step 5: Initialize base estimator
-        self.estimator_ = (
-            LinearRegression() if self.estimator is None else clone(self.estimator)
-        )
+        self.estimator_ = LinearRegression() if self.estimator is None else clone(self.estimator)
 
         # Step 6: Fit the estimator
         self.estimator_.fit(X_features, y, sample_weight=sample_weight)
 
         # Step 7: Create explanation
         adj_str = ", ".join(map(str, adjustment_vars)) if adjustment_vars else "none"
-        pre_str = (
-            ", ".join(map(str, pretreatment_vars)) if pretreatment_vars else "none"
-        )
+        pre_str = ", ".join(map(str, pretreatment_vars)) if pretreatment_vars else "none"
         self.explanation_ = (
             f"NaiveAdjustmentRegressor(exposure={self.exposure_var_}, outcome={self.outcome_var_}, "
             f"adjustment=[{adj_str}], pretreatment=[{pre_str}], "
@@ -241,9 +229,7 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
             dtype="numeric",
             reset=False,
         )
-        X_filtered = self._prepare_feature_df(
-            X, required_features=self.feature_columns_fit_
-        )
+        X_filtered = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
 
         # Step 2: Make predictions and return as 1D array
         predictions = self.estimator_.predict(X_filtered)

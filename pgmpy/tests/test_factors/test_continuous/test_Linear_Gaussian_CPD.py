@@ -17,9 +17,7 @@ def test_str():
     cpd1 = LinearGaussianCPD("x", [0.23], 0.56)
     cpd2 = LinearGaussianCPD("y", [0.67, 1, 4.56, 8], 2, ["x1", "x2", "x3"])
     assert cpd1.__str__() == "P(x) = N(0.23; 0.56)"
-    assert (
-        cpd2.__str__() == "P(y | x1, x2, x3) = N(1.0*x1 + 4.56*x2 + 8.0*x3 + 0.67; 2)"
-    )
+    assert cpd2.__str__() == "P(y | x1, x2, x3) = N(1.0*x1 + 4.56*x2 + 8.0*x3 + 0.67; 2)"
 
 
 def test_get_random():
