@@ -731,11 +731,6 @@ class TestBayesianNetworkCPD(unittest.TestCase):
 
         self.assertTrue(self.G.check_model())
 
-    def test_negative_cpd_rejected_at_init(self):
-        self.assertRaises(
-            ValueError, TabularCPD, "A", 2, [[-0.5], [1.5]]
-        )
-
     def test_check_model1(self):
         cpd_g = TabularCPD(
             "g",

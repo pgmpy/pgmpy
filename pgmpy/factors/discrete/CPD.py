@@ -47,11 +47,6 @@ class TabularCPD(DiscreteFactor):
         match the order in the values array. If state_names is not specified,
         auto-assigns state names starting from 0.
 
-    Raises
-    ------
-    ValueError
-        If any value in ``values`` is negative.
-
     Examples
     --------
     For a distribution of P(grade|diff, intel)
