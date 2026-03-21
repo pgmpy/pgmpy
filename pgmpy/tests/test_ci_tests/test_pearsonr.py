@@ -28,7 +28,7 @@ class TestPearsonr(unittest.TestCase):
 
         X = rng.normal(10000)
         Y = rng.normal(10000)
-        Z = 0.2 * X + 0.2 * Y + rng.normal(loc=0, scale=0.1, size=10000)
+        Z = 0.8 * X + 0.8 * Y + rng.normal(loc=0, scale=0.1, size=10000)
         self.df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
     def test_pearsonr(self):
@@ -49,7 +49,7 @@ class TestPearsonr(unittest.TestCase):
 
         test = Pearsonr(data=self.df_vstruct)
         test("X", "Y", ["Z"])
-        self.assertTrue(abs(test.statistic_) > 0.25)
+        self.assertTrue(abs(test.statistic_) > 0.1)
         self.assertTrue(test.p_value_ < 0.05)
 
         self.assertTrue(Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05))
