@@ -38,3 +38,4 @@ class TestExpertKnowledge(unittest.TestCase):
         self.assertIn("('A', 'B')", str(ek))
         self.assertIn("('B', 'C')", str(ek))
         self.assertIn("Temporal Order: [['A'], ['B']]", str(ek))
+        
