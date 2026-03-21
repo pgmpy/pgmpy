@@ -489,8 +489,8 @@ class CausalInference:
         ...     err_corr=[("W", "Y")],
         ... )
         >>> inference = CausalInference(model)
-        >>> inference.get_ivs("X", "Y")
-        set()
+        >>> inference.get_conditional_ivs("X", "Y")
+        [('I', {'W'})]
         """
         if not scaling_indicators:
             scaling_indicators = self.get_scaling_indicators()
@@ -739,8 +739,8 @@ class CausalInference:
         ...     rng.random(size=(1000, 4)), columns=["X", "A", "B", "Y"]
         ... )
         >>> inference = CausalInference(model=game1)
-        >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
-        0.0011382446151154688
+        >>> round(inference.estimate_ate("X", "Y", data=data, estimator_type="linear"), 15)
+        0.001138244615115
         """
         valid_estimators = ["linear"]
         if estimator_type not in valid_estimators:
