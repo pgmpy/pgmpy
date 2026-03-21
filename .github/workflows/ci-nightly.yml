@@ -96,8 +96,10 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $graphviz_root = Split-Path (Split-Path (Get-Command dot).Source)
-          python -m pip install --config-settings=--global-option=build_ext --config-settings="--global-option=-I$graphviz_root\include" --config-settings="--global-option=-L$graphviz_root\lib" pygraphviz
+          $graphviz_root = "C:\Program Files\Graphviz"
+          $env:INCLUDE = "$graphviz_root\include;$env:INCLUDE"
+          $env:LIB = "$graphviz_root\lib;$env:LIB"
+          python -m pip install pygraphviz
 
       - name: Install pygraphviz (macOS)
         if: matrix.os == 'macOS-latest'
