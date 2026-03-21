@@ -110,9 +110,7 @@ class Adjustment(_BaseIdentification):
         model = causal_graph if inplace else causal_graph.copy()
         edges_to_remove = []
         for source in causal_graph.get_role("exposures"):
-            paths = nx.all_simple_edge_paths(
-                causal_graph, source, causal_graph.get_role("outcomes")
-            )
+            paths = nx.all_simple_edge_paths(causal_graph, source, causal_graph.get_role("outcomes"))
             for path in paths:
                 edges_to_remove.append(path[0])
         model.remove_edges_from(edges_to_remove)
@@ -139,20 +137,14 @@ class Adjustment(_BaseIdentification):
         #         proper backdoor graph and compute the adjustment set.
         if self.variant == "minimal":
             if len(causal_graph.get_role("exposures")) != 1:
-                raise NotImplementedError(
-                    "Backdoor identification is only implemented for single exposure variable."
-                )
+                raise NotImplementedError("Backdoor identification is only implemented for single exposure variable.")
             if len(causal_graph.get_role("outcomes")) != 1:
-                raise NotImplementedError(
-                    "Backdoor identification is only implemented for single outcome variable."
-                )
+                raise NotImplementedError("Backdoor identification is only implemented for single outcome variable.")
 
             exposure = causal_graph.get_role("exposures")[0]
             outcome = causal_graph.get_role("outcomes")[0]
 
-            backdoor_graph = self._get_proper_backdoor_graph(
-                causal_graph, inplace=False
-            )
+            backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
             adjustment_set = backdoor_graph.minimal_dseparator(exposure, outcome)
 
             if adjustment_set is None:
@@ -166,9 +158,7 @@ class Adjustment(_BaseIdentification):
         # Step 2: If variant = "minimal_variance", use the algorithm from [2].
         #         O(X, Y, G) = pa(cn(X, Y, G), G) \ forb(X, Y, G)
         elif self.variant == "minimal_variance":
-            raise NotImplementedError(
-                "Backdoor identification with minimal variance is not implemented yet."
-            )
+            raise NotImplementedError("Backdoor identification with minimal variance is not implemented yet.")
 
         # Step 3: If variant = "all", iterate over all possible sets of adjustment
         #         variables, and return all that are valid.
@@ -178,17 +168,13 @@ class Adjustment(_BaseIdentification):
 
             ancestors = causal_graph.get_ancestors([exposure, outcome])
             # Remove any variables on the path from exposure to outcome (these cannot be in the adjustment set)
-            ancestors -= set(
-                itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome))
-            )
+            ancestors -= set(itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome)))
             ancestors -= {exposure, outcome}
             ancestors -= set(causal_graph.latents)
 
             valid_adj_graphs = []
             for s in _powerset(ancestors):
-                adj_causal_graph = causal_graph.with_role(
-                    "adjustment", s, inplace=False
-                )
+                adj_causal_graph = causal_graph.with_role("adjustment", s, inplace=False)
                 if self.validate(causal_graph=adj_causal_graph):
                     valid_adj_graphs.append(adj_causal_graph)
 
@@ -226,11 +212,7 @@ class Adjustment(_BaseIdentification):
         for pred_var in predecessors:
             outcome_d_seps = []
             for outcome_var in outcome:
-                outcome_d_seps.append(
-                    causal_graph.is_dconnected(
-                        pred_var, outcome_var, observed=conditional_vars
-                    )
-                )
+                outcome_d_seps.append(causal_graph.is_dconnected(pred_var, outcome_var, observed=conditional_vars))
             parents_d_sep.append(not any(outcome_d_seps))
 
         return all(parents_d_sep)

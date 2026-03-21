@@ -2,7 +2,8 @@
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import BDeu, ExpertKnowledge, HillClimbSearch, StructureEstimator
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.utils.mathext import powerset
 
@@ -31,7 +32,7 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
-        super(MmhcEstimator, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
@@ -86,13 +87,9 @@ class MmhcEstimator(StructureEstimator):
         skel = self.mmpc(significance_level)
         hc = HillClimbSearch(self.data)
 
-        possible_edges = nx.complete_graph(
-            n=self.state_names.keys(), create_using=nx.Graph
-        ).edges()
+        possible_edges = nx.complete_graph(n=self.state_names.keys(), create_using=nx.Graph).edges()
 
-        expert_knowledge = ExpertKnowledge(
-            forbidden_edges=possible_edges - skel.to_directed().edges()
-        )
+        expert_knowledge = ExpertKnowledge(forbidden_edges=possible_edges - skel.to_directed().edges())
 
         model = hc.estimate(
             scoring_method=scoring_method,
@@ -187,9 +184,7 @@ class MmhcEstimator(StructureEstimator):
 
             # Forward Phase
             while True:
-                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(
-                    node, neighbors[node]
-                )
+                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(node, neighbors[node])
                 if new_neighbor_min_assoc > 0:
                     neighbors[node].append(new_neighbor)
                 else:

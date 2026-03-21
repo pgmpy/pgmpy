@@ -141,9 +141,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             ...
         NotImplementedError: Use add_directed_edge or add_bidirected_edge to add edges.
         """
-        raise NotImplementedError(
-            "Use add_directed_edge or add_bidirected_edge to add edges."
-        )
+        raise NotImplementedError("Use add_directed_edge or add_bidirected_edge to add edges.")
 
     def get_directed_parents(self, nodes):
         """
@@ -213,13 +211,9 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             # Get neighbors and check for bidirected edges
             for neighbor in super().neighbors(node):
                 if (
-                    self.has_edge(node, neighbor)
-                    and self.get_edge_data(node, neighbor, 0).get("type")
-                    == "bidirected"
+                    self.has_edge(node, neighbor) and self.get_edge_data(node, neighbor, 0).get("type") == "bidirected"
                 ) or (
-                    self.has_edge(neighbor, node)
-                    and self.get_edge_data(neighbor, node, 0).get("type")
-                    == "bidirected"
+                    self.has_edge(neighbor, node) and self.get_edge_data(neighbor, node, 0).get("type") == "bidirected"
                 ):
                     bidirected_parents.add(neighbor)
 
@@ -290,13 +284,9 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             for neighbor in super().neighbors(node):
                 # Check if the edge to/from the neighbor is bidirected
                 if (
-                    self.has_edge(node, neighbor)
-                    and self.get_edge_data(node, neighbor, 0).get("type")
-                    == "bidirected"
+                    self.has_edge(node, neighbor) and self.get_edge_data(node, neighbor, 0).get("type") == "bidirected"
                 ) or (
-                    self.has_edge(neighbor, node)
-                    and self.get_edge_data(neighbor, node, 0).get("type")
-                    == "bidirected"
+                    self.has_edge(neighbor, node) and self.get_edge_data(neighbor, node, 0).get("type") == "bidirected"
                 ):
                     spouses.add(neighbor)
         return spouses
@@ -414,12 +404,10 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
                 for neighbor in super().neighbors(currentNode):
                     if (
                         self.has_edge(currentNode, neighbor)
-                        and self.get_edge_data(currentNode, neighbor, 0).get("type")
-                        == "bidirected"
+                        and self.get_edge_data(currentNode, neighbor, 0).get("type") == "bidirected"
                     ) or (
                         self.has_edge(neighbor, currentNode)
-                        and self.get_edge_data(neighbor, currentNode, 0).get("type")
-                        == "bidirected"
+                        and self.get_edge_data(neighbor, currentNode, 0).get("type") == "bidirected"
                     ):
                         if neighbor not in visited:
                             visited.add(neighbor)
@@ -427,12 +415,10 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
                 for predecessor in super().predecessors(currentNode):
                     if (
                         self.has_edge(currentNode, predecessor)
-                        and self.get_edge_data(currentNode, predecessor, 0).get("type")
-                        == "bidirected"
+                        and self.get_edge_data(currentNode, predecessor, 0).get("type") == "bidirected"
                     ) or (
                         self.has_edge(predecessor, currentNode)
-                        and self.get_edge_data(predecessor, currentNode, 0).get("type")
-                        == "bidirected"
+                        and self.get_edge_data(predecessor, currentNode, 0).get("type") == "bidirected"
                     ):
                         if predecessor not in visited:
                             visited.add(predecessor)
@@ -485,9 +471,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
         # Add directed edges from the original graph that have both endpoints in nodes_set
         for u, v, key, data in self.edges(keys=True, data=True):
             if data.get("type") == "directed" and u in nodes_set and v in nodes_set:
-                new_admg.add_directed_edges(
-                    [(u, v)]
-                )  # Use add_directed_edges to maintain cycle check
+                new_admg.add_directed_edges([(u, v)])  # Use add_directed_edges to maintain cycle check
 
         # Add bidirected edges from the original graph that have both endpoints in nodes_set
         processed_bidirected_pairs = set()
@@ -501,9 +485,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
                     ) not in processed_bidirected_pairs:
                         new_admg.add_bidirected_edges([(u, v)])
                         processed_bidirected_pairs.add((u, v))
-                        processed_bidirected_pairs.add(
-                            (v, u)
-                        )  # Mark both directions as processed
+                        processed_bidirected_pairs.add((v, u))  # Mark both directions as processed
 
         return new_admg
 
@@ -729,9 +711,7 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             active_trail = dag.active_trail_nodes(node, observed=conditional_set)
             # active_trail_nodes returns a dict {node: set_of_active_nodes}
             for active_nodes in active_trail.values():
-                m_connected_set.update(
-                    {n for n in active_nodes if not str(n).startswith("L_")}
-                )
+                m_connected_set.update({n for n in active_nodes if not str(n).startswith("L_")})
 
         if nodes_v is not None:
             nodes_v_set = {nodes_v} if isinstance(nodes_v, str) else set(nodes_v)
@@ -780,9 +760,6 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
 
         # Check edges type more details ('directed' or 'bidirected').
         for u, v in self.edges():
-            if (
-                self.get_edge_data(u, v, 0)["type"]
-                != other.get_edge_data(u, v, 0)["type"]
-            ):
+            if self.get_edge_data(u, v, 0)["type"] != other.get_edge_data(u, v, 0)["type"]:
                 return False
         return True

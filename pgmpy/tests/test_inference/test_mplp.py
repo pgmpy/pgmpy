@@ -8,9 +8,7 @@ from pgmpy.readwrite import UAIReader
 
 class TestMplp(unittest.TestCase):
     def setUp(self):
-        reader_file = UAIReader(
-            "pgmpy/tests/test_readwrite/testdata/grid4x4_with_triplets.uai"
-        )
+        reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4_with_triplets.uai")
         self.markov_model = reader_file.get_model()
 
         for factor in self.markov_model.factors:

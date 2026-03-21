@@ -7,9 +7,7 @@ from pgmpy.estimators import MmhcEstimator
 
 @pytest.fixture
 def mmhc_estimator():
-    data = pd.DataFrame(
-        np.random.randint(0, 2, size=(int(1e5), 3)), columns=list("XYZ")
-    )
+    data = pd.DataFrame(np.random.randint(0, 2, size=(int(1e5), 3)), columns=list("XYZ"))
     data["sum"] = data.sum(axis=1)
     est = MmhcEstimator(data)
     return est

@@ -27,15 +27,9 @@ def eq_assertions():
 @pytest.fixture
 def independencies():
     return {
-        "ind3": Independencies(
-            ["a", ["b", "c", "d"], ["e", "f", "g"]], ["c", ["d", "e", "f"], ["g", "h"]]
-        ),
-        "ind4": Independencies(
-            [["f", "d", "e"], "c", ["h", "g"]], [["b", "c", "d"], "a", ["f", "g", "e"]]
-        ),
-        "ind5": Independencies(
-            ["a", ["b", "c", "d"], ["e", "f", "g"]], ["c", ["d", "e", "f"], "g"]
-        ),
+        "ind3": Independencies(["a", ["b", "c", "d"], ["e", "f", "g"]], ["c", ["d", "e", "f"], ["g", "h"]]),
+        "ind4": Independencies([["f", "d", "e"], "c", ["h", "g"]], [["b", "c", "d"], "a", ["f", "g", "e"]]),
+        "ind5": Independencies(["a", ["b", "c", "d"], ["e", "f", "g"]], ["c", ["d", "e", "f"], "g"]),
     }
 
 
@@ -150,15 +144,9 @@ class TestIndependencies:
             independencies["ind4"],
             independencies["ind5"],
         )
-        assert ind3.get_all_variables() == frozenset(
-            ("a", "b", "c", "d", "e", "f", "g", "h")
-        )
-        assert ind4.get_all_variables() == frozenset(
-            ("f", "d", "e", "c", "h", "g", "b", "c", "a")
-        )
-        assert ind5.get_all_variables() == frozenset(
-            ("a", "b", "c", "d", "e", "f", "g")
-        )
+        assert ind3.get_all_variables() == frozenset(("a", "b", "c", "d", "e", "f", "g", "h"))
+        assert ind4.get_all_variables() == frozenset(("f", "d", "e", "c", "h", "g", "b", "c", "a"))
+        assert ind5.get_all_variables() == frozenset(("a", "b", "c", "d", "e", "f", "g"))
 
     def test_closure(self):
         ind1 = Independencies(("A", ["B", "C"], "D"))

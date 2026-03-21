@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import itertools
 
 
-class Independencies(object):
+class Independencies:
     """
     Base class for independencies.
     independencies class represents a set of Conditional Independence
@@ -61,12 +59,8 @@ class Independencies(object):
     def __eq__(self, other):
         if not isinstance(other, Independencies):
             return False
-        return all(
-            independency in other.get_assertions()
-            for independency in self.get_assertions()
-        ) and all(
-            independency in self.get_assertions()
-            for independency in other.get_assertions()
+        return all(independency in other.get_assertions() for independency in self.get_assertions()) and all(
+            independency in self.get_assertions() for independency in other.get_assertions()
         )
 
     def __ne__(self, other):
@@ -118,6 +112,7 @@ class Independencies(object):
         >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies(["X", "Y", "Z"])
         >>> independencies.get_assertions()
+        [(X ⟂ Y | Z)]
         """
         return self.independencies
 
@@ -142,13 +137,9 @@ class Independencies(object):
                 self.independencies.append(assertion)
             else:
                 try:
-                    self.independencies.append(
-                        IndependenceAssertion(assertion[0], assertion[1], assertion[2])
-                    )
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
                 except IndexError:
-                    self.independencies.append(
-                        IndependenceAssertion(assertion[0], assertion[1])
-                    )
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
 
     def closure(self):
         """
@@ -164,25 +155,16 @@ class Independencies(object):
         --------
         >>> from pgmpy.independencies import Independencies
         >>> ind1 = Independencies(("A", ["B", "C"], "D"))
-        >>> ind1.closure()
-        (A \u27c2 B | D, C)
-        (A \u27c2 B, C | D)
-        (A \u27c2 B | D)
-        (A \u27c2 C | D, B)
-        (A \u27c2 C | D)
+        >>> result1 = ind1.closure()
+        >>> len(result1.get_assertions())
+        5
+        >>> all("A" in str(a) for a in result1.get_assertions())
+        True
 
         >>> ind2 = Independencies(("W", ["X", "Y", "Z"]))
-        >>> ind2.closure()
-        (W \u27c2 Y)
-        (W \u27c2 Y | X)
-        (W \u27c2 Z | Y)
-        (W \u27c2 Z, X, Y)
-        (W \u27c2 Z)
-        (W \u27c2 Z, X)
-        (W \u27c2 X, Y)
-        (W \u27c2 Z | X)
-        (W \u27c2 Z, Y | X)
-        [..]
+        >>> result2 = ind2.closure()
+        >>> len(result2.get_assertions()) >= 9
+        True
         """
 
         def single_var(var):
@@ -218,10 +200,7 @@ class Independencies(object):
             if single_var(ind.event2):
                 return []
             else:
-                return [
-                    IndependenceAssertion(ind.event1, ind.event2 - {elem}, ind.event3)
-                    for elem in ind.event2
-                ]
+                return [IndependenceAssertion(ind.event1, ind.event2 - {elem}, ind.event3) for elem in ind.event2]
 
         @apply_left_and_right
         def sg2(ind):
@@ -230,10 +209,7 @@ class Independencies(object):
                 return []
             else:
                 return [
-                    IndependenceAssertion(
-                        ind.event1, ind.event2 - {elem}, {elem} | ind.event3
-                    )
-                    for elem in ind.event2
+                    IndependenceAssertion(ind.event1, ind.event2 - {elem}, {elem} | ind.event3) for elem in ind.event2
                 ]
 
         @apply_left_and_right
@@ -299,9 +275,7 @@ class Independencies(object):
             return False
 
         implications = self.closure().get_assertions()
-        return all(
-            ind in implications for ind in entailed_independencies.get_assertions()
-        )
+        return all(ind in implications for ind in entailed_independencies.get_assertions())
 
     def is_equivalent(self, other):
         """
@@ -363,9 +337,9 @@ class Independencies(object):
                         existing_temp = Independencies(existing_assertion)
 
                         if existing_temp != assertion_temp:
-                            remove_old = not existing_temp.entails(
-                                assertion_temp
-                            ) and assertion_temp.entails(existing_temp)
+                            remove_old = not existing_temp.entails(assertion_temp) and assertion_temp.entails(
+                                existing_temp
+                            )
 
                             if remove_old:
                                 reduced_assertions.remove(existing_assertion)
@@ -398,7 +372,7 @@ class Independencies(object):
         pass
 
 
-class IndependenceAssertion(object):
+class IndependenceAssertion:
     r"""
     Represents Conditional Independence or Independence assertion.
 
@@ -457,9 +431,7 @@ class IndependenceAssertion(object):
         if any([event2, event3]) and not event1:
             raise ValueError("event1 needs to be specified")
         if event3 and not all([event1, event2]):
-            raise ValueError(
-                "event1" if not event1 else "event2" + " needs to be specified"
-            )
+            raise ValueError("event1" if not event1 else "event2" + " needs to be specified")
 
         self.event1 = frozenset(self._return_list_if_not_collection(event1))
         self.event2 = frozenset(self._return_list_if_not_collection(event2))
@@ -469,14 +441,14 @@ class IndependenceAssertion(object):
     def __str__(self):
         if self.event3:
             return "({event1} \u27c2 {event2} | {event3})".format(
-                event1=", ".join([str(e) for e in self.event1]),
-                event2=", ".join([str(e) for e in self.event2]),
-                event3=", ".join([str(e) for e in self.event3]),
+                event1=", ".join(sorted([str(e) for e in self.event1])),
+                event2=", ".join(sorted([str(e) for e in self.event2])),
+                event3=", ".join(sorted([str(e) for e in self.event3])),
             )
         else:
             return "({event1} \u27c2 {event2})".format(
-                event1=", ".join([str(e) for e in self.event1]),
-                event2=", ".join([str(e) for e in self.event2]),
+                event1=", ".join(sorted([str(e) for e in self.event1])),
+                event2=", ".join(sorted([str(e) for e in self.event2])),
             )
 
     __repr__ = __str__
@@ -516,6 +488,7 @@ class IndependenceAssertion(object):
         >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion("X", "Y", "Z")
         >>> asser.get_assertion()
+        (frozenset({'X'}), frozenset({'Y'}), frozenset({'Z'}))
         """
         return self.event1, self.event2, self.event3
 

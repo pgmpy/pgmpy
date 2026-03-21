@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
 
 from pgmpy.base import DAG
 
@@ -117,12 +117,12 @@ class SimpleCausalModel(DAG):
 
     def __init__(
         self,
-        exposures: Union[str, int, Iterable[Union[str, int]]],
-        outcomes: Union[str, int, Iterable[Union[str, int]]],
-        confounders: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        mediators: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        instruments: Optional[Union[str, int, Iterable[Union[str, int]]]] = None,
-        latents: Optional[Iterable[str]] = None,
+        exposures: str | int | Iterable[str | int],
+        outcomes: str | int | Iterable[str | int],
+        confounders: str | int | Iterable[str | int] | None = None,
+        mediators: str | int | Iterable[str | int] | None = None,
+        instruments: str | int | Iterable[str | int] | None = None,
+        latents: Iterable[str] | None = None,
     ):
         exposures = self._to_list(exposures, "exposures")
         outcomes = self._to_list(outcomes, "outcomes")
@@ -161,7 +161,5 @@ class SimpleCausalModel(DAG):
         latents_set = set(latents) if latents else set()
         for latent in latents_set:
             if latent not in self.nodes():
-                raise ValueError(
-                    f"Latent variable '{latent}' is not in the graph nodes."
-                )
+                raise ValueError(f"Latent variable '{latent}' is not in the graph nodes.")
         self.latents = latents_set

@@ -24,10 +24,7 @@ class ContraceptiveMethod(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-        "real/contraceptive-method/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/contraceptive-method/"
 
     data_url = base_url + "data/contraceptive-method.continuous.txt"
     ground_truth_url = None

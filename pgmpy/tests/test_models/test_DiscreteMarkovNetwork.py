@@ -20,9 +20,7 @@ class TestMarkovNetworkCreation(unittest.TestCase):
     def test_class_init_with_data_string(self):
         self.g = DiscreteMarkovNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]])
 
     def test_class_init_with_data_nonstring(self):
         self.g = DiscreteMarkovNetwork([(1, 2), (2, 3)])
@@ -47,9 +45,7 @@ class TestMarkovNetworkCreation(unittest.TestCase):
         self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["d", "e"]])
         self.graph.add_nodes_from(["a", "b", "c"])
         self.graph.add_edge("a", "b")
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["d", "e"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["d", "e"]])
 
     def test_add_edge_nonstring(self):
         self.graph.add_edge(1, 2)
@@ -60,9 +56,7 @@ class TestMarkovNetworkCreation(unittest.TestCase):
     def test_add_edges_from_string(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]])
         self.graph.add_nodes_from(["d", "e", "f"])
         self.graph.add_edges_from([("d", "e"), ("e", "f")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d", "e", "f"])
@@ -103,15 +97,11 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["c", "d"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
-        self.assertDictEqual(
-            self.graph.get_cardinality(), {"d": 2, "a": 2, "b": 2, "c": 1}
-        )
+        self.assertDictEqual(self.graph.get_cardinality(), {"d": 2, "a": 2, "b": 2, "c": 1})
 
         phi3 = DiscreteFactor(["d", "a"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi3)
-        self.assertDictEqual(
-            self.graph.get_cardinality(), {"d": 1, "c": 1, "b": 2, "a": 2}
-        )
+        self.assertDictEqual(self.graph.get_cardinality(), {"d": 1, "c": 1, "b": 2, "a": 2})
 
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
@@ -260,16 +250,11 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
     def test_junction_tree_single_clique(self):
         self.graph.add_edges_from([("x1", "x2"), ("x2", "x3"), ("x1", "x3")])
-        phi = [
-            DiscreteFactor(edge, [2, 2], np.random.rand(4))
-            for edge in self.graph.edges()
-        ]
+        phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*phi)
 
         junction_tree = self.graph.to_junction_tree()
-        self.assertListEqual(
-            hf.recursive_sorted(junction_tree.nodes()), [["x1", "x2", "x3"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(junction_tree.nodes()), [["x1", "x2", "x3"]])
         factors = junction_tree.get_factors()
         self.assertEqual(factors[0], factor_product(*phi))
 
@@ -297,12 +282,9 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         # Verify that the clique potential was created correctly
         clique_factors = junction_tree.get_factors()
         self.assertEqual(len(clique_factors), 1)
-        clique_potential = clique_factors[0]
 
         # Verify the junction tree structure
-        self.assertListEqual(
-            hf.recursive_sorted(junction_tree.nodes()), [["A", "B", "C"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(junction_tree.nodes()), [["A", "B", "C"]])
         self.assertEqual(len(junction_tree.edges()), 0)  # Single clique means no edges
 
     def test_markov_blanket(self):
@@ -504,10 +486,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
     def test_cardinality_mismatch_raises_error(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        factor_list = [
-            DiscreteFactor(edge, [2, 2], np.random.rand(4))
-            for edge in self.graph.edges()
-        ]
+        factor_list = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*factor_list)
         self.graph.add_factors(DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6)))
         self.assertRaises(ValueError, self.graph.triangulate)

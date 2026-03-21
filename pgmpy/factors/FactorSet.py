@@ -3,7 +3,7 @@ from functools import reduce
 from pgmpy.factors.base import BaseFactor
 
 
-class FactorSet(object):
+class FactorSet:
     r"""
     Base class of *DiscreteFactor Sets*.
 
@@ -34,7 +34,7 @@ class FactorSet(object):
         ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
         ... )
         >>> factor_set = FactorSet(phi1, phi2)
-        >>> factor_set
+        >>> factor_set  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         >>> print(factor_set)  # doctest: +SKIP
         {<DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x...>,
@@ -42,7 +42,7 @@ class FactorSet(object):
         """
         if not all(isinstance(phi, BaseFactor) for phi in factors_list):
             raise TypeError("Input parameters must be child classes of BaseFactor")
-        self.factors = set([factor.copy() for factor in factors_list])
+        self.factors = {factor.copy() for factor in factors_list}
 
     def add_factors(self, *factors):
         """
@@ -108,7 +108,7 @@ class FactorSet(object):
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b250>,
              <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5b150>])
         >>> factor_set1.remove_factors(phi1, phi2)
-        >>> print(factor_set1)
+        >>> print(factor_set1)  # doctest: +ELLIPSIS
         {<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x...>}
         """
         for factor in factors:
@@ -251,9 +251,7 @@ class FactorSet(object):
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
 
-        factor_set.add_factors(
-            *[phi.identity_factor() / phi for phi in factor_set1.factors]
-        )
+        factor_set.add_factors(*[phi.identity_factor() / phi for phi in factor_set1.factors])
 
         if not inplace:
             return factor_set
@@ -295,21 +293,15 @@ class FactorSet(object):
 
         factor_set = self if inplace else self.copy()
 
-        factors_to_be_marginalized = set(
-            filter(lambda x: set(x.scope()).intersection(variables), factor_set.factors)
-        )
+        factors_to_be_marginalized = set(filter(lambda x: set(x.scope()).intersection(variables), factor_set.factors))
 
         for factor in factors_to_be_marginalized:
-            variables_to_be_marginalized = list(
-                set(factor.scope()).intersection(variables)
-            )
+            variables_to_be_marginalized = list(set(factor.scope()).intersection(variables))
             if inplace:
                 factor.marginalize(variables_to_be_marginalized, inplace=True)
             else:
                 factor_set.remove_factors(factor)
-                factor_set.add_factors(
-                    factor.marginalize(variables_to_be_marginalized, inplace=False)
-                )
+                factor_set.add_factors(factor.marginalize(variables_to_be_marginalized, inplace=False))
 
         if not inplace:
             return factor_set
@@ -338,10 +330,10 @@ class FactorSet(object):
         ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
         ... )
         >>> factor_set = FactorSet(phi1, phi2)
-        >>> factor_set
+        >>> factor_set  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         >>> factor_set_copy = factor_set.copy()
-        >>> factor_set_copy
+        >>> factor_set_copy  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         """
         # No need to have copies of factors as argument because __init__ method creates copies.

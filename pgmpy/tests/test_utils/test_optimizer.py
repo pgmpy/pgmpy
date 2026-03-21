@@ -17,12 +17,8 @@ class TestOptimize(unittest.TestCase):
     """
 
     def setUp(self):
-        self.A = torch.randn(
-            5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
-        self.B = torch.ones(
-            5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-        )
+        self.A = torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+        self.B = torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
 
     def loss_fn(self, params, loss_params):
         A = params["A"]
@@ -34,12 +30,8 @@ class TestOptimize(unittest.TestCase):
     def test_optimize(self):
         # TODO: Add tests for other optimizers
         for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
-            A = torch.randn(
-                5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-            )
-            B = torch.ones(
-                5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-            )
+            A = torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+            B = torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
             params = optimize(
                 self.loss_fn,
                 params={"A": A},
