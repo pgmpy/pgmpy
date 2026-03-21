@@ -73,9 +73,7 @@ class DiscreteMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(
-            string=gzip.decompress(cls._get_raw_data()).decode("utf-8")
-        ).get_model()
+        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).get_model()
 
 
 class BIFMixin:
@@ -171,10 +169,8 @@ def load_model(name: str):
         return_names=False,
     )
 
-    if target_model is None:
-        raise ValueError(
-            f"Model with name '{name}' not found. Please use list_models() to see available datasets."
-        )
+    if not target_model:
+        raise ValueError(f"Model with name '{name}' not found. Please use list_models() to see available datasets.")
 
     return target_model[0].load_model_object()
 
@@ -208,6 +204,13 @@ def list_models(**filter_tags) -> list[str]:
     >>> list_models(is_parameterized=False)
     ['dagitty/acid_1996', ...., ]
     """
+    valid_tags = set(_BaseExampleModel._tags.keys())
+
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
+        raise ValueError(
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
+        )
+
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
@@ -215,10 +218,6 @@ def list_models(**filter_tags) -> list[str]:
         filter_tags=filter_tags,
     )
 
-    model_names = [
-        cls.get_class_tag("name")
-        for cls in all_models
-        if cls.get_class_tag("name") is not None
-    ]
+    model_names = [cls.get_class_tag("name") for cls in all_models if cls.get_class_tag("name") is not None]
 
     return sorted(model_names)

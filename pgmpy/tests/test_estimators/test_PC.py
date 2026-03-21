@@ -8,10 +8,10 @@ from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import PC, ExpertKnowledge
+from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture(autouse=True)
@@ -69,9 +69,7 @@ def test_build_skeleton_fake_ci(estimator, variant):
 
 @pytest.mark.parametrize("variant", ["orig", "stable"])
 def test_build_skeleton_max_cond_vars_0(estimator, variant):
-    skel, _ = estimator.build_skeleton(
-        ci_test=fake_ci_t, variant=variant, max_cond_vars=0
-    )
+    skel, _ = estimator.build_skeleton(ci_test=fake_ci_t, variant=variant, max_cond_vars=0)
     expected_edges = {("A", "B"), ("A", "C"), ("A", "D")}
     for u, v in skel.edges():
         assert (u, v) in expected_edges or (v, u) in expected_edges
@@ -137,7 +135,7 @@ def test_build_skeleton_from_model_ind(variant):
 
 
 @pytest.mark.parametrize(
-    "skel,sep_sets,expected_edges",
+    ("skel", "sep_sets", "expected_edges"),
     [
         (
             nx.Graph([("A", "D"), ("A", "C"), ("B", "C")]),
@@ -221,10 +219,7 @@ def test_estimate_dag_from_model(variant):
     )
     expected_edges_1 = set(model.edges())
     expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
-    assert (
-        set(estimated_model.edges()) == expected_edges_1
-        or set(estimated_model.edges()) == expected_edges_2
-    )
+    assert set(estimated_model.edges()) == expected_edges_1 or set(estimated_model.edges()) == expected_edges_2
 
 
 @pytest.fixture
@@ -298,9 +293,7 @@ def test_build_skeleton_fake_ci_discrete(variant):
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
-@pytest.mark.parametrize(
-    "ci_test", ["g_sq", "log_likelihood", "modified_log_likelihood", "power_divergence"]
-)
+@pytest.mark.parametrize("ci_test", ["g_sq", "log_likelihood", "modified_log_likelihood", "power_divergence"])
 def test_build_skeleton_ci_tests(discrete_data, variant, ci_test):
     discrete_data.estimate(
         variant=variant,
@@ -449,32 +442,36 @@ def test_build_dag_continuous(ci_test, variant):
 
 
 def test_pc_alarm():
-    alarm_model = get_example_model("alarm")
+    alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(data)
     est.estimate(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
 
 
 def test_pc_asia(caplog):
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(data)
-    with caplog.at_level(logging.WARNING, logger="pgmpy"):
-        est.estimate(
-            variant="stable",
-            max_cond_vars=4,
-            expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
-            n_jobs=2,
-            show_progress=False,
-        )
+    pgmpy_logger = logging.getLogger("pgmpy")
+    pgmpy_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.WARNING, logger="pgmpy"):
+            est.estimate(
+                variant="stable",
+                max_cond_vars=4,
+                expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
+                n_jobs=2,
+                show_progress=False,
+            )
+    finally:
+        pgmpy_logger.removeHandler(caplog.handler)
     assert (
-        "Specified expert knowledge conflicts with learned structure."
-        " Ignoring edge xray->either from required edges"
+        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
     ) in caplog.text
 
 
 def test_pc_asia_expert():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(data)
     pdag = est.estimate(
@@ -501,7 +498,7 @@ def test_pc_asia_expert():
 
 
 def test_temporal_pc_cancer():
-    cancer_model = get_example_model("cancer")
+    cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(n_samples=int(5e4), seed=42)
     est = PC(data)
     background = ExpertKnowledge(
@@ -558,7 +555,7 @@ def test_temporal_pc_sachs():
         ("Akt", "Erk"),
     }
 
-    model = get_example_model("sachs")
+    model = load_model("bnlearn/sachs")
     df = model.simulate(int(1e3))
 
     expert = ExpertKnowledge(temporal_order=temporal_order)

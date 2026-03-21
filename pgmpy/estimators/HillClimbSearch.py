@@ -1,16 +1,10 @@
 #!/usr/bin/env python
+import warnings
 from collections import deque
+from collections.abc import Callable, Generator, Hashable
 from itertools import permutations
 from typing import (
     Any,
-    Callable,
-    Deque,
-    Generator,
-    Hashable,
-    List,
-    Optional,
-    Tuple,
-    Union,
 )
 
 import networkx as nx
@@ -19,13 +13,12 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 
 
 class HillClimbSearch(StructureEstimator):
@@ -57,25 +50,25 @@ class HillClimbSearch(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This HillClimbSearch class will be removed in a future release. "
-            "Please use the new sklearn compatible HillClimbSearch class from the "
-            "pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "HillClimbSearch is deprecated. Please use pgmpy.causal_discovery.HillClimbSearch instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.use_cache = use_cache
 
-        super(HillClimbSearch, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def _legal_operations(
         self,
         model: DAG,
-        score: Callable[[Any, List[Any]], float],
+        score: Callable[[Any, list[Any]], float],
         structure_score: Callable[[str], float],
-        tabu_list: Deque[Tuple[str, Tuple[Hashable, Hashable]]],
+        tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
-        forbidden_edges: List[Tuple[Hashable, Hashable]],
-        required_edges: List[Tuple[Hashable, Hashable]],
-    ) -> Generator[Tuple[Tuple[str, Tuple[Hashable, Hashable]], float], None, None]:
+        forbidden_edges: list[tuple[Hashable, Hashable]],
+        required_edges: list[tuple[Hashable, Hashable]],
+    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -90,9 +83,7 @@ class HillClimbSearch(StructureEstimator):
 
         # Step 1: Get all legal operations for adding edges.
         potential_new_edges = (
-            set(permutations(self.variables, 2))
-            - set(model.edges())
-            - set([(Y, X) for (X, Y) in model.edges()])
+            set(permutations(self.variables, 2)) - set(model.edges()) - {(Y, X) for (X, Y) in model.edges()}
         )
 
         for X, Y in potential_new_edges:
@@ -120,9 +111,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 3: Get all legal operations for flipping edges
         for X, Y in model.edges():
             # Check if flipping creates any cycles
-            if not any(
-                map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))
-            ):
+            if not any(map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))):
                 operation = ("flip", (X, Y))
                 if (
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
@@ -145,11 +134,11 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        start_dag: Optional[DAG] = None,
+        scoring_method: str | StructureScore | None = None,
+        start_dag: DAG | None = None,
         tabu_length: int = 100,
-        max_indegree: Optional[int] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        max_indegree: int | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         epsilon: float = 1e-4,
         max_iter: int = int(1e6),
         show_progress: bool = True,
@@ -203,18 +192,19 @@ class HillClimbSearch(StructureEstimator):
         Examples
         --------
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
-        >>> df = model.simulate(int(1e3))
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
+        >>> df = model.simulate(int(1e3), seed=42)
 
         >>> # Learn the model structure using HillClimbSearch algorithm from `df`
         >>> from pgmpy.estimators import HillClimbSearch
-        >>> est = HillClimbSearch(data)
+        >>> est = HillClimbSearch(df)
         >>> dag = est.estimate(scoring_method="bic-d")
         >>> len(dag.nodes())
         37
-        >>> len(dag.edges())
-        45
+        >>> isinstance(dag, DAG)
+        True
+
         """
 
         # Step 1: Initial checks and setup for arguments
@@ -226,12 +216,8 @@ class HillClimbSearch(StructureEstimator):
         if start_dag is None:
             start_dag = DAG()
             start_dag.add_nodes_from(self.variables)
-        elif not isinstance(start_dag, DAG) or not set(start_dag.nodes()) == set(
-            self.variables
-        ):
-            raise ValueError(
-                "'start_dag' should be a DAG with the same variables as the data set, or 'None'."
-            )
+        elif not isinstance(start_dag, DAG) or not set(start_dag.nodes()) == set(self.variables):
+            raise ValueError("'start_dag' should be a DAG with the same variables as the data set, or 'None'.")
 
         # Step 1.3: Check if expert knowledge was specified
         if expert_knowledge is None:

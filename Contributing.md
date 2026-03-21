@@ -114,6 +114,7 @@ Every new function or bug fix must include tests:
   the complete list.
 * Before starting to work on any issue, please comment on it to get it assigned to you.
 * Please try to discuss your design/solution on the issues page before opening a PR.
+* It is mandatory to fill in the PR checklist. PRs will be closed if the checklist is removed.
 
 ## Seeking Help & Discussion
 If you have questions or want to discuss anything related to the project, please join our Discord server (the link is in the README). We also host weekly dev and Community meetings that you can join to ask any questions live or listen to what others are working on.
