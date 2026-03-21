@@ -1,12 +1,12 @@
 import pytest
 
+from pgmpy.example_models import load_model
 from pgmpy.metrics import StructureScore
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture(scope="module")
 def alarm_and_data():
-    alarm = get_example_model("alarm")
+    alarm = load_model("bnlearn/alarm")
     data = alarm.simulate(int(1e4), show_progress=False)
 
     alarm_no_cpd = alarm.copy()

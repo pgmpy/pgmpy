@@ -6,15 +6,16 @@ import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import NETReader, NETWriter
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
 
 
 class TestNETWriter(unittest.TestCase):
     def setUp(self):
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
@@ -406,7 +407,7 @@ class TestNETWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
