@@ -380,6 +380,22 @@ class IVEstimator:
 
     Examples
     --------
+    >>> from pgmpy.models import SEM
+    >>> from pgmpy.estimators import IVEstimator
+    >>> model = SEM.from_graph(
+    ...     ebunch=[
+    ...         ("Z1", "X", 1.0),
+    ...         ("Z2", "X", 1.0),
+    ...         ("Z2", "W", 1.0),
+    ...         ("W", "U", 1.0),
+    ...         ("U", "X", 1.0),
+    ...         ("U", "Y", 1.0),
+    ...         ("X", "Y", 1.0),
+    ...     ],
+    ...     latents=["U"],
+    ...     err_var={"Z1": 1, "Z2": 1, "W": 1, "X": 1, "U": 1, "Y": 1},
+    ... )
+    >>> estimator = IVEstimator(model)
     """
 
     def __init__(self, model):
@@ -410,9 +426,34 @@ class IVEstimator:
             If not specified, tries to find the IVs from the model structure, fails if
             can't find either IV or Conditional IVs.
 
+        Returns
+        -------
+        tuple: (float, statsmodels.regression.linear_model.RegressionResultsWrapper)
+            A tuple where the first element is the estimated causal parameter
+            for X -> Y, and the second element is the fitted OLS results object
+            from the second stage regression (a RegressionResultsWrapper). Call
+            `.summary()` on this object to get the textual summary.
+
         Examples
         --------
-        >>> from pgmpy.estimators import IVEstimator  # TODO: Finish example.
+        >>> from pgmpy.models import SEM
+        >>> from pgmpy.estimators import IVEstimator
+        >>> model = SEM.from_graph(
+        ...     ebunch=[
+        ...         ("Z1", "X", 1.0),
+        ...         ("Z2", "X", 1.0),
+        ...         ("Z2", "W", 1.0),
+        ...         ("W", "U", 1.0),
+        ...         ("U", "X", 1.0),
+        ...         ("U", "Y", 1.0),
+        ...         ("X", "Y", 1.0),
+        ...     ],
+        ...     latents=["U"],
+        ...     err_var={"Z1": 1, "Z2": 1, "W": 1, "X": 1, "U": 1, "Y": 1},
+        ... )
+        >>> data = model.to_lisrel().generate_samples(500)
+        >>> estimator = IVEstimator(model)
+        >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)

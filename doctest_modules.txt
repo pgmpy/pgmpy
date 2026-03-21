@@ -4,6 +4,7 @@
 # pgmpy/base/DAG.py
 pgmpy/base/ADMG.py
 pgmpy/base/DAG.py
+pgmpy/base/MAG.py
 pgmpy/base/UndirectedGraph.py
 pgmpy/inference/ExactInference.py
 pgmpy/factors/FactorSet.py
@@ -20,11 +21,14 @@ pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/ExhaustiveSearch.py
 pgmpy/independencies/Independencies.py
 pgmpy/inference/ApproxInference.py
+pgmpy/inference/EliminationOrder.py
+pgmpy/inference/mplp.py
 pgmpy/metrics/shd.py
 pgmpy/models/ClusterGraph.py
 pgmpy/models/DiscreteBayesianNetwork.py
+pgmpy/models/DiscreteMarkovNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
-pgmpy/base/MAG.py
 pgmpy/utils/mathext.py
+pgmpy/inference/CausalInference.py

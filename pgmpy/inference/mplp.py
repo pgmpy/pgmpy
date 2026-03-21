@@ -346,6 +346,7 @@ class Mplp(Inference):
         >>> mm.add_factors(*phi)
         >>> mplp = Mplp(mm)
         >>> mplp.find_triangles()
+        []
         """
         return list(filter(lambda x: len(x) == 3, nx.find_cliques(self.model)))
 
@@ -479,6 +480,8 @@ class Mplp(Inference):
         >>> from pgmpy.models import DiscreteMarkovNetwork
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
+        >>> import numpy as np
+        >>> rng = np.random.default_rng(42)
         >>> mm = DiscreteMarkovNetwork()
         >>> mm.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
         >>> mm.add_edges_from(
@@ -493,12 +496,19 @@ class Mplp(Inference):
         ...         ("x5", "x7"),
         ...     ]
         ... )
-        >>> phi = [
-        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()
+        >>> phi_single = [
+        ...     DiscreteFactor([node], [2], rng.random(2))
+        ...     for node in mm.nodes()
         ... ]
-        >>> mm.add_factors(*phi)
+        >>> phi_pair = [
+        ...     DiscreteFactor(edge, [2, 2], rng.random(4))
+        ...     for edge in mm.edges()
+        ... ]
+        >>> mm.add_factors(*(phi_single + phi_pair))
         >>> mplp = Mplp(mm)
-        >>> mplp.map_query()
+        >>> mplp.map_query() # doctest: +SKIP
+        >>> {k: int(v) for k, v in mplp.map_query().items()}
+        {'x1': 0, 'x2': 1, 'x3': 1, 'x4': 0, 'x5': 1, 'x6': 1, 'x7': 1}
         >>> int_gap = mplp.get_integrality_gap()
         """
 
@@ -617,8 +627,8 @@ class Mplp(Inference):
         ... )
         >>> mplp = Mplp(student)
         >>> result = mplp.map_query()
-        >>> result
-        {'B': 0.93894, 'C': 1.121, 'A': 1.8323, 'F': 1.5093, 'D': 1.7765, 'E': 2.12239}
+        >>> {k: int(v) for k, v in result.items()}
+        {'A': 1, 'B': 0, 'C': 1, 'D': 1, 'E': 1, 'F': 0}
         """
         self.dual_threshold = dual_threshold
         self.integrality_gap_threshold = integrality_gap_threshold
