@@ -3,18 +3,17 @@ from math import lgamma
 import numpy as np
 from scipy.special import gammaln
 
-from pgmpy.base import DAG
-from pgmpy.structure_score.base import BaseStructureScore
+from pgmpy.structure_score._base import BaseStructureScore
 
 
 class BDeu(BaseStructureScore):
     """BDeu structure score for discrete Bayesian networks."""
 
     _tags = {
-        "name": "bdeu_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "bdeu",
+        "supported_datatype": "discrete",
+        "default_for": None,
         "is_parameteric": True,
-        "is_default": False,
     }
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):

@@ -9,10 +9,11 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import HillClimbSearch
-from pgmpy.estimators import K2, ExpertKnowledge
+from pgmpy.estimators import ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.structure_score import K2
 
 
 def expected_failed_checks(estimator):
@@ -253,6 +254,17 @@ def test_estimate_rand(rand_data):
     )
     est3.fit(rand_data)
     assert [("B", "C")] == list(est3.causal_graph_.edges())
+
+
+def test_estimate_rand_with_structure_score_instance(rand_data):
+    est = HillClimbSearch(
+        scoring_method=K2(rand_data),
+        return_type="dag",
+        show_progress=False,
+    )
+    est.fit(rand_data)
+    assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
+    assert list(est.causal_graph_.edges()) == [("B", "C")] or list(est.causal_graph_.edges()) == [("C", "B")]
 
 
 def test_estimate_titanic(titanic_data2):

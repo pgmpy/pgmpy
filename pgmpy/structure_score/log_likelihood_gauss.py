@@ -1,17 +1,16 @@
 import statsmodels.formula.api as smf
 
-from pgmpy.base import DAG
-from pgmpy.structure_score.base import BaseStructureScore
+from pgmpy.structure_score._base import BaseStructureScore
 
 
 class LogLikelihoodGauss(BaseStructureScore):
     """Gaussian log-likelihood structure score."""
 
     _tags = {
-        "name": "log_likelihood_gauss_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "ll-g",
+        "supported_datatype": "continuous",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

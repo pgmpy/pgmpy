@@ -8,7 +8,7 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
 class GES(_ScoreMixin, _BaseCausalDiscovery):
@@ -27,7 +27,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or StructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -37,7 +37,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
         If None, the appropriate scoring method is automatically selected based
         on the data type. Also accepts a custom score instance that inherits
-        from `StructureScore`.
+        from `BaseStructureScore`.
 
     expert_knowledge : ExpertKnowledge instance, default=None
         Expert knowledge to be used with the algorithm. Expert knowledge
@@ -59,9 +59,9 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         improvements are not performed.
 
     use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
-        Can give incorrect results for custom non-decomposable scoring methods.
+        Accepted for API compatibility. The new `pgmpy.structure_score`
+        scoring factory currently ignores this argument and returns the
+        scorer instance directly without caching.
 
     Attributes
     ----------
@@ -116,7 +116,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: str | StructureScore | None = None,
+        scoring_method: str | BaseStructureScore | None = None,
         expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,

@@ -2,18 +2,17 @@ import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
 
-from pgmpy.base import DAG
-from pgmpy.structure_score.base import BaseStructureScore
+from pgmpy.structure_score._base import BaseStructureScore
 
 
 class LogLikelihoodCondGauss(BaseStructureScore):
     """Conditional-Gaussian log-likelihood structure score."""
 
     _tags = {
-        "name": "log_likelihood_cond_gauss_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "ll-cg",
+        "supported_datatype": "mixed",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

@@ -1,6 +1,5 @@
 from math import log
 
-from pgmpy.base import DAG
 from pgmpy.structure_score.log_likelihood import LogLikeliHood
 
 
@@ -8,10 +7,10 @@ class BIC(LogLikeliHood):
     """BIC structure score for discrete Bayesian networks."""
 
     _tags = {
-        "name": "bic_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "bic-d",
+        "supported_datatype": "discrete",
+        "default_for": "discrete",
         "is_parameteric": False,
-        "is_default": True,
     }
 
     def __init__(self, data, **kwargs):

@@ -1,4 +1,3 @@
-from pgmpy.base import DAG
 from pgmpy.structure_score.log_likelihood_cond_gauss import LogLikelihoodCondGauss
 
 
@@ -6,10 +5,10 @@ class AICCondGauss(LogLikelihoodCondGauss):
     """AIC structure score for mixed Bayesian networks."""
 
     _tags = {
-        "name": "aic_cond_gauss_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "aic-cg",
+        "supported_datatype": "mixed",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

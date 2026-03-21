@@ -3,7 +3,6 @@ from math import lgamma, log
 import numpy as np
 from scipy.special import gammaln
 
-from pgmpy.base import DAG
 from pgmpy.structure_score.bdeu import BDeu
 
 
@@ -11,10 +10,10 @@ class BDs(BDeu):
     """BDs structure score for discrete Bayesian networks."""
 
     _tags = {
-        "name": "bds_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "bds",
+        "supported_datatype": "discrete",
+        "default_for": None,
         "is_parameteric": True,
-        "is_default": False,
     }
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):

@@ -3,18 +3,17 @@ from math import lgamma
 import numpy as np
 from scipy.special import gammaln
 
-from pgmpy.base import DAG
-from pgmpy.structure_score.base import BaseStructureScore
+from pgmpy.structure_score._base import BaseStructureScore
 
 
 class K2(BaseStructureScore):
     """K2 structure score for discrete Bayesian networks."""
 
     _tags = {
-        "name": "k2_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "k2",
+        "supported_datatype": "discrete",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

@@ -1,6 +1,5 @@
 import numpy as np
 
-from pgmpy.base import DAG
 from pgmpy.structure_score.log_likelihood_cond_gauss import LogLikelihoodCondGauss
 
 
@@ -8,10 +7,10 @@ class BICCondGauss(LogLikelihoodCondGauss):
     """BIC structure score for mixed Bayesian networks."""
 
     _tags = {
-        "name": "bic_cond_gauss_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "bic-cg",
+        "supported_datatype": "mixed",
+        "default_for": "mixed",
         "is_parameteric": False,
-        "is_default": True,
     }
 
     def __init__(self, data, **kwargs):

@@ -1,11 +1,22 @@
+from __future__ import annotations
+
 import pandas as pd
 from skbase.base import BaseObject
+from skbase.lookup import all_objects
 
-from pgmpy.utils import preprocess_data
+from pgmpy.utils import get_dataset_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
     """Base class for structure scoring."""
+
+    _tags = {
+        "name": None,
+        "supported_datatype": None,
+        "default_for": None,
+        "requires_data": True,
+        "is_parameteric": False,
+    }
 
     def __init__(self, data, state_names=None, **kwargs):
         self.data, self.dtypes = preprocess_data(data)
@@ -87,3 +98,44 @@ class BaseStructureScore(BaseObject):
                 state_counts = state_count_data.fillna(0)
 
         return state_counts
+
+
+def get_scoring_method(
+    scoring_method: str | BaseStructureScore | None,
+    data: pd.DataFrame,
+    use_cache: bool,
+    **kwargs,
+) -> tuple[BaseStructureScore, BaseStructureScore]:
+    del use_cache
+
+    if isinstance(scoring_method, BaseStructureScore):
+        return scoring_method, scoring_method
+
+    if scoring_method is None:
+        if data is None:
+            raise ValueError("Cannot determine scoring method: both `scoring_method` and `data` are None.")
+        var_type = get_dataset_type(data)
+        filter_tags = {"default_for": var_type}
+    elif isinstance(scoring_method, str):
+        filter_tags = {"name": scoring_method.lower()}
+    else:
+        raise ValueError(f"Invalid `scoring_method` argument: {scoring_method!r}")
+
+    scores = all_objects(
+        object_types=BaseStructureScore,
+        package_name="pgmpy.structure_score",
+        return_names=False,
+        filter_tags=filter_tags,
+    )
+
+    if scores:
+        cls = scores[0]
+        if cls.get_class_tag("requires_data", tag_value_default=True):
+            if data is None:
+                raise ValueError(f"Scoring method '{cls.__name__}' requires data, but data is None.")
+            score = cls(data=data, **kwargs)
+        else:
+            score = cls(**kwargs)
+        return score, score
+
+    raise ValueError(f"Unknown scoring method: {scoring_method!r}")

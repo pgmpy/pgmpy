@@ -1,4 +1,3 @@
-from pgmpy.base import DAG
 from pgmpy.structure_score.log_likelihood_gauss import LogLikelihoodGauss
 
 
@@ -6,10 +5,10 @@ class AICGauss(LogLikelihoodGauss):
     """AIC structure score for Gaussian Bayesian networks."""
 
     _tags = {
-        "name": "aic_gauss_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "aic-g",
+        "supported_datatype": "continuous",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

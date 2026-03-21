@@ -1,4 +1,3 @@
-from pgmpy.base import DAG
 from pgmpy.structure_score.log_likelihood import LogLikeliHood
 
 
@@ -6,10 +5,10 @@ class AIC(LogLikeliHood):
     """AIC structure score for discrete Bayesian networks."""
 
     _tags = {
-        "name": "aic_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "aic-d",
+        "supported_datatype": "discrete",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

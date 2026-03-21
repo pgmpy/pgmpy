@@ -1,17 +1,16 @@
 import numpy as np
 
-from pgmpy.base import DAG
-from pgmpy.structure_score.base import BaseStructureScore
+from pgmpy.structure_score._base import BaseStructureScore
 
 
 class LogLikeliHood(BaseStructureScore):
     """Discrete log-likelihood structure score."""
 
     _tags = {
-        "name": "log_likelihood_structure_score",
-        "supported_datatype": (DAG,),
+        "name": "ll-d",
+        "supported_datatype": "discrete",
+        "default_for": None,
         "is_parameteric": False,
-        "is_default": False,
     }
 
     def __init__(self, data, **kwargs):

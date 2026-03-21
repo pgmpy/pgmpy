@@ -9,7 +9,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
 class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
@@ -34,7 +34,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or StructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -44,7 +44,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         If None, the appropriate scoring method is automatically selected based
         on the data type. Also accepts a custom score instance that inherits
-        from `StructureScore`.
+        from `BaseStructureScore`.
 
     start_dag : DAG instance, default=None
         The starting point for the local search. By default, a completely
@@ -85,9 +85,9 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         `max_iter`.
 
     use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
-        Can give incorrect results for custom non-decomposable scoring methods.
+        Accepted for API compatibility. The new `pgmpy.structure_score`
+        scoring factory currently ignores this argument and returns the
+        scorer instance directly without caching.
 
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
@@ -136,7 +136,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: str | StructureScore | None = None,
+        scoring_method: str | BaseStructureScore | None = None,
         start_dag: DAG | None = None,
         tabu_length: int = 100,
         max_indegree: int | None = None,

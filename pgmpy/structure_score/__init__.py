@@ -1,7 +1,7 @@
+from pgmpy.structure_score._base import BaseStructureScore, get_scoring_method
 from pgmpy.structure_score.aic import AIC
 from pgmpy.structure_score.aic_cond_gauss import AICCondGauss
 from pgmpy.structure_score.aic_gauss import AICGauss
-from pgmpy.structure_score.base import BaseStructureScore
 from pgmpy.structure_score.bdeu import BDeu
 from pgmpy.structure_score.bds import BDs
 from pgmpy.structure_score.bic import BIC
@@ -14,6 +14,7 @@ from pgmpy.structure_score.log_likelihood_gauss import LogLikelihoodGauss
 
 __all__ = [
     "BaseStructureScore",
+    "get_scoring_method",
     "K2",
     "BDeu",
     "BDs",
