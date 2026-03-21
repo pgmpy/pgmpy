@@ -31,4 +31,4 @@ pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
 pgmpy/utils/mathext.py
-pgmpy/inference/CausalInference
+pgmpy/inference/CausalInference.py
