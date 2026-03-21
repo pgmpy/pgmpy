@@ -27,9 +27,6 @@ class LiNGAM(_BaseCausalDiscovery):
     alpha: float, default=0.05
         Significance level for the Wald test used to prune edges.
 
-    variation: str, default="original"
-        The variation of the algorithm to use. Currently only "original" (ICALiNGAM) is supported.
-
     return_type: str, default="dag"
         The type of graph to return. Currently only "dag" is supported.
 
@@ -67,22 +64,15 @@ class LiNGAM(_BaseCausalDiscovery):
         self,
         fast_ica=None,
         alpha: float = 0.05,
-        variation: str = "original",
         return_type: str = "dag",
     ):
         self.alpha = alpha
-        self.variation = variation
         self.return_type = return_type
         self.fast_ica = fast_ica
 
     def _fit(self, X: pd.DataFrame):
 
         # Step 0: Validate inputs
-        if self.variation != "original":
-            raise NotImplementedError(
-                f"Variation {self.variation} is not yet implemented. Use 'original'."
-            )
-
         if self.return_type != "dag":
             raise NotImplementedError(
                 f"Return type {self.return_type} is not yet implemented. Use 'dag'."
