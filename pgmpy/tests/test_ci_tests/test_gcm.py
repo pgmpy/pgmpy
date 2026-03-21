@@ -1,8 +1,6 @@
 import os
 import unittest
 
-import numpy as np
-
 from pgmpy.ci_tests import GCM
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -11,8 +9,6 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 @unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestGCM(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
-
         model_indep = LinearGaussianBayesianNetwork(
             [
                 ("Z1", "X"),
@@ -29,7 +25,7 @@ class TestGCM(unittest.TestCase):
         cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-        self.df_indep = model_indep.simulate(n_samples=1000, seed=42)
+        self.df_indep = model_indep.simulate(n_samples=10000, seed=42)
 
         model_dep = LinearGaussianBayesianNetwork(
             [
@@ -44,23 +40,23 @@ class TestGCM(unittest.TestCase):
         )
         cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-        self.df_dep = model_dep.simulate(n_samples=1000, seed=42)
+        self.df_dep = model_dep.simulate(n_samples=10000, seed=42)
 
     def test_gcm(self):
         test = GCM(data=self.df_indep)
 
         # Non-conditional test
         test("X", "Y", [])
-        self.assertAlmostEqual(round(test.statistic_, 3), 13.693)
+        self.assertAlmostEqual(round(test.statistic_, 3), 38.962)
         self.assertAlmostEqual(test.p_value_, 0.0)
 
         # Conditional test (independent)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertAlmostEqual(round(test.statistic_, 3), 0.097)
-        self.assertEqual(round(test.p_value_, 4), 0.9228)
+        self.assertAlmostEqual(round(test.statistic_, 3), -0.312)
+        self.assertEqual(round(test.p_value_, 4), 0.7547)
 
         # Conditional test (dependent)
         test = GCM(data=self.df_dep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertAlmostEqual(round(test.statistic_, 3), 11.69)
+        self.assertAlmostEqual(round(test.statistic_, 3), 39.798)
         self.assertAlmostEqual(test.p_value_, 0.0)
