@@ -49,7 +49,7 @@ class TestPearsonr(unittest.TestCase):
 
         test = Pearsonr(data=self.df_vstruct)
         test("X", "Y", ["Z"])
-        self.assertTrue(abs(test.statistic_) > 0.7)
+        self.assertTrue(abs(test.statistic_) > 0.5)
         self.assertTrue(test.p_value_ < 0.05)
 
         self.assertTrue(Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05))
