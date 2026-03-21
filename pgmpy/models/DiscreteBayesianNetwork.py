@@ -1227,13 +1227,13 @@ class DiscreteBayesianNetwork(DAG):
             latents=latents,
             seed=seed,
         )
-        # Pehle graph ko sirf edges ke sath initialize karein (bina latents ke)
+        # Initialize the network with edges only (without latents first)
         bn_model = DiscreteBayesianNetwork(dag.edges())
 
-        # Phir saare nodes add karein (taaki isolated nodes jaise X_0 miss na hon)
+        # Add all nodes to ensure isolated nodes (e.g., X_0) are included
         bn_model.add_nodes_from(dag.nodes())
 
-        # Saare nodes add hone ke baad safely latents set karein
+        # Set latents safely after all nodes have been added
         if hasattr(dag, "latents") and dag.latents:
             bn_model.latents = dag.latents
 
