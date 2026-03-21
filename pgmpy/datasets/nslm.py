@@ -2,6 +2,14 @@ from pgmpy.datasets._base import _BaseDataset
 
 
 class NSLM(_BaseDataset):
+    """
+    References
+    ----------
+    .. [1] Susan Athey, & Stefan Wager. (2019). Estimating Treatment Effects with Causal Forests: An Application.
+    .. [2] https://github.com/grf-labs/grf/tree/master/experiments/acic18
+    .. [3] https://github.com/pgmpy/example_datasets/tree/main/nslm
+    """
+
     _tags = {
         "name": "nslm",
         "n_variables": 13,
