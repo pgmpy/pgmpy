@@ -3,14 +3,14 @@
 # Example:
 # pgmpy/base/DAG.py
 pgmpy/base/ADMG.py
+pgmpy/base/DAG.py
+pgmpy/base/UndirectedGraph.py
 pgmpy/inference/ExactInference.py
+pgmpy/factors/FactorSet.py
 pgmpy/causal_discovery/GES.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
 pgmpy/causal_discovery/PC.py
-pgmpy/models/JunctionTree.py
-pgmpy/models/DiscreteBayesianNetwork.py
-pgmpy/models/MarkovChain.py
 pgmpy/estimators/HillClimbSearch.py
 pgmpy/estimators/PC.py
 pgmpy/estimators/MLE.py
@@ -18,6 +18,14 @@ pgmpy/estimators/MmhcEstimator.py
 pgmpy/estimators/EM.py
 pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/ExhaustiveSearch.py
+pgmpy/independencies/Independencies.py
 pgmpy/inference/ApproxInference.py
+pgmpy/metrics/shd.py
+pgmpy/models/ClusterGraph.py
+pgmpy/models/DiscreteBayesianNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/inference/mplp.py
+pgmpy/models/JunctionTree.py
+pgmpy/models/MarkovChain.py
+pgmpy/base/MAG.py
+pgmpy/utils/mathext.py

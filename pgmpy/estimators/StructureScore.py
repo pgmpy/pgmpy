@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+from __future__ import annotations
+
 from math import lgamma, log
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -13,11 +13,11 @@ from pgmpy.utils import get_dataset_type
 
 
 def get_scoring_method(
-    scoring_method: Union[str, "StructureScore"] | None,
+    scoring_method: str | StructureScore | None,
     data: pd.DataFrame,
     use_cache: bool,
     **kwargs,
-) -> tuple["StructureScore", "StructureScore"]:
+) -> tuple[StructureScore, StructureScore]:
     available_methods = {
         "continuous": {
             "bic-g": BICGauss,
