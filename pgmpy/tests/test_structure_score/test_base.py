@@ -15,6 +15,12 @@ class TestBaseStructureScore:
     def test_default_for_tag(self):
         assert BaseStructureScore.get_class_tag("default_for") is None
 
+    def test_local_score_requires_tuple_parents(self, small_df):
+        score = K2(small_df.astype("category"))
+
+        with pytest.raises(TypeError, match=r"`parents` must be a tuple\."):
+            score.local_score("A", ["B"])
+
 
 class TestGetScoringMethod:
     def test_get_scoring_method_default_discrete(self, small_df):

@@ -177,7 +177,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
-        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
+        score, score_c = get_scoring_method(self.scoring_method, X, use_cache=self.use_cache)
         score_fn = score_c.local_score
 
         # Step 1.2: Check the start_dag

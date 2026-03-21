@@ -16,9 +16,9 @@ class LogLikeliHood(BaseStructureScore):
     def __init__(self, data, **kwargs):
         super().__init__(data, **kwargs)
 
-    def _log_likelihood(self, variable: str, parents: list[str]) -> tuple[float, int, int]:
+    def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, int, int]:
         var_cardinality = len(self.state_names[variable])
-        parents = list(parents)
+        parents = self._validate_parents(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
@@ -35,7 +35,7 @@ class LogLikeliHood(BaseStructureScore):
 
         return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
 
-    def local_score(self, variable: str, parents: list[str]) -> float:
+    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local log-likelihood score for `variable`."""
         ll, _, _ = self._log_likelihood(variable=variable, parents=parents)
         return ll

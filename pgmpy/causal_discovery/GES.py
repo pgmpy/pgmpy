@@ -189,7 +189,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
+        _, score_c = get_scoring_method(self.scoring_method, X, use_cache=self.use_cache)
         score_fn = score_c.local_score
 
         current_model = DAG()
@@ -210,8 +210,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_edges))
 
             for index, (u, v) in enumerate(potential_edges):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, current_parents + [u]) - score_fn(v, current_parents)
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score_fn(v, current_parents + (u,)) - score_fn(v, current_parents)
 
             if len(potential_edges) == 0 or np.all(score_deltas < self.min_improvement):
                 break
@@ -224,8 +224,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, [node for node in current_parents if node != u]) - score_fn(
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score_fn(v, tuple(node for node in current_parents if node != u)) - score_fn(
                     v, current_parents
                 )
 
@@ -240,10 +240,10 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_flips))
 
             for index, (u, v) in enumerate(potential_flips):
-                v_parents = current_model.get_parents(v)
-                u_parents = current_model.get_parents(u)
-                score_deltas[index] = (score_fn(v, v_parents + [u]) - score_fn(v, v_parents)) + (
-                    score_fn(u, [node for node in u_parents if node != v]) - score_fn(u, u_parents)
+                v_parents = tuple(current_model.get_parents(v))
+                u_parents = tuple(current_model.get_parents(u))
+                score_deltas[index] = (score_fn(v, v_parents + (u,)) - score_fn(v, v_parents)) + (
+                    score_fn(u, tuple(node for node in u_parents if node != v)) - score_fn(u, u_parents)
                 )
 
             if len(potential_flips) == 0 or np.all(score_deltas < self.min_improvement):

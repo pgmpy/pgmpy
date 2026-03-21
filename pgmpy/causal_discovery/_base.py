@@ -486,7 +486,7 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: Callable[[Any, list[Any]], float],
+        score: Callable[[Any, tuple[Any, ...]], float],
         structure_score: Callable[[str], float],
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
@@ -515,8 +515,8 @@ class _ScoreMixin:
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
                 if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
+                    old_parents = tuple(model.get_parents(Y))
+                    new_parents = old_parents + (X,)
                     if len(new_parents) <= max_indegree:
                         score_delta = score(Y, new_parents) - score(Y, old_parents)
                         score_delta += structure_score("+")
@@ -526,8 +526,8 @@ class _ScoreMixin:
         for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
+                old_parents = tuple(model.get_parents(Y))
+                new_parents = tuple(var for var in old_parents if var != X)
                 score_delta = score(Y, new_parents) - score(Y, old_parents)
                 score_delta += structure_score("-")
                 yield (operation, score_delta)
@@ -542,10 +542,10 @@ class _ScoreMixin:
                     and ((X, Y) not in required_edges)
                     and ((Y, X) not in forbidden_edges)
                 ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
+                    old_X_parents = tuple(model.get_parents(X))
+                    old_Y_parents = tuple(model.get_parents(Y))
+                    new_X_parents = old_X_parents + (Y,)
+                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
                     if len(new_X_parents) <= max_indegree:
                         score_delta = (
                             score(X, new_X_parents)

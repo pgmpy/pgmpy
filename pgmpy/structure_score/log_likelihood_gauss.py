@@ -16,7 +16,8 @@ class LogLikelihoodGauss(BaseStructureScore):
     def __init__(self, data, **kwargs):
         super().__init__(data, **kwargs)
 
-    def _log_likelihood(self, variable: str, parents: list[str]) -> tuple[float, float]:
+    def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, float]:
+        parents = self._validate_parents(parents)
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
@@ -24,7 +25,7 @@ class LogLikelihoodGauss(BaseStructureScore):
 
         return (glm_model.llf, glm_model.df_model)
 
-    def local_score(self, variable: str, parents: list[str]) -> float:
+    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local Gaussian log-likelihood score for `variable`."""
         ll, _ = self._log_likelihood(variable=variable, parents=parents)
 

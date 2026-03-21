@@ -16,7 +16,7 @@ class BIC(LogLikeliHood):
     def __init__(self, data, **kwargs):
         super().__init__(data, **kwargs)
 
-    def local_score(self, variable: str, parents: list[str]) -> float:
+    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local BIC score for `variable`."""
         sample_size = len(self.data)
         ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)

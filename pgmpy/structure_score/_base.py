@@ -41,11 +41,18 @@ class BaseStructureScore(BaseObject):
         states = sorted(list(self.data.loc[:, variable].dropna().unique()))
         return states
 
+    @staticmethod
+    def _validate_parents(parents: tuple[str, ...]) -> tuple[str, ...]:
+        """Validate that parent variables are provided as a tuple."""
+        if not isinstance(parents, tuple):
+            raise TypeError("`parents` must be a tuple.")
+        return parents
+
     def score(self, model) -> float:
         """Compute a structure score for a model."""
         score = 0
         for node in model.nodes():
-            score += self.local_score(node, list(model.predecessors(node)))
+            score += self.local_score(node, tuple(model.predecessors(node)))
         score += self.structure_prior(model)
         return score
 
@@ -60,12 +67,13 @@ class BaseStructureScore(BaseObject):
     def state_counts(
         self,
         variable: str,
-        parents=[],
+        parents: tuple[str, ...] = (),
         weighted: bool = False,
         reindex: bool = True,
     ) -> pd.DataFrame:
         """Return state counts for `variable`, optionally conditioned on `parents`."""
-        parents = list(parents)
+        parents = self._validate_parents(parents)
+        parent_list = list(parents)
 
         if weighted and ("_weight" not in self.data.columns):
             raise ValueError("data must contain a `_weight` column if weighted=True")
@@ -82,17 +90,19 @@ class BaseStructureScore(BaseObject):
             parents_states = [self.state_names[parent] for parent in parents]
             if weighted:
                 state_count_data = (
-                    self.data.groupby([variable] + parents, observed=True)["_weight"].sum().unstack(parents)
+                    self.data.groupby([variable] + parent_list, observed=True)["_weight"].sum().unstack(parent_list)
                 )
             else:
-                state_count_data = self.data.groupby([variable] + parents, observed=True).size().unstack(parents)
+                state_count_data = (
+                    self.data.groupby([variable] + parent_list, observed=True).size().unstack(parent_list)
+                )
 
             if not isinstance(state_count_data.columns, pd.MultiIndex):
                 state_count_data.columns = pd.MultiIndex.from_arrays([state_count_data.columns])
 
             if reindex:
                 row_index = self.state_names[variable]
-                column_index = pd.MultiIndex.from_product(parents_states, names=parents)
+                column_index = pd.MultiIndex.from_product(parents_states, names=parent_list)
                 state_counts = state_count_data.reindex(index=row_index, columns=column_index).fillna(0)
             else:
                 state_counts = state_count_data.fillna(0)
@@ -103,7 +113,7 @@ class BaseStructureScore(BaseObject):
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
-    use_cache: bool,
+    use_cache: bool = True,
     **kwargs,
 ) -> tuple[BaseStructureScore, BaseStructureScore]:
     del use_cache
