@@ -306,15 +306,6 @@ class TestLGBNMethods(unittest.TestCase):
                 est_index = cpd_est.evidence.index(evid_var)
                 self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1)
 
-    def test_get_random_cpds_None(self):
-        model = get_example_model("alarm")
-        model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds1 = model_lin.get_random_cpds(seed=None)
-        cpds2 = model_lin.get_random_cpds(seed=None)
-        betas1 = [cpd.beta[0] for cpd in cpds1]
-        betas2 = [cpd.beta[0] for cpd in cpds2]
-        self.assertFalse(betas1 == betas2)
-
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
@@ -425,6 +416,11 @@ class TestLGBNMethods(unittest.TestCase):
         model_lin = LinearGaussianBayesianNetwork(model.edges())
         cpds = model_lin.get_random_cpds()
         self.assertEqual(len(cpds), len(model.nodes()))
+        cpds1 = model_lin.get_random_cpds(seed=None)
+        cpds2 = model_lin.get_random_cpds(seed=None)
+        betas1 = [cpd.beta[0] for cpd in cpds1]
+        betas2 = [cpd.beta[0] for cpd in cpds2]
+        self.assertFalse(betas1 == betas2)
 
     def test_get_random(self):
         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)
