@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
@@ -110,15 +112,26 @@ class BaseStructureScore(BaseObject):
         return state_counts
 
 
+def _enable_local_score_cache(score: BaseStructureScore, max_size: int = 10000) -> BaseStructureScore:
+    if not isinstance(score, BaseStructureScore):
+        raise TypeError("`score` must be an instance of BaseStructureScore.")
+
+    if not getattr(score, "_local_score_cache_enabled", False):
+        score.local_score = lru_cache(maxsize=int(max_size))(score.local_score)
+        score._local_score_cache_enabled = True
+
+    return score
+
+
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
     use_cache: bool = True,
     **kwargs,
 ) -> tuple[BaseStructureScore, BaseStructureScore]:
-    del use_cache
-
     if isinstance(scoring_method, BaseStructureScore):
+        if use_cache:
+            scoring_method = _enable_local_score_cache(scoring_method)
         return scoring_method, scoring_method
 
     if scoring_method is None:
@@ -146,6 +159,8 @@ def get_scoring_method(
             score = cls(data=data, **kwargs)
         else:
             score = cls(**kwargs)
+        if use_cache:
+            score = _enable_local_score_cache(score)
         return score, score
 
     raise ValueError(f"Unknown scoring method: {scoring_method!r}")

@@ -59,9 +59,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         improvements are not performed.
 
     use_cache : bool, default=True
-        Accepted for API compatibility. The new `pgmpy.structure_score`
-        scoring factory currently ignores this argument and returns the
-        scorer instance directly without caching.
+        If True, enable an LRU cache on the structure score's `local_score`
+        method for repeated evaluations during the search.
 
     Attributes
     ----------

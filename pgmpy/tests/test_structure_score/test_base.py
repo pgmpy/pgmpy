@@ -1,3 +1,5 @@
+from unittest.mock import Mock, call
+
 import pandas as pd
 import pytest
 
@@ -61,12 +63,28 @@ class TestGetScoringMethod:
         assert returned_score is score
         assert score_c is score
 
-    def test_get_scoring_method_use_cache_is_noop(self, small_df):
+    def test_get_scoring_method_use_cache_returns_same_instance(self, small_df):
         data = small_df.astype("category")
         score, score_c = get_scoring_method("k2", data, use_cache=True)
 
         assert isinstance(score, K2)
         assert score_c is score
+        assert score_c.local_score("A", ()) == score.local_score("A", ())
+
+    def test_get_scoring_method_use_cache_caches_local_score_calls(self, small_df):
+        data = small_df.astype("category")
+        score = K2(data)
+        expected = score.local_score("A", ("B",))
+        local_score_mock = Mock(return_value=expected)
+        score.local_score = local_score_mock
+
+        returned_score, score_c = get_scoring_method(score, data, use_cache=True)
+
+        assert returned_score is score
+        assert score_c.local_score("A", ("B",)) == expected
+        assert score_c.local_score("A", ("B",)) == expected
+
+        local_score_mock.assert_has_calls([call("A", ("B",))], any_order=False)
 
     def test_get_scoring_method_unknown_score_error(self, small_df):
         with pytest.raises(ValueError, match=r"Unknown scoring method: 'not-a-score'"):
