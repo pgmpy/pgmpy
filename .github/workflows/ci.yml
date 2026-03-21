@@ -74,7 +74,7 @@ jobs:
           python --version
 
       - name: Install graphviz
-        run: sudo apt-get update && sudo apt-get install graphviz -y
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
 
       - name: Install dependencies
         run: |
