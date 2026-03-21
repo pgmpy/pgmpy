@@ -38,7 +38,7 @@ class TestPearsonr(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(seed=42)
 
-        self.df_ind = pd.DataFrame(np.random.randn(1000, 3), columns=["X", "Y", "Z"])
+        self.df_ind = pd.DataFrame(rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
 
         Z = rng.normal(10000)
         X = 3 * Z + rng.normal(loc=0, scale=0.1, size=10000)

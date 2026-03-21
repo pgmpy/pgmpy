@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable
 
 import numpy as np
@@ -5,7 +6,7 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 from pgmpy.independencies import IndependenceAssertion
 from pgmpy.utils import get_dataset_type
 
@@ -143,7 +144,11 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     bool
         True if the independence assertion is present in `independences`, else False.
     """
-    logger.warning("independence_match is deprecated. Use pgmpy.ci_tests.IndependenceMatch instead.")
+    warnings.warn(
+        "`independence_match` is deprecated. Please use `pgmpy.ci_tests.IndependenceMatch` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return IndependenceAssertion(X, Y, Z) in independencies
 
 
@@ -187,7 +192,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
     .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
     """
-    logger.warning("pearsonr is deprecated. Use pgmpy.ci_tests.Pearsonr instead.")
+    warnings.warn(
+        "`pearsonr` is deprecated. Please use `pgmpy.ci_tests.Pearsonr` instead.", FutureWarning, stacklevel=2
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -293,7 +300,11 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     np.False_
 
     """
-    logger.warning("power_divergence is deprecated. Use pgmpy.ci_tests.PowerDivergence instead.")
+    warnings.warn(
+        "`power_divergence` is deprecated. Please use `pgmpy.ci_tests.PowerDivergence` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
         Z = list(Z)
@@ -401,7 +412,9 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    logger.warning("chi_square is deprecated. Use pgmpy.ci_tests.ChiSquare instead.")
+    warnings.warn(
+        "`chi_square` is deprecated. Please use `pgmpy.ci_tests.ChiSquare` instead.", FutureWarning, stacklevel=2
+    )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs)
 
 
@@ -462,7 +475,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    logger.warning("g_sq is deprecated. Use pgmpy.ci_tests.GSq instead.")
+    warnings.warn("`g_sq` is deprecated. Please use `pgmpy.ci_tests.GSq` instead.", FutureWarning, stacklevel=2)
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
@@ -531,7 +544,11 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    logger.warning("log_likelihood is deprecated. Use pgmpy.ci_tests.LogLikelihood instead.")
+    warnings.warn(
+        "`log_likelihood` is deprecated. Please use `pgmpy.ci_tests.LogLikelihood` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
@@ -595,7 +612,11 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    logger.warning("modified_log_likelihood is deprecated. Use pgmpy.ci_tests.ModifiedLogLikelihood instead.")
+    warnings.warn(
+        "`modified_log_likelihood` is deprecated. Please use `pgmpy.ci_tests.ModifiedLogLikelihood` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return power_divergence(
         X=X,
         Y=Y,
@@ -699,7 +720,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     .. [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate
            general linear hypothesis. Computational Statistics & Data Analysis.
     """
-    logger.warning("pillai_trace is deprecated. Use pgmpy.ci_tests.PillaiTrace instead.")
+    warnings.warn(
+        "`pillai_trace` is deprecated. Please use `pgmpy.ci_tests.PillaiTrace` instead.", FutureWarning, stacklevel=2
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -800,7 +823,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
         Covariance Measure".
     """
-    logger.warning("gcm is deprecated. Use pgmpy.ci_tests.GCM instead.")
+    warnings.warn("`gcm` is deprecated. Please use `pgmpy.ci_tests.GCM` instead.", FutureWarning, stacklevel=2)
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -873,7 +896,11 @@ def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwa
     .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
             arXiv:2404.18232 (2024).
     """
-    logger.warning("pearsonr_equivalence is deprecated. Use pgmpy.ci_tests.PearsonrEquivalence instead.")
+    warnings.warn(
+        "`pearsonr_equivalence` is deprecated. Please use `pgmpy.ci_tests.PearsonrEquivalence` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Input validation
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")

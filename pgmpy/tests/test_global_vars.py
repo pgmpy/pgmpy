@@ -1,10 +1,7 @@
-import logging
-
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
-from pgmpy.global_vars import DuplicateFilter
 
 torch = _safe_import("torch")
 
@@ -83,45 +80,3 @@ class TestConfig:
 
         assert config.SHOW_PROGRESS is False
         assert config.get_show_progress() is False
-
-
-class TestDuplicateFilter:
-    def test_duplicate_filter(self):
-        test_logger = logging.getLogger("test_logger")
-        test_logger.setLevel(logging.INFO)
-
-        for handler in test_logger.handlers[:]:
-            test_logger.removeHandler(handler)
-        for filter_ in test_logger.filters[:]:
-            test_logger.removeFilter(filter_)
-
-        captured_logs = []
-
-        class ListHandler(logging.Handler):
-            def emit(self, record):
-                captured_logs.append(record.getMessage())
-
-        handler = ListHandler()
-        test_logger.addHandler(handler)
-
-        # Add duplicate filter
-        duplicate_filter = DuplicateFilter()
-        test_logger.addFilter(duplicate_filter)
-
-        test_logger.info("First message")  # Should pass
-        test_logger.info("First message")  # Should be filtered out (duplicate)
-        test_logger.info("Second message")  # Should pass
-        test_logger.info("Second message")  # Should be filtered out (duplicate)
-        test_logger.info("Second message")  # Should be filtered out (duplicate)
-        test_logger.info("First message")  # Should pass (not consecutive duplicate)
-        test_logger.info("First message")  # Should be filtered out (duplicate)
-        test_logger.info("Third message")  # Should pass
-
-        expected_logs = [
-            "First message",
-            "Second message",
-            "First message",
-            "Third message",
-        ]
-
-        assert captured_logs == expected_logs
