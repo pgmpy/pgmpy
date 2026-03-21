@@ -1433,6 +1433,30 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         del self.model_connected
         del self.model_disconnected
 
+    def test_predict_error_cases(self):
+        # Case 1: Invalid variable (use existing model2)
+        data_invalid = pd.DataFrame({"A": [0, 1], "X": [1, 0]})
+        with pytest.raises(ValueError, match="not present in the model"):
+            self.model2.predict(data_invalid)
+
+        # Case 2: No missing variable (need valid model with CPDs)
+        model = DiscreteBayesianNetwork([("A", "B")])
+
+        cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.5], [0.5]])
+        cpd_b = TabularCPD(
+            variable="B",
+            variable_card=2,
+            values=[[0.7, 0.2], [0.3, 0.8]],
+            evidence=["A"],
+            evidence_card=[2],
+        )
+
+        model.add_cpds(cpd_a, cpd_b)
+
+        data_no_missing = pd.DataFrame({"A": [0, 1], "B": [1, 0]})
+        with pytest.raises(ValueError, match="No variables are missing"):
+            model.predict(data_no_missing)
+
 
 class TestDAGCPDOperations(unittest.TestCase):
     def setUp(self):
@@ -1906,3 +1930,4 @@ class TestSimulation(unittest.TestCase):
         missing_fraction = samples["U"].isnull().mean()
         expected_missing_fraction = 0.8
         self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)
+        
