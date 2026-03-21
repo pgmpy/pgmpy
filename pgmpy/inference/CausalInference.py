@@ -741,6 +741,7 @@ class CausalInference:
         >>> inference = CausalInference(model=game1)
         >>> round(inference.estimate_ate("X", "Y", data=data, estimator_type="linear"), 15)
         0.001138244615115
+        
         """
         valid_estimators = ["linear"]
         if estimator_type not in valid_estimators:
