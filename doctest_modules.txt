@@ -26,6 +26,7 @@ pgmpy/inference/mplp.py
 pgmpy/metrics/shd.py
 pgmpy/models/ClusterGraph.py
 pgmpy/models/DiscreteBayesianNetwork.py
+pgmpy/models/DiscreteMarkovNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
