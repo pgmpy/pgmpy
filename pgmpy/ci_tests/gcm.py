@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.base import clone, is_regressor
+from sklearn.linear_model import LinearRegression
 
 from ._base import _BaseCITest
 
@@ -9,15 +11,18 @@ class GCM(_BaseCITest):
     """
     The Generalized Covariance Measure(GCM) test for CI.
 
-    It performs linear regressions on the conditioning variable and then tests
-    for a vanishing covariance between the resulting residuals. Details of the
-    method can be found in [1].
+    It performs regressions on the conditioning variable using a specified
+    estimator and then tests for a vanishing covariance between the
+    resulting residuals. Details of the method can be found in [1].
 
     Parameters
     ----------
     data: pandas.DataFrame
         The dataset in which to test the independence condition.
-
+    estimator: sklearn estimator, optional (default=None)
+        A scikit-learn regressor to compute residuals. Must implement
+        fit and predict methods. If None, LinearRegression() is used
+        as default.
 
     Attributes
     ----------
@@ -39,8 +44,14 @@ class GCM(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, estimator=None):
         self.data = data
+        if estimator is None:
+            self.estimator = LinearRegression()
+        elif not is_regressor(estimator):
+            raise ValueError(f"estimator must be a scikit-learn regressor. Got {type(estimator)} instead.")
+        else:
+            self.estimator = estimator
         super().__init__()
 
     def run_test(
@@ -54,16 +65,18 @@ class GCM(_BaseCITest):
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
-        # Step 1.1: Add another column with constant values to handle intercepts.
+        # Step 1.1: Append intercept column to ensure Z is never empty
         data = self.data
-        Z_aug = list(Z) + ["intercept"]
-        data_aug = data.assign(intercept=np.ones(data.shape[0]))
+        Z_data = data.loc[:, list(Z)].copy()
+        Z_data["__pgmpy_intercept__"] = np.ones(data.shape[0])
 
-        # Step 2: Compute the linear regression and the residuals
-        X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
-        Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
-        res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
-        res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
+        # Step 2: Compute residuals using the provided estimator
+        est_x = clone(self.estimator)
+        est_y = clone(self.estimator)
+        est_x.fit(Z_data, data.loc[:, X])
+        est_y.fit(Z_data, data.loc[:, Y])
+        res_x = data.loc[:, X] - est_x.predict(Z_data)
+        res_y = data.loc[:, Y] - est_y.predict(Z_data)
 
         # Step 3: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]

@@ -1,13 +1,10 @@
-import copy
 import warnings
 from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.base import is_regressor
 from sklearn.cross_decomposition import CCA
-from sklearn.linear_model import LinearRegression
 
 from pgmpy import logger
 from pgmpy.independencies import IndependenceAssertion
@@ -785,13 +782,12 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="gcm", data_types=["continuous"])
-def gcm(X, Y, Z, data, boolean=True, estimator=None, **kwargs):
+def gcm(X, Y, Z, data, boolean=True, **kwargs):
     """
     The Generalized Covariance Measure(GCM) test for CI.
 
-    It performs regressions on the conditioning variable using a 
-    specified estimator and then tests for a vanishing covariance 
-    between the resulting residuals. Details of the
+    It performs linear regressions on the conditioning variable and then tests
+    for a vanishing covariance between the resulting residuals. Details of the
     method can be found in [1].
 
     Parameters
@@ -816,11 +812,6 @@ def gcm(X, Y, Z, data, boolean=True, estimator=None, **kwargs):
         If boolean=False, returns the pearson correlation coefficient and p_value
             of the test.
 
-    estimator: sklearn estimator, optional (default=None)
-        A scikit-learn regressor to compute residuals. Must implement
-        fit and predict methods. If None, LinearRegression() is used
-        as default.
-
     Returns
     -------
     CI Test results: tuple or bool
@@ -842,25 +833,15 @@ def gcm(X, Y, Z, data, boolean=True, estimator=None, **kwargs):
     if not isinstance(data, pd.DataFrame):
         raise ValueError(f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}")
 
-    if estimator is None:
-        estimator = LinearRegression()
-    elif not is_regressor(estimator):
-        raise ValueError(
-            f"estimator must be a scikit-learn regressor. "
-            f"Got {type(estimator)} instead."
-        )
+    # Step 1.1: Add another column with constant values to handle intercepts.
+    Z_aug = Z + ["intercept"]
+    data_aug = data.assign(intercept=np.ones(data.shape[0]))
 
-    # Step 2: Compute residuals using the provided estimator
-    # Append intercept column to ensure Z is never empty
-    Z_data = data.loc[:, Z].copy()
-    Z_data["intercept"] = np.ones(data.shape[0])
-    
-    est_x = copy.deepcopy(estimator)
-    est_y = copy.deepcopy(estimator)
-    est_x.fit(Z_data, data.loc[:, X])
-    est_y.fit(Z_data, data.loc[:, Y])
-    res_x = data.loc[:, X] - est_x.predict(Z_data)
-    res_y = data.loc[:, Y] - est_y.predict(Z_data)
+    # Step 2: Compute the linear regression and the residuals
+    X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
+    Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
+    res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
+    res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
 
     # Step 3: Compute the Generalised Covariance Measure.
     n = res_x.shape[0]
