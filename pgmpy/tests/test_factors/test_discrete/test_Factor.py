@@ -7,8 +7,8 @@ import numpy.testing as np_test
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.example_models import load_model
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors import factor_divide, factor_product, factor_sum_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
@@ -16,17 +16,16 @@ from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
+
+BACKEND_PARAMS = ["numpy"]
+if _check_soft_dependencies("torch", severity="none"):
+    BACKEND_PARAMS.append("torch")
 
 
-@pytest.fixture(params=["numpy", "torch"], autouse=True)
+@pytest.fixture(params=BACKEND_PARAMS, autouse=True)
 def backend(request):
     prev_backend = config.get_backend()
-
-    if request.param == "torch" and not _check_soft_dependencies(
-        "torch", severity="none"
-    ):
-        pytest.skip("torch not installed")
 
     config.set_backend(request.param)
     yield request.param
@@ -35,17 +34,13 @@ def backend(request):
 
 class TestFactorInit:
     def test_class_init(self):
-        phi = DiscreteFactor(
-            variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
-        )
+        phi = DiscreteFactor(variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8))
         assert phi.variables == ["x1", "x2", "x3"]
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
 
     def test_class_init_int_var(self):
-        phi = DiscreteFactor(
-            variables=[1, 2, 3], cardinality=[2, 3, 2], values=np.arange(12)
-        )
+        phi = DiscreteFactor(variables=[1, 2, 3], cardinality=[2, 3, 2], values=np.arange(12))
         assert phi.variables == [1, 2, 3]
         np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
@@ -102,8 +97,7 @@ class TestFactorMethods:
     def test_str_representation(self):
         """Test the string representation of DiscreteFactor using fancy_grid format."""
         factor = DiscreteFactor(["Nags", "Ankur"], [2, 2], np.ones(4))
-        # Set maxDiff to None to see the full difference
-        self.maxDiff = None
+
         # Update the expected output to match the actual output/ CompareLogic
         expected_output = str(factor)
         assert str(factor) == expected_output
@@ -234,9 +228,7 @@ class TestFactorMethods:
     def test_assignment(self):
         assert self.phi.assignment([0]) == [[("x1", 0), ("x2", 0), ("x3", 0)]]
 
-        assert self.phi_sn.assignment([0]) == [
-            [("x1", "sn0"), ("x2", "sn0"), ("x3", "sn0")]
-        ]
+        assert self.phi_sn.assignment([0]) == [[("x1", "sn0"), ("x2", "sn0"), ("x3", "sn0")]]
 
         assert self.phi.assignment([4, 5, 6]) == [
             [("x1", 1), ("x2", 0), ("x3", 0)],
@@ -598,9 +590,7 @@ class TestFactorMethods:
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        expected_factor = DiscreteFactor(
-            ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
-        )
+        expected_factor = DiscreteFactor(["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         assert prod == expected_factor
         assert set(prod.variables) == set(expected_factor.variables)
 
@@ -633,9 +623,7 @@ class TestFactorMethods:
         phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
         phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        expected_factor = DiscreteFactor(
-            ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
-        )
+        expected_factor = DiscreteFactor(["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         assert prod == expected_factor
         assert sorted(prod.variables) == ["x1", "x2", "x3"]
 
@@ -647,7 +635,7 @@ class TestFactorMethods:
             [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48],
         )
         assert expected_factor == phi7_copy
-        assert set(phi7_copy.variables) == set([self.var1, self.var2, self.var3])
+        assert set(phi7_copy.variables) == {self.var1, self.var2, self.var3}
 
     def test_factor_product_non_factor_arg(self):
         with pytest.raises(TypeError):
@@ -928,9 +916,7 @@ class TestFactorMethods:
         var1 = _TestHash(2, 3)
         var2 = _TestHash("x2", 1)
         phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], range(8))
-        phi4 = DiscreteFactor(
-            [self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7]
-        )
+        phi4 = DiscreteFactor([self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         assert hash(phi3) == hash(phi4)
 
     def test_maximize_single(self):
@@ -944,9 +930,7 @@ class TestFactorMethods:
             [0.25, 0.35, 0.08, 0.16, 0.05, 0.07, 0.00, 0.00, 0.15, 0.21, 0.08, 0.18],
         )
         self.phi2.maximize(["x2"])
-        assert self.phi2 == DiscreteFactor(
-            ["x1", "x3"], [3, 2], [0.25, 0.35, 0.05, 0.07, 0.15, 0.21]
-        )
+        assert self.phi2 == DiscreteFactor(["x1", "x3"], [3, 2], [0.25, 0.35, 0.05, 0.07, 0.15, 0.21])
 
         self.phi5.maximize([("x1", "x2")])
         assert self.phi5 == DiscreteFactor(
@@ -1021,9 +1005,7 @@ class TestTabularCPDInit:
         assert cpd.variable_card == 3
         assert list(cpd.variables) == ["grade"]
         np_test.assert_array_equal(cpd.cardinality, np.array([3]))
-        np_test.assert_array_almost_equal(
-            compat_fns.to_numpy(cpd.values), np.array([0.1, 0.1, 0.1])
-        )
+        np_test.assert_array_almost_equal(compat_fns.to_numpy(cpd.values), np.array([0.1, 0.1, 0.1]))
 
         values = [
             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -2925,18 +2907,9 @@ class TestTabularCPDMethods:
             evidence=["diff"],
             evidence_card=[2],
         )
-        assert (
-            repr(grade_cpd)
-            == f"<TabularCPD representing P(grade:3 | intel:3, diff:2) at {hex(id(grade_cpd))}>"
-        )
-        assert (
-            repr(intel_cpd)
-            == f"<TabularCPD representing P(intel:3) at {hex(id(intel_cpd))}>"
-        )
-        assert (
-            repr(diff_cpd)
-            == f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>"
-        )
+        assert repr(grade_cpd) == f"<TabularCPD representing P(grade:3 | intel:3, diff:2) at {hex(id(grade_cpd))}>"
+        assert repr(intel_cpd) == f"<TabularCPD representing P(intel:3) at {hex(id(intel_cpd))}>"
+        assert repr(diff_cpd) == f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>"
 
     def test_copy(self):
         copy_cpd = self.cpd.copy()
@@ -3078,9 +3051,7 @@ class TestTabularCPDMethods:
         assert cpd_sn.values.shape == (3,)
         assert cpd_sn.state_names["A"] == ["a1", "a2", "a3"]
 
-        cpd = TabularCPD.get_random(
-            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
-        )
+        cpd = TabularCPD.get_random(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4})
         assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
         assert cpd.values.shape == (2, 3, 4)
@@ -3120,9 +3091,7 @@ class TestTabularCPDMethods:
         assert cpd.state_names["C"] == ["c1", "c2"]
 
         with pytest.raises(ValueError):
-            TabularCPD.get_random(
-                variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3}
-            )
+            TabularCPD.get_random(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3})
 
     def test_get_uniform(self):
         cpd = TabularCPD.get_uniform(variable="A", evidence=None, cardinality={"A": 3})
@@ -3143,9 +3112,7 @@ class TestTabularCPDMethods:
         assert (cpd_sn.values == (1 / 3)).all()
         assert cpd_sn.state_names["A"] == ["a1", "a2", "a3"]
 
-        cpd = TabularCPD.get_uniform(
-            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
-        )
+        cpd = TabularCPD.get_uniform(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4})
         assert cpd.variables == ["A", "B", "C"]
         np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
         assert cpd.values.shape == (2, 3, 4)
@@ -3189,9 +3156,7 @@ class TestTabularCPDMethods:
         assert cpd.state_names["C"] == ["c1", "c2"]
 
         with pytest.raises(ValueError):
-            TabularCPD.get_uniform(
-                variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3}
-            )
+            TabularCPD.get_uniform(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3})
 
     def teardown_method(self):
         del self.cpd
@@ -3283,9 +3248,7 @@ class TestJointProbabilityDistributionMethods:
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
         assert self.jpd.scope() == ["x3"]
         np_test.assert_almost_equal(np.sum(compat_fns.to_numpy(self.jpd.values)), 1)
-        new_jpd = self.jpd1.conditional_distribution(
-            [("x1", 1), ("x2", 0)], inplace=False
-        )
+        new_jpd = self.jpd1.conditional_distribution([("x1", 1), ("x2", 0)], inplace=False)
         assert self.jpd1 != self.jpd
         assert self.jpd == new_jpd
 
@@ -3297,17 +3260,11 @@ class TestJointProbabilityDistributionMethods:
             self.jpd2.check_independence(["x1"], "x2")
         with pytest.raises(TypeError):
             self.jpd2.check_independence(["x1"], ["x2"], "x3")
-        assert not self.jpd2.check_independence(
-            ["x1"], ["x2"], ("x3",), condition_random_variable=True
-        )
+        assert not self.jpd2.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True)
         assert not self.jpd2.check_independence(["x1"], ["x2"], [("x3", 0)])
-        assert self.jpd1.check_independence(
-            ["x1"], ["x2"], ("x3",), condition_random_variable=True
-        )
+        assert self.jpd1.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True)
         assert self.jpd1.check_independence(["x1"], ["x2"], [("x3", 1)])
-        assert self.jpd3.check_independence(
-            ["x1"], ["x2"], ("x3",), condition_random_variable=True
-        )
+        assert self.jpd3.check_independence(["x1"], ["x2"], ("x3",), condition_random_variable=True)
 
     def test_get_independencies(self):
         independencies = Independencies(["x1", "x2"], ["x2", "x3"], ["x3", "x1"])
@@ -3328,10 +3285,7 @@ class TestJointProbabilityDistributionMethods:
         assert list(bm.edges()) == []
 
     def test_repr(self):
-        assert (
-            repr(self.jpd1)
-            == f"<Joint Distribution representing P(x1:2, x2:3, x3:2) at {hex(id(self.jpd1))}>"
-        )
+        assert repr(self.jpd1) == f"<Joint Distribution representing P(x1:2, x2:3, x3:2) at {hex(id(self.jpd1))}>"
 
     def test_is_imap(self):
         G1 = DiscreteBayesianNetwork([("diff", "grade"), ("intel", "grade")])
