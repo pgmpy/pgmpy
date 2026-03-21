@@ -2100,4 +2100,3 @@ class TestSimulation(unittest.TestCase):
         missing_fraction = samples["U"].isnull().mean()
         expected_missing_fraction = 0.8
         self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)
-        

@@ -1,5 +1,5 @@
 import statsmodels.api as sm
-from statsmodels.api import OLS, GLS, WLS
+from statsmodels.api import GLS, OLS, WLS
 
 
 class LinearEstimator(object):
