@@ -11,13 +11,16 @@ def _median_bandwidth(x: np.ndarray) -> float:
         x = x.reshape(-1, 1)
     n = x.shape[0]
     if n > 500:
-        idx = np.random.default_rng(0).choice(n, 500, replace=False)
+        idx = np.linspace(0, n - 1, 500, dtype=int)
         x = x[idx]
     dists_sq = np.sum((x[:, None] - x[None, :]) ** 2, axis=-1)
     upper = dists_sq[np.triu_indices_from(dists_sq, k=1)]
     if upper.size == 0 or upper.max() == 0:
         return 1.0
-    return float(np.sqrt(np.median(upper)))
+    bw = float(np.sqrt(np.median(upper)))
+    if not np.isfinite(bw) or bw <= 0.0:
+        return 1.0
+    return bw
 
 
 def _rff(x: np.ndarray, num_features: int, bandwidth: float, rng: np.random.Generator) -> np.ndarray:
