@@ -7,6 +7,7 @@ examples/Creating_Discrete_BN.ipynb
 examples/Creating_Linear_BN.ipynb
 examples/Causal_Inference.ipynb
 examples/Defining_CPDs.ipynb
+examples/Dynamic_BN.ipynb
 examples/Extending_pgmpy.ipynb
 examples/Inference_Discrete_BN.ipynb
 examples/Junction_Tree_Inference.ipynb
