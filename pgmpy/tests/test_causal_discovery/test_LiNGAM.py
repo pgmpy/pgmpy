@@ -34,7 +34,9 @@ def rand_data2():
 
 
 def test_fit_rand(rand_data):
-    algo = LiNGAM(random_state=42)
+    from sklearn.decomposition import FastICA
+
+    algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(rand_data)
     graph = algo.causal_graph_
 
@@ -52,7 +54,9 @@ def test_fit_rand(rand_data):
 
 
 def test_fit_rand2(rand_data2):
-    algo = LiNGAM(random_state=42)
+    from sklearn.decomposition import FastICA
+
+    algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(rand_data2)
 
     graph = algo.causal_graph_
@@ -69,3 +73,22 @@ def test_fit_rand2(rand_data2):
 
     assert not graph.has_edge("C", "B")
     assert not graph.has_edge("B", "C")
+
+
+def test_fit_custom_fast_ica(rand_data):
+    from sklearn.decomposition import FastICA
+
+    custom_ica = FastICA(random_state=42, max_iter=500, tol=1e-3)
+    algo = LiNGAM(fast_ica=custom_ica)
+    algo.fit(rand_data)
+    graph = algo.causal_graph_
+
+    assert graph.has_edge("A", "B")
+    assert graph.has_edge("B", "C")
+    assert not graph.has_edge("B", "A")
+    assert not graph.has_edge("C", "B")
+    assert not graph.has_edge("A", "C")
+
+    # Test adjacency matrix structure
+    B = algo.adjacency_matrix_
+    assert B.shape == (3, 3)

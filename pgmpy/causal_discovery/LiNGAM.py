@@ -20,10 +20,11 @@ class LiNGAM(_BaseCausalDiscovery):
 
     Parameters
     ----------
-    random_state: int, default=42
-        Random seed for the ICA algorithm.
+    fast_ica: sklearn.decomposition.FastICA
+        An instance of FastICA to use for independent component analysis. If None,
+        a default FastICA instance with `max_iter=1000` is used.
 
-    alpha: float, default=0.01
+    alpha: float, default=0.05
         Significance level for the Wald test used to prune edges.
 
     variation: str, default="original"
@@ -64,15 +65,15 @@ class LiNGAM(_BaseCausalDiscovery):
 
     def __init__(
         self,
-        random_state: int = 42,
+        fast_ica=None,
         alpha: float = 0.05,
         variation: str = "original",
         return_type: str = "dag",
     ):
-        self.random_state = random_state
         self.alpha = alpha
         self.variation = variation
         self.return_type = return_type
+        self.fast_ica = fast_ica
 
     def _fit(self, X: pd.DataFrame):
 
@@ -95,7 +96,11 @@ class LiNGAM(_BaseCausalDiscovery):
         # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has
         # the same size as X and contains in its rows the independent components.
         # From here on, we will exclusively work with W = A^-1.
-        ica = FastICA(random_state=self.random_state, max_iter=1000)
+        if self.fast_ica is None:
+            ica = FastICA(max_iter=1000)
+        else:
+            ica = self.fast_ica
+
         ica.fit(X_vals)
         W = ica.components_
 
