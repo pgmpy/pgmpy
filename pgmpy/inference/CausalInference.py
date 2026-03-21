@@ -739,7 +739,7 @@ class CausalInference:
         ...     rng.random(size=(1000, 4)), columns=["X", "A", "B", "Y"]
         ... )
         >>> inference = CausalInference(model=game1)
-        >>> round(inference.estimate_ate("X", "Y", data=data, estimator_type="linear"), 15)
+        >>> float(round(inference.estimate_ate("X", "Y", data=data, estimator_type="linear"), 15))
         0.001138244615115
 
         """
