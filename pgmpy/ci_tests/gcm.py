@@ -6,23 +6,27 @@ from ._base import _BaseCITest
 
 
 class GCM(_BaseCITest):
-    """
-    The Generalized Covariance Measure(GCM) test for CI.
+    r"""
+    Generalized Covariance Measure (GCM) test for conditional independence.
 
-    It performs linear regressions on the conditioning variable and then tests
-    for a vanishing covariance between the resulting residuals. Details of the
-    method can be found in [1].
+    Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
+    resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
+
+    .. math::
+        T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
+
+    where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
+    asymptotically standard normal. Details of the method can be found in [1].
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset in which to test the independence condition.
-
 
     Attributes
     ----------
     statistic_ : float
-        The GCM t-statistic. Set after calling the test.
+        The GCM test statistic. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
 
@@ -70,7 +74,7 @@ class GCM(_BaseCITest):
         t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
         # Step 4: Compute p-value using standard normal distribution.
-        p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
+        p_value = 2 * stats.norm.sf(np.abs(t_stat))
 
         self.statistic_ = t_stat
         self.p_value_ = p_value

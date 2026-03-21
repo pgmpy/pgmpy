@@ -36,7 +36,7 @@ jobs:
 
       - name: Install graphviz (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install graphviz -y
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
 
       - name: Install graphviz (macOS)
         if: matrix.os == 'macOS-latest'
@@ -83,16 +83,36 @@ jobs:
 
       - name: Install graphviz (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install graphviz -y
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
 
       - name: Install graphviz (macOS)
         if: matrix.os == 'macOS-latest'
         run: brew install graphviz
 
-      - name: Install dependencies
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install pygraphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          pip install --upgrade pip
-          pip install .[all,tests]
+          $graphviz_root = "C:\Program Files\Graphviz"
+          $env:INCLUDE = "$graphviz_root\include;$env:INCLUDE"
+          $env:LIB = "$graphviz_root\lib;$env:LIB"
+          python -m pip install pygraphviz
+
+      - name: Install pygraphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: |
+          GRAPHVIZ_PREFIX="$(brew --prefix graphviz)"
+          python -m pip install \
+            --config-settings=--global-option=build_ext \
+            --config-settings="--global-option=-I${GRAPHVIZ_PREFIX}/include" \
+            --config-settings="--global-option=-L${GRAPHVIZ_PREFIX}/lib" \
+            pygraphviz
+
+      - name: Install dependencies
+        run: python -m pip install .[all,tests]
 
       - name: Print installed packages
         run: pip freeze
