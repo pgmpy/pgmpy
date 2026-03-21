@@ -507,6 +507,7 @@ class Mplp(Inference):
         >>> mm.add_factors(*(phi_single + phi_pair))
         >>> mplp = Mplp(mm)
         >>> mplp.map_query()
+        >>> {k: int(v) for k, v in mplp.map_query().items()}
         {'x1': 0, 'x2': 1, 'x3': 1, 'x4': 0, 'x5': 1, 'x6': 1, 'x7': 1}
         >>> int_gap = mplp.get_integrality_gap()
         """
@@ -626,7 +627,7 @@ class Mplp(Inference):
         ... )
         >>> mplp = Mplp(student)
         >>> result = mplp.map_query()
-        >>> result
+        >>> {k: int(v) for k, v in result.items()}
         {'A': 1, 'B': 0, 'C': 1, 'D': 1, 'E': 1, 'F': 0}
         """
         self.dual_threshold = dual_threshold
