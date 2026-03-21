@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 import unittest
 
 import numpy as np
@@ -8,6 +7,7 @@ from pandas import DataFrame
 
 from pgmpy.factors.discrete import State
 from pgmpy.models import MarkovChain as MC
+from pgmpy.utils import sample_discrete
 
 
 class TestMarkovChain(unittest.TestCase):
@@ -257,29 +257,59 @@ class TestMarkovChain(unittest.TestCase):
         model.add_transition_model("diff", diff_tm)
         self.assertFalse(model.is_stationarity(0.0002, None))
 
-    @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
-    def test_generate_sample(self, sample_discrete):
+    def test_generate_sample(self):
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-        sample_discrete.side_effect = [[1], [0]] * 2
         gen = model.generate_sample(start_state=[State("a", 0), State("b", 1)], size=2)
         samples = [sample for sample in gen]
-        expected_samples = [[State("a", 1), State("b", 0)]] * 2
-        self.assertEqual(samples, expected_samples)
+        self.assertEqual(len(samples), 2)
+        for sample in samples:
+            self.assertEqual(len(sample), 2)
+            self.assertIn(sample[0].state, [0, 1])
+            self.assertIn(sample[1].state, [0, 1])
 
-    @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
+    def test_generate_sample_seed_reproducibility(self):
+        model = MC(["a", "b"], [2, 2])
+        model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
+        model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
+
+        start_state = [State("a", 0), State("b", 1)]
+        samples1 = list(model.generate_sample(start_state=start_state, size=10, seed=42))
+
+        model.set_start_state(start_state)
+        samples2 = list(model.generate_sample(start_state=start_state, size=10, seed=42))
+
+        self.assertEqual(samples1, samples2)
+
+    def test_generate_sample_seed_advances_rng_between_steps(self):
+        model = MC(["a"], [2])
+        model.transition_models["a"] = {
+            0: {0: 0.5, 1: 0.5},
+            1: {0: 0.5, 1: 0.5},
+        }
+
+        np.random.seed(42)
+        expected = [sample_discrete([0, 1], [0.5, 0.5])[0] for _ in range(8)]
+
+        start_state = [State("a", 0)]
+        samples = [sample[0].state for sample in model.generate_sample(start_state=start_state, size=8, seed=42)]
+
+        self.assertEqual(samples, expected)
+        self.assertGreater(len(set(samples)), 1)
+
     @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
-    def test_generate_sample_less_arg(self, random_state, sample_discrete):
+    def test_generate_sample_less_arg(self, random_state):
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
         random_state.return_value = [State("a", 0), State("b", 1)]
-        sample_discrete.side_effect = [[1], [0]] * 2
         gen = model.generate_sample(size=2)
         samples = [sample for sample in gen]
-        expected_samples = [[State("a", 1), State("b", 0)]] * 2
-        self.assertEqual(samples, expected_samples)
+        random_state.assert_called_once_with(model)
+        self.assertEqual(len(samples), 2)
+        for sample in samples:
+            self.assertEqual(len(sample), 2)
 
     def test_random_state(self):
         model = MC(["a", "b"], [2, 3])

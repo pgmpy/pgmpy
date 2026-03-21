@@ -350,6 +350,16 @@ class MarkovChain:
         """
         Generator version of self.sample
 
+        Parameters
+        ----------
+        start_state: dict or array-like iterable
+            Representing the starting states of the variables. If None is passed, the
+            previously set start state or a random start state is used.
+        size: int
+            Number of samples to be generated.
+        seed: int or None (default: None)
+            If provided, seeds the random number generator for reproducible results.
+
         Returns
         -------
         List of State namedtuples, representing the assignment to all variables of the model.
@@ -368,7 +378,7 @@ class MarkovChain:
         >>> model.add_transition_model("intel", intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1: 0.75}}
         >>> model.add_transition_model("diff", diff_tm)
-        >>> gen = model.generate_sample([State("intel", 0), State("diff", 0)], 2)
+        >>> gen = model.generate_sample([State("intel", 0), State("diff", 0)], 2, seed=42)
         >>> [sample for sample in gen] # doctest: +SKIP
         [[State(var='intel', state=2), State(var='diff', state=1)],
          [State(var='intel', state=2), State(var='diff', state=0)]]
@@ -381,12 +391,14 @@ class MarkovChain:
             self.set_start_state(start_state)
         # sampled.loc[0] = [self.state[var] for var in self.variables]
 
-        for i in range(size):
+        if seed is not None:
+            np.random.seed(seed)
+
+        for _ in range(size):
             for j, (var, st) in enumerate(self.state):
                 next_st = sample_discrete(
                     list(self.transition_models[var][st].keys()),
                     list(self.transition_models[var][st].values()),
-                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
