@@ -8,7 +8,7 @@ from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
 
-class SEMEstimator(object):
+class SEMEstimator:
     """
     Base class of SEM estimators. All the estimators inherit this class.
     """
@@ -27,9 +27,7 @@ class SEMEstimator(object):
         elif isinstance(model, SEMAlg):
             self.model = model
         else:
-            raise ValueError(
-                f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
-            )
+            raise ValueError(f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}")
 
         import torch
 
@@ -110,12 +108,7 @@ class SEMEstimator(object):
         S = loss_args["S"]
         sigma = self._get_implied_cov(params["B"], params["zeta"])
 
-        return (
-            sigma.det().clamp(min=1e-4).log()
-            + (S @ pinverse(sigma)).trace()
-            - S.logdet()
-            - len(self.model.y)
-        )
+        return sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() - len(self.model.y)
 
     def uls_loss(self, params, loss_args):
         r"""
@@ -201,8 +194,7 @@ class SEMEstimator(object):
                         B[i, j] = 1.0
                     elif i != j:
                         B[i, j] = a * (
-                            data.loc[:, scaling_vars[eta[i]]].std()
-                            / data.loc[:, scaling_vars[eta[j]]].std()
+                            data.loc[:, scaling_vars[eta[i]]].std() / data.loc[:, scaling_vars[eta[j]]].std()
                         )
             zeta = np.random.rand(m, m)
             for i in range(m):
@@ -280,19 +272,13 @@ class SEMEstimator(object):
             B_init, zeta_init = init_values["B"], init_values["zeta"]
         else:
             B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
-        B = torch.tensor(
-            B_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
-        zeta = torch.tensor(
-            zeta_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
+        B = torch.tensor(B_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+        zeta = torch.tensor(zeta_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
 
         # Compute the covariance of the data
         variable_order = self.model.y
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
-        S = torch.tensor(
-            S.values, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-        )
+        S = torch.tensor(S.values, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
 
         # Optimize the parameters
         if method.lower() == "ml":
@@ -346,9 +332,7 @@ class SEMEstimator(object):
         norm_residual = np.zeros(residual.shape)
         for i in range(norm_residual.shape[0]):
             for j in range(norm_residual.shape[1]):
-                norm_residual[i, j] = (
-                    sample_cov[i, j] - sigma_hat[i, j]
-                ) / backend.sqrt(
+                norm_residual[i, j] = (sample_cov[i, j] - sigma_hat[i, j]) / backend.sqrt(
                     ((sigma_hat[i, i] * sigma_hat[j, j]) + (sigma_hat[i, j] ** 2)) / N
                 )
 
@@ -381,9 +365,7 @@ class SEMEstimator(object):
         }
 
         # Update the model with the learned params
-        self.model.set_params(
-            B=compat_fns.to_numpy(params["B"]), zeta=compat_fns.to_numpy(params["zeta"])
-        )
+        self.model.set_params(B=compat_fns.to_numpy(params["B"]), zeta=compat_fns.to_numpy(params["zeta"]))
         return summary
 
 
@@ -450,17 +432,11 @@ class IVEstimator:
             civ_conditionals.extend(civ[1])
 
         # First stage regression.
-        params = (
-            sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals])
-            .fit()
-            .params
-        )
+        params = sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
 
         data["X_pred"] = np.zeros(data.shape[0])
         for var in reg_covars:
             data.X_pred += params[var] * data.loc[:, var]
 
-        summary = sm.OLS(
-            data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]
-        ).fit()
+        summary = sm.OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
         return summary.params["X_pred"], summary

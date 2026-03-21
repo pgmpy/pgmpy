@@ -85,16 +85,14 @@ class Mplp(Inference):
         if not isinstance(model, DiscreteMarkovNetwork):
             raise TypeError("Only DiscreteMarkovNetwork is supported")
 
-        super(Mplp, self).__init__(model)
+        super().__init__(model)
         self._initialize_structures()
 
         # S = \{c \cap c^{'} : c, c^{'} \in C, c \cap c^{'} \neq \emptyset\}
         self.intersection_set_variables = set()
         # We generate the Intersections of all the pairwise edges taken one at a time to form S
         for edge_pair in it.combinations(model.edges(), 2):
-            self.intersection_set_variables.add(
-                frozenset(edge_pair[0]) & frozenset(edge_pair[1])
-            )
+            self.intersection_set_variables.add(frozenset(edge_pair[0]) & frozenset(edge_pair[1]))
 
         # The corresponding optimization problem = \min_{\delta}{dual_lp(\delta)} where:
         # dual_lp(\delta) = \sum_{i \in V}{max_{x_i}(Objective[nodes])} + \sum_{f /in F}{max_{x_f}(Objective[factors])
@@ -110,14 +108,10 @@ class Mplp(Inference):
             self.objective[scope] = factor
             # For every factor consisting of more that a single node, we initialize a cluster.
             if len(scope) > 1:
-                self.cluster_set[scope] = self.Cluster(
-                    self.intersection_set_variables, factor
-                )
+                self.cluster_set[scope] = self.Cluster(self.intersection_set_variables, factor)
 
         # dual_lp(\delta) is the dual linear program
-        self.dual_lp = sum(
-            [np.amax(self.objective[obj].values) for obj in self.objective]
-        )
+        self.dual_lp = sum([np.amax(self.objective[obj].values) for obj in self.objective])
 
         # Best integral value of the primal objective is stored here
         self.best_int_objective = 0
@@ -131,7 +125,7 @@ class Mplp(Inference):
         # Default value = 0.0002. This can be changed in the map_query() method.
         self.integrality_gap_threshold = 0.0002
 
-    class Cluster(object):
+    class Cluster:
         r"""
         Inner class for representing a cluster.
         A cluster is a subset of variables.
@@ -176,12 +170,8 @@ class Mplp(Inference):
                 present_variables = list(intersection)
 
                 # Present variables cardinality
-                present_variables_card = cluster_potential.get_cardinality(
-                    present_variables
-                )
-                present_variables_card = [
-                    present_variables_card[var] for var in present_variables
-                ]
+                present_variables_card = cluster_potential.get_cardinality(present_variables)
+                present_variables_card = [present_variables_card[var] for var in present_variables]
 
                 # We need to create a new factor whose messages are blank
                 self.message_from_cluster[intersection] = DiscreteFactor(
@@ -238,10 +228,7 @@ class Mplp(Inference):
             updated_results.append(
                 phi
                 + -1
-                * (
-                    self.objective[current_intersect]
-                    + -1 * sending_cluster.message_from_cluster[current_intersect]
-                )
+                * (self.objective[current_intersect] + -1 * sending_cluster.message_from_cluster[current_intersect])
             )
 
         # This loop is primarily for simultaneous updating:
@@ -251,9 +238,7 @@ class Mplp(Inference):
         cluster_potential = copy.deepcopy(sending_cluster.cluster_potential)
         for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
             index += 1
-            sending_cluster.message_from_cluster[current_intersect] = updated_results[
-                index
-            ]
+            sending_cluster.message_from_cluster[current_intersect] = updated_results[index]
             self.objective[current_intersect] = objective[index]
             cluster_potential += (-1) * updated_results[index]
 
@@ -269,17 +254,13 @@ class Mplp(Inference):
         """
         # The current assignment of the single node factors is stored in the form of a dictionary
         decoded_result_assignment = {
-            node: np.argmax(self.objective[node].values)
-            for node in self.objective
-            if len(node) == 1
+            node: np.argmax(self.objective[node].values) for node in self.objective if len(node) == 1
         }
         # Use the original cluster_potentials of each factor to find the primal integral value.
         # 1. For single node factors
         integer_value = sum(
             [
-                self.factors[variable][0].values[
-                    decoded_result_assignment[frozenset([variable])]
-                ]
+                self.factors[variable][0].values[decoded_result_assignment[frozenset([variable])]]
                 for variable in self.variables
             ]
         )
@@ -290,9 +271,7 @@ class Mplp(Inference):
                 tuple([variable, decoded_result_assignment[frozenset([variable])]])
                 for variable in cluster.cluster_variables
             ]
-            integer_value += cluster.cluster_potential.reduce(
-                index, inplace=False
-            ).values
+            integer_value += cluster.cluster_potential.reduce(index, inplace=False).values
 
         # Check if this is the best assignment till now
         if self.best_int_objective < integer_value:
@@ -320,9 +299,7 @@ class Mplp(Inference):
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # Find the new objective after the message updates
-        new_dual_lp = sum(
-            [np.amax(self.objective[obj].values) for obj in self.objective]
-        )
+        new_dual_lp = sum([np.amax(self.objective[obj].values) for obj in self.objective])
 
         # Update the dual_gap as the difference between the dual objective of the previous and the current iteration.
         self.dual_gap = abs(self.dual_lp - new_dual_lp)
@@ -334,10 +311,7 @@ class Mplp(Inference):
         if dual_threshold and self.dual_gap < dual_threshold:
             return True
         # Check the threshold for the integrality gap
-        elif (
-            integrality_gap_threshold
-            and self.integrality_gap < integrality_gap_threshold
-        ):
+        elif integrality_gap_threshold and self.integrality_gap < integrality_gap_threshold:
             return True
         else:
             self.dual_lp = new_dual_lp
@@ -390,15 +364,9 @@ class Mplp(Inference):
         new_intersection_set = []
         for triangle_vars in triangles_list:
             cardinalities = [self.cardinality[variable] for variable in triangle_vars]
-            current_intersection_set = [
-                frozenset(intersect) for intersect in it.combinations(triangle_vars, 2)
-            ]
-            current_factor = DiscreteFactor(
-                triangle_vars, cardinalities, np.zeros(np.prod(cardinalities))
-            )
-            self.cluster_set[frozenset(triangle_vars)] = self.Cluster(
-                current_intersection_set, current_factor
-            )
+            current_intersection_set = [frozenset(intersect) for intersect in it.combinations(triangle_vars, 2)]
+            current_factor = DiscreteFactor(triangle_vars, cardinalities, np.zeros(np.prod(cardinalities)))
+            self.cluster_set[frozenset(triangle_vars)] = self.Cluster(current_intersection_set, current_factor)
             # add new factors
             self.model.factors.append(current_factor)
             # add new intersection sets
@@ -421,17 +389,10 @@ class Mplp(Inference):
         triplet_scores = {}
         for triplet in triangles_list:
             # Find the intersection sets of the current triplet
-            triplet_intersections = [
-                intersect for intersect in it.combinations(triplet, 2)
-            ]
+            triplet_intersections = [intersect for intersect in it.combinations(triplet, 2)]
 
             # Independent maximization
-            ind_max = sum(
-                [
-                    np.amax(self.objective[frozenset(intersect)].values)
-                    for intersect in triplet_intersections
-                ]
-            )
+            ind_max = sum([np.amax(self.objective[frozenset(intersect)].values) for intersect in triplet_intersections])
 
             # Joint maximization
             joint_max = self.objective[frozenset(triplet_intersections[0])]
@@ -462,10 +423,7 @@ class Mplp(Inference):
             # Find an integral solution by locally maximizing the single node beliefs
             self._local_decode()
             # If mplp converges to a global/local optima, we break.
-            if (
-                self._is_converged(self.dual_threshold, self.integrality_gap_threshold)
-                and niter >= 16
-            ):
+            if self._is_converged(self.dual_threshold, self.integrality_gap_threshold) and niter >= 16:
                 break
 
     def _tighten_triplet(self, max_iterations, later_iter, max_triplets, prolong):
@@ -494,9 +452,7 @@ class Mplp(Inference):
         # Arrange the keys on the basis of increasing order of the values of the dict. triplet_scores
         sorted_scores = sorted(triplet_scores, key=triplet_scores.get)
         for niter in range(max_iterations):
-            if self._is_converged(
-                integrality_gap_threshold=self.integrality_gap_threshold
-            ):
+            if self._is_converged(integrality_gap_threshold=self.integrality_gap_threshold):
                 break
             # add triplets that are yet not added.
             add_triplets = []

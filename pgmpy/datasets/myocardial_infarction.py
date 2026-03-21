@@ -32,9 +32,7 @@ class MyocardialInfarction(_BaseDataset):
     data_url = base_url + "data/myocarcial-infaraction-complications.continuous.txt"
 
     ground_truth_url = None
-    expert_knowledge_url = (
-        base_url + "ground.truth/myocarcial-infaraction-complications.knowledge.txt"
-    )
+    expert_knowledge_url = base_url + "ground.truth/myocarcial-infaraction-complications.knowledge.txt"
     missing_values_marker = "*"
 
     categorical_variables = []

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 from sklearn.base import clone
@@ -76,7 +76,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     >>> y = data["Y"]
     >>> G = DAG(
     ...     lgbn.edges(),
-    ...     roles={"exposure": "X", "instrument": ("Z1", "Z2"), "outcome": "Y"},
+    ...     roles={"exposures": "X", "instrument": ("Z1", "Z2"), "outcomes": "Y"},
     ... )
     >>>
     >>> model = NaiveIVRegressor(
@@ -114,9 +114,9 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     ...         ("P", "Y"),
     ...     ],
     ...     roles={
-    ...         "exposure": "X",
+    ...         "exposures": "X",
     ...         "instrument": ("U1", "U2", "U3"),
-    ...         "outcome": "Y",
+    ...         "outcomes": "Y",
     ...         "pretreatment": ["P"],
     ...     },
     ... )
@@ -140,7 +140,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     >>>
     >>> dag = DAG(
     ...     ebunch=[(1, 0), (0, 2)],
-    ...     roles={"exposure": [0], "outcome": [2], "instrument": [1]},
+    ...     roles={"exposures": [0], "outcomes": [2], "instrument": [1]},
     ... )
     >>> model = NaiveIVRegressor(
     ...     causal_graph=dag,
@@ -168,14 +168,14 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     def __init__(
         self,
         causal_graph,
-        stage1_estimator: Optional[Any] = None,
-        stage2_estimator: Optional[Any] = None,
+        stage1_estimator: Any | None = None,
+        stage2_estimator: Any | None = None,
     ):
         self.causal_graph = causal_graph
         self.stage1_estimator = stage1_estimator
         self.stage2_estimator = stage2_estimator
 
-    def fit(self, X, y, sample_weight: Optional[Any] = None):
+    def fit(self, X, y, sample_weight: Any | None = None):
         """
         This method performs two-stage least squares regression using the specified causal graph.
         It first fits the stage 1 estimator to predict the exposure variable from the instrument,
@@ -221,19 +221,15 @@ class NaiveIVRegressor(_BaseCausalPrediction):
         stage2_estimator = clone(self.stage2_estimator)
 
         # Step 1.1: Get roles from the causal graph and assign to attributes.
-        exposure_vars = self.causal_graph.get_role("exposure")
-        outcome_vars = self.causal_graph.get_role("outcome")
+        exposure_vars = self.causal_graph.get_role("exposures")
+        outcome_vars = self.causal_graph.get_role("outcomes")
         instrument_vars = self.causal_graph.get_role("instrument")
 
         # Step 1.2: Validate that exactly one exposure, one outcome and atleast one instrument are specified.
         if len(exposure_vars) != 1:
-            raise ValueError(
-                f"The current implementation only works for a single exposure; got {len(exposure_vars)}"
-            )
+            raise ValueError(f"The current implementation only works for a single exposure; got {len(exposure_vars)}")
         if len(outcome_vars) != 1:
-            raise ValueError(
-                f"The current implementation only works for a single outcome; got {len(outcome_vars)}"
-            )
+            raise ValueError(f"The current implementation only works for a single outcome; got {len(outcome_vars)}")
         if len(instrument_vars) < 1:
             raise ValueError("NaiveIVRegressor requires at least one instrument.")
 
@@ -241,9 +237,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
         self.outcome_var_ = outcome_vars[0]
         self.instrument_vars_ = instrument_vars
         self.pretreatment_vars_ = self.causal_graph.get_role("pretreatment")
-        self.feature_columns_fit_ = (
-            [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
-        )
+        self.feature_columns_fit_ = [self.exposure_var_] + self.instrument_vars_ + self.pretreatment_vars_
 
         # Step 1.2: Prepare feature dataframes and sample weights
         df = self._prepare_feature_df(X, required_features=self.feature_columns_fit_)
@@ -275,14 +269,10 @@ class NaiveIVRegressor(_BaseCausalPrediction):
         check_is_fitted(self, "stage1_est_")
         check_is_fitted(self, "stage2_est_")
 
-        validate_data(
-            self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False
-        )
+        validate_data(self, X, accept_sparse=False, ensure_2d=True, dtype="numeric", reset=False)
 
         # Step 1: Prepare feature DataFrame for prediction
-        X_df = self._prepare_feature_df(
-            X, required_features=self.feature_columns_predict_
-        )
+        X_df = self._prepare_feature_df(X, required_features=self.feature_columns_predict_)
 
         exposure = X_df[self.exposure_var_]
         pre_treatment = X_df[self.pretreatment_vars_]

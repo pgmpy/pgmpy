@@ -1,4 +1,5 @@
 import gzip
+import warnings
 
 import pandas as pd
 
@@ -8,7 +9,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 
 def get_example_model(model: str):
@@ -47,9 +48,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    logger.warning(
-        "Deprecation Warning: `get_example_model` is deprecated and will be removed in a future release. "
-        "Please use `pgmpy.example_models.load_model` instead."
+    warnings.warn(
+        "`get_example_model` is deprecated. Please use `pgmpy.example_models.load_model` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     cat_models = {
         "asia",
@@ -154,10 +156,7 @@ def get_example_model(model: str):
     }
 
     if model not in filenames:
-        raise ValueError(
-            f"Unknown model name: {model}. Please refer"
-            " documentation for valid model names."
-        )
+        raise ValueError(f"Unknown model name: {model}. Please refer documentation for valid model names.")
 
     path = filenames[model]
 
@@ -254,9 +253,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             )
     elif method == "quantile":
         for column in data.columns:
-            df_copy[column] = pd.qcut(
-                df_copy[column], q=cardinality[column], labels=labels.get(column)
-            )
+            df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
 
@@ -325,9 +322,7 @@ def llm_pairwise_orient(
         Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
         Do not add any formatting in the answer.
         """
-    response = completion(
-        model=llm_model, messages=[{"role": "user", "content": prompt}]
-    )
+    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
     response = response.choices[0].message.content
     response_txt = response.strip().lower().replace("*", "")
     if response_txt in ("a", "1"):
@@ -335,9 +330,7 @@ def llm_pairwise_orient(
     elif response_txt in ("b", "2"):
         return (y, x)
     else:
-        raise ValueError(
-            "Results from the LLM are unclear. Try calling the function again."
-        )
+        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):
@@ -395,9 +388,7 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(
-            df[col]
-        ):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
@@ -412,8 +403,7 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
-        f"inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
 

@@ -1,12 +1,12 @@
+import warnings
 from collections.abc import Callable
-from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 from pgmpy.independencies import IndependenceAssertion
 from pgmpy.utils import get_dataset_type
 
@@ -19,15 +19,15 @@ class CITestRegistry:
     """
 
     def __init__(self):
-        self._registry: Dict[str, Callable] = {}
-        self._tags: Dict[str, List[str]] = {}
-        self._defaults: Dict[str, str] = {
+        self._registry: dict[str, Callable] = {}
+        self._tags: dict[str, list[str]] = {}
+        self._defaults: dict[str, str] = {
             "continuous": "pearsonr",
             "discrete": "chi_square",
             "mixed": "pillai",
         }
 
-    def register(self, name: str, data_types: List[str]):
+    def register(self, name: str, data_types: list[str]):
         """
         Decorator to register a CI test strategy.
 
@@ -49,7 +49,7 @@ class CITestRegistry:
 
         return decorator
 
-    def list_all(self, data_type=None) -> List[str]:
+    def list_all(self, data_type=None) -> list[str]:
         """
         Lists all registered CI test strategies.
 
@@ -68,9 +68,7 @@ class CITestRegistry:
 
         return list(self._registry.keys())
 
-    def get_test(
-        self, test: Union[str, None, Callable], data: Optional[pd.DataFrame] = None
-    ) -> Callable:
+    def get_test(self, test: str | None | Callable, data: pd.DataFrame | None = None) -> Callable:
         """
         Retrieves a CI test strategy.
 
@@ -99,10 +97,7 @@ class CITestRegistry:
         # Case 2: Test is None, infer from data
         if test is None:
             if data is None:
-                raise ValueError(
-                    "Cannot determine a suitable CI test as data is None. "
-                    "Please specify CI test to use."
-                )
+                raise ValueError("Cannot determine a suitable CI test as data is None. Please specify CI test to use.")
             var_type = get_dataset_type(data)
             test_name = self._defaults.get(var_type)
             return self._registry[test_name]
@@ -114,8 +109,7 @@ class CITestRegistry:
                 return self._registry[clean_name]
             else:
                 raise ValueError(
-                    f"`ci_test` must either be one of {list(self._registry.keys())}, "
-                    f"or a callable. Got: {test}"
+                    f"`ci_test` must either be one of {list(self._registry.keys())}, or a callable. Got: {test}"
                 )
 
 
@@ -150,6 +144,11 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     bool
         True if the independence assertion is present in `independences`, else False.
     """
+    warnings.warn(
+        "`independence_match` is deprecated. Please use `pgmpy.ci_tests.IndependenceMatch` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return IndependenceAssertion(X, Y, Z) in independencies
 
 
@@ -193,6 +192,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
     .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
     """
+    warnings.warn(
+        "`pearsonr` is deprecated. Please use `pgmpy.ci_tests.Pearsonr` instead.", FutureWarning, stacklevel=2
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -200,9 +202,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
-        raise ValueError(
-            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
-        )
+        raise ValueError(f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}")
 
     # Step 2: If Z is empty compute a non-conditional test.
     if len(Z) == 0:
@@ -300,6 +300,11 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     np.False_
 
     """
+    warnings.warn(
+        "`power_divergence` is deprecated. Please use `pgmpy.ci_tests.PowerDivergence` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Check if the arguments are valid and type conversions.
     if hasattr(Z, "__iter__"):
         Z = list(Z)
@@ -307,9 +312,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         raise (f"Z must be an iterable. Got object type: {type(Z)}")
 
     if (X in Z) or (Y in Z):
-        raise ValueError(
-            f"The variables X or Y can't be in Z. Found {X if X in Z else Y} in Z."
-        )
+        raise ValueError(f"The variables X or Y can't be in Z. Found {X if X in Z else Y} in Z.")
 
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
@@ -326,23 +329,17 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             # Compute the contingency table
             unique_x, x_inv = np.unique(df[X], return_inverse=True)
             unique_y, y_inv = np.unique(df[Y], return_inverse=True)
-            contingency = np.bincount(
-                x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)
-            ).reshape(len(unique_x), len(unique_y))
+            contingency = np.bincount(x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)).reshape(
+                len(unique_x), len(unique_y)
+            )
 
             # If all values of a column in the contingency table are zeros, skip the test.
             if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                 if isinstance(z_state, str):
-                    logger.info(
-                        f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples"
-                    )
+                    logger.info(f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples")
                 else:
-                    z_str = ", ".join(
-                        [f"{var}={state}" for var, state in zip(Z, z_state)]
-                    )
-                    logger.info(
-                        f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples"
-                    )
+                    z_str = ", ".join([f"{var}={state}" for var, state in zip(Z, z_state)])
+                    logger.info(f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples")
             else:
                 c, _, d, _ = stats.chi2_contingency(contingency, lambda_=lambda_)
                 chi += c
@@ -415,9 +412,10 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    return power_divergence(
-        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs
+    warnings.warn(
+        "`chi_square` is deprecated. Please use `pgmpy.ci_tests.ChiSquare` instead.", FutureWarning, stacklevel=2
     )
+    return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs)
 
 
 @ci_registry.register(name="g_sq", data_types=["discrete"])
@@ -477,9 +475,8 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    return power_divergence(
-        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
-    )
+    warnings.warn("`g_sq` is deprecated. Please use `pgmpy.ci_tests.GSq` instead.", FutureWarning, stacklevel=2)
+    return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
 @ci_registry.register(name="log_likelihood", data_types=["discrete"])
@@ -547,9 +544,12 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    return power_divergence(
-        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
+    warnings.warn(
+        "`log_likelihood` is deprecated. Please use `pgmpy.ci_tests.LogLikelihood` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
+    return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
 @ci_registry.register(name="modified_log_likelihood", data_types=["discrete"])
@@ -612,6 +612,11 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
+    warnings.warn(
+        "`modified_log_likelihood` is deprecated. Please use `pgmpy.ci_tests.ModifiedLogLikelihood` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return power_divergence(
         X=X,
         Y=Y,
@@ -715,6 +720,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     .. [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate
            general linear hypothesis. Computational Statistics & Data Analysis.
     """
+    warnings.warn(
+        "`pillai_trace` is deprecated. Please use `pgmpy.ci_tests.PillaiTrace` instead.", FutureWarning, stacklevel=2
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -722,9 +730,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
         Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
-        raise ValueError(
-            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
-        )
+        raise ValueError(f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}")
 
     # Step 1.1: If no conditional variables are specified, use a constant value.
     if len(Z) == 0:
@@ -737,9 +743,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     # Step 3: Compute the residuals
     def get_residuals(col_name, pred, cat_index):
         if data.loc[:, col_name].dtype == "category":
-            dummies = pd.get_dummies(data.loc[:, col_name]).loc[
-                :, cat_index.categories[cat_index.codes]
-            ]
+            dummies = pd.get_dummies(data.loc[:, col_name]).loc[:, cat_index.categories[cat_index.codes]]
             # Drop last column to avoid multicollinearity
             return (dummies - pred).iloc[:, :-1]
         else:
@@ -819,6 +823,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
         Covariance Measure".
     """
+    warnings.warn("`gcm` is deprecated. Please use `pgmpy.ci_tests.GCM` instead.", FutureWarning, stacklevel=2)
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -826,9 +831,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
         Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
-        raise ValueError(
-            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
-        )
+        raise ValueError(f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}")
 
     # Step 1.1: Add another column with constant values to handle intercepts.
     Z_aug = Z + ["intercept"]
@@ -855,9 +858,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="pearsonr_equivalence", data_types=["continuous"])
-def pearsonr_equivalence(
-    X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwargs
-) -> tuple | bool:
+def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwargs) -> tuple | bool:
     """
     Computes a two-sided level-alpha equivalent test using partial correlations.
 
@@ -895,6 +896,11 @@ def pearsonr_equivalence(
     .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
             arXiv:2404.18232 (2024).
     """
+    warnings.warn(
+        "`pearsonr_equivalence` is deprecated. Please use `pgmpy.ci_tests.PearsonrEquivalence` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Input validation
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -902,9 +908,7 @@ def pearsonr_equivalence(
         Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
-        raise ValueError(
-            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
-        )
+        raise ValueError(f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}")
 
     # Step 2: Compute Partial Pearson Correlation and clip values to avoid infinities
     rho, _ = pearsonr(X, Y, Z, data, boolean=False)

@@ -1,19 +1,20 @@
+import warnings
+from collections.abc import Hashable
 from itertools import combinations
-from typing import Hashable, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
+from pgmpy import logger
 from pgmpy.base import DAG, PDAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
-    ExpertKnowledge,
     StructureEstimator,
     StructureScore,
 )
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 
 
 class GES(StructureEstimator):
@@ -44,37 +45,33 @@ class GES(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This GES class will be removed in a future release. "
-            "Please use the new sklearn compatible GES class from the "
-            "pgmpy.causal_discovery module instead."
+        warnings.warn(
+            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.use_cache = use_cache
 
-        super(GES, self).__init__(data=data, **kwargs)
+        super().__init__(data=data, **kwargs)
 
     def _legal_edge_additions(
         self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be added to the graph such that it remains a DAG.
         """
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
             if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u) and (
-                    (u, v) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, v, u) and ((u, v) not in expert_knowledge.forbidden_edges):
                     edges.append((u, v))
-                if not nx.has_path(current_model, u, v) and (
-                    (v, u) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, u, v) and ((v, u) not in expert_knowledge.forbidden_edges):
                     edges.append((v, u))
         return edges
 
     def _legal_edge_removals(
         self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be removed from the graph such that it remains a DAG.
         """
@@ -86,7 +83,7 @@ class GES(StructureEstimator):
 
     def _legal_edge_flips(
         self, current_model: PDAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all the edges in the `current_model` that can be flipped such that the model
         remains a DAG.
@@ -94,9 +91,7 @@ class GES(StructureEstimator):
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
-            if ((u, v) not in expert_knowledge.required_edges) and (
-                (v, u) not in expert_knowledge.forbidden_edges
-            ):
+            if ((u, v) not in expert_knowledge.required_edges) and ((v, u) not in expert_knowledge.forbidden_edges):
                 current_model.remove_edge(u, v)
                 if not nx.has_path(current_model, u, v):
                     potential_flips.append((v, u))
@@ -107,8 +102,8 @@ class GES(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        scoring_method: str | StructureScore | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         min_improvement: float = 1e-6,
         debug: bool = False,
     ) -> PDAG:
@@ -141,9 +136,9 @@ class GES(StructureEstimator):
         --------
         >>> import numpy as np
         >>> # Simulate some sample data from a known model to learn the model structure from
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> np.random.seed(42)
-        >>> model = get_example_model("alarm")
+        >>> model = load_model("bnlearn/alarm")
         >>> model.seed = 42
         >>> df = model.simulate(int(1e3))
 
@@ -171,21 +166,15 @@ class GES(StructureEstimator):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(self.data.columns)
 
-        expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, only_edges=False
-        )
+        expert_knowledge._orient_temporal_forbidden_edges(current_model, only_edges=False)
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
-            potential_edges = self._legal_edge_additions(
-                current_model, expert_knowledge
-            )
+            potential_edges = self._legal_edge_additions(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_edges))
             for index, (u, v) in enumerate(potential_edges):
                 current_parents = current_model.get_parents(v)
-                score_delta = score_fn(v, current_parents + [u]) - score_fn(
-                    v, current_parents
-                )
+                score_delta = score_fn(v, current_parents + [u]) - score_fn(v, current_parents)
                 score_deltas[index] = score_delta
 
             if (len(potential_edges) == 0) or (np.all(score_deltas < min_improvement)):
@@ -200,19 +189,15 @@ class GES(StructureEstimator):
 
         # Step 3: Backward Step: Iteratively remove edges till score stops improving.
         while True:
-            potential_removals = self._legal_edge_removals(
-                current_model, expert_knowledge
-            )
+            potential_removals = self._legal_edge_removals(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
                 current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(
-                    v, [node for node in current_parents if node != u]
-                ) - score_fn(v, current_parents)
-            if (len(potential_removals) == 0) or (
-                np.all(score_deltas < min_improvement)
-            ):
+                score_deltas[index] = score_fn(v, [node for node in current_parents if node != u]) - score_fn(
+                    v, current_parents
+                )
+            if (len(potential_removals) == 0) or (np.all(score_deltas < min_improvement)):
                 break
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
             current_model.remove_edge(edge_to_remove[0], edge_to_remove[1])
@@ -228,11 +213,8 @@ class GES(StructureEstimator):
             for index, (u, v) in enumerate(potential_flips):
                 v_parents = current_model.get_parents(v)
                 u_parents = current_model.get_parents(u)
-                score_deltas[index] = (
-                    score_fn(v, v_parents + [u]) - score_fn(v, v_parents)
-                ) + (
-                    score_fn(u, [node for node in u_parents if node != v])
-                    - score_fn(u, u_parents)
+                score_deltas[index] = (score_fn(v, v_parents + [u]) - score_fn(v, v_parents)) + (
+                    score_fn(u, [node for node in u_parents if node != v]) - score_fn(u, u_parents)
                 )
 
             if (len(potential_flips) == 0) or (np.all(score_deltas < min_improvement)):
