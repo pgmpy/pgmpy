@@ -1230,19 +1230,7 @@ class DiscreteBayesianNetwork(DAG):
         bn_model = DiscreteBayesianNetwork(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
 
-        cpds = []
-        for node in bn_model.nodes():
-            parents = list(bn_model.predecessors(node))
-            cpds.append(
-                TabularCPD.get_random(
-                    variable=node,
-                    evidence=parents,
-                    cardinality=n_states_dict,
-                    seed=seed,
-                )
-            )
-
-        bn_model.add_cpds(*cpds)
+        bn_model.get_random_cpds(n_states=n_states_dict, inplace=True, seed=seed)
         return bn_model
 
     def get_random_cpds(
@@ -1279,9 +1267,17 @@ class DiscreteBayesianNetwork(DAG):
             n_states = {var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
 
         cpds = []
-        for node in self.nodes():
+        for i, node in enumerate(self.nodes()):
             parents = list(self.predecessors(node))
-            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, seed=seed))
+            current_seed = (seed + i) if seed is not None else None
+            cpds.append(
+                TabularCPD.get_random(
+                    variable=node,
+                    evidence=parents,
+                    cardinality=n_states,
+                    seed=current_seed,
+                )
+            )
 
         if inplace:
             self.add_cpds(*cpds)

@@ -458,6 +458,25 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(len(model.cpds), 5)
         self.assertTrue(model.check_model())
 
+    def test_get_random_cpds_seed(self):
+        # Create a model with two independent nodes (same subgraph structure)
+        model = DiscreteBayesianNetwork()
+        model.add_nodes_from(["X", "Y"])
+
+        # Call get_random_cpds with a seed
+        cpds = model.get_random_cpds(n_states=2, seed=42)
+
+        # Verify that the two CPDs are not identical
+        cpd_x = None
+        cpd_y = None
+        for cpd in cpds:
+            if cpd.variable == "X":
+                cpd_x = cpd
+            elif cpd.variable == "Y":
+                cpd_y = cpd
+
+        self.assertFalse(np.allclose(cpd_x.get_values(), cpd_y.get_values()))
+
     def test_remove_node(self):
         self.G1.remove_node("diff")
         self.assertEqual(sorted(self.G1.nodes()), sorted(["grade", "intel"]))
