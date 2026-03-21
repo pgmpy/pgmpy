@@ -3,7 +3,6 @@ import pandas as pd
 import pytest
 
 from pgmpy.causal_discovery import LiNGAM
-from pgmpy.estimators import ExpertKnowledge
 
 
 @pytest.fixture
@@ -70,12 +69,3 @@ def test_fit_rand2(rand_data2):
 
     assert not graph.has_edge("C", "B")
     assert not graph.has_edge("B", "C")
-
-
-def test_expert_knowledge_rand(rand_data):
-    ek = ExpertKnowledge(forbidden_edges=[("A", "B")], required_edges=[("C", "A")])
-    algo = LiNGAM(random_state=42, expert_knowledge=ek)
-    algo.fit(rand_data)
-
-    assert not algo.causal_graph_.has_edge("A", "B")
-    assert algo.causal_graph_.has_edge("C", "A")

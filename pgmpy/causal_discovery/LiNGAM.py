@@ -1,4 +1,3 @@
-import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
@@ -8,7 +7,6 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators import ExpertKnowledge
 
 
 class LiNGAM(_BaseCausalDiscovery):
@@ -30,9 +28,6 @@ class LiNGAM(_BaseCausalDiscovery):
 
     variation: str, default="original"
         The variation of the algorithm to use. Currently only "original" (ICALiNGAM) is supported.
-
-    expert_knowledge: ExpertKnowledge
-        A pgmpy ExpertKnowledge instance specifying forbidden and required edges.
 
     return_type: str, default="dag"
         The type of graph to return. Currently only "dag" is supported.
@@ -72,24 +67,16 @@ class LiNGAM(_BaseCausalDiscovery):
         random_state: int = 42,
         alpha: float = 0.05,
         variation: str = "original",
-        expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "dag",
     ):
         self.random_state = random_state
         self.alpha = alpha
         self.variation = variation
-        self.expert_knowledge = expert_knowledge
         self.return_type = return_type
 
     def _fit(self, X: pd.DataFrame):
 
         # Step 0: Validate inputs
-        if self.expert_knowledge is not None:
-            if not isinstance(self.expert_knowledge, ExpertKnowledge):
-                raise TypeError(
-                    "expert_knowledge must be an instance of ExpertKnowledge"
-                )
-
         if self.variation != "original":
             raise NotImplementedError(
                 f"Variation {self.variation} is not yet implemented. Use 'original'."
@@ -145,31 +132,12 @@ class LiNGAM(_BaseCausalDiscovery):
         self.causal_graph_ = DAG()
         self.causal_graph_.add_nodes_from(self.feature_names_in_)
 
-        # Step 6.1: Check if required edges create a cycle
-        if self.expert_knowledge is not None:
-            self.causal_graph_.add_edges_from(self.expert_knowledge.required_edges)
-            if not nx.is_directed_acyclic_graph(self.causal_graph_):
-                raise ValueError(
-                    "required_edges create a cycle in the causal graph. Please modify expert_knowledge."
-                )
-            self.expert_knowledge._orient_temporal_forbidden_edges(
-                self.causal_graph_, only_edges=False
-            )
-
-        # Step 6.2: Add edges to the graph
+        # Step 6: Add edges to the graph
         for target_idx in range(n_features):
             for source_idx in range(n_features):
                 if B_tilde[target_idx, source_idx] != 0:
                     source_name = self.feature_names_in_[source_idx]
                     target_name = self.feature_names_in_[target_idx]
-
-                    # Ensure the edge doesn't violate forbidden edges
-                    if self.expert_knowledge is not None:
-                        if (
-                            source_name,
-                            target_name,
-                        ) in self.expert_knowledge.forbidden_edges:
-                            continue
 
                     self.causal_graph_.add_edge(source_name, target_name)
 
