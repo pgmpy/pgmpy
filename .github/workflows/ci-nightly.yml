@@ -89,10 +89,28 @@ jobs:
         if: matrix.os == 'macOS-latest'
         run: brew install graphviz
 
-      - name: Install dependencies
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install pygraphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          pip install --upgrade pip
-          pip install .[all,tests]
+          $graphviz_root = Split-Path (Split-Path (Get-Command dot).Source)
+          python -m pip install --config-settings=--global-option=build_ext --config-settings="--global-option=-I$graphviz_root\include" --config-settings="--global-option=-L$graphviz_root\lib" pygraphviz
+
+      - name: Install pygraphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: |
+          GRAPHVIZ_PREFIX="$(brew --prefix graphviz)"
+          python -m pip install \
+            --config-settings=--global-option=build_ext \
+            --config-settings="--global-option=-I${GRAPHVIZ_PREFIX}/include" \
+            --config-settings="--global-option=-L${GRAPHVIZ_PREFIX}/lib" \
+            pygraphviz
+
+      - name: Install dependencies
+        run: python -m pip install .[all,tests]
 
       - name: Print installed packages
         run: pip freeze
