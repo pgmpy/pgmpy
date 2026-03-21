@@ -4,6 +4,7 @@
 # examples/Monty_Hall.ipynb
 examples/Basic_Operations_on_BN.ipynb
 examples/Creating_Discrete_BN.ipynb
+examples/Creating_Linear_BN.ipynb
 examples/Causal_Inference.ipynb
 examples/Defining_CPDs.ipynb
 examples/Extending_pgmpy.ipynb
