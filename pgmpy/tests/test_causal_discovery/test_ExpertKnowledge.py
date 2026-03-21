@@ -8,8 +8,9 @@ class TestExpertKnowledge(unittest.TestCase):
         ek = ExpertKnowledge()
         self.assertEqual(
             repr(ek),
-            "<ExpertKnowledge with 0 required edges, 0 forbidden edges, 0 temporal tiers, and 0 search space edges>",
+            "Expert Knowledge: 0 required edges, 0 forbidden edges, temporal order on 0 nodes, and 0 search space edges",
         )
+        self.assertIn("Expert Knowledge:\n", str(ek))
         self.assertIn("Required Edges: None", str(ek))
         self.assertIn("Forbidden Edges: None", str(ek))
         self.assertIn("Search Space: None", str(ek))
@@ -24,8 +25,9 @@ class TestExpertKnowledge(unittest.TestCase):
         )
         self.assertEqual(
             repr(ek),
-            "<ExpertKnowledge with 1 required edges, 1 forbidden edges, 2 temporal tiers, and 2 search space edges>",
+            "Expert Knowledge: 1 required edges, 1 forbidden edges, temporal order on 2 nodes, and 2 search space edges",
         )
+        self.assertIn("Expert Knowledge:\n", str(ek))
         self.assertIn("Required Edges: {('A', 'B')}", str(ek))
         self.assertIn("Forbidden Edges: {('C', 'D')}", str(ek))
         self.assertIn("Search Space: {", str(ek))  # Sets are unordered, so check prefix and then individual elements.
