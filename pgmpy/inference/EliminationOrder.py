@@ -127,8 +127,7 @@ class WeightedMinFill(BaseEliminationOrder):
         edges = combinations(self.moralized_model.neighbors(node), 2)
         return sum(
             [
-                self.bayesian_model.get_cardinality(edge[0])
-                * self.bayesian_model.get_cardinality(edge[1])
+                self.bayesian_model.get_cardinality(edge[0]) * self.bayesian_model.get_cardinality(edge[1])
                 for edge in edges
             ]
         )
@@ -150,10 +149,7 @@ class MinWeight(BaseEliminationOrder):
         of its neighbors.
         """
         return np.prod(
-            [
-                self.bayesian_model.get_cardinality(neig_node)
-                for neig_node in self.moralized_model.neighbors(node)
-            ]
+            [self.bayesian_model.get_cardinality(neig_node) for neig_node in self.moralized_model.neighbors(node)]
         )
 
 

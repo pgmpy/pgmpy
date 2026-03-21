@@ -56,9 +56,7 @@ class TestBaseModelCreation(unittest.TestCase):
         self.G.add_edge("a", "c")
         self.G.add_edge("a", "d")
         self.assertCountEqual(list(self.G.nodes()), ["a", "b", "c", "d"])
-        self.assertCountEqual(
-            list(self.G.edges()), [("a", "b"), ("a", "c"), ("a", "d")]
-        )
+        self.assertCountEqual(list(self.G.edges()), [("a", "b"), ("a", "c"), ("a", "d")])
         self.assertEqual(self.G.dependent, "a")
         self.assertSetEqual(self.G.features, {"b", "c", "d"})
 
@@ -134,32 +132,16 @@ class TestNaiveBayesMethods(unittest.TestCase):
         )
 
     def test_active_trail_nodes(self):
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("d")), ["d", "g", "l", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("g")), ["d", "g", "l", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("l")), ["d", "g", "l", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("s")), ["d", "g", "l", "s"]
-        )
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("d")), ["d", "g", "l", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("g")), ["d", "g", "l", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("l")), ["d", "g", "l", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("s")), ["d", "g", "l", "s"])
 
     def test_active_trail_nodes_args(self):
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("d", observed="g")), ["d", "l", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("l", observed="g")), ["d", "l", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("s", observed=["g", "l"])), ["d", "s"]
-        )
-        self.assertListEqual(
-            sorted(self.G2.active_trail_nodes("s", observed=["d", "l"])), ["s"]
-        )
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("d", observed="g")), ["d", "l", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("l", observed="g")), ["d", "l", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("s", observed=["g", "l"])), ["d", "s"])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes("s", observed=["d", "l"])), ["s"])
 
     def test_get_ancestors(self):
         self.assertListEqual(sorted(self.G1.get_ancestors("b")), ["a", "b"])
@@ -185,17 +167,13 @@ class TestNaiveBayesFit(unittest.TestCase):
 
         self.model1.fit(values, "A")
         self.assertCountEqual(self.model1.nodes(), ["A", "B", "C", "D", "E"])
-        self.assertCountEqual(
-            self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
-        )
+        self.assertCountEqual(self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")])
         self.assertEqual(self.model1.dependent, "A")
         self.assertSetEqual(self.model1.features, {"B", "C", "D", "E"})
 
         self.model2.fit(values)
         self.assertCountEqual(self.model1.nodes(), ["A", "B", "C", "D", "E"])
-        self.assertCountEqual(
-            self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
-        )
+        self.assertCountEqual(self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")])
         self.assertEqual(self.model2.dependent, "A")
         self.assertSetEqual(self.model2.features, {"B", "C", "D", "E"})
 
@@ -204,9 +182,7 @@ class TestNaiveBayesFit(unittest.TestCase):
             np.random.randint(low=0, high=2, size=(1000, 5)),
             columns=["A", "B", "C", "D", "E"],
         )
-        values2 = pd.DataFrame(
-            np.random.randint(low=0, high=2, size=(1000, 3)), columns=["C", "D", "E"]
-        )
+        values2 = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)), columns=["C", "D", "E"])
 
         self.assertRaises(ValueError, self.model1.fit, values)
         self.assertRaises(ValueError, self.model1.fit, values2)

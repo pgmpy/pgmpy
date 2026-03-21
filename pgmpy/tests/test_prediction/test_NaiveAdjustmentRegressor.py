@@ -22,8 +22,8 @@ def make_estimator():
     dag.add_nodes_from([0, 1])  # exposure=0, outcome=1 (dummy)
 
     # assign roles
-    dag = dag.with_role("exposure", [0])
-    dag = dag.with_role("outcome", [1])
+    dag = dag.with_role("exposures", [0])
+    dag = dag.with_role("outcomes", [1])
     dag = dag.with_role("adjustment", [])
     return NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
 
@@ -37,15 +37,13 @@ def test_sklearn_compatibility(estimator, check):
 def test_basic_functionality_with_adjustment():
     """Test basic fit and predict functionality with synthetic causal data."""
 
-    lgbn = DAG.from_dagitty(
-        "dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
-    )
+    lgbn = DAG.from_dagitty("dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }")
 
     data = lgbn.simulate(1000, seed=42)
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["Z"]},
     )
 
     estimators = [
@@ -95,7 +93,7 @@ def test_dataframe_input_for_both_x_and_y():
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["Z"]},
     )
     cpd_x = LinearGaussianCPD("X", beta=[0, 0.5], std=0.01, evidence=["Z"])
     cpd_y = LinearGaussianCPD("Y", beta=[0, 0.3, 0.2], std=0.01, evidence=["X", "Z"])
@@ -129,8 +127,8 @@ def test_no_adjustment_variables():
     dag = DAG(
         ebunch=[("X", "Y")],
         roles={
-            "exposure": "X",
-            "outcome": "Y",
+            "exposures": "X",
+            "outcomes": "Y",
             "adjustment": [],
         },
     )
@@ -160,7 +158,7 @@ def test_multiple_adjustment_variables():
     # DAG with multiple confounders: U1 -> X, U1 -> Y, U2 -> X, U2 -> Y, X -> Y
     dag = DAG(
         ebunch=[("U1", "X"), ("U1", "Y"), ("U2", "X"), ("U2", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["U1", "U2"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["U1", "U2"]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag, estimator=LinearRegression())
@@ -174,9 +172,7 @@ def test_multiple_adjustment_variables():
     assert set(regressor.adjustment_vars_) == {"U1", "U2"}
     assert set(regressor.get_feature_names_out()) == {"X", "U1", "U2"}
 
-    assert (
-        regressor.n_features_in_ == 5
-    )  # Input has 5 columns: X, U1, U2, noise1, noise2
+    assert regressor.n_features_in_ == 5  # Input has 5 columns: X, U1, U2, noise1, noise2
     assert len(regressor.get_feature_names_out()) == 3  # Only X, U1, U2 are used
 
 
@@ -184,30 +180,26 @@ def test_error_handling():
     """Test various error conditions and validation."""
 
     # Test missing required roles
-    dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposure": "X"})
+    dag_no_outcome = DAG(ebunch=[("X", "Y")], roles={"exposures": "X"})
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_no_outcome)
 
-    with pytest.raises(
-        ValueError, match="Exactly one outcome variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one outcome variable must be defined"):
         regressor.fit(pd.DataFrame({"X": [1, 2], "Y": [3, 4]}), [5, 6])
 
     # Test multiple exposure variables (should fail)
     dag_multi_exposure = DAG(
         ebunch=[("X1", "Y"), ("X2", "Y")],
-        roles={"exposure": ["X1", "X2"], "outcome": "Y"},
+        roles={"exposures": ["X1", "X2"], "outcomes": "Y"},
     )
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_multi_exposure)
 
-    with pytest.raises(
-        ValueError, match="Exactly one exposure variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one exposure variable must be defined"):
         regressor.fit(pd.DataFrame({"X1": [1, 2], "X2": [3, 4], "Y": [5, 6]}), [7, 8])
 
     # Test missing required columns in data
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": ["Z"]},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["Z"]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
@@ -227,16 +219,14 @@ def test_numpy_array_input():
             (1, 2),
             (0, 2),
         ],  # Column 1 -> Column 0, Column 1 -> Column 2, Column 0 -> Column 2
-        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
+        roles={"exposures": [0], "outcomes": [2], "adjustment": [1]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
     np.random.seed(42)
     n_samples = 50
-    X_array = np.random.normal(
-        0, 1, (n_samples, 2)
-    )  # Columns 0 and 1 (exposure and adjustment)
+    X_array = np.random.normal(0, 1, (n_samples, 2))  # Columns 0 and 1 (exposure and adjustment)
     y_array = np.random.normal(0, 1, n_samples)  # Target (outcome column 2)
 
     regressor.fit(X_array, y_array)
@@ -254,8 +244,8 @@ def test_sample_weight_support():
     dag = DAG(
         ebunch=[("X", "Y")],
         roles={
-            "exposure": "X",
-            "outcome": "Y",
+            "exposures": "X",
+            "outcomes": "Y",
             "adjustment": [],
         },
     )
@@ -272,13 +262,11 @@ def test_sample_weight_support():
 
 def test_dag_roles_validation():
     """Test that DAG roles are properly validated during fit."""
-    dag_valid = DAG(
-        ebunch=[("X", "Y")], roles={"exposure": "X", "outcome": "Y", "adjustment": []}
-    )
+    dag_valid = DAG(ebunch=[("X", "Y")], roles={"exposures": "X", "outcomes": "Y", "adjustment": []})
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag_valid)
-    exposure_vars = regressor.causal_graph.get_role("exposure")
-    outcome_vars = regressor.causal_graph.get_role("outcome")
+    exposure_vars = regressor.causal_graph.get_role("exposures")
+    outcome_vars = regressor.causal_graph.get_role("outcomes")
     adjustment_vars = regressor.causal_graph.get_role("adjustment")
 
     if regressor.causal_graph.has_role("pretreatment"):
@@ -297,14 +285,12 @@ def test_dag_roles_validation():
     dag_no_roles = DAG(ebunch=[("X", "Y")])
     regressor_invalid = NaiveAdjustmentRegressor(causal_graph=dag_no_roles)
 
-    exposure_vars_invalid = regressor_invalid.causal_graph.get_role("exposure")
-    outcome_vars_invalid = regressor_invalid.causal_graph.get_role("outcome")
+    exposure_vars_invalid = regressor_invalid.causal_graph.get_role("exposures")
+    outcome_vars_invalid = regressor_invalid.causal_graph.get_role("outcomes")
     assert len(exposure_vars_invalid) == 0
     assert len(outcome_vars_invalid) == 0
 
-    with pytest.raises(
-        ValueError, match="Exactly one exposure variable must be defined"
-    ):
+    with pytest.raises(ValueError, match="Exactly one exposure variable must be defined"):
         test_data = pd.DataFrame({"X": [1, 2], "Y": [3, 4]})
         regressor_invalid.fit(test_data[["X"]], test_data["Y"])
 
@@ -318,7 +304,7 @@ def test_array_input_with_integer_dag_variables():
             (1, 2),
             (0, 2),
         ],  # Column 1 -> Column 0, Column 1 -> Column 2, Column 0 -> Column 2
-        roles={"exposure": [0], "outcome": [2], "adjustment": [1]},
+        roles={"exposures": [0], "outcomes": [2], "adjustment": [1]},
     )
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
@@ -336,12 +322,12 @@ def test_adjustment_role_behavior():
     """Test that missing and empty adjustment roles behave identically."""
     dag_missing_adj = DAG(
         ebunch=[("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y"},
+        roles={"exposures": "X", "outcomes": "Y"},
     )
 
     dag_empty_adj = DAG(
         ebunch=[("X", "Y")],
-        roles={"exposure": "X", "outcome": "Y", "adjustment": []},
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": []},
     )
 
     regressor1 = NaiveAdjustmentRegressor(causal_graph=dag_missing_adj)
@@ -361,8 +347,8 @@ def test_empty_adjustment_role_explicit():
     dag = DAG(
         ebunch=[("X", "Y")],
         roles={
-            "exposure": "X",
-            "outcome": "Y",
+            "exposures": "X",
+            "outcomes": "Y",
             "adjustment": [],
         },
     )
@@ -377,8 +363,8 @@ def test_pretreatment_variables():
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y"), ("P", "Y")],
         roles={
-            "exposure": "X",
-            "outcome": "Y",
+            "exposures": "X",
+            "outcomes": "Y",
             "adjustment": ["Z"],
             "pretreatment": ["P"],
         },
@@ -386,9 +372,7 @@ def test_pretreatment_variables():
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
-    data = pd.DataFrame(
-        {"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8], "Z": [0, 1, 0, 1], "P": [1, 1, 0, 0]}
-    )
+    data = pd.DataFrame({"X": [1, 2, 3, 4], "Y": [2, 4, 6, 8], "Z": [0, 1, 0, 1], "P": [1, 1, 0, 0]})
 
     regressor.fit(data[["X", "Z", "P"]], data["Y"])
 

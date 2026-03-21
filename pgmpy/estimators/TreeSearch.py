@@ -59,7 +59,7 @@ class TreeSearch(StructureEstimator):
         self.root_node = root_node
         self.n_jobs = n_jobs
 
-        super(TreeSearch, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def estimate(
         self,
@@ -132,24 +132,18 @@ class TreeSearch(StructureEstimator):
         # Step 1. Argument checks
         # Step 1.1: Only chow-liu and tan allowed as estimator type.
         if estimator_type not in {"chow-liu", "tan"}:
-            raise ValueError(
-                f"Invalid estimator_type. Expected either chow-liu or tan. Got: {estimator_type}"
-            )
+            raise ValueError(f"Invalid estimator_type. Expected either chow-liu or tan. Got: {estimator_type}")
 
         # Step 1.2: If estimator_type=tan, class_node must be specified
         if estimator_type == "tan" and class_node is None:
-            raise ValueError(
-                f"class_node argument must be specified for estimator_type='tan'"
-            )
+            raise ValueError("class_node argument must be specified for estimator_type='tan'")
         if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")
 
         # Step 1.3: If root_node isn't specified, get the node with the highest score.
         weights_computed = False
         if self.root_node is None:
-            weights = TreeSearch._get_weights(
-                self.data, edge_weights_fn, self.n_jobs, show_progress
-            )
+            weights = TreeSearch._get_weights(self.data, edge_weights_fn, self.n_jobs, show_progress)
             weights_computed = True
             sum_weights = weights.sum(axis=0)
             maxw_idx = np.argsort(sum_weights)[::-1]
@@ -158,9 +152,7 @@ class TreeSearch(StructureEstimator):
         # Step 2. Compute all edge weights.
         if estimator_type == "chow-liu":
             if not weights_computed:
-                weights = TreeSearch._get_weights(
-                    self.data, edge_weights_fn, self.n_jobs, show_progress
-                )
+                weights = TreeSearch._get_weights(self.data, edge_weights_fn, self.n_jobs, show_progress)
         else:
             weights = TreeSearch._get_conditional_weights(
                 self.data, class_node, edge_weights_fn, self.n_jobs, show_progress
@@ -168,35 +160,27 @@ class TreeSearch(StructureEstimator):
 
         # Step 3: If estimator_type = "chow-liu", estimate the DAG and return.
         if estimator_type == "chow-liu":
-            return TreeSearch._create_tree_and_dag(
-                weights, self.data.columns, self.root_node
-            )
+            return TreeSearch._create_tree_and_dag(weights, self.data.columns, self.root_node)
 
         # Step 4: If estimator_type = "tan":
         elif estimator_type == "tan":
             # Step 4.1: Checks root_node != class_node
             if self.root_node == class_node:
-                raise ValueError(
-                    f"Root node: {self.root_node} and class node: {class_node} are identical"
-                )
+                raise ValueError(f"Root node: {self.root_node} and class node: {class_node} are identical")
 
             # Step 4.2: Construct chow-liu DAG on {data.columns - class_node}
             class_node_idx = np.where(self.data.columns == class_node)[0][0]
             weights = np.delete(weights, class_node_idx, axis=0)
             weights = np.delete(weights, class_node_idx, axis=1)
             reduced_columns = np.delete(self.data.columns, class_node_idx)
-            D = TreeSearch._create_tree_and_dag(
-                weights, reduced_columns, self.root_node
-            )
+            D = TreeSearch._create_tree_and_dag(weights, reduced_columns, self.root_node)
 
             # Step 4.3: Add edges from class_node to all other nodes.
             D.add_edges_from([(class_node, node) for node in reduced_columns])
             return D
 
     @staticmethod
-    def _get_weights(
-        data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True
-    ):
+    def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
         """
         Helper function to Chow-Liu algorithm for estimating tree structure from given data. Refer to
         pgmpy.estimators.TreeSearch for more details. This function returns the edge weights matrix.
@@ -255,9 +239,7 @@ class TreeSearch(StructureEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(
-            delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
-        )
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -266,9 +248,7 @@ class TreeSearch(StructureEstimator):
         return weights
 
     @staticmethod
-    def _get_conditional_weights(
-        data, class_node, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True
-    ):
+    def _get_conditional_weights(data, class_node, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
         """
         Helper function to TAN (Tree Augmented Naive Bayes) algorithm for
         estimating tree structure from given data. Refer to
@@ -340,14 +320,10 @@ class TreeSearch(StructureEstimator):
             cond_edge_weight = 0
             for index, marg_prob in cond_marginal.items():
                 df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(
-                    df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
-                )
+                cond_edge_weight += marg_prob * edge_weights_fn(df_cond_subset.loc[:, u], df_cond_subset.loc[:, v])
             return cond_edge_weight
 
-        vals = Parallel(n_jobs=n_jobs)(
-            delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
-        )
+        vals = Parallel(n_jobs=n_jobs)(delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals

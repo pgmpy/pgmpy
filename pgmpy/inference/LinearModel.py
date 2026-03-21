@@ -2,7 +2,7 @@ import statsmodels.api as sm
 from statsmodels.api import GLS, OLS, WLS
 
 
-class LinearEstimator(object):
+class LinearEstimator:
     """
     A simple linear model built on statmodels.
     """

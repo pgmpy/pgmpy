@@ -1,7 +1,6 @@
 import gzip
 import hashlib
-import json
-import math
+import io
 import os
 import shutil
 from urllib.request import urlopen
@@ -10,9 +9,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.readwrite import BIFReader
 
 
@@ -76,9 +73,17 @@ class DiscreteMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(
-            string=gzip.decompress(cls._get_raw_data()).decode("utf-8")
-        ).get_model()
+        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).get_model()
+
+
+class BIFMixin:
+    """
+    Mixin class for loading discrete Bayesian networks from plain (non-gzipped) BIF files.
+    """
+
+    @classmethod
+    def load_model_object(cls):
+        return BIFReader(string=cls._get_raw_data().decode("utf-8")).get_model()
 
 
 class ContinuousMixin:
@@ -88,34 +93,13 @@ class ContinuousMixin:
 
     @classmethod
     def load_model_object(cls):
-        data = json.loads(cls._get_raw_data().decode("utf-8"))
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
+        from pgmpy.models import LinearGaussianBayesianNetwork
 
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
+        raw_data = cls._get_raw_data()
 
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
+        file_obj = io.BytesIO(raw_data)
 
-            intercept = coefficients["(Intercept)"][0]
-
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        model.add_cpds(*cpds)
-        return model
+        return LinearGaussianBayesianNetwork.load(file_obj)
 
 
 class DAGMixin:
@@ -150,7 +134,7 @@ def load_model(name: str):
     #  Loading a discrete Bayesian network with parameters.
 
     >>> from pgmpy.example_models import load_model
-    >>> model = load_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
     >>> len(model.nodes())
@@ -160,7 +144,7 @@ def load_model(name: str):
 
     # Loading a DAG without parameters.
 
-    >>> model = load_model("acid_1996")
+    >>> model = load_model("dagitty/acid_1996")
     >>> print(model)
     DAG with 18 nodes and 22 edges
     >>> len(model.nodes())
@@ -168,9 +152,15 @@ def load_model(name: str):
 
     # Loading a continuous Bayesian network with parameters.
 
-    >>> model = load_model("arht150")
+    >>> model = load_model("bnlearn/arth150")
     >>> print(model)
     LinearGaussianBayesianNetwork with 107 nodes and 150 edges
+
+    # Loading a bnRep discrete Bayesian network.
+
+    >>> model = load_model("bnrep/asia")
+    >>> print(model)
+    DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
     target_model = all_objects(
         object_types=_BaseExampleModel,
@@ -179,10 +169,8 @@ def load_model(name: str):
         return_names=False,
     )
 
-    if target_model is None:
-        raise ValueError(
-            f"Model with name '{name}' not found. Please use list_models() to see available datasets."
-        )
+    if not target_model:
+        raise ValueError(f"Model with name '{name}' not found. Please use list_models() to see available datasets.")
 
     return target_model[0].load_model_object()
 
@@ -210,12 +198,19 @@ def list_models(**filter_tags) -> list[str]:
     --------
     >>> from pgmpy.example_models import list_models
     >>> list_models()
-    ['alarm', 'arth150', ..... ]
+    ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
     >>> list_models(is_discrete=True)
-    ['alarm', 'asia', 'cancer', ..... ]
+    ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
     >>> list_models(is_parameterized=False)
-    ['acid_1996', ...., ]
+    ['dagitty/acid_1996', ...., ]
     """
+    valid_tags = set(_BaseExampleModel._tags.keys())
+
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
+        raise ValueError(
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
+        )
+
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
@@ -223,10 +218,6 @@ def list_models(**filter_tags) -> list[str]:
         filter_tags=filter_tags,
     )
 
-    model_names = [
-        cls.get_class_tag("name")
-        for cls in all_models
-        if cls.get_class_tag("name") is not None
-    ]
+    model_names = [cls.get_class_tag("name") for cls in all_models if cls.get_class_tag("name") is not None]
 
     return sorted(model_names)

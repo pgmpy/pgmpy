@@ -1,0 +1,46 @@
+name: Doctests
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+on:
+  push:
+    branches: ["dev"]
+  pull_request:
+  merge_group:
+
+jobs:
+  doctest:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install graphviz graphviz-dev -y
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .[all]
+
+      - name: Run doctests
+        run: |
+          modules=$(grep -v '^\s*#' doctest_modules.txt | grep -v '^\s*$' | tr '\n' ' ')
+          if [ -n "$modules" ]; then
+            pytest --doctest-modules -o "addopts=" $modules -v
+          else
+            echo "No modules listed in doctest_modules.txt, skipping."
+          fi

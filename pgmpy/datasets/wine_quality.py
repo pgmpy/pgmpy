@@ -1,9 +1,6 @@
 from pgmpy.datasets._base import _BaseDataset
 
-BASE_URL = (
-    "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-    "real/wine-quality/"
-)
+BASE_URL = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/wine-quality/"
 
 EXPERT_URL = BASE_URL + "ground.truth/wine.quality.knowledge.txt"
 

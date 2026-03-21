@@ -69,9 +69,7 @@ class LinearGaussianCPD(BaseFactor):
         try:
             hash(variable)
         except TypeError:
-            raise ValueError(
-                f"`variable` argument must be hashable, Got {type(variable).__name__}"
-            )
+            raise ValueError(f"`variable` argument must be hashable, Got {type(variable).__name__}")
 
         self.variable = variable
         self.beta = np.array(beta)
@@ -116,12 +114,7 @@ class LinearGaussianCPD(BaseFactor):
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
                 node=str(self.variable),
                 parents=", ".join([str(var) for var in self.evidence]),
-                mu=" + ".join(
-                    [
-                        f"{coeff}*{parent}"
-                        for coeff, parent in zip(mean[1:], self.evidence)
-                    ]
-                ),
+                mu=" + ".join([f"{coeff}*{parent}" for coeff, parent in zip(mean[1:], self.evidence)]),
                 b_0=str(mean[0]),
                 sigma=str(std),
             )
@@ -189,3 +182,37 @@ class LinearGaussianCPD(BaseFactor):
         )
 
         return node_cpd
+
+    def __eq__(self, other):
+        """
+        Checks equality of two LinearGaussianCPD objects. Two LinearGaussianCPD objects are considered equal if they are
+        defined on the same variable and evidence and have the same beta coefficients and standard deviation, regardless
+        of the order in which evidence and beta coefficients are specified.
+
+        Parameters
+        ----------
+        other: LinearGaussianCPD instance
+            The other LinearGaussianCPD object to compare with.
+
+        Returns
+        -------
+        bool
+            True if the two LinearGaussianCPD objects are equal, False otherwise.
+        """
+        if not isinstance(other, LinearGaussianCPD):
+            return False
+
+        if self.variable != other.variable:
+            return False
+        elif set(self.evidence) != set(other.evidence):
+            return False
+        else:
+            # Defined on the same variables but the order of evidence and beta coefficients are different.
+            other_evidence_beta = dict(zip(other.evidence, other.beta[1:]))
+            other_beta_reordered = [other.beta[0]] + [other_evidence_beta.get(var) for var in self.evidence]
+            other_beta_reordered = np.array(other_beta_reordered)
+
+            if not np.allclose(self.beta, other_beta_reordered) or not np.isclose(self.std, other.std):
+                return False
+
+        return True
