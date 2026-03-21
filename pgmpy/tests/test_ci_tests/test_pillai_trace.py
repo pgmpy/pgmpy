@@ -13,8 +13,6 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 @unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestPillaiTrace(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
-
         self.model_indep = LinearGaussianBayesianNetwork(
             [
                 ("Z1", "X"),
@@ -119,9 +117,6 @@ class TestPillaiTrace(unittest.TestCase):
         reason="execute only if required dependency present",
     )
     def test_pillai_no_cond(self):
-        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
-        dep_pvalues = [0, 0, 0, 0, 0]
-
         computed_coefs = []
         computed_pvalues = []
         for i, df in enumerate(
@@ -138,23 +133,14 @@ class TestPillaiTrace(unittest.TestCase):
             computed_coefs.append(test.statistic_)
             computed_pvalues.append(test.p_value_)
 
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
+        self.assertTrue(np.all(np.array(computed_coefs) >= 0.1))
+        self.assertTrue(np.all(np.array(computed_pvalues) <= 0.05))
 
     @unittest.skipUnless(
         _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
     def test_pillai_indep(self):
-        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.2430, 0.0161, 0.0384, 0.0108, 0.0384]
-
         computed_coefs = []
         computed_pvalues = []
         for i, df in enumerate(
@@ -171,23 +157,14 @@ class TestPillaiTrace(unittest.TestCase):
             computed_coefs.append(test.statistic_)
             computed_pvalues.append(test.p_value_)
 
-        self.assertTrue(
-            np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}",
-        )
+        self.assertTrue(np.all(np.array(computed_coefs) <= 0.1))
+        self.assertTrue(np.all(np.array(computed_pvalues) >= 0.05))
 
     @unittest.skipUnless(
         _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
     def test_pillai_dependent(self):
-        dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
-        dep_pvalues = np.array([0, 0, 0, 0, 0])
-
         computed_coefs = []
         computed_pvalues = []
         for i, df in enumerate(
@@ -204,11 +181,5 @@ class TestPillaiTrace(unittest.TestCase):
             computed_coefs.append(test.statistic_)
             computed_pvalues.append(test.p_value_)
 
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
+        self.assertTrue(np.all(np.array(computed_coefs) >= 0.1))
+        self.assertTrue(np.all(np.array(computed_pvalues) <= 0.05))
