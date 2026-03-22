@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.base import clone, is_regressor
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
 from ._base import _BaseCITest
@@ -11,17 +11,15 @@ class GCM(_BaseCITest):
     """
     The Generalized Covariance Measure(GCM) test for CI.
 
-    It performs regressions on the conditioning variable using a specified
-    estimator and then tests for a vanishing covariance between the
+    It fits a regressor on the conditioning variable and then tests for a vanishing covariance between the
     resulting residuals. Details of the method can be found in [1].
 
     Parameters
     ----------
     data: pandas.DataFrame
         The dataset in which to test the independence condition.
-    estimator: sklearn estimator, optional (default=None)
-        A scikit-learn regressor to compute residuals. Must implement
-        fit and predict methods. If None, LinearRegression() is used
+    estimator: optional (default=None)
+        Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
         as default.
 
     Attributes
@@ -48,8 +46,8 @@ class GCM(_BaseCITest):
         self.data = data
         if estimator is None:
             self.estimator = LinearRegression()
-        elif not is_regressor(estimator):
-            raise ValueError(f"estimator must be a scikit-learn regressor. Got {type(estimator)} instead.")
+        elif not (hasattr(estimator, "fit") and hasattr(estimator, "predict")):
+            raise ValueError(f"estimator must have fit and predict methods. Got {type(estimator)} instead.")
         else:
             self.estimator = estimator
         super().__init__()
@@ -67,8 +65,7 @@ class GCM(_BaseCITest):
         """
         # Step 1.1: Append intercept column to ensure Z is never empty
         data = self.data
-        Z_data = data.loc[:, list(Z)].copy()
-        Z_data["__pgmpy_intercept__"] = np.ones(data.shape[0])
+        Z_data = np.column_stack([data.loc[:, list(Z)].values, np.ones(data.shape[0])])
 
         # Step 2: Compute residuals using the provided estimator
         est_x = clone(self.estimator)
@@ -83,7 +80,7 @@ class GCM(_BaseCITest):
         t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
         # Step 4: Compute p-value using standard normal distribution.
-        p_value = 2 * (1 - stats.norm.cdf(np.abs(t_stat)))
+        p_value = 2 * stats.norm.sf(np.abs(t_stat))
 
         self.statistic_ = t_stat
         self.p_value_ = p_value
