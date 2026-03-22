@@ -11,8 +11,9 @@ from pgmpy.estimators import ExpertKnowledge
 from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
-def test_ges_interface_compliance():
-    check_causal_discovery(GES(return_type="dag"), data_type="discrete")
+@pytest.mark.parametrize("data_type", ["discrete", "continuous", "mixed"])
+def test_ges_interface_compliance(data_type):
+    check_causal_discovery(GES(return_type="dag"), data_type=data_type)
 
 
 @pytest.fixture

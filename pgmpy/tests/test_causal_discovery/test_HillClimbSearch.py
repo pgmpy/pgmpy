@@ -15,8 +15,9 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
-def test_hillclimb_interface_compliance():
-    check_causal_discovery(HillClimbSearch(return_type="dag", show_progress=False), data_type="discrete")
+@pytest.mark.parametrize("data_type", ["discrete", "continuous", "mixed"])
+def test_hillclimb_interface_compliance(data_type):
+    check_causal_discovery(HillClimbSearch(return_type="dag", show_progress=False), data_type=data_type)
 
 
 @pytest.fixture
