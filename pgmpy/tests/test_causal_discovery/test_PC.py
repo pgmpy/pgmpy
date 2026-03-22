@@ -19,7 +19,20 @@ from pgmpy.sampling import BayesianModelSampling
 from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
-@pytest.mark.parametrize("data_type", ["discrete", "continuous", "mixed"])
+@pytest.mark.parametrize(
+    "data_type",
+    [
+        "discrete",
+        "continuous",
+        pytest.param(
+            "mixed",
+            marks=pytest.mark.skipif(
+                not _check_soft_dependencies("xgboost", severity="none"),
+                reason="xgboost required for mixed data with PC",
+            ),
+        ),
+    ],
+)
 def test_pc_interface_compliance(data_type):
     check_causal_discovery(PC(return_type="dag", show_progress=False), data_type=data_type)
 
