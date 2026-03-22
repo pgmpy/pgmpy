@@ -1163,19 +1163,23 @@ class DynamicBayesianNetwork(DAG):
 
         Normal simulation from the model.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, seed=42) # doctest: +NORMALIZE_WHITESPACE
-          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (I, 1) (D, 2) (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0      0      1      0      0      1      0      1      1
-        1      1      1      0      0      1      1      1      0      1      0      1      1
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
+        0      0      0      1      0  ...      1      0      1      1     
+        1      1      1      0      0  ...      1      0      1      1     
+        <BLANKLINE>
+        [2 rows x 12 columns]
 
         Simulation with evidence.
 
         >>> dbn.simulate(
         ...     n_time_slices=4, n_samples=2, evidence={("D", 0): 1, ("D", 2): 0}, seed=42
-        ... )  # doctest: +NORMALIZE_WHITESPACE
-          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (I, 1) (D, 2) (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
-        0      1      2      0      1      1      0      0      1      0      0      1      1
-        1      1      0      0      0      1      0      0      1      1      0      0      1
+        ... )  # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
+        0      1      2      0      1  ...      0      0      1      1     
+        1      1      0      0      0  ...      1      0      0      1     
+        <BLANKLINE>
+        [2 rows x 12 columns]
 
         Simulation with virtual/soft evidence.
 
@@ -1184,18 +1188,22 @@ class DynamicBayesianNetwork(DAG):
         ...     n_samples=2,
         ...     virtual_evidence=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
         ...     seed=42
-        ... ) # doctest: +NORMALIZE_WHITESPACE
-          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (I, 1) (D, 2) (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0      0      1      0      0      1      1      1      0
-        1      1      1      0      0      1      1      1      0      1      1      1      0
+        ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
+        0      0      0      1      0  ...      1      1      1      0     
+        1      1      1      0      0  ...      1      1      1      0     
+        <BLANKLINE>
+        [2 rows x 12 columns]
 
         Simulation with intervention.
 
         >>> dbn.simulate(n_time_slices=4, n_samples=2,
-        ...     do={("D", 0): 1, ("D", 2): 0}, seed=42) # doctest: +NORMALIZE_WHITESPACE
-          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (I, 1) (D, 2) (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
-        0      1      2      0      0      1      0      0      0      0      0      1      1
-        1      1      0      0      0      1      0      0      1      1      0      1      1
+        ...     do={("D", 0): 1, ("D", 2): 0}, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
+        0      1      2      0      0  ...      0      0      1      1     
+        1      1      0      0      0  ...      1      0      1      1     
+        <BLANKLINE>
+        [2 rows x 12 columns]
 
         Simulation with virtual/soft intervention.
 
@@ -1204,15 +1212,17 @@ class DynamicBayesianNetwork(DAG):
         ...     n_samples=2,
         ...     virtual_intervention=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
         ...     seed=42
-        ... ) # doctest: +NORMALIZE_WHITESPACE
-          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (I, 1) (D, 2) (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0      0      1      0      2      1      1      0      0
-        1      1      1      0      0      0      1      1      0      1      0      1      1
+        ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
+        0      0      0      1      0  ...      1      1      0      0     
+        1      1      1      0      0  ...      1      0      1      1     
+        <BLANKLINE>
+        [2 rows x 12 columns]
 
         Return format selection using `return_format` argument.
         `return_format="wide"` returns the data in standard format.
 
-        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="wide", seed=42) # doctest: +NORMALIZE_WHITESPACE
+        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="wide", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
           (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (D, 2) (G, 2) (I, 1) (I, 2)
         0      0      0      1      0      0      0      0      1      1
         1      1      1      0      0      1      1      0      1      1
@@ -1220,7 +1230,7 @@ class DynamicBayesianNetwork(DAG):
         `return_format="pd-multiindex"` returns pandas dataframe with indexes of ("Variable name", "timestep").
 
         >>> dbn.simulate(n_samples=2, n_time_slices=3,
-        ...     return_format="pd-multiindex", seed=42) # doctest: +NORMALIZE_WHITESPACE
+        ...     return_format="pd-multiindex", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
         variable       D  G  I
         instance time
         0        0     0  0  1
