@@ -697,6 +697,40 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(stats["max_n_parents"], 3)
         self.assertEqual(stats["n_latent_nodes"], 0)
 
+        self.assertNotIn("n_exposures", stats)
+        self.assertNotIn("n_outcomes", stats)
+        self.assertNotIn("n_causal_paths", stats)
+        self.assertNotIn("n_direct_paths", stats)
+        self.assertNotIn("n_mediated_paths", stats)
+        self.assertNotIn("n_mediators", stats)
+        self.assertNotIn("n_confounding_paths", stats)
+
+        stats = model.get_stats(exposures=["PKC", "Plcg"], outcomes=["Akt", "PIP2"])
+        self.assertEqual(stats["n_nodes"], 11)
+        self.assertEqual(stats["n_edges"], 17)
+        self.assertEqual(stats["n_root_nodes"], 2)
+        self.assertEqual(stats["n_leaf_nodes"], 4)
+        self.assertEqual(stats["n_v_structures"], 0)
+        self.assertEqual(stats["n_connected_components"], 2)
+        self.assertAlmostEqual(stats["edge_density"], 17 / (11 * 10 / 2), places=5)
+        self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
+        self.assertEqual(stats["max_n_parents"], 3)
+        self.assertEqual(stats["n_latent_nodes"], 0)
+
+        self.assertEqual(stats["n_exposures"], 2)
+        self.assertEqual(stats["n_outcomes"], 2)
+        self.assertEqual(stats["n_causal_paths"], 8)
+        self.assertEqual(stats["n_direct_paths"], 1)
+        self.assertEqual(stats["n_mediated_paths"], 7)
+        self.assertEqual(stats["n_mediators"], 5)
+        self.assertEqual(stats["n_confounding_paths"], 0)
+
+        stats = model.get_stats(exposures=["PKC"])
+        self.assertNotIn("n_causal_paths", stats)
+
+        stats = model.get_stats(outcomes=["Akt"])
+        self.assertNotIn("n_causal_paths", stats)
+
 
 class TestDAGParser(unittest.TestCase):
     def test_from_lavaan(self):

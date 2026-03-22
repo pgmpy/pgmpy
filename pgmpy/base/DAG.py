@@ -1720,7 +1720,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
         )
 
-    def get_stats(self):
+    def get_stats(self, exposures=None, outcomes=None):
         """
         Returns a dictionary of summary statistics about the structure of the DAG.
 
@@ -1750,6 +1750,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         n_latent_nodes : int
             Number of latent (unobserved) nodes in the DAG.
 
+        Causal statistics : only computed if exposures and outcomes are provided.
+        n_exposures : int
+            Number of exposure nodes.
+        n_outcomes : int
+            Number of outcome nodes.
+        n_causal_paths : int
+            Number of directed paths from exposures to outcomes.
+        n_direct_paths : int
+            Number of causal paths with no mediator.
+        n_mediated_paths : int
+            Number of causal paths through at least one mediator.
+        n_mediators : int
+            Number of nodes mediating at least one exposure-outcome path.
+        n_confounding_paths : int
+            Number of backdoor paths from exposures to outcomes.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -1758,6 +1774,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> stats["n_nodes"]
         5
         >>> stats["n_v_structures"]
+        1
+        >>> stats = dag.get_stats(exposures=["D"], outcomes=["L"])
+        >>> stats["n_causal_paths"]
         1
         """
         no_of_nodes = self.number_of_nodes()
@@ -1768,7 +1787,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
 
-        return {
+        stats = {
             "n_nodes": no_of_nodes,
             "n_edges": no_of_edges,
             "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
@@ -1779,4 +1798,43 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
             "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
             "n_latent_nodes": len(getattr(self, "latents", [])),
+        }
+
+        if exposures is not None and outcomes is not None:
+            stats.update(self._get_causal_stats(exposures, outcomes))
+
+        return stats
+
+    def _get_causal_stats(self, exposures, outcomes):
+        import itertools
+
+        causal_paths = []
+        for exp, out in itertools.product(exposures, outcomes):
+            causal_paths.extend(nx.all_simple_paths(self, exp, out))
+
+        n_causal_paths = len(causal_paths)
+        mediator_nodes = set()
+        for path in causal_paths:
+            mediator_nodes.update(path[1:-1])  # excluding the first and the last node
+
+        n_direct_paths = sum(len(path) == 2 for path in causal_paths)
+        n_mediated_paths = sum(len(path) > 2 for path in causal_paths)
+
+        undirected = self.to_undirected()
+        n_confounding_paths = sum(
+            self.has_edge(path[1], path[0])
+            and not all(self.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1))
+            for exp, out in itertools.product(exposures, outcomes)
+            for path in nx.all_simple_paths(undirected, exp, out)
+            if len(path) > 1
+        )
+
+        return {
+            "n_exposures": len(exposures),
+            "n_outcomes": len(outcomes),
+            "n_causal_paths": n_causal_paths,
+            "n_direct_paths": n_direct_paths,
+            "n_mediated_paths": n_mediated_paths,
+            "n_mediators": len(mediator_nodes),
+            "n_confounding_paths": n_confounding_paths,
         }
