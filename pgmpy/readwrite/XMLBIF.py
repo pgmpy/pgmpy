@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
+import warnings
 import xml.etree.ElementTree as etree
 from io import BytesIO
 from itertools import chain
 
 import numpy as np
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
@@ -19,7 +20,7 @@ except ImportError as e:
     ) from None
 
 
-class XMLBIFReader(object):
+class XMLBIFReader:
     """
     Initialisation of XMLBIFReader object.
 
@@ -71,9 +72,7 @@ class XMLBIFReader(object):
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
         """
-        variables = [
-            variable.find("NAME").text for variable in self.network.findall("VARIABLE")
-        ]
+        variables = [variable.find("NAME").text for variable in self.network.findall("VARIABLE")]
         return variables
 
     def get_edges(self):
@@ -89,11 +88,7 @@ class XMLBIFReader(object):
          ['bowel-problem', 'dog-out'],
          ['dog-out', 'hear-bark']]
         """
-        edge_list = [
-            [value, key]
-            for key in self.variable_parents
-            for value in self.variable_parents[key]
-        ]
+        edge_list = [[value, key] for key in self.variable_parents for value in self.variable_parents[key]]
         return edge_list
 
     def get_states(self):
@@ -111,9 +106,7 @@ class XMLBIFReader(object):
          'light-on': ['true', 'false']}
         """
         variable_states = {
-            variable.find("NAME").text: [
-                outcome.text for outcome in variable.findall("OUTCOME")
-            ]
+            variable.find("NAME").text: [outcome.text for outcome in variable.findall("OUTCOME")]
             for variable in self.network.findall("VARIABLE")
         }
         return variable_states
@@ -133,9 +126,7 @@ class XMLBIFReader(object):
          'light-on': ['family-out']}
         """
         variable_parents = {
-            definition.find("FOR").text: [
-                edge.text for edge in definition.findall("GIVEN")
-            ]
+            definition.find("FOR").text: [edge.text for edge in definition.findall("GIVEN")]
             for definition in self.network.findall("DEFINITION")
         }
         return variable_parents
@@ -191,9 +182,7 @@ class XMLBIFReader(object):
          'light-on': ['position = (73, 165)']}
         """
         variable_property = {
-            variable.find("NAME").text: [
-                property.text for property in variable.findall("PROPERTY")
-            ]
+            variable.find("NAME").text: [property.text for property in variable.findall("PROPERTY")]
             for variable in self.network.findall("VARIABLE")
         }
         return variable_property
@@ -224,10 +213,7 @@ class XMLBIFReader(object):
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
-            evidence_card = [
-                len(self.variable_states[evidence_var])
-                for evidence_var in self.variable_parents[var]
-            ]
+            evidence_card = [len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]]
             cpd = TabularCPD(
                 var,
                 len(self.variable_states[var]),
@@ -252,7 +238,7 @@ class XMLBIFReader(object):
         return model
 
 
-class XMLBIFWriter(object):
+class XMLBIFWriter:
     """
     Initialise a XMLBIFWriter object.
 
@@ -270,8 +256,8 @@ class XMLBIFWriter(object):
     Examples
     --------
     >>> from pgmpy.readwrite import XMLBIFWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
     >>> writer = XMLBIFWriter(model)
     >>> writer.write("asia.xml")
 
@@ -351,9 +337,7 @@ class XMLBIFWriter(object):
         variables = self.model.nodes()
         variable_tag = {}
         for var in sorted(variables):
-            variable_tag[var] = etree.SubElement(
-                self.network, "VARIABLE", attrib={"TYPE": "nature"}
-            )
+            variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={"TYPE": "nature"})
             etree.SubElement(variable_tag[var], "NAME").text = var
         return variable_tag
 
@@ -401,20 +385,14 @@ class XMLBIFWriter(object):
 
         # Warn about commas in state names as they can cause issues when loading
         if "," in s:
-            var_name = (
-                self.variable_name if hasattr(self, "variable_name") else "unknown"
-            )
+            var_name = self.variable_name if hasattr(self, "variable_name") else "unknown"
             logger.warning(
                 f"State name '{s}' for variable '{var_name}' contains commas. "
                 "This may cause issues when loading the file. Consider removing any special characters."
             )
 
         # Keep existing transformation logic
-        s_fixed = (
-            pp.CharsNotIn(pp.alphanums + "_")
-            .set_parse_action(pp.replace_with("_"))
-            .transform_string(s)
-        )
+        s_fixed = pp.CharsNotIn(pp.alphanums + "_").set_parse_action(pp.replace_with("_")).transform_string(s)
         if not s_fixed[0].isalpha():
             s_fixed = s_fixed
 
@@ -503,9 +481,7 @@ class XMLBIFWriter(object):
         definition_tag = self.definition
         table_tag = {}
         for cpd in cpds:
-            table_tag[cpd.variable] = etree.SubElement(
-                definition_tag[cpd.variable], "TABLE"
-            )
+            table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
             table_tag[cpd.variable].text = ""
             for val in compat_fns.ravel_f(cpd.get_values()):
                 table_tag[cpd.variable].text += str(val) + " "
@@ -523,8 +499,8 @@ class XMLBIFWriter(object):
         Examples
         --------
         >>> from pgmpy.readwrite import XMLBIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XMLBIFWriter(model)
         >>> writer.write("asia.xml")
         """
@@ -532,7 +508,9 @@ class XMLBIFWriter(object):
             fout.write(self.__str__())
 
     def write_xmlbif(self, filename):
-        logger.warning(
-            "The `XMLBIFWriter.write_xmlbif` has been deprecated. Please use `XMLBIFWriter.write` instead."
+        warnings.warn(
+            "`XMLBIFWriter.write_xmlbif` is deprecated. Please use `XMLBIFWriter.write` instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.write(filename)

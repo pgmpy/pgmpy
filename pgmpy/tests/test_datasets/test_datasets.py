@@ -70,7 +70,7 @@ def test_list_datasets():
 
 
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=10, replace=False):
+    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -104,6 +104,29 @@ def test_load_covariance_dataset():
         )
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
+
+
+def test_load_tubingen_dataset():
+
+    for i in [1, 47, 86, 88, 108]:
+        dataset = load_dataset(f"tubingen/{i}")
+
+        assert dataset.name == f"tubingen/{i}"
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert list(dataset.data.columns) == ["x", "y"]
+
+        assert isinstance(dataset.ground_truth, DAG)
+
+
+def test_tubingen_invalid_format():
+    with pytest.raises(ValueError):
+        load_dataset("tubingen")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/abc")
+    with pytest.raises(ValueError):
+        load_dataset("tubingen/999")
 
 
 def test_invalid_input():

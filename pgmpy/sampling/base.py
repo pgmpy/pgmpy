@@ -1,14 +1,10 @@
 import itertools
-import math
-import os
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from opt_einsum import contract
 
-from pgmpy import config
 from pgmpy.inference import Inference
 from pgmpy.utils import _check_1d_array_object, _check_length_equal, compat_fns
 
@@ -27,10 +23,8 @@ class BayesianModelInference(Inference):
         from pgmpy.models import DiscreteBayesianNetwork
 
         if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError(
-                f"Model expected type: DiscreteBayesianNetwork, got type: {type(model)}"
-            )
-        super(BayesianModelInference, self).__init__(model)
+            raise TypeError(f"Model expected type: DiscreteBayesianNetwork, got type: {type(model)}")
+        super().__init__(model)
         self._initialize_structures()
 
         self.topological_order = list(nx.topological_sort(model))
@@ -56,13 +50,9 @@ class BayesianModelInference(Inference):
         variable_evid = variable_cpd.variables[:0:-1]
         cached_values = {}
 
-        for state_combination in itertools.product(
-            *[range(self.cardinality[var]) for var in variable_evid]
-        ):
+        for state_combination in itertools.product(*[range(self.cardinality[var]) for var in variable_evid]):
             states = list(zip(variable_evid, state_combination))
-            cached_values[state_combination] = variable_cpd.reduce(
-                states, inplace=False, show_warnings=False
-            ).values
+            cached_values[state_combination] = variable_cpd.reduce(states, inplace=False, show_warnings=False).values
 
         return cached_values
 
@@ -123,31 +113,19 @@ class BayesianModelInference(Inference):
         """
         variable_cpd = self.model.get_cpds(variable)
         if evidence is None:
-            evidence = [
-                var
-                for var in variable_cpd.variables[1:]
-                if var not in self.model.latents
-            ]
+            evidence = [var for var in variable_cpd.variables[1:] if var not in self.model.latents]
 
         if state_combinations is None:
             state_combinations = [
-                tuple(sc)
-                for sc in itertools.product(
-                    *[range(self.cardinality[var]) for var in evidence]
-                )
+                tuple(sc) for sc in itertools.product(*[range(self.cardinality[var]) for var in evidence])
             ]
 
         reduce_index = [variable_cpd.variables.index(var) for var in evidence]
 
         weights_list = compat_fns.stack(
-            [
-                BayesianModelInference._reduce_marg(variable_cpd, reduce_index, sc)
-                for sc in state_combinations
-            ]
+            [BayesianModelInference._reduce_marg(variable_cpd, reduce_index, sc) for sc in state_combinations]
         )
-        unique_weights, weights_indices = compat_fns.unique(
-            weights_list, axis=0, return_inverse=True
-        )
+        unique_weights, weights_indices = compat_fns.unique(weights_list, axis=0, return_inverse=True)
 
         # convert weights to index; make mapping of state to index
         state_to_index = dict(zip(state_combinations, weights_indices))
@@ -159,7 +137,7 @@ class BayesianModelInference(Inference):
         return state_to_index, index_to_weight
 
 
-class BaseGradLogPDF(object):
+class BaseGradLogPDF:
     """
     Base class for evaluating gradient log of probability density function/ distribution
 
@@ -203,9 +181,7 @@ class BaseGradLogPDF(object):
     """
 
     def __init__(self, variable_assignments, model):
-        self.variable_assignments = _check_1d_array_object(
-            variable_assignments, "variable_assignments"
-        )
+        self.variable_assignments = _check_1d_array_object(variable_assignments, "variable_assignments")
         _check_length_equal(
             variable_assignments,
             model.variables,
@@ -298,7 +274,7 @@ class GradLogPDFGaussian(BaseGradLogPDF):
         return grad, log_pdf
 
 
-class BaseSimulateHamiltonianDynamics(object):
+class BaseSimulateHamiltonianDynamics:
     """
     Base class for proposing new values of position and momentum by simulating Hamiltonian Dynamics.
 
@@ -381,18 +357,13 @@ class BaseSimulateHamiltonianDynamics(object):
     array([-0.9375, -1.875])
     """
 
-    def __init__(
-        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
-    ):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
         position = _check_1d_array_object(position, "position")
 
         momentum = _check_1d_array_object(momentum, "momentum")
 
         if not issubclass(grad_log_pdf, BaseGradLogPDF):
-            raise TypeError(
-                "grad_log_pdf must be an instance"
-                + " of pgmpy.inference.continuous.base.BaseGradLogPDF"
-            )
+            raise TypeError("grad_log_pdf must be an instance" + " of pgmpy.inference.continuous.base.BaseGradLogPDF")
 
         _check_length_equal(position, momentum, "position", "momentum")
         _check_length_equal(position, model.variables, "position", "model.variables")
@@ -401,12 +372,8 @@ class BaseSimulateHamiltonianDynamics(object):
             grad_log_position, _ = grad_log_pdf(position, model).get_gradient_log_pdf()
 
         else:
-            grad_log_position = _check_1d_array_object(
-                grad_log_position, "grad_log_position"
-            )
-            _check_length_equal(
-                grad_log_position, position, "grad_log_position", "position"
-            )
+            grad_log_position = _check_1d_array_object(grad_log_position, "grad_log_position")
+            _check_length_equal(grad_log_position, position, "grad_log_position", "position")
 
         self.position = position
         self.momentum = momentum
@@ -508,9 +475,7 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     array([ 41., -58.])
     """
 
-    def __init__(
-        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
-    ):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
         BaseSimulateHamiltonianDynamics.__init__(
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )
@@ -587,9 +552,7 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     array([-2.125, -1.1875])
     """
 
-    def __init__(
-        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
-    ):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
         BaseSimulateHamiltonianDynamics.__init__(
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )

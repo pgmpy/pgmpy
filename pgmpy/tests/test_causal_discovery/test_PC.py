@@ -1,3 +1,5 @@
+import logging
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -10,11 +12,11 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import PC
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
+from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 def expected_failed_checks(estimator):
@@ -158,9 +160,7 @@ def test_build_skeleton_from_ind(variant):
     for u, v in estimator.skeleton_.edges():
         assert ((u, v) in expected_edges) or ((v, u) in expected_edges)
 
-    assert (estimator.separating_sets_ == expected_sepsets1) or (
-        estimator.separating_sets_ == expected_sepsets2
-    )
+    assert (estimator.separating_sets_ == expected_sepsets1) or (estimator.separating_sets_ == expected_sepsets2)
 
 
 def test_skeleton_to_pdag():
@@ -173,21 +173,21 @@ def test_skeleton_to_pdag():
     }
     pdag = PC()._orient_colliders(skel, sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
+    assert set(pdag.edges()) == {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")}
 
     # C - A - B  ==> C -> A <- B
     skel = nx.Graph([("A", "B"), ("A", "C")])
     sep_sets = {frozenset({"B", "C"}): ()}
     pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set([("B", "A"), ("C", "A")])
+    assert set(pdag.edges()) == {("B", "A"), ("C", "A")}
 
     # C - A - B ==> C - A - B
     skel = nx.Graph([("A", "B"), ("A", "C")])
     sep_sets = {frozenset({"B", "C"}): ("A",)}
     pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")])
+    assert set(pdag.edges()) == {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")}
 
     # {A, B} - C - D ==> {A, B} -> C -> D
     skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
@@ -198,30 +198,28 @@ def test_skeleton_to_pdag():
     }
     pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set([("A", "C"), ("B", "C"), ("C", "D")])
+    assert set(pdag.edges()) == {("A", "C"), ("B", "C"), ("C", "D")}
 
     # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
     skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
     sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
     pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
+    assert set(pdag.edges()) == {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")}
 
     skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
     sep_sets = {frozenset({"A", "C"}): ("B",)}
     pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == set(
-        [
-            ("A", "B"),
-            ("B", "A"),
-            ("B", "C"),
-            ("C", "B"),
-            ("A", "D"),
-            ("B", "D"),
-            ("C", "D"),
-        ]
-    )
+    assert set(pdag.edges()) == {
+        ("A", "B"),
+        ("B", "A"),
+        ("B", "C"),
+        ("C", "B"),
+        ("A", "D"),
+        ("B", "D"),
+        ("C", "D"),
+    }
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -488,14 +486,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 
 def test_pc_alarm():
-    alarm_model = get_example_model("alarm")
+    alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
     est.fit(X=data)
 
 
 def test_pc_asia(caplog):
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     req_edges = [("xray", "either")]
     background = ExpertKnowledge(required_edges=req_edges)
@@ -507,18 +505,22 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    with caplog.at_level("WARNING"):
-        est.fit(X=data)
+    pgmpy_logger = logging.getLogger("pgmpy")
+    pgmpy_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level("WARNING", logger="pgmpy"):
+            est.fit(X=data)
+    finally:
+        pgmpy_logger.removeHandler(caplog.handler)
     expected_warning = (
-        "Specified expert knowledge conflicts with learned structure."
-        " Ignoring edge xray->either from required edges"
+        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
     )
 
     assert any(expected_warning in message for message in caplog.messages)
 
 
 def test_pc_asia_expert():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(
         variant="stable",
@@ -544,7 +546,7 @@ def test_pc_asia_expert():
 
 
 def test_temporal_pc_cancer():
-    cancer_model = get_example_model("cancer")
+    cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(n_samples=int(5e4), seed=42)
 
     background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
@@ -559,14 +561,12 @@ def test_temporal_pc_cancer():
     )
     est.fit(X=data)
     pdag = est.causal_graph_
-    assert set(pdag.edges()) == set(
-        [
-            ("Cancer", "Xray"),
-            ("Cancer", "Dyspnoea"),
-            ("Smoker", "Cancer"),
-            ("Pollution", "Cancer"),
-        ]
-    )
+    assert set(pdag.edges()) == {
+        ("Cancer", "Xray"),
+        ("Cancer", "Dyspnoea"),
+        ("Smoker", "Cancer"),
+        ("Pollution", "Cancer"),
+    }
 
 
 def test_temporal_pc_sachs():
@@ -584,38 +584,36 @@ def test_temporal_pc_sachs():
         ],
         ["Akt"],
     ]
-    temporal_forbidden_edges = set(
-        [
-            ("PKA", "PKC"),
-            ("PKA", "Plcg"),
-            ("Raf", "PKC"),
-            ("Raf", "Plcg"),
-            ("Jnk", "PKC"),
-            ("Jnk", "Plcg"),
-            ("P38", "PKC"),
-            ("P38", "Plcg"),
-            ("PIP3", "PKC"),
-            ("PIP3", "Plcg"),
-            ("PIP2", "PKC"),
-            ("PIP2", "Plcg"),
-            ("Mek", "PKC"),
-            ("Mek", "Plcg"),
-            ("Erk", "PKC"),
-            ("Erk", "Plcg"),
-            ("Akt", "PKC"),
-            ("Akt", "Plcg"),
-            ("Akt", "PKA"),
-            ("Akt", "Raf"),
-            ("Akt", "Jnk"),
-            ("Akt", "P38"),
-            ("Akt", "PIP3"),
-            ("Akt", "PIP2"),
-            ("Akt", "Mek"),
-            ("Akt", "Erk"),
-        ]
-    )
+    temporal_forbidden_edges = {
+        ("PKA", "PKC"),
+        ("PKA", "Plcg"),
+        ("Raf", "PKC"),
+        ("Raf", "Plcg"),
+        ("Jnk", "PKC"),
+        ("Jnk", "Plcg"),
+        ("P38", "PKC"),
+        ("P38", "Plcg"),
+        ("PIP3", "PKC"),
+        ("PIP3", "Plcg"),
+        ("PIP2", "PKC"),
+        ("PIP2", "Plcg"),
+        ("Mek", "PKC"),
+        ("Mek", "Plcg"),
+        ("Erk", "PKC"),
+        ("Erk", "Plcg"),
+        ("Akt", "PKC"),
+        ("Akt", "Plcg"),
+        ("Akt", "PKA"),
+        ("Akt", "Raf"),
+        ("Akt", "Jnk"),
+        ("Akt", "P38"),
+        ("Akt", "PIP3"),
+        ("Akt", "PIP2"),
+        ("Akt", "Mek"),
+        ("Akt", "Erk"),
+    }
 
-    model = get_example_model("sachs")
+    model = load_model("bnlearn/sachs")
     df = model.simulate(int(1e3))
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
@@ -633,9 +631,7 @@ def _fake_ci_temporal(X, Y, Z=[], **kwargs):
 
 @pytest.mark.parametrize("estimator_class", [PC, BaseConstraintEstimator])
 def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
-    graph = UndirectedGraph(
-        [("A", "B"), ("A", "C"), ("A", "D"), ("B", "C"), ("B", "D")]
-    )
+    graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("B", "C"), ("B", "D")])
     temporal_ordering = {"A": 3, "B": 1, "C": 2, "D": 0}
 
     result_ab = sorted(
@@ -674,9 +670,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
     assert result_no_temporal == [("C",), ("C",), ("D",), ("D",)]
 
     np.random.seed(42)
-    data = pd.DataFrame(
-        np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"]
-    )
+    data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
     expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
 
     if estimator_class is PC:
@@ -708,7 +702,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
 
 
 def test_score():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e4), seed=42)
     est = PC(
         return_type="dag",

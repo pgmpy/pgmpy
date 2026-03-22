@@ -2,7 +2,6 @@ from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
 
 
 class Dropouts(_CovarianceMixin, _BaseDataset):
-
     _tags = {
         "name": "dropouts",
         "n_variables": 8,
@@ -19,10 +18,7 @@ class Dropouts(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
-        "refs/heads/main/real/dropouts/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/dropouts/"
 
     data_url = base_url + "data/dropouts.cov.txt"
 
