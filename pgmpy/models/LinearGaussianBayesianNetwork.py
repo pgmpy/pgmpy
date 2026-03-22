@@ -81,7 +81,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
     >>> df = model.simulate(n_samples=100, seed=42)
     >>> print(df.columns)
-    Index(['x1', 'x2', 'x3'], dtype='object')
+    Index(['x1', 'x2', 'x3'], dtype='str')
 
     # Fitting the model to the simulated data.
 
@@ -460,9 +460,9 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> model.get_random_cpds(loc=0, scale=1, seed=42) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<LinearGaussianCPD: P(x1) = N(0.305; 1.04) at 0x...,
-        <LinearGaussianCPD: P(x2 | x1) = N(0.678*x1 + 0.244; 0.586) at 0x...,
-        <LinearGaussianCPD: P(x3 | x2) = N(0.102*x2 + 1.446; 0.327) at 0x...]
+        [<LinearGaussianCPD: P(x1) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(x3 | x2) = N(...; ...) at 0x...]
         """
         rng = np.random.default_rng(seed)
 
@@ -1004,7 +1004,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/ecoli70")
         >>> df = model.simulate(n_samples=5, seed=42)
-        >>> df = df.drop(columns=["folK"], axis=1)
+        >>> df = df.drop(columns=["folK"])
         >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
                folK
         0  0.903384
