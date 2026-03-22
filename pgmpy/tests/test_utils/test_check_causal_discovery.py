@@ -1,38 +1,56 @@
-import unittest
+"""
+Tests for the ``check_causal_discovery`` compliance checker.
+
+Location: pgmpy/tests/test_utils/test_check_causal_discovery.py
+"""
 
 import pandas as pd
+import pytest
 
 from pgmpy.causal_discovery import GES, PC, HillClimbSearch
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.utils.check_causal_discovery import check_causal_discovery
+from pgmpy.tests.test_causal_discovery.check_causal_discovery import (
+    check_causal_discovery,
+)
 
 
-class TestCheckCausalDiscovery(unittest.TestCase):
-    """Tests for the check_causal_discovery compliance checker."""
+@pytest.mark.parametrize(
+    ("estimator", "data_type"),
+    [
+        (PC(ci_test="chi_square", return_type="dag", show_progress=False), "discrete"),
+        (HillClimbSearch(return_type="dag", show_progress=False), "discrete"),
+        (GES(return_type="dag"), "discrete"),
+    ],
+    ids=[
+        "PC-discrete",
+        "HillClimbSearch-discrete",
+        "GES-discrete",
+    ],
+)
+def test_existing_algorithms_pass(estimator, data_type):
+    check_causal_discovery(estimator, data_type=data_type)
 
-    def test_existing_algorithms_pass(self):
-        for estimator in [PC(), GES(), HillClimbSearch()]:
-            with self.subTest(estimator=type(estimator).__name__):
-                check_causal_discovery(estimator)
 
-    def test_fails_without_inheritance(self):
-        class BadEstimator:
-            pass
+def test_fails_without_inheritance():
+    class BadEstimator:
+        pass
 
-        with self.assertRaises(TypeError):
-            check_causal_discovery(BadEstimator())
+    with pytest.raises(TypeError):
+        check_causal_discovery(BadEstimator())
 
-    def test_fails_without_fit(self):
-        class NoFitEstimator(_BaseCausalDiscovery):
-            pass
 
-        with self.assertRaises(AssertionError):
-            check_causal_discovery(NoFitEstimator())
+def test_fails_without_fit():
+    class NoFitEstimator(_BaseCausalDiscovery):
+        pass
 
-    def test_fails_without_causal_graph(self):
-        class NoCausalGraphEstimator(_BaseCausalDiscovery):
-            def _fit(self, X: pd.DataFrame):
-                return self
+    with pytest.raises(AssertionError):
+        check_causal_discovery(NoFitEstimator())
 
-        with self.assertRaises(AssertionError):
-            check_causal_discovery(NoCausalGraphEstimator())
+
+def test_fails_without_causal_graph():
+    class NoCausalGraphEstimator(_BaseCausalDiscovery):
+        def _fit(self, X: pd.DataFrame):
+            return self
+
+    with pytest.raises(AssertionError):
+        check_causal_discovery(NoCausalGraphEstimator())
