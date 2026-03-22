@@ -1064,7 +1064,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/ecoli70")
         >>> df = model.simulate(n_samples=5, seed=42)
-        >>> df = df.drop(columns=["folK"], axis=1)
+        >>> df = df.drop(columns=["folK"])
         >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
                folK
         0  0.903384
