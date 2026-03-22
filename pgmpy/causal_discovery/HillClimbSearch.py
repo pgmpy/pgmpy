@@ -84,10 +84,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         and returns the learned model when the number of iterations exceeds
         `max_iter`.
 
-    use_cache : bool, default=True
-        If True, enable an LRU cache on the structure score's `local_score`
-        method for repeated evaluations during the search.
-
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
 
@@ -143,7 +139,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         return_type: str = "pdag",
         epsilon: float = 1e-4,
         max_iter: int = int(1e6),
-        use_cache: bool = True,
         show_progress: bool = True,
     ):
         self.scoring_method = scoring_method
@@ -154,7 +149,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.return_type = return_type
         self.epsilon = epsilon
         self.max_iter = max_iter
-        self.use_cache = use_cache
         self.show_progress = show_progress
 
     def _fit(self, X: pd.DataFrame):
@@ -176,8 +170,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check scoring_method
-        score, score_c = get_scoring_method(self.scoring_method, X, use_cache=self.use_cache)
-        score_fn = score_c.local_score
+        score = get_scoring_method(self.scoring_method, X)
+        score_fn = score.local_score
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:

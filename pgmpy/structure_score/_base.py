@@ -38,6 +38,17 @@ class BaseStructureScore(BaseObject):
                     else:
                         self.state_names[var] = self._collect_state_names(var)
 
+        if hasattr(self, "local_score") and not getattr(self, "_local_score_cache_enabled", False):
+            uncached_local_score = self.local_score
+            cached_local_score = lru_cache(maxsize=10000)(uncached_local_score)
+
+            def local_score(variable, parents):
+                self._validate_parents(parents)
+                return cached_local_score(variable, parents)
+
+            self.local_score = local_score
+            self._local_score_cache_enabled = True
+
     def _collect_state_names(self, variable: str) -> list:
         """Return a list of states that the variable takes in the data."""
         states = sorted(list(self.data.loc[:, variable].dropna().unique()))
@@ -112,27 +123,13 @@ class BaseStructureScore(BaseObject):
         return state_counts
 
 
-def _enable_local_score_cache(score: BaseStructureScore, max_size: int = 10000) -> BaseStructureScore:
-    if not isinstance(score, BaseStructureScore):
-        raise TypeError("`score` must be an instance of BaseStructureScore.")
-
-    if not getattr(score, "_local_score_cache_enabled", False):
-        score.local_score = lru_cache(maxsize=int(max_size))(score.local_score)
-        score._local_score_cache_enabled = True
-
-    return score
-
-
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
-    use_cache: bool = True,
     **kwargs,
-) -> tuple[BaseStructureScore, BaseStructureScore]:
+) -> BaseStructureScore:
     if isinstance(scoring_method, BaseStructureScore):
-        if use_cache:
-            scoring_method = _enable_local_score_cache(scoring_method)
-        return scoring_method, scoring_method
+        return scoring_method
 
     if scoring_method is None:
         if data is None:
@@ -153,14 +150,10 @@ def get_scoring_method(
 
     if scores:
         cls = scores[0]
-        if cls.get_class_tag("requires_data", tag_value_default=True):
-            if data is None:
-                raise ValueError(f"Scoring method '{cls.__name__}' requires data, but data is None.")
-            score = cls(data=data, **kwargs)
-        else:
-            score = cls(**kwargs)
-        if use_cache:
-            score = _enable_local_score_cache(score)
-        return score, score
+        if data is None:
+            raise ValueError(f"Scoring method '{cls.__name__}' requires data, but data is None.")
 
-    raise ValueError(f"Unknown scoring method: {scoring_method!r}")
+        return cls(data=data, **kwargs)
+
+    else:
+        raise ValueError(f"Unknown scoring method: {scoring_method!r}")

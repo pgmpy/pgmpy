@@ -58,10 +58,6 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         (edge addition, removal, or flipping). Operations with smaller
         improvements are not performed.
 
-    use_cache : bool, default=True
-        If True, enable an LRU cache on the structure score's `local_score`
-        method for repeated evaluations during the search.
-
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
@@ -119,13 +115,11 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
-        use_cache: bool = True,
     ):
         self.scoring_method = scoring_method
         self.expert_knowledge = expert_knowledge
         self.return_type = return_type
         self.min_improvement = min_improvement
-        self.use_cache = use_cache
 
     def _legal_edge_additions(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
@@ -188,8 +182,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        _, score_c = get_scoring_method(self.scoring_method, X, use_cache=self.use_cache)
-        score_fn = score_c.local_score
+        score = get_scoring_method(self.scoring_method, X)
+        score_fn = score.local_score
 
         current_model = DAG()
         current_model.add_nodes_from(self.variables_)

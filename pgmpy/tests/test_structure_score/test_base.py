@@ -1,5 +1,3 @@
-from unittest.mock import Mock, call
-
 import pandas as pd
 import pytest
 
@@ -11,6 +9,17 @@ from pgmpy.structure_score import (
     BICGauss,
 )
 from pgmpy.structure_score._base import get_scoring_method
+
+
+class CountingScore(BaseStructureScore):
+    def __init__(self, data):
+        self.call_count = 0
+        super().__init__(data)
+
+    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+        self.call_count += 1
+        parents = self._validate_parents(parents)
+        return float(len(parents))
 
 
 class TestBaseStructureScore:
@@ -27,79 +36,77 @@ class TestBaseStructureScore:
 class TestGetScoringMethod:
     def test_get_scoring_method_default_discrete(self, small_df):
         data = small_df.astype("category")
-        score, score_c = get_scoring_method(None, data, use_cache=False)
+        score = get_scoring_method(None, data)
 
         assert isinstance(score, BIC)
-        assert score_c is score
 
     def test_get_scoring_method_default_continuous(self):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
 
-        score, score_c = get_scoring_method(None, data, use_cache=False)
+        score = get_scoring_method(None, data)
 
         assert isinstance(score, BICGauss)
-        assert score_c is score
 
     def test_get_scoring_method_default_mixed(self):
         data = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0)
 
-        score, score_c = get_scoring_method(None, data, use_cache=False)
+        score = get_scoring_method(None, data)
 
         assert isinstance(score, BICCondGauss)
-        assert score_c is score
 
     def test_get_scoring_method_by_name(self, small_df):
         data = small_df.astype("category")
-        score, score_c = get_scoring_method("k2", data, use_cache=False)
+        score = get_scoring_method("k2", data)
 
         assert isinstance(score, K2)
-        assert score_c is score
 
     def test_get_scoring_method_instance_passthrough(self, small_df):
         data = small_df.astype("category")
         score = K2(data)
-        returned_score, score_c = get_scoring_method(score, data, use_cache=False)
+        returned_score = get_scoring_method(score, data)
 
         assert returned_score is score
-        assert score_c is score
 
-    def test_get_scoring_method_use_cache_returns_same_instance(self, small_df):
+    def test_get_scoring_method_returns_cached_score_instance(self, small_df):
         data = small_df.astype("category")
-        score, score_c = get_scoring_method("k2", data, use_cache=True)
+        score = get_scoring_method("k2", data)
 
         assert isinstance(score, K2)
-        assert score_c is score
-        assert score_c.local_score("A", ()) == score.local_score("A", ())
+        assert score.local_score("A", ()) == score.local_score("A", ())
 
-    def test_get_scoring_method_use_cache_caches_local_score_calls(self, small_df):
+    def test_base_structure_score_caches_local_score_calls(self, small_df):
         data = small_df.astype("category")
-        score = K2(data)
-        expected = score.local_score("A", ("B",))
-        local_score_mock = Mock(return_value=expected)
-        score.local_score = local_score_mock
+        score = CountingScore(data)
 
-        returned_score, score_c = get_scoring_method(score, data, use_cache=True)
+        assert score.local_score("A", ("B",)) == 1.0
+        assert score.local_score("A", ("B",)) == 1.0
+        assert score.call_count == 1
 
+    def test_get_scoring_method_instance_passthrough_preserves_cached_score(self, small_df):
+        data = small_df.astype("category")
+        score = CountingScore(data)
+
+        returned_score = get_scoring_method(score, data)
         assert returned_score is score
-        assert score_c.local_score("A", ("B",)) == expected
-        assert score_c.local_score("A", ("B",)) == expected
 
-        local_score_mock.assert_has_calls([call("A", ("B",))], any_order=False)
+        assert returned_score.local_score("A", ("B",)) == 1.0
+        assert returned_score.local_score("A", ("B",)) == 1.0
+        assert score.call_count == 1
 
     def test_get_scoring_method_unknown_score_error(self, small_df):
         with pytest.raises(ValueError, match=r"Unknown scoring method: 'not-a-score'"):
-            get_scoring_method("not-a-score", small_df, use_cache=False)
+            get_scoring_method("not-a-score", small_df)
 
     def test_get_scoring_method_none_without_data_error(self):
         with pytest.raises(
             ValueError, match=r"Cannot determine scoring method: both `scoring_method` and `data` are None."
         ):
-            get_scoring_method(None, None, use_cache=False)
+            get_scoring_method(None, None)
 
     def test_get_scoring_method_name_without_data_error(self):
         with pytest.raises(ValueError, match=r"Scoring method 'K2' requires data, but data is None."):
-            get_scoring_method("k2", None, use_cache=False)
+            get_scoring_method("k2", None)
 
     def test_get_scoring_method_invalid_argument_error(self, small_df):
         with pytest.raises(ValueError, match=r"Invalid `scoring_method` argument: 123"):
-            get_scoring_method(123, small_df, use_cache=False)
+            get_scoring_method(123, small_df)
