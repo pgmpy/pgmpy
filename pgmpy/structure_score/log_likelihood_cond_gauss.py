@@ -29,7 +29,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         return df_cov
 
     def _cat_parents_product(self, parents: tuple[str, ...]) -> int:
-        parents = self._validate_parents(parents)
         k = 1
         for pa in parents:
             if self.dtypes[pa] != "N":
@@ -39,7 +38,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         return k
 
     def _get_num_parameters(self, variable: str, parents: tuple[str, ...]) -> int:
-        parents = self._validate_parents(parents)
         parent_dtypes = [self.dtypes[pa] for pa in parents]
         n_cont_parents = parent_dtypes.count("N")
 
@@ -58,7 +56,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         return k
 
     def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> float:
-        parents = self._validate_parents(parents)
         parent_list = list(parents)
         df = self.data.loc[:, [variable] + parent_list]
 

@@ -18,7 +18,6 @@ class LogLikeliHood(BaseStructureScore):
 
     def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, int, int]:
         var_cardinality = len(self.state_names[variable])
-        parents = self._validate_parents(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 

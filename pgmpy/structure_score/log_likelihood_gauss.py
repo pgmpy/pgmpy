@@ -17,7 +17,6 @@ class LogLikelihoodGauss(BaseStructureScore):
         super().__init__(data, **kwargs)
 
     def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, float]:
-        parents = self._validate_parents(parents)
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:

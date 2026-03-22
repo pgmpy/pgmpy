@@ -28,16 +28,8 @@ class BaseStructureScore(BaseObject):
 
         self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
 
-    @staticmethod
-    def _validate_parents(parents: tuple[str, ...]) -> tuple[str, ...]:
-        """Validate that parent variables are provided as a tuple."""
-        if not isinstance(parents, tuple):
-            raise TypeError("`parents` must be a tuple.")
-        return parents
-
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
-        parents = self._validate_parents(parents)
         return self._cached_local_score(variable, parents)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
@@ -68,7 +60,6 @@ class BaseStructureScore(BaseObject):
         reindex: bool = True,
     ) -> pd.DataFrame:
         """Return state counts for `variable`, optionally conditioned on `parents`."""
-        parents = self._validate_parents(parents)
         return get_state_counts(
             data=self.data,
             state_names=self.state_names,
@@ -82,7 +73,6 @@ class BaseStructureScore(BaseObject):
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
-    **kwargs,
 ) -> BaseStructureScore:
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
@@ -109,7 +99,7 @@ def get_scoring_method(
         if data is None:
             raise ValueError(f"Scoring method '{cls.__name__}' requires data, but data is None.")
 
-        return cls(data=data, **kwargs)
+        return cls(data=data)
 
     else:
         raise ValueError(f"Unknown scoring method: {scoring_method!r}")
