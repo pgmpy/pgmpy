@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import copy
+from copy import deepcopy
 
 __all__ = ["_GraphRolesMixin"]
 
@@ -88,7 +88,7 @@ class _GraphRolesMixin:
             variables = {variables}
 
         if not inplace:
-            new_graph = copy.deepcopy(self)
+            new_graph = deepcopy(self)
         else:
             new_graph = self
 
@@ -136,7 +136,7 @@ class _GraphRolesMixin:
             variables = {variables}
 
         if not inplace:
-            new_graph = copy.deepcopy(self)
+            new_graph = deepcopy(self)
         else:
             new_graph = self
 
