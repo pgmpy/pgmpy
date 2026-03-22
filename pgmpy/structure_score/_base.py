@@ -16,7 +16,6 @@ class BaseStructureScore(BaseObject):
         "name": None,
         "supported_datatype": None,
         "default_for": None,
-        "requires_data": True,
         "is_parameteric": False,
     }
 
