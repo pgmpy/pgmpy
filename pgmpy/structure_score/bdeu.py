@@ -20,9 +20,8 @@ class BDeu(BaseStructureScore):
         self.equivalent_sample_size = equivalent_sample_size
         super().__init__(data, **kwargs)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local BDeu score for `variable` given `parents`."""
-        parents = self._validate_parents(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 

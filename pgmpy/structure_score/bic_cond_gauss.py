@@ -16,7 +16,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
     def __init__(self, data, **kwargs):
         super().__init__(data, **kwargs)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local mixed-data BIC score for `variable`."""
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)

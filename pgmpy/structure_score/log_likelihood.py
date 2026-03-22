@@ -35,7 +35,7 @@ class LogLikeliHood(BaseStructureScore):
 
         return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local log-likelihood score for `variable`."""
         ll, _, _ = self._log_likelihood(variable=variable, parents=parents)
         return ll

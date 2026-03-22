@@ -16,9 +16,8 @@ class CountingScore(BaseStructureScore):
         self.call_count = 0
         super().__init__(data)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         self.call_count += 1
-        parents = self._validate_parents(parents)
         return float(len(parents))
 
 

@@ -179,7 +179,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
             return log_like
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local conditional-Gaussian log-likelihood score."""
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll

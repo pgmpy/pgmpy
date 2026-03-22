@@ -25,7 +25,7 @@ class LogLikelihoodGauss(BaseStructureScore):
 
         return (glm_model.llf, glm_model.df_model)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local Gaussian log-likelihood score for `variable`."""
         ll, _ = self._log_likelihood(variable=variable, parents=parents)
 

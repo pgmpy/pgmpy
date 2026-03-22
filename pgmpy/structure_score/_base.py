@@ -37,16 +37,7 @@ class BaseStructureScore(BaseObject):
                     else:
                         self.state_names[var] = self._collect_state_names(var)
 
-        if hasattr(self, "local_score") and not getattr(self, "_local_score_cache_enabled", False):
-            uncached_local_score = self.local_score
-            cached_local_score = lru_cache(maxsize=10000)(uncached_local_score)
-
-            def local_score(variable, parents):
-                self._validate_parents(parents)
-                return cached_local_score(variable, parents)
-
-            self.local_score = local_score
-            self._local_score_cache_enabled = True
+        self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
 
     def _collect_state_names(self, variable: str) -> list:
         """Return a list of states that the variable takes in the data."""
@@ -59,6 +50,15 @@ class BaseStructureScore(BaseObject):
         if not isinstance(parents, tuple):
             raise TypeError("`parents` must be a tuple.")
         return parents
+
+    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+        """Compute the cached local score for `variable` given `parents`."""
+        parents = self._validate_parents(parents)
+        return self._cached_local_score(variable, parents)
+
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+        """Compute the uncached local score for `variable` given `parents`."""
+        raise NotImplementedError
 
     def score(self, model) -> float:
         """Compute a structure score for a model."""

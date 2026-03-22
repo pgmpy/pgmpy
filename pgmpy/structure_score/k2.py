@@ -19,10 +19,9 @@ class K2(BaseStructureScore):
     def __init__(self, data, **kwargs):
         super().__init__(data, **kwargs)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local K2 score for `variable` given `parents`."""
         var_cardinality = len(self.state_names[variable])
-        parents = self._validate_parents(parents)
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
