@@ -6,28 +6,66 @@ from .pearsonr import Pearsonr
 
 
 class PearsonrEquivalence(Pearsonr):
-    """
-    Computes a two-sided level-alpha equivalent test using partial correlations.
+    r"""
+    Pearson equivalence test [1] for conditional independence on continuous data.
 
-    Tests the Null Hypothesis that the partial correlation is greater than or
-    equal to `delta_threshold` (Dependence). Rejection implies Practical Independence.
+    This test first computes the partial correlation coefficient :math:`\hat{\rho}_{XY \mid Z}` using :class:`Pearsonr`.
+    Let :math:`\delta` denote ``delta_threshold``. The Fisher transform is computed as:
+
+    .. math::
+        z_\rho = \operatorname{arctanh}(\hat{\rho}_{XY \mid Z}),
+        \qquad
+        z_\delta = \operatorname{arctanh}(\delta),
+
+    and defines
+
+    .. math::
+        c = \sqrt{n - |Z| - 3},
+
+    where :math:`n` is the sample size and :math:`|Z|` is the number of conditioning variables.
+
+    The test then performs a TOST (two one-sided tests) procedure for the equivalence hypothesis
+
+    .. math::
+        H_0: \rho_{XY \mid Z} \leq -\delta \;\; \text{or} \;\; \rho_{XY \mid Z} \geq \delta
+        \qquad \text{vs.} \qquad
+        H_1: -\delta < \rho_{XY \mid Z} < \delta.
+
+    The two one-sided test statistics are:
+
+    .. math::
+        T_{\mathrm{lower}} = c (z_\rho + z_\delta),
+        \qquad
+        T_{\mathrm{upper}} = c (z_\rho - z_\delta),
+
+    with corresponding p-values:
+
+    .. math::
+        p_{\mathrm{lower}} = 1 - \Phi(T_{\mathrm{lower}}),
+        \qquad
+        p_{\mathrm{upper}} = \Phi(T_{\mathrm{upper}}),
+
+    where :math:`\Phi` is the standard normal CDF. The reported p-value is:
+
+    .. math::
+        p = \max(p_{\mathrm{lower}}, p_{\mathrm{upper}}).
+
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset in which to test the independence condition.
 
-    delta_threshold: float
+    delta_threshold : float
         The equivalence bound (threshold for practical independence).
 
     Attributes
     ----------
     statistic_ : float
-        Fisher z-transformed partial correlation coefficient. Set after calling the test.
+        Fisher z-transformed correlation coefficient :math:`z_\rho`. Set after calling the test.
     p_value_ : float
-        The p-value from the TOST (Two One-Sided Tests) procedure. Independence is
-        concluded when p_value_ < significance_level (opposite of standard CI tests).
-        Set after calling the test.
+        The p-value from the TOST procedure. Independence is concluded when
+        ``p_value_ < significance_level`` (opposite of standard CI tests). Set after calling the test.
 
     References
     ----------

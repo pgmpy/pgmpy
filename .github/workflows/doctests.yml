@@ -28,10 +28,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install graphviz graphviz-dev -y
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install .[tests]
+          pip install .[all]
 
       - name: Run doctests
         run: |

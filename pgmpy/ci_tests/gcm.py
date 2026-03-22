@@ -8,15 +8,23 @@ from ._base import _BaseCITest
 
 
 class GCM(_BaseCITest):
-    """
-    The Generalized Covariance Measure(GCM) test for CI.
+    r"""
+    Generalized Covariance Measure (GCM) [1] test for conditional independence.
+
+    Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
+    resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
 
     It fits a regressor on the conditioning variable and then tests for a vanishing covariance between the
     resulting residuals. Details of the method can be found in [1].
+    .. math::
+        T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
+
+    where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
+    asymptotically standard normal.
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset in which to test the independence condition.
     estimator: optional (default=None)
         Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
@@ -25,7 +33,7 @@ class GCM(_BaseCITest):
     Attributes
     ----------
     statistic_ : float
-        The GCM t-statistic. Set after calling the test.
+        The GCM test statistic. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
 
