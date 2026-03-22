@@ -16,9 +16,9 @@ class BDeu(BaseStructureScore):
         "is_parameteric": True,
     }
 
-    def __init__(self, data, equivalent_sample_size=10, **kwargs):
+    def __init__(self, data, equivalent_sample_size=10, state_names=None):
         self.equivalent_sample_size = equivalent_sample_size
-        super().__init__(data, **kwargs)
+        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local BDeu score for `variable` given `parents`."""

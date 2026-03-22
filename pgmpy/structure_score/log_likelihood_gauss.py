@@ -13,8 +13,8 @@ class LogLikelihoodGauss(BaseStructureScore):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, data, state_names=None):
+        super().__init__(data, state_names=state_names)
 
     def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, float]:
         if len(parents) == 0:

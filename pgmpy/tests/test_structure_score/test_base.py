@@ -25,6 +25,12 @@ class TestBaseStructureScore:
     def test_default_for_tag(self):
         assert BaseStructureScore.get_class_tag("default_for") is None
 
+    def test_score_constructor_rejects_unexpected_kwargs(self, small_df):
+        data = small_df.astype("category")
+
+        with pytest.raises(TypeError, match=r"unexpected keyword argument 'foo'"):
+            K2(data, foo=1)
+
 
 class TestGetScoringMethod:
     def test_get_scoring_method_default_discrete(self, small_df):

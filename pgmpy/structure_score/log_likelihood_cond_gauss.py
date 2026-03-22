@@ -15,8 +15,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, data, state_names=None):
+        super().__init__(data, state_names=state_names)
 
     @staticmethod
     def _adjusted_cov(df: pd.DataFrame) -> pd.DataFrame:

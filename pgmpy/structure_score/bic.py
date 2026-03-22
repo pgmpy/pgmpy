@@ -13,8 +13,8 @@ class BIC(LogLikeliHood):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, data, state_names=None):
+        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the local BIC score for `variable`."""

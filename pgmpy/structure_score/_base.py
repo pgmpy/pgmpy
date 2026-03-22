@@ -19,7 +19,7 @@ class BaseStructureScore(BaseObject):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None, **kwargs):
+    def __init__(self, data, state_names=None):
         self.data, self.dtypes = preprocess_data(data)
 
         if self.data is not None:
