@@ -1164,9 +1164,9 @@ class DynamicBayesianNetwork(DAG):
         Normal simulation from the model.
 
         >>> dbn.simulate(n_time_slices=4, n_samples=2, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
-        0      0      0      1      0  ...      1      0      1      1     
-        1      1      1      0      0  ...      1      0      1      1     
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
+        0      0      0      1      0  ...      1      0      1      1
+        1      1      1      0      0  ...      1      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1175,9 +1175,9 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.simulate(
         ...     n_time_slices=4, n_samples=2, evidence={("D", 0): 1, ("D", 2): 0}, seed=42
         ... )  # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
-        0      1      2      0      1  ...      0      0      1      1     
-        1      1      0      0      0  ...      1      0      0      1     
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      2      0      1  ...      0      0      1      1
+        1      1      0      0      0  ...      1      0      0      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1189,9 +1189,9 @@ class DynamicBayesianNetwork(DAG):
         ...     virtual_evidence=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
         ...     seed=42
         ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
-        0      0      0      1      0  ...      1      1      1      0     
-        1      1      1      0      0  ...      1      1      1      0     
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
+        0      0      0      1      0  ...      1      1      1      0
+        1      1      1      0      0  ...      1      1      1      0
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1199,9 +1199,9 @@ class DynamicBayesianNetwork(DAG):
 
         >>> dbn.simulate(n_time_slices=4, n_samples=2,
         ...     do={("D", 0): 1, ("D", 2): 0}, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
-        0      1      2      0      0  ...      0      0      1      1     
-        1      1      0      0      0  ...      1      0      1      1     
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      2      0      0  ...      0      0      1      1
+        1      1      0      0      0  ...      1      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1213,16 +1213,17 @@ class DynamicBayesianNetwork(DAG):
         ...     virtual_intervention=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
         ...     seed=42
         ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)     
-        0      0      0      1      0  ...      1      1      0      0     
-        1      1      1      0      0  ...      1      0      1      1     
+          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
+        0      0      0      1      0  ...      1      1      0      0
+        1      1      1      0      0  ...      1      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
         Return format selection using `return_format` argument.
         `return_format="wide"` returns the data in standard format.
 
-        >>> dbn.simulate(n_samples=2, n_time_slices=3, return_format="wide", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
+        >>> dbn.simulate(n_samples=2, n_time_slices=3,
+        ...         return_format="wide", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
           (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (D, 2) (G, 2) (I, 1) (I, 2)
         0      0      0      1      0      0      0      0      1      1
         1      1      1      0      0      1      1      0      1      1
