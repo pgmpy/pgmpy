@@ -365,9 +365,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         >>> model.get_random_cpds(loc=0, scale=1, seed=42)
         """
-        # We want a different seed for each CPD; increment an integer seed in the loop.
-        # We want to provide a different seed for each cpd, therefore we force it to be integer and increment in a loop.
-        seed = seed if seed else 42
+        rng = np.random.default_rng(seed)
 
         cpds = []
         for i, var in enumerate(self.nodes()):
@@ -378,7 +376,7 @@ class LinearGaussianBayesianNetwork(DAG):
                     evidence=parents,
                     loc=loc,
                     scale=scale,
-                    seed=(seed + i),
+                    seed=int(rng.integers(0, 2**31)),
                 )
             )
         if inplace:

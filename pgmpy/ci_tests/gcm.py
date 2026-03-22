@@ -7,7 +7,7 @@ from ._base import _BaseCITest
 
 class GCM(_BaseCITest):
     r"""
-    Generalized Covariance Measure (GCM) test for conditional independence.
+    Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
     Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
     resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
@@ -16,7 +16,7 @@ class GCM(_BaseCITest):
         T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
 
     where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
-    asymptotically standard normal. Details of the method can be found in [1].
+    asymptotically standard normal.
 
     Parameters
     ----------

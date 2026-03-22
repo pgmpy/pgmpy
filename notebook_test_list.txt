@@ -15,3 +15,4 @@ examples/Parameter_Learning_Discrete_BN.ipynb
 examples/Structure_Learning.ipynb
 examples/Structure_Learning_Chow_Liu.ipynb
 examples/Structure_Learning_TAN.ipynb
+examples/Expert_Knowledge.ipynb
