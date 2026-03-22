@@ -28,3 +28,4 @@ pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
 pgmpy/base/MAG.py
 pgmpy/utils/mathext.py
+pgmpy/models/LinearGaussianBayesianNetwork.py
