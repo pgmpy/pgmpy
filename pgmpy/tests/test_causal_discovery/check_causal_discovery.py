@@ -1,10 +1,3 @@
-"""
-Method to check whether a causal discovery algorithm is compliant with pgmpy's
-unified interface, as defined in ``devtools/extension_templates/_causal_discovery.py``.
-
-Location: pgmpy/tests/test_causal_discovery/check_causal_discovery.py
-"""
-
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
@@ -21,14 +14,14 @@ EXPECTED_FAILED_SKLEARN_CHECKS = {
 }
 
 
-def _make_test_data(data_type="discrete", n_samples=200, n_features=3, seed=42):
+def _make_test_data(data_type, n_samples=200, n_features=3, seed=42):
     """Generate a simple synthetic dataset for testing.
 
     Parameters
     ----------
-    data_type : str, default="discrete"
+    data_type : str
         The type of data to generate. Must be one of:
-            * ``"discrete"``   - random integers in {0, 1}.
+            * ``"discrete"``   - random integers in {0, 1} with category dtype.
             * ``"continuous"`` - random standard-normal floats.
             * ``"mixed"``     - first half of columns discrete, rest continuous.
 
@@ -50,7 +43,7 @@ def _make_test_data(data_type="discrete", n_samples=200, n_features=3, seed=42):
 
     if data_type == "discrete":
         data = rng.choice([0, 1], size=(n_samples, n_features))
-        return pd.DataFrame(data, columns=columns)
+        return pd.DataFrame(data, columns=columns, dtype="category")
 
     elif data_type == "continuous":
         data = rng.standard_normal(size=(n_samples, n_features))
@@ -62,13 +55,16 @@ def _make_test_data(data_type="discrete", n_samples=200, n_features=3, seed=42):
         discrete_part = rng.choice([0, 1], size=(n_samples, n_discrete))
         continuous_part = rng.standard_normal(size=(n_samples, n_continuous))
         data = np.hstack([discrete_part, continuous_part])
-        return pd.DataFrame(data, columns=columns)
+        df = pd.DataFrame(data, columns=columns)
+        for col in columns[:n_discrete]:
+            df[col] = df[col].astype("category")
+        return df
 
     else:
         raise ValueError(f"data_type must be one of 'discrete', 'continuous', or 'mixed'. Got: {data_type!r}")
 
 
-def check_causal_discovery(estimator, data_type="discrete"):
+def check_causal_discovery(estimator, data_type):
     """Run all convention checks on a causal-discovery estimator.
 
     Parameters
@@ -76,7 +72,7 @@ def check_causal_discovery(estimator, data_type="discrete"):
     estimator : object
         An **unfitted** causal-discovery estimator (e.g. ``PC()``, ``GES()``).
 
-    data_type : str, default="discrete"
+    data_type : str
         The kind of synthetic data to generate for fitting.
         One of ``"discrete"``, ``"continuous"``, or ``"mixed"``.
 
@@ -98,8 +94,8 @@ def check_causal_discovery(estimator, data_type="discrete"):
     Examples
     --------
     >>> from pgmpy.causal_discovery import PC
-    >>> from pgmpy.tests.test_causal_discovery.check_causal_discovery import check_causal_discovery
-    >>> check_causal_discovery(PC())
+    >>> from pgmpy.tests.test_causal_discovery import check_causal_discovery
+    >>> check_causal_discovery(PC(), data_type="discrete")
     """
     name = type(estimator).__name__
 
@@ -120,7 +116,6 @@ def check_causal_discovery(estimator, data_type="discrete"):
     data = _make_test_data(data_type=data_type)
     fitted = estimator.fit(data)
     assert fitted is estimator, f"{name}.fit(X) must return self."
-    n_cols = data.shape[1]
 
     # Check 5: causal_graph_ must exist and be a valid graph type.
     assert hasattr(fitted, "causal_graph_"), f"{name} does not set `causal_graph_` after fitting."
@@ -131,6 +126,7 @@ def check_causal_discovery(estimator, data_type="discrete"):
     )
 
     # Check 6: adjacency_matrix_ must exist, be a DataFrame, and be square.
+    n_cols = data.shape[1]
     assert hasattr(fitted, "adjacency_matrix_"), f"{name} does not set `adjacency_matrix_` after fitting."
     assert isinstance(fitted.adjacency_matrix_, pd.DataFrame), (
         f"{name}.adjacency_matrix_ must be a pandas DataFrame, got {type(fitted.adjacency_matrix_).__name__}."

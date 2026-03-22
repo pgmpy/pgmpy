@@ -1,17 +1,9 @@
-"""
-Tests for the ``check_causal_discovery`` compliance checker.
-
-Location: pgmpy/tests/test_utils/test_check_causal_discovery.py
-"""
-
 import pandas as pd
 import pytest
 
 from pgmpy.causal_discovery import GES, PC, HillClimbSearch
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.tests.test_causal_discovery.check_causal_discovery import (
-    check_causal_discovery,
-)
+from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
 @pytest.mark.parametrize(
@@ -36,7 +28,7 @@ def test_fails_without_inheritance():
         pass
 
     with pytest.raises(TypeError):
-        check_causal_discovery(BadEstimator())
+        check_causal_discovery(BadEstimator(), data_type="discrete")
 
 
 def test_fails_without_fit():
@@ -44,7 +36,7 @@ def test_fails_without_fit():
         pass
 
     with pytest.raises(AssertionError):
-        check_causal_discovery(NoFitEstimator())
+        check_causal_discovery(NoFitEstimator(), data_type="discrete")
 
 
 def test_fails_without_causal_graph():
@@ -53,4 +45,4 @@ def test_fails_without_causal_graph():
             return self
 
     with pytest.raises(AssertionError):
-        check_causal_discovery(NoCausalGraphEstimator())
+        check_causal_discovery(NoCausalGraphEstimator(), data_type="discrete")
