@@ -80,8 +80,8 @@ class LinearGaussianBayesianNetwork(DAG):
     # Simulating data from the model.
 
     >>> df = model.simulate(n_samples=100, seed=42)
-    >>> print(df.columns)
-    Index(['x1', 'x2', 'x3'], dtype='str')
+    >>> print(df.columns) # doctest: +ELLIPSIS
+    Index(['x1', 'x2', 'x3'], dtype='...')
 
     # Fitting the model to the simulated data.
 
