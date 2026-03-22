@@ -32,4 +32,5 @@ pgmpy/models/DiscreteMarkovNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
+pgmpy/models/NaiveBayes.py
 pgmpy/utils/mathext.py
