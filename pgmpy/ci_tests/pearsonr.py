@@ -6,16 +6,41 @@ from ._base import _BaseCITest
 
 
 class Pearsonr(_BaseCITest):
-    """
-    Compute Pearson correlation coefficient and p-value for testing non-correlation.
+    r"""
+    Partial Correlation test for conditional independence.
 
-    Should be used only on continuous data. In case when :math:`Z \\neq \\emptyset` uses
-    linear regression and computes pearson coefficient on residuals.
+    If :math:`Z = \emptyset`, compute Pearson's correlation coefficient :math:`r_{XY}` and its two-sided p-value.
+
+    If :math:`Z \neq \emptyset`, regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, compute the
+    residuals :math:`r_X` and :math:`r_Y`, and define the partial correlation as the Pearson correlation between those
+    residuals. The resulting test statistic is
+
+    .. math::
+        t = \rho_{XY \mid Z} \sqrt{\frac{n - |Z| - 2}{1 - \rho_{XY \mid Z}^2}},
+
+    where :math:`n` is the sample size and :math:`|Z|` is the number of conditioning variables. Under the null
+    hypothesis :math:`X \perp Y \mid Z`, this statistic is Student's t distribution with :math:`n - |Z| - 2` degrees of
+    freedom.
 
     Parameters
     ----------
     data : pandas.DataFrame
         The dataset in which to test the independence condition.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from pgmpy.ci_tests import Pearsonr
+    >>> rng = np.random.default_rng(seed=42)
+    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=["X", "Y", "Z"])
+    >>> test = Pearsonr(data=data)
+    >>> test("X", "Y", ["Z"], significance_level=0.05)
+    np.True_
+    >>> round(test.statistic_, 2)
+    np.float64(0.01)
+    >>> round(test.p_value_, 2)
+    np.float(0.87)
 
     Attributes
     ----------
@@ -54,6 +79,7 @@ class Pearsonr(_BaseCITest):
         Sets ``self.statistic_`` (Pearson's r) and ``self.p_value_``.
         """
         data = self.data
+        n_samples = data.shape[0]
 
         # Step 1: If Z is empty compute a non-conditional test.
         if len(Z) == 0:
@@ -61,12 +87,17 @@ class Pearsonr(_BaseCITest):
 
         # Step 2: If Z is non-empty, use linear regression to compute residuals and test independence on it.
         else:
-            X_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, X], rcond=None)[0]
-            Y_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, Y], rcond=None)[0]
+            design_matrix = np.column_stack([np.ones(n_samples), data.loc[:, Z].to_numpy()])
+            X_coef = np.linalg.lstsq(design_matrix, data.loc[:, X], rcond=None)[0]
+            Y_coef = np.linalg.lstsq(design_matrix, data.loc[:, Y], rcond=None)[0]
 
-            residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
-            residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
-            coef, p_value = stats.pearsonr(residual_X, residual_Y)
+            residual_X = data.loc[:, X] - design_matrix @ X_coef
+            residual_Y = data.loc[:, Y] - design_matrix @ Y_coef
+
+            coef = np.corrcoef(residual_X, residual_Y)[0, 1]
+            self.dof_ = n_samples - len(Z) - 2
+            t_statistic = coef * np.sqrt(self.dof_ / (1 - coef**2))
+            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=self.dof_)
 
         self.statistic_ = coef
         self.p_value_ = p_value

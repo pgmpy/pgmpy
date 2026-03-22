@@ -12,11 +12,11 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import PC
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
+from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 def expected_failed_checks(estimator):
@@ -486,14 +486,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 
 def test_pc_alarm():
-    alarm_model = get_example_model("alarm")
+    alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
     est.fit(X=data)
 
 
 def test_pc_asia(caplog):
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     req_edges = [("xray", "either")]
     background = ExpertKnowledge(required_edges=req_edges)
@@ -520,7 +520,7 @@ def test_pc_asia(caplog):
 
 
 def test_pc_asia_expert():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(
         variant="stable",
@@ -546,7 +546,7 @@ def test_pc_asia_expert():
 
 
 def test_temporal_pc_cancer():
-    cancer_model = get_example_model("cancer")
+    cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(n_samples=int(5e4), seed=42)
 
     background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
@@ -613,7 +613,7 @@ def test_temporal_pc_sachs():
         ("Akt", "Erk"),
     }
 
-    model = get_example_model("sachs")
+    model = load_model("bnlearn/sachs")
     df = model.simulate(int(1e3))
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
@@ -702,7 +702,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
 
 
 def test_score():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e4), seed=42)
     est = PC(
         return_type="dag",

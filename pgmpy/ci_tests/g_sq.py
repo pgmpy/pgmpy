@@ -5,9 +5,11 @@ from .power_divergence import PowerDivergence
 
 class GSq(PowerDivergence):
     """
-    G squared test for conditional independence. Also commonly known as G-test,
-    likelihood-ratio or maximum likelihood statistical significance test.
-    Tests the null hypothesis that X is independent of Y given Zs.
+    G-squared test for conditional independence on discrete data.
+
+    This class is a thin specialization of :class:`PowerDivergence` with
+    ``lambda_="log-likelihood"``. For the contingency-table construction, conditional-case
+    aggregation, and p-value computation, see :class:`PowerDivergence`.
 
     Parameters
     ----------

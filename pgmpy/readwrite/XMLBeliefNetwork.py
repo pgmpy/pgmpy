@@ -458,9 +458,9 @@ class XBNWriter:
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import XBNReader, XBNWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = XBNWriter(asia)
         >>> writer.write(filename="asia.xbn")
         """
