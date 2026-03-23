@@ -9,9 +9,9 @@ from pgmpy.causal_discovery import LiNGAM
 
 @pytest.fixture
 def rand_data():
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     data = pd.DataFrame(
-        np.random.uniform(size=(100, 3)),
+        rng.uniform(size=(100, 3)),
         columns=list("ABC"),
     )
     data["B"] = 2.0 * data["A"] + data["B"]
@@ -21,9 +21,9 @@ def rand_data():
 
 @pytest.fixture
 def rand_data2():
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     data = pd.DataFrame(
-        np.random.laplace(size=(200, 5)),
+        rng.laplace(size=(1000, 5)),
         columns=list("ABCDE"),
     )
 
@@ -37,10 +37,10 @@ def rand_data2():
 
 @pytest.fixture
 def large_lingam_data():
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
 
     data = pd.DataFrame(
-        np.random.laplace(size=(1000, 10)),
+        rng.laplace(size=(5000, 10)),
         columns=list("ABCDEFGHIJ"),
     )
 
@@ -80,7 +80,7 @@ def test_fit_rand(rand_data):
     # Test adjacency matrix structure
     B = algo.adjacency_matrix_
     assert B.shape == (3, 3)
-    arr = np.array([[0.0, 0.0, 0.0], [2.05785506, 0.0, 0.0], [0.0, -1.50937624, 0.0]])
+    arr = np.array([[0.0, 0.0, 0.0], [2.0321982696, 0.0, 0.0], [0.0, -1.4574545280, 0.0]])
 
     np_test.assert_array_almost_equal(B, arr)
 
@@ -107,15 +107,17 @@ def test_fit_rand2(rand_data2):
 
     assert B.shape == (5, 5)
 
-    # arr = np.array([
-    #     [0.0, 0.0, 0.0, 0.0, 0.0],
-    #     [1.14641835, 0.0, 0.0, 0.0, 0.0],
-    #     [-1.64209705, 0.0, 0.0, 0.0, 0.0],
-    #     [0.0, 0.81291215, 0.0, 0.0, 0.0],
-    #     [0.0, 0.0, -0.73667243, 0.0, 0.0]
-    # ])
+    arr = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.19469001, 0.0, 0.0, 0.0, 0.0],
+            [-1.51738062, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.82198363, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -0.65074361, 0.0, 0.0],
+        ]
+    )
 
-    # np_test.assert_array_almost_equal(B, arr, decimal=2)
+    np_test.assert_array_almost_equal(B, arr, decimal=2)
 
 
 def test_large_lingam_data(large_lingam_data):
@@ -157,6 +159,27 @@ def test_large_lingam_data(large_lingam_data):
     assert not graph.has_edge("J", "F")
     assert not graph.has_edge("J", "I")
     assert not graph.has_edge("J", "C")
+
+    # Test adjacency matrix structure
+    B = algo.adjacency_matrix_
+    assert B.shape == (10, 10)
+
+    arr = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.50239738, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [-1.19284925, 0.49601381, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.82013001, -0.6041246, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -1.00434477, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.32481944, 0.70584334, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, -0.87022438, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.49830465, -1.10152681, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.600331, 0.0, 0.0, 0.81615371, 0.0, 0.0],
+            [0.0, 0.0, -0.49005547, 0.0, 0.0, -0.73179177, 0.0, 0.0, 0.92003576, 0.0],
+        ]
+    )
+
+    np_test.assert_array_almost_equal(B, arr, decimal=2)
 
 
 def test_fit_custom_fast_ica(rand_data):
