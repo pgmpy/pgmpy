@@ -15,6 +15,10 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 from pgmpy import config
 from pgmpy.causal_discovery import NOTEARS, ExpertKnowledge
 
+BACKEND_PARAMS = ["numpy"]
+if _check_soft_dependencies("torch", severity="none"):
+    BACKEND_PARAMS.append("torch")
+
 
 def expected_failed_checks(estimator):
     return {
@@ -35,15 +39,12 @@ def test_notears_compatibility(estimator, check):
     check(estimator)
 
 
-@pytest.fixture(params=["numpy", "torch"])
+@pytest.fixture(params=BACKEND_PARAMS)
 def backend(request):
-    if request.param == "torch":
-        if not _check_soft_dependencies("torch", severity="none"):
-            pytest.skip("torch not installed")
-        config.set_backend("torch")
-
+    prev_backend = config.get_backend()
+    config.set_backend(request.param)
     yield request.param
-    config.set_backend("numpy")
+    config.set_backend(prev_backend)
 
 
 @pytest.fixture
@@ -257,19 +258,45 @@ class TestNOTEARSExpertKnowledge:
         est.fit(continuous_data)
         assert ("Y", "X") not in est.causal_graph_.edges()
 
-    def test_required_edges(self, backend):
+    @pytest.mark.parametrize("w_threshold", [0.1, 0.0])
+    def test_required_edges(self, backend, w_threshold):
         rng = np.random.default_rng(42)
         data = pd.DataFrame({"A": rng.normal(size=100), "B": rng.normal(size=100)})
         expert = ExpertKnowledge(required_edges=[("A", "B")])
         est = NOTEARS(
             lambda1=0.01,
             max_iter=10,
-            w_threshold=0.1,
+            w_threshold=w_threshold,
             expert_knowledge=expert,
             show_progress=False,
         )
         est.fit(data)
         assert ("A", "B") in est.causal_graph_.edges()
+
+    @pytest.mark.parametrize(
+        ("expert_knowledge", "error_msg"),
+        [
+            (
+                ExpertKnowledge(required_edges=[("A", "C")]),
+                r"Expert knowledge edge \(A, C\) refers to node\(s\) not present in the data columns\.",
+            ),
+            (
+                ExpertKnowledge(forbidden_edges=[("A", "C")]),
+                r"Expert knowledge edge \(A, C\) refers to node\(s\) not present in the data columns\.",
+            ),
+        ],
+    )
+    def test_missing_nodes_in_expert_knowledge(self, backend, expert_knowledge, error_msg):
+        rng = np.random.default_rng(42)
+        data = pd.DataFrame({"A": rng.normal(size=50), "B": rng.normal(size=50)})
+        est = NOTEARS(
+            lambda1=0.01,
+            max_iter=5,
+            expert_knowledge=expert_knowledge,
+            show_progress=False,
+        )
+        with pytest.raises(ValueError, match=error_msg):
+            est.fit(data)
 
     def test_temporal_order_excludes_backward_edges(self, backend, continuous_data):
         expert = ExpertKnowledge(temporal_order=[["X"], ["Y"], ["Z"]])
@@ -290,44 +317,49 @@ class TestNOTEARSReferenceComparison:
     """Compare pgmpy NOTEARS output with the reference implementation."""
 
     def test_matches_reference_l2(self):
-        rng = np.random.default_rng(42)
-        x = rng.normal(size=200)
-        y = 1.5 * x + rng.normal(scale=0.3, size=200)
-        z = -1.0 * y + rng.normal(scale=0.3, size=200)
-        X_np = np.column_stack([x, y, z])
-        X_df = pd.DataFrame(X_np, columns=["X", "Y", "Z"])
+        prev_backend = config.get_backend()
+        config.set_backend("numpy")
+        try:
+            rng = np.random.default_rng(42)
+            x = rng.normal(size=200)
+            y = 1.5 * x + rng.normal(scale=0.3, size=200)
+            z = -1.0 * y + rng.normal(scale=0.3, size=200)
+            X_np = np.column_stack([x, y, z])
+            X_df = pd.DataFrame(X_np, columns=["X", "Y", "Z"])
 
-        lambda1, w_threshold = 0.1, 0.3
-        ref_W = _notears_reference(
-            X_np,
-            lambda1=lambda1,
-            loss_type="l2",
-            w_threshold=w_threshold,
-            max_iter=20,
-        )
+            lambda1, w_threshold = 0.1, 0.3
+            ref_W = _notears_reference(
+                X_np,
+                lambda1=lambda1,
+                loss_type="l2",
+                w_threshold=w_threshold,
+                max_iter=20,
+            )
 
-        est = NOTEARS(
-            lambda1=lambda1,
-            loss_type="l2",
-            w_threshold=w_threshold,
-            show_progress=False,
-        )
-        est.fit(X_df)
+            est = NOTEARS(
+                lambda1=lambda1,
+                loss_type="l2",
+                w_threshold=w_threshold,
+                show_progress=False,
+            )
+            est.fit(X_df)
 
-        # Both should recover the same non-zero edge pattern
-        ref_edges = set()
-        for i in range(3):
-            for j in range(3):
-                if ref_W[i, j] != 0:
-                    ref_edges.add((["X", "Y", "Z"][i], ["X", "Y", "Z"][j]))
+            # Both should recover the same non-zero edge pattern
+            ref_edges = set()
+            for i in range(3):
+                for j in range(3):
+                    if ref_W[i, j] != 0:
+                        ref_edges.add((["X", "Y", "Z"][i], ["X", "Y", "Z"][j]))
 
-        pgmpy_edges = set(est.causal_graph_.edges())
+            pgmpy_edges = set(est.causal_graph_.edges())
 
-        # The non-zero patterns should overlap significantly.
-        # The pgmpy version adds a DAG-enforcement step (greedy by weight)
-        # so the exact edge set may differ slightly, but the strong edges
-        # should match.
-        assert len(pgmpy_edges) > 0
-        assert len(ref_edges) > 0
-        # At minimum, both should find X->Y (the strongest edge)
-        assert ("X", "Y") in ref_edges or ("X", "Y") in pgmpy_edges
+            # The non-zero patterns should overlap significantly.
+            # The pgmpy version adds a DAG-enforcement step (greedy by weight)
+            # so the exact edge set may differ slightly, but the strong edges
+            # should match.
+            assert len(pgmpy_edges) > 0
+            assert len(ref_edges) > 0
+            # At minimum, both should find X->Y (the strongest edge)
+            assert ("X", "Y") in ref_edges or ("X", "Y") in pgmpy_edges
+        finally:
+            config.set_backend(prev_backend)
