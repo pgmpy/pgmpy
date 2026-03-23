@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 import numpy as np
+from scipy.linalg import expm
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
@@ -165,3 +166,23 @@ def allclose(arr1, arr2, atol):
             arr2,
             atol=atol,
         )
+
+
+def matrix_exp(arr):
+    if _is_torch_tensor(arr):
+        return torch.matrix_exp(arr)
+    return expm(np.asarray(arr))
+
+
+def concatenate(arr1, arr2):
+    if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
+        return np.concatenate((arr1, arr2), axis=None)
+    if _is_torch_tensor(arr1) or _is_torch_tensor(arr2):
+        tensor_ref = arr1 if _is_torch_tensor(arr1) else arr2
+        if not _is_torch_tensor(arr1):
+            arr1 = torch.as_tensor(arr1, dtype=tensor_ref.dtype, device=tensor_ref.device)
+        if not _is_torch_tensor(arr2):
+            arr2 = torch.as_tensor(arr2, dtype=tensor_ref.dtype, device=tensor_ref.device)
+        return torch.cat((arr1, arr2), dim=0)
+
+    return np.concatenate((np.asarray(arr1), np.asarray(arr2)), axis=None)
