@@ -1,4 +1,3 @@
-from pgmpy.causal_discovery._base import _ConstraintMixin, _ScoreMixin
 from pgmpy.causal_discovery.BOSS import BOSS
 from pgmpy.causal_discovery.ExpertKnowledge import ExpertKnowledge
 from pgmpy.causal_discovery.GES import GES
