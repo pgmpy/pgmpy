@@ -11,11 +11,7 @@ class TestExpertKnowledge(unittest.TestCase):
             "Expert Knowledge: 0 required edges, 0 forbidden edges, "
             "temporal order on 0 nodes, and 0 search space edges",
         )
-        self.assertIn("Expert Knowledge:\n", str(ek))
-        self.assertIn("Required Edges: None", str(ek))
-        self.assertIn("Forbidden Edges: None", str(ek))
-        self.assertIn("Search Space: None", str(ek))
-        self.assertIn("Temporal Order: None", str(ek))
+        self.assertEqual(str(ek), "Expert Knowledge:")
 
     def test_repr_and_str_populated(self):
         ek = ExpertKnowledge(
