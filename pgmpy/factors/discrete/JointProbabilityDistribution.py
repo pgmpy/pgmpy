@@ -6,6 +6,7 @@ import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
+from pgmpy.utils import compat_fns
 
 
 class JointProbabilityDistribution(DiscreteFactor):
@@ -83,7 +84,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         | x1(1) | x2(1) | x3(1) |        0.1250 |
         +-------+-------+-------+---------------+
         """
-        if np.isclose(np.sum(values), 1):
+        if np.isclose(np.sum(compat_fns.to_numpy(values)), 1):
             super().__init__(variables, cardinality, values)
         else:
             raise ValueError("The probability values doesn't sum to 1.")
