@@ -9,15 +9,18 @@ import pytest
 import scipy.linalg as slin
 import scipy.optimize as sopt
 from scipy.special import expit as sigmoid
-from skbase.utils.dependencies import _check_soft_dependencies
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy import config
 from pgmpy.causal_discovery import NOTEARS, ExpertKnowledge
+from pgmpy.utils import compat_fns
 
 BACKEND_PARAMS = ["numpy"]
 if _check_soft_dependencies("torch", severity="none"):
     BACKEND_PARAMS.append("torch")
+
+torch = _safe_import("torch")
 
 
 def expected_failed_checks(estimator):
@@ -235,6 +238,11 @@ class TestNOTEARSValidation:
                 pd.DataFrame({"A": [0, 1, -1], "B": [1, 0, 1]}),
                 "non-negative",
             ),
+            (
+                {"loss_type": "l2"},
+                pd.DataFrame({"A": [1.0, np.nan], "B": [3.0, 4.0]}),
+                "missing values",
+            ),
         ],
     )
     def test_invalid_data_raises(self, backend, kwargs, data, error_msg):
@@ -242,9 +250,37 @@ class TestNOTEARSValidation:
         with pytest.raises(ValueError, match=error_msg):
             est.fit(data)
 
+    @pytest.mark.parametrize(
+        ("kwargs", "error_msg"),
+        [
+            ({"lambda1": -0.1}, "lambda1 must be non-negative"),
+            ({"max_iter": 0}, "max_iter must be a positive integer"),
+            ({"w_threshold": -0.1}, "w_threshold must be non-negative"),
+        ],
+    )
+    def test_invalid_hyperparameters_raise(self, backend, kwargs, error_msg):
+        data = pd.DataFrame({"A": [1.0, 2.0], "B": [3.0, 4.0]})
+        est = NOTEARS(show_progress=False, **kwargs)
+        with pytest.raises(ValueError, match=error_msg):
+            est.fit(data)
+
 
 class TestNOTEARSExpertKnowledge:
     """Tests for expert knowledge constraints."""
+
+    def test_search_space_limits_edges(self, backend):
+        rng = np.random.default_rng(42)
+        data = pd.DataFrame({"A": rng.normal(size=100), "B": rng.normal(size=100)})
+        expert = ExpertKnowledge(search_space=[("A", "B")])
+        est = NOTEARS(
+            lambda1=0.01,
+            max_iter=5,
+            w_threshold=0.0,
+            expert_knowledge=expert,
+            show_progress=False,
+        )
+        est.fit(data)
+        assert set(est.causal_graph_.edges()).issubset({("A", "B")})
 
     def test_forbidden_edges_excluded(self, backend, continuous_data):
         expert = ExpertKnowledge(forbidden_edges=[("Y", "X")])
@@ -298,6 +334,47 @@ class TestNOTEARSExpertKnowledge:
         with pytest.raises(ValueError, match=error_msg):
             est.fit(data)
 
+    @pytest.mark.parametrize(
+        ("expert_knowledge", "error_msg"),
+        [
+            (
+                ExpertKnowledge(required_edges=[("A", "B")], forbidden_edges=[("A", "B")]),
+                r"Expert knowledge conflict: Edge \(A, B\) is both required and forbidden\.",
+            ),
+            (
+                ExpertKnowledge(required_edges=[("A", "A")]),
+                r"Expert knowledge conflict: Self-loop \(A, A\) cannot be required\.",
+            ),
+        ],
+    )
+    def test_conflicting_expert_knowledge_raises(self, backend, expert_knowledge, error_msg):
+        rng = np.random.default_rng(42)
+        data = pd.DataFrame({"A": rng.normal(size=50), "B": rng.normal(size=50)})
+        est = NOTEARS(
+            lambda1=0.01,
+            max_iter=5,
+            expert_knowledge=expert_knowledge,
+            show_progress=False,
+        )
+        with pytest.raises(ValueError, match=error_msg):
+            est.fit(data)
+
+    def test_required_edges_cycle_raises(self, backend):
+        rng = np.random.default_rng(42)
+        data = pd.DataFrame({"A": rng.normal(size=50), "B": rng.normal(size=50)})
+        expert = ExpertKnowledge(required_edges=[("A", "B"), ("B", "A")])
+        est = NOTEARS(
+            lambda1=0.01,
+            max_iter=5,
+            expert_knowledge=expert,
+            show_progress=False,
+        )
+        with pytest.raises(
+            ValueError,
+            match="required_edges create a cycle in the output DAG",
+        ):
+            est.fit(data)
+
     def test_temporal_order_excludes_backward_edges(self, backend, continuous_data):
         expert = ExpertKnowledge(temporal_order=[["X"], ["Y"], ["Z"]])
         est = NOTEARS(
@@ -315,6 +392,22 @@ class TestNOTEARSExpertKnowledge:
 
 class TestNOTEARSReferenceComparison:
     """Compare pgmpy NOTEARS output with the reference implementation."""
+
+    @pytest.mark.parametrize(
+        ("loss_type", "X"),
+        [
+            ("logistic", np.array([[0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])),
+            ("poisson", np.array([[1.0, 2.0], [0.0, 1.0], [2.0, 3.0]])),
+        ],
+    )
+    def test_reference_supports_other_losses(self, loss_type, X):
+        W_est = _notears_reference(X, lambda1=0.1, loss_type=loss_type, max_iter=1, w_threshold=0.0)
+        assert W_est.shape == (2, 2)
+
+    def test_reference_invalid_loss_raises(self):
+        X = np.array([[0.0, 1.0], [1.0, 0.0]])
+        with pytest.raises(ValueError, match="unknown loss type"):
+            _notears_reference(X, lambda1=0.1, loss_type="invalid", max_iter=1)
 
     def test_matches_reference_l2(self):
         prev_backend = config.get_backend()
@@ -363,3 +456,31 @@ class TestNOTEARSReferenceComparison:
             assert ("X", "Y") in ref_edges or ("X", "Y") in pgmpy_edges
         finally:
             config.set_backend(prev_backend)
+
+
+class TestNOTEARSCompatFns:
+    def test_matrix_exp_numpy_matches_scipy(self):
+        arr = np.array([[0.0, 1.0], [0.0, 0.0]])
+        np.testing.assert_allclose(compat_fns.matrix_exp(arr), slin.expm(arr))
+
+    @pytest.mark.skipif(not _check_soft_dependencies("torch", severity="none"), reason="torch not installed")
+    def test_matrix_exp_torch_matches_torch(self):
+        arr = torch.tensor([[0.0, 1.0], [0.0, 0.0]], dtype=torch.float64)
+        torch.testing.assert_close(compat_fns.matrix_exp(arr), torch.matrix_exp(arr))
+
+    def test_concatenate_fallback_accepts_python_sequences(self):
+        result = compat_fns.concatenate([1.0, 2.0], (3.0, 4.0))
+        np.testing.assert_array_equal(result, np.array([1.0, 2.0, 3.0, 4.0]))
+
+    @pytest.mark.skipif(not _check_soft_dependencies("torch", severity="none"), reason="torch not installed")
+    @pytest.mark.parametrize("tensor_first", [True, False])
+    def test_concatenate_torch_mixed_inputs(self, tensor_first):
+        tensor = torch.tensor([1.0, 2.0], dtype=torch.float64)
+        array = np.array([3.0, 4.0])
+        left, right = (tensor, array) if tensor_first else (array, tensor)
+        expected = np.array([1.0, 2.0, 3.0, 4.0]) if tensor_first else np.array([3.0, 4.0, 1.0, 2.0])
+
+        result = compat_fns.concatenate(left, right)
+
+        assert torch.is_tensor(result)
+        np.testing.assert_array_equal(result.detach().cpu().numpy(), expected)
