@@ -11,113 +11,93 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
     """
     Score-based causal discovery using Best Order Score Search (BOSS).
 
-    This class implements the BOSS algorithm [1]_ for causal discovery. Given a
+    This class implements the BOSS algorithm for causal discovery. Given a
     tabular dataset, the algorithm estimates the causal structure among the
-    variables in the data as a Directed Acyclic Graph (DAG) or Partially
-    Directed Acyclic Graph (PDAG).
+    variables in the data as a Directed Acyclic Graph (DAG) or a Completed
+    Partially Directed Acyclic Graph (CPDAG).
 
     BOSS is a permutation-based algorithm that greedily searches over orderings
     of variables. Unlike graph-space algorithms (e.g., HillClimbSearch, GES),
-    BOSS works in the space of variable permutations and constructs DAGs from
-    permutations using the Grow-Shrink (GS) procedure. The algorithm proceeds
-    in three phases:
+    BOSS operates in the space of variable permutations and constructs DAGs
+    from permutations by selecting parent sets using the Grow-Shrink (GS)
+    procedure.
 
-        1. **Permutation search**: Greedy optimization of the variable ordering
-           using the best-move operator (Algorithm 5), which moves each variable
-           to the position in the current permutation that maximises the score.
-           best-move is applied to each variable in turn; the outer loop repeats
-           until a full pass over all variables yields no score improvement.
-        2. **DAG construction**: The Grow-Shrink procedure (project, Algorithm 3)
-           builds a DAG from the optimised permutation by greedily selecting
-           parents for each variable from its predecessors.
-        3. **BES phase**: Backward Equivalence Search refines the learned
-           structure by removing spurious edges.
+    The algorithm proceeds in three phases:
+
+    1. **Permutation search**:
+       Greedy optimization of the variable ordering using the best-move
+       operator (Algorithm 5). For each variable, all possible insertion
+       positions are evaluated, and moves that improve the score are kept.
+       The process repeats until a full pass yields no improvement.
+
+    2. **DAG construction**:
+       The Grow-Shrink procedure (Algorithm 3) selects parent sets for each
+       variable from its predecessors in the permutation, and a DAG is
+       constructed accordingly.
+
+    3. **BES phase**:
+       Backward Equivalence Search refines the learned structure by removing
+       edges within the Markov equivalence class to improve the score. This
+       step is required for asymptotic correctness.
 
     Parameters
     ----------
     scoring_method : str or StructureScore instance, default=None
-        The score to be optimized during structure estimation. Supported
-        structure scores:
+    The score to be optimized during structure estimation. Supported
+    structure scores:
 
-        - Discrete data: 'k2', 'bdeu', 'bds', 'bic-d', 'aic-d'
-        - Continuous data: 'll-g', 'aic-g', 'bic-g'
-        - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
+    - Discrete data: 'k2', 'bdeu', 'bds', 'bic-d', 'aic-d'
+    - Continuous data: 'll-g', 'aic-g', 'bic-g'
+    - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
 
-        If None, the appropriate scoring method is automatically selected based
-        on the data type. BIC is recommended per the paper.
+    If None, the appropriate scoring method is automatically selected based
+    on the data type. BIC is recommended per the paper.
 
-    return_type : str, default='pdag'
-        The type of graph to return. Options are:
+    return_type : str, default='dag'
+    The type of graph to return. Options are:
 
-        - 'dag': Returns a directed acyclic graph (DAG).
-        - 'pdag': Returns a partially directed acyclic graph (PDAG).
-        - 'cpdag': Alias for 'pdag'
+    - 'dag': Returns a directed acyclic graph (DAG).
+    - 'pdag': Returns a completed partially directed acyclic graph (CPDAG).
+    - 'cpdag': Alias for 'pdag'
 
     use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
+    If True, uses caching of local scores for faster computation.
+    Note: Caching only works for decomposable scoring methods.
 
     random_state : int or None, default=None
-        Seed for the random number generator used to create the initial
-        permutation. If None, the initial permutation is non-deterministic.
-        Uses ``np.random.default_rng(random_state)`` for modern seeding.
+    Seed for the random number generator used to create the initial
+    permutation.
 
     max_iter : int, default=1000
-        The maximum number of outer repeat-until iterations (Algorithm 4).
-        Each iteration applies best-move to every variable in the permutation.
-        The algorithm terminates when a full pass produces no score improvement
-        or this limit is reached.
-
-    Attributes
-    ----------
-    causal_graph_ : DAG or PDAG
-        The learned causal graph at a (local) score maximum.
-
-    adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix representation of the learned causal graph.
-
-    n_features_in_ : int
-        The number of features in the data used to learn the causal graph.
-
-    feature_names_in_ : np.ndarray
-        The feature names in the data used to learn the causal graph.
-
-    Examples
-    --------
-    Simulate some data to use for causal discovery:
-
-    >>> import numpy as np
-    >>> from pgmpy.utils import get_example_model
-    >>> np.random.seed(42)
-    >>> model = get_example_model("alarm")
-    >>> df = model.simulate(n_samples=1000, seed=42)
-
-    Use the BOSS algorithm to learn the causal structure from data:
-
-    >>> from pgmpy.causal_discovery import BOSS
-    >>> boss = BOSS(scoring_method="bic-d", random_state=42)
-    >>> boss.fit(df)
-    BOSS(random_state=42, scoring_method='bic-d')
-    >>> boss.causal_graph_  # doctest: +ELLIPSIS
-    <pgmpy.base...object at 0x...>
-    >>> boss.n_features_in_
+    Maximum number of outer iterations of permutation search.
+    Examples 
+    -------- 
+    Simulate some data to use for causal discovery: 
+    >>> import numpy as np 
+    >>> from pgmpy.utils import get_example_model 
+    >>> np.random.seed(42) 
+    >>> model = get_example_model("alarm") 
+    >>> df = model.simulate(n_samples=1000, seed=42) 
+    
+    Use the BOSS algorithm to learn the causal structure from data: 
+    >>> from pgmpy.causal_discovery import BOSS 
+    >>> boss = BOSS(scoring_method="bic-d", random_state=42) 
+    >>> boss.fit(df) BOSS(random_state=42, scoring_method='bic-d') 
+    >>> boss.causal_graph_ # doctest: +ELLIPSIS 
+    <pgmpy.base...object at 0x...> 
+    >>> boss.n_features_in_ 
     37
-
-    References
-    ----------
-    .. [1] Andrews, B., Ramsey, J., Sanchez-Romero, R., Camchong, J., &
-           Kummerfeld, E. (2023). "Fast Scalable and Accurate Discovery of
-           DAGs Using the Best Order Score Search and Grow-Shrink Trees."
-           Advances in Neural Information Processing Systems (NeurIPS).
-           arXiv:2310.17679.
 
     Notes
     -----
-    This implementation follows the BOSS algorithm (Algorithms 3–5) but does
+    This implementation follows Algorithms 3–5 from the BOSS paper but does
     not include Grow-Shrink Trees (GSTs). Instead, it relies on pgmpy's score
-    caching and a plain dict-based permutation-score cache for efficiency.
-    The BES phase operates on a PDAG representation using Meek's rules via
-    pgmpy's PDAG implementation.
+    caching along with additional caching for permutation scores and
+    Grow-Shrink parent sets.
+
+    The BES phase is implemented as a greedy edge-deletion procedure on a
+    CPDAG using Meek's rules. This is a simplified variant of the full GES
+    BES operator.
     """
 
     def __init__(
@@ -150,42 +130,33 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        # Caches shared across the search.
         self._gs_cache: dict = {}
         self._perm_score_cache: dict = {}
+        self.n_features_in_ = X.shape[1]
 
         _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
         score_fn = score_c.local_score
 
-        # Step 1: Initialise a random permutation of variables.
         rng = np.random.default_rng(self.random_state)
         perm: list[str] = list(rng.permutation(self.variables_))
 
-        # Step 2: Greedy permutation search — Algorithm 4.
-        #
-        # Outer loop: one iteration = one full pass over all variables.
-        # Terminates when the score after a full pass equals the score before
-        # it (i.e. no variable move improved the objective).
         for _ in range(self.max_iter):
             best_score = self._score_permutation(perm, score_fn)
 
-            # Apply best-move (Algorithm 5) to every variable in turn.
             for v in list(perm):
                 perm = self._best_move(perm, v, score_fn)
 
-            # Termination: "until best = T.score(π)"
             if self._score_permutation(perm, score_fn) <= best_score:
                 break
 
-        # Step 3: Construct DAG from the converged permutation — Algorithm 3.
-        model = self._project_permutation(perm, score_fn)
+        dag = self._project_permutation(perm, score_fn)
 
-        model = model.to_pdag()
-        # Step 4: Run BES for asymptotic correctness (always executed).
-        model = self._run_bes(model, score_fn)
+        pdag = dag.to_pdag()
+        
+        model = self._run_bes(pdag, score_fn)
 
         rt = self.return_type.lower()
-        # Step 5: Store results.
+        
         if rt == "dag":
             self.causal_graph_ = model
         elif rt in {"pdag", "cpdag"}:
@@ -487,4 +458,4 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
             pdag = pdag.apply_meeks_rules(inplace=False)
 
-        return pdag.to_dag
+        return pdag.to_dag()
