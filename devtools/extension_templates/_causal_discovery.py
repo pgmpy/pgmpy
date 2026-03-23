@@ -1,4 +1,4 @@
-# This extension template provides instructions to add new datasets to pgmpy.
+# This extension template provides instructions to add new causal discovery algorithms to pgmpy.
 #
 # Please follow the following steps:
 # 1. Copy this file to `pgmpy/causal_discovery` and rename the file as `[MyCausalDiscoveryAlgo].py`
@@ -71,7 +71,7 @@ class MyCausalDiscoveryAlgo(_BaseCausalDiscovery):
         #       applicable.
 
         # TODO: After learning the causal graph, assign the learned graph to self.causal_graph_ attribute. Can be an
-        #       instance of pgmpy.base.DAG, PDAG, MAG, PAG, or ADMG depending on the algorithm or the hyperparameters.
+        #       instance of pgmpy.base.DAG, PDAG, MAG, PAG, or ADMG, depending on the algorithm or the hyperparameters.
         self.causal_graph_ = None
 
         # TODO: Additionally, assign the adjacency matrix of the learned graph to self.adjacency_matrix_ attribute.

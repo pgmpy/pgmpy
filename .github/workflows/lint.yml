@@ -20,6 +20,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install graphviz graphviz-dev -y
+
       - name: install dependencies
         run: |
           pip install --upgrade pip

@@ -3,9 +3,8 @@ import numpy as np
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import chi_square
+from pgmpy.example_models import load_model
 from pgmpy.metrics import ImpliedCIs
-from pgmpy.utils import get_example_model
 
 SEED = 42
 N_SAMPLES = 1_000
@@ -31,7 +30,7 @@ def random_dag_from_nodes(nodes, rng, edge_prob=EDGE_PROB):
     return dag
 
 
-def implied_ci_tests(X, causal_graph, ci_test=chi_square):
+def implied_ci_tests(X, causal_graph, ci_test="chi_square"):
     return ImpliedCIs(ci_test=ci_test)(X=X, causal_graph=causal_graph)
 
 
@@ -41,7 +40,7 @@ def assert_pvalues(df, expected, col="p-value", ndigits=4):
 
 
 def test_implied_cis_cancer():
-    model = get_example_model("cancer")
+    model = load_model("bnlearn/cancer")
     df = simulate(model)
 
     tests = implied_ci_tests(df, model)
@@ -50,7 +49,7 @@ def test_implied_cis_cancer():
 
 
 def test_implied_cis_alarm_true_and_random(rng):
-    model = get_example_model("alarm")
+    model = load_model("bnlearn/alarm")
     df = simulate(model)
 
     tests_true = implied_ci_tests(df, model)

@@ -6,6 +6,7 @@ import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
@@ -16,7 +17,6 @@ from pgmpy.models import (
     FunctionalBayesianNetwork,
     JunctionTree,
 )
-from pgmpy.utils import get_example_model
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestVariableElimination(unittest.TestCase):
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_raises_for_empty_variables(self):
-        model = get_example_model("earthquake")
+        model = load_model("bnlearn/earthquake")
         infer = VariableElimination(model)
 
         with self.assertRaises(ValueError) as context:
@@ -1105,11 +1105,11 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
 )
 class TestVariableEliminationLinearGaussianAndFunctionalBayesian(unittest.TestCase):
     def setUp(self):
-        from pgmpy.utils import get_example_model
+        from pgmpy.example_models import load_model
 
         config.set_backend("torch")
 
-        self.lgbm = get_example_model("ecoli70")
+        self.lgbm = load_model("bnlearn/ecoli70")
         self.fbn = FunctionalBayesianNetwork([("X", "Y")])
 
     def test_query_linear_gaussian(self):

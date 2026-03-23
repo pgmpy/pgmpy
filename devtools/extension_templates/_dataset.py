@@ -52,6 +52,9 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
 
+    # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
+    # sep = "\t"
+
     # TODO: If the dataset has categorical variables, list them here.
     categorical_variables = []
 
