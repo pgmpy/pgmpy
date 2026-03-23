@@ -3,7 +3,6 @@
 from copy import deepcopy
 
 import numpy as np
-from scipy.linalg import expm
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
@@ -171,6 +170,8 @@ def allclose(arr1, arr2, atol):
 def matrix_exp(arr):
     if _is_torch_tensor(arr):
         return torch.matrix_exp(arr)
+    from scipy.linalg import expm
+
     return expm(np.asarray(arr))
 
 
