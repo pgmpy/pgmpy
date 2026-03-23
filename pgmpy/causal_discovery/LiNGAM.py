@@ -74,9 +74,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 0: Validate inputs
         if self.return_type != "dag":
-            raise NotImplementedError(
-                f"Return type {self.return_type} is not yet implemented. Use 'dag'."
-            )
+            raise NotImplementedError(f"Return type {self.return_type} is not yet implemented. Use 'dag'.")
 
         X_vals = X.values
         n_samples, n_features = X_vals.shape
@@ -115,9 +113,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 5: Construct the lower triangular causal matrix B_tilde
         if causal_order is None:
-            raise ValueError(
-                "Could not find a valid causal order. Graph contains unresolvable cycles."
-            )
+            raise ValueError("Could not find a valid causal order. Graph contains unresolvable cycles.")
 
         B_tilde = self._prune_edges(X_vals, B_hat, causal_order, alpha=self.alpha)
 
@@ -216,9 +212,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
         return causal_order
 
-    def _prune_edges(
-        self, X: np.ndarray, B_hat: np.ndarray, causal_order: list, alpha: float = 0.01
-    ) -> np.ndarray:
+    def _prune_edges(self, X: np.ndarray, B_hat: np.ndarray, causal_order: list, alpha: float = 0.01) -> np.ndarray:
         """
         Perform a Wald test to prune statistically insignificant edges from the
         estimated LiNGAM connection matrix. This follows the straightforward pruning
