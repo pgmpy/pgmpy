@@ -166,7 +166,9 @@ class NOTEARS(_BaseCausalDiscovery):
         for edge_set in (expert_knowledge.required_edges, expert_knowledge.forbidden_edges):
             for u, v in edge_set:
                 if (u not in node_to_index) or (v not in node_to_index):
-                    raise ValueError(f"Expert knowledge edge ({u}, {v}) refers to node(s) not present in the data columns.")
+                    raise ValueError(
+                        f"Expert knowledge edge ({u}, {v}) refers to node(s) not present in the data columns."
+                    )
 
     def _loss_grad(self, data, adjacency_matrix, backend):
         scores = data @ adjacency_matrix
