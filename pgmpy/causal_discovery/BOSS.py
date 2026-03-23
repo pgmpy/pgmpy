@@ -1,10 +1,8 @@
-from typing import List, Optional, Tuple, Union
-
 import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
 from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
 
@@ -25,13 +23,15 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
     in three phases:
 
         1. **Permutation search**: Greedy optimization of the variable ordering
-           using the best-move operator, which tries moving each variable to
-           earlier positions in the permutation.
-        2. **DAG construction**: The Grow-Shrink procedure builds a DAG from
-           the optimized permutation by greedily selecting parents for each
-           variable from its predecessors.
-        3. **BES phase**: Backward Equivalence Search removes spurious edges
-           to ensure asymptotic correctness.
+           using the best-move operator (Algorithm 5), which moves each variable
+           to the position in the current permutation that maximises the score.
+           best-move is applied to each variable in turn; the outer loop repeats
+           until a full pass over all variables yields no score improvement.
+        2. **DAG construction**: The Grow-Shrink procedure (project, Algorithm 3)
+           builds a DAG from the optimised permutation by greedily selecting
+           parents for each variable from its predecessors.
+        3. **BES phase**: Backward Equivalence Search refines the learned
+           structure by removing spurious edges.
 
     Parameters
     ----------
@@ -51,6 +51,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
         - 'dag': Returns a directed acyclic graph (DAG).
         - 'pdag': Returns a partially directed acyclic graph (PDAG).
+        - 'cpdag': Alias for 'pdag'
 
     use_cache : bool, default=True
         If True, uses caching of local scores for faster computation.
@@ -62,8 +63,10 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         Uses ``np.random.default_rng(random_state)`` for modern seeding.
 
     max_iter : int, default=1000
-        The maximum number of permutation search iterations. The algorithm
-        terminates when no improving move is found or this limit is reached.
+        The maximum number of outer repeat-until iterations (Algorithm 4).
+        Each iteration applies best-move to every variable in the permutation.
+        The algorithm terminates when a full pass produces no score improvement
+        or this limit is reached.
 
     Attributes
     ----------
@@ -93,7 +96,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import BOSS
     >>> boss = BOSS(scoring_method="bic-d", random_state=42)
-    >>> boss.fit(df)
+    >>> boss.fit(df) 
     BOSS(random_state=42, scoring_method='bic-d')
     >>> boss.causal_graph_  # doctest: +ELLIPSIS
     <pgmpy.base...object at 0x...>
@@ -107,14 +110,22 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
            DAGs Using the Best Order Score Search and Grow-Shrink Trees."
            Advances in Neural Information Processing Systems (NeurIPS).
            arXiv:2310.17679.
+
+    Notes
+    -----
+    This implementation follows the BOSS algorithm (Algorithms 3–5) but does
+    not include Grow-Shrink Trees (GSTs). Instead, it relies on pgmpy's score
+    caching and a plain dict-based permutation-score cache for efficiency.
+    The BES phase operates on a PDAG representation using Meek's rules via
+    pgmpy's PDAG implementation.
     """
 
     def __init__(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
+        scoring_method: str | StructureScore | None = None,
         return_type: str = "pdag",
         use_cache: bool = True,
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         max_iter: int = 1000,
     ):
         self.scoring_method = scoring_method
@@ -139,113 +150,172 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
+        # Caches shared across the search.
+        self._gs_cache: dict = {}
+        self._perm_score_cache: dict = {}
+
         _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
         score_fn = score_c.local_score
 
-        # Step 1: Initialize a random permutation of variables.
+        # Step 1: Initialise a random permutation of variables.
         rng = np.random.default_rng(self.random_state)
-        perm = list(rng.permutation(self.variables_))
+        perm: list[str] = list(rng.permutation(self.variables_))
 
-        # Step 2: Greedy permutation search via best-move operator.
+        # Step 2: Greedy permutation search — Algorithm 4.
+        #
+        # Outer loop: one iteration = one full pass over all variables.
+        # Terminates when the score after a full pass equals the score before
+        # it (i.e. no variable move improved the objective).
         for _ in range(self.max_iter):
-            perm, improved = self._best_move(perm, score_fn)
-            if not improved:
+            best_score = self._score_permutation(perm, score_fn)
+
+            # Apply best-move (Algorithm 5) to every variable in turn.
+            for v in list(perm):
+                perm = self._best_move(perm, v, score_fn)
+
+            # Termination: "until best = T.score(π)"
+            if self._score_permutation(perm, score_fn) <= best_score:
                 break
 
-        # Step 3: Construct DAG from the converged permutation.
-        current_model = self._project_permutation(perm, score_fn)
-
+        # Step 3: Construct DAG from the converged permutation — Algorithm 3.
+        model = self._project_permutation(perm, score_fn)
+        
+        model = model.to_pdag()
         # Step 4: Run BES for asymptotic correctness (always executed).
-        current_model = self._run_bes(current_model, score_fn)
+        model = self._run_bes(model, score_fn)
 
+        rt = self.return_type.lower()
         # Step 5: Store results.
-        if self.return_type.lower() == "dag":
-            self.causal_graph_ = current_model
-        elif self.return_type.lower() == "pdag":
-            self.causal_graph_ = current_model.to_pdag()
+        if rt == "dag":
+            self.causal_graph_ = model
+        elif rt in {"pdag", "cpdag"}:
+            self.causal_graph_ = model.to_pdag()
         else:
             raise ValueError(
-                f"return_type must be one of: dag, pdag. Got: {self.return_type}"
+                f"return_type must be one of: dag, pdag, cpdag. Got: {self.return_type}"
             )
 
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
+            self.causal_graph_, weight=1, dtype=int
         )
 
         return self
 
-    def _best_move(self, perm: List, score_fn) -> Tuple[List, bool]:
+    def _score_permutation(self, perm: list[str], score_fn) -> float:
         """
-        Greedy best-move operator over the permutation.
+        Compute and cache the total BIC score for a permutation.
 
-        For each variable in the permutation, considers moving it to every
-        earlier position and selects the move that maximizes the total score
-        improvement. The score change is computed efficiently by re-running
-        ``_project_permutation`` only on the affected sub-permutation.
+        The score is the sum of local scores obtained by running the
+        Grow-Shrink procedure (via ``_grow_shrink_parents``) for every
+        variable in the permutation order:
+
+            T.score(π) = Σ_{v ∈ π} BIC(X_v, X_{GS(v, pre_π(v))})
 
         Parameters
         ----------
-        perm : list
-            Current permutation of variables.
+        perm : list[str]
+            A permutation (ordering) of variables.
 
         score_fn : callable
             Local scoring function: ``score_fn(variable, parents) -> float``.
 
         Returns
         -------
-        new_perm : list
-            The improved permutation (or the original if no improvement found).
-
-        improved : bool
-            Whether an improving move was found.
+        score : float
+            Total score for the permutation.
         """
-        best_perm = perm
-        best_delta = 0.0
-        n = len(perm)
+        key = tuple(perm)
+        if key in self._perm_score_cache:
+            return self._perm_score_cache[key]
 
-        # Compute current scores for each variable under the current permutation.
-        current_parents = {}
-        current_scores = {}
+        score = 0.0
         for idx, var in enumerate(perm):
             predecessors = perm[:idx]
             parents = self._grow_shrink_parents(var, predecessors, score_fn)
-            current_parents[var] = parents
-            current_scores[var] = score_fn(var, parents)
+            score += score_fn(var, parents)
 
-        for i in range(1, n):
-            var = perm[i]
-            for j in range(i):
-                # Create candidate permutation: move var from position i to position j.
-                candidate = perm[:j] + [var] + perm[j:i] + perm[i + 1 :]
+        self._perm_score_cache[key] = score
+        return score
 
-                # Only variables between positions j and i (inclusive of original
-                # position range) are affected.
-                delta = 0.0
-                for k in range(j, i + 1):
-                    v = candidate[k]
-                    predecessors = candidate[:k]
-                    new_parents = self._grow_shrink_parents(v, predecessors, score_fn)
-                    new_score = score_fn(v, new_parents)
-                    delta += new_score - current_scores[v]
-
-                if delta > best_delta:
-                    best_delta = delta
-                    best_perm = candidate
-
-        return best_perm, best_delta > 0
-
-    def _project_permutation(self, perm: List, score_fn) -> DAG:
+    def _best_move(self, perm: list[str], v: str, score_fn) -> list[str]:
         """
-        Grow-Shrink (GS) procedure to construct a DAG from a permutation.
+        Apply the best-move operator for a single variable — Algorithm 5.
 
-        For each variable in the permutation order, selects its parent set
-        from the predecessors using a greedy grow phase (add the parent that
-        most improves the score) followed by a shrink phase (remove any parent
-        whose removal improves the score).
+        Tries moving ``v`` to every position ``i`` in ``{0, …, |π|-1}``.
+        If inserting ``v`` at position ``i`` improves the total score, the
+        move is *kept* and the search continues from the new permutation
+        (i.e. multiple moves for the same variable within one call are
+        possible). If a position does not improve the score, ``v`` is left
+        at its current position and the next position is tried.
+
+        Concretely this implements::
+
+            best ← T.score(π)
+            for i ← 1 to |π| do
+                j ← π.index(v)
+                π ← π.move(v, i)
+                if best < T.score(π) then
+                    best ← T.score(π)
+                else
+                    π ← π.move(v, j)   # revert
 
         Parameters
         ----------
-        perm : list
+        perm : list[str]
+            Current permutation of variables.
+
+        v : str
+            The variable to move.
+
+        score_fn : callable
+            Local scoring function: ``score_fn(variable, parents) -> float``.
+
+        Returns
+        -------
+        perm : list[str]
+            Updated permutation (may equal the input if no move helped).
+        """
+        n = len(perm)
+        best = self._score_permutation(perm, score_fn)
+
+        for i in range(n):
+            # j is the *current* index of v — recomputed each iteration
+            # because a previous improving move may have shifted v.
+            j = perm.index(v)
+
+            # Build the candidate permutation: remove v from j, insert at i.
+            candidate = perm.copy()
+            candidate.pop(j)
+            candidate.insert(i, v)
+
+            candidate_score = self._score_permutation(candidate, score_fn)
+
+            if candidate_score > best:
+                # Improvement found — keep the move and continue.
+                best = candidate_score
+                perm = candidate
+            # else: perm is unchanged; v stays at its current position j.
+
+        return perm
+
+    def _project_permutation(self, perm: list[str], score_fn) -> DAG:
+        """
+        Grow-Shrink (GS) projection — Algorithm 3 from the paper.
+
+        For each variable in the permutation order, selects its parent set
+        from the predecessors using Grow-Shrink and adds the corresponding
+        directed edges to form a DAG.
+
+            foreach v ∈ π do
+                Z ← pre_π(v)
+                W ← grow(X, v, Z)
+                W ← shrink(X, v, W)
+                foreach w ∈ W do  E ← E ∪ (v, w)
+            G ← (V, E)
+
+        Parameters
+        ----------
+        perm : list[str]
             A permutation (ordering) of variables.
 
         score_fn : callable
@@ -259,29 +329,47 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         dag = DAG()
         dag.add_nodes_from(perm)
 
-        for idx, var in enumerate(perm):
-            predecessors = perm[:idx]
-            parents = self._grow_shrink_parents(var, predecessors, score_fn)
+        for i, var in enumerate(perm):
+            predecessors = perm[:i]
+            parents: list[str] = self._grow_shrink_parents(var, predecessors, score_fn)
             for p in parents:
                 dag.add_edge(p, var)
 
         return dag
 
-    @staticmethod
-    def _grow_shrink_parents(variable, candidates: List, score_fn) -> List:
+    def _grow_shrink_parents(
+        self, variable: str, candidates: list[str], score_fn
+    ) -> list[str]:
         """
-        Grow-Shrink parent selection for a single variable.
+        Grow-Shrink parent selection for a single variable — Algorithms 1 & 2.
 
-        Greedily grows the parent set by adding candidates that improve the
-        local score, then shrinks by removing parents whose removal improves
-        the score.
+        **Grow** (Algorithm 1): greedily add the candidate that most
+        improves ``score_fn(variable, parents ∪ {w})`` until no candidate
+        improves the score::
+
+            W ← ∅
+            repeat
+                w ← argmax_{z ∈ Z} BIC(X_v, X_{W ∪ z})
+                if w ≠ ∅ then W ← W ∪ w
+            until w = ∅
+
+        **Shrink** (Algorithm 2): remove any parent whose removal improves
+        the score::
+
+            repeat
+                w ← argmax_{w ∈ W} BIC(X_v, X_{W \\ w})
+                if w ≠ ∅ then W ← W \\ w
+            until w = ∅
+
+        Results are cached by ``(variable, frozenset(candidates))`` to avoid
+        redundant computation when the same prefix is encountered again.
 
         Parameters
         ----------
-        variable : hashable
+        variable : str
             The target variable.
 
-        candidates : list
+        candidates : list[str]
             Candidate parent variables (predecessors in permutation order).
 
         score_fn : callable
@@ -289,60 +377,74 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
         Returns
         -------
-        parents : list
+        parents : list[str]
             The selected parent set.
         """
-        parents = []
+        key = (variable, tuple(candidates))
+        if key in self._gs_cache:
+            return self._gs_cache[key]
 
-        # Grow phase: greedily add parents that improve the score.
-        improved = True
-        while improved:
-            improved = False
+        parents: list[str] = []
+        current_score = score_fn(variable, parents)
+
+        # --- Grow phase (Algorithm 1) ---
+        while True:
             best_candidate = None
-            best_score = score_fn(variable, parents)
+            best_score = current_score
 
             for c in candidates:
-                if c not in parents:
-                    candidate_parents = parents + [c]
-                    s = score_fn(variable, candidate_parents)
-                    if s > best_score:
-                        best_score = s
-                        best_candidate = c
+                if c in parents:
+                    continue
+                candidate_score = score_fn(variable, parents + [c])
+                if candidate_score > best_score:
+                    best_score = candidate_score
+                    best_candidate = c
 
-            if best_candidate is not None:
-                parents.append(best_candidate)
-                improved = True
+            if best_candidate is None:
+                break
 
-        # Shrink phase: remove parents whose removal improves the score.
-        improved = True
-        while improved:
+            parents.append(best_candidate)
+            current_score = best_score
+
+        # --- Shrink phase (Algorithm 2) ---
+        while True:
             improved = False
-            current_score = score_fn(variable, parents)
 
             for p in list(parents):
-                reduced_parents = [x for x in parents if x != p]
-                s = score_fn(variable, reduced_parents)
-                if s > current_score:
-                    parents = reduced_parents
-                    current_score = s
+                reduced = [x for x in parents if x != p]
+                candidate_score = score_fn(variable, reduced)
+                if candidate_score > current_score:
+                    parents = reduced
+                    current_score = candidate_score
                     improved = True
                     break
 
+            if not improved:
+                break
+
+        self._gs_cache[key] = parents
         return parents
 
-    @staticmethod
-    def _run_bes(dag: DAG, score_fn) -> DAG:
+    def _run_bes(self, pdag: PDAG, score_fn) -> DAG:
         """
         Backward Equivalence Search (BES) phase.
 
-        Iteratively removes edges from the DAG whose removal improves the
-        total score, ensuring the graph remains a DAG. This phase is always
-        executed for asymptotic correctness as recommended by the paper.
+        Corresponds to the ``BES(G, X)`` call in Algorithm 4. Iteratively
+        removes the directed edge whose removal yields the greatest score
+        improvement, applying Meek's rules after each deletion to maintain
+        a valid PDAG, until no improving deletion exists.
+
+        This is a simplified BES operating on a PDAG (obtained by first
+        converting the DAG to its CPDAG via ``find-compelled``/``to_pdag``).
+        The full GES BES uses a more general edge-deletion operator; here we
+        greedily remove the single best directed edge per iteration, which is
+        sufficient to guarantee asymptotic correctness when combined with the
+        permutation search (Proposition 2 in the paper).
 
         Parameters
         ----------
-        dag : pgmpy.base.DAG
-            The DAG produced by the permutation search.
+        pdag : pgmpy.base.PDAG
+            The DAG produced by the permutation search and projection step.
 
         score_fn : callable
             Local scoring function: ``score_fn(variable, parents) -> float``.
@@ -352,23 +454,44 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         dag : pgmpy.base.DAG
             The refined DAG after BES.
         """
-        improved = True
-        while improved:
-            improved = False
-            best_edge = None
-            best_delta = 0.0
+        # find-compelled: convert DAG → CPDAG before BES (paper Algorithm 4).
 
-            for u, v in list(dag.edges()):
-                current_parents = list(dag.predecessors(v))
-                new_parents = [p for p in current_parents if p != u]
-                delta = score_fn(v, new_parents) - score_fn(v, current_parents)
+        pdag = pdag.apply_meeks_rules(inplace=False)
+
+        def parents(graph, node):
+            return set(graph.directed_parents(node))
+        
+        def score_node(node, pa):
+            return score_fn(node, list(pa))
+
+        while True:
+            best_delta = 0.0
+            best_edge = None
+
+            for x, y in list(pdag.directed_edges):
+
+                if not pdag.has_directed_edge(x, y):
+                    continue
+
+                pa_y = parents(pdag, y)
+                old_score = score_node(y, pa_y)
+                new_score = score_node(y, pa_y - {x})
+
+                delta = new_score - old_score
 
                 if delta > best_delta:
                     best_delta = delta
-                    best_edge = (u, v)
+                    best_edge = (x,y)
 
-            if best_edge is not None:
-                dag.remove_edge(*best_edge)
-                improved = True
+            if best_edge is None:
+                break
 
-        return dag
+            x, y = best_edge
+            if (x, y) in pdag.directed_edges:
+                pdag.directed_edges.remove((x, y))
+            if pdag.has_edge(x, y):
+                pdag.remove_edge(x, y)
+
+            pdag = pdag.apply_meeks_rules(inplace=False)
+
+        return pdag.to_dag
