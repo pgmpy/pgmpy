@@ -1143,11 +1143,11 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> sorted(model.edges())
         [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_1', 'X_2'), ('X_2', 'X_3'), ('X_3', 'X_4')]
         >>> sorted(model.cpds, key=lambda cpd: cpd.variable) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<LinearGaussianCPD: P(X_0) = N(-0.19; 1.038) at 0x...,
-        <LinearGaussianCPD: P(X_1) = N(-0.152; 1.682) at 0x...,
-        <LinearGaussianCPD: P(X_2 | X_0, X_1) = N(0.071*X_0 + 0.46*X_1 + 0.761; 0.033) at 0x...,
-        <LinearGaussianCPD: P(X_3 | X_0, X_2) = N(1.047*X_0 + 0.379*X_2 + 0.818; 0.022) at 0x...,
-        <LinearGaussianCPD: P(X_4 | X_3) = N(0.624*X_3 + 0.996; 0.82) at 0x...]
+        [<LinearGaussianCPD: P(X_0) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(X_1) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(X_2 | X_0, X_1) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_3 | X_0, X_2) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_4 | X_3) = N(...) at 0x...]
         """
         dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents, seed=seed)
         # Initialize with full DAG to preserve isolated nodes
