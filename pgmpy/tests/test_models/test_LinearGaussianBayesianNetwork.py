@@ -629,3 +629,75 @@ class TestLGBNIO(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             model.simulate(n_samples=10, missing_prob={"X1": 1.5})
+
+
+class TestLGBNFitUpdate(unittest.TestCase):
+    def setUp(self):
+        self.model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        np.random.seed(42)
+        df_all = pd.DataFrame(
+            np.random.multivariate_normal(
+                mean=[1, -4.5, 8.5],
+                cov=[[16, 8, -8], [8, 20, -20], [-8, -20, 29]],
+                size=300,
+            ),
+            columns=["x1", "x2", "x3"],
+        )
+        self.df1 = df_all.iloc[:200].reset_index(drop=True)
+        self.df2 = df_all.iloc[200:].reset_index(drop=True)
+        self.df_all = df_all.reset_index(drop=True)
+
+    def test_fit_update_basic(self):
+        # fit_update() should run without error and return self
+        self.model.fit(self.df1)
+        result = self.model.fit_update(self.df2)
+        self.assertIsInstance(result, LinearGaussianBayesianNetwork)
+        for cpd in self.model.get_cpds():
+            self.assertIsNotNone(cpd.beta)
+            self.assertIsNotNone(cpd.std)
+            self.assertGreater(cpd.std, 0)
+
+    def test_fit_update_equivalent_to_combined_fit(self):
+        # fit(df1) + fit_update(df2) should give same CPDs as fit(df_all)
+        model_combined = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model_combined.fit(self.df_all)
+
+        self.model.fit(self.df1)
+        self.model.fit_update(self.df2)
+
+        for node in ["x1", "x2", "x3"]:
+            cpd_updated = self.model.get_cpds(node)
+            cpd_combined = model_combined.get_cpds(node)
+            np.testing.assert_array_almost_equal(cpd_updated.beta, cpd_combined.beta, decimal=8)
+            self.assertAlmostEqual(cpd_updated.std, cpd_combined.std, places=8)
+
+    def test_fit_update_multiple_batches(self):
+        # Three sequential fit_update calls should equal fit on all data
+        df_a = self.df_all.iloc[:100].reset_index(drop=True)
+        df_b = self.df_all.iloc[100:200].reset_index(drop=True)
+        df_c = self.df_all.iloc[200:].reset_index(drop=True)
+
+        model_combined = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model_combined.fit(self.df_all)
+
+        self.model.fit(df_a)
+        self.model.fit_update(df_b)
+        self.model.fit_update(df_c)
+
+        for node in ["x1", "x2", "x3"]:
+            cpd_updated = self.model.get_cpds(node)
+            cpd_combined = model_combined.get_cpds(node)
+            np.testing.assert_array_almost_equal(cpd_updated.beta, cpd_combined.beta, decimal=8)
+            self.assertAlmostEqual(cpd_updated.std, cpd_combined.std, places=8)
+
+    def test_fit_update_raises_without_fit(self):
+        # fit_update() before fit() should raise ValueError
+        with self.assertRaises(ValueError):
+            self.model.fit_update(self.df2)
+
+    def test_fit_update_raises_missing_variables(self):
+        # fit_update() with missing columns should raise ValueError
+        self.model.fit(self.df1)
+        df_missing = self.df2.drop(columns=["x3"])
+        with self.assertRaises(ValueError):
+            self.model.fit_update(df_missing)

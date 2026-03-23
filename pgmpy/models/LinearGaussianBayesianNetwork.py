@@ -212,6 +212,10 @@ class LinearGaussianBayesianNetwork(DAG):
             roles=roles,
         )
         self.cpds = []
+        # Sufficient statistics stored by fit() and used by fit_update()
+        self._n_samples = None
+        self._sample_mean = None
+        self._sample_cov = None
 
     @classmethod
     def load(
@@ -930,8 +934,161 @@ class LinearGaussianBayesianNetwork(DAG):
                 "Pass an initialized estimator, for example `LinearGaussianMLE()`."
             )
 
-        estimator.fit(self, data)
-        self.add_cpds(*estimator.parameters_)
+        # Step 2: Estimate the LinearGaussianCPDs
+        cpds = []
+        for node in self.nodes():
+            parents = self.get_parents(node)
+            # Step 2.1: If node doesn't have any parents (i.e. root node),
+            #  simply take the mean and variance.
+
+            if len(parents) == 0:
+                ddof = 0 if std_estimator == "mle" else 1
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        beta=[data.loc[:, node].mean()],
+                        std=data.loc[:, node].std(ddof=ddof),
+                    )
+                )
+            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
+            # Compute error variance using predicted values.
+
+            else:
+                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
+                residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
+                p = 1 + len(parents)  # intercept + coefficients
+                ddof = 0 if std_estimator == "mle" else p
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        beta=np.append([lm.intercept_], lm.coef_),
+                        std=residuals.std(ddof=ddof),
+                        evidence=parents,
+                    )
+                )
+
+        # Step 3: Add the estimated CPDs to the model
+        self.add_cpds(*cpds)
+
+        # Step 4: Store sufficient statistics for use in fit_update()
+        variables = list(nx.topological_sort(self))
+        self._n_samples = len(data)
+        self._sample_mean = data[variables].mean().values
+        self._sample_cov = data[variables].cov(ddof=0).values
+
+        return self
+
+    def fit_update(
+        self,
+        data: pd.DataFrame,
+    ) -> LinearGaussianBayesianNetwork:
+        """
+        Updates the parameters of the LinearGaussianBayesianNetwork with new
+        data without refitting from scratch.
+
+        Internally, updates the joint Gaussian distribution using the pooled
+        mean and covariance formula, then re-extracts the CPD parameters from
+        the updated joint using standard conditional Gaussian relationships.
+
+        The model must have been previously fitted using ``fit()`` before
+        calling this method.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            New observations to update the model with. Must contain all
+            model variables as columns.
+
+        n_prev_samples : int (optional)
+            The number of samples the model was previously trained on.
+            If None, uses the value stored during the last ``fit()`` or
+            ``fit_update()`` call.
+
+        Returns
+        -------
+        self : LinearGaussianBayesianNetwork
+            The model with updated CPD parameters.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> np.random.seed(42)
+        >>> df1 = pd.DataFrame(
+        ...     np.random.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
+        ... )
+        >>> df2 = pd.DataFrame(
+        ...     np.random.normal(0, 1, (50, 3)), columns=["x1", "x2", "x3"]
+        ... )
+        >>> model.fit(df1)
+        >>> model.fit_update(df2)
+        """
+        # Step 1: Check all variables are present in the new data
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
+
+        # Step 2: Check that fit() was called before fit_update()
+        if self._n_samples is None:
+            raise ValueError(
+                "fit_update() requires the model to be first fitted using fit(). Please call fit() before fit_update()."
+            )
+
+        # Step 3: Get topological order — used for joint stats and CPD extraction
+        variables = list(nx.topological_sort(self))
+        idx = {v: i for i, v in enumerate(variables)}
+
+        # Step 4: Compute new batch statistics
+        n1 = self._n_samples
+        n2 = len(data)
+        n_total = n1 + n2
+
+        mu1 = self._sample_mean
+        cov1 = self._sample_cov
+        mu2 = data[variables].mean().values
+        cov2 = data[variables].cov(ddof=0).values
+
+        # Step 5: Update joint Gaussian using exact pooled formula
+        mu_updated = (n1 * mu1 + n2 * mu2) / n_total
+
+        d1 = mu1 - mu_updated
+        d2 = mu2 - mu_updated
+        cov_updated = (n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)) / n_total
+
+        # Step 6: Re-extract CPD parameters from updated joint Gaussian
+        for node in variables:
+            parents = self.get_parents(node)
+            cpd = self.get_cpds(node)
+            i = idx[node]
+            k = 1 + len(parents)  # intercept + number of parent coefficients
+
+            if len(parents) == 0:
+                # Root node: mean and variance come directly from joint
+                beta = np.array([mu_updated[i]])
+                std = float(np.sqrt(cov_updated[i, i] * n_total / (n_total - 1)))
+            else:
+                # Non-root node: use conditional Gaussian formulas
+                p_idx = [idx[p] for p in parents]
+                cov_pp = cov_updated[np.ix_(p_idx, p_idx)]
+                cov_ip = cov_updated[i, p_idx]
+
+                beta_coeffs = np.linalg.solve(cov_pp, cov_ip)
+                beta_intercept = mu_updated[i] - beta_coeffs @ mu_updated[p_idx]
+                sigma2_mle = cov_updated[i, i] - cov_ip @ beta_coeffs
+
+                beta = np.append([beta_intercept], beta_coeffs)
+                std = float(np.sqrt(max(sigma2_mle, 0) * n_total / (n_total - k)))
+
+            # Update the CPD in place
+            cpd.beta = beta
+            cpd.std = std
+
+        # Step 7: Store updated statistics for the next fit_update() call
+        self._n_samples = n_total
+        self._sample_mean = mu_updated
+        self._sample_cov = cov_updated
+
         return self
 
     def predict_probability(self, data: pd.DataFrame) -> tuple[list[str], np.ndarray, np.ndarray]:

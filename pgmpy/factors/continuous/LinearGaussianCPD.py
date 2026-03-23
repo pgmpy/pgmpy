@@ -77,6 +77,11 @@ class LinearGaussianCPD(BaseFactor):
         self.evidence = list(evidence)
         self.variables = [variable] + evidence
 
+        # Sufficient statistics stored by fit() and used by fit_update()
+        self._n_samples = None
+        self._sample_mean = None
+        self._sample_cov = None
+
     def copy(self):
         """
         Returns a copy of the distribution.
@@ -103,6 +108,11 @@ class LinearGaussianCPD(BaseFactor):
             std=self.std,
             evidence=list(self.evidence),
         )
+
+        if self._n_samples is not None:
+            copy_cpd._n_samples = self._n_samples
+            copy_cpd._sample_mean = self._sample_mean.copy()
+            copy_cpd._sample_cov = self._sample_cov.copy()
 
         return copy_cpd
 
