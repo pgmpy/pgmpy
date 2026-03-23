@@ -1227,8 +1227,8 @@ class DiscreteBayesianNetwork(DAG):
             latents=latents,
             seed=seed,
         )
-        bn_model = DiscreteBayesianNetwork(dag.edges())
-        bn_model.add_nodes_from(dag.nodes())
+        # Initialize with full DAG to preserve isolated nodes
+        bn_model = DiscreteBayesianNetwork(dag)
         bn_model.latents = dag.latents
 
         cpds = []
