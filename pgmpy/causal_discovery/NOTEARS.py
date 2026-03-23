@@ -158,6 +158,16 @@ class NOTEARS(_BaseCausalDiscovery):
             )
             return torch.sum(penalty_mat), jac
 
+    def _required_edge_min_strength(self):
+        return max(self.w_threshold, self.lambda1 / (2 * self._required_penalty_weight) + 1e-6)
+
+    @staticmethod
+    def _validate_expert_knowledge_nodes(expert_knowledge, node_to_index):
+        for edge_set in (expert_knowledge.required_edges, expert_knowledge.forbidden_edges):
+            for u, v in edge_set:
+                if (u not in node_to_index) or (v not in node_to_index):
+                    raise ValueError(f"Expert knowledge edge ({u}, {v}) refers to node(s) not present in the data columns.")
+
     def _loss_grad(self, data, adjacency_matrix, backend):
         scores = data @ adjacency_matrix
         n_samples = data.shape[0]
@@ -203,7 +213,7 @@ class NOTEARS(_BaseCausalDiscovery):
 
         loss, loss_jac = self._loss_grad(data, adjacency_matrix, backend)
         acyclic_penalty, acyclic_jac = self._constraint_grad(adjacency_matrix)
-        required_threshold = self.w_threshold if self.w_threshold > 0 else np.finfo(float).eps
+        required_threshold = self._required_edge_min_strength()
         required_penalty, required_jac = self._required_penalty_gradient(
             adjacency_strength, required_mask, required_threshold
         )
@@ -247,7 +257,7 @@ class NOTEARS(_BaseCausalDiscovery):
         adjacency_strength = w_plus + w_minus
         loss, _ = self._loss_grad(data, adjacency_matrix, backend)
         acyclic_penalty, _ = self._constraint_grad(adjacency_matrix, compute_jac=False)
-        required_threshold = self.w_threshold if self.w_threshold > 0 else np.finfo(float).eps
+        required_threshold = self._required_edge_min_strength()
         required_penalty, _ = self._required_penalty_gradient(
             adjacency_strength, required_mask, required_threshold, compute_jac=False
         )
@@ -350,6 +360,7 @@ class NOTEARS(_BaseCausalDiscovery):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(nodes)
         expert_knowledge._orient_temporal_forbidden_edges(DAG(), only_edges=False)
+        self._validate_expert_knowledge_nodes(expert_knowledge, node_to_index)
 
         forbidden_mask_np = np.zeros((n_nodes, n_nodes), dtype=bool)
         required_mask_np = np.zeros((n_nodes, n_nodes), dtype=float)
@@ -490,25 +501,27 @@ class NOTEARS(_BaseCausalDiscovery):
         adjacency_np = compat_fns.to_numpy(adjacency_est)
         adjacency_np[np.abs(adjacency_np) < self.w_threshold] = 0.0
 
-        if self.expert_knowledge is not None:
-            node_to_index = {node: idx for idx, node in enumerate(nodes)}
-            for u, v in self.expert_knowledge.required_edges:
-                u_idx = node_to_index.get(u)
-                v_idx = node_to_index.get(v)
-                if u_idx is None or v_idx is None:
-                    raise ValueError(
-                        f"Expert knowledge edge ({u}, {v}) refers to node(s) not present in the data columns."
-                    )
+        if expert_knowledge.required_edges:
+            required_threshold = self._required_edge_min_strength()
+            for u, v in expert_knowledge.required_edges:
+                u_idx = node_to_index[u]
+                v_idx = node_to_index[v]
                 if adjacency_np[u_idx, v_idx] == 0.0:
-                    adjacency_np[u_idx, v_idx] = self.w_threshold
+                    adjacency_np[u_idx, v_idx] = required_threshold
 
         dag = DAG()
         dag.add_nodes_from(nodes)
+        required_edges = set(expert_knowledge.required_edges)
+        for u, v in required_edges:
+            if nx.has_path(dag, v, u):
+                raise ValueError("required_edges create a cycle in the output DAG. Please modify required_edges.")
+            dag.add_edge(u, v)
+
         weighted_edges = [
             (nodes[i], nodes[j], abs(adjacency_np[i, j]))
             for i in range(n_nodes)
             for j in range(n_nodes)
-            if (i != j) and (adjacency_np[i, j] != 0.0)
+            if (i != j) and (adjacency_np[i, j] != 0.0) and ((nodes[i], nodes[j]) not in required_edges)
         ]
         weighted_edges.sort(key=lambda edge: edge[2], reverse=True)
         for u, v, _ in weighted_edges:
