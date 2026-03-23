@@ -96,7 +96,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import BOSS
     >>> boss = BOSS(scoring_method="bic-d", random_state=42)
-    >>> boss.fit(df) 
+    >>> boss.fit(df)
     BOSS(random_state=42, scoring_method='bic-d')
     >>> boss.causal_graph_  # doctest: +ELLIPSIS
     <pgmpy.base...object at 0x...>
@@ -179,7 +179,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
         # Step 3: Construct DAG from the converged permutation — Algorithm 3.
         model = self._project_permutation(perm, score_fn)
-        
+
         model = model.to_pdag()
         # Step 4: Run BES for asymptotic correctness (always executed).
         model = self._run_bes(model, score_fn)
@@ -191,13 +191,9 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
         elif rt in {"pdag", "cpdag"}:
             self.causal_graph_ = model.to_pdag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, cpdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype=int
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype=int)
 
         return self
 
@@ -337,9 +333,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
         return dag
 
-    def _grow_shrink_parents(
-        self, variable: str, candidates: list[str], score_fn
-    ) -> list[str]:
+    def _grow_shrink_parents(self, variable: str, candidates: list[str], score_fn) -> list[str]:
         """
         Grow-Shrink parent selection for a single variable — Algorithms 1 & 2.
 
@@ -460,7 +454,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
         def parents(graph, node):
             return set(graph.directed_parents(node))
-        
+
         def score_node(node, pa):
             return score_fn(node, list(pa))
 
@@ -469,7 +463,6 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
             best_edge = None
 
             for x, y in list(pdag.directed_edges):
-
                 if not pdag.has_directed_edge(x, y):
                     continue
 
@@ -481,7 +474,7 @@ class BOSS(_ScoreMixin, _BaseCausalDiscovery):
 
                 if delta > best_delta:
                     best_delta = delta
-                    best_edge = (x,y)
+                    best_edge = (x, y)
 
             if best_edge is None:
                 break
