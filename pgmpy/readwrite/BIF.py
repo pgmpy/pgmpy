@@ -1,4 +1,5 @@
 import re
+import warnings
 from itertools import product
 from string import Template
 
@@ -22,13 +23,13 @@ except ImportError as e:
         f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
-class BIFReader(object):
+class BIFReader:
     """
     Initializes a BIFReader object.
 
@@ -60,7 +61,7 @@ class BIFReader(object):
 
     def __init__(self, path=None, string=None, include_properties=False):
         if path:
-            with open(path, "r") as network:
+            with open(path) as network:
                 self.network = network.read()
 
         elif string:
@@ -75,9 +76,7 @@ class BIFReader(object):
             # removing comments from the file
             pattern = r'("[^"\\]*(?:\\.[^"\\]*)*")|(/\*.*?\*/|//[^\n]*)'
             regex = re.compile(pattern, re.DOTALL)
-            self.network = regex.sub(
-                lambda m: m.group(1) if m.group(1) else "", self.network
-            )
+            self.network = regex.sub(lambda m: m.group(1) if m.group(1) else "", self.network)
 
         if '"' in self.network:
             # Replacing quotes by spaces to remove case sensitivity like:
@@ -128,9 +127,7 @@ class BIFReader(object):
                 self.variable_states[name] = states
                 if self.include_properties:
                     properties = property_expr.search_string(block_content)
-                    self.variable_properties[name] = [
-                        y.strip() for x in properties for y in x
-                    ]
+                    self.variable_properties[name] = [y.strip() for x in properties for y in x]
 
             # self.get_parents(), self.get_edges()
             elif block_content.startswith("probability"):
@@ -174,10 +171,7 @@ class BIFReader(object):
         # self.get_values()
         self.variable_cpds = {}
 
-        state_maps = {
-            var: {state: i for i, state in enumerate(states)}
-            for var, states in self.variable_states.items()
-        }
+        state_maps = {var: {state: i for i, state in enumerate(states)} for var, states in self.variable_states.items()}
 
         for block_content, var_name, parents in probability_blocks:
             cpds_list = cpd_expr.search_string(block_content)
@@ -203,9 +197,7 @@ class BIFReader(object):
                     for idx, parent in enumerate(parents):
                         col = state_df.columns[idx]
                         state_df = state_df.astype({col: "object"})
-                        state_df.iloc[:, idx] = state_df.iloc[:, idx].map(
-                            state_maps[parent]
-                        )
+                        state_df.iloc[:, idx] = state_df.iloc[:, idx].map(state_maps[parent])
 
                     strides = np.cumprod([1] + parent_cards[::-1])[:-1][::-1]
                     col_indices = state_df.dot(strides).astype(int)
@@ -217,11 +209,7 @@ class BIFReader(object):
         A method that returns variable grammar
         """
         # Variable name: everything between "variable" and "{", allowing spaces
-        name_expr = (
-            Suppress("variable")
-            + pp.Regex(r"[^{]+").set_parse_action(lambda t: t[0].strip())
-            + Suppress("{")
-        )
+        name_expr = Suppress("variable") + pp.Regex(r"[^{]+").set_parse_action(lambda t: t[0].strip()) + Suppress("{")
         # State names: comma-separated values that may contain spaces
         state_value = pp.Regex(r"[^,};]+").set_parse_action(lambda t: t[0].strip())
         # Defining a variable state expression
@@ -238,9 +226,7 @@ class BIFReader(object):
         )
         # variable states is of the form type description [args] { val1, val2 }; (comma may or may not be present)
 
-        property_expr = (
-            Suppress("property") + CharsNotIn(";") + Suppress(";")
-        )  # Creating an expr to find property
+        property_expr = Suppress("property") + CharsNotIn(";") + Suppress(";")  # Creating an expr to find property
 
         return name_expr, variable_state_expr, property_expr
 
@@ -250,28 +236,14 @@ class BIFReader(object):
         """
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
-        word_expr = (
-            Word(pp.unicode.alphanums + "-" + "_" + ".")
-            + Suppress(Optional("|"))
-            + Suppress(Optional(","))
-        )
+        word_expr = Word(pp.unicode.alphanums + "-" + "_" + ".") + Suppress(Optional("|")) + Suppress(Optional(","))
         # creating an expression for valid numbers, of the format
         # 1.00 or 1 or 1.00. 0.00 or 9.8e-5 etc
         num_expr = Word(nums + "-" + "+" + "e" + "E" + ".") + Suppress(Optional(","))
-        probability_expr = (
-            Suppress("probability")
-            + Suppress("(")
-            + OneOrMore(word_expr)
-            + Suppress(")")
-        )
+        probability_expr = Suppress("probability") + Suppress("(") + OneOrMore(word_expr) + Suppress(")")
         # State values in CPD rows: comma-separated values that may contain spaces
         state_value = pp.Regex(r"[^,)]+").set_parse_action(lambda t: t[0].strip())
-        optional_expr = (
-            Suppress("(")
-            + state_value
-            + ZeroOrMore(Suppress(",") + state_value)
-            + Suppress(")")
-        )
+        optional_expr = Suppress("(") + state_value + ZeroOrMore(Suppress(",") + state_value) + Suppress(")")
         probab_attributes = optional_expr | Suppress("table") | Suppress("default")
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 
@@ -302,8 +274,7 @@ class BIFReader(object):
         for var in sorted(self.variable_cpds.keys()):
             values = self.variable_cpds[var]
             sn = {
-                p_var: list(map(state_name_type, self.variable_states[p_var]))
-                for p_var in self.variable_parents[var]
+                p_var: list(map(state_name_type, self.variable_states[p_var])) for p_var in self.variable_parents[var]
             }
             sn[var] = list(map(state_name_type, self.variable_states[var]))
             cpd = TabularCPD(
@@ -311,10 +282,7 @@ class BIFReader(object):
                 len(self.variable_states[var]),
                 values,
                 evidence=self.variable_parents[var],
-                evidence_card=[
-                    len(self.variable_states[evidence_var])
-                    for evidence_var in self.variable_parents[var]
-                ],
+                evidence_card=[len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]],
                 state_names=sn,
             )
             tabular_cpds.append(cpd)
@@ -330,7 +298,7 @@ class BIFReader(object):
         return model
 
 
-class BIFWriter(object):
+class BIFWriter:
     """
     Initialise a BIFWriter Object
 
@@ -344,8 +312,8 @@ class BIFWriter(object):
     Examples
     ---------
     >>> from pgmpy.readwrite import BIFWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
     >>> writer
     <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
@@ -452,9 +420,7 @@ $values
                 cpd_values_transpose = cpd.get_values().T
 
                 # Get the sanitized state names for parents from self.variable_states
-                parent_states = product(
-                    *[self.variable_states[var] for var in cpd.variables[1:]]
-                )
+                parent_states = product(*[self.variable_states[var] for var in cpd.variables[1:]])
                 all_cpd = ""
                 for index, state in enumerate(parent_states):
                     all_cpd += conditional_probability_template.substitute(
@@ -557,9 +523,7 @@ $values
         property_tag = {}
         for variable in sorted(variables):
             properties = self.model.nodes[variable]
-            property_tag[variable] = [
-                f"{prop} = {val}" for prop, val in sorted(properties.items())
-            ]
+            property_tag[variable] = [f"{prop} = {val}" for prop, val in sorted(properties.items())]
         return property_tag
 
     def get_parents(self):
@@ -611,9 +575,7 @@ $values
         cpds = self.model.get_cpds()
         tables = {}
         for cpd in cpds:
-            tables[cpd.variable] = compat_fns.to_numpy(
-                cpd.values.ravel(), decimals=self.round_values
-            )
+            tables[cpd.variable] = compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values)
         return tables
 
     def write(self, filename):
@@ -626,9 +588,9 @@ $values
 
         Example
         -------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = get_example_model("asia")
+        >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.write(filename="asia.bif")
         """
@@ -637,7 +599,7 @@ $values
             fout.write(writer)
 
     def write_bif(self, filename):
-        logger.warning(
-            "The `BIFWriter.write_bif` has been deprecated. Please use `BIFWriter.write` instead."
+        warnings.warn(
+            "`BIFWriter.write_bif` is deprecated. Please use `BIFWriter.write` instead.", FutureWarning, stacklevel=2
         )
         self.write(filename)

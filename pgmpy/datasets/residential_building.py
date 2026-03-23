@@ -24,10 +24,7 @@ class ResidentialBuilding(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-        "real/residential-building/"
-    )
+    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/residential-building/"
 
     data_url = base_url + "data/residential-building.continuous.txt"
     ground_truth_url = None

@@ -46,9 +46,7 @@ class NoisyORCPD(TabularCPD):
 
     def __init__(self, variable, prob_values, evidence):
         if len(prob_values) != len(evidence):
-            raise ValueError(
-                "Number of prob_values should be equal to number of evidence variables"
-            )
+            raise ValueError("Number of prob_values should be equal to number of evidence variables")
 
         self.prob_values = np.array(prob_values)
         if any(self.prob_values > 1) or any(self.prob_values < 0):
@@ -65,7 +63,7 @@ class NoisyORCPD(TabularCPD):
         state_names = {variable: ["True", "False"]}
         state_names.update({var: ["True", "False"] for var in evidence})
 
-        super(NoisyORCPD, self).__init__(
+        super().__init__(
             variable=variable,
             variable_card=2,
             values=tabular_values,

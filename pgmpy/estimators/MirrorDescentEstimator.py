@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from typing import Optional
 
 import numpy as np
 from scipy.special import logsumexp
@@ -93,7 +92,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         marginals: list[tuple[str, ...]],
         metric="L2",
         iterations=100,
-        stepsize: Optional[float] = None,
+        stepsize: float | None = None,
         show_progress=True,
     ):
         """
@@ -189,15 +188,9 @@ class MirrorDescentEstimator(MarginalEstimator):
         )
 
         # Step 2: Perform calibration to initialize variables.
-        theta = (
-            self.theta
-            if self.theta
-            else self.belief_propagation.junction_tree.clique_beliefs
-        )
+        theta = self.theta if self.theta else self.belief_propagation.junction_tree.clique_beliefs
         mu = self._calibrate(theta=theta, n=n)
-        answer = self._marginal_loss(
-            marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
-        )
+        answer = self._marginal_loss(marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric)
 
         # Step 3: Optimize the potentials based off the observed marginals.
         pbar = tqdm(range(iterations)) if show_progress else range(iterations)
@@ -211,9 +204,9 @@ class MirrorDescentEstimator(MarginalEstimator):
                 pbar.set_description_str(
                     ",\t".join(
                         [
-                            "Loss: {:e}".format(curr_loss),
-                            "Grad Norm: {:e}".format(np.sqrt(dL.dot(dL))),
-                            "alpha: {:e}".format(alpha),
+                            f"Loss: {curr_loss:e}",
+                            f"Grad Norm: {np.sqrt(dL.dot(dL)):e}",
+                            f"alpha: {alpha:e}",
                         ]
                     )
                 )
@@ -226,9 +219,7 @@ class MirrorDescentEstimator(MarginalEstimator):
                 mu = self._calibrate(theta=theta, n=n)
 
                 # Compute the new loss with respect to the updated beliefs.
-                answer = self._marginal_loss(
-                    marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
-                )
+                answer = self._marginal_loss(marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric)
                 # If we haven't appreciably improved, try reducing the step size.
                 # Otherwise, we break to the next iteration.
                 _step = 0.5 * alpha * dL.dot(nu - mu)

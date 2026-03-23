@@ -10,31 +10,18 @@ def parse_lavaan(lines):
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)
     reg_gram = (
-        OneOrMore(
-            var.setResultsName("predictors", listAllMatches=True)
-            + Optional(Suppress("+"))
-        )
+        OneOrMore(var.setResultsName("predictors", listAllMatches=True) + Optional(Suppress("+")))
         + "~"
-        + OneOrMore(
-            var.setResultsName("covariates", listAllMatches=True)
-            + Optional(Suppress("+"))
-        )
+        + OneOrMore(var.setResultsName("covariates", listAllMatches=True) + Optional(Suppress("+")))
     )
     intercept_gram = var("inter_var") + "~" + Word("1")
     covar_gram = (
         var("covar_var1")
         + "~~"
-        + OneOrMore(
-            var.setResultsName("covar_var2", listAllMatches=True)
-            + Optional(Suppress("+"))
-        )
+        + OneOrMore(var.setResultsName("covar_var2", listAllMatches=True) + Optional(Suppress("+")))
     )
     latent_gram = (
-        var("latent")
-        + "=~"
-        + OneOrMore(
-            var.setResultsName("obs", listAllMatches=True) + Optional(Suppress("+"))
-        )
+        var("latent") + "=~" + OneOrMore(var.setResultsName("obs", listAllMatches=True) + Optional(Suppress("+")))
     )
 
     # Step 2: Preprocess string to lines
@@ -52,9 +39,7 @@ def parse_lavaan(lines):
             elif reg_gram.matches(line):
                 results = reg_gram.parseString(line, parseAll=True)
                 for pred in results["predictors"]:
-                    ebunch.extend(
-                        [(covariate, pred) for covariate in results["covariates"]]
-                    )
+                    ebunch.extend([(covariate, pred) for covariate in results["covariates"]])
             elif covar_gram.matches(line):
                 results = covar_gram.parseString(line, parseAll=True)
                 for var in results["covar_var2"]:
@@ -83,9 +68,7 @@ def parse_dagitty(lines):
             return handle_edge_stat(edge_stat[0], latents, ebunch, betas)
 
         # If longer than 3, split into smaller edge/stat parts and handle recursively
-        if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(
-            edge_stat
-        ) > 3:
+        if (isinstance(edge_stat, ParseResults) or isinstance(edge_stat, list)) and len(edge_stat) > 3:
             length = len(edge_stat)
             start_i = 0
             while start_i < length - 1:
@@ -104,20 +87,11 @@ def parse_dagitty(lines):
                     # subgraph/list of variables {a b c}
                     end_i = start_i + 1
 
-                all_vars.update(
-                    handle_edge_stat(
-                        edge_stat[start_i : end_i + 1], latents, ebunch, betas
-                    )
-                )
+                all_vars.update(handle_edge_stat(edge_stat[start_i : end_i + 1], latents, ebunch, betas))
 
                 # Parse `edge` [beta=float]
-                if end_i + 1 < length and isinstance(
-                    edge_stat[end_i + 1], ParseResults
-                ):
-                    if (
-                        isinstance(edge_stat[end_i + 1][0], str)
-                        and edge_stat[end_i + 1][0] == "beta"
-                    ):
+                if end_i + 1 < length and isinstance(edge_stat[end_i + 1], ParseResults):
+                    if isinstance(edge_stat[end_i + 1][0], str) and edge_stat[end_i + 1][0] == "beta":
                         source = edge_stat[start_i]
                         target = edge_stat[end_i]
                         beta = edge_stat[end_i + 1][1]
@@ -188,9 +162,7 @@ def parse_dagitty(lines):
                     elif token == "<->":
                         # represent bidirected in DAG-as-MAG form using an artificial latent confounder
                         latent_var = (
-                            f"u_{left_var}_{right_var}"
-                            if left_var < right_var
-                            else f"u_{right_var}_{left_var}"
+                            f"u_{left_var}_{right_var}" if left_var < right_var else f"u_{right_var}_{left_var}"
                         )
                         latents.append(latent_var)
                         ebunch.append((latent_var, left_var))
@@ -262,17 +234,9 @@ def parse_dagitty(lines):
     edge_chars = "><-@" if target_type.upper() == "PAG" else "><-"
     edge = Word(edge_chars)
 
-    beta = (
-        Suppress("[")
-        + Group(Word("beta") + Suppress("=") + pyparsing_common.number())
-        + Suppress("]")
-    )
+    beta = Suppress("[") + Group(Word("beta") + Suppress("=") + pyparsing_common.number()) + Suppress("]")
 
-    edge_relation = (
-        var_or_subgraph
-        + OneOrMore(edge + var_or_subgraph)
-        + Optional(beta.setResultsName("annotation"))
-    )
+    edge_relation = var_or_subgraph + OneOrMore(edge + var_or_subgraph) + Optional(beta.setResultsName("annotation"))
 
     bb_re = Combine("bb=" + QuotedString('"'))
     pos_re = Combine("[pos=" + QuotedString('"') + "]")

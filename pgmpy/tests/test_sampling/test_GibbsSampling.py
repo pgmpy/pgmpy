@@ -67,9 +67,7 @@ def bayesian_model_sprinkler():
 def markov_model():
     model = DiscreteMarkovNetwork([("A", "B"), ("C", "B"), ("B", "D")])
     factor_ab = DiscreteFactor(["A", "B"], [2, 3], [1, 2, 3, 4, 5, 6])
-    factor_cb = DiscreteFactor(
-        ["C", "B"], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6]
-    )
+    factor_cb = DiscreteFactor(["C", "B"], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
     factor_bd = DiscreteFactor(["B", "D"], [3, 2], [5, 7, 2, 1, 9, 3])
     model.add_factors(factor_ab, factor_cb, factor_bd)
     return model
@@ -142,10 +140,7 @@ def test_sample_limit(gibbs, bayesian_model):
     marginal_prob = VariableElimination(bayesian_model).query(
         list(bayesian_model.nodes()), joint=False, show_progress=False
     )
-    sample_prob = {
-        node: samples.loc[:, node].value_counts() / 1e4
-        for node in bayesian_model.nodes()
-    }
+    sample_prob = {node: samples.loc[:, node].value_counts() / 1e4 for node in bayesian_model.nodes()}
     for node in bayesian_model.nodes():
         assert np.allclose(
             sorted(marginal_prob[node].values),
