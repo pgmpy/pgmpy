@@ -166,11 +166,11 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...     ["Bob", "Charles"], cardinality=[2, 3], values=np.ones(6)
         ... )
         >>> student.add_factors(factor1, factor2)
-        >>> student.get_factors()
-        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>,
-        <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x7f8a0e9bf5f8>]
-        >>> student.get_factors("Alice")
-        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>]
+        >>> student.get_factors()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x...>,
+        <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x...>]
+        >>> student.get_factors("Alice")  # doctest: +ELLIPSIS
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x...>]
         """
         if node:
             if node not in self.nodes():
@@ -223,10 +223,10 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...     ["Alice", "Bob"], cardinality=[2, 2], values=np.random.rand(4)
         ... )
         >>> student.add_factors(factor)
-        >>> student.get_cardinality(node="Alice")
+        >>> int(student.get_cardinality(node="Alice"))
         2
-        >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+        >>> {k: int(v) for k, v in student.get_cardinality().items()}
+        {'Alice': 2, 'Bob': 2}
         """
         if node:
             for factor in self.factors:
@@ -641,7 +641,8 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...         ("x5", "x7"),
         ...     ]
         ... )
-        >>> mm.markov_blanket("x1")
+        >>> mm.markov_blanket("x1")  # doctest: +ELLIPSIS
+        <dict_keyiterator object at 0x...>
         """
         return self.neighbors(node)
 
@@ -676,7 +677,18 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...         ("x5", "x7"),
         ...     ]
         ... )
-        >>> mm.get_local_independencies()
+        >>> independencies = mm.get_local_independencies()
+        >>> assertions = independencies.get_assertions()
+        >>> len(assertions)
+        7
+        >>> mm.get_local_independencies()  # doctest: +SKIP
+        (x1 ⟂ x7, x5, x2, x6 | x3, x4)
+        (x2 ⟂ x7, x6, x1, x3 | x5, x4)
+        (x3 ⟂ x7, x5, x2, x4 | x6, x1)
+        (x4 ⟂ x5, x3 | x7, x6, x1, x2)
+        (x5 ⟂ x6, x1, x3, x4 | x7, x2)
+        (x6 ⟂ x7, x5, x1, x2 | x3, x4)
+        (x7 ⟂ x6, x1, x2, x3 | x5, x4)
         """
         local_independencies = Independencies()
 
@@ -792,6 +804,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = DiscreteMarkovNetwork()
         >>> G.add_nodes_from(["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
+        >>> rng = np.random.default_rng(42)
         >>> G.add_edges_from(
         ...     [
         ...         ("x1", "x3"),
@@ -804,11 +817,10 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         ...         ("x5", "x7"),
         ...     ]
         ... )
-        >>> phi = [
-        ...     DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()
-        ... ]
+        >>> phi = [DiscreteFactor(edge, [2, 2], rng.random(4)) for edge in G.edges()]
         >>> G.add_factors(*phi)
-        >>> G.get_partition_function()
+        >>> round(float(G.get_partition_function()), 3)
+        0.82
         """
         self.check_model()
 
@@ -837,13 +849,13 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> G_copy = G.copy()
         >>> G_copy.edges()
         EdgeView([(('a', 'b'), ('b', 'c'))])
-        >>> G_copy.nodes()
+        >>> sorted(G_copy.nodes())
         [('a', 'b'), ('b', 'c')]
         >>> factor = DiscreteFactor(
         ...     [("a", "b")], cardinality=[3], values=np.random.rand(3)
         ... )
         >>> G.add_factors(factor)
-        >>> G.get_factors()
+        >>> G.get_factors()  # doctest: +ELLIPSIS
         [<DiscreteFactor representing phi(('a', 'b'):3) at 0x...>]
         >>> G_copy.get_factors()
         []

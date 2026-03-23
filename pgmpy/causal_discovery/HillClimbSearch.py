@@ -7,8 +7,8 @@ from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
 
 
@@ -110,8 +110,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the HillClimbSearch algorithm to learn the causal structure from data:
@@ -123,7 +123,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     Use expert knowledge to constrain the search:
 
-    >>> from pgmpy.estimators import ExpertKnowledge
+    >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)
