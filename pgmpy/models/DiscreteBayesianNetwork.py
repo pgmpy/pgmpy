@@ -1227,11 +1227,9 @@ class DiscreteBayesianNetwork(DAG):
             latents=latents,
             seed=seed,
         )
-        # Initialize the network with edges only (without latents first)
-        bn_model = DiscreteBayesianNetwork(dag.edges())
-
-        # Add all nodes to ensure isolated nodes (e.g., X_0) are included
-        bn_model.add_nodes_from(dag.nodes())
+        # Initialize with full DAG to preserve isolated nodes
+        bn_model = DiscreteBayesianNetwork(dag)
+        bn_model.latents = dag.latents
 
         # Set latents safely after all nodes have been added
         if hasattr(dag, "latents") and dag.latents:

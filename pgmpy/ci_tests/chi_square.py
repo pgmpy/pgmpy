@@ -5,19 +5,21 @@ from .power_divergence import PowerDivergence
 
 class ChiSquare(PowerDivergence):
     """
-    Perform Chi-square conditional independence test.
+    Pearson chi-square test for conditional independence on discrete data.
 
-    Tests the null hypothesis that X is independent from Y given Zs.
+    This class is a thin specialization of :class:`PowerDivergence` with ``lambda_="pearson"``.
+    For the contingency-table construction, conditional-case aggregation, and p-value computation,
+    see :class:`PowerDivergence`.
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset on which to test the independence condition.
 
     Attributes
     ----------
     statistic_ : float
-        The chi-squared test statistic. Set after calling the test.
+        The Pearson chi-square test statistic. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
     dof_ : int
