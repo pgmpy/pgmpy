@@ -26,6 +26,7 @@ from pgmpy.estimators.PC import PC
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
 from pgmpy.estimators.expert import ExpertInLoop
 from pgmpy.estimators.GES import GES
+from pgmpy.estimators.NonParamGES import NonParamGES, NonParamGESScore
 
 __all__ = [
     "BaseEstimator",
@@ -58,4 +59,6 @@ __all__ = [
     "LogLikelihoodCondGauss",
     "AICCondGauss",
     "BICCondGauss",
+    "NonParamGES",
+    "NonParamGESScore",
 ]
