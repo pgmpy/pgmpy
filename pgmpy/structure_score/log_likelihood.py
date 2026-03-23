@@ -3,7 +3,7 @@ import numpy as np
 from pgmpy.structure_score._base import BaseStructureScore
 
 
-class LogLikeliHood(BaseStructureScore):
+class LogLikelihood(BaseStructureScore):
     """Discrete log-likelihood structure score."""
 
     _tags = {

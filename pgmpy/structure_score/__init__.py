@@ -8,7 +8,7 @@ from pgmpy.structure_score.bic import BIC
 from pgmpy.structure_score.bic_cond_gauss import BICCondGauss
 from pgmpy.structure_score.bic_gauss import BICGauss
 from pgmpy.structure_score.k2 import K2
-from pgmpy.structure_score.log_likelihood import LogLikeliHood
+from pgmpy.structure_score.log_likelihood import LogLikelihood
 from pgmpy.structure_score.log_likelihood_cond_gauss import LogLikelihoodCondGauss
 from pgmpy.structure_score.log_likelihood_gauss import LogLikelihoodGauss
 
@@ -18,7 +18,7 @@ __all__ = [
     "K2",
     "BDeu",
     "BDs",
-    "LogLikeliHood",
+    "LogLikelihood",
     "AIC",
     "BIC",
     "LogLikelihoodGauss",

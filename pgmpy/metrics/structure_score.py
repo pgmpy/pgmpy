@@ -1,6 +1,6 @@
 from pgmpy.base import DAG
-from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.structure_score import get_scoring_method
 
 
 class StructureScore(_BaseUnsupervisedMetric):
@@ -15,10 +15,6 @@ class StructureScore(_BaseUnsupervisedMetric):
     ----------
     scoring_method: str
         Options are: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg
-
-    kwargs: kwargs
-        Any additional parameters that needs to be passed to the
-        scoring method. Check pgmpy.estimators.StructureScore for details.
 
     Returns
     -------
@@ -48,6 +44,6 @@ class StructureScore(_BaseUnsupervisedMetric):
     def __init__(self, scoring_method=None):
         self.scoring_method = scoring_method
 
-    def _evaluate(self, X, causal_graph, **kwargs):
-        scoring_method = get_scoring_method(self.scoring_method, data=X, use_cache=False, **kwargs)[0]
+    def _evaluate(self, X, causal_graph):
+        scoring_method = get_scoring_method(self.scoring_method, data=X)
         return scoring_method.score(causal_graph)

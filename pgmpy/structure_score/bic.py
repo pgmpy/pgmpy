@@ -1,9 +1,9 @@
 from math import log
 
-from pgmpy.structure_score.log_likelihood import LogLikeliHood
+from pgmpy.structure_score.log_likelihood import LogLikelihood
 
 
-class BIC(LogLikeliHood):
+class BIC(LogLikelihood):
     """BIC structure score for discrete Bayesian networks."""
 
     _tags = {

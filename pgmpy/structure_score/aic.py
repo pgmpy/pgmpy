@@ -1,7 +1,7 @@
-from pgmpy.structure_score.log_likelihood import LogLikeliHood
+from pgmpy.structure_score.log_likelihood import LogLikelihood
 
 
-class AIC(LogLikeliHood):
+class AIC(LogLikelihood):
     """AIC structure score for discrete Bayesian networks."""
 
     _tags = {
