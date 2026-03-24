@@ -73,19 +73,12 @@ def est_titanic1(titanic_data1):
 
 @pytest.fixture
 def score_rand(rand_data):
-    k2score = K2(rand_data)
-    return k2score.local_score
-
-
-@pytest.fixture
-def score_structure_prior(rand_data):
-    k2score = K2(rand_data)
-    return k2score.structure_prior_ratio
+    return K2(rand_data)
 
 
 @pytest.fixture
 def score_titanic1(titanic_data1):
-    return K2(titanic_data1).local_score
+    return K2(titanic_data1)
 
 
 @pytest.fixture
@@ -102,12 +95,11 @@ def model2(model1):
     return model
 
 
-def test_legal_operations(est_rand, model2, score_rand, score_structure_prior):
+def test_legal_operations(est_rand, model2, score_rand):
     model2_legal_ops = list(
         est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
-            structure_score=score_structure_prior,
             tabu_list=set(),
             max_indegree=float("inf"),
             required_edges=set(),
@@ -125,12 +117,11 @@ def test_legal_operations(est_rand, model2, score_rand, score_structure_prior):
     assert {op for op, score in model2_legal_ops} == {op for op, score in model2_legal_ops_ref}
 
 
-def test_legal_operations_forbidden_required(est_rand, model2, score_rand, score_structure_prior):
+def test_legal_operations_forbidden_required(est_rand, model2, score_rand):
     model2_legal_ops_bl = list(
         est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
-            structure_score=score_structure_prior,
             tabu_list=set(),
             max_indegree=float("inf"),
             forbidden_edges={("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")},
@@ -148,7 +139,6 @@ def test_legal_operations_forbidden_required(est_rand, model2, score_rand, score
         est_rand._legal_operations_dag(
             model=model2,
             score=score_rand,
-            structure_score=score_structure_prior,
             tabu_list=set(),
             max_indegree=float("inf"),
             forbidden_edges={("B", "C"), ("C", "B"), ("B", "A")},
@@ -163,13 +153,12 @@ def test_legal_operations_forbidden_required(est_rand, model2, score_rand, score
     assert {op for op, score in model2_legal_ops_wl} == set(model2_legal_ops_wl_ref)
 
 
-def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_prior):
+def test_legal_operations_titanic(est_titanic1, score_titanic1):
     start_model = DiscreteBayesianNetwork([("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")])
 
     legal_ops = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
-        structure_score=score_structure_prior,
         tabu_list=[],
         max_indegree=float("inf"),
         forbidden_edges=set(),
@@ -185,7 +174,6 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
     legal_ops_tabu = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
-        structure_score=score_structure_prior,
         tabu_list=tabu_list,
         max_indegree=float("inf"),
         forbidden_edges=set(),
@@ -196,7 +184,6 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
     legal_ops_indegree = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
-        structure_score=score_structure_prior,
         tabu_list=[],
         max_indegree=1,
         forbidden_edges=set(),
@@ -207,7 +194,6 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1, score_structure_
     legal_ops_both = est_titanic1._legal_operations_dag(
         model=start_model,
         score=score_titanic1,
-        structure_score=score_structure_prior,
         tabu_list=tabu_list,
         max_indegree=1,
         forbidden_edges=set(),

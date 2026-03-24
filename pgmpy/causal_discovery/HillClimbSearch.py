@@ -34,7 +34,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or BaseStructureScore instance, default=None
+    score : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -112,7 +112,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     Use the HillClimbSearch algorithm to learn the causal structure from data:
 
     >>> from pgmpy.causal_discovery import HillClimbSearch
-    >>> hc = HillClimbSearch(scoring_method="bic-d")
+    >>> hc = HillClimbSearch(score="bic-d")
     >>> hc.fit(df)
     >>> hc.causal_graph_.edges()
 
@@ -120,7 +120,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
-    >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
+    >>> hc = HillClimbSearch(score="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)
 
     References
@@ -169,9 +169,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.variables_ = list(X.columns)
 
         # Step 1: Initial checks and setup for arguments
-        # Step 1.1: Check scoring_method
+        # Step 1.1: Check score
         score = get_scoring_method(self.scoring_method, X)
-        score_fn = score.local_score
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -221,8 +220,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    score=score_fn,
-                    structure_score=score.structure_prior_ratio,
+                    score=score,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
                     forbidden_edges=expert_knowledge.forbidden_edges,
