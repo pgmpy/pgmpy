@@ -325,10 +325,12 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     else:
         chi = 0
         dof = 0
+        unique_x = np.unique(data[X])
+        unique_y = np.unique(data[Y])
         for z_state, df in data.groupby(Z, observed=True):
             # Compute the contingency table
-            unique_x, x_inv = np.unique(df[X], return_inverse=True)
-            unique_y, y_inv = np.unique(df[Y], return_inverse=True)
+            x_inv = np.searchsorted(unique_x, df[X])
+            y_inv = np.searchsorted(unique_y, df[Y])
             contingency = np.bincount(x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)).reshape(
                 len(unique_x), len(unique_y)
             )
