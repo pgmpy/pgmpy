@@ -37,71 +37,71 @@ from pgmpy.estimators.CITests import ci_registry
 )
 def my_ci_test(X, Y, Z, data, boolean=True, **kwargs):
     """
-    [One line description of the CI test.]
+        [One line description of the CI test.]
 
-    [Detailed description of the test. Explain the null hypothesis, the statistic
-    being computed, and any important assumptions (e.g., sample size, data type).]
+        [Detailed description of the test. Explain the null hypothesis, the statistic
+        being computed, and any important assumptions (e.g., sample size, data type).]
 
-    The null hypothesis for this test is: X is independent of Y given Z.
+        The null hypothesis for this test is: X is independent of Y given Z.
 
-    Parameters
-    ----------
-    X : int, str, or any hashable object
-        A variable name contained in the dataset.
+        Parameters
+        ----------
+        X : int, str, or any hashable object
+            A variable name contained in the dataset.
 
-    Y : int, str, or any hashable object
-        A variable name contained in the dataset, different from X.
+        Y : int, str, or any hashable object
+            A variable name contained in the dataset, different from X.
 
-    Z : list or array-like
-        A list of variable names contained in the dataset, different from X and Y.
-        This is the conditioning set that (potentially) makes X and Y independent.
-        Pass an empty list `[]` for an unconditional independence test.
+        Z : list or array-like
+            A list of variable names contained in the dataset, different from X and Y.
+            This is the conditioning set that (potentially) makes X and Y independent.
+            Pass an empty list `[]` for an unconditional independence test.
 
-    data : pandas.DataFrame
-        The dataset on which to test the independence condition. Each column
-        corresponds to a variable; rows are observations.
+        data : pandas.DataFrame
+            The dataset on which to test the independence condition. Each column
+            corresponds to a variable; rows are observations.
 
-    boolean : bool, default=True
-        If True, an additional keyword argument `significance_level` must be
-        provided via `**kwargs`. Returns True if the p-value is greater than or
-        equal to `significance_level` (i.e., fail to reject independence),
-        otherwise returns False.
+        boolean : bool, default=True
+            If True, an additional keyword argument `significance_level` must be
+            provided via `**kwargs`. Returns True if the p-value is greater than or
+            equal to `significance_level` (i.e., fail to reject independence),
+            otherwise returns False.
 
-        If False, returns the raw test statistic, p-value, and degrees of freedom.
+            If False, returns the raw test statistic, p-value, and degrees of freedom.
 
-    **kwargs
-        significance_level : float
-            Required when `boolean=True`. Threshold for rejecting the null
-            hypothesis (e.g., 0.05).
-        # TODO: Document any additional keyword arguments your test requires.
+        **kwargs
+            significance_level : float
+                Required when `boolean=True`. Threshold for rejecting the null
+                hypothesis (e.g., 0.05).
+            # TODO: Document any additional keyword arguments your test requires.
 
-    Returns
-    -------
-    result : bool or tuple
-        If boolean=True  : returns True if p_value >= significance_level, else False.
-        If boolean=False : returns a tuple (statistic, p_value, dof).
-            - statistic : float -- the computed test statistic.
-            - p_value   : float -- the p-value for the test.
-            - dof       : int   -- the degrees of freedom used in the test.
+        Returns
+        -------
+        result : bool or tuple
+            If boolean=True  : returns True if p_value >= significance_level, else False.
+            If boolean=False : returns a tuple (statistic, p_value, dof).
+                - statistic : float -- the computed test statistic.
+                - p_value   : float -- the p-value for the test.
+                - dof       : int   -- the degrees of freedom used in the test.
 
-    Examples
-    --------
-    >>> import pandas as pd
-    >>> import numpy as np
-    >>> np.random.seed(42)
-    >>> data = pd.DataFrame(
-    ...     np.random.randint(0, 2, size=(10000, 3)), columns=["A", "B", "C"]
-    ... )
-    >>> # TODO: Replace with a realistic working example for your test.
-    >>> my_ci_test(X="A", Y="B", Z=[], data=data, boolean=True, significance_level=0.05)
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> np.random.seed(42)
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(0, 2, size=(10000, 3)), columns=["A", "B", "C"]
+        ... )
+        >>> # TODO: Replace with a realistic working example for your test.
+        >>> my_ci_test(X="A", Y="B", Z=[], data=data, boolean=True, significance_level=0.05)  # doctest: +SKIP
     True
-    >>> my_ci_test(X="A", Y="B", Z=["C"], data=data, boolean=False)
+    >>> my_ci_test(X="A", Y="B", Z=["C"], data=data, boolean=False)  # doctest: +SKIP
     (statistic_value, p_value, dof)
 
-    References
-    ----------
-    .. [1] TODO: Add the primary citation for this test.
-    .. [2] TODO: Add additional references if applicable.
+        References
+        ----------
+        .. [1] TODO: Add the primary citation for this test.
+        .. [2] TODO: Add additional references if applicable.
     """
     # ------------------------------------------------------------------
     # Step 1: Validate and normalise inputs.
