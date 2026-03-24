@@ -1,3 +1,4 @@
+import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
@@ -35,7 +36,7 @@ class LiNGAM(_BaseCausalDiscovery):
     causal_graph_: pgmpy.base.DAG
         The learned causal graph.
 
-    adjacency_matrix_: numpy.ndarray
+    adjacency_matrix_: pd.DataFrame
         The learned adjacency matrix of the graph. Elements correspond to coefficients
         in the linear model.
 
@@ -117,20 +118,13 @@ class LiNGAM(_BaseCausalDiscovery):
 
         B_tilde = self._prune_edges(X_vals, B_hat, causal_order, alpha=self.alpha)
 
-        self.adjacency_matrix_ = B_tilde
+        self.adjacency_matrix_ = pd.DataFrame(B_tilde, index=self.feature_names_in_, columns=self.feature_names_in_)
 
         # Step 6: Construct graph
-        self.causal_graph_ = DAG()
-        self.causal_graph_.add_nodes_from(self.feature_names_in_)
-
-        # Step 6: Add edges to the graph
-        for target_idx in range(n_features):
-            for source_idx in range(n_features):
-                if B_tilde[target_idx, source_idx] != 0:
-                    source_name = self.feature_names_in_[source_idx]
-                    target_name = self.feature_names_in_[target_idx]
-
-                    self.causal_graph_.add_edge(source_name, target_name)
+        self.causal_graph_ = nx.convert_matrix.from_numpy_array(B_tilde.T, create_using=DAG())
+        nx.relabel_nodes(
+            self.causal_graph_, mapping={i: name for i, name in enumerate(self.feature_names_in_)}, copy=False
+        )
 
         return self
 
