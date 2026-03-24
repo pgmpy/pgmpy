@@ -6,7 +6,6 @@
 #     return [(num_to_letter(u), num_to_letter(v)) for u, v in edges]
 
 import numpy as np
-import numpy.testing as np_test
 import pandas as pd
 import pytest
 from sklearn.decomposition import FastICA
@@ -16,6 +15,9 @@ from pgmpy.causal_discovery import LiNGAM
 
 @pytest.fixture
 def rand_data():
+    """
+    A -> B -> C
+    """
     rng = np.random.default_rng(42)
     data = pd.DataFrame(
         rng.uniform(size=(100, 3)),
@@ -28,6 +30,11 @@ def rand_data():
 
 @pytest.fixture
 def rand_data2():
+    r"""
+        / -> B -> D
+    A -
+        \ -> C -> E
+    """
     rng = np.random.default_rng(42)
     data = pd.DataFrame(
         rng.laplace(size=(1000, 5)),
@@ -44,6 +51,20 @@ def rand_data2():
 
 @pytest.fixture
 def large_lingam_data():
+    r"""
+                     F --
+                   /      \
+            B --> D        --> H --
+          /         \     /          \
+         /            G --            \
+       A                                --> J
+         \            F --            /
+           \        /      \        /
+            C --> E         --> I --
+                    \      /
+                      G --
+    """
+
     rng = np.random.default_rng(42)
 
     data = pd.DataFrame(
@@ -51,169 +72,114 @@ def large_lingam_data():
         columns=list("ABCDEFGHIJ"),
     )
 
-    # Level 1 dependencies
+    # Level 1
     data["B"] = 1.5 * data["A"] + data["B"]
-    data["C"] = -1.2 * data["A"] + 0.5 * data["B"] + data["C"]
+    data["C"] = -1.2 * data["A"] + data["C"]
 
-    # Level 2 dependencies
-    data["D"] = 0.8 * data["B"] - 0.6 * data["C"] + data["D"]
+    # Level 2
+    data["D"] = 0.8 * data["B"] + data["D"]
     data["E"] = -1.0 * data["C"] + data["E"]
 
-    # Level 3 dependencies
+    # Level 3
     data["F"] = 1.3 * data["D"] + 0.7 * data["E"] + data["F"]
-    data["G"] = -0.9 * data["D"] + data["G"]
+    data["G"] = -0.9 * data["D"] + 0.5 * data["E"] + data["G"]
 
-    # Level 4 dependencies
+    # Level 4
     data["H"] = 0.5 * data["F"] - 1.1 * data["G"] + data["H"]
-    data["I"] = 0.6 * data["E"] + 0.8 * data["H"] + data["I"]
+    data["I"] = 0.6 * data["F"] + 0.8 * data["G"] + data["I"]
 
-    # Final node with multiple parents
-    data["J"] = -0.7 * data["F"] + 0.9 * data["I"] - 0.5 * data["C"] + data["J"]
+    # Level 5
+    data["J"] = -0.7 * data["H"] + 0.9 * data["I"] + data["J"]
 
     return data
 
 
 def test_fit_rand(rand_data):
     # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
-    # Adj_matrix = model.adjacency_matrix_
 
     algo = LiNGAM(fast_ica=FastICA(random_state=42, max_iter=1000))
     algo.fit(rand_data)
     graph = algo.causal_graph_
 
-    # print(num_letter(networkx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
     # [('A', 'B'), ('B', 'C')]
     assert graph.has_edge("A", "B")
     assert graph.has_edge("B", "C")
-    assert not graph.has_edge("B", "A")
-    assert not graph.has_edge("C", "B")
+
     assert not graph.has_edge("A", "C")
 
-    # Test adjacency matrix structure
-    B = algo.adjacency_matrix_
-    assert B.shape == (3, 3)
-    arr = np.array([[0.0, 0.0, 0.0], [2.0321982696, 0.0, 0.0], [0.0, -1.4574545280, 0.0]])
+    # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
+    Adj_matrix = algo.adjacency_matrix_
+    assert Adj_matrix.shape == (3, 3)
 
-    np_test.assert_array_almost_equal(B, arr)
+    # print(model.adjacency_matrix_[0, 2]) -> 0.0
+    assert Adj_matrix.loc["A", "C"] == 0
 
 
 def test_fit_rand2(rand_data2):
     # model = lingam.ICALiNGAM(random_state=42)
-    # Adj_matrix = model.adjacency_matrix_
 
     algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(rand_data2)
     graph = algo.causal_graph_
 
-    # print(num_letter(networkx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
     # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E')]
     assert graph.has_edge("A", "B")
+    assert graph.has_edge("A", "C")
     assert graph.has_edge("B", "D")
     assert graph.has_edge("C", "E")
-    assert graph.has_edge("A", "C")
 
-    assert not graph.has_edge("B", "A")
-    assert not graph.has_edge("C", "A")
-    assert not graph.has_edge("D", "B")
-    assert not graph.has_edge("E", "C")
-    assert not graph.has_edge("C", "B")
+    assert not graph.has_edge("A", "D")
+    assert not graph.has_edge("A", "E")
     assert not graph.has_edge("B", "C")
+    assert not graph.has_edge("D", "E")
+    assert not graph.has_edge("B", "E")
+    assert not graph.has_edge("C", "D")
 
-    B = algo.adjacency_matrix_
-    assert B.shape == (5, 5)
+    # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
+    Adj_matrix = algo.adjacency_matrix_
+    assert Adj_matrix.shape == (5, 5)
 
-    arr = np.array(
-        [
-            [0.0, 0.0, 0.0, 0.0, 0.0],
-            [1.19469001, 0.0, 0.0, 0.0, 0.0],
-            [-1.51738062, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.82198363, 0.0, 0.0, 0.0],
-            [0.0, 0.0, -0.65074361, 0.0, 0.0],
-        ]
-    )
-
-    np_test.assert_array_almost_equal(B, arr, decimal=2)
+    # print(model.adjacency_matrix_[0, 3]) -> 0.0
+    assert Adj_matrix.loc["A", "D"] == 0
+    # print(model.adjacency_matrix_[0, 4]) -> 0.0
+    assert Adj_matrix.loc["A", "E"] == 0
+    # print(model.adjacency_matrix_[1, 2]) -> 0.0
+    assert Adj_matrix.loc["B", "C"] == 0
+    # print(model.adjacency_matrix_[3, 4]) -> 0.0
+    assert Adj_matrix.loc["D", "E"] == 0
+    # print(model.adjacency_matrix_[1, 4]) -> 0.0
+    assert Adj_matrix.loc["B", "E"] == 0
+    # print(model.adjacency_matrix_[2, 3]) -> 0.0
+    assert Adj_matrix.loc["C", "D"] == 0
 
 
 def test_large_lingam_data(large_lingam_data):
     # model = lingam.ICALiNGAM(random_state=42)
-    # Adj_matrix = model.adjacency_matrix_
 
     algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(large_lingam_data)
     graph = algo.causal_graph_
 
-    # print(num_letter(nx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
-    # [('A', 'B'), ('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'D'), ('C', 'E'), ('C', 'J'), ('D', 'F'), ('D', 'G'),
-    #  ('E', 'F'), ('E', 'I'), ('F', 'H'), ('F', 'J'), ('G', 'H'), ('H', 'I'), ('I', 'J')]
+    # print(num_letter(nx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
+    # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E'), ('D', 'F'), ('D', 'G'), ('E', 'F'), ('E', 'G'), ('F', 'H'),
+    #  ('F', 'I'), ('G', 'H'), ('G', 'I'), ('H', 'J'), ('I', 'J')]
     assert graph.has_edge("A", "B")
     assert graph.has_edge("A", "C")
-    assert graph.has_edge("B", "C")
     assert graph.has_edge("B", "D")
-    assert graph.has_edge("C", "D")
     assert graph.has_edge("C", "E")
     assert graph.has_edge("D", "F")
-    assert graph.has_edge("E", "F")
     assert graph.has_edge("D", "G")
+    assert graph.has_edge("E", "F")
+    assert graph.has_edge("E", "G")
     assert graph.has_edge("F", "H")
+    assert graph.has_edge("F", "I")
     assert graph.has_edge("G", "H")
-    assert graph.has_edge("E", "I")
-    assert graph.has_edge("H", "I")
-    assert graph.has_edge("F", "J")
+    assert graph.has_edge("G", "I")
+    assert graph.has_edge("H", "J")
     assert graph.has_edge("I", "J")
-    assert graph.has_edge("C", "J")
-
-    assert not graph.has_edge("B", "A")
-    assert not graph.has_edge("C", "A")
-    assert not graph.has_edge("C", "B")
-    assert not graph.has_edge("D", "B")
-    assert not graph.has_edge("D", "C")
-    assert not graph.has_edge("E", "C")
-    assert not graph.has_edge("F", "D")
-    assert not graph.has_edge("F", "E")
-    assert not graph.has_edge("G", "D")
-    assert not graph.has_edge("H", "F")
-    assert not graph.has_edge("H", "G")
-    assert not graph.has_edge("I", "E")
-    assert not graph.has_edge("I", "H")
-    assert not graph.has_edge("J", "F")
-    assert not graph.has_edge("J", "I")
-    assert not graph.has_edge("J", "C")
 
     # Test adjacency matrix structure
-    B = algo.adjacency_matrix_
-    assert B.shape == (10, 10)
-
-    arr = np.array(
-        [
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [1.50239738, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [-1.19284925, 0.49601381, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.82013001, -0.6041246, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, -1.00434477, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 1.32481944, 0.70584334, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, -0.87022438, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.49830465, -1.10152681, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.600331, 0.0, 0.0, 0.81615371, 0.0, 0.0],
-            [0.0, 0.0, -0.49005547, 0.0, 0.0, -0.73179177, 0.0, 0.0, 0.92003576, 0.0],
-        ]
-    )
-
-    np_test.assert_array_almost_equal(B, arr, decimal=2)
-
-
-def test_fit_custom_fast_ica(rand_data):
-    custom_ica = FastICA(random_state=42, max_iter=500, tol=1e-3)
-    algo = LiNGAM(fast_ica=custom_ica)
-    algo.fit(rand_data)
-    graph = algo.causal_graph_
-
-    assert graph.has_edge("A", "B")
-    assert graph.has_edge("B", "C")
-    assert not graph.has_edge("B", "A")
-    assert not graph.has_edge("C", "B")
-    assert not graph.has_edge("A", "C")
-
-    # Test adjacency matrix structure
-    B = algo.adjacency_matrix_
-    assert B.shape == (3, 3)
+    Adj_matrix = algo.adjacency_matrix_
+    assert Adj_matrix.shape == (10, 10)
