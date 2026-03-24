@@ -35,6 +35,11 @@ class BDeu(BaseStructureScore):
         where :math:`\alpha` is ``equivalent_sample_size``, :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i`
         is the number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in
         parent configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+
+        In the implementation, ``state_counts(..., reindex=False)`` drops unobserved parent configurations to save
+        memory. The ``gamma_counts_adj`` and ``gamma_conds_adj`` terms add back the corresponding
+        :math:`\log \Gamma(\beta)` and :math:`\log \Gamma(\alpha)` contributions so that the returned value still
+        equals the full BDeu score over all :math:`q_i` parent configurations.
         """
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])

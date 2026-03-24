@@ -53,6 +53,11 @@ class BDs(BDeu):
         :math:`q_i` is the total number of parent configurations, :math:`r_i` is the cardinality of :math:`X_i`,
         :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`, :math:`\beta = \text{equivalent_sample_size} /
         (r_i q_i)`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+
+        In the implementation, ``state_counts(..., reindex=False)`` keeps only the observed parent configurations
+        :math:`\mathcal{O}_i`. The ``gamma_counts_adj`` and ``gamma_conds_adj`` terms restore the missing
+        contributions from the unobserved configurations, so the returned score matches the full BDs formula while
+        still using the sparse count table.
         """
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])

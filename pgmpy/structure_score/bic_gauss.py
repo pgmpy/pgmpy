@@ -27,6 +27,9 @@ class BICGauss(LogLikelihoodGauss):
 
         where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian log-likelihood, :math:`d_i = \text{df\_model} + 2` is the
         effective parameter count used by the implementation, and :math:`n` is the number of rows in ``self.data``.
+
+        Here ``df_model`` is the statsmodels degree-of-freedom count for the fitted regressors and excludes the
+        intercept. The additional ``+ 2`` accounts for one intercept parameter and one Gaussian variance parameter.
         """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
