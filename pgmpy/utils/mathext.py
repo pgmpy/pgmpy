@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from pgmpy import logger
+from pgmpy import config, logger
 from pgmpy.utils import compat_fns
 
 State = namedtuple("State", ["var", "state"])
@@ -83,12 +83,13 @@ def _adjusted_weights(weights: np.ndarray):
     >>> int(np.sum(result != 0.1111111))  # Exactly one element was adjusted
     1
     """
-    error = 1 - weights.sum()
-    if abs(error) > 1e-3:
+    error = 1 - compat_fns.sum(weights)
+    error_value = float(compat_fns.to_numpy(error))
+    if abs(error_value) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
-    elif error != 0:
-        logger.warning(f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values.")
-        weights[compat_fns.argmax(weights)] += error
+    elif error_value != 0:
+        logger.warning(f"Probability values don't exactly sum to 1. Differ by: {error_value}. Adjusting values.")
+        weights[compat_fns.argmax(weights)] += error_value
 
     return weights
 
@@ -125,21 +126,45 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if seed is not None:
-        np.random.seed(seed)
-    weights = compat_fns.to_numpy(weights)
-    if weights.ndim == 1:
-        return np.random.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
+    if config.get_backend() == "numpy":
+        if seed is not None:
+            np.random.seed(seed)
+        weights = compat_fns.to_numpy(weights)
+        if weights.ndim == 1:
+            return np.random.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
+        else:
+            samples = np.zeros(size, dtype=int)
+            unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
+            for index, size in enumerate(counts):
+                samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
+                    compat_fns.to_numpy(values),
+                    size=size,
+                    p=_adjusted_weights(unique_weights[index]),
+                )
+            return samples
     else:
-        samples = np.zeros(size, dtype=int)
-        unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
-        for index, size in enumerate(counts):
-            samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
-                compat_fns.to_numpy(values),
-                size=size,
-                p=_adjusted_weights(unique_weights[index]),
-            )
-        return samples
+        import torch
+
+        if seed is not None:
+            torch.manual_seed(seed)
+
+        values = np.asarray(list(values) if isinstance(values, range) else values)
+        weights = torch.as_tensor(weights, dtype=config.get_dtype(), device=config.get_device())
+        size = int(size)
+
+        if weights.ndim == 1:
+            sampled_indices = torch.multinomial(_adjusted_weights(weights.clone()), num_samples=size, replacement=True)
+        else:
+            sampled_indices = torch.empty(size, dtype=torch.long, device=config.get_device())
+            unique_weights, inverse, counts = torch.unique(weights, dim=0, return_inverse=True, return_counts=True)
+            for index, count in enumerate(counts.tolist()):
+                sampled_indices[inverse == index] = torch.multinomial(
+                    _adjusted_weights(unique_weights[index].clone()),
+                    num_samples=count,
+                    replacement=True,
+                )
+
+        return values[compat_fns.to_numpy(sampled_indices).astype(int)]
 
 
 def sample_discrete_maps(
@@ -183,23 +208,48 @@ def sample_discrete_maps(
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    if config.get_backend() == "numpy":
+        if seed is not None:
+            np.random.seed(seed)
 
-    # TODO: Remove this conversion and find a way to do this natively in torch.
-    states = np.array(states)
-    weight_indices = compat_fns.to_numpy(weight_indices)
-    index_to_weight = {key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()}
-    size = int(size)
+        states = np.array(states)
+        weight_indices = compat_fns.to_numpy(weight_indices)
+        index_to_weight = {key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()}
+        size = int(size)
 
-    samples = np.zeros(size, dtype=int)
-    unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
+        samples = np.zeros(size, dtype=int)
+        unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
 
-    for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[(weight_indices == weight_index)] = np.random.choice(
-            states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
-        )
-    return samples
+        for weight_size, weight_index in zip(counts, unique_weight_indices):
+            samples[(weight_indices == weight_index)] = np.random.choice(
+                states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
+            )
+        return samples
+    else:
+        import torch
+
+        if seed is not None:
+            torch.manual_seed(seed)
+
+        states = np.asarray(list(states) if isinstance(states, range) else states)
+        weight_indices = torch.as_tensor(weight_indices, dtype=torch.long, device=config.get_device())
+        index_to_weight = {
+            key: torch.as_tensor(value, dtype=config.get_dtype(), device=config.get_device())
+            for key, value in index_to_weight.items()
+        }
+        size = int(size)
+
+        samples = torch.empty(size, dtype=torch.long, device=config.get_device())
+        unique_weight_indices, counts = torch.unique(weight_indices, return_counts=True)
+
+        for weight_index, weight_size in zip(unique_weight_indices.tolist(), counts.tolist()):
+            samples[weight_indices == weight_index] = torch.multinomial(
+                _adjusted_weights(index_to_weight[weight_index].clone()),
+                num_samples=weight_size,
+                replacement=True,
+            )
+
+        return states[compat_fns.to_numpy(samples).astype(int)]
 
 
 def powerset(l_input: list):

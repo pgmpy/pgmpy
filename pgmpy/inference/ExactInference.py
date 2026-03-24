@@ -5,7 +5,6 @@ from collections.abc import Hashable
 from functools import reduce
 
 import networkx as nx
-import numpy as np
 from opt_einsum import contract
 from tqdm.auto import tqdm
 
@@ -1456,8 +1455,8 @@ class BeliefPropagationWithMessagePassing(Inference):
         elif len(incoming_messages) == 1:
             return incoming_messages[0]
         else:
-            outgoing_message = reduce(np.multiply, incoming_messages)
-        return outgoing_message / np.sum(outgoing_message)
+            outgoing_message = reduce(lambda message, incoming_message: message * incoming_message, incoming_messages)
+        return outgoing_message / compat_fns.sum(outgoing_message)
 
     @staticmethod
     def calc_factor_node_message(factor, incoming_messages, target_var):
@@ -1489,13 +1488,14 @@ class BeliefPropagationWithMessagePassing(Inference):
         target_var_idx = factor.variables.index(target_var)
         if target_var_idx != 0:
             # Move target var to the 0th axis to allow the reduction
-            cpt = np.moveaxis(cpt, target_var_idx, 0)
+            order = (target_var_idx,) + tuple(axis for axis in range(cpt.ndim) if axis != target_var_idx)
+            cpt = compat_fns.transpose(cpt, order)
 
         # Invert incoming_messages, so that the first message corresponds to the last
         # dimension of the CPT
         incoming_messages = list(reversed(incoming_messages))
 
         # Reduce the CPT with the inverted list of incoming messages
-        outgoing_message = reduce(lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt)
+        outgoing_message = reduce(lambda cpt_reduced, message: cpt_reduced @ message, incoming_messages, cpt)
         # Normalise
-        return outgoing_message / sum(outgoing_message)
+        return outgoing_message / compat_fns.sum(outgoing_message)

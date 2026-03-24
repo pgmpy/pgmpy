@@ -152,7 +152,7 @@ class TabularCPD(DiscreteFactor):
         else:
             import torch
 
-            values_casted = torch.tensor(values).type(config.get_dtype()).to(config.get_device())
+            values_casted = torch.as_tensor(values, dtype=config.get_dtype(), device=config.get_device())
 
         if values_casted.ndim != 2:
             raise TypeError("Values must be a 2D list/array")

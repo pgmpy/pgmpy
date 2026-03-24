@@ -1,10 +1,34 @@
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.sampling.base import BayesianModelInference
+from pgmpy.utils import compat_fns
+
+BACKEND_PARAMS = ["numpy"]
+if _check_soft_dependencies("torch", severity="none"):
+    BACKEND_PARAMS.append("torch")
+
+
+@pytest.fixture(params=BACKEND_PARAMS, autouse=True)
+def backend(request):
+    prev_backend = config.get_backend()
+
+    config.set_backend(request.param)
+    yield request.param
+    config.set_backend(prev_backend)
+
+
+def _to_list(arr, decimals=None):
+    return compat_fns.to_numpy(arr, decimals=decimals).tolist()
+
+
+def _to_float(value):
+    return float(compat_fns.to_numpy(value))
 
 
 @pytest.fixture
@@ -168,15 +192,15 @@ def test_pre_compute_reduce_maps(bayesian_model):
     state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["A", "R"], [(1, 1), (1, 0)])
     assert state_to_index[(1, 1)] == 0
     assert state_to_index[(1, 0)] == 1
-    assert list(index_to_weight[0]) == [0.1, 0.9]
-    assert list(index_to_weight[1]) == [0.6, 0.4]
+    assert _to_list(index_to_weight[0]) == [0.1, 0.9]
+    assert _to_list(index_to_weight[1]) == [0.6, 0.4]
 
     # Make sure the order of the evidence variables doesn't matter
     state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["R", "A"], [(1, 1), (1, 0)])
     assert state_to_index[(1, 1)] == 0
     assert state_to_index[(1, 0)] == 1
-    assert list(index_to_weight[0]) == [0.1, 0.9]
-    assert list(index_to_weight[1]) == [0.7, 0.3]
+    assert _to_list(index_to_weight[0]) == [0.1, 0.9]
+    assert _to_list(index_to_weight[1]) == [0.7, 0.3]
 
 
 def test_pre_compute_reduce_maps_partial_evidence(bayesian_model):
@@ -184,15 +208,15 @@ def test_pre_compute_reduce_maps_partial_evidence(bayesian_model):
     state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["A"], [(1,), (0,)])
     assert state_to_index[(1,)] == 0
     assert state_to_index[(0,)] == 1
-    assert list(index_to_weight[0].round(2)) == [0.35, 0.65]
-    assert list(index_to_weight[1].round(2)) == [0.8, 0.2]
+    assert _to_list(index_to_weight[0], decimals=2) == [0.35, 0.65]
+    assert _to_list(index_to_weight[1], decimals=2) == [0.8, 0.2]
 
     # Make sure the order of the evidence variables doesn't matter
     state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps("J", ["R"], [(1,), (0,)])
     assert state_to_index[(1,)] == 0
     assert state_to_index[(0,)] == 1
-    assert list(index_to_weight[0].round(2)) == [0.4, 0.6]
-    assert list(index_to_weight[1].round(2)) == [0.75, 0.25]
+    assert _to_list(index_to_weight[0], decimals=2) == [0.4, 0.6]
+    assert _to_list(index_to_weight[1], decimals=2) == [0.75, 0.25]
 
 
 def test_forward_sample(
@@ -224,7 +248,7 @@ def test_forward_sample(
     sample_marginals = {node: sample[node].value_counts() / sample.shape[0] for node in bayesian_model.nodes()}
     for node in bayesian_model.nodes():
         for state in [0, 1]:
-            assert round(forward_marginals[node].get_value(**{node: state}), 1) == round(
+            assert round(_to_float(forward_marginals[node].get_value(**{node: state})), 1) == round(
                 sample_marginals[node].loc[state], 1
             )
 
@@ -312,7 +336,7 @@ def test_rejection_sample_basic(
     sample_marginals = {node: sample[node].value_counts() / sample.shape[0] for node in ["Q", "G", "L"]}
     for node in ["Q", "G", "L"]:
         for state in [0, 1]:
-            assert round(rejection_marginals[node].get_value(**{node: state}), 1) == round(
+            assert round(_to_float(rejection_marginals[node].get_value(**{node: state})), 1) == round(
                 sample_marginals[node].loc[state], 1
             )
 

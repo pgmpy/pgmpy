@@ -66,6 +66,17 @@ class TestConfig:
         assert config.SHOW_PROGRESS is True
         assert config.get_show_progress() is True
 
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("torch", severity="none") or torch.cuda.is_available(),
+        reason="test only if torch is available and cuda is unavailable",
+    )
+    def test_torch_cuda_unavailable(self):
+        with pytest.raises(ValueError, match="CUDA device requested but torch.cuda.is_available\\(\\) is False"):
+            config.set_backend(backend="torch", device="cuda", dtype=torch.float32)
+
+        assert config.get_backend() == "numpy"
+        assert config.get_device() is None
+
     def test_no_progress(self):
         config.set_show_progress(show_progress=False)
 

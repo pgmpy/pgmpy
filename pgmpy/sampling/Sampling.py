@@ -95,6 +95,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         if seed is not None:
             np.random.seed(seed)
+            if config.get_backend() == "torch":
+                import torch
+
+                torch.manual_seed(seed)
 
         for node in pbar:
             if show_progress and config.SHOW_PROGRESS:
@@ -113,12 +117,7 @@ class BayesianModelSampling(BayesianModelInference):
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                         variable=node, evidence=evidence, state_combinations=unique
                     )
-                    if config.get_backend() == "numpy":
-                        weight_index = np.array([state_to_index[u] for u in unique])[inverse]
-                    else:
-                        import torch
-
-                        weight_index = torch.Tensor([state_to_index[u] for u in unique])[inverse]
+                    weight_index = np.array([state_to_index[u] for u in unique])[inverse]
                     sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size)
                 else:
                     weights = cpd.values
@@ -201,6 +200,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         if seed is not None:
             np.random.seed(seed)
+            if config.get_backend() == "torch":
+                import torch
+
+                torch.manual_seed(seed)
 
         # If no evidence is given, it is equivalent to forward sampling.
         if len(evidence) == 0:
@@ -319,6 +322,10 @@ class BayesianModelSampling(BayesianModelInference):
         """
         if seed is not None:
             np.random.seed(seed)
+            if config.get_backend() == "torch":
+                import torch
+
+                torch.manual_seed(seed)
 
         # Convert evidence state names to number
         evidence = [(var, self.model.get_cpds(var).get_state_no(var, state)) for var, state in evidence]
@@ -531,6 +538,10 @@ class GibbsSampling(MarkovChain):
 
         if seed is not None:
             np.random.seed(seed)
+            if config.get_backend() == "torch":
+                import torch
+
+                torch.manual_seed(seed)
 
         types = [(str(var_name), "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
@@ -575,6 +586,10 @@ class GibbsSampling(MarkovChain):
         """
         if seed is not None:
             np.random.seed(seed)
+            if config.get_backend() == "torch":
+                import torch
+
+                torch.manual_seed(seed)
 
         if start_state is None and self.state is None:
             self.state = self.random_state()
