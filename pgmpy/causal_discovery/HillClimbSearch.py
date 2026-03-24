@@ -220,7 +220,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    score=score,
+                    scoring_method=score,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
                     forbidden_edges=expert_knowledge.forbidden_edges,

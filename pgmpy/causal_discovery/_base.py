@@ -102,8 +102,8 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
-            argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the scoring_method. If ``None``, a default metric appropriate for the
+            provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
         -------
@@ -484,7 +484,7 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: BaseStructureScore,
+        scoring_method: BaseStructureScore,
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
@@ -515,8 +515,10 @@ class _ScoreMixin:
                     old_parents = tuple(model.get_parents(Y))
                     new_parents = old_parents + (X,)
                     if len(new_parents) <= max_indegree:
-                        score_delta = score.local_score(Y, new_parents) - score.local_score(Y, old_parents)
-                        score_delta += score.structure_prior_ratio("+")
+                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                            Y, old_parents
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("+")
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
@@ -525,8 +527,8 @@ class _ScoreMixin:
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
                 old_parents = tuple(model.get_parents(Y))
                 new_parents = tuple(var for var in old_parents if var != X)
-                score_delta = score.local_score(Y, new_parents) - score.local_score(Y, old_parents)
-                score_delta += score.structure_prior_ratio("-")
+                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
+                score_delta += scoring_method.structure_prior_ratio("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -545,10 +547,10 @@ class _ScoreMixin:
                     new_Y_parents = tuple(var for var in old_Y_parents if var != X)
                     if len(new_X_parents) <= max_indegree:
                         score_delta = (
-                            score.local_score(X, new_X_parents)
-                            + score.local_score(Y, new_Y_parents)
-                            - score.local_score(X, old_X_parents)
-                            - score.local_score(Y, old_Y_parents)
+                            scoring_method.local_score(X, new_X_parents)
+                            + scoring_method.local_score(Y, new_Y_parents)
+                            - scoring_method.local_score(X, old_X_parents)
+                            - scoring_method.local_score(Y, old_Y_parents)
                         )
-                        score_delta += score.structure_prior_ratio("flip")
+                        score_delta += scoring_method.structure_prior_ratio("flip")
                         yield (operation, score_delta)

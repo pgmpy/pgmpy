@@ -99,7 +99,7 @@ def test_legal_operations(est_rand, model2, score_rand):
     model2_legal_ops = list(
         est_rand._legal_operations_dag(
             model=model2,
-            score=score_rand,
+            scoring_method=score_rand,
             tabu_list=set(),
             max_indegree=float("inf"),
             required_edges=set(),
@@ -121,7 +121,7 @@ def test_legal_operations_forbidden_required(est_rand, model2, score_rand):
     model2_legal_ops_bl = list(
         est_rand._legal_operations_dag(
             model=model2,
-            score=score_rand,
+            scoring_method=score_rand,
             tabu_list=set(),
             max_indegree=float("inf"),
             forbidden_edges={("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")},
@@ -138,7 +138,7 @@ def test_legal_operations_forbidden_required(est_rand, model2, score_rand):
     model2_legal_ops_wl = list(
         est_rand._legal_operations_dag(
             model=model2,
-            score=score_rand,
+            scoring_method=score_rand,
             tabu_list=set(),
             max_indegree=float("inf"),
             forbidden_edges={("B", "C"), ("C", "B"), ("B", "A")},
@@ -158,7 +158,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1):
 
     legal_ops = est_titanic1._legal_operations_dag(
         model=start_model,
-        score=score_titanic1,
+        scoring_method=score_titanic1,
         tabu_list=[],
         max_indegree=float("inf"),
         forbidden_edges=set(),
@@ -173,7 +173,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1):
     ]
     legal_ops_tabu = est_titanic1._legal_operations_dag(
         model=start_model,
-        score=score_titanic1,
+        scoring_method=score_titanic1,
         tabu_list=tabu_list,
         max_indegree=float("inf"),
         forbidden_edges=set(),
@@ -183,7 +183,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1):
 
     legal_ops_indegree = est_titanic1._legal_operations_dag(
         model=start_model,
-        score=score_titanic1,
+        scoring_method=score_titanic1,
         tabu_list=[],
         max_indegree=1,
         forbidden_edges=set(),
@@ -193,7 +193,7 @@ def test_legal_operations_titanic(est_titanic1, score_titanic1):
 
     legal_ops_both = est_titanic1._legal_operations_dag(
         model=start_model,
-        score=score_titanic1,
+        scoring_method=score_titanic1,
         tabu_list=tabu_list,
         max_indegree=1,
         forbidden_edges=set(),
