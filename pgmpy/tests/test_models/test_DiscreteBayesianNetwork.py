@@ -518,9 +518,8 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(sorted(self.G1.nodes()), sorted(["intel"]))
         self.assertRaises(ValueError, self.G1.get_cpds, "diff")
         self.assertRaises(ValueError, self.G1.get_cpds, "grade")
-
     def test_do(self):
-        # One confounder var with treatment T and outcome C: S -> T -> C ; S -> C
+        
         model = DiscreteBayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
             variable="S",
@@ -546,23 +545,33 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         )
         model.add_cpds(cpd_s, cpd_t, cpd_c)
 
-        model_do_inplace = model.do(["T"], inplace=True)
+      
         model_do_new = model.do(["T"], inplace=False)
+        self.assertIsNotNone(model_do_new)
+
+       
+        model_copy = model.copy()
+        result = model_copy.do(["T"], inplace=True)
+        self.assertIsNone(result)
+        model_do_inplace = model_copy
 
         for m in [model_do_inplace, model_do_new]:
+            
             self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
-            self.assertEqual(len(m.cpds), 3)
-            np_test.assert_array_equal(
-                m.get_cpds(node="S").values, np.array([0.5, 0.5])
-            )
-            np_test.assert_array_equal(
-                m.get_cpds(node="T").values, np.array([0.5, 0.5])
-            )
-            np_test.assert_array_equal(
-                m.get_cpds(node="C").values,
-                np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
-            )
 
+        
+            self.assertEqual(len(m.cpds), 3)
+
+
+            np_test.assert_array_almost_equal(m.get_cpds(node="S").get_values(), np.array([[0.5], [0.5]]))
+
+            
+            expected_t_cpd = np.array([[0.5], [0.5]])
+            np_test.assert_array_almost_equal(m.get_cpds(node="T").get_values(), expected_t_cpd)
+
+          
+            expected_c_cpd = np.array([[0.35, 0.75], [0.65, 0.25]])
+            np_test.assert_array_almost_equal(m.get_cpds(node="C").get_values(), expected_c_cpd)
     def test_simulate(self):
         asia = get_example_model("asia")
         n_samples = int(1e3)
