@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.exceptions import NotFittedError
-from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import PC
@@ -17,21 +16,25 @@ from pgmpy.independencies import Independencies
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
-def expected_failed_checks(estimator):
-    return {
-        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
-        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
-    }
-
-
-@parametrize_with_checks(
-    [PC(return_type="dag", show_progress=False)],
-    expected_failed_checks=expected_failed_checks,
+@pytest.mark.parametrize(
+    "data_type",
+    [
+        "discrete",
+        "continuous",
+        pytest.param(
+            "mixed",
+            marks=pytest.mark.skipif(
+                not _check_soft_dependencies("xgboost", severity="none"),
+                reason="xgboost required for mixed data with PC",
+            ),
+        ),
+    ],
 )
-def test_pc_compatibility(estimator, check):
-    check(estimator)
+def test_pc_interface_compliance(data_type):
+    check_causal_discovery(PC(return_type="dag", show_progress=False), data_type=data_type)
 
 
 def fake_ci_t(X, Y, Z=[], **kwargs):

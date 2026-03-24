@@ -5,25 +5,15 @@ Tests for the sklearn-compatible GES class in pgmpy.causal_discovery.
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import GES
 from pgmpy.estimators import ExpertKnowledge
+from pgmpy.tests.test_causal_discovery import check_causal_discovery
 
 
-def expected_failed_checks(estimator):
-    return {
-        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
-        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
-    }
-
-
-@parametrize_with_checks(
-    [GES(return_type="dag")],
-    expected_failed_checks=expected_failed_checks,
-)
-def test_ges_compatibility(estimator, check):
-    check(estimator)
+@pytest.mark.parametrize("data_type", ["discrete", "continuous", "mixed"])
+def test_ges_interface_compliance(data_type):
+    check_causal_discovery(GES(return_type="dag"), data_type=data_type)
 
 
 @pytest.fixture
