@@ -15,7 +15,19 @@ class AICGauss(LogLikelihoodGauss):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the local Gaussian AIC score for `variable`."""
+        r"""
+        Compute the local Gaussian AIC score for ``variable`` given ``parents``.
+
+        The method computes
+
+        .. math::
+            \operatorname{AIC}(X_i, \Pi_i)
+            = \ell(X_i, \Pi_i) - d_i,
+
+        where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian
+        log-likelihood and :math:`d_i = \text{df\_model} + 2` is the
+        effective parameter count used by the implementation.
+        """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
         return ll - (df_model + 2)

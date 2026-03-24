@@ -35,6 +35,21 @@ class LogLikelihood(BaseStructureScore):
         return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the local log-likelihood score for `variable`."""
+        r"""
+        Compute the local discrete log-likelihood score for ``variable`` given ``parents``.
+
+        The method computes
+
+        .. math::
+            \ell(X_i, \Pi_i)
+            = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i}
+              N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
+
+        with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the
+        cardinality of :math:`X_i`, :math:`q_i` is the number of parent
+        configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of
+        :math:`X_i = k` in parent configuration :math:`j`, and
+        :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+        """
         ll, _, _ = self._log_likelihood(variable=variable, parents=parents)
         return ll

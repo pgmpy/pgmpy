@@ -20,7 +20,25 @@ class K2(BaseStructureScore):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the local K2 score for `variable` given `parents`."""
+        r"""
+        Compute the local K2 score for ``variable`` given ``parents``.
+
+        The method computes
+
+        .. math::
+            \operatorname{K2}(X_i, \Pi_i)
+            = \sum_{j=1}^{q_i} \left[
+                \log \Gamma(r_i)
+                - \log \Gamma(N_{ij} + r_i)
+                + \sum_{k=1}^{r_i} \log \Gamma(N_{ijk} + 1)
+              \right],
+
+        where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is
+        the number of parent configurations of :math:`\Pi_i`,
+        :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
+        configuration :math:`j`, and
+        :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+        """
         var_cardinality = len(self.state_names[variable])
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])

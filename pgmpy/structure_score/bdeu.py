@@ -21,7 +21,29 @@ class BDeu(BaseStructureScore):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the local BDeu score for `variable` given `parents`."""
+        r"""
+        Compute the local BDeu score for ``variable`` given ``parents``.
+
+        The method computes
+
+        .. math::
+            \operatorname{BDeu}(X_i, \Pi_i)
+            = \sum_{j=1}^{q_i} \left[
+                \log \Gamma\left(\frac{\alpha}{q_i}\right)
+                - \log \Gamma\left(N_{ij} + \frac{\alpha}{q_i}\right)
+                + \sum_{k=1}^{r_i}
+                  \left(
+                    \log \Gamma\left(N_{ijk} + \frac{\alpha}{r_i q_i}\right)
+                    - \log \Gamma\left(\frac{\alpha}{r_i q_i}\right)
+                  )
+              \right],
+
+        where :math:`\alpha` is ``equivalent_sample_size``, :math:`r_i` is
+        the cardinality of :math:`X_i`, :math:`q_i` is the number of parent
+        configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of
+        :math:`X_i = k` in parent configuration :math:`j`, and
+        :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+        """
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
