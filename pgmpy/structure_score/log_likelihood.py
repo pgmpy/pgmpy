@@ -38,18 +38,14 @@ class LogLikelihood(BaseStructureScore):
         r"""
         Compute the local discrete log-likelihood score for ``variable`` given ``parents``.
 
-        The method computes
+        The method computes:
 
         .. math::
-            \ell(X_i, \Pi_i)
-            = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i}
-              N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
+            \ell(X_i, \Pi_i) = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i} N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
 
-        with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the
-        cardinality of :math:`X_i`, :math:`q_i` is the number of parent
-        configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of
-        :math:`X_i = k` in parent configuration :math:`j`, and
-        :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+        with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is
+        the number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
+        configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
         """
         ll, _, _ = self._log_likelihood(variable=variable, parents=parents)
         return ll

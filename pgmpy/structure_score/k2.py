@@ -23,20 +23,14 @@ class K2(BaseStructureScore):
         r"""
         Compute the local K2 score for ``variable`` given ``parents``.
 
-        The method computes
+        The method computes:
 
         .. math::
-            \operatorname{K2}(X_i, \Pi_i)
-            = \sum_{j=1}^{q_i} \left[
-                \log \Gamma(r_i)
-                - \log \Gamma(N_{ij} + r_i)
-                + \sum_{k=1}^{r_i} \log \Gamma(N_{ijk} + 1)
-              \right],
+            \operatorname{K2}(X_i, \Pi_i) = \sum_{j=1}^{q_i} \left[ \log \Gamma(r_i)
+                - \log \Gamma(N_{ij} + r_i) + \sum_{k=1}^{r_i} \log \Gamma(N_{ijk} + 1) \right],
 
-        where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is
-        the number of parent configurations of :math:`\Pi_i`,
-        :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
-        configuration :math:`j`, and
+        where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is the number of parent configurations of
+        :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent configuration :math:`j`, and
         :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
         """
         var_cardinality = len(self.state_names[variable])

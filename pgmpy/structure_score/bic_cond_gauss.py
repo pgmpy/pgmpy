@@ -20,16 +20,13 @@ class BICCondGauss(LogLikelihoodCondGauss):
         r"""
         Compute the local mixed-data BIC score for ``variable`` given ``parents``.
 
-        The method computes
+        The method computes:
 
         .. math::
-            \operatorname{BIC}(X_i, \Pi_i)
-            = \ell(X_i, \Pi_i) - \frac{k_i}{2} \log n,
+            \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{k_i}{2} \log n,
 
-        where :math:`\ell(X_i, \Pi_i)` is the local
-        conditional-Gaussian log-likelihood, :math:`k_i` is the number of free
-        parameters computed by ``_get_num_parameters``, and :math:`n` is the
-        number of rows in ``self.data``.
+        where :math:`\ell(X_i, \Pi_i)` is the local conditional-Gaussian log-likelihood, :math:`k_i` is the number of
+        free parameters computed by ``_get_num_parameters``, and :math:`n` is the number of rows in ``self.data``.
         """
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)

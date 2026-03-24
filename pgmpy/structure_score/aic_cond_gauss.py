@@ -18,14 +18,12 @@ class AICCondGauss(LogLikelihoodCondGauss):
         r"""
         Compute the local mixed-data AIC score for ``variable`` given ``parents``.
 
-        The method computes
+        The method computes:
 
         .. math::
-            \operatorname{AIC}(X_i, \Pi_i)
-            = \ell(X_i, \Pi_i) - k_i,
+            \operatorname{AIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - k_i,
 
-        where :math:`\ell(X_i, \Pi_i)` is the local
-        conditional-Gaussian log-likelihood and :math:`k_i` is the number of
+        where :math:`\ell(X_i, \Pi_i)` is the local conditional-Gaussian log-likelihood and :math:`k_i` is the number of
         free parameters computed by ``_get_num_parameters``.
         """
         ll = self._log_likelihood(variable=variable, parents=parents)

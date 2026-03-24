@@ -20,16 +20,13 @@ class BICGauss(LogLikelihoodGauss):
         r"""
         Compute the local Gaussian BIC score for ``variable`` given ``parents``.
 
-        The method computes
+        The method computes:
 
         .. math::
-            \operatorname{BIC}(X_i, \Pi_i)
-            = \ell(X_i, \Pi_i) - \frac{d_i}{2} \log n,
+            \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{d_i}{2} \log n,
 
-        where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian
-        log-likelihood, :math:`d_i = \text{df\_model} + 2` is the
-        effective parameter count used by the implementation, and
-        :math:`n` is the number of rows in ``self.data``.
+        where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian log-likelihood, :math:`d_i = \text{df\_model} + 2` is the
+        effective parameter count used by the implementation, and :math:`n` is the number of rows in ``self.data``.
         """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 

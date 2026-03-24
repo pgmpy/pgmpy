@@ -28,21 +28,17 @@ class LogLikelihoodGauss(BaseStructureScore):
         r"""
         Compute the local Gaussian log-likelihood score for ``variable`` given ``parents``.
 
-        The method fits the Gaussian GLM
+        The method fits the Gaussian GLM:
 
         .. math::
-            X_i = \beta_0 + \beta^\top \Pi_i + \varepsilon_i,
-            \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma_i^2),
+            X_i = \beta_0 + \beta^\top \Pi_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma_i^2),
 
-        and returns the fitted log-likelihood
+        and returns the fitted log-likelihood:
 
         .. math::
-            \ell(X_i, \Pi_i)
-            = \log p(x_i \mid \hat{\beta}_0, \hat{\beta},
-            \hat{\sigma}_i^2, \Pi_i).
+            \ell(X_i, \Pi_i) = \log p(x_i \mid \hat{\beta}_0, \hat{\beta}, \hat{\sigma}_i^2, \Pi_i).
 
-        If ``parents`` is empty, the fitted model reduces to
-        :math:`X_i = \beta_0 + \varepsilon_i`.
+        If ``parents`` is empty, the fitted model reduces to :math:`X_i = \beta_0 + \varepsilon_i`.
         """
         ll, _ = self._log_likelihood(variable=variable, parents=parents)
 

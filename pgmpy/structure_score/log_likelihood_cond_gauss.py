@@ -180,28 +180,20 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         r"""
         Compute the local conditional-Gaussian log-likelihood score for ``variable`` given ``parents``.
 
-        For a continuous target :math:`C_1` with continuous parents
-        :math:`C_2` and discrete parents :math:`D`, the method computes
+        For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete parents :math:`D`, the
+        method computes:
 
         .. math::
-            \ell(C_1 \mid C_2, D)
-            = \sum_{t=1}^{n}
-              \log \frac{p(c_{1t}, c_{2t} \mid d_t)}{p(c_{2t} \mid d_t)}.
+            \ell(C_1 \mid C_2, D) = \sum_{t=1}^{n} \log \frac{p(c_{1t}, c_{2t} \mid d_t)}{p(c_{2t} \mid d_t)}.
 
-        For a discrete target :math:`D_1` with continuous parents
-        :math:`C` and discrete parents :math:`D_2`, it computes
+        For a discrete target :math:`D_1` with continuous parents :math:`C` and discrete parents :math:`D_2`, it
+        computes:
 
         .. math::
-            \ell(D_1 \mid C, D_2)
-            = \sum_{t=1}^{n}
-              \log \frac{
-                p(c_t \mid d_{1t}, d_{2t}) \, p(d_{1t}, d_{2t})
-              }{
-                p(c_t \mid d_{2t}) \, p(d_{2t})
-              }.
+            \ell(D_1 \mid C, D_2) = \sum_{t=1}^{n} \log \frac{ p(c_t \mid d_{1t}, d_{2t}) \, p(d_{1t}, d_{2t}) }{ p(c_t
+            \mid d_{2t}) \, p(d_{2t}) }.
 
-        The Gaussian densities are estimated from the corresponding grouped
-        samples.
+        The Gaussian densities are estimated from the corresponding grouped samples.
         """
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll
