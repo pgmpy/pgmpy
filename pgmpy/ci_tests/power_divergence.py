@@ -8,19 +8,52 @@ from ._base import _BaseCITest
 
 
 class PowerDivergence(_BaseCITest):
-    """
-    Computes the Cressie-Read power divergence statistic [1]. The null hypothesis for the test is X is independent of Y
-    given Z. A lot of the frequency comparison based statistics (eg. chi-square, G-test etc) belong to power divergence
-    family, and are special cases of this test.
+    r"""
+    Cressie-Read power divergence test for conditional independence on discrete data [1].
+
+    This test evaluates the null hypothesis :math:`X \perp Y \mid Z` using contingency tables. For a contingency table
+    with observed counts :math:`O_{ij}` and expected counts :math:`E_{ij}` under independence, the Cressie-Read power
+    divergence statistic is:
+
+    .. math::
+        T_\lambda = \frac{2}{\lambda(\lambda + 1)}
+        \sum_{i, j} O_{ij} \left[\left(\frac{O_{ij}}{E_{ij}}\right)^\lambda - 1\right],
+
+    for :math:`\lambda \notin \{-1, 0\}`. Different values of :math:`\lambda` recover common special cases such as the
+    Pearson chi-square test and the log-likelihood ratio test.
+
+    If :math:`Z = \emptyset`, the implementation constructs the contingency table of :math:`X` and :math:`Y` from the
+    full dataset and computes :math:`T_\lambda` with :func:`scipy.stats.chi2_contingency`.
+
+    If :math:`Z \neq \emptyset`, the data are partitioned by each observed configuration :math:`z` of :math:`Z`. For
+    each stratum, a contingency table for :math:`X` and :math:`Y` is constructed and its power divergence statistic
+    :math:`T_\lambda^{(z)}` and degrees of freedom :math:`\nu^{(z)}` are computed. The overall statistic used in the
+    code is:
+
+    .. math::
+        T = \sum_{z} T_\lambda^{(z)},
+        \qquad
+        \nu = \sum_{z} \nu^{(z)},
+
+    where the sum runs over strata whose contingency tables do not contain an all-zero row or all-zero column. Strata
+    with such degenerate tables are skipped.
+
+    Under the null hypothesis, :math:`T` is treated with the usual chi-square asymptotic approximation, so the
+    p-value is computed as:
+
+    .. math::
+        p = 1 - F_{\chi^2_\nu}(T),
+
+    where :math:`F_{\chi^2_\nu}` is the CDF of the chi-square distribution with :math:`\nu` degrees of freedom.
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset on which to test the independence condition.
 
-    lambda_: float or string
-        The lambda parameter for the power_divergence statistic. Some values of
-        lambda_ results in other well known tests:
+    lambda_ : float or string
+        The :math:`\lambda` parameter for the power divergence statistic. Some values of
+        ``lambda_`` recover well-known special cases:
 
             * "pearson"             1          "Chi-squared test"
             * "log-likelihood"      0          "G-test or log-likelihood"
@@ -32,16 +65,16 @@ class PowerDivergence(_BaseCITest):
     Attributes
     ----------
     statistic_ : float
-        The chi-squared test statistic. Set after calling the test.
+        The power divergence test statistic :math:`T`. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
     dof_ : int
-        Degrees of freedom for the test. Set after calling the test.
+        Degrees of freedom :math:`\nu` for the test. Set after calling the test.
 
     References
     ----------
-    .. [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests."
-      Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
+    .. [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical
+         Society: Series B (Methodological) 46.3 (1984): 440-464.
 
     Examples
     --------

@@ -313,15 +313,12 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.causal_discovery import PC
-        >>> rng = np.random.default_rng(42)
-        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC()
-        >>> _ = c.fit(data)
-        >>> pdag = c._orient_colliders(c.skeleton_, c.separating_sets_)
-        >>> sorted(pdag.edges())  # edges: A->C, B->C, A--D (not directed)
-        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
+        >>> from pgmpy.example_models import load_model
+        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
+        >>> est = PC(ci_test='chi_square').fit(df)
+        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> sorted(pdag.edges())
+        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         pdag = skeleton.to_directed()
