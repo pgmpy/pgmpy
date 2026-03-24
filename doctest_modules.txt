@@ -23,6 +23,7 @@ pgmpy/inference/ApproxInference.py
 pgmpy/inference/CausalInference.py
 pgmpy/inference/EliminationOrder.py
 pgmpy/inference/ExactInference.py
+pgmpy/inference/dbn_inference.py
 pgmpy/inference/mplp.py
 pgmpy/metrics/shd.py
 pgmpy/models/ClusterGraph.py
@@ -33,3 +34,5 @@ pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
 pgmpy/models/NaiveBayes.py
 pgmpy/utils/mathext.py
+pgmpy/inference/CausalInference.py
+pgmpy/models/DynamicBayesianNetwork.py
