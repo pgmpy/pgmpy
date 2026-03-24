@@ -1,3 +1,10 @@
+# The tests in this file are validated against the lingam package v1.12.2.
+# Helper function to convert node indices to letters (used for validation only):
+# def num_letter(edges):
+#     def num_to_letter(n):
+#         return chr(ord('A') + n)
+#     return [(num_to_letter(u), num_to_letter(v)) for u, v in edges]
+
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
@@ -67,10 +74,15 @@ def large_lingam_data():
 
 
 def test_fit_rand(rand_data):
-    algo = LiNGAM(fast_ica=FastICA(random_state=42))
+    # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
+    # Adj_matrix = model.adjacency_matrix_
+
+    algo = LiNGAM(fast_ica=FastICA(random_state=42, max_iter=1000))
     algo.fit(rand_data)
     graph = algo.causal_graph_
 
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
+    # [('A', 'B'), ('B', 'C')]
     assert graph.has_edge("A", "B")
     assert graph.has_edge("B", "C")
     assert not graph.has_edge("B", "A")
@@ -86,10 +98,15 @@ def test_fit_rand(rand_data):
 
 
 def test_fit_rand2(rand_data2):
+    # model = lingam.ICALiNGAM(random_state=42)
+    # Adj_matrix = model.adjacency_matrix_
+
     algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(rand_data2)
     graph = algo.causal_graph_
 
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
+    # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E')]
     assert graph.has_edge("A", "B")
     assert graph.has_edge("B", "D")
     assert graph.has_edge("C", "E")
@@ -102,9 +119,7 @@ def test_fit_rand2(rand_data2):
     assert not graph.has_edge("C", "B")
     assert not graph.has_edge("B", "C")
 
-    # Test adjacency matrix structure
     B = algo.adjacency_matrix_
-
     assert B.shape == (5, 5)
 
     arr = np.array(
@@ -121,11 +136,16 @@ def test_fit_rand2(rand_data2):
 
 
 def test_large_lingam_data(large_lingam_data):
+    # model = lingam.ICALiNGAM(random_state=42)
+    # Adj_matrix = model.adjacency_matrix_
 
     algo = LiNGAM(fast_ica=FastICA(random_state=42))
     algo.fit(large_lingam_data)
     graph = algo.causal_graph_
 
+    # print(num_letter(nx.convert_matrix.from_numpy_array(Adj_matrix).edges()))
+    # [('A', 'B'), ('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'D'), ('C', 'E'), ('C', 'J'), ('D', 'F'), ('D', 'G'),
+    #  ('E', 'F'), ('E', 'I'), ('F', 'H'), ('F', 'J'), ('G', 'H'), ('H', 'I'), ('I', 'J')]
     assert graph.has_edge("A", "B")
     assert graph.has_edge("A", "C")
     assert graph.has_edge("B", "C")
