@@ -10,10 +10,9 @@ class BDs(BDeu):
     r"""
     BDs structure score for discrete Bayesian networks.
 
-    BDs is a sparse-data variant of BDeu that reallocates the equivalent sample size over the
-    observed parent configurations instead of all possible configurations. This makes it better
-    suited to discrete datasets with many unobserved parent configurations. The local score
-    computed by `local_score(variable, parents)` is
+    BDs is a sparse-data variant of BDeu that reallocates the equivalent sample size over the observed parent
+    configurations instead of all possible configurations. This makes it better suited to discrete datasets with many
+    unobserved parent configurations. The local score computed as:
 
     .. math::
         \operatorname{BDs}(X_i, \Pi_i) =
@@ -28,28 +27,25 @@ class BDs(BDeu):
         + \tilde{q}_i \log \Gamma(\alpha)
         - q_i r_i \log \Gamma(\beta),
 
-    where :math:`\mathcal{O}_i` is the set of observed parent configurations,
-    :math:`\tilde{q}_i = |\mathcal{O}_i|`, :math:`q_i` is the total number of parent
-    configurations, :math:`r_i` is the cardinality of :math:`X_i`,
-    :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`,
-    :math:`\beta = \text{equivalent_sample_size} / (r_i q_i)`, and
-    :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+    where :math:`\mathcal{O}_i` is the set of observed parent configurations, :math:`\tilde{q}_i = |\mathcal{O}_i|`,
+    :math:`q_i` is the total number of parent configurations, :math:`r_i` is the cardinality of :math:`X_i`,
+    :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`, :math:`\beta = \text{equivalent_sample_size} / (r_i
+    q_i)`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
 
-    In the implementation, `state_counts(..., reindex=False)` keeps only the observed parent
-    configurations. The `gamma_counts_adj` and `gamma_conds_adj` terms restore the missing
-    contributions from the unobserved ones so the returned score matches the full BDs formula.
-    This class also uses the marginal uniform graph prior from Scutari (2016).
+    In the implementation, `state_counts(..., reindex=False)` keeps only the observed parent configurations. The
+    `gamma_counts_adj` and `gamma_conds_adj` terms restore the missing contributions from the unobserved ones so the
+    returned score matches the full BDs formula. This class also uses the marginal uniform graph prior from Scutari
+    (2016).
 
     Parameters
     ----------
     data : pandas.DataFrame
-        DataFrame where each column represents a discrete variable. Missing values should be
-        set to `numpy.nan`.
+        DataFrame where each column represents a discrete variable. Missing values should be set to `numpy.nan`.
     equivalent_sample_size : int, optional
         Equivalent sample size used to define the Dirichlet hyperparameters.
     state_names : dict, optional
-        Dictionary mapping each variable to its discrete states. If not specified, the unique
-        values observed in the data are used.
+        Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
+        data are used.
 
     Examples
     --------
@@ -74,8 +70,8 @@ class BDs(BDeu):
 
     References
     ----------
-    [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks.
-        Journal of Machine Learning Research, 2016, pp. 438-48.
+    ..[1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks. Journal of Machine Learning Research,
+        2016, pp. 438-48.
     """
 
     _tags = {
@@ -105,29 +101,6 @@ class BDs(BDeu):
         return score
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local BDs score for ``variable`` given ``parents``.
-
-        The method computes the BDs score using only observed parent configurations and explicit correction terms for
-        the unobserved ones:
-
-        .. math::
-            \operatorname{BDs}(X_i, \Pi_i) = \left[ \sum_{j \in \mathcal{O}_i} \sum_{k=1}^{r_i} \log \Gamma(N_{ijk} +
-            \beta) + (q_i - \tilde{q}_i) r_i \log \Gamma(\beta) \right]
-              - \left[ \sum_{j \in \mathcal{O}_i} \log \Gamma(N_{ij} + \alpha) + (q_i - \tilde{q}_i) \log \Gamma(\alpha)
-                \right] + \tilde{q}_i \log \Gamma(\alpha)
-              - q_i r_i \log \Gamma(\beta),
-
-        where :math:`\mathcal{O}_i` is the set of observed parent configurations, :math:`\tilde{q}_i = |\mathcal{O}_i|`,
-        :math:`q_i` is the total number of parent configurations, :math:`r_i` is the cardinality of :math:`X_i`,
-        :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`, :math:`\beta = \text{equivalent_sample_size} /
-        (r_i q_i)`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
-
-        In the implementation, ``state_counts(..., reindex=False)`` keeps only the observed parent configurations
-        :math:`\mathcal{O}_i`. The ``gamma_counts_adj`` and ``gamma_conds_adj`` terms restore the missing
-        contributions from the unobserved configurations, so the returned score matches the full BDs formula while
-        still using the sparse count table.
-        """
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 

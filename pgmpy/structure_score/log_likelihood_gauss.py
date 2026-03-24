@@ -7,19 +7,16 @@ class LogLikelihoodGauss(BaseStructureScore):
     r"""
     Log-likelihood structure score for Gaussian Bayesian networks.
 
-    This score evaluates a continuous Bayesian network structure by fitting a Gaussian GLM for
-    each local family and returning the fitted log-likelihood. The local score computed by
-    `local_score(variable, parents)` fits
+    This score evaluates a continuous Bayesian network structure by fitting a Gaussian GLM for each local family and
+    returning the fitted log-likelihood. The local score is computed as:
 
     .. math::
-        X_i = \beta_0 + \beta^\top \Pi_i + \varepsilon_i,
-        \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma_i^2),
+        X_i = \beta_0 + \beta^\top \Pi_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma_i^2),
 
     and returns
 
     .. math::
-        \ell(X_i, \Pi_i) =
-        \log p(x_i \mid \hat{\beta}_0, \hat{\beta}, \hat{\sigma}_i^2, \Pi_i).
+        \ell(X_i, \Pi_i) = \log p(x_i \mid \hat{\beta}_0, \hat{\beta}, \hat{\sigma}_i^2, \Pi_i).
 
     If `parents` is empty, the fitted model reduces to :math:`X_i = \beta_0 + \varepsilon_i`.
 
@@ -50,8 +47,7 @@ class LogLikelihoodGauss(BaseStructureScore):
     Raises
     ------
     ValueError
-        If the model cannot be fitted because the data contains incompatible or non-numeric
-        variables.
+        If the model cannot be fitted because the data contains incompatible or non-numeric variables.
     """
 
     _tags = {
@@ -73,21 +69,6 @@ class LogLikelihoodGauss(BaseStructureScore):
         return (glm_model.llf, glm_model.df_model)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local Gaussian log-likelihood score for ``variable`` given ``parents``.
-
-        The method fits the Gaussian GLM:
-
-        .. math::
-            X_i = \beta_0 + \beta^\top \Pi_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma_i^2),
-
-        and returns the fitted log-likelihood:
-
-        .. math::
-            \ell(X_i, \Pi_i) = \log p(x_i \mid \hat{\beta}_0, \hat{\beta}, \hat{\sigma}_i^2, \Pi_i).
-
-        If ``parents`` is empty, the fitted model reduces to :math:`X_i = \beta_0 + \varepsilon_i`.
-        """
         ll, _ = self._log_likelihood(variable=variable, parents=parents)
 
         return ll

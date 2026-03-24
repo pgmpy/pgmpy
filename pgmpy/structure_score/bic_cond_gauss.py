@@ -7,17 +7,14 @@ class BICCondGauss(LogLikelihoodCondGauss):
     r"""
     BIC structure score for Bayesian networks with mixed discrete and continuous variables.
 
-    This score penalizes the conditional-Gaussian log-likelihood by the number of free
-    parameters and the sample size. The local score computed by `local_score(variable, parents)`
-    is
+    This score penalizes the conditional-Gaussian log-likelihood by the number of free parameters and the sample size.
+    The local score is computed as:
 
     .. math::
-        \operatorname{BIC}(X_i, \Pi_i) =
-        \ell(X_i, \Pi_i) - \frac{k_i}{2} \log n,
+        \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{k_i}{2} \log n,
 
-    where :math:`\ell(X_i, \Pi_i)` is the local conditional-Gaussian log-likelihood,
-    :math:`k_i` is the number of free parameters returned by `_get_num_parameters`, and
-    :math:`n` is the number of rows in `self.data`.
+    where :math:`\ell(X_i, \Pi_i)` is the local conditional-Gaussian log-likelihood, :math:`k_i` is the number of free
+    parameters returned by `_get_num_parameters`, and :math:`n` is the number of rows in `self.data`.
 
     Parameters
     ----------
@@ -46,14 +43,12 @@ class BICCondGauss(LogLikelihoodCondGauss):
     Raises
     ------
     ValueError
-        If the log-likelihood or parameter count cannot be computed for the given local
-        configuration.
+        If the log-likelihood or parameter count cannot be computed for the given local configuration.
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of
-        Mixed Variables. International Journal of Data Science and Analytics, 6(1), 3-18.
-        https://doi.org/10.1007/s41060-017-0085-7
+    ..[1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of Mixed Variables. International
+        Journal of Data Science and Analytics, 6(1), 3-18. https://doi.org/10.1007/s41060-017-0085-7
     """
 
     _tags = {
@@ -67,17 +62,6 @@ class BICCondGauss(LogLikelihoodCondGauss):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local mixed-data BIC score for ``variable`` given ``parents``.
-
-        The method computes:
-
-        .. math::
-            \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{k_i}{2} \log n,
-
-        where :math:`\ell(X_i, \Pi_i)` is the local conditional-Gaussian log-likelihood, :math:`k_i` is the number of
-        free parameters computed by ``_get_num_parameters``, and :math:`n` is the number of rows in ``self.data``.
-        """
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)
 

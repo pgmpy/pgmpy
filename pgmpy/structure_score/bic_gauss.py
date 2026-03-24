@@ -7,20 +7,16 @@ class BICGauss(LogLikelihoodGauss):
     r"""
     BIC structure score for Gaussian Bayesian networks.
 
-    This score penalizes the Gaussian log-likelihood to discourage overfitting. The local
-    score computed by `local_score(variable, parents)` is
+    This score penalizes the Gaussian log-likelihood to discourage overfitting. The local score is computed as:
 
     .. math::
-        \operatorname{BIC}(X_i, \Pi_i) =
-        \ell(X_i, \Pi_i) - \frac{d_i}{2} \log n,
+        \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{d_i}{2} \log n,
 
-    where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian log-likelihood,
-    :math:`d_i = \text{df\_model} + 2` is the effective parameter count used by the
-    implementation, and :math:`n` is the number of rows in `self.data`.
+    where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian log-likelihood, :math:`d_i = \text{df\_model} + 2` is the
+    effective parameter count used by the implementation, and :math:`n` is the number of rows in `self.data`.
 
-    Here `df_model` is the statsmodels degree-of-freedom count for the fitted regressors and
-    excludes the intercept. The additional `+ 2` accounts for one intercept parameter and one
-    Gaussian variance parameter.
+    Here `df_model` is the statsmodels degree-of-freedom count for the fitted regressors and excludes the intercept. The
+    additional `+ 2` accounts for one intercept parameter and one Gaussian variance parameter.
 
     Parameters
     ----------
@@ -49,8 +45,7 @@ class BICGauss(LogLikelihoodGauss):
     Raises
     ------
     ValueError
-        If the model cannot be fitted because the data contains incompatible or non-numeric
-        variables.
+        If the model cannot be fitted because the data contains incompatible or non-numeric variables.
     """
 
     _tags = {
@@ -64,20 +59,6 @@ class BICGauss(LogLikelihoodGauss):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local Gaussian BIC score for ``variable`` given ``parents``.
-
-        The method computes:
-
-        .. math::
-            \operatorname{BIC}(X_i, \Pi_i) = \ell(X_i, \Pi_i) - \frac{d_i}{2} \log n,
-
-        where :math:`\ell(X_i, \Pi_i)` is the fitted Gaussian log-likelihood, :math:`d_i = \text{df\_model} + 2` is the
-        effective parameter count used by the implementation, and :math:`n` is the number of rows in ``self.data``.
-
-        Here ``df_model`` is the statsmodels degree-of-freedom count for the fitted regressors and excludes the
-        intercept. The additional ``+ 2`` accounts for one intercept parameter and one Gaussian variance parameter.
-        """
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
         return ll - (((df_model + 2) / 2) * np.log(self.data.shape[0]))

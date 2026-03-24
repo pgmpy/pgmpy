@@ -9,26 +9,19 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     r"""
     Log-likelihood score for Bayesian networks with mixed discrete and continuous variables.
 
-    This score is based on conditional Gaussian distributions and supports local families with
-    both discrete and continuous variables. The local score computed by
-    `local_score(variable, parents)` uses the conditional-Gaussian log-likelihood from
-    Andrews, Ramsey, and Cooper (2018).
+    This score is based on conditional Gaussian distributions[1] and supports local families with both discrete and
+    continuous variables.
 
-    For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete
-    parents :math:`D`, it computes
+    For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete parents :math:`D`, it computes
 
     .. math::
-        \ell(C_1 \mid C_2, D) =
-        \sum_{t=1}^{n} \log \frac{p(c_{1t}, c_{2t} \mid d_t)}{p(c_{2t} \mid d_t)}.
+        \ell(C_1 \mid C_2, D) = \sum_{t=1}^{n} \log \frac{p(c_{1t}, c_{2t} \mid d_t)}{p(c_{2t} \mid d_t)}.
 
-    For a discrete target :math:`D_1` with continuous parents :math:`C` and discrete parents
-    :math:`D_2`, it computes
+    For a discrete target :math:`D_1` with continuous parents :math:`C` and discrete parents :math:`D_2`, it computes
 
     .. math::
-        \ell(D_1 \mid C, D_2) =
-        \sum_{t=1}^{n} \log
-        \frac{p(c_t \mid d_{1t}, d_{2t}) p(d_{1t}, d_{2t})}
-             {p(c_t \mid d_{2t}) p(d_{2t})}.
+        \ell(D_1 \mid C, D_2) = \sum_{t=1}^{n} \log \frac{p(c_t \mid d_{1t}, d_{2t}) p(d_{1t}, d_{2t})} {p(c_t \mid
+        d_{2t}) p(d_{2t})}.
 
     The Gaussian densities are estimated from the corresponding grouped samples.
 
@@ -63,9 +56,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of
-        Mixed Variables. International Journal of Data Science and Analytics, 6(1), 3-18.
-        https://doi.org/10.1007/s41060-017-0085-7
+    ..[1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of Mixed Variables. International
+        Journal of Data Science and Analytics, 6(1), 3-18. https://doi.org/10.1007/s41060-017-0085-7
     """
 
     _tags = {
@@ -237,23 +229,5 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             return log_like
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local conditional-Gaussian log-likelihood score for ``variable`` given ``parents``.
-
-        For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete parents :math:`D`, the
-        method computes:
-
-        .. math::
-            \ell(C_1 \mid C_2, D) = \sum_{t=1}^{n} \log \frac{p(c_{1t}, c_{2t} \mid d_t)}{p(c_{2t} \mid d_t)}.
-
-        For a discrete target :math:`D_1` with continuous parents :math:`C` and discrete parents :math:`D_2`, it
-        computes:
-
-        .. math::
-            \ell(D_1 \mid C, D_2) = \sum_{t=1}^{n} \log \frac{ p(c_t \mid d_{1t}, d_{2t}) \, p(d_{1t}, d_{2t}) }{ p(c_t
-            \mid d_{2t}) \, p(d_{2t}) }.
-
-        The Gaussian densities are estimated from the corresponding grouped samples.
-        """
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll

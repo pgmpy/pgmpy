@@ -7,27 +7,23 @@ class LogLikelihood(BaseStructureScore):
     r"""
     Log-likelihood structure score for discrete Bayesian networks.
 
-    This score evaluates a discrete Bayesian network structure by computing the unpenalized
-    log-likelihood of the observed data. The local score computed by
-    `local_score(variable, parents)` is
+    This score evaluates a discrete Bayesian network structure by computing the unpenalized log-likelihood of the
+    observed data. The local score is computed as:
 
     .. math::
-        \ell(X_i, \Pi_i) = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i}
-            N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
+        \ell(X_i, \Pi_i) = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i} N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
 
-    with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the cardinality of
-    :math:`X_i`, :math:`q_i` is the number of parent configurations of :math:`\Pi_i`,
-    :math:`N_{ijk}` is the count of :math:`X_i = k` in parent configuration :math:`j`, and
-    :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+    with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is the
+    number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
+    configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
 
     Parameters
     ----------
     data : pandas.DataFrame
-        DataFrame where each column represents a discrete variable. Missing values should be
-        set to `numpy.nan`.
+        DataFrame where each column represents a discrete variable. Missing values should be set to `numpy.nan`.
     state_names : dict, optional
-        Dictionary mapping each variable to its discrete states. If not specified, the unique
-        values observed in the data are used.
+        Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
+        data are used.
 
     Examples
     --------
@@ -47,8 +43,7 @@ class LogLikelihood(BaseStructureScore):
     Raises
     ------
     ValueError
-        If the data contains non-discrete variables, or if the model variables are not present
-        in the data.
+        If the data contains non-discrete variables, or if the model variables are not present in the data.
     """
 
     _tags = {
@@ -80,17 +75,5 @@ class LogLikelihood(BaseStructureScore):
         return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local discrete log-likelihood score for ``variable`` given ``parents``.
-
-        The method computes:
-
-        .. math::
-            \ell(X_i, \Pi_i) = \sum_{j=1}^{q_i} \sum_{k=1}^{r_i} N_{ijk} \log \frac{N_{ijk}}{N_{ij}},
-
-        with the convention :math:`0 \log 0 = 0`, where :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is
-        the number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
-        configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
-        """
         ll, _, _ = self._log_likelihood(variable=variable, parents=parents)
         return ll

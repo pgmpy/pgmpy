@@ -10,9 +10,8 @@ class BDeu(BaseStructureScore):
     r"""
     BDeu structure score for discrete Bayesian networks with Dirichlet priors.
 
-    The BDeu score evaluates a Bayesian network structure on fully discrete data using a
-    Dirichlet prior parameterized by an equivalent sample size. The local score computed by
-    `local_score(variable, parents)` is
+    The BDeu score evaluates a Bayesian network structure on fully discrete data using a Dirichlet prior parameterized
+    by an equivalent sample size. The local score computed as:
 
     .. math::
         \operatorname{BDeu}(X_i, \Pi_i) = \sum_{j=1}^{q_i} \left[
@@ -24,15 +23,14 @@ class BDeu(BaseStructureScore):
             \right)
         \right],
 
-    where :math:`\alpha` is `equivalent_sample_size`, :math:`r_i` is the cardinality of
-    :math:`X_i`, :math:`q_i` is the number of parent configurations of :math:`\Pi_i`,
-    :math:`N_{ijk}` is the count of :math:`X_i = k` in parent configuration :math:`j`, and
-    :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+    where :math:`\alpha` is `equivalent_sample_size`, :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i` is the
+    number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent
+    configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
 
-    In the implementation, `state_counts(..., reindex=False)` drops unobserved parent
-    configurations to save memory. The `gamma_counts_adj` and `gamma_conds_adj` terms restore
-    the missing :math:`\log \Gamma(\beta)` and :math:`\log \Gamma(\alpha)` contributions so
-    that the returned value still equals the full BDeu score over all parent configurations.
+    In the implementation, `state_counts(..., reindex=False)` drops unobserved parent configurations to save memory. The
+    `gamma_counts_adj` and `gamma_conds_adj` terms restore the missing :math:`\log \Gamma(\beta)` and :math:`\log
+    \Gamma(\alpha)` contributions so that the returned value still equals the full BDeu score over all parent
+    configurations.
 
     Parameters
     ----------
@@ -68,9 +66,8 @@ class BDeu(BaseStructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4-18.3.6.
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+    ..[1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009, Section 18.3.4-18.3.6.
+    ..[2] AM Carvalho, Scoring functions for learning Bayesian networks,
         http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
     """
 
@@ -86,26 +83,6 @@ class BDeu(BaseStructureScore):
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        r"""
-        Compute the local BDeu score for ``variable`` given ``parents``.
-
-        The method computes:
-
-        .. math::
-            \operatorname{BDeu}(X_i, \Pi_i) = \sum_{j=1}^{q_i} \left[ \log \Gamma\left(\frac{\alpha}{q_i}\right)
-                - \log \Gamma\left(N_{ij} + \frac{\alpha}{q_i}\right) + \sum_{k=1}^{r_i} \left( \log \Gamma\left(N_{ijk}
-                  + \frac{\alpha}{r_i q_i}\right)
-                    - \log \Gamma\left(\frac{\alpha}{r_i q_i}\right)) \right],
-
-        where :math:`\alpha` is ``equivalent_sample_size``, :math:`r_i` is the cardinality of :math:`X_i`, :math:`q_i`
-        is the number of parent configurations of :math:`\Pi_i`, :math:`N_{ijk}` is the count of :math:`X_i = k` in
-        parent configuration :math:`j`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
-
-        In the implementation, ``state_counts(..., reindex=False)`` drops unobserved parent configurations to save
-        memory. The ``gamma_counts_adj`` and ``gamma_conds_adj`` terms add back the corresponding
-        :math:`\log \Gamma(\beta)` and :math:`\log \Gamma(\alpha)` contributions so that the returned value still
-        equals the full BDeu score over all :math:`q_i` parent configurations.
-        """
         state_counts = self.state_counts(variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
