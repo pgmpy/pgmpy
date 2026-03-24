@@ -34,7 +34,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    score : str or BaseStructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -112,7 +112,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     Use the HillClimbSearch algorithm to learn the causal structure from data:
 
     >>> from pgmpy.causal_discovery import HillClimbSearch
-    >>> hc = HillClimbSearch(score="bic-d")
+    >>> hc = HillClimbSearch(scoring_method="bic-d")
     >>> hc.fit(df)
     >>> hc.causal_graph_.edges()
 
@@ -120,7 +120,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
-    >>> hc = HillClimbSearch(score="bic-d", expert_knowledge=expert)
+    >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)
 
     References

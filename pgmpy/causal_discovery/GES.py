@@ -27,7 +27,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    score : str or BaseStructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -85,9 +85,9 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     Use the GES algorithm to learn the causal structure from data:
 
     >>> from pgmpy.causal_discovery import GES
-    >>> ges = GES(score="bic-d")
+    >>> ges = GES(scoring_method="bic-d")
     >>> ges.fit(df)
-    GES(score='bic-d')
+    GES(scoring_method='bic-d')
     >>> ges.causal_graph_  # doctest: +ELLIPSIS
     <pgmpy.base.PDAG.PDAG object at 0x...>
     >>> ges.n_features_in_
@@ -97,10 +97,10 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
-    >>> ges = GES(score="bic-d", expert_knowledge=expert)
+    >>> ges = GES(scoring_method="bic-d", expert_knowledge=expert)
     >>> ges.fit(df)  # doctest: +ELLIPSIS
     GES(expert_knowledge=<pgmpy.causal_discovery.ExpertKnowledge.ExpertKnowledge object at 0x...>,
-        score='bic-d')
+        scoring_method='bic-d')
 
     References
     ----------
