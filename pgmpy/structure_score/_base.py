@@ -26,36 +26,6 @@ class BaseStructureScore(BaseObject):
     state_names : dict, optional
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.structure_score import K2
-    >>> rng = np.random.default_rng(0)
-    >>> data = pd.DataFrame(rng.integers(0, 5, size=(5000, 2)), columns=list("AB"))
-    >>> data["C"] = data["B"]
-    >>> model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
-    >>> score = K2(data)
-    >>> round(score.score(model), 3)
-    np.float64(-16277.851)
-
-    Notes
-    -----
-    Use this class as a base for implementing custom structure scores. For standard scoring
-    approaches, prefer the derived classes in `pgmpy.structure_score`.
-
-    Raises
-    ------
-    ValueError
-        If the model contains variables that are not present in `data`, or if a concrete
-        score class is applied to unsupported data types.
-
-    References
-    ----------
-    Koller & Friedman, Probabilistic Graphical Models: Principles and Techniques, 2009,
-    Section 18.3.
     """
 
     _tags = {
