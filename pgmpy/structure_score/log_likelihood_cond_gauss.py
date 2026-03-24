@@ -9,7 +9,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     r"""
     Log-likelihood score for Bayesian networks with mixed discrete and continuous variables.
 
-    This score is based on conditional Gaussian distributions[1] and supports local families with both discrete and
+    This score is based on conditional Gaussian distributions [1]_ and supports local families with both discrete and
     continuous variables.
 
     For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete parents :math:`D`, it computes
@@ -56,7 +56,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     References
     ----------
-    ..[1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of Mixed Variables. International
+    .. [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of Mixed Variables. International
         Journal of Data Science and Analytics, 6(1), 3-18. https://doi.org/10.1007/s41060-017-0085-7
     """
 

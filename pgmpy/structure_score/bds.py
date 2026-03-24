@@ -70,8 +70,8 @@ class BDs(BDeu):
 
     References
     ----------
-    ..[1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks. Journal of Machine Learning Research,
-        2016, pp. 438-48.
+    .. [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks. Journal of Machine Learning
+        Research, 2016, pp. 438-48.
     """
 
     _tags = {
