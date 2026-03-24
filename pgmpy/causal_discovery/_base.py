@@ -102,7 +102,7 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the scoring_method. If ``None``, a default metric appropriate for the
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
             provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
