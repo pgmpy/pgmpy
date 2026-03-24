@@ -16,8 +16,8 @@
 
 
 # TODO: Add any other necessary imports here.
-import pandas as pd
 import numpy as np  # noqa: F401
+import pandas as pd
 from scipy import stats  # noqa: F401
 
 from pgmpy.estimators.CITests import ci_registry
@@ -31,7 +31,7 @@ from pgmpy.estimators.CITests import ci_registry
 #   - `is_default` : Set to True ONLY if this test should become the default for one of
 #                    the listed data types. Leave False unless you have a strong reason.
 @ci_registry.register(
-    name="my_ci_test",        # TODO: Replace with your test's unique name.
+    name="my_ci_test",  # TODO: Replace with your test's unique name.
     data_types=["discrete"],  # TODO: Replace with the appropriate data type(s).
     is_default=False,
 )
@@ -107,21 +107,14 @@ def my_ci_test(X, Y, Z, data, boolean=True, **kwargs):
     # Step 1: Validate and normalise inputs.
     # ------------------------------------------------------------------
     if not hasattr(Z, "__iter__"):
-        raise ValueError(
-            f"Z must be an iterable (e.g., a list). Got type: {type(Z)}"
-        )
+        raise ValueError(f"Z must be an iterable (e.g., a list). Got type: {type(Z)}")
     Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
-        raise ValueError(
-            f"data must be a pandas.DataFrame. Got type: {type(data)}"
-        )
+        raise ValueError(f"data must be a pandas.DataFrame. Got type: {type(data)}")
 
     if (X in Z) or (Y in Z):
-        raise ValueError(
-            f"X and Y must not appear in Z. "
-            f"Found {X if X in Z else Y} in Z."
-        )
+        raise ValueError(f"X and Y must not appear in Z. Found {X if X in Z else Y} in Z.")
 
     # TODO: Add any additional input validation specific to your test here.
     # For example, checking that the data is of the expected type (discrete/continuous).
