@@ -1,9 +1,6 @@
 from collections import deque
 from collections.abc import Callable, Collection, Generator, Hashable
 from itertools import chain, combinations, permutations
-from typing import (
-    Any,
-)
 
 import networkx as nx
 import numpy as np
@@ -19,6 +16,7 @@ from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
+from pgmpy.structure_score import BaseStructureScore
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -104,8 +102,8 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
-            argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
+            provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
         -------
@@ -486,8 +484,7 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: Callable[[Any, list[Any]], float],
-        structure_score: Callable[[str], float],
+        scoring_method: BaseStructureScore,
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
@@ -515,21 +512,23 @@ class _ScoreMixin:
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
                 if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
+                    old_parents = tuple(model.get_parents(Y))
+                    new_parents = old_parents + (X,)
                     if len(new_parents) <= max_indegree:
-                        score_delta = score(Y, new_parents) - score(Y, old_parents)
-                        score_delta += structure_score("+")
+                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                            Y, old_parents
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("+")
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
-                score_delta = score(Y, new_parents) - score(Y, old_parents)
-                score_delta += structure_score("-")
+                old_parents = tuple(model.get_parents(Y))
+                new_parents = tuple(var for var in old_parents if var != X)
+                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
+                score_delta += scoring_method.structure_prior_ratio("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -542,16 +541,16 @@ class _ScoreMixin:
                     and ((X, Y) not in required_edges)
                     and ((Y, X) not in forbidden_edges)
                 ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
+                    old_X_parents = tuple(model.get_parents(X))
+                    old_Y_parents = tuple(model.get_parents(Y))
+                    new_X_parents = old_X_parents + (Y,)
+                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
                     if len(new_X_parents) <= max_indegree:
                         score_delta = (
-                            score(X, new_X_parents)
-                            + score(Y, new_Y_parents)
-                            - score(X, old_X_parents)
-                            - score(Y, old_Y_parents)
+                            scoring_method.local_score(X, new_X_parents)
+                            + scoring_method.local_score(Y, new_Y_parents)
+                            - scoring_method.local_score(X, old_X_parents)
+                            - scoring_method.local_score(Y, old_Y_parents)
                         )
-                        score_delta += structure_score("flip")
+                        score_delta += scoring_method.structure_prior_ratio("flip")
                         yield (operation, score_delta)
