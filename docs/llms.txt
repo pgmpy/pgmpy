@@ -22,6 +22,7 @@ Key pages
 /guides/io - import/export formats
 /guides/custom_model - defining models and CPDs
 /guides/plotting - plotting and visualization options
+/guides/extensibility - extension templates for datasets, models, metrics, and algorithms
 
 Sitemap
 /sitemap.xml

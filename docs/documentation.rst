@@ -92,6 +92,13 @@ Detailed guides for each class of methods provided by pgmpy.
 
       Visualize graphs with pygraphviz, daft, and networkx.
 
+   .. grid-item-card:: Extensibility
+      :link: guides/extensibility
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Use repository templates to add datasets, models, metrics, and algorithms.
+
 .. toctree::
    :hidden:
 
@@ -107,3 +114,4 @@ Detailed guides for each class of methods provided by pgmpy.
    guides/io
    guides/custom_model
    guides/plotting
+   guides/extensibility
