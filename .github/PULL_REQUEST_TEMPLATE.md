@@ -1,6 +1,6 @@
 # The following checklist is mandatory.
 
-Your PR will be closed if you remove the checklist or do not answer the questions to a satisfactory level. Use of LLMs is **strictly forbidden** for any part of this checklist (including for improving language), and will result in a **ban** if we find any use of LLMs.
+Your PR will be closed if you remove the checklist or do not answer the questions to a satisfactory level (example of what we expect: [#2622](https://github.com/pgmpy/pgmpy/pull/2622)). Use of LLMs is **strictly forbidden** for any part of this checklist (including for improving language), and will result in a **ban** if we find any use of LLMs.
 
 ### Your checklist for this pull request
 
@@ -10,20 +10,25 @@ Your PR will be closed if you remove the checklist or do not answer the question
 
 Please answer the following questions:
 
-- Did you use an LLM for any assistance with this PR? Please describe in **detail** (around a paragraph) how and what you used it for?  
-[Please Answer Here]
+- Did you use an LLM for any assistance with this PR? Please describe in **detail** (around a paragraph) how and what you used it for?
+
+[Please replace this with your answer]
 
 - Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
-[Please Answer Here]
+
+[Please replace this with your answer]
 
 - What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered? Other than running tests, what else have you verified?  
-[Please Answer Here]
+
+[Please replace this with your answer]
 
 - Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.  
-[Please Answer Here]
+
+[Please replace this with your answer]
 
 - Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.  
-[Please Answer Here]
+
+[Please replace this with your answer]
 
 ### Issue number(s) that this pull request fixes
 - Fixes #

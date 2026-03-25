@@ -29,6 +29,8 @@ pgmpy/estimators/HillClimbSearch.py
 pgmpy/estimators/MLE.py
 pgmpy/estimators/MmhcEstimator.py
 pgmpy/estimators/PC.py
+pgmpy/factors/discrete/CPD.py
+pgmpy/factors/continuous/LinearGaussianCPD.py
 pgmpy/factors/FactorSet.py
 pgmpy/independencies/Independencies.py
 pgmpy/inference/ApproxInference.py
