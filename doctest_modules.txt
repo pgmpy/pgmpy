@@ -33,3 +33,4 @@ pgmpy/models/JunctionTree.py
 pgmpy/models/MarkovChain.py
 pgmpy/models/NaiveBayes.py
 pgmpy/utils/mathext.py
+pgmpy/factors/discrete/CPD.py
