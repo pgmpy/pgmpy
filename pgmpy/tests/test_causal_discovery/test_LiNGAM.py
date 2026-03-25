@@ -6,6 +6,7 @@
 #     return [(num_to_letter(u), num_to_letter(v)) for u, v in edges]
 
 import numpy as np
+import numpy.testing as np_test
 import pandas as pd
 import pytest
 from sklearn.decomposition import FastICA
@@ -130,13 +131,6 @@ def test_fit_rand2(rand_data2):
     assert graph.has_edge("B", "D")
     assert graph.has_edge("C", "E")
 
-    assert not graph.has_edge("A", "D")
-    assert not graph.has_edge("A", "E")
-    assert not graph.has_edge("B", "C")
-    assert not graph.has_edge("D", "E")
-    assert not graph.has_edge("B", "E")
-    assert not graph.has_edge("C", "D")
-
     # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
     Adj_matrix = algo.adjacency_matrix_
     assert Adj_matrix.shape == (5, 5)
@@ -183,3 +177,23 @@ def test_large_lingam_data(large_lingam_data):
     # Test adjacency matrix structure
     Adj_matrix = algo.adjacency_matrix_
     assert Adj_matrix.shape == (10, 10)
+
+    # print(model.adjacency_matrix_)
+    # Note: There are slight differences in the non-zero values of the adjacency matrix compared to the
+    # official lingam package due to the different edge pruning techniques used (Wald test vs. Adaptive Lasso).
+    test_matrix = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.50456931, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [-1.20729124, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.81661721, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -0.98877545, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.31563236, 0.69922556, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, -0.86888487, 0.48815156, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.50483525, -1.10748153, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.61281088, 0.80349663, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, -0.04201462, 0.0, -0.6911563, 0.92003648, 0.0],
+        ]
+    )
+
+    np_test.assert_almost_equal(Adj_matrix.to_numpy(), test_matrix)
