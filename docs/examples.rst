@@ -5,7 +5,7 @@ A curated set of `Jupyter notebooks <https://github.com/pgmpy/pgmpy/tree/dev/exa
 Defining Bayesian Networks
 """"""""""""""""""""""
 
-See the :doc:`Defining a Custom Model <doc/custom_model>` guide for background.
+See the :doc:`Defining a Custom Model <guides/custom_model>` guide for background.
 
 .. grid:: 3
    :gutter: 3
@@ -49,7 +49,7 @@ See the :doc:`Defining a Custom Model <doc/custom_model>` guide for background.
 Causal Discovery / Structure Learning
 """"""""""""""""""""""""""""""
 
-See the :doc:`Causal Discovery <doc/causal_discovery>` guide for background.
+See the :doc:`Causal Discovery <guides/causal_discovery>` guide for background.
 
 .. grid:: 3
    :gutter: 3
@@ -86,7 +86,7 @@ See the :doc:`Causal Discovery <doc/causal_discovery>` guide for background.
 Parameter Estimation
 """"""""""""""""""
 
-See the :doc:`Parameter Estimation <doc/parameter_estimation>` guide for background.
+See the :doc:`Parameter Estimation <guides/parameter_estimation>` guide for background.
 
 .. grid:: 3
    :gutter: 3
@@ -109,7 +109,7 @@ See the :doc:`Parameter Estimation <doc/parameter_estimation>` guide for backgro
 Probabilistic Inference
 """""""""""""""""""""
 
-See the :doc:`Probabilistic Inference <doc/probabilistic_inference>` guide for background.
+See the :doc:`Probabilistic Inference <guides/probabilistic_inference>` guide for background.
 
 .. grid:: 3
    :gutter: 3
@@ -132,7 +132,7 @@ See the :doc:`Probabilistic Inference <doc/probabilistic_inference>` guide for b
 Causal Inference
 """"""""""""""""""
 
-See the :doc:`Causal Identification <doc/causal_identification>` and :doc:`Causal Estimation <doc/causal_estimation>` guides for background.
+See the :doc:`Causal Identification <guides/causal_identification>` and :doc:`Causal Estimation <guides/causal_estimation>` guides for background.
 
 .. grid:: 3
    :gutter: 3
@@ -155,7 +155,7 @@ See the :doc:`Causal Identification <doc/causal_identification>` and :doc:`Causa
 Simulations
 """"""""""
 
-See the :doc:`Simulations <doc/simulations>` guide for background.
+See the :doc:`Simulations <guides/simulations>` guide for background.
 
 .. grid:: 3
    :gutter: 3

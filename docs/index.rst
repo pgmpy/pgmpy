@@ -72,7 +72,7 @@ Key Features
       and frontdoor adjustment.
 
    .. grid-item-card:: Causal Identification
-      :link: doc/causal_identification
+      :link: guides/causal_identification
       :link-type: doc
       :class-card: sd-card-hover
 
@@ -98,7 +98,7 @@ Workflow
 .. toctree::
    :hidden:
 
-   Getting Started <started/base>
+   Getting Started <started/index>
    Documentation <documentation>
    Examples <examples>
    API Reference <reference>

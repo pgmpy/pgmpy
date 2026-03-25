@@ -184,13 +184,7 @@ ogp_image = "https://pgmpy.org/_static/images/logo.png"
 ogp_description_length = 200
 ogp_type = "website"
 ogp_custom_meta_tags = [
-    (
-        '<meta name="description" content="pgmpy: A Python library for causal inference and probabilistic inference',
-        'using Directed Acyclic Graphs (DAGs) and Bayesian Networks." />',
-    ),
-    (
-        '<meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models,',
-        'structure learning, parameter estimation, Python" />',
-    ),
+    '<meta name="description" content="pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks." />',
+    '<meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models, structure learning, parameter estimation, Python" />',
     '<meta name="twitter:card" content="summary" />',
 ]

@@ -33,7 +33,7 @@ Bayesian Networks and DAGs that can then be plotted using graphviz.
 
 The output `sachs.png` is shown below. Users can also tryout other layout methods supported by pygraphviz such as: `neato`, `dot`, `twopi`, `circo`, `fdp`, `nop`.
 
-.. image:: _static/images/sachs.png
+.. image:: ../_static/images/sachs.png
    :scale: 75%
 
 
@@ -62,9 +62,9 @@ Daft is a python package that uses matplotlib to render high quality plots suita
 
 The output of the two plots above.
 
-.. image:: _static/images/sachs_daft_plain.png
+.. image:: ../_static/images/sachs_daft_plain.png
 
-.. image:: _static/images/sachs_daft_shell.png
+.. image:: ../_static/images/sachs_daft_shell.png
 
 
 3. Using `networkx.drawing`

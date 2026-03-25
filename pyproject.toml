@@ -107,7 +107,7 @@ filterwarnings = ["default"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "examples/*", "docs/source/conf.py", "pgmpy/estimators/__init__.py",
+exclude = [".git", "examples/*", "docs/conf.py", "pgmpy/estimators/__init__.py",
 	   "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py",
            "pgmpy/extern/*", "pgmpy/.github/*"]
 target-version = "py314"

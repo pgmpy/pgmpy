@@ -1,5 +1,5 @@
-Reference
-=========
+API Reference
+=============
 
 Complete API reference for all pgmpy modules.
 
@@ -65,15 +65,14 @@ Use the section landing pages below for the public API surface.
 
       Readers and writers for BIF, XMLBIF, XDSL, UAI, PomdpX, and related formats.
 
-   .. grid-item-card:: Plotting Guide
-      :link: plotting
-      :link-type: doc
-      :class-card: sd-card-hover
-
-      Visualization helpers for models and graph structures.
-
 .. toctree::
    :hidden:
 
-   api/index
-   plotting
+   api/models
+   api/factors
+   api/inference
+   api/causal_inference
+   api/parameter_estimation
+   api/structure_learning
+   api/metrics
+   api/readwrite
