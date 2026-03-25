@@ -11,6 +11,17 @@ Formally, inference computes a posterior such as
 :math:`P(X \mid e) = \frac{P(X, e)}{P(e)}`, often by summing out hidden
 variables or using sampling to approximate the result.
 
+When to use
+-----------
+
+- Use variable elimination as the default exact method for small to medium
+  networks.
+- Use belief propagation when the graph structure or repeated-query pattern
+  makes message passing efficient.
+- Use MPLP for MAP-style inference problems rather than full posterior
+  estimation.
+- Use approximate or Gibbs sampling when exact inference becomes too expensive.
+
 Example
 -------
 
@@ -24,18 +35,6 @@ Example
     variable = list(model.nodes())[0]
     query = infer.query(variables=[variable])
     print(query)
-
-When to use which
------------------
-
-- **Variable Elimination** -- General-purpose exact inference. Good default for
-  small to medium networks.
-- **Belief Propagation** -- Efficient for tree-structured networks or when
-  multiple queries share computation.
-- **MPLP** -- MAP (most probable explanation) inference via linear programming
-  relaxation.
-- **Approximate / Gibbs** -- Use when the network is too large for exact
-  inference or when approximate answers are acceptable.
 
 Algorithms
 ----------
@@ -84,6 +83,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | :doc:`Monty Hall <../examples/Monty_Hall>` | :doc:`Junction Tree Inference <../examples/Junction_Tree_Inference>`
-- **API Reference:** :doc:`Inference API <../infer/base>`
+- **API Reference:** :doc:`Inference API <../api/inference>`
 - **Previous:** :doc:`parameter_estimation` -- estimate model parameters
 - **Next:** :doc:`causal_identification` -- check whether a causal effect is identifiable

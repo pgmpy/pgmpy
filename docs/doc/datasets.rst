@@ -14,6 +14,31 @@ Typical workflow:
 1. Call ``list_datasets(...)`` with optional filters to find a dataset.
 2. Call ``load_dataset(name)`` on one of the returned names.
 
+When to use
+-----------
+
+- Use built-in datasets when you need a standard benchmark without managing raw
+  files yourself.
+- Use ``list_datasets`` when you want to discover datasets by tags such as data
+  type, sample count, or ground-truth availability.
+- Use ``load_dataset`` when you want the DataFrame plus associated metadata,
+  expert knowledge, and ground-truth graph.
+
+Example
+-------
+
+.. code-block:: python
+
+    from pgmpy.datasets import list_datasets, load_dataset
+
+    matches = list_datasets(is_discrete=True, has_ground_truth=True)
+    print(matches[:3])
+
+    dataset = load_dataset(matches[0])
+    print(dataset.name)
+    print(dataset.data.shape)
+    print(dataset.ground_truth is not None)
+
 list_datasets
 -------------
 
@@ -106,5 +131,7 @@ Subsequent calls read from this local cache.
 See Also
 --------
 
+- **Reference:** :func:`pgmpy.datasets.list_datasets` | :func:`pgmpy.datasets.load_dataset`
+- **Examples:** :doc:`Examples <../examples>`
 - **Previous:** :doc:`simulations` -- generate synthetic data from a model
 - **Next:** :doc:`example_models` -- pre-built Bayesian Networks for benchmarking

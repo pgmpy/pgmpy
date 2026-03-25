@@ -10,6 +10,15 @@ models portable across tools.
 In practice, these formats store both structure and CPDs so models can be
 reused for inference, simulation, or further editing.
 
+When to use
+-----------
+
+- Use these readers and writers when you need to exchange models with other
+  Bayesian network tools.
+- Use BIF or XMLBIF for common Bayesian-network interchange workflows.
+- Use XDSL when interoperating with GeNIe / SMILE tooling.
+- Use UAI or PomdpX when targeting those ecosystem-specific formats.
+
 Example
 -------
 
@@ -67,5 +76,7 @@ Supported Formats
 See Also
 --------
 
-- **API Reference:** :doc:`Reading/Writing API <../readwrite/base>`
+- **Examples:** :doc:`Examples <../examples>`
+- **API Reference:** :doc:`Reading/Writing API <../api/readwrite>`
 - **Previous:** :doc:`example_models` -- pre-built Bayesian Networks
+- **Next:** :doc:`custom_model` -- define models and factors directly in pgmpy

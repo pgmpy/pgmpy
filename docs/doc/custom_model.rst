@@ -14,6 +14,17 @@ conditionals over parents:
 
    P(X_1, \ldots, X_n) = \prod_{i=1}^n P(X_i \mid Pa_i)
 
+When to use
+-----------
+
+- Use a custom model definition when you want full control over graph
+  structure, variable types, and parameterization.
+- Start with a discrete Bayesian network when working with tabular CPDs.
+- Choose linear Gaussian or functional Bayesian networks when the data or
+  model family requires continuous or hybrid CPDs.
+- Use factor-graph or Markov-network families when the problem is naturally
+  undirected.
+
 Example
 -------
 
@@ -23,7 +34,8 @@ Example
     from pgmpy.estimators import MaximumLikelihoodEstimator
     from pgmpy.models import DiscreteBayesianNetwork
 
-    data = load_dataset("sachs_discrete")
+    dataset = load_dataset("sachs_discrete")
+    data = dataset.data
     model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
     fitted = model.fit(data, estimator=MaximumLikelihoodEstimator)
     print(fitted.get_cpds())
@@ -96,5 +108,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Creating a Discrete BN <../examples/Creating_Discrete_BN>` | :doc:`Creating a Linear BN <../examples/Creating_Linear_BN>` | :doc:`Dynamic BN <../examples/Dynamic_BN>` | :doc:`Defining CPDs <../examples/Defining_CPDs>`
-- **API Reference:** :doc:`Models <../models/base>` | :doc:`Factors <../factors/base>`
+- **API Reference:** :doc:`Models <../api/models>` | :doc:`Factors <../api/factors>`
+- **Previous:** :doc:`io` -- import and export models in various formats
 - **Next:** :doc:`causal_discovery` -- learn graph structure from data

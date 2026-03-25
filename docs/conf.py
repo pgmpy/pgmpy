@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pgmpy documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 30 18:17:42 2016.
@@ -33,6 +32,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
+    "myst_parser",
     "nbsphinx",
     "sphinx_immaterial",
     "sphinx_copybutton",
@@ -42,8 +42,12 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
-source_suffix = ".rst"
-master_doc = "index"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "myst",
+}
+root_doc = "index"
+master_doc = root_doc
 
 project = "pgmpy"
 copyright = "2025, Ankur Ankan"
@@ -53,10 +57,19 @@ version = "dev"
 release = "1.0.0"
 language = "en"
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+]
 nbsphinx_execute = "never"
 pygments_style = "tango"
 todo_include_todos = True
+
+myst_enable_extensions = ["colon_fence", "deflist", "fieldlist"]
+myst_heading_anchors = 3
+autosummary_generate = True
+autosummary_generate_overwrite = True
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -64,7 +77,7 @@ html_theme = "sphinx_immaterial"
 
 html_title = "pgmpy"
 html_favicon = "logo_favi.ico"
-html_logo = "logo.png"
+html_logo = "_static/images/logo.png"
 html_static_path = ["_static"]
 html_extra_path = ["robots.txt", "llms.txt", "llms-full.txt"]
 
@@ -136,17 +149,17 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [(master_doc, "pgmpy.tex", "pgmpy Documentation", "Ankur Ankan", "manual")]
+latex_documents = [(root_doc, "pgmpy.tex", "pgmpy Documentation", "Ankur Ankan", "manual")]
 
 # -- Options for manual page output ---------------------------------------
 
-man_pages = [(master_doc, "pgmpy", "pgmpy Documentation", [author], 1)]
+man_pages = [(root_doc, "pgmpy", "pgmpy Documentation", [author], 1)]
 
 # -- Options for Texinfo output -------------------------------------------
 
 texinfo_documents = [
     (
-        master_doc,
+        root_doc,
         "pgmpy",
         "pgmpy Documentation",
         author,
@@ -167,11 +180,17 @@ html_baseurl = "https://pgmpy.org"
 # Open Graph metadata (social sharing previews)
 ogp_site_url = "https://pgmpy.org"
 ogp_site_name = "pgmpy"
-ogp_image = "https://pgmpy.org/_static/logo.png"
+ogp_image = "https://pgmpy.org/_static/images/logo.png"
 ogp_description_length = 200
 ogp_type = "website"
 ogp_custom_meta_tags = [
-    '<meta name="description" content="pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks." />',
-    '<meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models, structure learning, parameter estimation, Python" />',
+    (
+        '<meta name="description" content="pgmpy: A Python library for causal inference and probabilistic inference',
+        'using Directed Acyclic Graphs (DAGs) and Bayesian Networks." />',
+    ),
+    (
+        '<meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models,',
+        'structure learning, parameter estimation, Python" />',
+    ),
     '<meta name="twitter:card" content="summary" />',
 ]

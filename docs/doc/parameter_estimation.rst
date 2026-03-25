@@ -23,6 +23,18 @@ states :math:`x`, and a parent configuration :math:`Pa = p`,
 
    \hat{P}(X = x \mid Pa = p) = \frac{N(x, p)}{N(p)}
 
+When to use
+-----------
+
+- Use maximum likelihood estimation for fully observed data with enough samples
+  per parent configuration.
+- Use Bayesian estimation when the data is sparse and you want smoothing via
+  priors.
+- Use expectation maximization when the model has latent variables or missing
+  data.
+- Use SEM and IV estimators when working with structural equation models rather
+  than discrete CPDs.
+
 Example
 -------
 
@@ -105,6 +117,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Discrete BN Parameters <../examples/Parameter_Learning_Discrete_BN>` | :doc:`Factor Graph Parameters <../examples/Parameter_Learning_Factor_Graphs>`
-- **API Reference:** :doc:`Parameter Estimation API <../param_estimator/base>`
+- **API Reference:** :doc:`Parameter Estimation API <../api/parameter_estimation>`
 - **Previous:** :doc:`causal_discovery` -- learn graph structure from data
 - **Next:** :doc:`probabilistic_inference` -- query the fitted model

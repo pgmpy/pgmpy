@@ -15,6 +15,18 @@ the true graph, where :math:`R` denotes reversed edges:
 
    SHD(G, \hat{G}) = |E \setminus \hat{E}| + |\hat{E} \setminus E| + |R|
 
+When to use
+-----------
+
+- Use SHD when you have a ground-truth graph and want a simple structural error
+  count.
+- Use structure score comparisons when you care about how well the learned
+  graph explains the data under a scoring function.
+- Use correlation score or implied conditional independencies when no
+  ground-truth graph is available.
+- Use Fisher C when you want a single omnibus fit diagnostic from implied
+  independencies.
+
 Example
 -------
 
@@ -28,20 +40,6 @@ Example
 
     shd = SHD()
     print(shd(true_causal_graph=true_graph, est_causal_graph=est_graph))
-
-When to use which
------------------
-
-- **SHD** -- The standard metric for comparing a learned graph against the
-  ground truth. Counts edge additions, deletions, and reversals needed.
-- **Structure Score** -- Compares the score (BIC, BDeu, etc.) of the learned
-  structure against the true structure.
-- **Correlation Score** -- Compares observed correlations in data against those
-  implied by the model. Does not require a ground-truth graph.
-- **Implied CIs** -- Tests whether the conditional independencies implied by the
-  model hold in the data.
-- **Fisher C** -- Combines p-values from independence tests implied by the
-  model into an overall goodness-of-fit statistic.
 
 Algorithms
 ----------
@@ -72,6 +70,6 @@ Algorithms
 See Also
 --------
 
-- **API Reference:** :doc:`Metrics API <../metrics/metrics>`
+- **API Reference:** :doc:`Metrics API <../api/metrics>`
 - **Previous:** :doc:`causal_estimation` -- estimate causal effects
 - **Next:** :doc:`simulations` -- generate synthetic data from a model

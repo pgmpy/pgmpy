@@ -2,19 +2,6 @@
 
 {% block extrahead %}
   {{ super() }}
-  <!-- SEO meta tags -->
-  <meta name="description" content="{{ page_description | default('pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks.', true) }}">
-  <meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models, structure learning, parameter estimation, Python">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="pgmpy">
-  <meta property="og:title" content="{{ title | striptags }}">
-  <meta property="og:description" content="{{ page_description | default('pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks.', true) }}">
-  <meta property="og:url" content="{{ pageurl | default('https://pgmpy.org', true) }}">
-  <meta property="og:image" content="https://pgmpy.org/_static/logo.png">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="{{ title | striptags }}">
-  <meta name="twitter:description" content="{{ page_description | default('pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks.', true) }}">
-  <meta name="twitter:image" content="https://pgmpy.org/_static/logo.png">
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HCFR07M31W"></script>
   <script>
@@ -25,71 +12,6 @@
   </script>
   <!-- EthicalAds -->
   <script async src="https://media.ethicalads.io/media/client/ethicalads.min.js"></script>
-  <!-- Header social links styling -->
-  <style>
-    @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap");
-    :root {
-      --md-text-font: "Source Sans 3", system-ui, sans-serif;
-      --md-code-font: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    }
-    .md-header__social {
-      display: flex;
-      align-items: center;
-      gap: 0.1rem;
-      margin-left: 0.4rem;
-    }
-    .md-header__social a {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.4rem;
-      color: var(--md-default-fg-color--light);
-      opacity: 0.7;
-      transition: opacity 0.25s;
-    }
-    .md-header__social a:hover {
-      opacity: 1;
-    }
-    .md-header__social svg {
-      width: 1.2rem;
-      height: 1.2rem;
-      fill: currentColor;
-    }
-    [data-md-color-scheme="slate"] .md-header__social a {
-      color: var(--md-default-fg-color--light);
-    }
-    /* Card visibility in light/dark modes */
-    .sd-card {
-      background-color: var(--pgmpy-card-bg, var(--md-default-bg-color));
-      border: 1px solid var(--pgmpy-card-border, rgba(0, 0, 0, 0.08));
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    }
-    .sd-card .sd-card-header,
-    .sd-card .sd-card-footer {
-      border-color: var(--pgmpy-card-border, rgba(0, 0, 0, 0.08));
-    }
-    [data-md-color-scheme="slate"] .sd-card {
-      --pgmpy-card-bg: rgba(255, 255, 255, 0.045);
-      --pgmpy-card-border: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-    }
-    /* Hover shadow effect on feature cards */
-    .sd-card-hover {
-      transition: box-shadow 0.25s ease, transform 0.25s ease;
-    }
-    .sd-card-hover:hover {
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-      transform: translateY(-2px);
-    }
-    [data-md-color-scheme="slate"] .sd-card-hover:hover {
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
-    }
-    /* Center content when right sidebar (toc) is hidden */
-    .md-sidebar--secondary[hidden] ~ .md-content {
-      margin-left: auto;
-      margin-right: auto;
-    }
-  </style>
 {% endblock %}
 
 {% block content %}

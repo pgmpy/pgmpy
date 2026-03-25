@@ -131,4 +131,4 @@ Next Steps
 ----------
 
 * :doc:`Examples <../examples>` -- Jupyter notebooks with detailed walkthroughs
-* :doc:`API Reference <../api>` -- Full module documentation
+* :doc:`API Reference <../reference>` -- Full module documentation

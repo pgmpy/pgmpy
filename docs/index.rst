@@ -3,28 +3,36 @@
 :hide-toc:
 :hide-navigation:
 
-.. raw:: html
+Welcome to pgmpy
+================
 
-   <div class="hero-grid">
-     <div class="hero-logo">
-       <img src="_static/logo.png" alt="pgmpy logo">
-     </div>
-     <div class="hero-text">
-       <h1>Welcome to pgmpy</h1>
-       <p class="hero-subtitle"><em>Python Library for Causal AI</em></p>
-       <p>pgmpy is a Python package for causal inference and probabilistic inference
-       using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
-       modularity and extensibility. Implementations of various algorithms for Causal
-       Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
-       (Sampling Based) and Exact inference, and Causal Inference are available.</p>
-       <div class="badge-container" style="text-align: left;">
-         <a href="https://pypi.org/project/pgmpy/"><img src="https://img.shields.io/pypi/v/pgmpy?style=flat-square&amp;color=2E8B8E" alt="PyPI version"></a>
-         <a href="https://anaconda.org/conda-forge/pgmpy"><img src="https://img.shields.io/conda/vn/conda-forge/pgmpy?style=flat-square&amp;color=2E8B8E" alt="Conda version"></a>
-         <a href="https://github.com/pgmpy/pgmpy"><img src="https://img.shields.io/github/stars/pgmpy/pgmpy?style=flat-square&amp;color=2E8B8E" alt="GitHub stars"></a>
-         <a href="http://jmlr.org/papers/v25/23-0487.html"><img src="https://img.shields.io/badge/JMLR-2024-009688?style=flat-square" alt="JMLR 2024"></a>
-       </div>
-     </div>
-   </div>
+.. grid:: 1 1 2 2
+   :gutter: 3
+
+   .. grid-item::
+      :class: hero-logo-panel
+
+      .. image:: _static/images/logo.png
+         :alt: pgmpy logo
+         :width: 220px
+         :align: center
+
+   .. grid-item::
+      :class: hero-copy-panel
+
+      .. class:: hero-subtitle
+
+      *Python Library for Causal AI*
+
+      pgmpy is a Python package for causal inference and probabilistic inference
+      using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
+      modularity and extensibility. Implementations of various algorithms for
+      causal discovery, parameter estimation, approximate inference, exact
+      inference, and causal inference are available.
+
+      .. container:: badge-container badge-container-left
+
+         |pypi-badge| |conda-badge| |github-badge| |jmlr-badge|
 
 Key Features
 ------------
@@ -34,21 +42,21 @@ Key Features
    :class-container: sd-shadow-hover-cards
 
    .. grid-item-card:: Causal Discovery and Structure Learning
-      :link: structure_estimator/base
+      :link: api/structure_learning
       :link-type: doc
       :class-card: sd-card-hover
 
       Learn causal structure from data.
 
    .. grid-item-card:: Parameter Estimation
-      :link: param_estimator/base
+      :link: api/parameter_estimation
       :link-type: doc
       :class-card: sd-card-hover
 
       Estimate model parameters with Maximum Likelihood, Bayesian estimation, or EM.
 
    .. grid-item-card:: Probabilistic Inference
-      :link: infer/base
+      :link: api/inference
       :link-type: doc
       :class-card: sd-card-hover
 
@@ -56,7 +64,7 @@ Key Features
       inference (sampling, Gibbs).
 
    .. grid-item-card:: Causal Inference
-      :link: causal_infer/base
+      :link: api/causal_inference
       :link-type: doc
       :class-card: sd-card-hover
 
@@ -82,7 +90,7 @@ Key Features
 Workflow
 --------
 
-.. figure:: pgmpy_workflow.png
+.. figure:: _static/images/pgmpy_workflow.png
    :alt: Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
 
    Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
@@ -93,6 +101,22 @@ Workflow
    Getting Started <started/base>
    Documentation <documentation>
    Examples <examples>
-   API Reference <api>
+   API Reference <reference>
    Citation <citation>
    Getting Involved <development>
+
+.. |pypi-badge| image:: https://img.shields.io/pypi/v/pgmpy?style=flat-square&color=2E8B8E
+   :alt: PyPI version
+   :target: https://pypi.org/project/pgmpy/
+
+.. |conda-badge| image:: https://img.shields.io/conda/vn/conda-forge/pgmpy?style=flat-square&color=2E8B8E
+   :alt: Conda version
+   :target: https://anaconda.org/conda-forge/pgmpy
+
+.. |github-badge| image:: https://img.shields.io/github/stars/pgmpy/pgmpy?style=flat-square&color=2E8B8E
+   :alt: GitHub stars
+   :target: https://github.com/pgmpy/pgmpy
+
+.. |jmlr-badge| image:: https://img.shields.io/badge/JMLR-2024-009688?style=flat-square
+   :alt: JMLR 2024
+   :target: http://jmlr.org/papers/v25/23-0487.html

@@ -13,6 +13,18 @@ effect (ATE) from observed data using an identified adjustment set:
 
    ATE = E[Y \mid do(X=1)] - E[Y \mid do(X=0)]
 
+When to use
+-----------
+
+- Use ``CausalInference`` when you already have a causal graph and want
+  interventional quantities from that graph.
+- Use the naive adjustment regressor as a simple baseline for backdoor-based
+  estimation.
+- Use the naive IV regressor when an instrumental variable assumption is more
+  plausible than unconfoundedness.
+- Use Double ML when you want a more flexible semi-parametric estimator for
+  high-dimensional settings.
+
 Example
 -------
 
@@ -22,7 +34,8 @@ Example
     from pgmpy.inference import CausalInference
     from pgmpy.models import DiscreteBayesianNetwork
 
-    data = load_dataset("sachs_discrete")
+    dataset = load_dataset("sachs_discrete")
+    data = dataset.data
     dag = DiscreteBayesianNetwork(
         [
             ("PKA", "ERK"),
@@ -33,19 +46,6 @@ Example
     ci = CausalInference(dag)
     ate = ci.estimate_ate("PKA", "Akt", data)
     print(ate)
-
-When to use which
------------------
-
-- **CausalInference** -- Use with a fully specified causal graph to compute
-  interventional distributions via do-calculus.
-- **Naive Adjustment Regressor** -- Simple backdoor adjustment with a
-  regression model. Good starting point for continuous outcomes.
-- **Naive IV Regressor** -- Instrumental variable regression when there is
-  unmeasured confounding but a valid instrument is available.
-- **Double ML Regressor** -- Doubly-robust estimation using machine learning
-  models. Best for high-dimensional settings or when the outcome model may be
-  misspecified.
 
 Algorithms
 ----------
@@ -82,6 +82,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Causal Inference <../examples/Causal_Inference>` | :doc:`Causal Games <../examples/Causal_Games>`
-- **API Reference:** :doc:`Causal Inference API <../causal_infer/base>`
+- **API Reference:** :doc:`Causal Inference API <../api/causal_inference>`
 - **Previous:** :doc:`causal_identification` -- check identifiability
 - **Next:** :doc:`metrics` -- evaluate the learned model

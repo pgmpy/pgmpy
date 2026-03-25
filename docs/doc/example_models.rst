@@ -10,6 +10,15 @@ learning.
 These models are fully parameterized, so you can run inference immediately or
 simulate data from the joint distribution of the network.
 
+When to use
+-----------
+
+- Use example models when you need a ready-to-query network without fitting one
+  from scratch.
+- Use small models such as ``asia`` or ``cancer`` for tutorials and debugging.
+- Use larger models such as ``alarm`` or ``andes`` for benchmarking inference
+  and structure-aware workflows.
+
 Example
 -------
 
@@ -119,8 +128,13 @@ Gaussian Bayesian Networks
 Conditional Linear Gaussian Networks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+No curated conditional linear Gaussian example models are currently listed in
+the built-in registry.
+
 See Also
 --------
 
+- **Reference:** :func:`pgmpy.example_models.list_models` | :func:`pgmpy.example_models.load_model`
+- **Examples:** :doc:`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | :doc:`Simulating Data <../examples/Simulating_Data>`
 - **Previous:** :doc:`datasets` -- built-in datasets for testing
 - **Next:** :doc:`io` -- import and export models in various formats

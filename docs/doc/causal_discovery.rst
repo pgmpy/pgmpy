@@ -16,6 +16,18 @@ variables :math:`X` that either satisfies conditional independencies like
 
    G^* = \arg\max_G S(G; D)
 
+When to use
+-----------
+
+- Use causal discovery when the graph structure is unknown but observational
+  data is available.
+- Use constraint-based methods when conditional independence tests are a good
+  fit for the data type and assumptions.
+- Use score-based methods when you want to optimize a graph objective such as
+  BIC, AIC, or BDeu.
+- Use expert-in-the-loop workflows when you need domain constraints such as
+  required or forbidden edges.
+
 Example
 -------
 
@@ -24,7 +36,8 @@ Example
     from pgmpy.datasets import load_dataset
     from pgmpy.estimators import HillClimbSearch, BIC
 
-    data = load_dataset("sachs_discrete")
+    dataset = load_dataset("sachs_discrete")
+    data = dataset.data
     hc = HillClimbSearch(data)
     model = hc.estimate(scoring_method=BIC(data))
     print(model.edges())
@@ -113,6 +126,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Structure Learning <../examples/Structure_Learning>` | :doc:`Chow-Liu Tree <../examples/Structure_Learning_Chow_Liu>` | :doc:`TAN <../examples/Structure_Learning_TAN>` | :doc:`Expert Knowledge <../examples/Expert_Knowledge>`
-- **API Reference:** :doc:`Causal Discovery API <../structure_estimator/base>`
+- **API Reference:** :doc:`Causal Discovery API <../api/structure_learning>`
 - **Previous:** :doc:`custom_model` -- define a model from scratch
 - **Next:** :doc:`parameter_estimation` -- estimate CPDs for the learned structure

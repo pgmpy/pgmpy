@@ -11,6 +11,16 @@ Given a DAG with CPDs, the joint distribution factorizes as
 variables in a topological order to produce i.i.d. samples from this joint
 distribution.
 
+When to use
+-----------
+
+- Use simulation when you need synthetic tabular data from a known model.
+- Use forward sampling for unconditional synthetic data generation.
+- Use rejection or likelihood-weighted sampling when evidence must be respected
+  during generation.
+- Use Gibbs sampling when working with approximate sampling workflows over more
+  complex models.
+
 Example
 -------
 
@@ -46,5 +56,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Simulating Data <../examples/Simulating_Data>`
+- **API Reference:** :class:`pgmpy.sampling.Sampling.BayesianModelSampling` | :class:`pgmpy.sampling.Sampling.GibbsSampling`
 - **Previous:** :doc:`metrics` -- evaluate model quality
 - **Next:** :doc:`datasets` -- built-in datasets for testing

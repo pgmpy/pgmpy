@@ -14,6 +14,15 @@ identifiable and can be written as:
 
    P(Y \mid do(X)) = \sum_Z P(Y \mid X, Z) P(Z)
 
+When to use
+-----------
+
+- Use causal identification before estimation when you need to know whether an
+  observational dataset can support a target causal query.
+- Use adjustment when you expect a valid backdoor set to exist.
+- Use frontdoor when backdoor adjustment is impossible but a mediator-based
+  identification strategy is available.
+
 Example
 -------
 
@@ -47,6 +56,6 @@ See Also
 --------
 
 - **Examples:** :doc:`Causal Inference <../examples/Causal_Inference>`
-- **API Reference:** :doc:`Causal Inference API <../causal_infer/base>`
+- **API Reference:** :doc:`Causal Inference API <../api/causal_inference>`
 - **Previous:** :doc:`probabilistic_inference` -- query posterior probabilities
 - **Next:** :doc:`causal_estimation` -- estimate causal effects from data
