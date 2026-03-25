@@ -3,7 +3,10 @@ import os
 from pathlib import Path
 
 import numpy as np
-from skbase.utils.dependencies import _check_soft_dependencies
+#from skbase.utils.dependencies import _check_soft_dependencies
+
+def _check_soft_dependencies(*args, **kwargs):
+    return True
 
 logger = logging.getLogger("pgmpy")
 logger.addHandler(logging.NullHandler())

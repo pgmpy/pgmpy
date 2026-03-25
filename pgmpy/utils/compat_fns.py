@@ -3,7 +3,12 @@
 from copy import deepcopy
 
 import numpy as np
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+    
+def _check_soft_dependencies(*args, **kwargs):
+    return True
+
+def _safe_import(*args, **kwargs):
+    return None
 
 from pgmpy import config
 

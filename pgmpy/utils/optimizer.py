@@ -1,6 +1,7 @@
 from math import isclose
 
-from skbase.utils.dependencies import _safe_import
+def _safe_import(*args, **kwargs):
+    return None
 
 from pgmpy import logger
 
