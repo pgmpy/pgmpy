@@ -27,7 +27,7 @@ class TestStructureScore:
 
             for scoring_method in ("bdeu", "bds"):
                 scorer = StructureScore(scoring_method=scoring_method)
-                metric = scorer(X=data, causal_graph=model, equivalent_sample_size=10)
+                metric = scorer(X=data, causal_graph=model)
                 assert isinstance(metric, float)
 
     def test_input(self, alarm_and_data):
