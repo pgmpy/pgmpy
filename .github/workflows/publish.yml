@@ -182,10 +182,7 @@ jobs:
 
       - name: Build versioned docs
         run: |
-          PGMPY_DOCS_ENV="${{ steps.resolve.outputs.docs_version }}" \
-          PGMPY_DOCS_VERSION="${{ steps.resolve.outputs.docs_version }}" \
-          PGMPY_DOCS_RELEASE="${{ github.event.release.tag_name }}" \
-          PGMPY_DOCS_BASEURL="${DOCS_SITE_ROOT}/${{ steps.resolve.outputs.docs_version }}" \
+          PGMPY_DOCS_TARGET="${{ steps.resolve.outputs.docs_version }}" \
           PGMPY_DOCS_SITE_ROOT="${DOCS_SITE_ROOT}" \
           PGMPY_TUTORIALS_PATH="${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" \
           sphinx-build -b html docs docs/_build/release-versioned -W --keep-going
@@ -193,10 +190,7 @@ jobs:
       - name: Build stable docs
         if: steps.resolve.outputs.build_stable_root == 'true'
         run: |
-          PGMPY_DOCS_ENV="production" \
-          PGMPY_DOCS_VERSION="stable" \
-          PGMPY_DOCS_RELEASE="${{ github.event.release.tag_name }}" \
-          PGMPY_DOCS_BASEURL="${DOCS_SITE_ROOT}" \
+          PGMPY_DOCS_TARGET="stable" \
           PGMPY_DOCS_SITE_ROOT="${DOCS_SITE_ROOT}" \
           PGMPY_TUTORIALS_PATH="${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" \
           sphinx-build -b html docs docs/_build/release-stable -W --keep-going

@@ -28,9 +28,9 @@ if os.path.isdir(tutorials_path):
 
 import pgmpy_docs
 
-site_config = pgmpy_docs.resolve_site_config()
 versions_manifest_path = Path(os.environ.get(VERSIONS_FILE_ENV_VAR, Path(__file__).with_name("versions.json")))
 versions_manifest = pgmpy_docs.load_versions_manifest(versions_manifest_path)
+site_config = pgmpy_docs.resolve_site_config(manifest=versions_manifest)
 versions_payload = pgmpy_docs.build_versions_payload(versions_manifest, site_root_url=site_config.site_root_url)
 
 # -- General configuration ------------------------------------------------

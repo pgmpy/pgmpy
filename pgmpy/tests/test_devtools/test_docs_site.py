@@ -16,36 +16,42 @@ def _load_docs_module():
 
 def test_resolve_site_config_environments():
     docs_module = _load_docs_module()
+    manifest = {"stable": "v1.2", "releases": ["v1.2", "v1.1"], "development": ["dev"]}
 
-    production = docs_module.resolve_site_config({"PGMPY_DOCS_ENV": "production"})
+    production = docs_module.resolve_site_config({"PGMPY_DOCS_TARGET": "stable"}, manifest=manifest)
     assert production.base_url == "https://pgmpy.org"
     assert production.is_indexable is True
     assert production.robots_meta == "index,follow,max-image-preview:large"
+    assert production.release == "v1.2"
 
-    preview = docs_module.resolve_site_config(
-        {
-            "PGMPY_DOCS_ENV": "preview",
-            "PGMPY_DOCS_BASEURL": "https://preview.pgmpy.org",
-        }
-    )
-    assert preview.base_url == "https://preview.pgmpy.org"
+    preview = docs_module.resolve_site_config({"PGMPY_DOCS_TARGET": "preview"}, manifest=manifest)
+    assert preview.base_url == "https://pgmpy.org/preview"
     assert preview.is_indexable is False
     assert preview.robots_meta == "noindex,nofollow,noarchive"
 
     release = docs_module.resolve_site_config(
         {
-            "PGMPY_DOCS_ENV": "v1.1",
-            "PGMPY_DOCS_BASEURL": "https://pgmpy.org/v1.1",
-            "PGMPY_DOCS_VERSION": "v1.1",
-            "PGMPY_DOCS_RELEASE": "v1.1.2",
-        }
+            "PGMPY_DOCS_TARGET": "v1.1",
+        },
+        manifest=manifest,
     )
     assert release.base_url == "https://pgmpy.org/v1.1"
     assert release.is_indexable is True
     assert release.robots_meta == "index,follow,max-image-preview:large"
     assert release.version_name == "v1.1"
-    assert release.release == "v1.1.2"
+    assert release.release == "v1.1"
     assert release.version_path == "v1.1"
+
+    legacy_release = docs_module.resolve_site_config(
+        {
+            "PGMPY_DOCS_ENV": "v1.1",
+            "PGMPY_DOCS_RELEASE": "v1.1.2",
+            "PGMPY_DOCS_BASEURL": "https://pgmpy.org/v1.1",
+        },
+        manifest=manifest,
+    )
+    assert legacy_release.release == "v1.1.2"
+    assert legacy_release.base_url == "https://pgmpy.org/v1.1"
 
 
 def test_discover_pages_extracts_primary_sections_and_descriptions():

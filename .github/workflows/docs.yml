@@ -45,15 +45,9 @@ jobs:
           echo "PGMPY_TUTORIALS_PATH=${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" >> "${GITHUB_ENV}"
 
           if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
-            echo "PGMPY_DOCS_ENV=dev" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_VERSION=dev" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_RELEASE=dev" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_BASEURL=${DOCS_SITE_ROOT}/dev" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_TARGET=dev" >> "${GITHUB_ENV}"
           else
-            echo "PGMPY_DOCS_ENV=preview" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_VERSION=preview" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_RELEASE=${GITHUB_SHA}" >> "${GITHUB_ENV}"
-            echo "PGMPY_DOCS_BASEURL=${DOCS_SITE_ROOT}/preview/${GITHUB_RUN_ID}" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_TARGET=preview" >> "${GITHUB_ENV}"
           fi
 
       - name: Install graphviz

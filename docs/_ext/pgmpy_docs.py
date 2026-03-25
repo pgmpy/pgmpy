@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_SITE_URL = "https://pgmpy.org"
+DEFAULT_VERSIONS_FILE = Path(__file__).resolve().parents[1] / "versions.json"
+DOCS_TARGET_VAR = "PGMPY_DOCS_TARGET"
 DOCS_ENV_VAR = "PGMPY_DOCS_ENV"
 DOCS_BASEURL_ENV_VAR = "PGMPY_DOCS_BASEURL"
 DOCS_SITE_ROOT_ENV_VAR = "PGMPY_DOCS_SITE_ROOT"
@@ -65,23 +67,15 @@ def _normalize_base_url(url: str) -> str:
     return url.rstrip("/")
 
 
+def _default_versions_manifest_path() -> Path:
+    return DEFAULT_VERSIONS_FILE
+
+
 def _parse_release_version(version_name: str) -> tuple[int, int] | None:
     match = RELEASE_VERSION_PATTERN.fullmatch(version_name.strip())
     if match is None:
         return None
     return tuple(int(match.group(part)) for part in ("major", "minor"))
-
-
-def _is_release_environment(environment: str) -> bool:
-    return _parse_release_version(environment) is not None
-
-
-def _default_version_name(environment: str) -> str:
-    if environment == "production":
-        return "stable"
-    if environment in {"development", "dev"}:
-        return "dev"
-    return environment or "dev"
 
 
 def _version_path(version_name: str) -> str:
@@ -90,57 +84,151 @@ def _version_path(version_name: str) -> str:
     return version_name.strip("/")
 
 
-def _default_base_url(environment: str) -> str:
-    if environment == "production":
-        return DEFAULT_SITE_URL
-    if environment in {"development", "dev"}:
-        return f"{DEFAULT_SITE_URL}/dev"
-    if environment == "preview":
-        return f"{DEFAULT_SITE_URL}/preview"
-    if environment == "local":
-        return "http://127.0.0.1:8000"
-    if environment:
-        return f"{DEFAULT_SITE_URL}/{environment}"
-    return f"{DEFAULT_SITE_URL}/dev"
-
-
-def resolve_site_config(environ: dict[str, str] | None = None) -> SiteConfig:
-    env = dict(os.environ if environ is None else environ)
-    environment = env.get(DOCS_ENV_VAR, "development").strip().lower()
-    base_url = _normalize_base_url(env.get(DOCS_BASEURL_ENV_VAR, _default_base_url(environment)))
-    site_root_url = _normalize_base_url(env.get(DOCS_SITE_ROOT_ENV_VAR, DEFAULT_SITE_URL))
-    version_name = env.get(DOCS_VERSION_VAR, _default_version_name(environment)).strip() or _default_version_name(
-        environment
-    )
-    release = env.get(DOCS_RELEASE_VAR, version_name).strip() or version_name
-    version_path = _version_path(version_name)
-    is_indexable = environment == "production" or _is_release_environment(environment)
-    return SiteConfig(
-        environment=environment,
-        base_url=base_url,
-        site_root_url=site_root_url,
-        is_indexable=is_indexable,
-        site_name="pgmpy",
-        default_description=(
-            "pgmpy is a Python library for causal inference, probabilistic modeling, "
-            "Bayesian networks, and directed acyclic graphs."
-        ),
-        social_image=f"{base_url}/_static/images/logo.png",
-        robots_meta="index,follow,max-image-preview:large" if is_indexable else "noindex,nofollow,noarchive",
-        version_name=version_name,
-        release=release,
-        version_path=version_path,
-    )
-
-
-def load_versions_manifest(path: str | Path) -> dict[str, Any]:
-    manifest_path = Path(path)
+def load_versions_manifest(path: str | Path | None = None) -> dict[str, Any]:
+    manifest_path = _default_versions_manifest_path() if path is None else Path(path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     return {
         "stable": manifest.get("stable"),
         "releases": list(manifest.get("releases", [])),
         "development": list(manifest.get("development", ["dev"])),
     }
+
+
+def _resolve_target(env: dict[str, str]) -> str:
+    target = env.get(DOCS_TARGET_VAR, "").strip()
+    if target:
+        return target
+
+    version_name = env.get(DOCS_VERSION_VAR, "").strip()
+    if version_name:
+        return version_name
+
+    environment = env.get(DOCS_ENV_VAR, "development").strip().lower()
+    if environment == "production":
+        return "stable"
+    if environment in {"development", "dev"}:
+        return "dev"
+    return environment or "dev"
+
+
+def _resolve_site_config_from_target(target: str, site_root_url: str, manifest: dict[str, Any]) -> SiteConfig:
+    normalized_root = _normalize_base_url(site_root_url)
+    development_targets = set(manifest.get("development", ["dev"]))
+    stable_version = manifest.get("stable")
+
+    if target == "stable":
+        release = stable_version or "stable"
+        return SiteConfig(
+            environment="production",
+            base_url=normalized_root,
+            site_root_url=normalized_root,
+            is_indexable=True,
+            site_name="pgmpy",
+            default_description=(
+                "pgmpy is a Python library for causal inference, probabilistic modeling, "
+                "Bayesian networks, and directed acyclic graphs."
+            ),
+            social_image=f"{normalized_root}/_static/images/logo.png",
+            robots_meta="index,follow,max-image-preview:large",
+            version_name="stable",
+            release=release,
+            version_path="",
+        )
+
+    if target in development_targets or target == "preview":
+        base_url = f"{normalized_root}/{target}"
+        return SiteConfig(
+            environment=target,
+            base_url=base_url,
+            site_root_url=normalized_root,
+            is_indexable=False,
+            site_name="pgmpy",
+            default_description=(
+                "pgmpy is a Python library for causal inference, probabilistic modeling, "
+                "Bayesian networks, and directed acyclic graphs."
+            ),
+            social_image=f"{base_url}/_static/images/logo.png",
+            robots_meta="noindex,nofollow,noarchive",
+            version_name=target,
+            release=target,
+            version_path=_version_path(target),
+        )
+
+    if _parse_release_version(target) is not None:
+        base_url = f"{normalized_root}/{target}"
+        return SiteConfig(
+            environment=target,
+            base_url=base_url,
+            site_root_url=normalized_root,
+            is_indexable=True,
+            site_name="pgmpy",
+            default_description=(
+                "pgmpy is a Python library for causal inference, probabilistic modeling, "
+                "Bayesian networks, and directed acyclic graphs."
+            ),
+            social_image=f"{base_url}/_static/images/logo.png",
+            robots_meta="index,follow,max-image-preview:large",
+            version_name=target,
+            release=target,
+            version_path=_version_path(target),
+        )
+
+    environment = target or "dev"
+    base_url = f"{normalized_root}/{environment}"
+    return SiteConfig(
+        environment=environment,
+        base_url=base_url,
+        site_root_url=normalized_root,
+        is_indexable=False,
+        site_name="pgmpy",
+        default_description=(
+            "pgmpy is a Python library for causal inference, probabilistic modeling, "
+            "Bayesian networks, and directed acyclic graphs."
+        ),
+        social_image=f"{base_url}/_static/images/logo.png",
+        robots_meta="noindex,nofollow,noarchive",
+        version_name=environment,
+        release=environment,
+        version_path=_version_path(environment),
+    )
+
+
+def resolve_site_config(environ: dict[str, str] | None = None, manifest: dict[str, Any] | None = None) -> SiteConfig:
+    env = dict(os.environ if environ is None else environ)
+    site_root_url = _normalize_base_url(env.get(DOCS_SITE_ROOT_ENV_VAR, DEFAULT_SITE_URL))
+    loaded_manifest = load_versions_manifest(env.get(DOCS_VERSIONS_FILE_ENV_VAR)) if manifest is None else manifest
+    site_config = _resolve_site_config_from_target(_resolve_target(env), site_root_url, loaded_manifest)
+
+    if DOCS_BASEURL_ENV_VAR in env:
+        base_url = _normalize_base_url(env[DOCS_BASEURL_ENV_VAR])
+        site_config = SiteConfig(
+            environment=site_config.environment,
+            base_url=base_url,
+            site_root_url=site_config.site_root_url,
+            is_indexable=site_config.is_indexable,
+            site_name=site_config.site_name,
+            default_description=site_config.default_description,
+            social_image=f"{base_url}/_static/images/logo.png",
+            robots_meta=site_config.robots_meta,
+            version_name=site_config.version_name,
+            release=env.get(DOCS_RELEASE_VAR, site_config.release).strip() or site_config.release,
+            version_path=site_config.version_path,
+        )
+    elif DOCS_RELEASE_VAR in env:
+        site_config = SiteConfig(
+            environment=site_config.environment,
+            base_url=site_config.base_url,
+            site_root_url=site_config.site_root_url,
+            is_indexable=site_config.is_indexable,
+            site_name=site_config.site_name,
+            default_description=site_config.default_description,
+            social_image=site_config.social_image,
+            robots_meta=site_config.robots_meta,
+            version_name=site_config.version_name,
+            release=env.get(DOCS_RELEASE_VAR, site_config.release).strip() or site_config.release,
+            version_path=site_config.version_path,
+        )
+    return site_config
 
 
 def build_versions_payload(manifest: dict[str, Any], site_root_url: str = DEFAULT_SITE_URL) -> dict[str, Any]:
