@@ -13,12 +13,19 @@ want the public classes, functions, and modules for that area.
    :gutter: 3
    :class-container: sd-shadow-hover-cards
 
+   .. grid-item-card:: Graph Classes
+      :link: api/base.rst
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      DAG, PDAG, MAG, PAG, and other base graph structures.
+
    .. grid-item-card:: Models
       :link: api/models
       :link-type: doc
       :class-card: sd-card-hover
 
-      Base graphs, Bayesian networks, Markov models, SEMs, and related structures.
+      Bayesian networks, SEMs, and related structures.
 
    .. grid-item-card:: Parameterization
       :link: api/factors
@@ -54,6 +61,20 @@ want the public classes, functions, and modules for that area.
       :class-card: sd-card-hover
 
       Structure learning algorithms, CI tests, and graph scoring methods.
+
+   .. grid-item-card:: Conditional Independence (CI) Tests
+      :link: api/ci_test
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      List of available CI tests
+
+   .. grid-item-card:: Structure Scores
+      :link: api/structure_score
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      List of available structure scoring methods.
 
    .. grid-item-card:: Metrics
       :link: api/metrics
