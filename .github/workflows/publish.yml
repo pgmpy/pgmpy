@@ -234,6 +234,9 @@ jobs:
     if: github.event_name == 'release'
     needs: [publish-pypi, build-release-docs]
     runs-on: ubuntu-latest
+    environment:
+      name: docs-production
+      url: https://pgmpy.org/
 
     steps:
       - name: Download versioned docs artifact
