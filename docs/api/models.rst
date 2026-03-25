@@ -5,9 +5,9 @@ Bayesian and Causal Models
    :toctree: generated/models
    :template: autosummary/class.rst
 
-   pgmpy.models.DiscreteBayesianNetwork
-   pgmpy.models.LinearGaussianBayesianNetwork
-   pgmpy.models.FunctionalBayesianNetwork
-   pgmpy.models.DynamicBayesianNetwork
-   pgmpy.models.NaiveBayes
-   pgmpy.models.SEM
+   ~pgmpy.models.DiscreteBayesianNetwork
+   ~pgmpy.models.LinearGaussianBayesianNetwork
+   ~pgmpy.models.FunctionalBayesianNetwork
+   ~pgmpy.models.DynamicBayesianNetwork
+   ~pgmpy.models.NaiveBayes
+   ~pgmpy.models.SEM

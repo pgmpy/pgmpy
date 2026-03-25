@@ -8,9 +8,9 @@ Supervised Metrics
    :toctree: generated/metrics
    :template: autosummary/class.rst
 
-   pgmpy.metrics.SHD
-   pgmpy.metrics.AdjacencyConfusionMatrix
-   pgmpy.metrics.OrientationConfusionMatrix
+   ~pgmpy.metrics.SHD
+   ~pgmpy.metrics.AdjacencyConfusionMatrix
+   ~pgmpy.metrics.OrientationConfusionMatrix
 
 Unsupervised Metrics
 --------------------
@@ -19,10 +19,10 @@ Unsupervised Metrics
    :toctree: generated/metrics
    :template: autosummary/class.rst
 
-   pgmpy.metrics.CorrelationScore
-   pgmpy.metrics.ImpliedCIs
-   pgmpy.metrics.FisherC
-   pgmpy.metrics.StructureScore
+   ~pgmpy.metrics.CorrelationScore
+   ~pgmpy.metrics.ImpliedCIs
+   ~pgmpy.metrics.FisherC
+   ~pgmpy.metrics.StructureScore
 
 Utilities
 ---------
@@ -31,4 +31,4 @@ Utilities
    :toctree: generated/metrics
    :template: autosummary/function.rst
 
-   pgmpy.metrics.get_metrics
+   ~pgmpy.metrics.get_metrics

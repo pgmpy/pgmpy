@@ -5,8 +5,8 @@ Undirected and Derived Models
    :toctree: generated/undirected
    :template: autosummary/class.rst
 
-   pgmpy.models.DiscreteMarkovNetwork
-   pgmpy.models.JunctionTree
-   pgmpy.models.ClusterGraph
-   pgmpy.models.FactorGraph
-   pgmpy.models.MarkovChain
+   ~pgmpy.models.DiscreteMarkovNetwork
+   ~pgmpy.models.JunctionTree
+   ~pgmpy.models.ClusterGraph
+   ~pgmpy.models.FactorGraph
+   ~pgmpy.models.MarkovChain

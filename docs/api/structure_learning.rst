@@ -8,13 +8,13 @@ Algorithms
    :toctree: generated/structure_learning
    :template: autosummary/class.rst
 
-   pgmpy.causal_discovery.PC
-   pgmpy.causal_discovery.HillClimbSearch
-   pgmpy.causal_discovery.GES
-   pgmpy.estimators.TreeSearch
-   pgmpy.estimators.ExpertInLoop
-   pgmpy.estimators.MmhcEstimator
-   pgmpy.estimators.ExhaustiveSearch
+   ~pgmpy.causal_discovery.PC
+   ~pgmpy.causal_discovery.HillClimbSearch
+   ~pgmpy.causal_discovery.GES
+   ~pgmpy.estimators.TreeSearch
+   ~pgmpy.estimators.ExpertInLoop
+   ~pgmpy.estimators.MmhcEstimator
+   ~pgmpy.estimators.ExhaustiveSearch
 
 Expert Knowledge
 ----------------
@@ -23,4 +23,4 @@ Expert Knowledge
    :toctree: generated/structure_learning
    :template: autosummary/class.rst
 
-   pgmpy.causal_discovery.ExpertKnowledge
+   ~pgmpy.causal_discovery.ExpertKnowledge

@@ -8,11 +8,11 @@ Exact Inference
    :toctree: generated/inference
    :template: autosummary/class.rst
 
-   pgmpy.inference.VariableElimination
-   pgmpy.inference.BeliefPropagation
-   pgmpy.inference.BeliefPropagationWithMessagePassing
-   pgmpy.inference.Mplp
-   pgmpy.inference.DBNInference
+   ~pgmpy.inference.VariableElimination
+   ~pgmpy.inference.BeliefPropagation
+   ~pgmpy.inference.BeliefPropagationWithMessagePassing
+   ~pgmpy.inference.Mplp
+   ~pgmpy.inference.DBNInference
 
 Support Modules
 ---------------
@@ -21,7 +21,7 @@ Support Modules
    :toctree: generated/inference
    :template: autosummary/module.rst
 
-   pgmpy.inference.EliminationOrder
+   ~pgmpy.inference.EliminationOrder
 
 Approximate Inference and Sampling
 ----------------------------------
@@ -30,6 +30,6 @@ Approximate Inference and Sampling
    :toctree: generated/inference
    :template: autosummary/class.rst
 
-   pgmpy.inference.ApproxInference
-   pgmpy.sampling.Sampling.BayesianModelSampling
-   pgmpy.sampling.Sampling.GibbsSampling
+   ~pgmpy.inference.ApproxInference
+   ~pgmpy.sampling.Sampling.BayesianModelSampling
+   ~pgmpy.sampling.Sampling.GibbsSampling
