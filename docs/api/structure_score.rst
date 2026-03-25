@@ -1,8 +1,8 @@
 Structure Scoring
------------------
+=================
 
 .. autosummary::
-   :toctree: generated/structure_learning
+   :toctree: generated/structure_score
    :template: autosummary/class.rst
 
    pgmpy.structure_score.K2

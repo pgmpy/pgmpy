@@ -1,14 +1,14 @@
-Conditional Independence Tests
-------------------------------
+Conditional Independence (CI) Tests
+===================================
 
 .. autosummary::
-   :toctree: generated/structure_learning
+   :toctree: generated/ci_test
    :template: autosummary/function.rst
 
    pgmpy.ci_tests.get_ci_test
 
 .. autosummary::
-   :toctree: generated/structure_learning
+   :toctree: generated/ci_test
    :template: autosummary/class.rst
 
    pgmpy.ci_tests.ChiSquare

@@ -2,7 +2,7 @@ Undirected and Derived Models
 =============================
 
 .. autosummary::
-   :toctree: generated/models
+   :toctree: generated/undirected
    :template: autosummary/class.rst
 
    pgmpy.models.DiscreteMarkovNetwork

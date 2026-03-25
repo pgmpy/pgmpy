@@ -93,11 +93,15 @@ want the public classes, functions, and modules for that area.
 .. toctree::
    :hidden:
 
+   api/base
    api/models
+   api/undirected
    api/factors
    api/inference
    api/causal_inference
    api/parameter_estimation
    api/structure_learning
+   api/ci_test
+   api/structure_score
    api/metrics
    api/readwrite
