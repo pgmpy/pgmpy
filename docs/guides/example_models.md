@@ -1,8 +1,8 @@
-Example Models
-==============
+# Example Models
 
-.. meta::
-   :description: Load pre-built Bayesian Networks for inference, simulation, and benchmarking.
+```{meta}
+:description: Load pre-built Bayesian Networks for inference, simulation, and benchmarking.
+```
 
 pgmpy provides pre-built Bayesian Networks for testing, benchmarking, and
 learning.
@@ -10,35 +10,32 @@ learning.
 These models are fully parameterized, so you can run inference immediately or
 simulate data from the joint distribution of the network.
 
-When to use
------------
+## When to use
 
 - Use example models when you need a ready-to-query network without fitting one
   from scratch.
-- Use small models such as ``asia`` or ``cancer`` for tutorials and debugging.
-- Use larger models such as ``alarm`` or ``andes`` for benchmarking inference
+- Use small models such as `asia` or `cancer` for tutorials and debugging.
+- Use larger models such as `alarm` or `andes` for benchmarking inference
   and structure-aware workflows.
 
-Example
--------
+## Example
 
-.. code-block:: python
+```python
+from pgmpy.inference import VariableElimination
+from pgmpy.utils import get_example_model
 
-    from pgmpy.inference import VariableElimination
-    from pgmpy.utils import get_example_model
+model = get_example_model("alarm")
+infer = VariableElimination(model)
+variable = list(model.nodes())[0]
+query = infer.query(variables=[variable])
+print(query)
+```
 
-    model = get_example_model("alarm")
-    infer = VariableElimination(model)
-    variable = list(model.nodes())[0]
-    query = infer.query(variables=[variable])
-    print(query)
+## Available Models
 
-Available Models
-----------------
+### Discrete Bayesian Networks
 
-Discrete Bayesian Networks
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 25 15 60
@@ -106,10 +103,11 @@ Discrete Bayesian Networks
    * - pigs
      - Very Large
      - Pedigree genetics network
+```
 
-Gaussian Bayesian Networks
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Gaussian Bayesian Networks
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -124,17 +122,16 @@ Gaussian Bayesian Networks
      - MAGIC rice population (IRRI)
    * - arth150
      - Arabidopsis gene network
+```
 
-Conditional Linear Gaussian Networks
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Conditional Linear Gaussian Networks
 
 No curated conditional linear Gaussian example models are currently listed in
 the built-in registry.
 
-See Also
---------
+## See Also
 
-- **Reference:** :func:`pgmpy.example_models.list_models` | :func:`pgmpy.example_models.load_model`
-- **Examples:** :doc:`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | :doc:`Simulating Data <../examples/Simulating_Data>`
-- **Previous:** :doc:`datasets` -- built-in datasets for testing
-- **Next:** :doc:`io` -- import and export models in various formats
+- **Reference:** {py:func}`pgmpy.example_models.list_models` | {py:func}`pgmpy.example_models.load_model`
+- **Examples:** {doc}`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | {doc}`Simulating Data <../examples/Simulating_Data>`
+- **Previous:** {doc}`datasets` -- built-in datasets for testing
+- **Next:** {doc}`io` -- import and export models in various formats

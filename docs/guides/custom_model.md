@@ -1,8 +1,8 @@
-Defining a Custom Model
-=======================
+# Defining a Custom Model
 
-.. meta::
-   :description: Define custom graphical models and CPD types in pgmpy to build Bayesian and Markov models.
+```{meta}
+:description: Define custom graphical models and CPD types in pgmpy to build Bayesian and Markov models.
+```
 
 pgmpy lets you define different graphical model families and their
 corresponding factor or CPD types.
@@ -10,12 +10,11 @@ corresponding factor or CPD types.
 For a DAG model, the joint distribution factorizes as a product of local
 conditionals over parents:
 
-.. math::
+```{math}
+P(X_1, \ldots, X_n) = \prod_{i=1}^n P(X_i \mid Pa_i)
+```
 
-   P(X_1, \ldots, X_n) = \prod_{i=1}^n P(X_i \mid Pa_i)
-
-When to use
------------
+## When to use
 
 - Use a custom model definition when you want full control over graph
   structure, variable types, and parameterization.
@@ -25,24 +24,23 @@ When to use
 - Use factor-graph or Markov-network families when the problem is naturally
   undirected.
 
-Example
--------
+## Example
 
-.. code-block:: python
+```python
+from pgmpy.datasets import load_dataset
+from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.models import DiscreteBayesianNetwork
 
-    from pgmpy.datasets import load_dataset
-    from pgmpy.estimators import MaximumLikelihoodEstimator
-    from pgmpy.models import DiscreteBayesianNetwork
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
+fitted = model.fit(data, estimator=MaximumLikelihoodEstimator)
+print(fitted.get_cpds())
+```
 
-    dataset = load_dataset("sachs_discrete")
-    data = dataset.data
-    model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
-    fitted = model.fit(data, estimator=MaximumLikelihoodEstimator)
-    print(fitted.get_cpds())
+## Model Types
 
-Model Types
------------
-
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 30 30 40
@@ -83,10 +81,11 @@ Model Types
    * - Markov Chain
      - --
      - :class:`~pgmpy.models.MarkovChain.MarkovChain`
+```
 
-Factor / CPD Types
-------------------
+## Factor / CPD Types
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -103,11 +102,11 @@ Factor / CPD Types
      - :class:`~pgmpy.factors.continuous.LinearGaussianCPD.LinearGaussianCPD`
    * - FunctionalCPD
      - :class:`~pgmpy.factors.hybrid.FunctionalCPD.FunctionalCPD`
+```
 
-See Also
---------
+## See Also
 
-- **Examples:** :doc:`Creating a Discrete BN <../examples/Creating_Discrete_BN>` | :doc:`Creating a Linear BN <../examples/Creating_Linear_BN>` | :doc:`Dynamic BN <../examples/Dynamic_BN>` | :doc:`Defining CPDs <../examples/Defining_CPDs>`
-- **API Reference:** :doc:`Models <../api/models>` | :doc:`Factors <../api/factors>`
-- **Previous:** :doc:`io` -- import and export models in various formats
-- **Next:** :doc:`causal_discovery` -- learn graph structure from data
+- **Examples:** {doc}`Creating a Discrete BN <../examples/Creating_Discrete_BN>` | {doc}`Creating a Linear BN <../examples/Creating_Linear_BN>` | {doc}`Dynamic BN <../examples/Dynamic_BN>` | {doc}`Defining CPDs <../examples/Defining_CPDs>`
+- **API Reference:** {doc}`Models <../api/models>` | {doc}`Factors <../api/factors>`
+- **Previous:** {doc}`io` -- import and export models in various formats
+- **Next:** {doc}`causal_discovery` -- learn graph structure from data

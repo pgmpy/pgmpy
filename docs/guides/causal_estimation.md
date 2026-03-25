@@ -1,22 +1,21 @@
-Causal Estimation
-=================
+# Causal Estimation
 
-.. meta::
-   :description: Estimate causal effects from data after identification using do-calculus and regression-based estimators.
+```{meta}
+:description: Estimate causal effects from data after identification using do-calculus and regression-based estimators.
+```
 
 Causal estimation quantifies how much changing a variable changes an outcome.
 
 More precisely, it estimates causal effects such as the average treatment
 effect (ATE) from observed data using an identified adjustment set:
 
-.. math::
+```{math}
+ATE = E[Y \mid do(X=1)] - E[Y \mid do(X=0)]
+```
 
-   ATE = E[Y \mid do(X=1)] - E[Y \mid do(X=0)]
+## When to use
 
-When to use
------------
-
-- Use ``CausalInference`` when you already have a causal graph and want
+- Use `CausalInference` when you already have a causal graph and want
   interventional quantities from that graph.
 - Use the naive adjustment regressor as a simple baseline for backdoor-based
   estimation.
@@ -25,31 +24,30 @@ When to use
 - Use Double ML when you want a more flexible semi-parametric estimator for
   high-dimensional settings.
 
-Example
--------
+## Example
 
-.. code-block:: python
+```python
+from pgmpy.datasets import load_dataset
+from pgmpy.inference import CausalInference
+from pgmpy.models import DiscreteBayesianNetwork
 
-    from pgmpy.datasets import load_dataset
-    from pgmpy.inference import CausalInference
-    from pgmpy.models import DiscreteBayesianNetwork
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+dag = DiscreteBayesianNetwork(
+    [
+        ("PKA", "ERK"),
+        ("ERK", "Akt"),
+        ("PKA", "Akt"),
+    ]
+)
+ci = CausalInference(dag)
+ate = ci.estimate_ate("PKA", "Akt", data)
+print(ate)
+```
 
-    dataset = load_dataset("sachs_discrete")
-    data = dataset.data
-    dag = DiscreteBayesianNetwork(
-        [
-            ("PKA", "ERK"),
-            ("ERK", "Akt"),
-            ("PKA", "Akt"),
-        ]
-    )
-    ci = CausalInference(dag)
-    ate = ci.estimate_ate("PKA", "Akt", data)
-    print(ate)
+## Algorithms
 
-Algorithms
-----------
-
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 35 65
@@ -58,13 +56,14 @@ Algorithms
      - API Reference
    * - CausalInference (do-calculus)
      - :class:`pgmpy.inference.CausalInference.CausalInference`
+```
 
-Semi-parametric Estimators
---------------------------
+## Semi-parametric Estimators
 
 These methods combine graphical structure with flexible regression models for
 heterogeneous treatment effect estimation.
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 35 65
@@ -77,11 +76,11 @@ heterogeneous treatment effect estimation.
      - :class:`pgmpy.prediction.NaiveIVRegressor.NaiveIVRegressor`
    * - Double ML Regressor
      - :class:`pgmpy.prediction.DoubleMLRegressor.DoubleMLRegressor`
+```
 
-See Also
---------
+## See Also
 
-- **Examples:** :doc:`Causal Inference <../examples/Causal_Inference>` | :doc:`Causal Games <../examples/Causal_Games>`
-- **API Reference:** :doc:`Causal Inference API <../api/causal_inference>`
-- **Previous:** :doc:`causal_identification` -- check identifiability
-- **Next:** :doc:`metrics` -- evaluate the learned model
+- **Examples:** {doc}`Causal Inference <../examples/Causal_Inference>` | {doc}`Causal Games <../examples/Causal_Games>`
+- **API Reference:** {doc}`Causal Inference API <../api/causal_inference>`
+- **Previous:** {doc}`causal_identification` -- check identifiability
+- **Next:** {doc}`metrics` -- evaluate the learned model

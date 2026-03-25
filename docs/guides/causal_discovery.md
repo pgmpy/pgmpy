@@ -1,23 +1,22 @@
-Causal Discovery and Structure Learning
-=======================================
+# Causal Discovery and Structure Learning
 
-.. meta::
-   :description: Learn causal graphs from data using constraint- and score-based structure learning in pgmpy.
+```{meta}
+:description: Learn causal graphs from data using constraint- and score-based structure learning in pgmpy.
+```
 
 Causal discovery (structure learning) finds which variables influence others
 by learning a directed graph from data.
 
-In more precise terms, we seek a directed acyclic graph (DAG) :math:`G` over
-variables :math:`X` that either satisfies conditional independencies like
-:math:`X \perp Y \mid Z` (constraint-based) or maximizes a score :math:`S(G; D)`
-(score-based) for data :math:`D`:
+In more precise terms, we seek a directed acyclic graph (DAG) {math}`G` over
+variables {math}`X` that either satisfies conditional independencies like
+{math}`X \perp Y \mid Z` (constraint-based) or maximizes a score
+{math}`S(G; D)` (score-based) for data {math}`D`:
 
-.. math::
+```{math}
+G^* = \arg\max_G S(G; D)
+```
 
-   G^* = \arg\max_G S(G; D)
-
-When to use
------------
+## When to use
 
 - Use causal discovery when the graph structure is unknown but observational
   data is available.
@@ -28,26 +27,25 @@ When to use
 - Use expert-in-the-loop workflows when you need domain constraints such as
   required or forbidden edges.
 
-Example
--------
+## Example
 
-.. code-block:: python
+```python
+from pgmpy.datasets import load_dataset
+from pgmpy.estimators import HillClimbSearch, BIC
 
-    from pgmpy.datasets import load_dataset
-    from pgmpy.estimators import HillClimbSearch, BIC
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+hc = HillClimbSearch(data)
+model = hc.estimate(scoring_method=BIC(data))
+print(model.edges())
+```
 
-    dataset = load_dataset("sachs_discrete")
-    data = dataset.data
-    hc = HillClimbSearch(data)
-    model = hc.estimate(scoring_method=BIC(data))
-    print(model.edges())
-
-Conditional Independence Tests
-------------------------------
+## Conditional Independence Tests
 
 Constraint-based algorithms rely on conditional independence (CI) tests to
 determine the graph structure. pgmpy provides the following CI tests:
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 40 60
@@ -66,13 +64,14 @@ determine the graph structure. pgmpy provides the following CI tests:
      - Pillai trace test for multivariate continuous data
    * - GCM
      - Generalized Covariance Measure for nonlinear dependencies
+```
 
-Scoring Functions
------------------
+## Scoring Functions
 
 Score-based algorithms use scoring functions to evaluate candidate graph
 structures. Available scoring functions:
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -89,10 +88,11 @@ structures. Available scoring functions:
      - Information-theoretic scores for discrete models
    * - BICGauss / AICGauss
      - Information-theoretic scores for Gaussian models
+```
 
-Algorithms
-----------
+## Algorithms
 
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 30 20 50
@@ -121,11 +121,11 @@ Algorithms
    * - Expert In The Loop
      - Interactive
      - :class:`pgmpy.estimators.expert.ExpertInLoop`
+```
 
-See Also
---------
+## See Also
 
-- **Examples:** :doc:`Structure Learning <../examples/Structure_Learning>` | :doc:`Chow-Liu Tree <../examples/Structure_Learning_Chow_Liu>` | :doc:`TAN <../examples/Structure_Learning_TAN>` | :doc:`Expert Knowledge <../examples/Expert_Knowledge>`
-- **API Reference:** :doc:`Causal Discovery API <../api/structure_learning>`
-- **Previous:** :doc:`custom_model` -- define a model from scratch
-- **Next:** :doc:`parameter_estimation` -- estimate CPDs for the learned structure
+- **Examples:** {doc}`Structure Learning <../examples/Structure_Learning>` | {doc}`Chow-Liu Tree <../examples/Structure_Learning_Chow_Liu>` | {doc}`TAN <../examples/Structure_Learning_TAN>` | {doc}`Expert Knowledge <../examples/Expert_Knowledge>`
+- **API Reference:** {doc}`Causal Discovery API <../api/structure_learning>`
+- **Previous:** {doc}`custom_model` -- define a model from scratch
+- **Next:** {doc}`parameter_estimation` -- estimate CPDs for the learned structure

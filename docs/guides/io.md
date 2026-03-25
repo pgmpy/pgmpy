@@ -1,8 +1,8 @@
-Exporting / Importing Models
-============================
+# Exporting / Importing Models
 
-.. meta::
-   :description: Import and export Bayesian Networks using common file formats like BIF, UAI, XMLBIF, and XDSL.
+```{meta}
+:description: Import and export Bayesian Networks using common file formats like BIF, UAI, XMLBIF, and XDSL.
+```
 
 pgmpy can read and write Bayesian Networks in common file formats to make your
 models portable across tools.
@@ -10,8 +10,7 @@ models portable across tools.
 In practice, these formats store both structure and CPDs so models can be
 reused for inference, simulation, or further editing.
 
-When to use
------------
+## When to use
 
 - Use these readers and writers when you need to exchange models with other
   Bayesian network tools.
@@ -19,27 +18,26 @@ When to use
 - Use XDSL when interoperating with GeNIe / SMILE tooling.
 - Use UAI or PomdpX when targeting those ecosystem-specific formats.
 
-Example
--------
+## Example
 
-.. code-block:: python
+```python
+from pgmpy.inference import VariableElimination
+from pgmpy.readwrite import BIFReader, BIFWriter
+from pgmpy.utils import get_example_model
 
-    from pgmpy.inference import VariableElimination
-    from pgmpy.readwrite import BIFReader, BIFWriter
-    from pgmpy.utils import get_example_model
+model = get_example_model("asia")
+BIFWriter(model).write_bif("asia.bif")
 
-    model = get_example_model("asia")
-    BIFWriter(model).write_bif("asia.bif")
+imported = BIFReader("asia.bif").get_model()
+infer = VariableElimination(imported)
+variable = list(imported.nodes())[0]
+query = infer.query(variables=[variable])
+print(query)
+```
 
-    imported = BIFReader("asia.bif").get_model()
-    infer = VariableElimination(imported)
-    variable = list(imported.nodes())[0]
-    query = infer.query(variables=[variable])
-    print(query)
+## Supported Formats
 
-Supported Formats
------------------
-
+```{eval-rst}
 .. list-table::
    :header-rows: 1
    :widths: 15 20 20 45
@@ -72,11 +70,11 @@ Supported Formats
      - :class:`~pgmpy.readwrite.XMLBeliefNetwork.XBNReader`
      - :class:`~pgmpy.readwrite.XMLBeliefNetwork.XBNWriter`
      - XML Belief Network format (Microsoft).
+```
 
-See Also
---------
+## See Also
 
-- **Examples:** :doc:`Examples <../examples>`
-- **API Reference:** :doc:`Reading/Writing API <../api/readwrite>`
-- **Previous:** :doc:`example_models` -- pre-built Bayesian Networks
-- **Next:** :doc:`custom_model` -- define models and factors directly in pgmpy
+- **Examples:** {doc}`Examples <../examples>`
+- **API Reference:** {doc}`Reading/Writing API <../api/readwrite>`
+- **Previous:** {doc}`example_models` -- pre-built Bayesian Networks
+- **Next:** {doc}`custom_model` -- define models and factors directly in pgmpy
