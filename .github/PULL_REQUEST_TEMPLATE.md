@@ -14,19 +14,19 @@ Please answer the following questions:
 
 [Please replace this with your answer]
 
-- Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
+- Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.
 
 [Please replace this with your answer]
 
-- What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered? Other than running tests, what else have you verified?  
+- What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered? Other than running tests, what else have you verified?
 
 [Please replace this with your answer]
 
-- Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.  
+- Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.
 
 [Please replace this with your answer]
 
-- Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.  
+- Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.
 
 [Please replace this with your answer]
 
