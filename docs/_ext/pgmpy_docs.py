@@ -293,8 +293,8 @@ def render_llms_document(
     )
     if not expanded:
         lines.append(
-            f"- [Full page inventory]({site_config.base_url}/llms-full.txt): Expanded list of public pages and",
-            "summaries.",
+            f"- [Full page inventory]({site_config.base_url}/llms-full.txt): "
+            "Expanded list of public pages and summaries."
         )
     return "\n".join(lines) + "\n"
 
