@@ -8,7 +8,7 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
 class GES(_ScoreMixin, _BaseCausalDiscovery):
@@ -27,7 +27,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or StructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -37,7 +37,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
         If None, the appropriate scoring method is automatically selected based
         on the data type. Also accepts a custom score instance that inherits
-        from `StructureScore`.
+        from `BaseStructureScore`.
 
     expert_knowledge : ExpertKnowledge instance, default=None
         Expert knowledge to be used with the algorithm. Expert knowledge
@@ -57,11 +57,6 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         The minimum score improvement required to perform an operation
         (edge addition, removal, or flipping). Operations with smaller
         improvements are not performed.
-
-    use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
-        Can give incorrect results for custom non-decomposable scoring methods.
 
     Attributes
     ----------
@@ -116,17 +111,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: str | StructureScore | None = None,
+        scoring_method: str | BaseStructureScore | None = None,
         expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
-        use_cache: bool = True,
     ):
         self.scoring_method = scoring_method
         self.expert_knowledge = expert_knowledge
         self.return_type = return_type
         self.min_improvement = min_improvement
-        self.use_cache = use_cache
 
     def _legal_edge_additions(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
@@ -189,8 +182,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score_c.local_score
+        score = get_scoring_method(self.scoring_method, X)
 
         current_model = DAG()
         current_model.add_nodes_from(self.variables_)
@@ -210,8 +202,10 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_edges))
 
             for index, (u, v) in enumerate(potential_edges):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, current_parents + [u]) - score_fn(v, current_parents)
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score.local_score(v, current_parents + (u,)) - score.local_score(
+                    v, current_parents
+                )
 
             if len(potential_edges) == 0 or np.all(score_deltas < self.min_improvement):
                 break
@@ -224,10 +218,10 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, [node for node in current_parents if node != u]) - score_fn(
-                    v, current_parents
-                )
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score.local_score(
+                    v, tuple(node for node in current_parents if node != u)
+                ) - score.local_score(v, current_parents)
 
             if len(potential_removals) == 0 or np.all(score_deltas < self.min_improvement):
                 break
@@ -240,10 +234,11 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_flips))
 
             for index, (u, v) in enumerate(potential_flips):
-                v_parents = current_model.get_parents(v)
-                u_parents = current_model.get_parents(u)
-                score_deltas[index] = (score_fn(v, v_parents + [u]) - score_fn(v, v_parents)) + (
-                    score_fn(u, [node for node in u_parents if node != v]) - score_fn(u, u_parents)
+                v_parents = tuple(current_model.get_parents(v))
+                u_parents = tuple(current_model.get_parents(u))
+                score_deltas[index] = (score.local_score(v, v_parents + (u,)) - score.local_score(v, v_parents)) + (
+                    score.local_score(u, tuple(node for node in u_parents if node != v))
+                    - score.local_score(u, u_parents)
                 )
 
             if len(potential_flips) == 0 or np.all(score_deltas < self.min_improvement):

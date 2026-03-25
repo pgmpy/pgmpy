@@ -31,8 +31,11 @@ pgmpy/models/DiscreteBayesianNetwork.py
 pgmpy/models/DiscreteMarkovNetwork.py
 pgmpy/models/FactorGraph.py
 pgmpy/models/JunctionTree.py
+pgmpy/models/LinearGaussianBayesianNetwork.py
 pgmpy/models/MarkovChain.py
 pgmpy/models/NaiveBayes.py
 pgmpy/utils/mathext.py
+pgmpy/factors/discrete/CPD.py
 pgmpy/inference/CausalInference.py
 pgmpy/models/DynamicBayesianNetwork.py
+pgmpy/factors/continuous/LinearGaussianCPD.py

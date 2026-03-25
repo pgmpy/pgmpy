@@ -9,6 +9,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import GES
 from pgmpy.estimators import ExpertKnowledge
+from pgmpy.structure_score import K2
 
 
 def expected_failed_checks(estimator):
@@ -58,6 +59,12 @@ class TestGESCore:
 
     def test_estimate_rand(self, rand_data):
         est = GES(scoring_method="k2", return_type="dag")
+        est.fit(rand_data)
+        assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
+        assert list(est.causal_graph_.edges()) == [("B", "C")] or list(est.causal_graph_.edges()) == [("C", "B")]
+
+    def test_estimate_rand_with_structure_score_instance(self, rand_data):
+        est = GES(scoring_method=K2(rand_data), return_type="dag")
         est.fit(rand_data)
         assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
         assert list(est.causal_graph_.edges()) == [("B", "C")] or list(est.causal_graph_.edges()) == [("C", "B")]
