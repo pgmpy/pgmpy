@@ -166,7 +166,7 @@ class LinearGaussianCPD(BaseFactor):
         ...     loc=2.0,
         ...     scale=0.5,
         ...     seed=5,
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <LinearGaussianCPD: P(Income | Age, Experience) = N(1.338*Age + 1.876*Experience + 1.599; 2.21) at 0x...
         """
         rng = np.random.default_rng(seed=seed)

@@ -14,4 +14,4 @@ comment:
   require_changes: true
 codecov:
   notify:
-    after_n_builds: 6
+    after_n_builds: 2

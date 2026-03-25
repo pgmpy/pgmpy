@@ -1,0 +1,138 @@
+name: Publish Package
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distribution artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check distribution metadata
+        run: twine check dist/*
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  test-installed-package:
+    name: Installed package | Python 3.14
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Print Python info
+        run: |
+          which python
+          python --version
+
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Install package from wheel
+        run: |
+          pip install pytest mock jsonschema
+          pip install --upgrade pip
+          pip install dist/*.whl
+
+      - name: Print installed packages
+        run: pip freeze
+
+      - name: Copy tests to isolated directory
+        run: |
+          rm -rf /tmp/pgmpy-installed-tests
+          mkdir -p /tmp/pgmpy-installed-tests/pgmpy
+          mkdir -p /tmp/pgmpy-installed-tests/devtools
+          cp pyproject.toml /tmp/pgmpy-installed-tests/pyproject.toml
+          cp -r pgmpy/tests /tmp/pgmpy-installed-tests/pgmpy/tests
+          cp -r devtools/schema /tmp/pgmpy-installed-tests/devtools/schema
+
+      - name: Run tests against installed package
+        working-directory: /tmp/pgmpy-installed-tests
+        run: |
+          pytest pgmpy/tests
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'release'
+    needs: [build, test-installed-package]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pgmpy/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs: [build, test-installed-package]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://test.pypi.org/project/pgmpy/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish package distributions to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

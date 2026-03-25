@@ -1,9 +1,6 @@
 from collections import deque
 from collections.abc import Callable, Collection, Generator, Hashable
 from itertools import chain, combinations, permutations
-from typing import (
-    Any,
-)
 
 import networkx as nx
 import numpy as np
@@ -13,13 +10,13 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
-from pgmpy.global_vars import logger
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
+from pgmpy.structure_score import BaseStructureScore
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -105,8 +102,8 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
-            argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
+            provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
         -------
@@ -309,7 +306,10 @@ class _ConstraintMixin:
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        ci_test = ci_registry.get_test(ci_test, data=data)
+        if independencies is not None:
+            ci_test = IndependenceMatch(independencies=independencies)
+        else:
+            ci_test = get_ci_test(test=ci_test, data=data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -346,10 +346,7 @@ class _ConstraintMixin:
                                 u,
                                 v,
                                 separating_set,
-                                data=data,
-                                independencies=independencies,
                                 significance_level=significance_level,
-                                **kwargs,
                             ):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
@@ -368,10 +365,7 @@ class _ConstraintMixin:
                                 u,
                                 v,
                                 separating_set,
-                                data=data,
-                                independencies=independencies,
                                 significance_level=significance_level,
-                                **kwargs,
                             ):
                                 separating_sets[frozenset((u, v))] = separating_set
                                 graph.remove_edge(u, v)
@@ -385,10 +379,7 @@ class _ConstraintMixin:
                             u,
                             v,
                             separating_set,
-                            data=data,
-                            independencies=independencies,
                             significance_level=significance_level,
-                            **kwargs,
                         ):
                             return (u, v), separating_set
 
@@ -493,13 +484,12 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: Callable[[Any, list[Any]], float],
-        structure_score: Callable[[str], float],
+        scoring_method: BaseStructureScore,
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
         required_edges: list[tuple[Hashable, Hashable]],
-    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float], None, None]:
+    ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -522,21 +512,23 @@ class _ScoreMixin:
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
                 if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
+                    old_parents = tuple(model.get_parents(Y))
+                    new_parents = old_parents + (X,)
                     if len(new_parents) <= max_indegree:
-                        score_delta = score(Y, new_parents) - score(Y, old_parents)
-                        score_delta += structure_score("+")
+                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                            Y, old_parents
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("+")
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
-                score_delta = score(Y, new_parents) - score(Y, old_parents)
-                score_delta += structure_score("-")
+                old_parents = tuple(model.get_parents(Y))
+                new_parents = tuple(var for var in old_parents if var != X)
+                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
+                score_delta += scoring_method.structure_prior_ratio("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -549,16 +541,16 @@ class _ScoreMixin:
                     and ((X, Y) not in required_edges)
                     and ((Y, X) not in forbidden_edges)
                 ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
+                    old_X_parents = tuple(model.get_parents(X))
+                    old_Y_parents = tuple(model.get_parents(Y))
+                    new_X_parents = old_X_parents + (Y,)
+                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
                     if len(new_X_parents) <= max_indegree:
                         score_delta = (
-                            score(X, new_X_parents)
-                            + score(Y, new_Y_parents)
-                            - score(X, old_X_parents)
-                            - score(Y, old_Y_parents)
+                            scoring_method.local_score(X, new_X_parents)
+                            + scoring_method.local_score(Y, new_Y_parents)
+                            - scoring_method.local_score(X, old_X_parents)
+                            - scoring_method.local_score(Y, old_Y_parents)
                         )
-                        score_delta += structure_score("flip")
+                        score_delta += scoring_method.structure_prior_ratio("flip")
                         yield (operation, score_delta)
