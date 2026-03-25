@@ -11,11 +11,9 @@ class GCM(_BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
-    Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
+    Fit an estimator on :math:`X` and :math:`Y` on :math:`[1, Z]`, let :math:`r_X` and :math:`r_Y` denote the
     resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
 
-    It fits a regressor on the conditioning variable and then tests for a vanishing covariance between the
-    resulting residuals. Details of the method can be found in [1].
     .. math::
         T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
 
@@ -57,6 +55,21 @@ class GCM(_BaseCITest):
         elif not (hasattr(estimator, "fit") and hasattr(estimator, "predict")):
             raise ValueError(f"estimator must have fit and predict methods. Got {type(estimator)} instead.")
         else:
+            # Ensure estimator is scikit-learn compatible and cloneable,
+            # since run_test uses sklearn.base.clone.
+            if not hasattr(estimator, "get_params"):
+                raise ValueError(
+                    "estimator must be a scikit-learn compatible estimator with a get_params method. "
+                    f"Got {type(estimator)} instead."
+                )
+            try:
+                # This will raise TypeError/ValueError if the estimator is not cloneable.
+                clone(estimator)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "estimator must be cloneable via sklearn.base.clone. "
+                    f"Got non-cloneable estimator of type {type(estimator)}."
+                ) from exc
             self.estimator = estimator
         super().__init__()
 
@@ -71,7 +84,7 @@ class GCM(_BaseCITest):
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
-        # Step 1.1: Append intercept column to ensure Z is never empty
+        # Step 1: Append intercept column to ensure Z is never empty
         data = self.data
         Z_data = np.column_stack([data.loc[:, list(Z)].values, np.ones(data.shape[0])])
 

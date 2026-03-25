@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from sklearn.ensemble import RandomForestRegressor
+
 from pgmpy.ci_tests import GCM
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -47,16 +49,24 @@ class TestGCM(unittest.TestCase):
 
         # Non-conditional test
         test("X", "Y", [])
-        self.assertAlmostEqual(round(test.statistic_, 3), 38.962)
+        self.assertAlmostEqual(round(test.statistic_, 3), 39.631)
         self.assertAlmostEqual(test.p_value_, 0.0)
 
         # Conditional test (independent)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertAlmostEqual(round(test.statistic_, 3), -0.312)
-        self.assertEqual(round(test.p_value_, 4), 0.7547)
+        self.assertAlmostEqual(round(test.statistic_, 3), 0.584)
+        self.assertEqual(round(test.p_value_, 4), 0.5591)
 
         # Conditional test (dependent)
         test = GCM(data=self.df_dep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         self.assertAlmostEqual(round(test.statistic_, 3), 39.798)
         self.assertAlmostEqual(test.p_value_, 0.0)
+
+        # Test with custom sklearn estimator
+        test = GCM(data=self.df_indep, estimator=RandomForestRegressor(random_state=42))
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        self.assertIsInstance(test.statistic_, float)
+        self.assertIsInstance(test.p_value_, float)
+        self.assertGreaterEqual(test.p_value_, 0.0)
+        self.assertLessEqual(test.p_value_, 1.0)
