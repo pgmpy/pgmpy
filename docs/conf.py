@@ -14,14 +14,24 @@
 
 import os
 import sys
+from pathlib import Path
+
+TUTORIALS_PATH_ENV_VAR = "PGMPY_TUTORIALS_PATH"
+VERSIONS_FILE_ENV_VAR = "PGMPY_DOCS_VERSIONS_FILE"
 
 sys.path.insert(0, os.path.abspath("_ext"))
 sys.path.insert(0, os.path.abspath("../"))
-sys.path.insert(0, os.path.abspath("../../pgmpy_notebooks/notebooks"))
+
+tutorials_path = os.environ.get(TUTORIALS_PATH_ENV_VAR, os.path.abspath("../../pgmpy_tutorials/notebooks"))
+if os.path.isdir(tutorials_path):
+    sys.path.insert(0, os.path.abspath(tutorials_path))
 
 import pgmpy_docs
 
 site_config = pgmpy_docs.resolve_site_config()
+versions_manifest_path = Path(os.environ.get(VERSIONS_FILE_ENV_VAR, Path(__file__).with_name("versions.json")))
+versions_manifest = pgmpy_docs.load_versions_manifest(versions_manifest_path)
+versions_payload = pgmpy_docs.build_versions_payload(versions_manifest, site_root_url=site_config.site_root_url)
 
 # -- General configuration ------------------------------------------------
 
@@ -59,8 +69,8 @@ project = "pgmpy"
 copyright = "2025, Ankur Ankan"
 author = "Ankur Ankan, Abinash Panda"
 
-version = "dev"
-release = "1.0.0"
+version = site_config.version_name
+release = site_config.release
 language = "en"
 
 exclude_patterns = [
@@ -126,12 +136,16 @@ html_theme_options = {
         },
     ],
     "version_dropdown": True,
-    "version_info": [
-        {"version": "https://pgmpy.org", "title": "1.0.0 (stable)", "aliases": []},
-        {"version": "https://pgmpy.org/dev", "title": "dev", "aliases": []},
-    ],
+    "version_info": pgmpy_docs.build_theme_version_info(site_config),
     "toc_title_is_page_title": True,
     "globaltoc_collapse": True,
+}
+
+html_context = {
+    "pgmpy_site_root_url": site_config.site_root_url,
+    "pgmpy_version_name": site_config.version_name,
+    "pgmpy_versions": versions_payload,
+    "pgmpy_current_version_label": pgmpy_docs.current_version_label(site_config),
 }
 
 html_css_files = ["custom.css"]

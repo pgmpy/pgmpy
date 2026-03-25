@@ -11,6 +11,11 @@ from typing import Any
 DEFAULT_SITE_URL = "https://pgmpy.org"
 DOCS_ENV_VAR = "PGMPY_DOCS_ENV"
 DOCS_BASEURL_ENV_VAR = "PGMPY_DOCS_BASEURL"
+DOCS_SITE_ROOT_ENV_VAR = "PGMPY_DOCS_SITE_ROOT"
+DOCS_VERSION_VAR = "PGMPY_DOCS_VERSION"
+DOCS_RELEASE_VAR = "PGMPY_DOCS_RELEASE"
+DOCS_VERSIONS_FILE_ENV_VAR = "PGMPY_DOCS_VERSIONS_FILE"
+RELEASE_VERSION_PATTERN = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)$")
 TITLE_UNDERLINE_CHARS = frozenset('=-~^"`:#*+')
 SECTION_ORDER = {
     "Home": 0,
@@ -36,11 +41,15 @@ PRIMARY_PAGES = {
 class SiteConfig:
     environment: str
     base_url: str
+    site_root_url: str
     is_indexable: bool
     site_name: str
     default_description: str
     social_image: str
     robots_meta: str
+    version_name: str
+    release: str
+    version_path: str
 
 
 @dataclass(frozen=True)
@@ -54,6 +63,31 @@ class PageRecord:
 
 def _normalize_base_url(url: str) -> str:
     return url.rstrip("/")
+
+
+def _parse_release_version(version_name: str) -> tuple[int, int] | None:
+    match = RELEASE_VERSION_PATTERN.fullmatch(version_name.strip())
+    if match is None:
+        return None
+    return tuple(int(match.group(part)) for part in ("major", "minor"))
+
+
+def _is_release_environment(environment: str) -> bool:
+    return _parse_release_version(environment) is not None
+
+
+def _default_version_name(environment: str) -> str:
+    if environment == "production":
+        return "stable"
+    if environment in {"development", "dev"}:
+        return "dev"
+    return environment or "dev"
+
+
+def _version_path(version_name: str) -> str:
+    if version_name == "stable":
+        return ""
+    return version_name.strip("/")
 
 
 def _default_base_url(environment: str) -> str:
@@ -74,10 +108,17 @@ def resolve_site_config(environ: dict[str, str] | None = None) -> SiteConfig:
     env = dict(os.environ if environ is None else environ)
     environment = env.get(DOCS_ENV_VAR, "development").strip().lower()
     base_url = _normalize_base_url(env.get(DOCS_BASEURL_ENV_VAR, _default_base_url(environment)))
-    is_indexable = environment == "production"
+    site_root_url = _normalize_base_url(env.get(DOCS_SITE_ROOT_ENV_VAR, DEFAULT_SITE_URL))
+    version_name = env.get(DOCS_VERSION_VAR, _default_version_name(environment)).strip() or _default_version_name(
+        environment
+    )
+    release = env.get(DOCS_RELEASE_VAR, version_name).strip() or version_name
+    version_path = _version_path(version_name)
+    is_indexable = environment == "production" or _is_release_environment(environment)
     return SiteConfig(
         environment=environment,
         base_url=base_url,
+        site_root_url=site_root_url,
         is_indexable=is_indexable,
         site_name="pgmpy",
         default_description=(
@@ -86,7 +127,69 @@ def resolve_site_config(environ: dict[str, str] | None = None) -> SiteConfig:
         ),
         social_image=f"{base_url}/_static/images/logo.png",
         robots_meta="index,follow,max-image-preview:large" if is_indexable else "noindex,nofollow,noarchive",
+        version_name=version_name,
+        release=release,
+        version_path=version_path,
     )
+
+
+def load_versions_manifest(path: str | Path) -> dict[str, Any]:
+    manifest_path = Path(path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    return {
+        "stable": manifest.get("stable"),
+        "releases": list(manifest.get("releases", [])),
+        "development": list(manifest.get("development", ["dev"])),
+    }
+
+
+def build_versions_payload(manifest: dict[str, Any], site_root_url: str = DEFAULT_SITE_URL) -> dict[str, Any]:
+    normalized_root = _normalize_base_url(site_root_url)
+    release_versions = list(dict.fromkeys(manifest.get("releases", [])))
+    stable_version = manifest.get("stable")
+
+    for version in release_versions:
+        if _parse_release_version(version) is None:
+            raise ValueError(f"Invalid release version in manifest: {version}")
+    if stable_version is not None and stable_version not in release_versions:
+        raise ValueError("The manifest stable version must also be present in the releases list.")
+
+    releases = [
+        {
+            "name": version,
+            "label": version,
+            "url": f"{normalized_root}/{version}/",
+        }
+        for version in release_versions
+    ]
+
+    stable = None
+    if stable_version is not None:
+        stable = {
+            "name": "stable",
+            "label": f"{stable_version} (stable)",
+            "url": f"{normalized_root}/",
+        }
+
+    return {
+        "stable": stable,
+        "current_stable": stable_version,
+        "releases": releases,
+        "in_development": [
+            {"name": version, "label": version, "url": f"{normalized_root}/{version}/"}
+            for version in dict.fromkeys(manifest.get("development", ["dev"]))
+        ],
+    }
+
+
+def build_theme_version_info(site_config: SiteConfig) -> list[dict[str, Any]]:
+    return [{"version": site_config.base_url, "title": current_version_label(site_config), "aliases": []}]
+
+
+def current_version_label(site_config: SiteConfig) -> str:
+    if site_config.version_name == "stable" and site_config.release:
+        return f"{site_config.release} (stable)"
+    return site_config.version_name
 
 
 def _extract_title_from_rst(text: str) -> str:
@@ -423,6 +526,7 @@ def on_html_page_context(app: Any, pagename: str, templatename: str, context: di
             source_path=full_source_path,
         )
 
+    current_target_uri = app.builder.get_target_uri(pagename)
     current_url = build_page_url(pagename, site_config, app.builder.get_target_uri)
     metatags = context.get("metatags", "")
     description = page.description or site_config.default_description
@@ -468,6 +572,9 @@ def on_html_page_context(app: Any, pagename: str, templatename: str, context: di
     )
 
     context["metatags"] = metatags
+    context["pgmpy_current_target_uri"] = current_target_uri
+    context["pgmpy_site_root_url"] = site_config.site_root_url
+    context["pgmpy_version_name"] = site_config.version_name
     context["pgmpy_structured_data"] = [
         json.dumps(item, sort_keys=True)
         for item in build_structured_data(

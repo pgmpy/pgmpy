@@ -1,20 +1,91 @@
-{% if versions %}
+{% set versions = pgmpy_versions %}
 <label for="version-select">{{ _('Select Version') }}</label>
-<select id="version-select" onchange="location = this.value;">
-  {% if versions.releases %}
+<select
+  id="version-select"
+  data-current-version="{{ pgmpy_version_name }}"
+  data-current-label="{{ pgmpy_current_version_label }}"
+  data-target-uri="{{ pgmpy_current_target_uri or '' }}"
+>
+  {% set has_release_entries = versions.stable or versions.releases %}
+  {% if has_release_entries %}
   <optgroup label="{{ _('Releases') }}">
-    {%- for item in versions.releases %}
-    <option value="{{ item.url }}">{{ item.name }}</option>
-    {%- endfor %}
+    {% if versions.stable %}
+    <option value="{{ versions.stable.name }}" data-url="{{ versions.stable.url }}" {% if versions.stable.name == pgmpy_version_name %}selected{% endif %}>
+      {{ versions.stable.label }}
+    </option>
+    {% endif %}
+    {% for item in versions.releases %}
+    <option value="{{ item.name }}" data-url="{{ item.url }}" {% if item.name == pgmpy_version_name %}selected{% endif %}>
+      {{ item.label }}
+    </option>
+    {% endfor %}
   </optgroup>
   {% endif %}
 
   {% if versions.in_development %}
   <optgroup label="{{ _('In Development') }}">
-    {%- for item in versions.in_development %}
-    <option value="{{ item.url }}">{{ item.name }}</option>
-    {%- endfor %}
+    {% for item in versions.in_development %}
+    <option value="{{ item.name }}" data-url="{{ item.url }}" {% if item.name == pgmpy_version_name %}selected{% endif %}>
+      {{ item.label }}
+    </option>
+    {% endfor %}
   </optgroup>
   {% endif %}
 </select>
-{% endif %}
+
+<script>
+  (function() {
+    const select = document.getElementById("version-select");
+    if (!select) {
+      return;
+    }
+
+    const currentVersion = select.dataset.currentVersion;
+    const currentLabel = select.dataset.currentLabel || currentVersion;
+    const currentTargetUri = (select.dataset.targetUri || "").replace(/^\/+/, "");
+
+    if (!Array.from(select.options).some(function(option) { return option.value === currentVersion; })) {
+      const option = document.createElement("option");
+      option.value = currentVersion;
+      option.textContent = currentLabel;
+      option.selected = true;
+      select.insertBefore(option, select.firstChild);
+    }
+
+    const buildTargetUrl = function(baseUrl) {
+      if (!currentTargetUri || currentTargetUri === "index.html") {
+        return baseUrl;
+      }
+      return new URL(currentTargetUri, baseUrl).toString();
+    };
+
+    const navigateToVersion = async function(option) {
+      const baseUrl = option.dataset.url;
+      if (!baseUrl) {
+        return;
+      }
+
+      const targetUrl = buildTargetUrl(baseUrl);
+
+      if (targetUrl === baseUrl) {
+        window.location.href = baseUrl;
+        return;
+      }
+
+      try {
+        const response = await fetch(targetUrl, { method: "HEAD" });
+        window.location.href = response.ok ? targetUrl : baseUrl;
+      } catch (error) {
+        window.location.href = targetUrl;
+      }
+    };
+
+    select.addEventListener("change", function(event) {
+      const option = event.target.selectedOptions[0];
+      if (!option) {
+        return;
+      }
+      navigateToVersion(option);
+    });
+  })();
+</script>

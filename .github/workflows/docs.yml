@@ -1,0 +1,135 @@
+name: Documentation
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+on:
+  push:
+    branches: ["dev"]
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+env:
+  DOCS_ARTIFACT_NAME: docs-html
+  DOCS_SITE_ROOT: https://pgmpy.org
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build-docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Checkout tutorial notebooks
+        uses: actions/checkout@v6
+        with:
+          repository: pgmpy/pgmpy_tutorials
+          path: pgmpy_tutorials
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Resolve docs metadata
+        run: |
+          echo "PGMPY_DOCS_SITE_ROOT=${DOCS_SITE_ROOT}" >> "${GITHUB_ENV}"
+          echo "PGMPY_TUTORIALS_PATH=${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" >> "${GITHUB_ENV}"
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
+            echo "PGMPY_DOCS_ENV=dev" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_VERSION=dev" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_RELEASE=dev" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_BASEURL=${DOCS_SITE_ROOT}/dev" >> "${GITHUB_ENV}"
+          else
+            echo "PGMPY_DOCS_ENV=preview" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_VERSION=preview" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_RELEASE=${GITHUB_SHA}" >> "${GITHUB_ENV}"
+            echo "PGMPY_DOCS_BASEURL=${DOCS_SITE_ROOT}/preview/${GITHUB_RUN_ID}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .[all]
+
+      - name: Prepare tutorial sources
+        run: |
+          rm -rf docs/detailed_notebooks docs/csv docs/files docs/images
+
+          if [ -d pgmpy_tutorials/notebooks/detailed_notebooks ]; then
+            cp -R pgmpy_tutorials/notebooks/detailed_notebooks docs/detailed_notebooks
+          fi
+
+          for path in csv files images; do
+            if [ -d "pgmpy_tutorials/${path}" ]; then
+              cp -R "pgmpy_tutorials/${path}" "docs/${path}"
+            fi
+          done
+
+      - name: Build docs
+        run: sphinx-build -b html docs docs/_build/html -W --keep-going
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.DOCS_ARTIFACT_NAME }}
+          path: docs/_build/html/
+
+  deploy-dev-docs:
+    name: Deploy dev docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs: build-docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download docs artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.DOCS_ARTIFACT_NAME }}
+          path: built-docs
+
+      - name: Checkout source repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          path: source
+          ref: ${{ github.sha }}
+
+      - name: Checkout documentation site
+        uses: actions/checkout@v6
+        with:
+          repository: pgmpy/pgmpy.github.io
+          path: site
+          token: ${{ secrets.PGMPY_DOCS_DEPLOY_TOKEN }}
+
+      - name: Publish dev docs
+        run: |
+          mkdir -p site/dev
+          rsync -a --delete built-docs/ site/dev/
+          cp source/docs/versions.json site/versions.json
+
+      - name: Commit and push documentation site
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$(git status --short)" ]; then
+            git add -A
+            git commit -m "docs: update dev site for ${GITHUB_SHA}"
+            git push
+          else
+            echo "No documentation changes to publish."
+          fi

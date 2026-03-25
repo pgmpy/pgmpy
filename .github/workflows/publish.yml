@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  DOCS_SITE_ROOT: https://pgmpy.org
+  PYTHON_VERSION: "3.12"
+
 jobs:
   build:
     name: Build distribution artifacts
@@ -93,6 +97,123 @@ jobs:
         run: |
           pytest pgmpy/tests
 
+  build-release-docs:
+    name: Build release docs
+    if: github.event_name == 'release'
+    needs: [build, test-installed-package]
+    runs-on: ubuntu-latest
+    outputs:
+      docs_version: ${{ steps.resolve.outputs.docs_version }}
+      build_stable_root: ${{ steps.resolve.outputs.build_stable_root }}
+
+    steps:
+      - name: Checkout released ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Checkout tutorial notebooks
+        uses: actions/checkout@v6
+        with:
+          repository: pgmpy/pgmpy_tutorials
+          path: pgmpy_tutorials
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Resolve release docs metadata
+        id: resolve
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+
+          release_tag = os.environ["RELEASE_TAG"]
+          match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", release_tag)
+          if match is None:
+              raise SystemExit(f"Unsupported release tag format: {release_tag}")
+
+          docs_version = f"v{match.group(1)}.{match.group(2)}"
+          manifest = json.loads(pathlib.Path("docs/versions.json").read_text(encoding="utf-8"))
+          releases = manifest.get("releases", [])
+          stable = manifest.get("stable")
+
+          if docs_version not in releases:
+              raise SystemExit(
+                  f"Release line {docs_version} is not listed in docs/versions.json. "
+                  "Update the manifest before publishing the release."
+              )
+
+          build_stable_root = "true" if stable == docs_version else "false"
+          github_output = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          with github_output.open("a", encoding="utf-8") as handle:
+              handle.write(f"docs_version={docs_version}\n")
+              handle.write(f"build_stable_root={build_stable_root}\n")
+          PY
+
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .[all]
+
+      - name: Prepare tutorial sources
+        run: |
+          rm -rf docs/detailed_notebooks docs/csv docs/files docs/images
+
+          if [ -d pgmpy_tutorials/notebooks/detailed_notebooks ]; then
+            cp -R pgmpy_tutorials/notebooks/detailed_notebooks docs/detailed_notebooks
+          fi
+
+          for path in csv files images; do
+            if [ -d "pgmpy_tutorials/${path}" ]; then
+              cp -R "pgmpy_tutorials/${path}" "docs/${path}"
+            fi
+          done
+
+      - name: Build versioned docs
+        run: |
+          PGMPY_DOCS_ENV="${{ steps.resolve.outputs.docs_version }}" \
+          PGMPY_DOCS_VERSION="${{ steps.resolve.outputs.docs_version }}" \
+          PGMPY_DOCS_RELEASE="${{ github.event.release.tag_name }}" \
+          PGMPY_DOCS_BASEURL="${DOCS_SITE_ROOT}/${{ steps.resolve.outputs.docs_version }}" \
+          PGMPY_DOCS_SITE_ROOT="${DOCS_SITE_ROOT}" \
+          PGMPY_TUTORIALS_PATH="${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" \
+          sphinx-build -b html docs docs/_build/release-versioned -W --keep-going
+
+      - name: Build stable docs
+        if: steps.resolve.outputs.build_stable_root == 'true'
+        run: |
+          PGMPY_DOCS_ENV="production" \
+          PGMPY_DOCS_VERSION="stable" \
+          PGMPY_DOCS_RELEASE="${{ github.event.release.tag_name }}" \
+          PGMPY_DOCS_BASEURL="${DOCS_SITE_ROOT}" \
+          PGMPY_DOCS_SITE_ROOT="${DOCS_SITE_ROOT}" \
+          PGMPY_TUTORIALS_PATH="${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" \
+          sphinx-build -b html docs docs/_build/release-stable -W --keep-going
+
+      - name: Upload versioned docs artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-docs-versioned
+          path: docs/_build/release-versioned/
+
+      - name: Upload stable docs artifact
+        if: steps.resolve.outputs.build_stable_root == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-docs-stable
+          path: docs/_build/release-stable/
+
   publish-pypi:
     name: Publish to PyPI
     if: github.event_name == 'release'
@@ -113,6 +234,81 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  deploy-release-docs:
+    name: Publish release docs
+    if: github.event_name == 'release'
+    needs: [publish-pypi, build-release-docs]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download versioned docs artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: release-docs-versioned
+          path: built-docs-versioned
+
+      - name: Download stable docs artifact
+        if: needs.build-release-docs.outputs.build_stable_root == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: release-docs-stable
+          path: built-docs-stable
+
+      - name: Checkout released ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          path: source
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Checkout documentation site
+        uses: actions/checkout@v6
+        with:
+          repository: pgmpy/pgmpy.github.io
+          path: site
+          token: ${{ secrets.PGMPY_DOCS_DEPLOY_TOKEN }}
+
+      - name: Publish release docs
+        env:
+          DOCS_VERSION: ${{ needs.build-release-docs.outputs.docs_version }}
+          BUILD_STABLE_ROOT: ${{ needs.build-release-docs.outputs.build_stable_root }}
+        run: |
+          mkdir -p "site/${DOCS_VERSION}"
+          rsync -a --delete built-docs-versioned/ "site/${DOCS_VERSION}/"
+          cp source/docs/versions.json site/versions.json
+
+          if [ "${BUILD_STABLE_ROOT}" = "true" ]; then
+            if [ -f site/.stable-files ]; then
+              while IFS= read -r path; do
+                if [ -n "${path}" ]; then
+                  rm -f "site/${path}"
+                fi
+              done < site/.stable-files
+            fi
+
+            rsync -a built-docs-stable/ site/
+            (
+              cd built-docs-stable
+              find . -type f | sed 's#^\./##' | sort
+            ) > site/.stable-files
+          fi
+
+      - name: Commit and push documentation site
+        working-directory: site
+        env:
+          DOCS_VERSION: ${{ needs.build-release-docs.outputs.docs_version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$(git status --short)" ]; then
+            git add -A
+            git commit -m "docs: publish ${DOCS_VERSION}"
+            git push
+          else
+            echo "No documentation changes to publish."
+          fi
 
   publish-testpypi:
     name: Publish to TestPyPI

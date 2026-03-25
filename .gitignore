@@ -71,6 +71,10 @@ instance/
 # Sphinx documentation
 docs/_build/
 docs/api/generated/
+docs/csv/
+docs/detailed_notebooks/
+docs/files/
+docs/images/
 
 # PyBuilder
 .pybuilder/
