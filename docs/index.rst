@@ -3,6 +3,9 @@
 :hide-toc:
 :hide-navigation:
 
+.. meta::
+   :description: pgmpy documentation for Bayesian networks, causal discovery, parameter estimation, inference, and causal effect workflows in Python.
+
 Welcome to pgmpy
 ================
 
@@ -33,6 +36,41 @@ Welcome to pgmpy
       .. container:: badge-container badge-container-left
 
          |pypi-badge| |conda-badge| |github-badge| |jmlr-badge|
+
+Start Here
+----------
+
+.. grid:: 2 2 4 4
+   :gutter: 3
+   :class-container: sd-shadow-hover-cards
+
+   .. grid-item-card:: Getting Started
+      :link: started/index
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Install pgmpy, run the quickstart, and get a first workflow running.
+
+   .. grid-item-card:: Guides
+      :link: documentation
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Follow task-oriented guides for learning, inference, causal analysis, and model building.
+
+   .. grid-item-card:: Examples
+      :link: examples
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Browse notebook-driven examples organized by workflow and model type.
+
+   .. grid-item-card:: API Reference
+      :link: reference
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Jump directly to the public classes, functions, and modules.
 
 Key Features
 ------------
@@ -99,7 +137,7 @@ Workflow
    :hidden:
 
    Getting Started <started/index>
-   Documentation <documentation>
+   Guides <documentation>
    Examples <examples>
    API Reference <reference>
    Citation <citation>

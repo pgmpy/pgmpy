@@ -1,8 +1,14 @@
+.. meta::
+   :description: Start using pgmpy with installation instructions, a quickstart workflow, and links to the main documentation sections.
+
 Getting Started
 ===============
 
 pgmpy is a Python library for causal and probabilistic inference using
 Bayesian Networks. Get up and running in minutes.
+
+Recommended path: install pgmpy, work through the quickstart, then continue into
+the guides, examples, or API reference depending on how deep you need to go.
 
 .. grid:: 2
    :gutter: 3

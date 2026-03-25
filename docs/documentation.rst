@@ -1,9 +1,14 @@
 :hide-toc:
 
-Documentation
-=============
+.. meta::
+   :description: Task-oriented pgmpy guides for causal discovery, parameter estimation, probabilistic inference, simulations, and model building.
 
-Detailed guides for each class of methods provided by pgmpy.
+Guides
+======
+
+Use these guides when you want workflow-oriented documentation before diving into
+the API reference. Each page focuses on a concrete task and links to the
+relevant examples and public APIs.
 
 .. grid:: 3
    :gutter: 3

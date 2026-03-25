@@ -1,9 +1,13 @@
+.. meta::
+   :description: Public API reference for pgmpy models, factors, inference, causal discovery, metrics, and model import or export.
+
 API Reference
 =============
 
 Complete API reference for all pgmpy modules.
 
-Use the section landing pages below for the public API surface.
+Use these section landing pages when you already know the workflow you need and
+want the public classes, functions, and modules for that area.
 
 .. grid:: 2 2 3 3
    :gutter: 3

@@ -1,3 +1,6 @@
+.. meta::
+   :description: Contributing, issue reporting, pull requests, and community channels for the pgmpy project.
+
 Getting Involved
 ================
 

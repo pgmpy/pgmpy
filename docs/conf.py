@@ -15,8 +15,13 @@
 import os
 import sys
 
+sys.path.insert(0, os.path.abspath("_ext"))
 sys.path.insert(0, os.path.abspath("../"))
 sys.path.insert(0, os.path.abspath("../../pgmpy_notebooks/notebooks"))
+
+import pgmpy_docs
+
+site_config = pgmpy_docs.resolve_site_config()
 
 # -- General configuration ------------------------------------------------
 
@@ -39,6 +44,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx_sitemap",
+    "pgmpy_docs",
 ]
 
 templates_path = ["_templates"]
@@ -79,7 +85,7 @@ html_title = "pgmpy"
 html_favicon = "logo_favi.ico"
 html_logo = "_static/images/logo.png"
 html_static_path = ["_static"]
-html_extra_path = ["robots.txt", "llms.txt", "llms-full.txt"]
+html_extra_path = ["robots.txt"]
 
 html_theme_options = {
     "repo_url": "https://github.com/pgmpy/pgmpy",
@@ -175,16 +181,14 @@ numpydoc_show_class_members = False
 # -- SEO configuration -----------------------------------------------------
 
 # Base URL for sitemap and canonical links
-html_baseurl = "https://pgmpy.org"
+html_baseurl = site_config.base_url
 
 # Open Graph metadata (social sharing previews)
-ogp_site_url = "https://pgmpy.org"
-ogp_site_name = "pgmpy"
-ogp_image = "https://pgmpy.org/_static/images/logo.png"
+ogp_site_url = site_config.base_url
+ogp_site_name = site_config.site_name
+ogp_image = site_config.social_image
 ogp_description_length = 200
 ogp_type = "website"
 ogp_custom_meta_tags = [
-    '<meta name="description" content="pgmpy: A Python library for causal inference and probabilistic inference using Directed Acyclic Graphs (DAGs) and Bayesian Networks." />',
-    '<meta name="keywords" content="pgmpy, Bayesian Networks, causal inference, probabilistic graphical models, structure learning, parameter estimation, Python" />',
-    '<meta name="twitter:card" content="summary" />',
+    '<meta name="twitter:card" content="summary_large_image" />',
 ]
