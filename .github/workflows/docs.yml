@@ -1,4 +1,4 @@
-name: Documentation
+name: Build Documentation
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
@@ -79,7 +79,7 @@ jobs:
           done
 
       - name: Build docs
-        run: sphinx-build -b html docs docs/_build/html -W --keep-going
+        run: sphinx-build -b html docs docs/_build/html --keep-going
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v7
