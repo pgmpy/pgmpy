@@ -35,7 +35,6 @@ pgmpy/factors/FactorSet.py
 pgmpy/independencies/Independencies.py
 pgmpy/inference/ApproxInference.py
 pgmpy/inference/CausalInference.py
-pgmpy/inference/CausalInference.py
 pgmpy/inference/EliminationOrder.py
 pgmpy/inference/ExactInference.py
 pgmpy/inference/dbn_inference.py
