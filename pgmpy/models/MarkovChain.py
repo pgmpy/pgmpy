@@ -201,6 +201,13 @@ class MarkovChain:
         >>> model.add_transition_model("grade", grade_tm)
         >>> model.add_transition_model("grade", grade_tm_matrix)
         """
+
+        # Validate that the variable exists in the model
+        if variable not in self.variables:
+            raise ValueError(
+                f"Variable '{variable}' not found in model",
+            )
+
         if isinstance(transition_model, list):
             transition_model = np.array(transition_model, dtype=float)
 

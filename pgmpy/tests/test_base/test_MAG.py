@@ -185,7 +185,7 @@ class TestMAG:
             mag {
                 "Wet grass" [exposure]
                 'Large Name' <-> Node ; Rain -> "Wet grass"
-                Node [o]
+                Node [outcome]
             }"""
 
         model_from_str = MAG.from_dagitty(model_str)

@@ -14,21 +14,21 @@ class TestFisherZ(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(seed=42)
 
-        self.df_ind = pd.DataFrame(rng.standard_normal((1000, 3)), columns=["X", "Y", "Z"])
+        self.df_ind = pd.DataFrame(rng.standard_normal((10000, 3)), columns=["X", "Y", "Z"])
 
-        Z = rng.normal(10000)
+        Z = rng.normal(size=10000)
         X = 0.3 * Z + rng.normal(loc=0, scale=0.1, size=10000)
         Y = 0.2 * Z + rng.normal(loc=0, scale=0.1, size=10000)
         self.df_cind = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-        Z1 = rng.normal(10000)
-        Z2 = rng.normal(10000)
+        Z1 = rng.normal(size=10000)
+        Z2 = rng.normal(size=10000)
         X = 0.3 * Z1 + 0.2 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
         Y = 0.2 * Z1 + 0.3 * Z2 + rng.normal(loc=0, scale=0.1, size=10000)
         self.df_cind_mul = pd.DataFrame({"X": X, "Y": Y, "Z1": Z1, "Z2": Z2})
 
-        X = rng.normal(10000)
-        Y = rng.normal(10000)
+        X = rng.normal(size=10000)
+        Y = rng.normal(size=10000)
         Z = 0.2 * X + 0.2 * Y + rng.normal(loc=0, scale=0.1, size=10000)
         self.df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
