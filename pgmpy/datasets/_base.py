@@ -62,14 +62,6 @@ class _BaseDataset(BaseObject):
     repo_type = "dataset"
     revision = "main"
 
-    @classmethod
-    def _resolve_data_path(cls, filename: str) -> str:
-        parts = []
-        if cls.base_url:
-            parts.append(cls.base_url.strip("/"))
-        parts.append(filename.lstrip("/"))
-        return "/".join(parts)
-
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
         """
@@ -132,7 +124,7 @@ class _BaseDataset(BaseObject):
         """
         return read_hf_file(
             repo_id=cls.repo_id,
-            filename=cls._resolve_data_path(filename),
+            filename=f"{cls.base_url}/{filename}",
             repo_type=cls.repo_type,
             revision=cls.revision,
         )
