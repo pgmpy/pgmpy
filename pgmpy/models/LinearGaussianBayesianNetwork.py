@@ -212,10 +212,6 @@ class LinearGaussianBayesianNetwork(DAG):
             roles=roles,
         )
         self.cpds = []
-        # Sufficient statistics stored by fit() and used by fit_update()
-        self._n_samples = None
-        self._sample_mean = None
-        self._sample_cov = None
 
     @classmethod
     def load(
@@ -970,24 +966,20 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
 
-        # Step 4: Store sufficient statistics for use in fit_update()
-        variables = list(nx.topological_sort(self))
-        self._n_samples = len(data)
-        self._sample_mean = data[variables].mean().values
-        self._sample_cov = data[variables].cov(ddof=0).values
-
         return self
 
     def fit_update(
         self,
         data: pd.DataFrame,
-    ) -> LinearGaussianBayesianNetwork:
+        n_prev_samples: int | None = None,
+    ) -> "LinearGaussianBayesianNetwork":
         """
         Updates the parameters of the LinearGaussianBayesianNetwork with new
         data without refitting from scratch.
 
-        Internally, updates the joint Gaussian distribution using the pooled
-        mean and covariance formula, then re-extracts the CPD parameters from
+        Internally, retrieves the joint Gaussian distribution implied by the
+        current CPD parameters, updates it using the pooled mean and covariance
+        formula with the new batch, then re-extracts the CPD parameters from
         the updated joint using standard conditional Gaussian relationships.
 
         The model must have been previously fitted using ``fit()`` before
@@ -1001,8 +993,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
         n_prev_samples : int (optional)
             The number of samples the model was previously trained on.
-            If None, uses the value stored during the last ``fit()`` or
-            ``fit_update()`` call.
+            If None, defaults to the number of rows in the new data.
 
         Returns
         -------
@@ -1030,22 +1021,25 @@ class LinearGaussianBayesianNetwork(DAG):
             raise ValueError(f"Following variables are missing in the data: {missing_vars}")
 
         # Step 2: Check that fit() was called before fit_update()
-        if self._n_samples is None:
+        if len(self.get_cpds()) == 0:
             raise ValueError(
-                "fit_update() requires the model to be first fitted using fit(). Please call fit() before fit_update()."
+                "fit_update() requires the model to be first fitted using fit(). "
+                "Please call fit() before fit_update()."
             )
+
+        if n_prev_samples is None:
+            n_prev_samples = data.shape[0]
 
         # Step 3: Get topological order — used for joint stats and CPD extraction
         variables = list(nx.topological_sort(self))
         idx = {v: i for i, v in enumerate(variables)}
 
-        # Step 4: Compute new batch statistics
-        n1 = self._n_samples
+        # Step 4: Compute batch statistics and retrieve previous joint from CPDs
+        n1 = n_prev_samples
         n2 = len(data)
         n_total = n1 + n2
 
-        mu1 = self._sample_mean
-        cov1 = self._sample_cov
+        mu1, cov1 = self.to_joint_gaussian()
         mu2 = data[variables].mean().values
         cov2 = data[variables].cov(ddof=0).values
 
@@ -1054,12 +1048,14 @@ class LinearGaussianBayesianNetwork(DAG):
 
         d1 = mu1 - mu_updated
         d2 = mu2 - mu_updated
-        cov_updated = (n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)) / n_total
+        cov_updated = (
+            n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)
+        ) / n_total
 
         # Step 6: Re-extract CPD parameters from updated joint Gaussian
+        new_cpds = []
         for node in variables:
             parents = self.get_parents(node)
-            cpd = self.get_cpds(node)
             i = idx[node]
             k = 1 + len(parents)  # intercept + number of parent coefficients
 
@@ -1080,15 +1076,11 @@ class LinearGaussianBayesianNetwork(DAG):
                 beta = np.append([beta_intercept], beta_coeffs)
                 std = float(np.sqrt(max(sigma2_mle, 0) * n_total / (n_total - k)))
 
-            # Update the CPD in place
-            cpd.beta = beta
-            cpd.std = std
+            new_cpds.append(
+                LinearGaussianCPD(variable=node, beta=beta, std=std, evidence=parents)
+            )
 
-        # Step 7: Store updated statistics for the next fit_update() call
-        self._n_samples = n_total
-        self._sample_mean = mu_updated
-        self._sample_cov = cov_updated
-
+        self.add_cpds(*new_cpds)
         return self
 
     def predict_probability(self, data: pd.DataFrame) -> tuple[list[str], np.ndarray, np.ndarray]:
