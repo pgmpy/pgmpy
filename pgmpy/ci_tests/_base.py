@@ -153,8 +153,9 @@ def get_ci_test(test=None, data=None):
 
     >>> import pandas as pd
     >>> import numpy as np
-    >>> np.random.seed(42)
-    >>> data = pd.DataFrame(np.random.randn(100, 3), columns=["X", "Y", "Z"])
+    >>> from pgmpy.ci_tests import ChiSquare, Pearsonr
+    >>> rng = np.random.default_rng(seed=42)
+    >>> data = pd.DataFrame(data=rng.standard_normal(size=(100, 3)), columns=["X", "Y", "Z"])
     >>> test = get_ci_test(data=data)
     >>> isinstance(test, Pearsonr)
     True
