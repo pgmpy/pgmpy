@@ -116,14 +116,8 @@ class YourCITest(_BaseCITest):
         statistic = None
         p_value = None
 
-        # TODO: Optionally compute degrees of freedom
-        # dof = ...
-
         # Required: Store results
         self.statistic_ = statistic
         self.p_value_ = p_value
-
-        # Optional:
-        # self.dof_ = dof
 
         return self.statistic_, self.p_value_
