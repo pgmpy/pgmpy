@@ -7,6 +7,11 @@ from .LLMPairwise import LLMPairwise
 from .PC import PC
 from .TAN import TAN
 from .TOPIC import TOPIC
+from pgmpy.causal_discovery.ExpertKnowledge import ExpertKnowledge
+from pgmpy.causal_discovery.GES import GES
+from pgmpy.causal_discovery.HillClimbSearch import HillClimbSearch
+from pgmpy.causal_discovery.PC import PC
+from pgmpy.causal_discovery.DAGMA import DagmaLinear
 
 __all__ = [
     "ChowLiu",
@@ -18,4 +23,5 @@ __all__ = [
     "PC",
     "TAN",
     "TOPIC",
+    "DagmaLinear",
 ]
