@@ -24,11 +24,11 @@ class YachtHydrodynamics(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/yacht-hydrodynamics/"
+    base_url = "real/yacht-hydrodynamics"
 
-    data_url = base_url + "data/yacht.hydrodynamics.continuous.txt"
+    data_url = "data/yacht.hydrodynamics.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/yacht-hydrodynamics.knowledge.txt"
+    expert_knowledge_url = "ground.truth/yacht-hydrodynamics.knowledge.txt"
 
     categorical_variables = []
     ordinal_variables = dict()
