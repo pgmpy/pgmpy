@@ -653,9 +653,7 @@ class TestPDAGDagitty(unittest.TestCase):
         self.assertIn("Z", pdag.nodes())
 
         # role annotations
-        pdag = PDAG.from_dagitty(
-            "pdag { X [exposure]; Y [outcome]; Z [latent]; X -> Y }"
-        )
+        pdag = PDAG.from_dagitty("pdag { X [exposure]; Y [outcome]; Z [latent]; X -> Y }")
         self.assertIn("X", pdag.get_role("exposures"))
         self.assertIn("Y", pdag.get_role("outcomes"))
         self.assertIn("Z", pdag.latents)
@@ -665,7 +663,9 @@ class TestPDAGDagitty(unittest.TestCase):
             PDAG.from_dagitty()
 
     def test_from_dagitty_filename(self):
-        import tempfile, os
+        import os
+        import tempfile
+
         content = "pdag { X -> Y; A -- B }"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(content)

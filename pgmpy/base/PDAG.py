@@ -457,7 +457,6 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
-
     @classmethod
     def from_dagitty(cls, string=None, filename=None):
         """
@@ -493,9 +492,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         elif string is not None:
             dagitty_str = string
         else:
-            raise ValueError(
-                "Either `filename` or `string` need to be specified."
-            )
+            raise ValueError("Either `filename` or `string` need to be specified.")
 
         body = _re.sub(r"^\s*\w+\s*\{", "", dagitty_str)
         body = _re.sub(r"\}\s*$", "", body)
@@ -561,10 +558,18 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         pdag = cls(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
-            latents=list(set(latents)),
-            roles=roles,
         )
-        pdag.add_nodes_from(isolated_nodes)
+        # Add isolated nodes and any latent/role-only nodes before setting roles,
+        # because with_role validates that each variable is already in the graph.
+        edge_nodes = {n for e in directed_edges + undirected_edges for n in e}
+        extra_nodes = (set(latents) | set(isolated_nodes)) - edge_nodes
+        for r_nodes in roles.values():
+            extra_nodes |= set(r_nodes) - edge_nodes
+        pdag.add_nodes_from(extra_nodes)
+        if latents:
+            pdag.latents = set(latents)
+        for role, var_set in roles.items():
+            pdag.with_role(role=role, variables=var_set, inplace=True)
         return pdag
 
     def to_dagitty(self) -> str:
@@ -594,14 +599,10 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         statements = []
 
-        for u, v in sorted(
-            self.directed_edges, key=lambda x: (str(x[0]), str(x[1]))
-        ):
+        for u, v in sorted(self.directed_edges, key=lambda x: (str(x[0]), str(x[1]))):
             statements.append(f"{u} -> {v}")
 
-        for u, v in sorted(
-            self.undirected_edges, key=lambda x: (str(x[0]), str(x[1]))
-        ):
+        for u, v in sorted(self.undirected_edges, key=lambda x: (str(x[0]), str(x[1]))):
             statements.append(f"{u} -- {v}")
 
         for node in sorted(nx.isolates(self), key=str):
