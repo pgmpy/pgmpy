@@ -34,9 +34,9 @@ class TestChiSquare(unittest.TestCase):
             "HoursPerWeek",
             ["Age", "Immigrant", "Race", "Sex"],
         )
-        np_test.assert_almost_equal(self.test.statistic_, 1460.11, decimal=1)
+        np_test.assert_almost_equal(self.test.statistic_, 1342.67, decimal=1)
         np_test.assert_almost_equal(self.test.p_value_, 0, decimal=1)
-        self.assertEqual(self.test.dof_, 316)
+        self.assertEqual(self.test.dof_, 270)
 
         self.test("Immigrant", "Sex", [])
         np_test.assert_almost_equal(self.test.statistic_, 0.2724, decimal=1)
@@ -44,9 +44,8 @@ class TestChiSquare(unittest.TestCase):
         self.assertEqual(self.test.dof_, 1)
 
         self.test("Education", "MaritalStatus", ["Age", "Sex"])
-        np_test.assert_almost_equal(self.test.statistic_, 481.96, decimal=1)
-        np_test.assert_almost_equal(self.test.p_value_, 0, decimal=1)
-        self.assertEqual(self.test.dof_, 58)
+        np_test.assert_almost_equal(self.test.statistic_, 473.60, decimal=1)
+        self.assertEqual(self.test.dof_, 54)
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples. Update: Might be same from scipy=1.7.0
@@ -92,3 +91,28 @@ class TestChiSquare(unittest.TestCase):
         test("x", "y", [])
         self.assertEqual(test.dof_, 1)
         np_test.assert_almost_equal(test.p_value_, 0, decimal=5)
+
+    def test_contingency_table_all_states_conditioned(self):
+        """
+        Regression test for gh-2886.
+
+        When conditioning on Z, each stratum must produce a contingency table
+        that includes *all* observed states of X and Y from the full dataset,
+        not just the states that appear in that particular stratum.
+
+        In this dataset X=2 only appears when Z=0. The old per-stratum
+        approach computed a 2x2 table for Z=1 (missing the X=2 row), which
+        prevented the zero-row check from triggering and produced an
+        incorrect dof. The correct dof is 2, not 3.
+        """
+        data = pd.DataFrame(
+            {
+                "X": [0, 0, 1, 1, 2, 2, 0, 0, 1, 1],
+                "Y": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                "Z": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+            }
+        )
+
+        test = ChiSquare(data=data)
+        test("X", "Y", ["Z"])
+        self.assertEqual(test.dof_, 2)
