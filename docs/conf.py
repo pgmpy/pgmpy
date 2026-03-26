@@ -114,7 +114,7 @@ html_theme_options = {
     "show_nav_level": 1,
     "show_toc_level": 2,
     "secondary_sidebar_items": {
-        "**": ["page-toc"],
+        "**": ["page-toc", "sidebar-ethical-ads"],
         "index": [],
     },
     "primary_sidebar_end": [],

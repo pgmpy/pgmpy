@@ -1,13 +1,16 @@
 .. meta::
-   :description: Public API reference for pgmpy models, factors, inference, causal discovery, metrics, and model import or export.
+   :description: Public API reference for pgmpy graphs, models, factors, inference, discovery, metrics, datasets, example models, and model import or export.
 
 API Reference
 =============
 
-Complete API reference for all pgmpy modules.
+Public API reference for pgmpy.
 
-Use these section landing pages when you already know the workflow you need and
-want the public classes, functions, and modules for that area.
+Browse by workflow or object family to find the public classes and helper
+functions for that part of the library.
+
+Deprecated compatibility aliases are intentionally omitted from the main API
+listings in favor of the current class names.
 
 .. grid:: 1 1 2 3
    :gutter: 3
@@ -25,70 +28,84 @@ want the public classes, functions, and modules for that area.
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Bayesian networks, SEMs, and related structures.
+      Bayesian networks, SEMs, Markov models, and derived graph structures.
 
-   .. grid-item-card:: Parameterization
+   .. grid-item-card:: Factors And CPDs
       :link: api/factors
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      CPDs, factors, and factor utilities for discrete, Gaussian, and hybrid models.
+      Discrete factors, CPDs, Gaussian CPDs, hybrid CPDs, and factor utilities.
 
-   .. grid-item-card:: Probabilistic Inference
+   .. grid-item-card:: Inference And Sampling
       :link: api/inference
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Exact inference, approximate inference, sampling, and inference utilities.
+      Exact inference, approximate inference, sampling, and elimination-order helpers.
 
    .. grid-item-card:: Causal Inference
       :link: api/causal_inference
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Causal identification, interventional inference, and causal estimators.
+      Identification, interventional inference, and regression-based causal estimators.
 
    .. grid-item-card:: Parameter Estimation
       :link: api/parameter_estimation
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      MLE, Bayesian estimation, EM, and SEM estimation workflows.
+      Estimator base classes, MLE, Bayesian estimation, EM, SEM fitting, and mirror descent.
 
    .. grid-item-card:: Causal Discovery
       :link: api/structure_learning
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Structure learning algorithms, CI tests, and graph scoring methods.
+      Constraint-based, score-based, tree-based, and expert-guided discovery algorithms.
 
    .. grid-item-card:: Conditional Independence (CI) Tests
       :link: api/ci_test
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      List of available CI tests
+      Built-in CI test selectors and test implementations.
 
    .. grid-item-card:: Structure Scores
       :link: api/structure_score
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      List of available structure scoring methods.
+      Discrete, Gaussian, and conditional-Gaussian structure scoring classes.
 
    .. grid-item-card:: Metrics
       :link: api/metrics
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Supervised and unsupervised metrics for evaluating learned graphs and models.
+      Supervised and unsupervised metrics for evaluating learned graphs and fitted models.
 
    .. grid-item-card:: Reading/Writing
       :link: api/readwrite
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Readers and writers for BIF, XMLBIF, XDSL, UAI, PomdpX, and related formats.
+      Reader and writer classes for BIF, XMLBIF, XDSL, UAI, PomdpX, and related formats.
+
+   .. grid-item-card:: Datasets And Examples
+      :link: api/data
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Built-in dataset loaders and example-model discovery helpers.
+
+   .. grid-item-card:: Independencies
+      :link: api/independencies
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Independence assertions and collections used across discovery and testing workflows.
 
 .. toctree::
    :hidden:
@@ -105,3 +122,5 @@ want the public classes, functions, and modules for that area.
    api/structure_score
    api/metrics
    api/readwrite
+   api/data
+   api/independencies

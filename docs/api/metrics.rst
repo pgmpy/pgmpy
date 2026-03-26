@@ -1,6 +1,9 @@
 Metrics
 =======
 
+Metrics for evaluating learned structures, implied independencies, and fitted
+models.
+
 Supervised Metrics
 ------------------
 

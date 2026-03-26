@@ -1,6 +1,9 @@
 Causal Inference
 ================
 
+Public classes for identification, interventional queries, and
+regression-based causal effect estimation.
+
 Graphical Identification and Inference
 --------------------------------------
 

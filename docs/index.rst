@@ -6,9 +6,6 @@
 .. meta::
    :description: pgmpy documentation for Bayesian networks, causal discovery, parameter estimation, inference, and causal effect workflows in Python.
 
-Welcome to pgmpy
-================
-
 .. grid:: 1 1 2 2
    :gutter: 3
    :class-container: hero-grid
@@ -18,7 +15,7 @@ Welcome to pgmpy
 
       .. image:: _static/images/logo.png
          :alt: pgmpy logo
-         :width: 220px
+         :width: 180px
          :align: center
 
    .. grid-item::
@@ -34,44 +31,43 @@ Welcome to pgmpy
       causal discovery, parameter estimation, approximate inference, exact
       inference, and causal inference are available.
 
+      .. container:: hero-actions
+
+         .. button-ref:: started/index
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            Getting Started
+
+         .. button-ref:: documentation
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            User Guide
+
+         .. button-ref:: examples
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            Examples
+
+         .. button-ref:: reference
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            API Reference
+
       .. container:: badge-container badge-container-left
 
          |pypi-badge| |conda-badge| |github-badge| |jmlr-badge|
-
-Start Here
-----------
-
-.. grid:: 1 1 2 4
-   :gutter: 3
-   :class-container: sd-shadow-hover-cards pgmpy-card-grid
-
-   .. grid-item-card:: Getting Started
-      :link: started/index
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Install pgmpy, run the quickstart, and get a first workflow running.
-
-   .. grid-item-card:: Guides
-      :link: documentation
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Follow task-oriented guides for learning, inference, causal analysis, and model building.
-
-   .. grid-item-card:: Examples
-      :link: examples
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Browse notebook-driven examples organized by workflow and model type.
-
-   .. grid-item-card:: API Reference
-      :link: reference
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Jump directly to the public classes, functions, and modules.
 
 Key Features
 ------------
@@ -138,7 +134,7 @@ Workflow
    :hidden:
 
    Getting Started <started/index>
-   Guides <documentation>
+   User Guide <documentation>
    Examples <examples>
    API Reference <reference>
    Citation <citation>

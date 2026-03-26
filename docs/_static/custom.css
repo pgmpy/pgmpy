@@ -225,6 +225,55 @@ html[data-theme="dark"] .bd-header {
     max-width: 44ch;
 }
 
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin: 1.35rem 0 0.2rem;
+}
+
+.hero-actions p {
+    display: flex;
+    margin: 0;
+}
+
+.hero-actions .sd-btn {
+    align-items: center;
+    border-radius: 999px;
+    box-shadow: none;
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 10.75rem;
+    padding: 0.7rem 1rem;
+    text-align: center;
+    text-decoration: none;
+    transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.hero-actions .sd-btn:hover {
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
+}
+
+.hero-actions .sd-btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--pst-color-primary) 72%, white 28%);
+    outline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+    .hero-grid .sd-row > .hero-logo-panel {
+        flex: 0 0 30%;
+        max-width: 30%;
+    }
+
+    .hero-grid .sd-row > .hero-copy-panel {
+        flex: 0 0 70%;
+        max-width: 70%;
+    }
+}
+
 .badge-container {
     align-items: center;
     display: flex;
@@ -410,6 +459,20 @@ div.highlight pre {
 
     .hero-copy-panel > p {
         max-width: none;
+    }
+
+    .hero-actions {
+        margin-top: 1.15rem;
+    }
+
+    .hero-actions p {
+        flex: 1 1 100%;
+    }
+
+    .hero-actions .sd-btn {
+        flex: 1 1 100%;
+        min-width: 0;
+        width: 100%;
     }
 
     .sd-card .sd-card-body {

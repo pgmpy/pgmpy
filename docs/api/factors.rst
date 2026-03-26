@@ -1,30 +1,39 @@
-Parameterization
+Factors and CPDs
 ================
 
-Discrete and CPD Modules
-------------------------
+Factor, CPD, and factor-container classes used to parameterize pgmpy models.
 
-.. autosummary::
-   :toctree: generated/factors
-   :template: autosummary/module.rst
-
-   ~pgmpy.factors.discrete.CPD
-   ~pgmpy.factors.discrete.DiscreteFactor
-   ~pgmpy.factors.discrete.JointProbabilityDistribution
-   ~pgmpy.factors.discrete.NoisyOR
-
-Continuous and Hybrid Factors
------------------------------
+Discrete Factors and CPDs
+-------------------------
 
 .. autosummary::
    :toctree: generated/factors
    :template: autosummary/class.rst
 
-   ~pgmpy.factors.continuous.LinearGaussianCPD.LinearGaussianCPD
-   ~pgmpy.factors.hybrid.FunctionalCPD.FunctionalCPD
+   ~pgmpy.factors.discrete.TabularCPD
+   ~pgmpy.factors.discrete.DiscreteFactor
+   ~pgmpy.factors.discrete.JointProbabilityDistribution
+   ~pgmpy.factors.discrete.NoisyORCPD
 
-Factor Utilities
-----------------
+Continuous and Hybrid CPDs
+--------------------------
+
+.. autosummary::
+   :toctree: generated/factors
+   :template: autosummary/class.rst
+
+   ~pgmpy.factors.continuous.LinearGaussianCPD
+   ~pgmpy.factors.hybrid.FunctionalCPD
+
+Factor Containers and Utilities
+-------------------------------
+
+.. autosummary::
+   :toctree: generated/factors
+   :template: autosummary/class.rst
+
+   ~pgmpy.factors.FactorSet
+   ~pgmpy.factors.FactorDict
 
 .. autosummary::
    :toctree: generated/factors
@@ -35,10 +44,3 @@ Factor Utilities
    ~pgmpy.factors.factor_sum_product
    ~pgmpy.factors.factorset_product
    ~pgmpy.factors.factorset_divide
-
-.. autosummary::
-   :toctree: generated/factors
-   :template: autosummary/class.rst
-
-   ~pgmpy.factors.FactorSet
-   ~pgmpy.factors.FactorDict

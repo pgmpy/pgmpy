@@ -163,12 +163,24 @@ def test_docs_conf_uses_pydata_theme_with_existing_navigation_layout(monkeypatch
         "navbar-icon-links",
     ]
     assert conf["html_theme_options"]["header_links_before_dropdown"] == 4
-    assert conf["html_theme_options"]["secondary_sidebar_items"]["**"] == ["page-toc"]
+    assert conf["html_theme_options"]["secondary_sidebar_items"]["**"] == [
+        "page-toc",
+        "sidebar-ethical-ads",
+    ]
     assert conf["html_baseurl"].endswith("/")
     assert conf["ogp_site_url"] == conf["html_baseurl"]
     assert conf["site_url"] == conf["html_baseurl"]
     assert conf["sitemap_url_scheme"] == "{link}"
     assert conf["sitemap_locales"] == [None]
+
+
+def test_layout_includes_google_analytics_and_ethical_ads_client():
+    repo_root = Path(__file__).parent.parent.parent.parent
+    layout_text = (repo_root / "docs" / "_templates" / "layout.html").read_text(encoding="utf-8")
+
+    assert "googletagmanager.com/gtag/js?id=G-HCFR07M31W" in layout_text
+    assert "gtag('config', 'G-HCFR07M31W');" in layout_text
+    assert "media.ethicalads.io/media/client/ethicalads.min.js" in layout_text
 
 
 def test_homepage_and_landing_pages_use_responsive_grid_layout():
@@ -178,11 +190,23 @@ def test_homepage_and_landing_pages_use_responsive_grid_layout():
     index_text = (docs_root / "index.rst").read_text(encoding="utf-8")
     guides_text = (docs_root / "documentation.rst").read_text(encoding="utf-8")
     reference_text = (docs_root / "reference.rst").read_text(encoding="utf-8")
+    custom_css = (docs_root / "_static" / "custom.css").read_text(encoding="utf-8")
 
     assert ".. container:: hero-subtitle" in index_text
     assert ".. class:: hero-subtitle" not in index_text
     assert ":class-container: hero-grid" in index_text
-    assert ".. grid:: 1 1 2 4" in index_text
+    assert ":width: 180px" in index_text
+    assert ".. container:: hero-actions" in index_text
+    assert ".. button-ref:: started/index" in index_text
+    assert ".. button-ref:: documentation" in index_text
+    assert "User Guide" in index_text
+    assert "Guides <documentation>" not in index_text
+    assert "User Guide <documentation>" in index_text
+    assert ".. button-ref:: examples" in index_text
+    assert ".. button-ref:: reference" in index_text
+    assert "Start Here" not in index_text
+    assert ".hero-grid .sd-row > .hero-logo-panel" in custom_css
+    assert ".hero-grid .sd-row > .hero-copy-panel" in custom_css
     assert ".. grid:: 1 1 2 3" in index_text
     assert ".. grid:: 1 1 2 3" in guides_text
     assert ".. grid:: 1 1 2 3" in reference_text
@@ -196,7 +220,7 @@ def test_landing_pages_define_card_grid_treatments():
     guides_text = (docs_root / "documentation.rst").read_text(encoding="utf-8")
     reference_text = (docs_root / "reference.rst").read_text(encoding="utf-8")
 
-    assert index_text.count("pgmpy-card-grid") == 2
+    assert index_text.count("pgmpy-card-grid") == 1
     assert "pgmpy-card-grid" in guides_text
     assert "pgmpy-card-grid" in reference_text
     assert "pgmpy-card-featured" not in index_text

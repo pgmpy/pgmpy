@@ -1,27 +1,19 @@
-Probabilistic Inference
-=======================
+Inference and Sampling
+======================
 
-Exact Inference
----------------
+Core Inference Classes
+----------------------
 
 .. autosummary::
    :toctree: generated/inference
    :template: autosummary/class.rst
 
+   ~pgmpy.inference.Inference
    ~pgmpy.inference.VariableElimination
    ~pgmpy.inference.BeliefPropagation
    ~pgmpy.inference.BeliefPropagationWithMessagePassing
    ~pgmpy.inference.Mplp
    ~pgmpy.inference.DBNInference
-
-Support Modules
----------------
-
-.. autosummary::
-   :toctree: generated/inference
-   :template: autosummary/module.rst
-
-   ~pgmpy.inference.EliminationOrder
 
 Approximate Inference and Sampling
 ----------------------------------
@@ -31,5 +23,19 @@ Approximate Inference and Sampling
    :template: autosummary/class.rst
 
    ~pgmpy.inference.ApproxInference
-   ~pgmpy.sampling.Sampling.BayesianModelSampling
-   ~pgmpy.sampling.Sampling.GibbsSampling
+   ~pgmpy.sampling.BayesianModelInference
+   ~pgmpy.sampling.BayesianModelSampling
+   ~pgmpy.sampling.GibbsSampling
+
+Elimination-Order Heuristics
+----------------------------
+
+.. autosummary::
+   :toctree: generated/inference
+   :template: autosummary/class.rst
+
+   ~pgmpy.inference.EliminationOrder.BaseEliminationOrder
+   ~pgmpy.inference.EliminationOrder.WeightedMinFill
+   ~pgmpy.inference.EliminationOrder.MinNeighbors
+   ~pgmpy.inference.EliminationOrder.MinWeight
+   ~pgmpy.inference.EliminationOrder.MinFill

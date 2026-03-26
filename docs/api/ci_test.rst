@@ -1,11 +1,19 @@
 Conditional Independence (CI) Tests
 ===================================
 
+Selector utilities and built-in CI test implementations.
+
+Selector
+--------
+
 .. autosummary::
    :toctree: generated/ci_test
    :template: autosummary/function.rst
 
    ~pgmpy.ci_tests.get_ci_test
+
+Available Tests
+---------------
 
 .. autosummary::
    :toctree: generated/ci_test
