@@ -11,6 +11,7 @@ Welcome to pgmpy
 
 .. grid:: 1 1 2 2
    :gutter: 3
+   :class-container: hero-grid
 
    .. grid-item::
       :class: hero-logo-panel
@@ -23,9 +24,9 @@ Welcome to pgmpy
    .. grid-item::
       :class: hero-copy-panel
 
-      .. class:: hero-subtitle
+      .. container:: hero-subtitle
 
-      *Python Library for Causal AI*
+         Python Library for Causal AI
 
       pgmpy is a Python package for causal inference and probabilistic inference
       using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
@@ -40,63 +41,63 @@ Welcome to pgmpy
 Start Here
 ----------
 
-.. grid:: 2 2 4 4
+.. grid:: 1 1 2 4
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: sd-shadow-hover-cards pgmpy-card-grid
 
    .. grid-item-card:: Getting Started
       :link: started/index
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Install pgmpy, run the quickstart, and get a first workflow running.
 
    .. grid-item-card:: Guides
       :link: documentation
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Follow task-oriented guides for learning, inference, causal analysis, and model building.
 
    .. grid-item-card:: Examples
       :link: examples
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Browse notebook-driven examples organized by workflow and model type.
 
    .. grid-item-card:: API Reference
       :link: reference
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Jump directly to the public classes, functions, and modules.
 
 Key Features
 ------------
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: sd-shadow-hover-cards pgmpy-card-grid
 
    .. grid-item-card:: Causal Discovery and Structure Learning
       :link: api/structure_learning
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Learn causal structure from data.
 
    .. grid-item-card:: Parameter Estimation
       :link: api/parameter_estimation
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Estimate model parameters with Maximum Likelihood, Bayesian estimation, or EM.
 
    .. grid-item-card:: Probabilistic Inference
       :link: api/inference
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Run exact inference (Variable Elimination, Belief Propagation) or approximate
       inference (sampling, Gibbs).
@@ -104,7 +105,7 @@ Key Features
    .. grid-item-card:: Causal Inference
       :link: api/causal_inference
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Perform interventional and counterfactual queries using do-calculus, backdoor,
       and frontdoor adjustment.
@@ -112,7 +113,7 @@ Key Features
    .. grid-item-card:: Causal Identification
       :link: guides/causal_identification
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Determine whether a causal effect is identifiable from observational data
       given the graph structure.
@@ -120,7 +121,7 @@ Key Features
    .. grid-item-card:: Example Datasets and Models
       :link: examples
       :link-type: doc
-      :class-card: sd-card-hover
+      :class-card: sd-card-hover pgmpy-card
 
       Explore built-in example Bayesian Networks and datasets to quickly prototype
       and test workflows.

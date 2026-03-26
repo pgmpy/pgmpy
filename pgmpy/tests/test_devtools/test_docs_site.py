@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import runpy
 import sys
 from pathlib import Path
 
@@ -142,3 +143,66 @@ def test_build_versions_payload_requires_stable_release_membership():
         assert "stable" in str(error)
     else:
         raise AssertionError("Expected build_versions_payload to reject a missing stable release.")
+
+
+def test_docs_conf_uses_pydata_theme_with_existing_navigation_layout(monkeypatch):
+    repo_root = Path(__file__).parent.parent.parent.parent
+    docs_root = repo_root / "docs"
+
+    monkeypatch.chdir(docs_root)
+    conf = runpy.run_path(str(docs_root / "conf.py"))
+
+    assert conf["html_theme"] == "pydata_sphinx_theme"
+    assert "numpydoc" in conf["extensions"]
+    assert "sphinx.ext.napoleon" not in conf["extensions"]
+    assert conf["html_sidebars"]["**"] == ["sidebar-nav-bs.html"]
+    assert conf["html_theme_options"]["navbar_center"] == ["navbar-nav"]
+    assert conf["html_theme_options"]["navbar_end"] == [
+        "versioning.html",
+        "theme-switcher",
+        "navbar-icon-links",
+    ]
+    assert conf["html_theme_options"]["header_links_before_dropdown"] == 4
+    assert conf["html_theme_options"]["secondary_sidebar_items"]["**"] == ["page-toc"]
+    assert conf["html_baseurl"].endswith("/")
+    assert conf["ogp_site_url"] == conf["html_baseurl"]
+    assert conf["site_url"] == conf["html_baseurl"]
+    assert conf["sitemap_url_scheme"] == "{link}"
+    assert conf["sitemap_locales"] == [None]
+
+
+def test_homepage_and_landing_pages_use_responsive_grid_layout():
+    repo_root = Path(__file__).parent.parent.parent.parent
+    docs_root = repo_root / "docs"
+
+    index_text = (docs_root / "index.rst").read_text(encoding="utf-8")
+    guides_text = (docs_root / "documentation.rst").read_text(encoding="utf-8")
+    reference_text = (docs_root / "reference.rst").read_text(encoding="utf-8")
+
+    assert ".. container:: hero-subtitle" in index_text
+    assert ".. class:: hero-subtitle" not in index_text
+    assert ":class-container: hero-grid" in index_text
+    assert ".. grid:: 1 1 2 4" in index_text
+    assert ".. grid:: 1 1 2 3" in index_text
+    assert ".. grid:: 1 1 2 3" in guides_text
+    assert ".. grid:: 1 1 2 3" in reference_text
+
+
+def test_landing_pages_define_card_grid_treatments():
+    repo_root = Path(__file__).parent.parent.parent.parent
+    docs_root = repo_root / "docs"
+
+    index_text = (docs_root / "index.rst").read_text(encoding="utf-8")
+    guides_text = (docs_root / "documentation.rst").read_text(encoding="utf-8")
+    reference_text = (docs_root / "reference.rst").read_text(encoding="utf-8")
+
+    assert index_text.count("pgmpy-card-grid") == 2
+    assert "pgmpy-card-grid" in guides_text
+    assert "pgmpy-card-grid" in reference_text
+    assert "pgmpy-card-featured" not in index_text
+    assert "pgmpy-card-start" not in index_text
+    assert "pgmpy-card-guide" not in index_text
+    assert "pgmpy-card-example" not in index_text
+    assert "pgmpy-card-reference" not in index_text
+    assert ":class-card: sd-card-hover pgmpy-card" in guides_text
+    assert ":class-card: sd-card-hover pgmpy-card" in reference_text

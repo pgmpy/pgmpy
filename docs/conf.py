@@ -45,11 +45,10 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
+    "numpydoc",
     "myst_parser",
     "nbsphinx",
-    "sphinx_immaterial",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinxext.opengraph",
@@ -89,56 +88,56 @@ autosummary_generate_overwrite = True
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx_immaterial"
+html_theme = "pydata_sphinx_theme"
 
 html_title = "pgmpy"
 html_favicon = "logo_favi.ico"
 html_logo = "_static/images/logo.png"
 html_static_path = ["_static"]
 html_extra_path = ["robots.txt"]
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html"],
+    "index": [],
+}
 
 html_theme_options = {
-    "repo_url": "https://github.com/pgmpy/pgmpy",
-    "repo_name": "pgmpy/pgmpy",
-    "icon": {
-        "repo": "fontawesome/brands/github",
+    "logo": {
+        "text": "pgmpy",
     },
-    "features": [
-        "navigation.tabs",
-        "navigation.tabs.sticky",
-        "navigation.sections",
-        "navigation.top",
-        "search.highlight",
-        "search.share",
-        "toc.follow",
-        "content.tabs.link",
-    ],
-    "palette": [
+    "navbar_start": ["navbar-logo"],
+    "navbar_center": ["navbar-nav"],
+    "navbar_end": ["versioning.html", "theme-switcher", "navbar-icon-links"],
+    "navbar_persistent": ["search-button-field"],
+    "header_links_before_dropdown": 4,
+    "collapse_navigation": True,
+    "navigation_depth": 4,
+    "show_nav_level": 1,
+    "show_toc_level": 2,
+    "secondary_sidebar_items": {
+        "**": ["page-toc"],
+        "index": [],
+    },
+    "primary_sidebar_end": [],
+    "footer_start": ["copyright"],
+    "footer_center": [],
+    "footer_end": [],
+    "icon_links": [
         {
-            "media": "(prefers-color-scheme: light)",
-            "scheme": "default",
-            "primary": "white",
-            "accent": "teal",
-            "toggle": {
-                "icon": "material/weather-night",
-                "name": "Switch to dark mode",
-            },
+            "name": "GitHub",
+            "url": "https://github.com/pgmpy/pgmpy",
+            "icon": "fa-brands fa-github",
         },
         {
-            "media": "(prefers-color-scheme: dark)",
-            "scheme": "slate",
-            "primary": "black",
-            "accent": "teal",
-            "toggle": {
-                "icon": "material/weather-sunny",
-                "name": "Switch to light mode",
-            },
+            "name": "Discord",
+            "url": "https://discord.gg/DRkdKaumBs",
+            "icon": "fa-brands fa-discord",
+        },
+        {
+            "name": "LinkedIn",
+            "url": "https://www.linkedin.com/company/pgmpy/",
+            "icon": "fa-brands fa-linkedin",
         },
     ],
-    "version_dropdown": True,
-    "version_info": pgmpy_docs.build_theme_version_info(site_config),
-    "toc_title_is_page_title": True,
-    "globaltoc_collapse": True,
 }
 
 html_context = {
@@ -195,10 +194,13 @@ numpydoc_show_class_members = False
 # -- SEO configuration -----------------------------------------------------
 
 # Base URL for sitemap and canonical links
-html_baseurl = site_config.base_url
+html_baseurl = f"{site_config.base_url.rstrip('/')}/"
+site_url = html_baseurl
+sitemap_url_scheme = "{link}"
+sitemap_locales = [None]
 
 # Open Graph metadata (social sharing previews)
-ogp_site_url = site_config.base_url
+ogp_site_url = html_baseurl
 ogp_site_name = site_config.site_name
 ogp_image = site_config.social_image
 ogp_description_length = 200
