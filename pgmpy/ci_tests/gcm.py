@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class GCM(_BaseCITest):
+class GCM(BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
@@ -57,6 +57,13 @@ class GCM(_BaseCITest):
         Compute GCM statistic and p-value.
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            The GCM test statistic stored in ``self.statistic_``.
+        p_value : float
+            The p-value stored in ``self.p_value_``.
         """
         # Step 1.1: Add another column with constant values to handle intercepts.
         data = self.data

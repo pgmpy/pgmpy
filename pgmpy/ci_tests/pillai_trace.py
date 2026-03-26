@@ -3,10 +3,10 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class PillaiTrace(_BaseCITest):
+class PillaiTrace(BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
@@ -81,7 +81,24 @@ class PillaiTrace(_BaseCITest):
     def _get_predictions(self, X, Y, Z, data):
         """
         Get XGBoost predictions for X and Y given Z.
+
         Uses ``self.seed`` for reproducibility.
+
+        Returns
+        -------
+        pred_x : numpy.ndarray
+            Predicted values or class probabilities for ``X``.
+        pred_y : numpy.ndarray
+            Predicted values or class probabilities for ``Y``.
+        x_cat_index : pandas.Index or None
+            Category index for ``X`` when it is categorical, otherwise ``None``.
+        y_cat_index : pandas.Index or None
+            Category index for ``Y`` when it is categorical, otherwise ``None``.
+
+        Raises
+        ------
+        ImportError
+            If ``xgboost`` is not installed.
         """
         try:
             from xgboost import XGBClassifier, XGBRegressor
@@ -129,6 +146,13 @@ class PillaiTrace(_BaseCITest):
         Compute Pillai's trace statistic and p-value.
 
         Sets ``self.statistic_`` (Pillai's trace) and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            Pillai's trace statistic stored in ``self.statistic_``.
+        p_value : float
+            The F-approximation p-value stored in ``self.p_value_``.
         """
         data = self.data
         # Step 1: Add an intercept term for conditional variables.

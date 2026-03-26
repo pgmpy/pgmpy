@@ -118,6 +118,13 @@ class PearsonrEquivalence(Pearsonr):
         Compute Pearson equivalence statistic and p-value.
 
         Sets ``self.statistic_`` (Fisher z-transformed partial correlation) and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            Fisher z-transformed partial correlation stored in ``self.statistic_``.
+        p_value : float
+            The TOST p-value stored in ``self.p_value_``.
         """
         # Step 2: Compute Partial Pearson Correlation via parent and clip to avoid infinities
         super().run_test(X, Y, Z)

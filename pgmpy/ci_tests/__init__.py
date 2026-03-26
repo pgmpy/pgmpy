@@ -1,4 +1,4 @@
-from ._base import _BaseCITest, get_ci_test
+from ._base import BaseCITest, get_ci_test
 from .chi_square import ChiSquare
 from .fisher_z import FisherZ
 from .g_sq import GSq
@@ -12,7 +12,7 @@ from .pillai_trace import PillaiTrace
 from .power_divergence import PowerDivergence
 
 __all__ = [
-    "_BaseCITest",
+    "BaseCITest",
     "get_ci_test",
     "ChiSquare",
     "FisherZ",

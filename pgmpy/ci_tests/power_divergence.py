@@ -4,10 +4,10 @@ from scipy import stats
 
 from pgmpy import logger
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class PowerDivergence(_BaseCITest):
+class PowerDivergence(BaseCITest):
     r"""
     Cressie-Read power divergence test for conditional independence on discrete data [1].
 
@@ -116,6 +116,13 @@ class PowerDivergence(_BaseCITest):
         Compute power divergence statistic, p-value, and degrees of freedom.
 
         Sets ``self.statistic_`` (chi-squared), ``self.p_value_``, and ``self.dof_``.
+
+        Returns
+        -------
+        statistic : float
+            The power divergence statistic stored in ``self.statistic_``.
+        p_value : float
+            The p-value stored in ``self.p_value_``.
         """
         data = self.data
 

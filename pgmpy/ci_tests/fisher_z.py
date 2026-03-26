@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 from .pearsonr import Pearsonr
 
 
-class FisherZ(_BaseCITest):
+class FisherZ(BaseCITest):
     r"""
     Fisher's Z test for conditional independence on continuous data.
 
@@ -68,6 +68,13 @@ class FisherZ(_BaseCITest):
         Compute the Fisher Z statistic and p-value.
 
         Sets ``self.statistic_``, ``self.transformed_statistic_``, and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            The Fisher Z statistic stored in ``self.statistic_``.
+        p_value : float
+            The two-sided p-value stored in ``self.p_value_``.
         """
         partial_corr, _ = Pearsonr(data=self.data).run_test(X=X, Y=Y, Z=Z)
 

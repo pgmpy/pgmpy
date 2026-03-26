@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class Pearsonr(_BaseCITest):
+class Pearsonr(BaseCITest):
     r"""
     Partial Correlation test for conditional independence.
 
@@ -77,6 +77,13 @@ class Pearsonr(_BaseCITest):
         Compute Pearson correlation coefficient and p-value.
 
         Sets ``self.statistic_`` (Pearson's r) and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            Pearson's correlation coefficient or partial correlation stored in ``self.statistic_``.
+        p_value : float
+            The p-value stored in ``self.p_value_``.
         """
         data = self.data
         n_samples = data.shape[0]
