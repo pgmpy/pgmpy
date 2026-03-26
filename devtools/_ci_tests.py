@@ -1,11 +1,10 @@
 # This extension template provides instructions to add new Conditional Independence (CI) tests to pgmpy.
 
 # Please follow the following steps:
-# 1. Copy this file to `pgmpy/estimators/CITests` and rename it as `your_ci_test.py`.
+# 1. Copy this file to `pgmpy/ci_tests` and rename it as `your_ci_test.py`.
 # 2. Go through the file and address all the TODOs.
-# 3. Add an import in `pgmpy/estimators/CITests/__init__.py`.
-# 4. Ensure the test is registered in the CI registry (if applicable).
-# 5. Add tests in `pgmpy/tests/test_ci_tests/test_your_ci_test.py`.
+# 3. Add an import in `pgmpy/ci_tests/__init__.py`.
+# 4. Add tests in `pgmpy/tests/test_ci_tests/test_your_ci_test.py`.
 
 # TODO: Add necessary imports (e.g., numpy, scipy, sklearn, etc.)
 import pandas as pd
@@ -17,11 +16,7 @@ class YourCITest(_BaseCITest):
     """
     [One-line description of the CI test]
 
-    [Detailed description of the test, including:
-     - What hypothesis it tests
-     - Mathematical formulation
-     - Assumptions (if any)
-     - When to use it]
+    [Detailed description of the test]
 
     Parameters
     ----------
@@ -41,9 +36,6 @@ class YourCITest(_BaseCITest):
 
     p_value_ : float
         P-value corresponding to the test statistic.
-
-    dof_ : int, optional
-        Degrees of freedom (if applicable).
 
     Examples
     --------
