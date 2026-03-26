@@ -1,7 +1,6 @@
 from collections import deque
 from collections.abc import Callable, Collection, Generator, Hashable
 from itertools import chain, combinations, permutations
-from typing import Any
 
 import networkx as nx
 import numpy as np
