@@ -631,3 +631,67 @@ class TestPDAG(unittest.TestCase):
 
         self.assertEqual(self.pdag1.latents, set())
         self.assertEqual(set(self.pdag1.get_role("latents")), set())
+
+
+class TestPDAGDagitty(unittest.TestCase):
+    """Tests for PDAG.from_dagitty and PDAG.to_dagitty."""
+
+    def test_from_dagitty(self):
+        # directed edges
+        pdag = PDAG.from_dagitty("pdag { X -> Y; Y -> Z }")
+        self.assertEqual(pdag.directed_edges, {("X", "Y"), ("Y", "Z")})
+        self.assertEqual(pdag.undirected_edges, set())
+
+        # undirected edges
+        pdag = PDAG.from_dagitty("pdag { A -- B; B -- C }")
+        self.assertEqual(pdag.undirected_edges, {("A", "B"), ("B", "C")})
+
+        # mixed, isolated node, newline-separated
+        pdag = PDAG.from_dagitty("pdag {\n    X -> Y\n    A -- B\n    Z\n}")
+        self.assertEqual(pdag.directed_edges, {("X", "Y")})
+        self.assertEqual(pdag.undirected_edges, {("A", "B")})
+        self.assertIn("Z", pdag.nodes())
+
+        # role annotations
+        pdag = PDAG.from_dagitty(
+            "pdag { X [exposure]; Y [outcome]; Z [latent]; X -> Y }"
+        )
+        self.assertIn("X", pdag.get_role("exposures"))
+        self.assertIn("Y", pdag.get_role("outcomes"))
+        self.assertIn("Z", pdag.latents)
+
+        # missing args
+        with self.assertRaises(ValueError):
+            PDAG.from_dagitty()
+
+    def test_from_dagitty_filename(self):
+        import tempfile, os
+        content = "pdag { X -> Y; A -- B }"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write(content)
+            fname = f.name
+        try:
+            pdag = PDAG.from_dagitty(filename=fname)
+            self.assertEqual(pdag.directed_edges, {("X", "Y")})
+            self.assertEqual(pdag.undirected_edges, {("A", "B")})
+        finally:
+            os.unlink(fname)
+
+    def test_to_dagitty(self):
+        pdag = PDAG(directed_ebunch=[("X", "Y")], undirected_ebunch=[("A", "B")])
+        result = pdag.to_dagitty()
+        self.assertTrue(result.startswith("pdag {"))
+        self.assertIn("X -> Y", result)
+        self.assertIn("A -- B", result)
+
+        # empty graph
+        self.assertEqual(PDAG().to_dagitty(), "pdag {\n}")
+
+    def test_dagitty_roundtrip(self):
+        pdag = PDAG(
+            directed_ebunch=[("X", "Y"), ("Y", "Z")],
+            undirected_ebunch=[("A", "B")],
+        )
+        pdag2 = PDAG.from_dagitty(pdag.to_dagitty())
+        self.assertEqual(pdag.directed_edges, pdag2.directed_edges)
+        self.assertEqual(pdag.undirected_edges, pdag2.undirected_edges)

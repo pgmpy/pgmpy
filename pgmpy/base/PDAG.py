@@ -457,6 +457,163 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         return nx.nx_agraph.to_agraph(self)
 
+
+    @classmethod
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Returns a PDAG instance from a dagitty pdag string.
+
+        Parameters
+        ----------
+        string: str
+            A dagitty pdag string.
+        filename: str
+            Path to a file containing a dagitty pdag string.
+
+        Returns
+        -------
+        pgmpy.base.PDAG
+            A PDAG instance.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> dag_str = "pdag { X -> Y; A -- B }"
+        >>> pdag = PDAG.from_dagitty(dag_str)
+        >>> list(pdag.directed_edges)
+        [('X', 'Y')]
+        >>> list(pdag.undirected_edges)
+        [('A', 'B')]
+        """
+        import re as _re
+
+        if filename:
+            with open(filename) as f:
+                dagitty_str = f.read()
+        elif string is not None:
+            dagitty_str = string
+        else:
+            raise ValueError(
+                "Either `filename` or `string` need to be specified."
+            )
+
+        body = _re.sub(r"^\s*\w+\s*\{", "", dagitty_str)
+        body = _re.sub(r"\}\s*$", "", body)
+
+        directed_edges, undirected_edges, isolated_nodes, latents, roles = (
+            [],
+            [],
+            [],
+            [],
+            {},
+        )
+
+        def _parse_node(token):
+            token = token.strip()
+            role = None
+            m = _re.search(r"\[([^\]]+)\]", token)
+            if m:
+                attrs = {a.strip().lower() for a in m.group(1).split(",")}
+                if "latent" in attrs:
+                    role = "latent"
+                elif "exposure" in attrs:
+                    role = "exposure"
+                elif "outcome" in attrs:
+                    role = "outcome"
+                token = _re.sub(r"\s*\[.*?\]", "", token).strip()
+            token = token.strip("'\"")
+            return token, role
+
+        def _record_role(node, role):
+            if role == "latent":
+                latents.append(node)
+            elif role in ("exposure", "outcome"):
+                roles.setdefault(role + "s", set()).add(node)
+
+        for stmt in body.replace(";", "\n").split("\n"):
+            stmt = stmt.strip()
+            if not stmt:
+                continue
+            if "->" in stmt:
+                parts = _re.split(r"\s*->\s*", stmt)
+                for i in range(len(parts) - 1):
+                    u, u_role = _parse_node(parts[i])
+                    v, v_role = _parse_node(parts[i + 1])
+                    if u and v:
+                        directed_edges.append((u, v))
+                    _record_role(u, u_role)
+                    _record_role(v, v_role)
+            elif "--" in stmt:
+                parts = _re.split(r"\s*--\s*", stmt)
+                for i in range(len(parts) - 1):
+                    u, u_role = _parse_node(parts[i])
+                    v, v_role = _parse_node(parts[i + 1])
+                    if u and v:
+                        undirected_edges.append((u, v))
+                    _record_role(u, u_role)
+                    _record_role(v, v_role)
+            else:
+                node, role = _parse_node(stmt)
+                if node:
+                    isolated_nodes.append(node)
+                    _record_role(node, role)
+
+        pdag = cls(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=list(set(latents)),
+            roles=roles,
+        )
+        pdag.add_nodes_from(isolated_nodes)
+        return pdag
+
+    def to_dagitty(self) -> str:
+        """
+        Returns a dagitty pdag string representation of the PDAG.
+
+        Returns
+        -------
+        str
+            String in dagitty pdag syntax.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[("X", "Y")], undirected_ebunch=[("A", "B")])
+        >>> print(pdag.to_dagitty())
+        pdag {
+        X -> Y
+        A -- B
+        }
+
+        >>> pdag2 = PDAG.from_dagitty(pdag.to_dagitty())
+        >>> pdag.directed_edges == pdag2.directed_edges
+        True
+        >>> pdag.undirected_edges == pdag2.undirected_edges
+        True
+        """
+        statements = []
+
+        for u, v in sorted(
+            self.directed_edges, key=lambda x: (str(x[0]), str(x[1]))
+        ):
+            statements.append(f"{u} -> {v}")
+
+        for u, v in sorted(
+            self.undirected_edges, key=lambda x: (str(x[0]), str(x[1]))
+        ):
+            statements.append(f"{u} -- {v}")
+
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        body = "\n".join(statements)
+        if body:
+            return f"pdag {{\n{body}\n}}"
+        else:
+            return "pdag {\n}"
+
     def __eq__(self, other):
         """
         Checks if two PDAGs are equal. Two PDAGs are considered equal if they
